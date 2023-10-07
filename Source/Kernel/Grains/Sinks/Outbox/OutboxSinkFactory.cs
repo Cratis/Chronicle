@@ -4,7 +4,7 @@
 using System.Text.Json;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Engines.Sinks;
-using Aksio.Cratis.Projections;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Sinks;
 
 namespace Aksio.Cratis.Kernel.Grains.Sinks.Outbox;

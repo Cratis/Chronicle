@@ -7,6 +7,7 @@ using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Models;
 using AutoMapper;
 
 namespace Aksio.Cratis.Integration;

@@ -12,8 +12,8 @@ using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Keys;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Objects;
-using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Sinks;
 

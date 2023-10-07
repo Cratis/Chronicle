@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Sinks;
-using Aksio.Cratis.Projections;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Sinks;
 using Aksio.MongoDB;

@@ -3,8 +3,8 @@
 
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Kernel.Engines.Sinks;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Observation.Reducers;
-using Aksio.Cratis.Projections;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;

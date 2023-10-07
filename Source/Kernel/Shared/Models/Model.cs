@@ -3,7 +3,7 @@
 
 using NJsonSchema;
 
-namespace Aksio.Cratis.Projections;
+namespace Aksio.Cratis.Models;
 
 /// <summary>
 /// Represents the model used by a projection to project to.

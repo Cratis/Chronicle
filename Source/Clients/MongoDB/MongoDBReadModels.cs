@@ -52,14 +52,16 @@ public static class MongoDBReadModels
 
     static async Task ConfigureReadModels(IServiceProvider serviceProvider)
     {
-        var storage = await serviceProvider.GetRequiredService<IMicroserviceConfiguration>().Storage();
-        var clientFactory = serviceProvider.GetRequiredService<IMongoDBClientFactory>();
-        foreach (var (tenant, config) in storage.Tenants)
-        {
-            var storageType = config.Get(WellKnownStorageTypes.ReadModels);
-            var url = new MongoUrl(storageType.ConnectionDetails.ToString()!);
-            var client = clientFactory.Create(url);
-            _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
-        }
+        // var storage = await serviceProvider.GetRequiredService<IMicroserviceConfiguration>().Storage();
+        // var clientFactory = serviceProvider.GetRequiredService<IMongoDBClientFactory>();
+        // foreach (var (tenant, config) in storage.Tenants)
+        // {
+        //     var storageType = config.Get(WellKnownStorageTypes.ReadModels);
+        //     var url = new MongoUrl(storageType.ConnectionDetails.ToString()!);
+        //     var client = clientFactory.Create(url);
+        //     _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
+        // }
+
+        await Task.CompletedTask;
     }
 }
