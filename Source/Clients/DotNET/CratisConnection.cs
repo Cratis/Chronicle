@@ -14,46 +14,58 @@ namespace Aksio.Cratis;
 /// <summary>
 /// Represents an implementation of <see cref="ICratisConnection"/>.
 /// </summary>
-public class CratisConnection : ICratisConnection, IDisposable
+public class CratisConnection : ICratisConnection
 {
-    readonly CratisOptions _settings;
-    readonly IConnectionLifecycle _connectionLifecycle;
     readonly ITasks _tasks;
     readonly CancellationToken _cancellationToken;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
+    IEventSequences _eventSequences;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CratisConnection"/> class.
     /// </summary>
-    /// <param name="settings">The <see cref="CratisOptions"/> to use.</param>
     /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
     /// <param name="tasks"><see cref="ITasks"/> to create tasks with.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public CratisConnection(
-        CratisOptions settings,
         IConnectionLifecycle connectionLifecycle,
         ITasks tasks,
         CancellationToken cancellationToken)
     {
         GrpcClientFactory.AllowUnencryptedHttp2 = true;
-        _settings = settings;
-        _connectionLifecycle = connectionLifecycle;
+        Lifecycle = connectionLifecycle;
         _tasks = tasks;
         _cancellationToken = cancellationToken;
-        Connect().GetAwaiter().GetResult();
     }
 #pragma warning restore CS8618
 
+    public IConnectionLifecycle Lifecycle { get; }
+
     /// <inheritdoc/>
-    public IEventSequences EventSequences { get; private set; }
+    public IEventSequences EventSequences
+    {
+        get
+        {
+            ConnectIfNotConnected();
+            return _eventSequences;
+        }
+    }
 
     /// <inheritdoc/>
     public void Dispose()
     {
         _channel?.Dispose();
+    }
+
+    void ConnectIfNotConnected()
+    {
+        if (!Lifecycle.IsConnected)
+        {
+            Connect().GetAwaiter().GetResult();
+        }
     }
 
     async Task Connect()
@@ -65,14 +77,14 @@ public class CratisConnection : ICratisConnection, IDisposable
         _lastKeepAlive = DateTimeOffset.UtcNow;
         _connectionService.Connect(new()
         {
-            ConnectionId = _connectionLifecycle.ConnectionId,
+            ConnectionId = Lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
         }).Subscribe(HandleConnection);
         HandleKeepAlive();
 
-        EventSequences = _channel.CreateGrpcService<IEventSequences>();
+        _eventSequences = _channel.CreateGrpcService<IEventSequences>();
 
-        await _connectionLifecycle.Connected();
+        await Lifecycle.Connected();
     }
 
     void HandleConnection(ConnectionKeepAlive keepAlive)
@@ -92,7 +104,7 @@ public class CratisConnection : ICratisConnection, IDisposable
                     var delta = DateTimeOffset.UtcNow.Subtract(_lastKeepAlive);
                     if (delta.TotalSeconds > 5)
                     {
-                        await _connectionLifecycle.Disconnected();
+                        await Lifecycle.Disconnected();
                         await Connect();
                     }
                 }

@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Connections;
-using Aksio.Cratis.Events;
+using Aksio.Cratis.Schemas;
+using Aksio.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis;
@@ -13,11 +15,12 @@ namespace Aksio.Cratis;
 /// </summary>
 public class CratisClient : ICratisClient, IDisposable
 {
-    readonly CratisOptions _settings;
+    readonly CratisOptions _options;
     readonly ICratisConnection? _connection;
-    readonly IEventTypes _eventTypes;
-    readonly IEventSerializer _eventSerializer;
     readonly ICausationManager _causationManager;
+    readonly IJsonSchemaGenerator _jsonSchemaGenerator;
+    readonly IComplianceMetadataResolver _complianceMetadataResolver;
+    readonly IConnectionLifecycle _connectionLifecycle;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CratisClient"/> class.
@@ -40,28 +43,18 @@ public class CratisClient : ICratisClient, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="CratisClient"/> class.
     /// </summary>
-    /// <param name="settings"><see cref="CratisOptions"/> to use.</param>
-    /// <param name="services">Optional <see cref="Services"/> configured.</param>
-    public CratisClient(CratisOptions settings, Services? services = null)
+    /// <param name="options"><see cref="CratisOptions"/> to use.</param>
+    public CratisClient(CratisOptions options)
     {
-        _settings = settings;
-        services = new Services(_settings.ArtifactsProvider);
-
-        _eventTypes = new EventTypes(_settings.ArtifactsProvider);
-        _eventSerializer = new EventSerializer(
-            settings.ArtifactsProvider,
-            settings.ServiceProvider,
-            _eventTypes,
-            settings.JsonSerializerOptions);
+        _options = options;
         _causationManager = new CausationManager();
-
+        _complianceMetadataResolver = new ComplianceMetadataResolver(
+            new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, options.ServiceProvider),
+            new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, options.ServiceProvider));
+        _jsonSchemaGenerator = new JsonSchemaGenerator(_complianceMetadataResolver);
+        _connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
         _connection = new CratisConnection(
-            _settings,
-            new ConnectionLifecycle(
-                new IParticipateInConnectionLifecycle[]
-                {
-                },
-                settings.LoggerFactory.CreateLogger<ConnectionLifecycle>()),
+            _connectionLifecycle,
             new Tasks.Tasks(),
             CancellationToken.None);
     }
@@ -69,19 +62,22 @@ public class CratisClient : ICratisClient, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        _connection?.Dispose();
     }
 
     /// <inheritdoc/>
     public IEventStore GetEventStore(EventStoreName name, TenantId? tenantId = null) =>
         new EventStore(
             name,
-            tenantId ?? TenantId.Development,
+            tenantId ?? TenantId.NotSet,
             _connection!,
-            _settings.ArtifactsProvider,
-            _eventTypes,
-            _eventSerializer,
+            _options.ArtifactsProvider,
             _causationManager,
-            _settings.IdentityProvider);
+            _options.IdentityProvider,
+            _jsonSchemaGenerator,
+            _options.ModelNameConvention,
+            _options.ServiceProvider,
+            _options.JsonSerializerOptions);
 
     /// <inheritdoc/>
     public IAsyncEnumerable<EventStoreName> ListEventStores(CancellationToken cancellationToken = default) => throw new NotImplementedException();

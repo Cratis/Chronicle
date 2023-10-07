@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Identities;
+using Aksio.Cratis.Models;
 using Aksio.Json;
 using Aksio.Types;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,7 @@ public class CratisOptions
     /// </summary>
     /// <param name="url"><see cref="CratisUrl"/> to use.</param>
     /// <param name="kernelConnectivity"><see cref="KernelConnectivity"/> to use.</param>
+    /// <param name="modelNameConvention">Optional <see cref="IModelNameConvention"/> to use.</param>
     /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/> to use. Will revert to default if not configured.</param>
     /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
     /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving instances of things like observers, reducers and other artifacts. Will revert to <see cref="DefaultServiceProvider"/> if not configured.</param>
@@ -28,6 +30,7 @@ public class CratisOptions
     public CratisOptions(
         CratisUrl url,
         KernelConnectivity kernelConnectivity,
+        IModelNameConvention? modelNameConvention = null,
         IIdentityProvider? identityProvider = null,
         JsonSerializerOptions? jsonSerializerOptions = null,
         IServiceProvider? serviceProvider = null,
@@ -36,6 +39,7 @@ public class CratisOptions
     {
         Url = url;
         KernelConnectivity = kernelConnectivity;
+        ModelNameConvention = modelNameConvention ?? new DefaultModelNameConvention();
         IdentityProvider = identityProvider ?? new BaseIdentityProvider();
         JsonSerializerOptions = jsonSerializerOptions ?? Globals.JsonSerializerOptions;
         LoggerFactory = loggerFactory ?? new LoggerFactory();
@@ -72,6 +76,11 @@ public class CratisOptions
     /// Gets the <see cref="IClientArtifactsProvider"/> to use.
     /// </summary>
     public IClientArtifactsProvider ArtifactsProvider { get; init; }
+
+    /// <summary>
+    /// Gets the <see cref="IModelNameConvention"/> to use.
+    /// </summary>
+    public IModelNameConvention ModelNameConvention { get; init; }
 
     /// <summary>
     /// Gets the <see cref="ILoggerFactory"/> to use internally in the client.

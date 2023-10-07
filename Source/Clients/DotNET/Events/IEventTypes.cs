@@ -9,6 +9,12 @@ namespace Aksio.Cratis.Events;
 public interface IEventTypes
 {
     /// <summary>
+    /// Discover and register all event types discovered from the entry assembly.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task RegisterKnownEventTypes();
+
+    /// <summary>
     /// Gets all the available event types.
     /// </summary>
     IEnumerable<EventType> All { get; }

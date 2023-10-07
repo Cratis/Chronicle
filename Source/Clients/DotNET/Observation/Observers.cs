@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Observation;
 
 namespace Aksio.Cratis.Observation;
@@ -11,20 +10,25 @@ namespace Aksio.Cratis.Observation;
 /// </summary>
 public class Observers : IObservers
 {
+    readonly IEventStore _eventStore;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
-    readonly IEventTypes _eventTypes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
+    /// <param name="eventStore"><see cref="IEventStore"/> the observers belong to.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving event types.</param>
     public Observers(
-        IClientArtifactsProvider clientArtifactsProvider,
-        IEventTypes eventTypes)
+        IEventStore eventStore,
+        IClientArtifactsProvider clientArtifactsProvider)
     {
+        _eventStore = eventStore;
+        eventStore.Connection.Lifecycle.OnConnected += () =>
+        {
+            Console.WriteLine("Hello world");
+            return Task.CompletedTask;
+        };
         _clientArtifactsProvider = clientArtifactsProvider;
-        _eventTypes = eventTypes;
     }
 
     /// <inheritdoc/>
@@ -49,7 +53,7 @@ public class Observers : IObservers
     public async Task<IEnumerable<ObserverInformation>> GetObserversForEventTypes(IEnumerable<Type> eventTypes)
     {
         var observers = await GetAllObservers();
-        var eventTypeIdentifiers = eventTypes.Select(_ => _eventTypes.GetEventTypeFor(_));
+        var eventTypeIdentifiers = eventTypes.Select(_ => _eventStore.EventTypes.GetEventTypeFor(_));
         return observers.Where(_ => _.EventTypes.Any(_ => eventTypeIdentifiers.Contains(_)));
     }
 }

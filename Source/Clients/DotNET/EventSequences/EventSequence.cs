@@ -57,7 +57,7 @@ public class EventSequence : IEventSequence
     {
         var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
         var content = await _eventSerializer.Serialize(@event);
-        var causationChain = _causationManager.GetCurrentChain().Select(_ => new Aksio.Cratis.Kernel.Contracts.Auditing.Causation
+        var causationChain = _causationManager.GetCurrentChain().Select(_ => new Kernel.Contracts.Auditing.Causation
         {
             Occurred = _.Occurred!,
             Type = _.Type,

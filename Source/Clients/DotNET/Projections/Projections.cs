@@ -17,25 +17,28 @@ namespace Aksio.Cratis.Projections;
 /// </summary>
 public class Projections : IProjections
 {
+    readonly IEventStore _eventStore;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
+    /// <param name="eventStore"><see cref="IEventStore"/> the projections belongs to.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="modelNameResolver">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public Projections(
-        IEventTypes eventTypes,
+        IEventStore eventStore,
         IClientArtifactsProvider clientArtifacts,
         IJsonSchemaGenerator schemaGenerator,
         IModelNameResolver modelNameResolver,
         IServiceProvider serviceProvider,
         JsonSerializerOptions jsonSerializerOptions)
     {
+        _eventStore = eventStore;
         Definitions = FindAllProjectionDefinitions(
-            eventTypes,
+            _eventStore.EventTypes,
             clientArtifacts,
             schemaGenerator,
             modelNameResolver,
@@ -45,6 +48,12 @@ public class Projections : IProjections
 
     /// <inheritdoc/>
     public IImmutableList<ProjectionDefinition> Definitions { get; }
+
+    /// <inheritdoc/>
+    public Task RegisterKnownProjections()
+    {
+        return Task.CompletedTask;
+    }
 
     IEnumerable<ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,

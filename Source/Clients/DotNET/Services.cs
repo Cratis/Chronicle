@@ -16,7 +16,6 @@ public class Services
     /// <param name="artifactsProvider"><see cref="IClientArtifactsProvider"/> for all artifacts.</param>
     public Services(IClientArtifactsProvider artifactsProvider)
     {
-        EventTypes = new EventTypes(artifactsProvider);
     }
 
     /// <summary>

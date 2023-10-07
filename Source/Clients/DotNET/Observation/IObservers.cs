@@ -6,12 +6,12 @@ using Aksio.Cratis.Kernel.Observation;
 namespace Aksio.Cratis.Observation;
 
 /// <summary>
-/// Defines a system for working with observers registered in the Kernel.
+/// Defines a system for working with observer registrations for the Kernel.
 /// </summary>
 public interface IObservers
 {
     /// <summary>
-    /// Discover and register all observers from the entry assembly.
+    /// Discover and register all observers discovered from the entry assembly.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task RegisterKnownObservers();

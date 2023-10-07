@@ -15,4 +15,10 @@ public interface IProjections
     /// Gets all the <see cref="ProjectionDefinition">projection definitions</see>.
     /// </summary>
     IImmutableList<ProjectionDefinition> Definitions { get; }
+
+    /// <summary>
+    /// Discover and register all reducers discovered from the entry assembly.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task RegisterKnownProjections();
 }

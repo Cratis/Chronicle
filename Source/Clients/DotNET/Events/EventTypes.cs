@@ -9,12 +9,14 @@ namespace Aksio.Cratis.Events;
 public class EventTypes : IEventTypes
 {
     readonly IDictionary<EventType, Type> _typesByEventType;
+    readonly IEventStore _eventStore;
 
     /// <summary>
     /// /// Initializes a new instance of <see cref="EventTypes"/>.
     /// </summary>
+    /// <param name="eventStore">The <see cref="IEventStore"/> the event types belong to.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-    public EventTypes(IClientArtifactsProvider clientArtifacts)
+    public EventTypes(IEventStore eventStore, IClientArtifactsProvider clientArtifacts)
     {
         var eventTypes = clientArtifacts.EventTypes.Select(_ => new
         {
@@ -31,10 +33,17 @@ public class EventTypes : IEventTypes
 
         _typesByEventType = eventTypes.ToDictionary(_ => _.EventType, _ => _.ClrType);
         All = eventTypes.Select(_ => _.EventType).ToArray();
+        _eventStore = eventStore;
     }
 
     /// <inheritdoc/>
     public IEnumerable<EventType> All { get; }
+
+    /// <inheritdoc/>
+    public Task RegisterKnownEventTypes()
+    {
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.Id == eventTypeId);

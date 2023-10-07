@@ -8,25 +8,29 @@ namespace Aksio.Cratis.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IConnectionLifecycle"/>.
 /// </summary>
-[Singleton]
 public class ConnectionLifecycle : IConnectionLifecycle
 {
-    readonly IEnumerable<IParticipateInConnectionLifecycle> _participants;
     readonly ILogger<ConnectionLifecycle> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionLifecycle"/>.
     /// </summary>
-    /// <param name="participants">The participants of the client lifecycle.</param>
     /// <param name="logger">Logger for logging.</param>
-    public ConnectionLifecycle(
-        IEnumerable<IParticipateInConnectionLifecycle> participants,
-        ILogger<ConnectionLifecycle> logger)
+    public ConnectionLifecycle(ILogger<ConnectionLifecycle> logger)
     {
-        _participants = participants;
         _logger = logger;
         ConnectionId = ConnectionId.New();
     }
+
+    /// <summary>
+    /// Adds or removes event handlers for when the connection is connected.
+    /// </summary>
+    public event Connected OnConnected = () => Task.CompletedTask;
+
+    /// <summary>
+    /// Adds or removes event handlers for when the connection is disconnected.
+    /// </summary>
+    public event Disconnected OnDisconnected = () => Task.CompletedTask;
 
     /// <inheritdoc/>
     public bool IsConnected { get; private set; }
@@ -38,34 +42,45 @@ public class ConnectionLifecycle : IConnectionLifecycle
     public async Task Connected()
     {
         IsConnected = true;
-        await Parallel.ForEachAsync(_participants, async (participant, _) =>
+
+        _logger.Connected();
+
+        var tasks = OnConnected.GetInvocationList().Select(_ => Task.Run(async () =>
         {
             try
             {
-                await new ValueTask(participant.ClientConnected());
+                await ((Connected)_).Invoke();
             }
             catch (Exception ex)
             {
-                _logger.ParticipantFailedDuringConnected(participant!.GetType().FullName ?? participant!.GetType().Name, ex);
+                _logger.FailureDuringConnected(ex);
             }
-        });
+        })).ToArray();
+
+        await Task.WhenAll(tasks);
     }
 
     /// <inheritdoc/>
     public async Task Disconnected()
     {
         IsConnected = false;
-        await Parallel.ForEachAsync(_participants, async (participant, _) =>
+
+        _logger.Disconnected();
+
+        var tasks = OnConnected.GetInvocationList().Select(_ => Task.Run(async () =>
         {
             try
             {
-                await new ValueTask(participant.ClientDisconnected());
+                await ((Disconnected)_).Invoke();
             }
             catch (Exception ex)
             {
-                _logger.ParticipantFailedDuringDisconnected(participant!.GetType().FullName ?? participant!.GetType().Name, ex);
+                _logger.FailureDuringDisconnected(ex);
             }
-        });
+        })).ToArray();
+
+        await Task.WhenAll(tasks);
+
         ConnectionId = ConnectionId.New();
     }
 }

@@ -9,6 +9,16 @@ namespace Aksio.Cratis.Connections;
 public interface IConnectionLifecycle
 {
     /// <summary>
+    /// Adds or removes event handlers for when the connection is connected.
+    /// </summary>
+    event Connected OnConnected;
+
+    /// <summary>
+    /// Adds or removes event handlers for when the connection is disconnected.
+    /// </summary>
+    event Disconnected OnDisconnected;
+
+    /// <summary>
     /// Gets whether or not the client is connected.
     /// </summary>
     bool IsConnected { get; }
