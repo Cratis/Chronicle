@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
+using System.Dynamic;
 using System.Reflection;
 using Aksio.Collections;
 using Aksio.Concepts;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Reflection;
 using Aksio.Reflection;
 
 namespace Aksio.Cratis.Changes;
@@ -71,7 +73,31 @@ public class ObjectComparer : IObjectComparer
                 continue;
             }
 
-            var propertyPath = currentPropertyPath + (type.IsEnumerable() ? $"[{key}]" : key);
+            var propertyPath = currentPropertyPath.AddProperty(key, type);
+            CompareValues(type, leftValue, rightValue, propertyPath, differences);
+        }
+    }
+
+    void CompareDictionaryValues(IEnumerable left, IEnumerable right, PropertyPath currentPropertyPath, List<PropertyDifference> differences)
+    {
+        var leftDictionary = left.GetKeyValuePairs().ToDictionary(_ => _.Key, _ => _.Value);
+        var rightDictionary = right.GetKeyValuePairs().ToDictionary(_ => _.Key, _ => _.Value);
+
+        var keys = leftDictionary.Keys.ToList();
+        keys.AddRange(rightDictionary.Keys);
+
+        foreach (var key in keys.Distinct())
+        {
+            var leftValue = leftDictionary!.ContainsKey(key) ? leftDictionary[key] : null;
+            var rightValue = rightDictionary!.ContainsKey(key) ? rightDictionary[key] : null;
+
+            var type = leftValue?.GetType() ?? rightValue?.GetType();
+            if (type is null)
+            {
+                continue;
+            }
+
+            var propertyPath = currentPropertyPath.AddProperty(key, type);
             CompareValues(type, leftValue, rightValue, propertyPath, differences);
         }
     }
@@ -85,9 +111,18 @@ public class ObjectComparer : IObjectComparer
         {
             differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
         }
-        else if (type.IsAssignableTo(typeof(IDictionary<string, object>)))
+        else if (type.IsAssignableTo(typeof(ExpandoObject)))
         {
             CompareDictionaryValues((leftValue as IDictionary<string, object>)!, (rightValue as IDictionary<string, object>)!, propertyPath, differences);
+        }
+        else if (type.IsDictionary())
+        {
+            var dictionaryDifferences = new List<PropertyDifference>();
+            CompareDictionaryValues((leftValue as IEnumerable)!, (rightValue as IEnumerable)!, propertyPath, dictionaryDifferences);
+            if (dictionaryDifferences.Count > 0)
+            {
+                differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+            }
         }
         else if (!type.IsPrimitive &&
           type != typeof(Guid) &&

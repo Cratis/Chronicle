@@ -26,13 +26,19 @@ public class Startup
 
     public void Configure(IApplicationBuilder app)
     {
+        var logger = app.ApplicationServices.GetRequiredService<ILogger<Startup>>();
+
         app.UseRouting();
         app.UseEndpoints(_ => _.MapGrpcService<Services.EventSequences.EventSequences>());
 
         app.UseWebSockets();
         app.UseCratis();
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
-        appLifetime.ApplicationStarted.Register(() => app.PerformBootProcedures());
+        appLifetime.ApplicationStarted.Register(() =>
+        {
+            logger.PerformingBootProcedures();
+            app.PerformBootProcedures();
+        });
         app.UseAksio();
     }
 }

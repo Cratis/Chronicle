@@ -56,4 +56,7 @@ public record TargetType(
     OtherType Reference,
     IEnumerable<OtherType> Children,
     IEnumerable<string> StringArray,
-    IEnumerable<int> IntArray);
+    IEnumerable<int> IntArray,
+    IDictionary<string, string> StringDictionary,
+    IDictionary<string, int> IntDictionary,
+    IDictionary<string, OtherType> ComplexTypeDictionary);

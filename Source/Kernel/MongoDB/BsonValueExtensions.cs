@@ -3,6 +3,7 @@
 
 using System.Collections;
 using System.Globalization;
+using Aksio.Cratis.Reflection;
 using Aksio.MongoDB;
 using Aksio.Types;
 using MongoDB.Bson;
@@ -26,6 +27,25 @@ public static class BsonValueExtensions
         if (input is null)
         {
             return BsonNull.Value;
+        }
+
+        if (input.GetType().IsDictionary())
+        {
+            var dictionaryType = input.GetType();
+            var keyType = dictionaryType.GetKeyType();
+            var valueType = dictionaryType.GetValueType();
+            var keyValuePairType = typeof(KeyValuePair<,>).MakeGenericType(keyType, valueType);
+            var keyProperty = keyValuePairType.GetProperty(nameof(KeyValuePair<object, object>.Key))!;
+            var valueProperty = keyValuePairType.GetProperty(nameof(KeyValuePair<object, object>.Value))!;
+
+            var dictionary = input as IEnumerable;
+            var document = new BsonDocument();
+            foreach (var keyValuePair in dictionary!)
+            {
+                var key = keyProperty.GetValue(keyValuePair)?.ToString() ?? string.Empty;
+                document[key] = ToBsonValue(valueProperty.GetValue(keyValuePair));
+            }
+            return document;
         }
 
         if (input.IsConcept())
