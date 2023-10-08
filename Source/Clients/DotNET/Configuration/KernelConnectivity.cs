@@ -9,6 +9,11 @@ namespace Aksio.Cratis.Configuration;
 public class KernelConnectivity
 {
     /// <summary>
+    /// Gets the default <see cref="KernelConnectivity"/> configuration.
+    /// </summary>
+    public static readonly KernelConnectivity Default = new() { SingleKernel = new() };
+
+    /// <summary>
     /// Gets or sets the <see cref="SingleKernel"/> to use.
     /// </summary>
     public SingleKernelOptions? SingleKernel { get; set; }

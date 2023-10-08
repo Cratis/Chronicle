@@ -99,9 +99,5 @@ public class CratisOptions
     /// </summary>
     /// <param name="url"><see cref="CratisUrl"/> to create from.</param>
     /// <returns>A new <see cref="CratisOptions"/>.</returns>
-    public static CratisOptions FromUrl(CratisUrl url) =>
-        new(url, new KernelConnectivity
-        {
-            SingleKernel = new SingleKernelOptions()
-        });
+    public static CratisOptions FromUrl(CratisUrl url) => new(url, KernelConnectivity.Default);
 }
