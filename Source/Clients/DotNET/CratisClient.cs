@@ -56,8 +56,8 @@ public class CratisClient : ICratisClient, IDisposable
         _connection = new CratisConnection(
             _connectionLifecycle,
             new Tasks.Tasks(),
-            CancellationToken.None,
-            options.LoggerFactory.CreateLogger<CratisConnection>());
+            options.LoggerFactory.CreateLogger<CratisConnection>(),
+            CancellationToken.None);
     }
 
     /// <inheritdoc/>

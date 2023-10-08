@@ -32,14 +32,14 @@ public class CratisConnection : ICratisConnection
     /// </summary>
     /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
     /// <param name="tasks"><see cref="ITasks"/> to create tasks with.</param>
-    /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
     /// <param name="logger">Logger for logging.</param>
+    /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public CratisConnection(
         IConnectionLifecycle connectionLifecycle,
         ITasks tasks,
-        CancellationToken cancellationToken,
-        ILogger<CratisConnection> logger)
+        ILogger<CratisConnection> logger,
+        CancellationToken cancellationToken)
     {
         GrpcClientFactory.AllowUnencryptedHttp2 = true;
         Lifecycle = connectionLifecycle;
