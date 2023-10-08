@@ -7,7 +7,9 @@ using Aksio.Cratis.Kernel.Contracts.Clients;
 using Aksio.Cratis.Kernel.Contracts.Events;
 using Aksio.Cratis.Kernel.Contracts.EventSequences;
 using Aksio.Cratis.Tasks;
+using Grpc.Core;
 using Grpc.Net.Client;
+using Grpc.Net.Client.Configuration;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc.Client;
 
@@ -82,7 +84,39 @@ public class CratisConnection : ICratisConnection
         _logger.Connecting();
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
-        _channel = GrpcChannel.ForAddress("http://localhost:35000");
+
+        var httpHandler = new SocketsHttpHandler
+        {
+            // ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+            KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+            KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+            EnableMultipleHttp2Connections = true
+        };
+
+        _channel = GrpcChannel.ForAddress(
+            "http://localhost:35000",
+            new GrpcChannelOptions
+            {
+                HttpHandler = httpHandler,
+                ServiceConfig = new ServiceConfig
+                {
+                    MethodConfigs = {
+                        new MethodConfig
+                        {
+                            Names = { MethodName.Default },
+                            RetryPolicy = new RetryPolicy
+                            {
+                                MaxAttempts = 5,
+                                InitialBackoff = TimeSpan.FromSeconds(1),
+                                MaxBackoff = TimeSpan.FromSeconds(10),
+                                BackoffMultiplier = 1.5,
+                                RetryableStatusCodes = { StatusCode.Unavailable }
+                            }
+                        }
+                    }
+                }
+            });
         _connectionService = _channel.CreateGrpcService<IConnectionService>();
 
         _lastKeepAlive = DateTimeOffset.UtcNow;

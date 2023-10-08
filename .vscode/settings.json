@@ -90,6 +90,7 @@
         "protobuf",
         "Referer",
         "Remindable",
+        "Retryable",
         "Swashbuckle",
         "tinycolor",
         "typeparam",
