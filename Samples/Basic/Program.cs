@@ -2,14 +2,20 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis;
+using Aksio.Cratis.Configuration;
 using Basic;
+using Microsoft.Extensions.Logging;
 
-using var client = new CratisClient("cratis://localhost:35000");
+using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+
+using var client = new CratisClient(
+        new CratisOptions(
+            new CratisUrl("cratis://localhost:35000"),
+            KernelConnectivity.Default,
+            loggerFactory: loggerFactory));
+
 var eventStore = client.GetEventStore(Guid.Empty.ToString());
-await eventStore.EventTypes.Discover();
-await eventStore.Observers.Discover();
-await eventStore.Reducers.Discover();
-await eventStore.Projections.Discover();
+await eventStore.DiscoverAll();
 await eventStore.EventLog.Append(
     eventSourceId: Guid.NewGuid(),
     new ItemAddedToCart(
