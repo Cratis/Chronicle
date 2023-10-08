@@ -6,6 +6,9 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Contracts.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
+using Aksio.Cratis.Kernel.Services.Auditing;
+using Aksio.Cratis.Kernel.Services.Events;
+using Aksio.Cratis.Kernel.Services.Identities;
 
 namespace Aksio.Cratis.Kernel.Services.EventSequences;
 
@@ -41,7 +44,7 @@ public class EventSequences : IEventSequences
         var eventSequence = GetEventSequence(request.EventStoreName, request.EventSequenceId, request.TenantId);
         await eventSequence.Append(
             request.EventSourceId,
-            new(request.EventType.Id, request.EventType.Generation),
+            request.EventType.ToKernel(),
             JsonSerializer.Deserialize<JsonNode>(request.Content, _jsonSerializerOptions)!.AsObject(),
             request.Causation.ToKernel(),
             request.Identity.ToKernel(),

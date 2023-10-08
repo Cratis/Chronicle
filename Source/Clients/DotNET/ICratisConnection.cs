@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Connections;
-using Aksio.Cratis.Kernel.Contracts.EventSequences;
 
 namespace Aksio.Cratis;
 
@@ -17,7 +16,7 @@ public interface ICratisConnection : IDisposable
     IConnectionLifecycle Lifecycle { get; }
 
     /// <summary>
-    /// Gets the <see cref="IEventSequences"/> service.
+    /// Gets the <see cref="IServices"/> available.
     /// </summary>
-    IEventSequences EventSequences { get; }
+    IServices Services { get; }
 }

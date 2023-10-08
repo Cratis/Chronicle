@@ -9,10 +9,16 @@ namespace Aksio.Cratis.Events;
 public interface IEventTypes
 {
     /// <summary>
-    /// Discover and register all event types discovered from the entry assembly.
+    /// Discover all event types from the entry assembly and dependencies.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Discover();
+
+    /// <summary>
+    /// Register all event types with the Cratis Kernel.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Register();
 
     /// <summary>
     /// Check if there is a registered <see cref="Type">Clr Type</see> for a specific <see cref="EventTypeId"/>.

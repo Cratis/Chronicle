@@ -1,6 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Contracts.Events;
+using Aksio.Cratis.Schemas;
+
 namespace Aksio.Cratis.Events;
 
 /// <summary>
@@ -10,19 +13,24 @@ public class EventTypes : IEventTypes
 {
     readonly IDictionary<EventType, Type> _typesByEventType = new Dictionary<EventType, Type>();
     readonly IEventStore _eventStore;
+    readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly IClientArtifactsProvider _clientArtifacts;
 
     /// <summary>
     /// /// Initializes a new instance of <see cref="EventTypes"/>.
     /// </summary>
     /// <param name="eventStore">The <see cref="IEventStore"/> the event types belong to.</param>
+    /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas from types.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     public EventTypes(
         IEventStore eventStore,
+        IJsonSchemaGenerator jsonSchemaGenerator,
         IClientArtifactsProvider clientArtifacts)
     {
         _eventStore = eventStore;
+        _jsonSchemaGenerator = jsonSchemaGenerator;
         _clientArtifacts = clientArtifacts;
+        eventStore.Connection.Lifecycle.OnConnected += async () => await Register();
     }
 
     /// <inheritdoc/>
@@ -47,6 +55,23 @@ public class EventTypes : IEventTypes
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task Register()
+    {
+        var registrations = _typesByEventType.Select(_ => new EventTypeRegistration
+        {
+            Type = _.Key.ToContract(),
+            FriendlyName = _.Value.Name,
+            Schema = _jsonSchemaGenerator.Generate(_.Value).ToJson()
+        }).ToList();
+
+        await _eventStore.Connection.Services.EventTypes.Register(new()
+        {
+            EventStoreName = _eventStore.EventStoreName,
+            Types = registrations
+        });
     }
 
     /// <inheritdoc/>

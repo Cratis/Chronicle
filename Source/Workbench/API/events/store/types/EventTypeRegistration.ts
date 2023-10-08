@@ -14,6 +14,6 @@ export class EventTypeRegistration {
     @field(String)
     friendlyName!: string;
 
-    @field(Object)
-    schema!: any;
+    @field(String)
+    schema!: string;
 }

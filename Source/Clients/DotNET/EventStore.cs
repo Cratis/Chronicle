@@ -56,8 +56,8 @@ public class EventStore : IEventStore
         _identityProvider = identityProvider;
         EventStoreName = eventStoreName;
         TenantId = tenantId;
-        EventTypes = new EventTypes(this, clientArtifactsProvider);
         Connection = connection;
+        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
 
         _eventSerializer = new EventSerializer(
             clientArtifactsProvider,

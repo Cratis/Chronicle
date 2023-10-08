@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Kernel.Contracts.Clients;
+using Aksio.Cratis.Kernel.Contracts.Events;
 using Aksio.Cratis.Kernel.Contracts.EventSequences;
 using Aksio.Cratis.Tasks;
 using Grpc.Net.Client;
@@ -21,7 +22,7 @@ public class CratisConnection : ICratisConnection
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
-    IEventSequences _eventSequences;
+    IServices _services;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CratisConnection"/> class.
@@ -42,15 +43,16 @@ public class CratisConnection : ICratisConnection
     }
 #pragma warning restore CS8618
 
+    /// <inheritdoc/>
     public IConnectionLifecycle Lifecycle { get; }
 
     /// <inheritdoc/>
-    public IEventSequences EventSequences
+    public IServices Services
     {
         get
         {
             ConnectIfNotConnected();
-            return _eventSequences;
+            return _services;
         }
     }
 
@@ -82,7 +84,9 @@ public class CratisConnection : ICratisConnection
         }).Subscribe(HandleConnection);
         HandleKeepAlive();
 
-        _eventSequences = _channel.CreateGrpcService<IEventSequences>();
+        _services = new Services(
+            _channel.CreateGrpcService<IEventSequences>(),
+            _channel.CreateGrpcService<IEventTypes>());
 
         await Lifecycle.Connected();
     }

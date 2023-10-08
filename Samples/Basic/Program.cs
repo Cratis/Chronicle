@@ -16,3 +16,8 @@ await eventStore.EventLog.Append(
         PersonId: new(Guid.NewGuid()),
         MaterialId: new(Guid.NewGuid()),
         Quantity: 1));
+
+
+Console.WriteLine("Press a key to exit...");
+
+Console.ReadKey();

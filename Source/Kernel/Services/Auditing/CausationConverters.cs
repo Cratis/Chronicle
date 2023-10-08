@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Auditing;
 
-namespace Aksio.Cratis.Kernel.Services.EventSequences;
+namespace Aksio.Cratis.Kernel.Services.Auditing;
 
 /// <summary>
 /// Extension methods for converting to and from <see cref="Causation"/>.

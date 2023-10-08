@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Identities;
 
-namespace Aksio.Cratis.Kernel.Services.EventSequences;
+namespace Aksio.Cratis.Kernel.Services.Identities;
 
 /// <summary>
 /// Extension methods for converting to and from <see cref="Identity"/>.

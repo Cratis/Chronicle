@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Reducers;
 public interface IReducers
 {
     /// <summary>
-    /// Discover and register all reducers discovered from the entry assembly.
+    /// Discover all reducers from the entry assembly and dependencies.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Discover();

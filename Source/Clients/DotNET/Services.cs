@@ -1,25 +1,16 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Contracts.Events;
+using Aksio.Cratis.Kernel.Contracts.EventSequences;
 
 namespace Aksio.Cratis;
 
 /// <summary>
-/// Represents services available for the client.
+/// Represents an implementation of <see cref="IServices"/>.
 /// </summary>
-public class Services
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Services"/> class.
-    /// </summary>
-    /// <param name="artifactsProvider"><see cref="IClientArtifactsProvider"/> for all artifacts.</param>
-    public Services(IClientArtifactsProvider artifactsProvider)
-    {
-    }
-
-    /// <summary>
-    /// Gets the <see cref="IEventTypes"/> available.
-    /// </summary>
-    public IEventTypes EventTypes { get; }
-}
+/// <param name="EventSequences"><see cref="IEventSequences"/> instance.</param>
+/// <param name="EventTypes"><see cref="IEventTypes"/> instance.</param>
+public record Services(
+    IEventSequences EventSequences,
+    IEventTypes EventTypes) : IServices;

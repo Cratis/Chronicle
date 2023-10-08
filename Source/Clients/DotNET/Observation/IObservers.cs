@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Observation;
 public interface IObservers
 {
     /// <summary>
-    /// Discover and register all observers discovered from the entry assembly.
+    /// Discover all observers from the entry assembly and dependencies.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Discover();

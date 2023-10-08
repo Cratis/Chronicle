@@ -14,6 +14,7 @@ public class Startup
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddCodeFirstGrpc();
+        services.AddGrpcServices();
         services.AddMongoDBReadModels();
         services.AddHttpClient(ConnectedClients.ConnectedClientsHttpClient).ConfigurePrimaryHttpMessageHandler(_ => new HttpClientHandler
         {
@@ -29,7 +30,7 @@ public class Startup
         var logger = app.ApplicationServices.GetRequiredService<ILogger<Startup>>();
 
         app.UseRouting();
-        app.UseEndpoints(_ => _.MapGrpcService<Services.EventSequences.EventSequences>());
+        app.MapGrpcServices();
 
         app.UseWebSockets();
         app.UseCratis();

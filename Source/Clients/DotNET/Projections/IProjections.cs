@@ -17,7 +17,7 @@ public interface IProjections
     IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
-    /// Discover and register all reducers discovered from the entry assembly.
+    /// Discover and register all reducers discovered from the entry assembly and dependencies.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Discover();

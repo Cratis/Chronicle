@@ -7,26 +7,26 @@ import { Validator } from '@aksio/applications/validation';
 import { EventTypeRegistration } from './EventTypeRegistration';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/types');
+const routeTemplate = Handlebars.compile('/api/events/store/{{eventStoreName}}/types');
 
 export interface IRegister {
-    microserviceId?: string;
+    eventStoreName?: string;
     types?: EventTypeRegistration[];
 }
 
 export class RegisterValidator extends CommandValidator {
     readonly properties: CommandPropertyValidators = {
-        microserviceId: new Validator(),
+        eventStoreName: new Validator(),
         types: new Validator(),
     };
 }
 
 export class Register extends Command<IRegister> implements IRegister {
-    readonly route: string = '/api/events/store/{{microserviceId}}/types';
+    readonly route: string = '/api/events/store/{{eventStoreName}}/types';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RegisterValidator();
 
-    private _microserviceId!: string;
+    private _eventStoreName!: string;
     private _types!: EventTypeRegistration[];
 
     constructor() {
@@ -35,24 +35,24 @@ export class Register extends Command<IRegister> implements IRegister {
 
     get requestArguments(): string[] {
         return [
-            'microserviceId',
+            'eventStoreName',
         ];
     }
 
     get properties(): string[] {
         return [
-            'microserviceId',
+            'eventStoreName',
             'types',
         ];
     }
 
-    get microserviceId(): string {
-        return this._microserviceId;
+    get eventStoreName(): string {
+        return this._eventStoreName;
     }
 
-    set microserviceId(value: string) {
-        this._microserviceId = value;
-        this.propertyChanged('microserviceId');
+    set eventStoreName(value: string) {
+        this._eventStoreName = value;
+        this.propertyChanged('eventStoreName');
     }
     get types(): EventTypeRegistration[] {
         return this._types;

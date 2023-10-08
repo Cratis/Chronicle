@@ -65,6 +65,7 @@ public class MongoDBSchemaStore : ISchemaStore
         var mongoEventSchema = eventSchema.ToMongoDB();
         schema.EnsureFlattenedProperties();
         _schemasByTypeAndGeneration[type.Id][type.Generation] = eventSchema;
+
         GetCollection().ReplaceOne(
             _ => _.Id == mongoEventSchema.Id,
             mongoEventSchema,

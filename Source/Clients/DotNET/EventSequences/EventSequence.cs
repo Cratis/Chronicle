@@ -64,7 +64,7 @@ public class EventSequence : IEventSequence
             Properties = _.Properties
         });
         var identity = _identityProvider.GetCurrent();
-        await _connection.EventSequences.Append(new()
+        await _connection.Services.EventSequences.Append(new()
         {
             EventStoreName = _eventStoreName,
             TenantId = _tenantId,
