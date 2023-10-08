@@ -101,7 +101,8 @@ public class CratisConnection : ICratisConnection
                 HttpHandler = httpHandler,
                 ServiceConfig = new ServiceConfig
                 {
-                    MethodConfigs = {
+                    MethodConfigs =
+                    {
                         new MethodConfig
                         {
                             Names = { MethodName.Default },
@@ -136,6 +137,7 @@ public class CratisConnection : ICratisConnection
 
     void HandleConnection(ConnectionKeepAlive keepAlive)
     {
+        Console.WriteLine("Keep alive from server");
         _lastKeepAlive = DateTimeOffset.UtcNow;
         _connectionService?.ConnectionKeepAlive(keepAlive);
     }
@@ -151,11 +153,12 @@ public class CratisConnection : ICratisConnection
                     var delta = DateTimeOffset.UtcNow.Subtract(_lastKeepAlive);
                     if (delta.TotalSeconds > 5)
                     {
-                        await Lifecycle.Disconnected();
-                        await Connect();
-                        return;
+                        break;
                     }
                 }
+
+                await Lifecycle.Disconnected();
+                await Connect();
             },
             _cancellationToken);
     }

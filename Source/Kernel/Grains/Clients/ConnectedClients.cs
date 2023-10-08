@@ -41,7 +41,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _metrics = _metricsFactory.Create(this.GetPrimaryKey());
+        _metrics = _metricsFactory.Create();
         RegisterTimer(ReviseConnectedClients, null!, TimeSpan.Zero, TimeSpan.FromSeconds(1));
 
         return Task.CompletedTask;
@@ -50,22 +50,15 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     /// <inheritdoc/>
     public async Task OnClientConnected(
         ConnectionId connectionId,
-        Uri clientUri,
         string version,
-        bool isRunningWithDebugger,
-        bool isMultiTenanted)
+        bool isRunningWithDebugger)
     {
-        var microserviceId = (MicroserviceId)this.GetPrimaryKey();
-
-        _logger.ClientConnected(microserviceId, connectionId);
-        State.Clients.Where(_ => _.ClientUri == clientUri).ToList().ForEach(_ => State.Clients.Remove(_));
+        _logger.ClientConnected(connectionId);
         State.Clients.Add(new ConnectedClient(
             connectionId,
-            clientUri,
             version,
             DateTimeOffset.UtcNow,
-            isRunningWithDebugger,
-            isMultiTenanted));
+            isRunningWithDebugger));
         _metrics?.SetConnectedClients(State.Clients.Count);
 
         await WriteStateAsync();
@@ -74,8 +67,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     /// <inheritdoc/>
     public async Task OnClientDisconnected(ConnectionId connectionId, string reason)
     {
-        var microserviceId = (MicroserviceId)this.GetPrimaryKey();
-        _logger.ClientDisconnected(microserviceId, connectionId, reason);
+        _logger.ClientDisconnected(connectionId, reason);
 
         var client = State.Clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
         if (client is not null)
@@ -94,7 +86,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         var client = State.Clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
         if (client is not null)
         {
-            State.Clients.Where(_ => _.ClientUri == client.ClientUri).ToList().ForEach(_ => State.Clients.Remove(_));
+            State.Clients.Remove(client);
             State.Clients.Add(client with { LastSeen = DateTimeOffset.UtcNow });
             await WriteStateAsync();
             return true;

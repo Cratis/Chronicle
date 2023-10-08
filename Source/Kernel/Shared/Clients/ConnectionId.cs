@@ -7,12 +7,18 @@ namespace Aksio.Cratis.Connections;
 /// Represents the unique identifier for a connection for a client.
 /// </summary>
 /// <param name="Value">Actual inner value.</param>
-public record ConnectionId(Guid Value) : ConceptAs<Guid>(Value)
+public record ConnectionId(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
     /// Represents a connection identifier that has not been set.
     /// </summary>
-    public static readonly ConnectionId NotSet = new(Guid.Empty);
+    public static readonly ConnectionId NotSet = new(string.Empty);
+
+    /// <summary>
+    /// Implicitly convert from <see cref="string"/> to <see cref="ConnectionId"/>.
+    /// </summary>
+    /// <param name="value">String to convert from.</param>
+    public static implicit operator ConnectionId(string value) => new(value);
 
     /// <summary>
     /// Implicitly convert from <see cref="ConnectionId"/> to <see cref="string"/>.
@@ -24,5 +30,5 @@ public record ConnectionId(Guid Value) : ConceptAs<Guid>(Value)
     /// Create a new unique <see cref="ConnectionId"/>.
     /// </summary>
     /// <returns>A new <see cref="ConnectionId"/>.</returns>
-    public static ConnectionId New() => new(Guid.NewGuid());
+    public static ConnectionId New() => new(Guid.NewGuid().ToString());
 }

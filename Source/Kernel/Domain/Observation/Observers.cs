@@ -59,9 +59,9 @@ public class Observers : Controller
         {
             var stopwatch = Stopwatch.StartNew();
 
-            var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
+            var connectedClients = _grainFactory.GetGrain<IConnectedClients>(0);
             var client = await connectedClients.GetConnectedClient(connectionId);
-            var tenants = client.IsMultiTenanted ? _configuration.Tenants.GetTenantIds() : new TenantId[] { TenantId.NotSet };
+            var tenants = _configuration.Tenants.GetTenantIds();
 
             var observers = _grainFactory.GetGrain<IClientObservers>(microserviceId);
             await observers.Register(connectionId, registrations, tenants);

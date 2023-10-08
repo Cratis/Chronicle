@@ -30,9 +30,9 @@ public class Startup
         var logger = app.ApplicationServices.GetRequiredService<ILogger<Startup>>();
 
         app.UseRouting();
+        app.UseWebSockets();
         app.MapGrpcServices();
 
-        app.UseWebSockets();
         app.UseCratis();
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
         appLifetime.ApplicationStarted.Register(() =>

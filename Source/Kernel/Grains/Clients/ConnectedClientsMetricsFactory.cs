@@ -19,5 +19,5 @@ public class ConnectedClientsMetricsFactory : IConnectedClientsMetricsFactory
     public ConnectedClientsMetricsFactory(Meter meter) => _meter = meter;
 
     /// <inheritdoc/>
-    public IConnectedClientsMetrics Create(MicroserviceId microserviceId) => new ConnectedClientsMetrics(_meter, microserviceId);
+    public IConnectedClientsMetrics Create() => new ConnectedClientsMetrics(_meter);
 }

@@ -13,7 +13,6 @@ public interface IConnectedClientsState
     /// <summary>
     /// Gets an observable with all the connected clients for specific microservice.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to get for.</param>
     /// <returns><see cref="IObservable{T}"/> of a collection of <see cref="ConnectedClient"/>.</returns>
-    IObservable<IEnumerable<ConnectedClient>> GetAllForMicroservice(MicroserviceId microserviceId);
+    IObservable<IEnumerable<ConnectedClient>> GetAll();
 }

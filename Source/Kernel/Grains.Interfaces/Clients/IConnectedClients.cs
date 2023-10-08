@@ -8,18 +8,16 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 /// <summary>
 /// Defines a system for tracking connected observers.
 /// </summary>
-public interface IConnectedClients : IGrainWithGuidKey
+public interface IConnectedClients : IGrainWithIntegerKey
 {
     /// <summary>
     /// Report that a client was connected.
     /// </summary>
     /// <param name="connectionId">The connection identifier.</param>
-    /// <param name="clientUri">The client uri.</param>
     /// <param name="version">The version of the client.</param>
     /// <param name="isRunningWithDebugger">Whether or not the client is running with debugger.</param>
-    /// <param name="isMultiTenanted">Whether or not the client is multi-tenanted.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnClientConnected(ConnectionId connectionId, Uri clientUri, string version, bool isRunningWithDebugger, bool isMultiTenanted);
+    Task OnClientConnected(ConnectionId connectionId, string version, bool isRunningWithDebugger);
 
     /// <summary>
     /// Report that a client was disconnected.

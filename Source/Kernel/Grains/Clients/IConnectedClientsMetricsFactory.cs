@@ -11,7 +11,6 @@ public interface IConnectedClientsMetricsFactory
     /// <summary>
     /// Create a new instance of <see cref="IConnectedClientsMetrics"/>.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to create for.</param>
     /// <returns>A <see cref="IConnectedClientsMetrics"/>.</returns>
-    IConnectedClientsMetrics Create(MicroserviceId microserviceId);
+    IConnectedClientsMetrics Create();
 }

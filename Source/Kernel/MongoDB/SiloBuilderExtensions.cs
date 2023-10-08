@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;
@@ -14,6 +13,7 @@ using Aksio.Cratis.Kernel.Observation;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Runtime;
 using Orleans.Storage;
+using ConnectedClientsState = Aksio.Cratis.Kernel.Grains.Clients.ConnectedClientsState;
 
 namespace Orleans.Hosting;
 
@@ -33,13 +33,13 @@ public static class SiloBuilderExtensions
         builder.AddMemoryGrainStorage("PubSubStore");
         builder.ConfigureServices(services =>
         {
-            services.AddSingletonNamedService<IGrainStorage>(EventSequenceState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<EventSequencesStorageProvider>());
-            services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<ObserverStorageProvider>());
-            services.AddSingletonNamedService<IGrainStorage>(ObserverState.CatchUpStorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<CatchUpStorageProvider>());
-            services.AddSingletonNamedService<IGrainStorage>(ObserverState.ReplayStorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<ReplayStorageProvider>());
-            services.AddSingletonNamedService<IGrainStorage>(RecoverFailedPartitionState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<RecoverFailedPartitionStorageProvider>());
-            services.AddSingletonNamedService<IGrainStorage>(TenantConfigurationState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
-            services.AddSingletonNamedService<IGrainStorage>(ConnectedClientsState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<ConnectedClientsStorageProvider>());
+            services.AddSingletonNamedService(EventSequenceState.StorageProvider, (Func<IServiceProvider, string, IGrainStorage>)((IServiceProvider serviceProvider, string _) => serviceProvider.GetRequiredService<EventSequencesStorageProvider>()));
+            services.AddSingletonNamedService(ObserverState.StorageProvider, (Func<IServiceProvider, string, IGrainStorage>)((IServiceProvider serviceProvider, string _) => serviceProvider.GetRequiredService<ObserverStorageProvider>()));
+            services.AddSingletonNamedService(ObserverState.CatchUpStorageProvider, (Func<IServiceProvider, string, IGrainStorage>)((IServiceProvider serviceProvider, string _) => serviceProvider.GetRequiredService<CatchUpStorageProvider>()));
+            services.AddSingletonNamedService(ObserverState.ReplayStorageProvider, (Func<IServiceProvider, string, IGrainStorage>)((IServiceProvider serviceProvider, string _) => serviceProvider.GetRequiredService<ReplayStorageProvider>()));
+            services.AddSingletonNamedService(RecoverFailedPartitionState.StorageProvider, (Func<IServiceProvider, string, IGrainStorage>)((IServiceProvider serviceProvider, string _) => serviceProvider.GetRequiredService<RecoverFailedPartitionStorageProvider>()));
+            services.AddSingletonNamedService(TenantConfigurationState.StorageProvider, (Func<IServiceProvider, string, IGrainStorage>)((IServiceProvider serviceProvider, string _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>()));
+            services.AddSingletonNamedService(ConnectedClientsState.StorageProvider, (Func<IServiceProvider, string, IGrainStorage>)((IServiceProvider serviceProvider, string _) => serviceProvider.GetRequiredService<ConnectedClientsStorageProvider>()));
         });
         builder.ConfigureServices(services => services.AddSingleton<IReminderTable, MongoDBReminderTable>());
         return builder;

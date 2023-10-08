@@ -4,10 +4,10 @@
 import { Route, Routes } from 'react-router-dom';
 import { Header } from './Header';
 import { Configuration } from './configuration/Configuration';
-import { Clients } from './clients/Clients';
 import { EventStore } from './eventStore/EventStore';
 import { Metrics } from './metrics/Metrics';
 import { Home } from './Home';
+import { ConnectedClients } from './clients/ConnectedClients';
 
 export const App = () => {
     return (
@@ -17,7 +17,7 @@ export const App = () => {
                 <Route path="/" element={<Home />} />
                 <Route path="/event-store/*" element={<EventStore />} />
                 <Route path="/metrics/*" element={<Metrics />} />
-                <Route path="/clients/*" element={<Clients />} />
+                <Route path="/clients" element={<ConnectedClients />} />
                 <Route path="/configuration/*" element={<Configuration />} />
             </Routes>
         </>

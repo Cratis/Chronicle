@@ -11,7 +11,7 @@ namespace Read.Clients;
 /// <summary>
 /// Represents the API for querying connected clients.
 /// </summary>
-[Route("/api/clients/{microserviceId}")]
+[Route("/api/clients")]
 public class ConnectedClients : Controller
 {
     readonly IConnectedClientsState _connectedClients;
@@ -28,14 +28,12 @@ public class ConnectedClients : Controller
     /// <summary>
     /// Get and observe all connected clients for a specific microservice.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to observe for.</param>
     /// <returns>Client observable of a collection of <see cref="ConnectedClient"/>.</returns>
     [HttpGet]
-    public Task<ClientObservable<IEnumerable<ConnectedClient>>> ConnectedClientsForMicroservice(
-        [FromRoute] MicroserviceId microserviceId)
+    public Task<ClientObservable<IEnumerable<ConnectedClient>>> AllConnectedClients()
     {
         var clientObservable = new ClientObservable<IEnumerable<ConnectedClient>>();
-        var observable = _connectedClients.GetAllForMicroservice(microserviceId);
+        var observable = _connectedClients.GetAll();
         var subscription = observable.Subscribe(_ => clientObservable.OnNext(_));
         clientObservable.ClientDisconnected = () =>
         {

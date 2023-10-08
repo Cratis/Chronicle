@@ -11,9 +11,6 @@ export class ConnectedClient {
     connectionId!: string;
 
     @field(String)
-    clientUri!: string;
-
-    @field(String)
     version!: string;
 
     @field(Date)
@@ -21,7 +18,4 @@ export class ConnectedClient {
 
     @field(Boolean)
     isRunningWithDebugger!: boolean;
-
-    @field(Boolean)
-    isMultiTenanted!: boolean;
 }

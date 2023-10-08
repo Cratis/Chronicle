@@ -15,23 +15,23 @@ namespace Aksio.Cratis.Kernel.MongoDB.Clients;
 /// </summary>
 public class MongoDBConnectedClientsState : IConnectedClientsState
 {
-    readonly ProviderFor<ISharedDatabase> _sharedDatabaseProvider;
+    readonly ProviderFor<IClusterDatabase> _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBConnectedClientsState"/> class.
     /// </summary>
-    /// <param name="sharedDatabaseProvider">Provider for <see cref="ISharedDatabase"/>.</param>
-    public MongoDBConnectedClientsState(ProviderFor<ISharedDatabase> sharedDatabaseProvider)
+    /// <param name="database">Provider for <see cref="ISharedDatabase"/>.</param>
+    public MongoDBConnectedClientsState(ProviderFor<IClusterDatabase> database)
     {
-        _sharedDatabaseProvider = sharedDatabaseProvider;
+        _database = database;
     }
 
-    IMongoCollection<MongoDBConnectedClientsForMicroserviceState> Collection => _sharedDatabaseProvider().GetCollection<MongoDBConnectedClientsForMicroserviceState>(CollectionNames.ConnectedClients);
+    IMongoCollection<ConnectedClientsState> Collection => _database().GetCollection<ConnectedClientsState>(CollectionNames.ConnectedClients);
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ConnectedClient>> GetAllForMicroservice(MicroserviceId microserviceId)
+    public IObservable<IEnumerable<ConnectedClient>> GetAll()
     {
-        var clients = GetClients(Collection.Find(_ => _.Id == microserviceId).SingleOrDefault());
+        var clients = GetClients(Collection.Find(_ => _.Id == 0).SingleOrDefault());
         var observable = new BehaviorSubject<IEnumerable<ConnectedClient>>(clients);
         var cursor = Collection.Watch();
         _ = Task.Run(async () =>
@@ -47,7 +47,7 @@ public class MongoDBConnectedClientsState : IConnectedClientsState
                     }
 
                     if (!cursor.Current.Any()) continue;
-                    var clients = await Collection.FindAsync(_ => _.Id == microserviceId);
+                    var clients = await Collection.FindAsync(_ => _.Id == 0);
                     if (!observable.IsDisposed)
                     {
                         observable.OnNext(GetClients(clients.SingleOrDefault()));
@@ -63,5 +63,5 @@ public class MongoDBConnectedClientsState : IConnectedClientsState
         return observable;
     }
 
-    IEnumerable<ConnectedClient> GetClients(MongoDBConnectedClientsForMicroserviceState microservice) => microservice?.Clients.OrderBy(_ => _.ConnectionId).AsEnumerable() ?? Array.Empty<ConnectedClient>();
+    IEnumerable<ConnectedClient> GetClients(ConnectedClientsState state) => state?.Clients.OrderBy(_ => _.ConnectionId).ToArray().AsEnumerable() ?? Array.Empty<ConnectedClient>();
 }

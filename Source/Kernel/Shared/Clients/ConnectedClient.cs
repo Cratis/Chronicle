@@ -7,9 +7,7 @@ namespace Aksio.Cratis.Connections;
 /// Represents the information related to a connected client.
 /// </summary>
 /// <param name="ConnectionId">The unique connection id.</param>
-/// <param name="ClientUri">The uri of the client.</param>
 /// <param name="Version">Version of the client.</param>
 /// <param name="LastSeen">The date and time the client was last seen.</param>
 /// <param name="IsRunningWithDebugger">Whether or not the client is running with debugger attached.</param>
-/// <param name="IsMultiTenanted">Whether or not the client is multi-tenanted.</param>
-public record ConnectedClient(ConnectionId ConnectionId, Uri ClientUri, string Version, DateTimeOffset LastSeen, bool IsRunningWithDebugger, bool IsMultiTenanted);
+public record ConnectedClient(ConnectionId ConnectionId, string Version, DateTimeOffset LastSeen, bool IsRunningWithDebugger);

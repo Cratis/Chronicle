@@ -3,6 +3,8 @@
 
 using System.Reactive.Subjects;
 using Aksio.Cratis.Kernel.Contracts.Clients;
+using Aksio.Cratis.Kernel.Grains.Clients;
+using ProtoBuf.Grpc;
 
 namespace Aksio.Cratis.Kernel.Services.Clients;
 
@@ -11,14 +13,59 @@ namespace Aksio.Cratis.Kernel.Services.Clients;
 /// </summary>
 public class ConnectionService : IConnectionService
 {
-    /// <inheritdoc/>
-    public IObservable<ConnectionKeepAlive> Connect(ConnectRequest request)
+    readonly IGrainFactory _grainFactory;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConnectionService"/> class.
+    /// </summary>
+    /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
+    public ConnectionService(IGrainFactory grainFactory)
     {
-        return new Subject<ConnectionKeepAlive>();
+        _grainFactory = grainFactory;
+    }
+
+    /// <inheritdoc/>
+    public IObservable<ConnectionKeepAlive> Connect(
+        ConnectRequest request,
+        CallContext context = default)
+    {
+        var connectedClients = _grainFactory.GetGrain<IConnectedClients>(0);
+        connectedClients.OnClientConnected(
+            request.ConnectionId,
+            request.ClientVersion,
+            request.IsRunningWithDebugger).GetAwaiter().GetResult();
+
+        var subject = new Subject<ConnectionKeepAlive>();
+
+        _ = Task.Run(async () =>
+        {
+            while (!context.CancellationToken.IsCancellationRequested)
+            {
+                Console.WriteLine("Ping client");
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
+                if (context.CancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                subject.OnNext(new ConnectionKeepAlive
+                {
+                    ConnectionId = request.ConnectionId
+                });
+            }
+
+            await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
+        });
+
+        return subject;
     }
 
     /// <inheritdoc/>
     public void ConnectionKeepAlive(ConnectionKeepAlive keepAlive)
     {
+        Console.WriteLine("Keep alive from client");
+        var connectedClients = _grainFactory.GetGrain<IConnectedClients>(0);
+        connectedClients.OnClientPing(keepAlive.ConnectionId).GetAwaiter().GetResult();
     }
 }

@@ -6,13 +6,10 @@ import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@a
 import { ConnectedClient } from './ConnectedClient';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/clients/{{microserviceId}}');
+const routeTemplate = Handlebars.compile('/api/clients');
 
-export interface ConnectedClientsForMicroserviceArguments {
-    microserviceId: string;
-}
-export class ConnectedClientsForMicroservice extends ObservableQueryFor<ConnectedClient[], ConnectedClientsForMicroserviceArguments> {
-    readonly route: string = '/api/clients/{{microserviceId}}';
+export class AllConnectedClients extends ObservableQueryFor<ConnectedClient[]> {
+    readonly route: string = '/api/clients';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ConnectedClient[] = [];
 
@@ -22,11 +19,10 @@ export class ConnectedClientsForMicroservice extends ObservableQueryFor<Connecte
 
     get requestArguments(): string[] {
         return [
-            'microserviceId',
         ];
     }
 
-    static use(args?: ConnectedClientsForMicroserviceArguments): [QueryResultWithState<ConnectedClient[]>] {
-        return useObservableQuery<ConnectedClient[], ConnectedClientsForMicroservice, ConnectedClientsForMicroserviceArguments>(ConnectedClientsForMicroservice, args);
+    static use(): [QueryResultWithState<ConnectedClient[]>] {
+        return useObservableQuery<ConnectedClient[], AllConnectedClients>(AllConnectedClients);
     }
 }

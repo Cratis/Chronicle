@@ -1,11 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ConnectedClientsForMicroservice } from 'API/clients/ConnectedClientsForMicroservice';
-import { useRouteParams } from '../eventStore/RouteParams';
 import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid';
-import { Box } from '@mui/material';
+import { Box, Paper } from '@mui/material';
 import { ConnectedClient } from 'API/clients/ConnectedClient';
+import { AllConnectedClients } from 'API/clients/AllConnectedClients';
 
 const columns: GridColDef[] = [
     {
@@ -39,18 +38,19 @@ const columns: GridColDef[] = [
 ];
 
 export const ConnectedClients = () => {
-    const { microserviceId } = useRouteParams();
-    const [connectedClients] = ConnectedClientsForMicroservice.use({ microserviceId });
+    const [connectedClients] = AllConnectedClients.use();
 
     return (
-        <Box sx={{ height: '100%', flex: 1 }}>
-            <DataGrid
-                columns={columns}
-                filterMode="client"
-                sortingMode="client"
-                getRowId={(row: ConnectedClient) => row.connectionId}
-                rows={connectedClients.data}
-            />
-        </Box>
+        <Paper elevation={0} sx={{ height: '100%', padding: '24px' }}>
+            <Box sx={{ height: '100%', flex: 1 }}>
+                <DataGrid
+                    columns={columns}
+                    filterMode="client"
+                    sortingMode="client"
+                    getRowId={(row: ConnectedClient) => row.connectionId}
+                    rows={connectedClients.data}
+                />
+            </Box>
+        </Paper>
     );
 };

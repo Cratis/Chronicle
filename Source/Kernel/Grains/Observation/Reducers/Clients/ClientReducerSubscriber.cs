@@ -70,7 +70,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
         _jsonSerializerOptions = jsonSerializerOptions;
     }
 
-    IConnectedClients ConnectedClientsGrain => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(_microserviceId);
+    IConnectedClients ConnectedClientsGrain => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(0);
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -90,6 +90,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
+        /*
         foreach (var @event in events)
         {
             _logger.EventReceived(
@@ -160,5 +161,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
         }
 
         return new ObserverSubscriberResult(ObserverSubscriberState.Disconnected, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
+        */
+        throw new NotImplementedException();
     }
 }

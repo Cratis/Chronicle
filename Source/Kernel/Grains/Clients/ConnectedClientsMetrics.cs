@@ -19,10 +19,9 @@ public class ConnectedClientsMetrics : IConnectedClientsMetrics
     /// Initializes a new instance of <see cref="ConnectedClientsMetrics"/>.
     /// </summary>
     /// <param name="meter">Meter for the Kernel.</param>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to track for.</param>
-    public ConnectedClientsMetrics(Meter meter, MicroserviceId microserviceId)
+    public ConnectedClientsMetrics(Meter meter)
     {
-        _connectedClients = meter.CreateObservableGauge($"cratis-connected-clients-{microserviceId}", () => _connectedClientsCount, description: "Number of connected clients");
+        _connectedClients = meter.CreateObservableGauge($"cratis-connected-clients", () => _connectedClientsCount, description: "Number of connected clients");
     }
 
     /// <inheritdoc/>

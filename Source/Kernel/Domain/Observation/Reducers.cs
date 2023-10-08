@@ -54,9 +54,9 @@ public class Reducers : Controller
 
         _ = Task.Run(async () =>
         {
-            var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
+            var connectedClients = _grainFactory.GetGrain<IConnectedClients>(0);
             var client = await connectedClients.GetConnectedClient(connectionId);
-            var tenants = client.IsMultiTenanted ? _configuration.Tenants.GetTenantIds() : new TenantId[] { TenantId.NotSet };
+            var tenants = _configuration.Tenants.GetTenantIds();
 
             var reducers = _grainFactory.GetGrain<IClientReducers>(microserviceId);
             await reducers.Register(connectionId, definitions, tenants);

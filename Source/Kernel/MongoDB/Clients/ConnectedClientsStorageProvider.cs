@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Connections;
-using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
 using Orleans.Runtime;
@@ -26,7 +25,7 @@ public class ConnectedClientsStorageProvider : IGrainStorage
         _database = database;
     }
 
-    IMongoCollection<MongoDBConnectedClientsForMicroserviceState> Collection => _database.GetCollection<MongoDBConnectedClientsForMicroserviceState>(CollectionNames.ConnectedClients);
+    IMongoCollection<ConnectedClientsState> Collection => _database.GetCollection<ConnectedClientsState>(CollectionNames.ConnectedClients);
 
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
@@ -34,12 +33,11 @@ public class ConnectedClientsStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var actualGrainState = (grainState as IGrainState<ConnectedClientsState>)!;
-        var microserviceId = (MicroserviceId)grainId.GetGuidKey();
-        var cursor = await Collection.FindAsync(_ => _.Id == microserviceId).ConfigureAwait(false);
+        var actualGrainState = (grainState as IGrainState<Grains.Clients.ConnectedClientsState>)!;
+        var cursor = await Collection.FindAsync(_ => _.Id == 0).ConfigureAwait(false);
         var mongoState = await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
 
-        actualGrainState.State = new ConnectedClientsState
+        actualGrainState.State = new Grains.Clients.ConnectedClientsState
         {
             Clients = new List<ConnectedClient>(mongoState?.Clients ?? Enumerable.Empty<ConnectedClient>())
         };
@@ -48,10 +46,9 @@ public class ConnectedClientsStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var actualGrainState = (grainState as IGrainState<ConnectedClientsState>)!;
-        var microserviceId = (MicroserviceId)grainId.GetGuidKey();
+        var actualGrainState = (grainState as IGrainState<Grains.Clients.ConnectedClientsState>)!;
         var state = actualGrainState.State;
-        var mongoState = new MongoDBConnectedClientsForMicroserviceState(microserviceId, state.Clients);
-        await Collection.ReplaceOneAsync(_ => _.Id == microserviceId, mongoState, options: new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+        var mongoState = new ConnectedClientsState(0, state.Clients);
+        await Collection.ReplaceOneAsync(_ => _.Id == 0, mongoState, options: new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 }
