@@ -57,7 +57,13 @@ public interface IEventStore
     /// <summary>
     /// Gets the <see cref="IProjections"/> for the event store.
     /// </summary>
-    IProjections Projections { get; }
+    IProjections Projections { get; }
+
+    /// <summary>
+    /// Discover all artifacts for the event store.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task DiscoverAll();
 
     /// <summary>
     /// Get an event sequence by id.

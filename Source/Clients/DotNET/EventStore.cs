@@ -101,7 +101,7 @@ public class EventStore : IEventStore
     public TenantId TenantId { get; }
 
     /// <inheritdoc/>
-    public ICratisConnection Connection { get; }
+    public ICratisConnection Connection { get; }
 
     /// <inheritdoc/>
     public IEventTypes EventTypes { get; }
@@ -120,6 +120,16 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IProjections Projections { get; }
+
+    /// <inheritdoc/>
+    public Task DiscoverAll()
+    {
+        return Task.WhenAll(
+            EventTypes.Discover(),
+            Observers.Discover(),
+            Reducers.Discover(),
+            Projections.Discover());
+    }
 
     /// <inheritdoc/>
     public IEventSequence GetEventSequence(EventSequenceId id) =>
