@@ -11,6 +11,7 @@ using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Reducers;
 using Aksio.Cratis.Schemas;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis;
 
@@ -38,6 +39,7 @@ public class EventStore : IEventStore
     /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+    /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStore(
         EventStoreName eventStoreName,
         TenantId tenantId,
@@ -48,7 +50,8 @@ public class EventStore : IEventStore
         IJsonSchemaGenerator schemaGenerator,
         IModelNameConvention modelNameConvention,
         IServiceProvider serviceProvider,
-        JsonSerializerOptions jsonSerializerOptions)
+        JsonSerializerOptions jsonSerializerOptions,
+        ILoggerFactory loggerFactory)
     {
         _eventStoreName = eventStoreName;
         _tenantId = tenantId;
@@ -83,7 +86,15 @@ public class EventStore : IEventStore
             causationManager,
             identityProvider);
 
-        Observers = new Observers(this, clientArtifactsProvider);
+        Observers = new Observers(
+            this,
+            clientArtifactsProvider,
+            serviceProvider,
+            new ObserverMiddlewares(clientArtifactsProvider, serviceProvider),
+            _eventSerializer,
+            causationManager,
+            loggerFactory);
+
         Reducers = new Reducers.Reducers(this, clientArtifactsProvider);
         Projections = new Projections.Projections(
             this,

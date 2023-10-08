@@ -17,6 +17,19 @@ public interface IObservers
     Task Discover();
 
     /// <summary>
+    /// Register all observers with the Cratis Kernel.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Register();
+
+    /// <summary>
+    /// Gets a specific handler by its <see cref="ObserverId"/>.
+    /// </summary>
+    /// <param name="id"><see cref="ObserverId"/> to get for.</param>
+    /// <returns><see cref="ObserverHandler"/> instance.</returns>
+    ObserverHandler GetHandlerById(ObserverId id);
+
+    /// <summary>
     /// Get all observers for specific event types.
     /// </summary>
     /// <param name="eventTypes">Collection of types representing events to get for.</param>

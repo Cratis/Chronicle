@@ -11,16 +11,16 @@ namespace Aksio.Cratis.Observation;
 /// </summary>
 public class ClientObservers : IClientObservers
 {
-    readonly IObserversRegistrar _observers;
+    readonly IObservers _observers;
     readonly ILogger<ClientObservers> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientObservers"/> class.
     /// </summary>
-    /// <param name="observers">The <see cref="IObserversRegistrar"/> in the system.</param>
+    /// <param name="observers">The <see cref="IObservers"/> in the system.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientObservers(
-        IObserversRegistrar observers,
+        IObservers observers,
         ILogger<ClientObservers> logger)
     {
         _observers = observers;
@@ -37,7 +37,7 @@ public class ClientObservers : IClientObservers
         foreach (var @event in events)
         {
             _logger.EventReceived(@event.Metadata.Type.Id, observerId);
-            var handler = _observers.GetById(observerId);
+            var handler = _observers.GetHandlerById(observerId);
             if (handler is not null)
             {
                 await handler.OnNext(@event);

@@ -56,7 +56,8 @@ public class CratisClient : ICratisClient, IDisposable
         _connection = new CratisConnection(
             _connectionLifecycle,
             new Tasks.Tasks(),
-            CancellationToken.None);
+            CancellationToken.None,
+            options.LoggerFactory.CreateLogger<CratisConnection>());
     }
 
     /// <inheritdoc/>
@@ -77,7 +78,8 @@ public class CratisClient : ICratisClient, IDisposable
             _jsonSchemaGenerator,
             _options.ModelNameConvention,
             _options.ServiceProvider,
-            _options.JsonSerializerOptions);
+            _options.JsonSerializerOptions,
+            _options.LoggerFactory);
 
     /// <inheritdoc/>
     public IAsyncEnumerable<EventStoreName> ListEventStores(CancellationToken cancellationToken = default) => throw new NotImplementedException();

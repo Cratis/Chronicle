@@ -28,6 +28,7 @@ public static class GrpcServiceRegistrations
         {
             _.MapGrpcService<Services.EventSequences.EventSequences>();
             _.MapGrpcService<Services.Events.EventTypes>();
+            _.MapGrpcService<Services.Clients.ConnectionService>();
         });
     }
 }

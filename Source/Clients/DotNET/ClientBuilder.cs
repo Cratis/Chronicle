@@ -176,7 +176,6 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton(Globals.JsonSerializerOptions)
             .AddSingleton<IConnectionLifecycle, ConnectionLifecycle>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
-            .AddSingleton<IObserversRegistrar, ObserversRegistrar>()
             .AddTransient<IClientObservers, ClientObservers>()
             .AddSingleton<IReducersRegistrar, ReducersRegistrar>()
             .AddSingleton<IReducerValidator, ReducerValidator>()
