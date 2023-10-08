@@ -30,7 +30,7 @@ public class EventTypes : IEventTypes
         _eventStore = eventStore;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _clientArtifacts = clientArtifacts;
-        eventStore.Connection.Lifecycle.OnConnected += async () => await Register();
+        eventStore.Connection.Lifecycle.OnConnected += Register;
     }
 
     /// <inheritdoc/>
