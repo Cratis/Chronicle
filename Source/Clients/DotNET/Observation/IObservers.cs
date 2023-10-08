@@ -14,7 +14,7 @@ public interface IObservers
     /// Discover and register all observers discovered from the entry assembly.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task RegisterKnownObservers();
+    Task Discover();
 
     /// <summary>
     /// Get all observers for specific event types.

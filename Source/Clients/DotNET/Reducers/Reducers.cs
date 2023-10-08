@@ -23,5 +23,5 @@ public class Reducers : IReducers
     }
 
     /// <inheritdoc/>
-    public Task RegisterKnownReducers() => Task.CompletedTask;
+    public Task Discover() => Task.CompletedTask;
 }

@@ -12,12 +12,7 @@ public interface IEventTypes
     /// Discover and register all event types discovered from the entry assembly.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task RegisterKnownEventTypes();
-
-    /// <summary>
-    /// Gets all the available event types.
-    /// </summary>
-    IEnumerable<EventType> All { get; }
+    Task Discover();
 
     /// <summary>
     /// Check if there is a registered <see cref="Type">Clr Type</see> for a specific <see cref="EventTypeId"/>.

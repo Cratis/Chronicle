@@ -20,5 +20,5 @@ public interface IProjections
     /// Discover and register all reducers discovered from the entry assembly.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task RegisterKnownProjections();
+    Task Discover();
 }

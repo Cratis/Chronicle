@@ -8,17 +8,27 @@ namespace Aksio.Cratis.Events;
 /// </summary>
 public class EventTypes : IEventTypes
 {
-    readonly IDictionary<EventType, Type> _typesByEventType;
+    readonly IDictionary<EventType, Type> _typesByEventType = new Dictionary<EventType, Type>();
     readonly IEventStore _eventStore;
+    readonly IClientArtifactsProvider _clientArtifacts;
 
     /// <summary>
     /// /// Initializes a new instance of <see cref="EventTypes"/>.
     /// </summary>
     /// <param name="eventStore">The <see cref="IEventStore"/> the event types belong to.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-    public EventTypes(IEventStore eventStore, IClientArtifactsProvider clientArtifacts)
+    public EventTypes(
+        IEventStore eventStore,
+        IClientArtifactsProvider clientArtifacts)
     {
-        var eventTypes = clientArtifacts.EventTypes.Select(_ => new
+        _eventStore = eventStore;
+        _clientArtifacts = clientArtifacts;
+    }
+
+    /// <inheritdoc/>
+    public Task Discover()
+    {
+        var eventTypes = _clientArtifacts.EventTypes.Select(_ => new
         {
             ClrType = _,
             EventType = _.GetEventType()
@@ -31,17 +41,11 @@ public class EventTypes : IEventTypes
             throw new MultipleEventTypesWithSameIdFound(clrTypes);
         }
 
-        _typesByEventType = eventTypes.ToDictionary(_ => _.EventType, _ => _.ClrType);
-        All = eventTypes.Select(_ => _.EventType).ToArray();
-        _eventStore = eventStore;
-    }
+        foreach (var eventType in eventTypes)
+        {
+            _typesByEventType[eventType.EventType] = eventType.ClrType;
+        }
 
-    /// <inheritdoc/>
-    public IEnumerable<EventType> All { get; }
-
-    /// <inheritdoc/>
-    public Task RegisterKnownEventTypes()
-    {
         return Task.CompletedTask;
     }
 

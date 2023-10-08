@@ -32,7 +32,7 @@ public class Observers : IObservers
     }
 
     /// <inheritdoc/>
-    public Task RegisterKnownObservers()
+    public Task Discover()
     {
         return Task.CompletedTask;
     }

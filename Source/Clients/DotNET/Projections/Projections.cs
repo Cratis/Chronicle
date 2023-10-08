@@ -50,7 +50,7 @@ public class Projections : IProjections
     public IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <inheritdoc/>
-    public Task RegisterKnownProjections()
+    public Task Discover()
     {
         return Task.CompletedTask;
     }
