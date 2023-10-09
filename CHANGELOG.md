@@ -1,3 +1,11 @@
+# [v9.5.4] - 2023-10-9 [PR: #985](https://github.com/aksio-insurtech/Cratis/pull/985)
+
+### Fixed
+
+- Removing a `console.log()` from the workbench when looking at event details.
+- Fixing rehydration of projections to not activate projections that are marked as non active (`IsActive=false`)
+
+
 # [v9.5.3] - 2023-10-6 [PR: #983](https://github.com/aksio-insurtech/Cratis/pull/983)
 
 ### Fixed
