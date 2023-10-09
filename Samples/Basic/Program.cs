@@ -8,10 +8,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
-//builder.UseCratis();
-builder.UseCratis(_ => _
-    .ForMicroservice("cd51c091-3bba-4608-87a8-93da1f88c4dd", "Basic Sample")
-    .MultiTenanted());
+builder.UseCratis();
+// builder.UseCratis(_ => _
+//     .ForMicroservice("cd51c091-3bba-4608-87a8-93da1f88c4dd", "Basic Sample")
+//     .MultiTenanted());
 
 builder.Services.AddTransient<CartReducer>();
 var app = builder.Build();
