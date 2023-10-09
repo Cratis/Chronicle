@@ -186,6 +186,12 @@ jobs:
           key: ${{ env.DOTNET_X64_CACHE }}
 
       - uses: actions/cache@v3
+        id: dotnet-arm64-output
+        with:
+          path: ./Source/Kernel/Server/out/arm64
+          key: ${{ env.DOTNET_ARM64_CACHE }}
+
+      - uses: actions/cache@v3
         id: workbench-output
         with:
           path: ./Source/Workbench/wwwroot
@@ -212,6 +218,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
           file: ./Docker/Production/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             aksioinsurtech/cratis:${{ needs.release.outputs.version }}

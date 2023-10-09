@@ -15,12 +15,16 @@ RUN echo Version = ${VERSION}
 
 EXPOSE 80 11111 30000
 
-COPY ./Source/Kernel/Server/out/x64/*.dll .
-COPY ./Source/Kernel/Server/out/x64/*.json .
-COPY ./Source/Kernel/Server/out/x64/*.so .
-COPY ./Source/Kernel/Server/out/x64/Aksio.Cratis.Kernel.Server .
+COPY Docker/copy-server-files.sh ./copy-server-files.sh
+RUN chmod +x ./copy-server-files.sh
+
+COPY ./Source/Kernel/Server/out ./out
 COPY ./Source/Workbench/wwwroot wwwroot
 
+RUN echo $PWD
+RUN ./copy-server-files.sh
+
+RUN rm appsettings.Development.json
 RUN rm ./cratis.json
 
 ENTRYPOINT ["./Aksio.Cratis.Kernel.Server"]
