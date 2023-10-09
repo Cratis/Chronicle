@@ -85,6 +85,26 @@ public class CratisConnection : ICratisConnection
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
 
+        _channel = CreateGrpcChannel();
+        _connectionService = _channel.CreateGrpcService<IConnectionService>();
+
+        _lastKeepAlive = DateTimeOffset.UtcNow;
+        _keepAliveSubscription = _connectionService.Connect(new()
+        {
+            ConnectionId = Lifecycle.ConnectionId,
+            IsRunningWithDebugger = Debugger.IsAttached,
+        }).Subscribe(HandleConnection);
+        StartWatchDog();
+
+        _services = new Services(
+            _channel.CreateGrpcService<IEventSequences>(),
+            _channel.CreateGrpcService<IEventTypes>());
+
+        await Lifecycle.Connected();
+    }
+
+    GrpcChannel CreateGrpcChannel()
+    {
         var httpHandler = new SocketsHttpHandler
         {
             // ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
@@ -94,7 +114,7 @@ public class CratisConnection : ICratisConnection
             EnableMultipleHttp2Connections = true
         };
 
-        _channel = GrpcChannel.ForAddress(
+        return GrpcChannel.ForAddress(
             "http://localhost:35000",
             new GrpcChannelOptions
             {
@@ -118,26 +138,10 @@ public class CratisConnection : ICratisConnection
                     }
                 }
             });
-        _connectionService = _channel.CreateGrpcService<IConnectionService>();
-
-        _lastKeepAlive = DateTimeOffset.UtcNow;
-        _keepAliveSubscription = _connectionService.Connect(new()
-        {
-            ConnectionId = Lifecycle.ConnectionId,
-            IsRunningWithDebugger = Debugger.IsAttached,
-        }).Subscribe(HandleConnection);
-        StartWatchDog();
-
-        _services = new Services(
-            _channel.CreateGrpcService<IEventSequences>(),
-            _channel.CreateGrpcService<IEventTypes>());
-
-        await Lifecycle.Connected();
     }
 
     void HandleConnection(ConnectionKeepAlive keepAlive)
     {
-        Console.WriteLine("Keep alive from server");
         _lastKeepAlive = DateTimeOffset.UtcNow;
         _connectionService?.ConnectionKeepAlive(keepAlive);
     }

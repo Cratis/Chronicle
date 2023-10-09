@@ -41,7 +41,6 @@ public class ConnectionService : IConnectionService
         {
             while (!context.CancellationToken.IsCancellationRequested)
             {
-                Console.WriteLine("Ping client");
                 await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
 
                 if (context.CancellationToken.IsCancellationRequested)
@@ -64,7 +63,6 @@ public class ConnectionService : IConnectionService
     /// <inheritdoc/>
     public void ConnectionKeepAlive(ConnectionKeepAlive keepAlive)
     {
-        Console.WriteLine("Keep alive from client");
         var connectedClients = _grainFactory.GetGrain<IConnectedClients>(0);
         connectedClients.OnClientPing(keepAlive.ConnectionId).GetAwaiter().GetResult();
     }
