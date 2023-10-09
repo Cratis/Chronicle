@@ -10,11 +10,6 @@ const columns: GridColDef[] = [
     {
         headerName: 'Id',
         field: 'connectionId',
-        width: 250
-    },
-    {
-        headerName: 'Client Uri',
-        field: 'clientUri',
         width: 300
     },
     {
