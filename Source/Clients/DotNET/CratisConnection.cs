@@ -6,6 +6,7 @@ using Aksio.Cratis.Connections;
 using Aksio.Cratis.Kernel.Contracts.Clients;
 using Aksio.Cratis.Kernel.Contracts.Events;
 using Aksio.Cratis.Kernel.Contracts.EventSequences;
+using Aksio.Cratis.Kernel.Contracts.Observation;
 using Aksio.Cratis.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -98,7 +99,8 @@ public class CratisConnection : ICratisConnection
 
         _services = new Services(
             _channel.CreateGrpcService<IEventSequences>(),
-            _channel.CreateGrpcService<IEventTypes>());
+            _channel.CreateGrpcService<IEventTypes>(),
+            _channel.CreateGrpcService<IObservers>());
 
         await Lifecycle.Connected();
     }

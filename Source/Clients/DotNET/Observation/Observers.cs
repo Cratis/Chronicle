@@ -1,11 +1,13 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using System.Reflection;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Kernel.Contracts.Observation;
 using Microsoft.Extensions.Logging;
+using ObserverInformation = Aksio.Cratis.Kernel.Observation.ObserverInformation;
 
 namespace Aksio.Cratis.Observation;
 
@@ -83,6 +85,10 @@ public class Observers : IObservers
     /// <inheritdoc/>
     public Task Register()
     {
+        foreach (var handler in _handlers.Values)
+        {
+            RegisterObserver(handler);
+        }
         return Task.CompletedTask;
     }
 
@@ -120,5 +126,32 @@ public class Observers : IObservers
         {
             throw new UnknownObserverId(observerId);
         }
+    }
+
+    void RegisterObserver(ObserverHandler handler)
+    {
+        var registration = new RegisterObserver
+        {
+            EventStoreName = _eventStore.EventStoreName,
+            TenantId = _eventStore.TenantId,
+            EventSequenceId = handler.EventSequenceId.ToString(),
+            ObserverId = handler.ObserverId.ToString(),
+            ObserverName = handler.Name,
+            EventTypes = handler.EventTypes.Select(_ => _.ToContract()).ToArray()
+        };
+        var messages = new BehaviorSubject<ObserverClientMessage>(new(new(registration)));
+
+        Console.WriteLine($"Hello - {registration.ObserverId}");
+        var eventsToObserve = _eventStore.Connection.Services.Observers.Observe(messages);
+        eventsToObserve.Subscribe(async events =>
+        {
+            Console.WriteLine("hello");
+            var result = new ObservationResult
+            {
+                State = ObservationState.Success
+            };
+            messages.OnNext(new(new(result)));
+            await Task.CompletedTask;
+        });
     }
 }

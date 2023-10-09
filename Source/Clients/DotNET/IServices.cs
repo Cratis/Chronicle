@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Kernel.Contracts.Events;
 using Aksio.Cratis.Kernel.Contracts.EventSequences;
+using Aksio.Cratis.Kernel.Contracts.Observation;
 
 namespace Aksio.Cratis;
 
@@ -20,4 +21,9 @@ public interface IServices
     /// Gets the <see cref="IEventTypes"/> service.
     /// </summary>
     IEventTypes EventTypes { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IObservers"/>  service.
+    /// </summary>
+    IObservers Observers { get; }
 }

@@ -31,8 +31,20 @@ public class RegisterObserver
     public string EventSequenceId { get; set; }
 
     /// <summary>
-    /// Gets or sets a collection of event types to observe.
+    /// Gets or sets the observer identifier.
     /// </summary>
     [ProtoMember(4)]
+    public string ObserverId { get; set; } = Guid.NewGuid().ToString();
+
+    /// <summary>
+    /// Gets or sets the observer name.
+    /// </summary>
+    [ProtoMember(5)]
+    public string ObserverName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a collection of event types to observe.
+    /// </summary>
+    [ProtoMember(6)]
     public IList<EventType> EventTypes { get; set; } = new List<EventType>();
 }

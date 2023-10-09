@@ -42,14 +42,3 @@ public class CartReducer : IReducerFor<Cart>
         });
     }
 }
-
-/*
-Client
-- If no explicit keys are defined, use event source id as key
-
-Kernel:
-- Key definitions are for all observer types
-- Support Bulk operations for all observers (Optionally implemented by observers)
-- Support running reducers in parallel - fan out based on key (partitioning)
-    - This involves changing partitioning for observers
-*/

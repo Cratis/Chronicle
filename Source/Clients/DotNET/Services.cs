@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Kernel.Contracts.Events;
 using Aksio.Cratis.Kernel.Contracts.EventSequences;
+using Aksio.Cratis.Kernel.Contracts.Observation;
 
 namespace Aksio.Cratis;
 
@@ -11,6 +12,8 @@ namespace Aksio.Cratis;
 /// </summary>
 /// <param name="EventSequences"><see cref="IEventSequences"/> instance.</param>
 /// <param name="EventTypes"><see cref="IEventTypes"/> instance.</param>
+/// <param name="Observers"><see cref="IObservers"/> instance.</param>
 public record Services(
     IEventSequences EventSequences,
-    IEventTypes EventTypes) : IServices;
+    IEventTypes EventTypes,
+    IObservers Observers) : IServices;
