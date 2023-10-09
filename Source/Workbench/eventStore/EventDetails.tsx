@@ -202,7 +202,6 @@ const PropertiesFor = (props: { propertyPath: string, value: any, schemaOrType: 
                     const fullPropertyPath = props.propertyPath === '' ? item : `${props.propertyPath}.${item}`;
                     const key = `${fullPropertyPath}`;
                     const propertyType = getPropertyType(fullPropertyPath, props.value);
-                    console.log(key);
 
                     if (propertyType === PropertyType.Object) {
                         return (
