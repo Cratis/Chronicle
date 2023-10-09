@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="OneOf" />
       <PackageReference Include="protobuf-net.Grpc" />
       <PackageReference Include="Aksio.Fundamentals" />
     </ItemGroup>
