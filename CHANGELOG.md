@@ -1,3 +1,11 @@
+# [v9.5.7] - 2023-10-10 [PR: #986](https://github.com/aksio-insurtech/Cratis/pull/986)
+
+### Fixed
+
+- Adding package referenced assemblies to default artifacts discovery so that we get types from the Cratis SDK, e.g. `EventRedacted` event type.
+- Register system event types, e.g. `EventRedacted` in all event stores.
+
+
 # [v9.5.6] - 2023-10-9 [PR: #0]()
 
 No release notes
