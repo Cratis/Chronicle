@@ -9,17 +9,27 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// Represents an implementation of <see cref="IJob{TRequest}"/>.
 /// </summary>
 /// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
+/// <typeparam name="TJobState">Type of state for the job.</typeparam>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Jobs)]
-public abstract class Job<TRequest> : Grain<JobState>, IJob<TRequest>
+public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest>
+    where TJobState : JobState
 {
+    /// <inheritdoc/>
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        StatusChanged(JobStatus.Started);
+        await WriteStateAsync();
+    }
+
     /// <inheritdoc/>
     public abstract Task Start(TRequest request);
 
     /// <inheritdoc/>
-    public Task Stop() => throw new NotImplementedException();
-
-    /// <inheritdoc/>
-    public Task ReportStepProgress(JobStepId stepId, JobStepProgress progress) => throw new NotImplementedException();
+    public async Task Stop()
+    {
+        StatusChanged(JobStatus.Stopped);
+        await WriteStateAsync();
+    }
 
     /// <inheritdoc/>
     public virtual Task OnCompleted() => Task.CompletedTask;
@@ -27,7 +37,6 @@ public abstract class Job<TRequest> : Grain<JobState>, IJob<TRequest>
     /// <inheritdoc/>
     public async Task OnStepSuccessful(JobStepId stepId)
     {
-        State.Steps.Remove(stepId);
         State.Progress.SuccessfulSteps++;
 
         await WriteStateAsync();
@@ -40,9 +49,6 @@ public abstract class Job<TRequest> : Grain<JobState>, IJob<TRequest>
     /// <inheritdoc/>
     public async Task OnStepFailed(JobStepId stepId)
     {
-        var step = State.Steps[stepId];
-        State.Steps.Remove(stepId);
-        State.FailedSteps[stepId] = step;
         State.Progress.FailedSteps++;
 
         await WriteStateAsync();
@@ -62,10 +68,6 @@ public abstract class Job<TRequest> : Grain<JobState>, IJob<TRequest>
         var jobStepId = JobStepId.New();
         var jobStep = GrainFactory.GetGrain<TJobStep>(jobStepId);
         await jobStep.Start(this.GetGrainId(), request);
-        State.Steps[jobStepId] = new JobStepState
-        {
-            Status = JobStepStatus.Running
-        };
         State.Progress.TotalSteps++;
     }
 
@@ -75,6 +77,25 @@ public abstract class Job<TRequest> : Grain<JobState>, IJob<TRequest>
         {
             await GrainFactory.GetGrain<IJobsManager>(0).OnCompleted(this.GetPrimaryKey());
             await OnCompleted();
+
+            if (State.Progress.FailedSteps > 0)
+            {
+                StatusChanged(JobStatus.CompletedWithFailures);
+            }
+            else
+            {
+                StatusChanged(JobStatus.Completed);
+            }
         }
+    }
+
+    void StatusChanged(JobStatus status)
+    {
+        State.StatusChanges.Add(new JobStatusChanged
+        {
+            Status = status,
+            Occurred = DateTimeOffset.UtcNow
+        });
+        State.Status = status;
     }
 }

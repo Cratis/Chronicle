@@ -14,9 +14,9 @@ public enum JobStepStatus
     None = 0,
 
     /// <summary>
-    /// The job step has not started.
+    /// The job step has been scheduled to start.
     /// </summary>
-    NotStarted = 1,
+    Scheduled = 1,
 
     /// <summary>
     /// The job step is running.
@@ -26,7 +26,7 @@ public enum JobStepStatus
     /// <summary>
     /// The job step is completed.
     /// </summary>
-    Completed = 3,
+    Succeeded = 3,
 
     /// <summary>
     /// The job step failed.

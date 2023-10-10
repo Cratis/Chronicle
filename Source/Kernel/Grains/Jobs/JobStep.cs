@@ -11,16 +11,25 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// Represents an implementation of <see cref="IJobStep{TRequest}"/>.
 /// </summary>
 /// <typeparam name="TRequest">Type of request for the step.</typeparam>
-public abstract class JobStep<TRequest> : SyncWorker<TRequest, object>, IJobStep<TRequest>
+/// <typeparam name="TState">Type of state for the step.</typeparam>
+public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, IJobStep<TRequest>
+    where TState : JobStepState
 {
+    readonly IPersistentState<TState> _state;
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="JobStep{TRequest}"/> class.
+    /// Initializes a new instance of the <see cref="JobStep{TRequest, TState}"/> class.
     /// </summary>
+    /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
     /// <param name="taskScheduler"><see cref="LimitedConcurrencyLevelTaskScheduler"/> to use for scheduling.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    protected JobStep(LimitedConcurrencyLevelTaskScheduler taskScheduler, ILogger logger) : base(logger, taskScheduler)
+    protected JobStep(
+        [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)] IPersistentState<TState> state,
+        LimitedConcurrencyLevelTaskScheduler taskScheduler,
+        ILogger logger) : base(logger, taskScheduler)
     {
         Job = new NullJob();
+        _state = state;
     }
 
     /// <summary>
@@ -38,6 +47,8 @@ public abstract class JobStep<TRequest> : SyncWorker<TRequest, object>, IJobStep
     {
         Job = GrainFactory.GetGrain(jobId).AsReference<IJob>();
 
+        StatusChanged(JobStepStatus.Running);
+        await _state.WriteStateAsync();
         await PrepareStep(request);
         await Start(request);
     }
@@ -62,16 +73,32 @@ public abstract class JobStep<TRequest> : SyncWorker<TRequest, object>, IJobStep
     /// <inheritdoc/>
     protected override async Task<object> PerformWork(TRequest request)
     {
+        StatusChanged(JobStepStatus.Running);
+        await _state.WriteStateAsync();
+
         var result = await PerformStep(request);
         if (result)
         {
             await Job.OnStepSuccessful(JobStepId);
+            StatusChanged(JobStepStatus.Succeeded);
         }
         else
         {
             await Job.OnStepFailed(JobStepId);
+            StatusChanged(JobStepStatus.Failed);
         }
 
+        await _state.WriteStateAsync();
         return "OK";
+    }
+
+    void StatusChanged(JobStepStatus status)
+    {
+        _state.State.StatusChanges.Add(new JobStepStatusChanged
+        {
+            Status = status,
+            Occurred = DateTimeOffset.UtcNow
+        });
+        _state.State.Status = status;
     }
 }

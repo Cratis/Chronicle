@@ -14,27 +14,22 @@ public enum JobStatus
     None = 0,
 
     /// <summary>
-    /// The job has been created.
-    /// </summary>
-    Created = 1,
-
-    /// <summary>
     /// The job has been started.
     /// </summary>
-    Started = 2,
+    Started = 1,
 
     /// <summary>
     /// The job has been completed.
     /// </summary>
-    Completed = 3,
+    Completed = 2,
 
     /// <summary>
-    /// The job has completed with failure.
+    /// The job has completed with failures.
     /// </summary>
-    CompletedWithFailure = 4,
+    CompletedWithFailures = 3,
 
     /// <summary>
     /// The job has been cancelled.
     /// </summary>
-    Cancelled = 5
+    Stopped = 4
 }

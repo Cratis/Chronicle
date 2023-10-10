@@ -36,6 +36,7 @@ public static class SiloBuilderExtensions
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.TenantConfiguration, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.ConnectedClients, (serviceProvider, _) => serviceProvider.GetRequiredService<ConnectedClientsStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.Jobs, (serviceProvider, _) => serviceProvider.GetRequiredService<JobGrainStorageProvider>());
+            services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.JobSteps, (serviceProvider, _) => serviceProvider.GetRequiredService<JobStepGrainStorageProvider>());
         });
         builder.ConfigureServices(services => services.AddSingleton<IReminderTable, MongoDBReminderTable>());
         return builder;

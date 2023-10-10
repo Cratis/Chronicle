@@ -15,14 +15,6 @@ public interface IJob : IGrainWithGuidKey
     Task Stop();
 
     /// <summary>
-    /// Report progress of a job step.
-    /// </summary>
-    /// <param name="stepId"><see cref="JobStepId"/> to report on.</param>
-    /// <param name="progress">The progress to report.</param>
-    /// <returns>Awaitable task.</returns>
-    Task ReportStepProgress(JobStepId stepId, JobStepProgress progress);
-
-    /// <summary>
     /// Report a successful completion of a job step.
     /// </summary>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was completed.</param>

@@ -7,6 +7,7 @@ using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
+using Orleans.Runtime;
 using Orleans.SyncWork;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
@@ -14,7 +15,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a step in a replay job.
 /// </summary>
-public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArguments>, IHandleEventsForPartition
+public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionState>, IHandleEventsForPartition
 {
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
@@ -24,15 +25,17 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
     /// <summary>
     /// Initializes a new instance of the <see cref="HandleEventsForPartition"/> class.
     /// </summary>
+    /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="taskScheduler"><see cref="LimitedConcurrencyLevelTaskScheduler"/> to use for scheduling.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public HandleEventsForPartition(
+        [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)] IPersistentState<HandleEventsForPartitionState> state,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         IExecutionContextManager executionContextManager,
         LimitedConcurrencyLevelTaskScheduler taskScheduler,
-        ILogger<HandleEventsForPartition> logger) : base(taskScheduler, logger)
+        ILogger<HandleEventsForPartition> logger) : base(state, taskScheduler, logger)
     {
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _executionContextManager = executionContextManager;

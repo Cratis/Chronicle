@@ -10,4 +10,10 @@ namespace Aksio.Cratis.Kernel.Keys;
 /// </summary>
 /// <param name="Value">The actual key value.</param>
 /// <param name="ArrayIndexers">Any array indexers.</param>
-public record Key(object Value, ArrayIndexers ArrayIndexers);
+public record Key(object Value, ArrayIndexers ArrayIndexers)
+{
+    /// <summary>
+    /// Gets the <see cref="Key"/> representing an unset key.
+    /// </summary>
+    public static readonly Key Undefined = new(null!, ArrayIndexers.NoIndexers);
+}

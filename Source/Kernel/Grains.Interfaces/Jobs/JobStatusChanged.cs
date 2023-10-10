@@ -4,9 +4,9 @@
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
-/// Holds the state of a <see cref="IJob{TRequest}"/>.
+/// Represents a status change event that occurred for a <see cref="IJob{TRequest}"/>.
 /// </summary>
-public class JobState
+public class JobStatusChanged
 {
     /// <summary>
     /// Gets or sets the <see cref="JobStatus"/>.
@@ -14,12 +14,7 @@ public class JobState
     public JobStatus Status { get; set; }
 
     /// <summary>
-    /// Gets or sets collection of status changes that happened to the job.
+    /// Gets or sets when the event occurred.
     /// </summary>
-    public IList<JobStatusChanged> StatusChanges { get; set; } = new List<JobStatusChanged>();
-
-    /// <summary>
-    /// Gets or sets the <see cref="JobProgress"/>.
-    /// </summary>
-    public JobProgress Progress { get; set; } = new();
+    public DateTimeOffset Occurred { get; set; }
 }

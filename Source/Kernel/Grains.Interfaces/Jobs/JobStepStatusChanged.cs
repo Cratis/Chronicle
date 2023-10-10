@@ -4,14 +4,14 @@
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
-/// Represents an event that occurred for a <see cref="IJob{TRequest}"/>.
+/// Represents a state change event.
 /// </summary>
-public class JobEvent
+public class JobStepStatusChanged
 {
     /// <summary>
-    /// Gets or sets the <see cref="JobStatus"/>.
+    /// Gets or sets the <see cref="JobStepStatus"/>.
     /// </summary>
-    public JobStatus Status { get; set; }
+    public JobStepStatus Status { get; set; }
 
     /// <summary>
     /// Gets or sets when the event occurred.

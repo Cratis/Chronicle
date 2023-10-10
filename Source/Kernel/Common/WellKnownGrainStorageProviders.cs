@@ -37,4 +37,9 @@ public static class WellKnownGrainStorageProviders
     /// THe name of the storage provider used for jobs.
     /// </summary>
     public const string Jobs = "job-state";
+
+    /// <summary>
+    /// THe name of the storage provider used for jobs.
+    /// </summary>
+    public const string JobSteps = "job-step-state";
 }

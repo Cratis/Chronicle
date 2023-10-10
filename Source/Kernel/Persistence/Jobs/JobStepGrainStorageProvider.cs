@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Persistence.Jobs;
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling job state storage.
 /// </summary>
-public class JobGrainStorageProvider : IGrainStorage
+public class JobStepGrainStorageProvider : IGrainStorage
 {
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
