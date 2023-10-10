@@ -10,7 +10,6 @@ namespace Aksio.Cratis.Kernel.Persistence.Jobs;
 /// </summary>
 /// <typeparam name="TJobState">Type of <see cref="JobState"/> to store.</typeparam>
 public interface IJobStorage<TJobState>
-    where TJobState : JobState
 {
     /// <summary>
     /// Read the state of a job.

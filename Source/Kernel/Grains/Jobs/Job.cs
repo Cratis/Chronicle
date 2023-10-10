@@ -75,7 +75,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         if (State.Progress.IsCompleted)
         {
-            await GrainFactory.GetGrain<IJobsManager>(0).OnCompleted(this.GetPrimaryKey());
+            var id = this.GetPrimaryKey(out var keyExtension);
+            var key = (JobKey)keyExtension!;
+            await GrainFactory.GetGrain<IJobsManager>(0).OnCompleted(key.MicroserviceId, key.TenantId, id);
             await OnCompleted();
 
             if (State.Progress.FailedSteps > 0)

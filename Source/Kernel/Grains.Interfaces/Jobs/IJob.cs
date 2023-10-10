@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// <summary>
 /// Represents a job that typically runs as long running with <see cref="IJobStep{TRequest}"/>.
 /// </summary>
-public interface IJob : IGrainWithGuidKey
+public interface IJob : IGrainWithGuidCompoundKey
 {
     /// <summary>
     /// Stop a running job.

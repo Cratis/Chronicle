@@ -21,6 +21,12 @@ public record JobId(Guid Value) : ConceptAs<Guid>(Value)
     public static implicit operator JobId(Guid value) => new(value);
 
     /// <summary>
+    /// Implicitly convert from <see cref="string"/> to <see cref="JobId"/>.
+    /// </summary>
+    /// <param name="value">String representation of a <see cref="Guid"/>.</param>
+    public static implicit operator JobId(string value) => new(Guid.Parse(value));
+
+    /// <summary>
     /// Create a new unique <see cref="JobId"/>.
     /// </summary>
     /// <returns><see cref="JobId"/> created.</returns>

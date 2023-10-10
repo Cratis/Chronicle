@@ -18,8 +18,8 @@ public abstract class EventLogJob : BenchmarkJob
     {
         SetExecutionContext();
 
-        Database?.DropCollection(CollectionNames.EventLog);
-        Database?.DropCollection(CollectionNames.EventSequences);
+        Database?.DropCollection(WellKnownCollectionNames.EventLog);
+        Database?.DropCollection(WellKnownCollectionNames.EventSequences);
     }
 
     protected override void Setup()

@@ -17,7 +17,7 @@ public class ClientReducerJob : BenchmarkJob
     {
         SetExecutionContext();
 
-        Database?.DropCollection(CollectionNames.Observers);
+        Database?.DropCollection(WellKnownCollectionNames.Observers);
     }
 
     protected override void Setup()

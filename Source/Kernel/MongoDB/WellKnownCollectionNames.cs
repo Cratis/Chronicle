@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.MongoDB;
 /// <summary>
 /// Internal class for holding all collection names.
 /// </summary>
-public static class CollectionNames
+public static class WellKnownCollectionNames
 {
     /// <summary>
     /// The collection that holds <see cref="Event"/>.
@@ -70,4 +70,19 @@ public static class CollectionNames
     /// The collection that holds identities.
     /// </summary>
     public const string Identities = "identities";
+
+    /// <summary>
+    /// The collection that holds jobs.
+    /// </summary>
+    public const string Jobs = "jobs";
+
+    /// <summary>
+    /// The collection that holds job steps.
+    /// </summary>
+    public const string JobSteps = "job-steps";
+
+    /// <summary>
+    /// The collection that holds failed job steps.
+    /// </summary>
+    public const string FailedJobSteps = "failed-job-steps";
 }

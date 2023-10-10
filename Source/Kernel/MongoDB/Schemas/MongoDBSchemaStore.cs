@@ -132,7 +132,7 @@ public class MongoDBSchemaStore : ISchemaStore
         return Task.FromResult(schemas.Count == 1);
     }
 
-    IMongoCollection<EventSchemaMongoDB> GetCollection() => _sharedDatabase.GetCollection<EventSchemaMongoDB>(CollectionNames.Schemas);
+    IMongoCollection<EventSchemaMongoDB> GetCollection() => _sharedDatabase.GetCollection<EventSchemaMongoDB>(WellKnownCollectionNames.Schemas);
 
     FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(EventTypeId type, EventGeneration? generation) => Builders<EventSchemaMongoDB>.Filter.And(
                    Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Value),

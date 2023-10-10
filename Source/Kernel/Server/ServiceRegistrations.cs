@@ -14,9 +14,11 @@ using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.MongoDB.Clients;
 using Aksio.Cratis.Kernel.MongoDB.EventSequences;
 using Aksio.Cratis.Kernel.MongoDB.Identities;
+using Aksio.Cratis.Kernel.MongoDB.Jobs;
 using Aksio.Cratis.Kernel.MongoDB.Keys;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.MongoDB.Projections;
+using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Aksio.Cratis.Kernel.Persistence.Observation;
 using Autofac;
 
@@ -43,5 +45,6 @@ public class ServiceRegistrations : Module
         builder.RegisterType<MongoDBConnectedClientsState>().As<IConnectedClientsState>().SingleInstance();
         builder.RegisterType<MongoDBIdentityStore>().As<IIdentityStore>().InstancePerTenant();
         builder.RegisterType<MongoDBObserverKeyIndexes>().As<IObserverKeyIndexes>().InstancePerTenant();
+        builder.RegisterGeneric(typeof(MongoDBJobStorage<>)).As(typeof(IJobStorage<>)).InstancePerMicroservice();
     }
 }

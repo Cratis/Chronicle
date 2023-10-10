@@ -56,24 +56,24 @@ public class EventStoreDatabase : IEventStoreDatabase
     }
 
     /// <inheritdoc/>
-    public IMongoCollection<ObserverState> GetObserverStateCollection() => GetCollection<ObserverState>(CollectionNames.Observers);
+    public IMongoCollection<ObserverState> GetObserverStateCollection() => GetCollection<ObserverState>(WellKnownCollectionNames.Observers);
 
     string GetCollectionNameFor(EventSequenceId eventSequenceId)
     {
-        var collectionName = CollectionNames.EventLog;
+        var collectionName = WellKnownCollectionNames.EventLog;
         if (!eventSequenceId.IsEventLog)
         {
             if (eventSequenceId == EventSequenceId.SystemId)
             {
-                collectionName = CollectionNames.System;
+                collectionName = WellKnownCollectionNames.System;
             }
             else if (eventSequenceId.IsOutbox)
             {
-                collectionName = CollectionNames.Outbox;
+                collectionName = WellKnownCollectionNames.Outbox;
             }
             else
             {
-                collectionName = CollectionNames.Inbox;
+                collectionName = WellKnownCollectionNames.Inbox;
             }
         }
 

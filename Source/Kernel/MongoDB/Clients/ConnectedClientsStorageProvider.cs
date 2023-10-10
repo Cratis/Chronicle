@@ -26,7 +26,7 @@ public class ConnectedClientsStorageProvider : IGrainStorage
         _database = database;
     }
 
-    IMongoCollection<MongoDBConnectedClientsForMicroserviceState> Collection => _database.GetCollection<MongoDBConnectedClientsForMicroserviceState>(CollectionNames.ConnectedClients);
+    IMongoCollection<MongoDBConnectedClientsForMicroserviceState> Collection => _database.GetCollection<MongoDBConnectedClientsForMicroserviceState>(WellKnownCollectionNames.ConnectedClients);
 
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;

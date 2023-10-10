@@ -26,7 +26,7 @@ public class MongoDBConnectedClientsState : IConnectedClientsState
         _sharedDatabaseProvider = sharedDatabaseProvider;
     }
 
-    IMongoCollection<MongoDBConnectedClientsForMicroserviceState> Collection => _sharedDatabaseProvider().GetCollection<MongoDBConnectedClientsForMicroserviceState>(CollectionNames.ConnectedClients);
+    IMongoCollection<MongoDBConnectedClientsForMicroserviceState> Collection => _sharedDatabaseProvider().GetCollection<MongoDBConnectedClientsForMicroserviceState>(WellKnownCollectionNames.ConnectedClients);
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<ConnectedClient>> GetAllForMicroservice(MicroserviceId microserviceId)

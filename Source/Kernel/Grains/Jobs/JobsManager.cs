@@ -9,15 +9,20 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public class JobsManager : Grain, IJobsManager
 {
     /// <inheritdoc/>
-    public Task Start<TJob, TRequest>(JobId jobId, TRequest request)
+    public Task Start<TJob, TRequest>(MicroserviceId microserviceId, TenantId tenantId, JobId jobId, TRequest request)
         where TJob : IJob<TRequest>
     {
-        var job = GrainFactory.GetGrain<TJob>(jobId);
+        var job = GrainFactory.GetGrain<TJob>(
+            jobId,
+            new JobKey(
+                microserviceId,
+                tenantId));
+
         return job.Start(request);
     }
 
     /// <inheritdoc/>
-    public Task OnCompleted(JobId jobId)
+    public Task OnCompleted(MicroserviceId microserviceId, TenantId tenantId, JobId jobId)
     {
         return Task.CompletedTask;
     }

@@ -28,7 +28,7 @@ public class EventSequencesStorageProvider : IGrainStorage
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
 
-    IMongoCollection<EventSequenceState> Collection => _eventStoreDatabaseProvider().GetCollection<EventSequenceState>(CollectionNames.EventSequences);
+    IMongoCollection<EventSequenceState> Collection => _eventStoreDatabaseProvider().GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
 
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;

@@ -19,7 +19,7 @@ public static class ObserverStateAggregateExtensions
     /// <returns>New aggregation now based on <see cref="ObserverInformation"/>.</returns>
     public static IAggregateFluent<ObserverInformation> JoinWithFailedPartitions(this IAggregateFluent<ObserverState> aggregation) => aggregation
         .Lookup(
-            CollectionNames.FailedPartitions,
+            WellKnownCollectionNames.FailedPartitions,
             new ExpressionFieldDefinition<ObserverState>((ObserverState _) => _.ObserverId),
             new ExpressionFieldDefinition<FailedPartition>((FailedPartition _) => _.ObserverId),
             new ExpressionFieldDefinition<ObserverInformation>((ObserverInformation _) => _.FailedPartitions));
