@@ -1,3 +1,10 @@
+# [v9.5.8] - 2023-10-10 [PR: #987](https://github.com/aksio-insurtech/Cratis/pull/987)
+
+### Fixed
+
+- Fixing server crash at startup by upgrading the dependency to `Fundamentals` package, which has a fix for what is classified as assembly referenced packages - avoiding duplicates in type discovery.
+
+
 # [v9.5.7] - 2023-10-10 [PR: #986](https://github.com/aksio-insurtech/Cratis/pull/986)
 
 ### Fixed
