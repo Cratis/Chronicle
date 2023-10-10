@@ -163,7 +163,8 @@ public class ClientBuilder : IClientBuilder
 
         var options = Services.BuildServiceProvider().GetRequiredService<IOptions<ClientOptions>>();
 
-        var clientArtifacts = _clientArtifactsProvider ?? new DefaultClientArtifactsProvider(ProjectReferencedAssemblies.Instance);
+        var clientArtifacts = _clientArtifactsProvider ?? new DefaultClientArtifactsProvider(
+            new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
         _logger.ConfiguringServices();
 
