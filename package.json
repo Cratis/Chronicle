@@ -4,7 +4,8 @@
     "workspaces": [
         "Source/**/*",
         "DocFX/**/*",
-        "Samples/**/*"
+        "Samples/**/*",
+        "!**/Workbench"
     ],
     "scripts": {
         "g:dev": "cd $INIT_CWD && tsc -b && vite serve",

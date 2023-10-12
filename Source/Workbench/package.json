@@ -1,47 +1,29 @@
 {
-    "name": "@aksio/cratis-workbench",
-    "type": "module",
-    "version": "1.0.0",
-    "description": "",
+    "name": "workbench",
     "private": true,
-    "author": "Aksio Insurtech",
-    "license": "MIT",
-    "engineStrict": true,
-    "engines": {
-        "node": ">= 16"
-    },
+    "version": "0.0.0",
+    "type": "module",
     "scripts": {
-        "dev": "yarn g:dev",
-        "preview": "yarn g:preview",
-        "prepublish": "yarn g:build",
-        "clean": "yarn g:clean",
-        "build": "yarn g:web-build",
-        "lint": "yarn g:lint",
-        "lint:ci": "yarn g:lint:ci",
-        "test": "yarn g:test",
-        "ci": "yarn g:ci",
-        "up": "yarn g:up"
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "lint": "eslint Workbench --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+        "preview": "vite preview"
     },
     "dependencies": {
-        "@aksio/applications": "1.1.17",
-        "@aksio/applications-mui": "1.1.17",
-        "@aksio/fundamentals": "1.5.1",
-        "@aksio/typescript": "1.4.2",
-        "@ctrl/tinycolor": "3.4.1",
-        "@emotion/react": "11.11.1",
-        "@emotion/styled": "11.11.0",
-        "@fluentui/react": "8.92.0",
-        "@fluentui/react-hooks": "8.6.9",
-        "@monaco-editor/react": "4.4.5",
-        "@mui/icons-material": "5.14.0",
-        "@mui/lab": "5.0.0-alpha.136",
-        "@mui/material": "5.14.0",
-        "@mui/x-data-grid": "6.0.1",
-        "d3": "7.4.4",
-        "echarts": "5.3.2",
-        "handlebars": "4.7.7",
         "react": "18.2.0",
-        "react-dom": "18.2.0",
-        "react-router-dom": "6.3.0"
+        "react-dom": "18.2.0"
+    },
+    "devDependencies": {
+        "@types/node": "20.8.4",
+        "@types/react": "18.2.28",
+        "@types/react-dom": "18.2.7",
+        "@typescript-eslint/eslint-plugin": "6.0.0",
+        "@typescript-eslint/parser": "6.0.0",
+        "@vitejs/plugin-react": "4.0.3",
+        "eslint": "8.45.0",
+        "eslint-plugin-react-hooks": "4.6.0",
+        "eslint-plugin-react-refresh": "0.4.3",
+        "typescript": "5.0.2",
+        "vite": "4.4.5"
     }
 }
