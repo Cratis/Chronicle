@@ -39,8 +39,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         State.Progress.SuccessfulSteps++;
 
-        await WriteStateAsync();
         await HandleCompletion();
+        await WriteStateAsync();
     }
 
     /// <inheritdoc/>
@@ -51,8 +51,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         State.Progress.FailedSteps++;
 
-        await WriteStateAsync();
         await HandleCompletion();
+        await WriteStateAsync();
     }
 
     /// <summary>
