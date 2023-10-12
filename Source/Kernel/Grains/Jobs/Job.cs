@@ -44,7 +44,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     }
 
     /// <inheritdoc/>
-    public Task OnStepStopped(JobStepId stepId) => throw new NotImplementedException();
+    public Task OnStepStopped(JobStepId stepId) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task OnStepFailed(JobStepId stepId)
