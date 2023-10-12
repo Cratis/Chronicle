@@ -32,4 +32,12 @@ public interface IJobStep<TRequest> : ISyncWorker<TRequest, object>
     /// <param name="status">The <see cref="JobStepStatus"/> to change to.</param>
     /// <returns>Awaitable task.</returns>
     Task ReportStatusChange(JobStepStatus status);
+
+    /// <summary>
+    /// Report the step has failed.
+    /// </summary>
+    /// <param name="exceptionMessages">Collection of exception messages.</param>
+    /// <param name="exceptionStackTrace">Exception stack trace.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReportFailure(IEnumerable<string> exceptionMessages, string exceptionStackTrace);
 }

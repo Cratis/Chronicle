@@ -68,6 +68,19 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     {
         StatusChanged(status);
         await _state.WriteStateAsync();
+
+        if (status == JobStepStatus.Succeeded)
+        {
+            await Job.OnStepSuccessful(JobStepId);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task ReportFailure(IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    {
+        StatusChanged(JobStepStatus.Failed, exceptionMessages, exceptionStackTrace);
+        await _state.WriteStateAsync();
+        await Job.OnStepFailed(JobStepId);
     }
 
     /// <summary>
@@ -89,27 +102,40 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     {
         await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
 
-        var result = await PerformStep(request);
-        if (result)
+        var exceptionMessages = Enumerable.Empty<string>();
+        var exceptionStackTrace = string.Empty;
+
+        var successful = false;
+        try
         {
-            await Job.OnStepSuccessful(JobStepId);
-            await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
+            successful = await PerformStep(request);
+        }
+        catch (Exception ex)
+        {
+            exceptionMessages = ex.GetAllMessages();
+            exceptionStackTrace = ex.StackTrace ?? string.Empty;
+        }
+
+        if (successful)
+        {
+            await ThisJobStep.ReportStatusChange(JobStepStatus.Succeeded);
         }
         else
         {
-            await Job.OnStepFailed(JobStepId);
-            await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
+            await ThisJobStep.ReportFailure(exceptionMessages, exceptionStackTrace);
         }
 
-        return "OK";
+        return string.Empty;
     }
 
-    void StatusChanged(JobStepStatus status)
+    void StatusChanged(JobStepStatus status, IEnumerable<string>? exceptionMessages = null!, string? exceptionStackTrace = null!)
     {
         _state.State.StatusChanges.Add(new JobStepStatusChanged
         {
             Status = status,
-            Occurred = DateTimeOffset.UtcNow
+            Occurred = DateTimeOffset.UtcNow,
+            ExceptionMessages = exceptionMessages ?? Enumerable.Empty<string>(),
+            ExceptionStackTrace = exceptionStackTrace ?? string.Empty
         });
         _state.State.Status = status;
     }
