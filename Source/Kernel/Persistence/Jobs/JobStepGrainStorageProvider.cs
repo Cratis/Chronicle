@@ -56,7 +56,15 @@ public class JobStepGrainStorageProvider : IGrainStorage
             var key = (JobStepKey)keyExtension!;
             _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
             var storage = _serviceProvider.GetRequiredService<IJobStepStorage<T>>();
+
             await storage.Save(key.JobId, jobStepId, grainState.State);
+            var actualState = (grainState.State as JobStepState)!;
+            if (actualState.StatusChanges.Count > 1 &&
+                actualState.StatusChanges[^1].Status == JobStepStatus.Failed &&
+                actualState.StatusChanges[^2].Status == JobStepStatus.Running)
+            {
+                await storage.Remove(key.JobId, jobStepId);
+            }
         }
     }
 }

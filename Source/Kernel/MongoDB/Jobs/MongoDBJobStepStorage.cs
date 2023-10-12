@@ -28,6 +28,7 @@ public class MongoDBJobStepStorage<TJobStepState> : IJobStepStorage<TJobStepStat
     }
 
     IMongoCollection<BsonDocument> Collection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.JobSteps);
+    IMongoCollection<BsonDocument> FailedCollection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.FailedJobSteps);
 
     /// <inheritdoc/>
     public async Task<TJobStepState?> Read(JobId jobId, JobStepId jobStepId)
@@ -46,14 +47,17 @@ public class MongoDBJobStepStorage<TJobStepState> : IJobStepStorage<TJobStepStat
     /// <inheritdoc/>
     public Task Remove(JobId jobId, JobStepId jobStepId)
     {
-        return Task.CompletedTask;
+        var filter = GetIdFilter(jobId, jobStepId);
+        return Collection.DeleteOneAsync(filter);
     }
 
     /// <inheritdoc/>
     public async Task Save(JobId jobId, JobStepId jobStepId, TJobStepState state)
     {
         var filter = GetIdFilter(jobId, jobStepId);
-        await Collection.ReplaceOneAsync(filter, state.ToBsonDocument(), new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+        var jobStepState = (state as JobStepState)!;
+        var collection = jobStepState.Status == JobStepStatus.Failed ? FailedCollection : Collection;
+        await collection.ReplaceOneAsync(filter, state.ToBsonDocument(), new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 
     FilterDefinition<BsonDocument> GetIdFilter(Guid jobId, Guid jobStepId) =>
@@ -62,11 +66,11 @@ public class MongoDBJobStepStorage<TJobStepState> : IJobStepStorage<TJobStepStat
             new BsonDocument
             {
                 {
-                    "JobId",
+                    "jobId",
                     new BsonBinaryData(jobId, GuidRepresentation.Standard)
                 },
                 {
-                    "JobStepId", new BsonBinaryData(jobStepId, GuidRepresentation.Standard)
+                    "jobStepId", new BsonBinaryData(jobStepId, GuidRepresentation.Standard)
                 }
             });
 }
