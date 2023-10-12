@@ -9,7 +9,6 @@ using Aksio.Cratis.Identities;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.EventSequences;
-using Aksio.Cratis.Kernel.Grains.Workers;
 using Aksio.Cratis.Kernel.Schemas;
 using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
@@ -231,7 +230,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     }
 
     /// <inheritdoc/>
-    public async Task<IWorker<RewindPartitionForObserversAfterRedactRequest, RewindPartitionForObserversAfterRedactResponse>> Redact(
+    public async Task Redact(
         EventSequenceNumber sequenceNumber,
         RedactionReason reason,
         IEnumerable<Causation> causation,
@@ -250,11 +249,11 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             causation,
             await _identityStoreProvider().GetFor(causedBy),
             DateTimeOffset.UtcNow);
-        return await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, sequenceNumber, new[] { affectedEvent.Metadata.Type });
+        await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, sequenceNumber, new[] { affectedEvent.Metadata.Type });
     }
 
     /// <inheritdoc/>
-    public async Task<IWorker<RewindPartitionForObserversAfterRedactRequest, RewindPartitionForObserversAfterRedactResponse>> Redact(
+    public async Task Redact(
         EventSourceId eventSourceId,
         RedactionReason reason,
         IEnumerable<EventType> eventTypes,
@@ -276,24 +275,16 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             causation,
             await _identityStoreProvider().GetFor(causedBy),
             DateTimeOffset.UtcNow);
-        return await RewindPartitionForAffectedObservers(eventSourceId, EventSequenceNumber.First, affectedEventTypes);
+        await RewindPartitionForAffectedObservers(eventSourceId, EventSequenceNumber.First, affectedEventTypes);
     }
 
-    async Task<IWorker<RewindPartitionForObserversAfterRedactRequest, RewindPartitionForObserversAfterRedactResponse>> RewindPartitionForAffectedObservers(
+    async Task RewindPartitionForAffectedObservers(
         EventSourceId eventSourceId,
         EventSequenceNumber sequenceNumber,
         IEnumerable<EventType> affectedEventTypes)
     {
-        var worker = GrainFactory.GetGrain<IWorker<RewindPartitionForObserversAfterRedactRequest, RewindPartitionForObserversAfterRedactResponse>>(Guid.NewGuid());
-
-        await worker.Start(new(
-            _microserviceAndTenant.MicroserviceId,
-            _microserviceAndTenant.TenantId,
-            _eventSequenceId,
-            eventSourceId,
-            sequenceNumber,
-            affectedEventTypes));
-
-        return worker;
+        // TODO: Find all affected observers and call rewind on them for the affected partition.
+        await Task.CompletedTask;
+        throw new NotImplementedException();
     }
 }
