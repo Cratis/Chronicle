@@ -17,6 +17,8 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// </summary>
 public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionState>, IHandleEventsForPartition
 {
+    const string SubscriberDisconnected = "Subscriber is disconnected";
+
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
     IObserver? _observer;
@@ -66,11 +68,11 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
     }
 
     /// <inheritdoc/>
-    protected override async Task<bool> PerformStep(HandleEventsForPartitionArguments request)
+    protected override async Task<JobStepResult> PerformStep(HandleEventsForPartitionArguments request)
     {
         if (_subscriber == null || !request.ObserverSubscription.IsSubscribed)
         {
-            return false;
+            return JobStepResult.Failed(SubscriberDisconnected);
         }
 
         var eventSourceId = (EventSourceId)(request.Partition.Value.ToString() ?? string.Empty);
@@ -109,7 +111,9 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
                         tailEventSequenceNumber = result.LastSuccessfulObservation;
                         break;
                     case ObserverSubscriberState.Disconnected:
-                        return false;
+                        failed = true;
+                        exceptionMessages = new[] { SubscriberDisconnected };
+                        break;
                 }
             }
             catch (Exception ex)
@@ -122,9 +126,10 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
             if (failed)
             {
                 await _observer!.PartitionFailed(eventSourceId, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
+                return new JobStepResult(JobStepStatus.Failed, exceptionMessages, exceptionStackTrace);
             }
         }
 
-        return !failed;
+        return JobStepResult.Succeeded;
     }
 }

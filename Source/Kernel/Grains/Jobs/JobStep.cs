@@ -95,34 +95,30 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     /// </summary>
     /// <param name="request">The request object for the step.</param>
     /// <returns>True if successful, false if not.</returns>
-    protected abstract Task<bool> PerformStep(TRequest request);
+    protected abstract Task<JobStepResult> PerformStep(TRequest request);
 
     /// <inheritdoc/>
     protected override async Task<object> PerformWork(TRequest request)
     {
         await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
 
-        var exceptionMessages = Enumerable.Empty<string>();
-        var exceptionStackTrace = string.Empty;
-
-        var successful = false;
+        JobStepResult result;
         try
         {
-            successful = await PerformStep(request);
+            result = await PerformStep(request);
         }
         catch (Exception ex)
         {
-            exceptionMessages = ex.GetAllMessages();
-            exceptionStackTrace = ex.StackTrace ?? string.Empty;
+            result = new JobStepResult(JobStepStatus.Failed, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
         }
 
-        if (successful)
+        if (result.IsSuccess)
         {
             await ThisJobStep.ReportStatusChange(JobStepStatus.Succeeded);
         }
         else
         {
-            await ThisJobStep.ReportFailure(exceptionMessages.ToList(), exceptionStackTrace);
+            await ThisJobStep.ReportFailure(result.Messages.ToList(), result.ExceptionStackTrace);
         }
 
         return string.Empty;
