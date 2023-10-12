@@ -21,7 +21,9 @@ public class JobGrainStorageProvider : IGrainStorage
     /// </summary>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting services.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public JobGrainStorageProvider(IServiceProvider serviceProvider, IExecutionContextManager executionContextManager)
+    public JobGrainStorageProvider(
+        IServiceProvider serviceProvider,
+        IExecutionContextManager executionContextManager)
     {
         _serviceProvider = serviceProvider;
         _executionContextManager = executionContextManager;
@@ -33,11 +35,11 @@ public class JobGrainStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var storage = _serviceProvider.GetRequiredService<IJobStorage<T>>();
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
             var key = (JobKey)keyExtension!;
             _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
+            var storage = _serviceProvider.GetRequiredService<IJobStorage<T>>();
             var state = await storage.Read(jobId);
             if (state is not null)
             {
@@ -49,12 +51,11 @@ public class JobGrainStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var storage = _serviceProvider.GetRequiredService<IJobStorage<T>>();
-
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
             var key = (JobKey)keyExtension!;
             _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
+            var storage = _serviceProvider.GetRequiredService<IJobStorage<T>>();
             await storage.Save(jobId, grainState.State);
         }
     }

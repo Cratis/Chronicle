@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// Represents a step in a job.
 /// </summary>
 /// <typeparam name="TRequest">Type of the request for the job.</typeparam>
-public interface IJobStep<TRequest> : ISyncWorker<TRequest, object>
+public interface IJobStep<TRequest> : ISyncWorker<TRequest, object>, IGrainWithGuidCompoundKey
 {
     /// <summary>
     /// Start the job step.
@@ -39,5 +39,5 @@ public interface IJobStep<TRequest> : ISyncWorker<TRequest, object>
     /// <param name="exceptionMessages">Collection of exception messages.</param>
     /// <param name="exceptionStackTrace">Exception stack trace.</param>
     /// <returns>Awaitable task.</returns>
-    Task ReportFailure(IEnumerable<string> exceptionMessages, string exceptionStackTrace);
+    Task ReportFailure(IList<string> exceptionMessages, string exceptionStackTrace);
 }

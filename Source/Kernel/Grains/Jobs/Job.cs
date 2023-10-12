@@ -66,7 +66,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         where TJobStep : IJobStep<TJobStepRequest>
     {
         var jobStepId = JobStepId.New();
-        var jobStep = GrainFactory.GetGrain<TJobStep>(jobStepId);
+        var jobId = this.GetPrimaryKey(out var keyExtension);
+        var jobKey = (JobKey)keyExtension!;
+        var jobStep = GrainFactory.GetGrain<TJobStep>(jobStepId, keyExtension: new JobStepKey(jobId, jobKey.MicroserviceId, jobKey.TenantId));
         await jobStep.Start(this.GetGrainId(), request);
         State.Progress.TotalSteps++;
     }

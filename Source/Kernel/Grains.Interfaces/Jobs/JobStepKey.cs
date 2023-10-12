@@ -24,7 +24,7 @@ public record JobStepKey(JobId JobId, MicroserviceId MicroserviceId, TenantId Te
     public static implicit operator string(JobStepKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{MicroserviceId}+{TenantId}";
+    public override string ToString() => $"{JobId}+{MicroserviceId}+{TenantId}";
 
     /// <summary>
     /// Parse a key from a string.

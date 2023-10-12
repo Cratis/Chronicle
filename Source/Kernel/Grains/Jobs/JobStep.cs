@@ -76,7 +76,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     }
 
     /// <inheritdoc/>
-    public async Task ReportFailure(IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    public async Task ReportFailure(IList<string> exceptionMessages, string exceptionStackTrace)
     {
         StatusChanged(JobStepStatus.Failed, exceptionMessages, exceptionStackTrace);
         await _state.WriteStateAsync();
@@ -122,7 +122,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
         }
         else
         {
-            await ThisJobStep.ReportFailure(exceptionMessages, exceptionStackTrace);
+            await ThisJobStep.ReportFailure(exceptionMessages.ToList(), exceptionStackTrace);
         }
 
         return string.Empty;

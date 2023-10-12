@@ -10,7 +10,6 @@ namespace Aksio.Cratis.Kernel.Persistence.Jobs;
 /// </summary>
 /// <typeparam name="TJobStepState">Type of state it is for.</typeparam>
 public interface IJobStepStorage<TJobStepState>
-    where TJobStepState : JobStepState
 {
     /// <summary>
     /// Read the state for a specific job step.
@@ -18,7 +17,7 @@ public interface IJobStepStorage<TJobStepState>
     /// <param name="jobId"><see cref="JobId"/> the step belongs to.</param>
     /// <param name="jobStepId"><see cref="JobStepId"/> for the step.</param>
     /// <returns><see cref="JobStepState"/> if it was found, null if not.</returns>
-    Task<JobStepState?> Read(JobId jobId, JobStepId jobStepId);
+    Task<TJobStepState?> Read(JobId jobId, JobStepId jobStepId);
 
     /// <summary>
     /// Save the state for a specific job step.
