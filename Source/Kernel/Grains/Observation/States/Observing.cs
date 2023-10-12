@@ -83,10 +83,10 @@ public class Observing : BaseObserverState
     }
 
     /// <inheritdoc/>
-    public override Task<ObserverState> OnLeave(ObserverState state)
+    public override async Task<ObserverState> OnLeave(ObserverState state)
     {
-        _streamSubscription?.UnsubscribeAsync();
+        await (_streamSubscription?.UnsubscribeAsync() ?? Task.CompletedTask);
         _streamSubscription = null;
-        return Task.FromResult(state);
+        return state;
     }
 }
