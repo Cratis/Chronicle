@@ -29,6 +29,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
         ILogger logger) : base(logger, taskScheduler)
     {
         Job = new NullJob();
+        ThisJobStep = null!;
         _state = state;
     }
 
@@ -42,10 +43,16 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     /// </summary>
     protected IJob Job { get; private set; }
 
+    /// <summary>
+    /// Gets the job step.
+    /// </summary>
+    protected IJobStep<TRequest> ThisJobStep { get; private set; }
+
     /// <inheritdoc/>
     public async Task Start(GrainId jobId, TRequest request)
     {
         Job = GrainFactory.GetGrain(jobId).AsReference<IJob>();
+        ThisJobStep = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJobStep<TRequest>>();
 
         StatusChanged(JobStepStatus.Running);
         await _state.WriteStateAsync();
@@ -54,7 +61,14 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     }
 
     /// <inheritdoc/>
-    public Task Stop() => throw new NotImplementedException();
+    public Task Stop() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public async Task ReportStatusChange(JobStepStatus status)
+    {
+        StatusChanged(status);
+        await _state.WriteStateAsync();
+    }
 
     /// <summary>
     /// Prepare the step before it starts.
@@ -73,22 +87,20 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     /// <inheritdoc/>
     protected override async Task<object> PerformWork(TRequest request)
     {
-        StatusChanged(JobStepStatus.Running);
-        await _state.WriteStateAsync();
+        await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
 
         var result = await PerformStep(request);
         if (result)
         {
             await Job.OnStepSuccessful(JobStepId);
-            StatusChanged(JobStepStatus.Succeeded);
+            await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
         }
         else
         {
             await Job.OnStepFailed(JobStepId);
-            StatusChanged(JobStepStatus.Failed);
+            await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
         }
 
-        await _state.WriteStateAsync();
         return "OK";
     }
 

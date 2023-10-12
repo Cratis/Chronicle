@@ -25,4 +25,11 @@ public interface IJobStep<TRequest> : ISyncWorker<TRequest, object>
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Stop();
+
+    /// <summary>
+    /// Report a status change.
+    /// </summary>
+    /// <param name="status">The <see cref="JobStepStatus"/> to change to.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReportStatusChange(JobStepStatus status);
 }
