@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.States;
 using Aksio.Cratis.Kernel.Keys;
@@ -42,6 +43,7 @@ public class ReplayJob : Job<ReplayRequest, JobState>, IReplayJob
                     request.ObserverKey,
                     request.ObserverSubscription,
                     key,
+                    EventSequenceNumber.First,
                     request.EventTypes));
 
             break;

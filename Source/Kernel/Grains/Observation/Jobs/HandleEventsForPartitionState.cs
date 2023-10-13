@@ -25,27 +25,22 @@ public class HandleEventsForPartitionState : JobStepState
     public EventSequenceId EventSequenceId { get; set; } = EventSequenceId.Unspecified;
 
     /// <summary>
-    /// Gets or sets the microservice identifier.
-    /// </summary>
-    public MicroserviceId MicroserviceId { get; set; } = MicroserviceId.Unspecified;
-
-    /// <summary>
-    /// Gets or sets the tenant identifier.
-    /// </summary>
-    public TenantId TenantId { get; set; } = TenantId.NotSet;
-
-    /// <summary>
     /// Gets or sets the partition key.
     /// </summary>
     public Key Partition { get; set; } = Key.Undefined;
 
     /// <summary>
-    /// Gets or sets the event types to handle.
+    /// Gets or sets the next event sequence number the job step should handle.
     /// </summary>
-    public IEnumerable<EventType> EventTypes { get; set; } = Enumerable.Empty<EventType>();
+    public EventSequenceNumber NextEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
 
     /// <summary>
     /// Gets or sets the last handled event sequence number.
     /// </summary>
     public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
+    /// Gets or sets the event types to handle.
+    /// </summary>
+    public IEnumerable<EventType> EventTypes { get; set; } = Enumerable.Empty<EventType>();
 }
