@@ -31,7 +31,14 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
         Job = new NullJob();
         ThisJobStep = null!;
         _state = state;
+    }
+
+    /// <inheritdoc/>
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
         _state.State.Name = GetType().Name;
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -61,7 +68,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
         ThisJobStep = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJobStep<TRequest>>();
 
         StatusChanged(JobStepStatus.Running);
-        _state.State.Request = request;
+        _state.State.Request = request!;
         await _state.WriteStateAsync();
         await PrepareStep(request);
         await Start(request);
