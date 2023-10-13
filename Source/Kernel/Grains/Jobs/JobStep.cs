@@ -48,6 +48,11 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     /// </summary>
     protected IJobStep<TRequest> ThisJobStep { get; private set; }
 
+    /// <summary>
+    /// Gets the state for the job step.
+    /// </summary>
+    protected TState State => _state.State;
+
     /// <inheritdoc/>
     public async Task Start(GrainId jobId, TRequest request)
     {
