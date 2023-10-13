@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
@@ -8,6 +10,15 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// </summary>
 public interface IJobsManager : IGrainWithIntegerKey
 {
+    /// <summary>
+    /// Get a collection of all running jobs of specific type.
+    /// </summary>
+    /// <typeparam name="TJob">Type of job to get for.</typeparam>
+    /// <typeparam name="TRequest">Type of request.</typeparam>
+    /// <returns>Collection of request instances</returns>
+    Task<IImmutableList<TRequest>> GetRunningJobsOfType<TJob, TRequest>()
+        where TJob : IJob<TRequest>;
+
     /// <summary>
     /// Start a job.
     /// </summary>

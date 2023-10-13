@@ -49,11 +49,7 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
         var eventSourceId = (EventSourceId)(request.Partition.Value.ToString() ?? string.Empty);
         _observer = GrainFactory.GetGrain<IObserver>(request.ObserverId, request.ObserverKey);
 
-        State.ObserverId = request.ObserverId;
-        State.EventSequenceId = request.ObserverKey.EventSequenceId;
-        State.Partition = request.Partition;
         State.NextEventSequenceNumber = request.StartEventSequenceNumber;
-        State.EventTypes = request.EventTypes;
 
         if (!request.ObserverSubscription.IsSubscribed)
         {

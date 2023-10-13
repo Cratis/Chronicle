@@ -27,4 +27,9 @@ public class JobStepState
     /// Gets or sets the <see cref="JobStepProgress"/>.
     /// </summary>
     public JobStepProgress Progress { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the request associated with the job step.
+    /// </summary>
+    public object Request { get; set; } = null!;
 }

@@ -61,6 +61,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
         ThisJobStep = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJobStep<TRequest>>();
 
         StatusChanged(JobStepStatus.Running);
+        _state.State.Request = request;
         await _state.WriteStateAsync();
         await PrepareStep(request);
         await Start(request);
