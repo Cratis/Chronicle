@@ -23,7 +23,11 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     }
 
     /// <inheritdoc/>
-    public abstract Task Start(TRequest request);
+    public Task Start(TRequest request)
+    {
+        State.Request = request!;
+        return StartJob(request);
+    }
 
     /// <inheritdoc/>
     public async Task Stop()
@@ -55,6 +59,13 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         await HandleCompletion();
         await WriteStateAsync();
     }
+
+    /// <summary>
+    /// Start the job.
+    /// </summary>
+    /// <param name="request">Request to start with.</param>
+    /// <returns>Awaitable task.</returns>
+    protected abstract Task StartJob(TRequest request);
 
     /// <summary>
     /// Add a step to the job.

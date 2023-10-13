@@ -26,7 +26,15 @@ public class ReplayJob : Job<ReplayRequest, JobState>, IReplayJob
     }
 
     /// <inheritdoc/>
-    public override async Task Start(ReplayRequest request)
+    public override async Task OnCompleted()
+    {
+        if (_request == null) return;
+        var observer = GrainFactory.GetGrain<IObserver>(_request.ObserverId, _request.ObserverKey);
+        await observer.TransitionTo<Observing>();
+    }
+
+    /// <inheritdoc/>
+    protected override async Task StartJob(ReplayRequest request)
     {
         _request = request;
         var index = await _observerKeyIndexes.GetFor(
@@ -50,13 +58,5 @@ public class ReplayJob : Job<ReplayRequest, JobState>, IReplayJob
         }
 
         await WriteStateAsync();
-    }
-
-    /// <inheritdoc/>
-    public override async Task OnCompleted()
-    {
-        if (_request == null) return;
-        var observer = GrainFactory.GetGrain<IObserver>(_request.ObserverId, _request.ObserverKey);
-        await observer.TransitionTo<Observing>();
     }
 }
