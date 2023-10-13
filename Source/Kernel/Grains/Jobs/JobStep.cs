@@ -31,6 +31,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
         Job = new NullJob();
         ThisJobStep = null!;
         _state = state;
+        _state.State.Name = GetType().Name;
     }
 
     /// <summary>

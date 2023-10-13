@@ -9,6 +9,11 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public class JobState
 {
     /// <summary>
+    /// Gets or sets the name of the job.
+    /// </summary>
+    public JobName Name { get; set; } = JobName.NotSet;
+
+    /// <summary>
     /// Gets or sets the <see cref="JobStatus"/>.
     /// </summary>
     public JobStatus Status { get; set; }

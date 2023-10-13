@@ -18,6 +18,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         StatusChanged(JobStatus.Started);
+        State.Name = GetType().Name;
         await WriteStateAsync();
     }
 
