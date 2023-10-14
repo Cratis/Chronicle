@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using Aksio.Applications.Autofac;
+using Aksio.Cratis.Kernel.Grains.Observation.Placement;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 
@@ -34,6 +35,7 @@ public static class Program
             .UseCratis(_ => _.InKernel())
             .UseOrleans(_ => _
                 .UseCluster()
+                .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
                 .UseStreamCaching()
                 .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
                 .ConfigureSerialization()
