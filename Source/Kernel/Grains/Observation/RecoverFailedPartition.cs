@@ -87,7 +87,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     public async Task Recover(ObserverKey observerKey, ObserverName observerName, EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, IEnumerable<string> messages, string stackTrace, DateTimeOffset occurred)
     {
         _observerKey = observerKey;
-        _subscriberKey = ObserverSubscriberKey.FromObserverKey(observerKey, _key!.EventSourceId);
+        _subscriberKey = ObserverSubscriberKey.FromObserverKey(observerKey, _key!.EventSourceId, _subscriberKey!.SiloAddress);
         State.InitializeError(_observerKey, observerName, _subscriberKey, fromEvent, eventTypes, messages, stackTrace, occurred);
         _logger.RecoveryRequested(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, fromEvent);
         await WriteStateAsync();
@@ -110,7 +110,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     {
         await ReadStateAsync();
         _observerKey = ObserverKey.Parse(State.ObserverKey);
-        _subscriberKey = ObserverSubscriberKey.FromObserverKey(_observerKey, _key!.EventSourceId);
+        _subscriberKey = ObserverSubscriberKey.FromObserverKey(_observerKey, _key!.EventSourceId, _subscriberKey!.SiloAddress);
         _logger.RecoveryRequested(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, State.CurrentError);
         await SetSubscriberSubscription();
         ScheduleNextTimer(true);
@@ -150,7 +150,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
             if (_subscriberSubscription is not null)
             {
                 var subscriber = (GrainFactory.GetGrain(_subscriberSubscription.SubscriberType, State.ObserverId, _subscriberKey!) as IObserverSubscriber)!;
-                var result = await subscriber.OnNext(new[] { @event }, new ObserverSubscriberContext(EventObservationState.None, _subscriberSubscription.Arguments));
+                var result = await subscriber.OnNext(new[] { @event }, new ObserverSubscriberContext(EventObservationState.None));
                 switch (result.State)
                 {
                     case ObserverSubscriberState.Failed:

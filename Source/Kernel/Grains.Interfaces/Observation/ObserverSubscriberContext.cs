@@ -9,5 +9,4 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// Represents the context for an observer subscriber.
 /// </summary>
 /// <param name="ObservationState">The <see cref="EventObservationState"/> for the context.</param>
-/// <param name="Metadata">Metadata associated.</param>
-public record ObserverSubscriberContext(EventObservationState ObservationState, object Metadata);
+public record ObserverSubscriberContext(EventObservationState ObservationState);

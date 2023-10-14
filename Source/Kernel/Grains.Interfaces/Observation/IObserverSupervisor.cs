@@ -5,6 +5,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Workers;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
@@ -20,21 +21,15 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     Task<IEnumerable<EventType>> GetEventTypes();
 
     /// <summary>
-    /// Set metadata associated with the observer.
-    /// </summary>
-    /// <param name="name">Friendly name of the observer.</param>
-    /// <param name="type"><see cref="ObserverType"/>.</param>
-    /// <returns>Awaitable task.</returns>
-    Task SetNameAndType(ObserverName name, ObserverType type);
-
-    /// <summary>
     /// Subscribe to observer.
     /// </summary>
     /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>
+    /// <param name="name">Friendly name of the observer.</param>
+    /// <param name="type"><see cref="ObserverType"/>.</param>
     /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
-    /// <param name="subscriberArgs">Optional arguments associated with the subscription.</param>
+    /// <param name="siloAddress">Address of the Orleans Silo the subscriber should be running on.</param>
     /// <returns>Awaitable task.</returns>
-    Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes, object? subscriberArgs = default)
+    Task Subscribe<TObserverSubscriber>(ObserverName name, ObserverType type, IEnumerable<EventType> eventTypes, SiloAddress siloAddress)
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>

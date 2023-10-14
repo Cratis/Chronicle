@@ -13,6 +13,7 @@ using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
+
 /// <summary>
 /// Represents an implementation of <see cref="IObserverSupervisor"/>.
 /// </summary>
@@ -113,15 +114,6 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(State.EventTypes);
-
-    /// <inheritdoc/>
-    public async Task SetNameAndType(ObserverName name, ObserverType type)
-    {
-        State.Name = name;
-        State.Type = type;
-
-        await WriteStateAsync();
-    }
 
 #pragma warning disable CA1721 // Property names should not match get methods
     /// <inheritdoc/>

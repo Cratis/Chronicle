@@ -7,6 +7,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
@@ -102,9 +103,9 @@ public class ObserverState
     public string CurrentSubscriptionType { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the current subscription arguments.
+    /// Gets or sets the current subscription silo address.
     /// </summary>
-    public object? CurrentSubscriptionArguments { get; set; }
+    public SiloAddress CurrentSubscriptionSiloAddress { get; set; } = SiloAddress.Zero;
 
     /// <summary>
     /// Add a failed partition.

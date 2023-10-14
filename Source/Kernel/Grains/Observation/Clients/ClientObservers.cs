@@ -4,12 +4,14 @@
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
+using Orleans.Placement;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientObservers"/>.
 /// </summary>
+[PreferLocalPlacement]
 public class ClientObservers : Grain, IClientObservers
 {
     readonly ILogger<ClientObservers> _logger;
@@ -38,7 +40,7 @@ public class ClientObservers : Grain, IClientObservers
                     registration.ObserverId,
                     registration.Name,
                     registration.EventSequenceId);
-                var key = new ObserverKey(microserviceId, tenantId, registration.EventSequenceId);
+                var key = new ConnectedObserverKey(microserviceId, tenantId, registration.EventSequenceId, connectionId);
                 var observer = GrainFactory.GetGrain<IClientObserver>(registration.ObserverId, key);
                 await observer.Start(registration.Name, connectionId, registration.EventTypes);
             }

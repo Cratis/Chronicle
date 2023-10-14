@@ -6,6 +6,7 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.EventSequences.Inboxes;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 
@@ -14,6 +15,17 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 /// </summary>
 public class Inbox : Grain, IInbox
 {
+    readonly ILocalSiloDetails _localSiloDetails;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Inbox"/> class.
+    /// </summary>
+    /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
+    public Inbox(ILocalSiloDetails localSiloDetails)
+    {
+        _localSiloDetails = localSiloDetails;
+    }
+
     /// <inheritdoc/>
     public async Task Start()
     {
@@ -29,7 +41,7 @@ public class Inbox : Grain, IInbox
                 key.MicroserviceId,
                 key.TenantId));
 
-        await observer.SetNameAndType($"Inbox for ${microserviceId}, Outbox from ${key.MicroserviceId} for Tenant ${key.TenantId}", ObserverType.Inbox);
-        await observer.Subscribe<IInboxObserverSubscriber>(Enumerable.Empty<EventType>());
+        var name = $"Inbox for {microserviceId}, Outbox from {key.MicroserviceId} for Tenant {key.TenantId}";
+        await observer.Subscribe<IInboxObserverSubscriber>(name, ObserverType.Inbox, Enumerable.Empty<EventType>(), _localSiloDetails.SiloAddress);
     }
 }

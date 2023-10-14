@@ -10,6 +10,7 @@ using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
+using Orleans.Runtime;
 using EngineProjection = Aksio.Cratis.Kernel.Engines.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;
@@ -22,6 +23,7 @@ public class Projection : Grain, IProjection
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
     readonly ProviderFor<IProjectionManager> _projectionManagerProvider;
     readonly IExecutionContextManager _executionContextManager;
+    readonly ILocalSiloDetails _localSiloDetails;
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers;
     EngineProjection? _projection;
     IObserverSupervisor? _observer;
@@ -64,9 +66,7 @@ public class Projection : Grain, IProjection
         await RefreshDefinition();
 
         _observer = GrainFactory.GetGrain<IObserverSupervisor>(_projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
-
-        await _observer.SetNameAndType(_definition!.Name.Value, ObserverType.Projection);
-        await _observer.Subscribe<IProjectionObserverSubscriber>(_projection!.EventTypes);
+        await _observer.Subscribe<IProjectionObserverSubscriber>(_definition!.Name.Value, ObserverType.Projection, _projection!.EventTypes, SiloAddress.Zero);
     }
 
     /// <inheritdoc/>

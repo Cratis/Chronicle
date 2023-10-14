@@ -6,37 +6,44 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
+using Orleans.Placement;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientObserver"/>.
 /// </summary>
+[PreferLocalPlacement]
 public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
 {
     readonly ILogger<ClientObserver> _logger;
     readonly IExecutionContextManager _executionContextManager;
+    readonly ILocalSiloDetails _localSiloDetails;
     ObserverId? _observerId;
-    ObserverKey? _observerKey;
+    ConnectedObserverKey? _observerKey;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientObserver"/> class.
     /// </summary>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
+    /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientObserver(
-        ILogger<ClientObserver> logger,
-        IExecutionContextManager executionContextManager)
+        IExecutionContextManager executionContextManager,
+        ILocalSiloDetails localSiloDetails,
+        ILogger<ClientObserver> logger)
     {
-        _logger = logger;
         _executionContextManager = executionContextManager;
+        _localSiloDetails = localSiloDetails;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _observerId = this.GetPrimaryKey(out var keyAsString);
-        _observerKey = ObserverKey.Parse(keyAsString);
+        _observerKey = ConnectedObserverKey.Parse(keyAsString);
 
         return Task.CompletedTask;
     }
@@ -49,9 +56,7 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
         var observer = GrainFactory.GetGrain<IObserverSupervisor>(_observerId!, _observerKey!);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
         await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
-        await observer.SetNameAndType(name, ObserverType.Client);
-        var connectedClient = await connectedClients.GetConnectedClient(connectionId);
-        await observer.Subscribe<IClientObserverSubscriber>(eventTypes, connectedClient);
+        await observer.Subscribe<IClientObserverSubscriber>(name, ObserverType.Client, eventTypes, _localSiloDetails.SiloAddress);
     }
 
     /// <inheritdoc/>

@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Observation;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
@@ -12,9 +13,13 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public partial class ObserverSupervisor
 {
     /// <inheritdoc/>
-    public Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes, object? subscriberArgs = default)
+    public Task Subscribe<TObserverSubscriber>(
+        ObserverName name,
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress)
         where TObserverSubscriber : IObserverSubscriber
-        => Subscribe(typeof(TObserverSubscriber), eventTypes, subscriberArgs);
+        => Subscribe(name, type, typeof(TObserverSubscriber), eventTypes, siloAddress);
 
     /// <inheritdoc/>
     public async Task Unsubscribe()
@@ -28,14 +33,20 @@ public partial class ObserverSupervisor
     }
 
     async Task Subscribe(
+        ObserverName name,
+        ObserverType type,
         Type subscriberType,
         IEnumerable<EventType> eventTypes,
-        object? subscriberArgs = default)
+        SiloAddress siloAddress)
     {
-        _logger.Subscribing(_observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
+        _logger.Subscribing(name, type, _observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
+
+        State.Name = name;
+        State.Type = type;
+
         _failedPartitionSupervisor = new(_observerId, _observerKey, State.Name, eventTypes, State.FailedPartitions, GrainFactory);
         await ReadStateAsync();
-        CurrentSubscription = new(_observerId, _observerKey, eventTypes, subscriberType, subscriberArgs!);
+        CurrentSubscription = new(_observerId, _observerKey, eventTypes, subscriberType, siloAddress);
 
         if (State.RunningState == ObserverRunningState.Rewinding)
         {

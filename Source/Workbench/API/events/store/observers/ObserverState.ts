@@ -8,6 +8,7 @@ import { EventType } from './EventType';
 import { ObserverType } from './ObserverType';
 import { ObserverRunningState } from './ObserverRunningState';
 import { FailedPartition } from './FailedPartition';
+import { SiloAddress } from './SiloAddress';
 
 export class ObserverState {
 
@@ -50,6 +51,6 @@ export class ObserverState {
     @field(String)
     currentSubscriptionType!: string;
 
-    @field(Object)
-    currentSubscriptionArguments?: any;
+    @field(SiloAddress)
+    currentSubscriptionSiloAddress!: SiloAddress;
 }

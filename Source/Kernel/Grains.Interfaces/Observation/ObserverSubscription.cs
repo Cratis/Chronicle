@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Observation;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
@@ -13,8 +14,13 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <param name="ObserverKey">The <see cref="ObserverKey"/> that the subscription is for.</param>
 /// <param name="EventTypes">Represents the event types for the subscription.</param>
 /// <param name="SubscriberType">Type that is subscribing.</param>
-/// <param name="Arguments">Any arguments it passed.</param>
-public record ObserverSubscription(ObserverId ObserverId, ObserverKey ObserverKey, IEnumerable<EventType> EventTypes, Type SubscriberType, object Arguments)
+/// <param name="SiloAddress">The <see cref="SiloAddress"/> for the subscriber.</param>
+public record ObserverSubscription(
+    ObserverId ObserverId,
+    ObserverKey ObserverKey,
+    IEnumerable<EventType> EventTypes,
+    Type SubscriberType,
+    SiloAddress SiloAddress)
 {
     /// <summary>
     /// Gets a subscription representing no subscription.

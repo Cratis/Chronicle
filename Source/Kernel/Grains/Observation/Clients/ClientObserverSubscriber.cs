@@ -1,17 +1,13 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
-using Aksio.Commands;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Clients;
+using Aksio.Cratis.Kernel.Grains.Observation.Placement;
 using Aksio.Cratis.Observation;
-using Aksio.Json;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
@@ -19,6 +15,13 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IClientObserverSubscriber"/>.
 /// </summary>
+/// <remarks>
+/// We want this grain to be local to its activation. When a client connects, the service instance that
+/// receives the connection will activate this grain and we then want it to be local to that service instance
+/// and not perform a network hop. The <see cref="ObserverKey"/> contains a <see cref="ConnectionId"/> which
+/// will make the observer unique per connection, helping us to achieve this.
+/// </remarks>
+[ConnectedObserverPlacement]
 public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
 {
     readonly ILogger<ClientObserverSubscriber> _logger;

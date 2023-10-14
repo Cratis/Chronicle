@@ -58,7 +58,7 @@ public partial class ObserverSupervisor
             _logger.OffsetIsAtTail(_observerId, _microserviceId, _eventSequenceId, _tenantId);
             State.RunningState = ObserverRunningState.TailOfReplay;
             await WriteStateAsync();
-            await Subscribe(CurrentSubscription.SubscriberType!, State.EventTypes);
+            await Subscribe(State.Name, State.Type, CurrentSubscription.SubscriberType!, State.EventTypes, CurrentSubscription.SiloAddress);
             return;
         }
 
