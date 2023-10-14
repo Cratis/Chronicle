@@ -1,17 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
-using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using IClientObservers = Aksio.Cratis.Kernel.Grains.Observation.Clients.IClientObservers;
 
 namespace Aksio.Cratis.Kernel.Domain.Observation;
 
@@ -21,56 +15,15 @@ namespace Aksio.Cratis.Kernel.Domain.Observation;
 [Route("/api/events/store/{microserviceId}/observers")]
 public class Observers : Controller
 {
-    readonly KernelConfiguration _configuration;
     readonly IGrainFactory _grainFactory;
-    readonly ILogger<Observers> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
-    /// <param name="configuration">The Kernel configuration.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public Observers(
-        KernelConfiguration configuration,
-        IGrainFactory grainFactory,
-        ILogger<Observers> logger)
+    public Observers(IGrainFactory grainFactory)
     {
-        _configuration = configuration;
         _grainFactory = grainFactory;
-        _logger = logger;
-    }
-
-    /// <summary>
-    /// Register client observers for a specific microservice and unique connection.
-    /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to register for.</param>
-    /// <param name="connectionId"><see cref="ConnectionId"/> to register with.</param>
-    /// <param name="registrations">Collection of <see cref="ClientObserverRegistration"/>.</param>
-    /// <returns>Awaitable task.</returns>
-    [HttpPost("register/{connectionId}")]
-    public Task Register(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] ConnectionId connectionId,
-        [FromBody] IEnumerable<ClientObserverRegistration> registrations)
-    {
-        _logger.RegisterObservers();
-        _ = Task.Run(async () =>
-        {
-            var stopwatch = Stopwatch.StartNew();
-
-            var connectedClients = _grainFactory.GetGrain<IConnectedClients>(0);
-            var client = await connectedClients.GetConnectedClient(connectionId);
-            var tenants = _configuration.Tenants.GetTenantIds();
-
-            var observers = _grainFactory.GetGrain<IClientObservers>(microserviceId);
-            await observers.Register(connectionId, registrations, tenants);
-
-            stopwatch.Stop();
-            _logger.ObserversRegistered(stopwatch.Elapsed);
-        });
-
-        return Task.CompletedTask;
     }
 
     /// <summary>

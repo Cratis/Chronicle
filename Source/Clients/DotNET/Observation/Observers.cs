@@ -132,6 +132,7 @@ public class Observers : IObservers
     {
         var registration = new RegisterObserver
         {
+            ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStoreName = _eventStore.EventStoreName,
             TenantId = _eventStore.TenantId,
             EventSequenceId = handler.EventSequenceId.ToString(),

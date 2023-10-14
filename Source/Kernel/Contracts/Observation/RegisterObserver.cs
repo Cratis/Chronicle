@@ -13,38 +13,44 @@ namespace Aksio.Cratis.Kernel.Contracts.Observation;
 public class RegisterObserver
 {
     /// <summary>
-    /// Gets or sets the microservice identifier.
+    /// Gets or sets the connection identifier.
     /// </summary>
     [ProtoMember(1)]
+    public string ConnectionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the microservice identifier.
+    /// </summary>
+    [ProtoMember(2)]
     public string EventStoreName { get; set; }
 
     /// <summary>
     /// Gets or sets the tenant identifier.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(3)]
     public Guid TenantId { get; set; }
 
     /// <summary>
     /// Gets or sets the event sequence identifier.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(4)]
     public string EventSequenceId { get; set; }
 
     /// <summary>
     /// Gets or sets the observer identifier.
     /// </summary>
-    [ProtoMember(4)]
+    [ProtoMember(5)]
     public string ObserverId { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>
     /// Gets or sets the observer name.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(6)]
     public string ObserverName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets a collection of event types to observe.
     /// </summary>
-    [ProtoMember(6)]
+    [ProtoMember(7)]
     public IList<EventType> EventTypes { get; set; } = new List<EventType>();
 }
