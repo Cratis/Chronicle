@@ -15,12 +15,14 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <param name="EventTypes">Represents the event types for the subscription.</param>
 /// <param name="SubscriberType">Type that is subscribing.</param>
 /// <param name="SiloAddress">The <see cref="SiloAddress"/> for the subscriber.</param>
+/// <param name="State">Optional state associated with subscription.</param>
 public record ObserverSubscription(
     ObserverId ObserverId,
     ObserverKey ObserverKey,
     IEnumerable<EventType> EventTypes,
     Type SubscriberType,
-    SiloAddress SiloAddress)
+    SiloAddress SiloAddress,
+    object? State = null)
 {
     /// <summary>
     /// Gets a subscription representing no subscription.

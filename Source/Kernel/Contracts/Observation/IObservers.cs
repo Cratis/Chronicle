@@ -13,15 +13,6 @@ namespace Aksio.Cratis.Kernel.Contracts.Observation;
 public interface IObservers
 {
     /// <summary>
-    /// Observer an event sequence.
-    /// </summary>
-    /// <param name="messages">Observable of messages coming from the client.</param>
-    /// <param name="context">gRPC call context.</param>
-    /// <returns>An observable of <see cref="EventsToObserve"/>.</returns>
-    [Operation]
-    IObservable<EventsToObserve> Observe(IObservable<ObserverClientMessage> messages, CallContext context = default);
-
-    /// <summary>
     /// Rewind an observer.
     /// </summary>
     /// <param name="request">The rewind request.</param>

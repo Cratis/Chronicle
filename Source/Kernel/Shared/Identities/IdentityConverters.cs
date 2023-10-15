@@ -20,4 +20,12 @@ public static class IdentityConverters
         UserName = identity.UserName,
         OnBehalfOf = identity.OnBehalfOf?.ToContract()
     };
+
+    /// <summary>
+    /// Convert to Kernel representation.
+    /// </summary>
+    /// <param name="identity"><see cref="Kernel.Contracts.Identities.Identity"/> to convert from.</param>
+    /// <returns>Converted <see cref="Identity"/>.</returns>
+    public static Identity ToKernel(this Kernel.Contracts.Identities.Identity identity) =>
+        new(identity.Subject, identity.Name, identity.UserName, identity.OnBehalfOf?.ToKernel());
 }

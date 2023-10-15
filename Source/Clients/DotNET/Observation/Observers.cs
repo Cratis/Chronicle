@@ -3,8 +3,11 @@
 
 using System.Reactive.Subjects;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Contracts.Observation;
 using Microsoft.Extensions.Logging;
 using ObserverInformation = Aksio.Cratis.Kernel.Observation.ObserverInformation;
@@ -17,11 +20,13 @@ namespace Aksio.Cratis.Observation;
 public class Observers : IObservers
 {
     readonly IEventStore _eventStore;
+    readonly IEventTypes _eventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly IServiceProvider _serviceProvider;
     readonly IObserverMiddlewares _middlewares;
     readonly IEventSerializer _eventSerializer;
     readonly ICausationManager _causationManager;
+    readonly ILogger<Observers> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IDictionary<Type, ObserverHandler> _handlers = new Dictionary<Type, ObserverHandler>();
 
@@ -29,27 +34,33 @@ public class Observers : IObservers
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
     /// <param name="eventStore"><see cref="IEventStore"/> the observers belong to.</param>
+    /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving event types.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
     /// <param name="middlewares"><see cref="IObserverMiddlewares"/> to call.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Observers(
         IEventStore eventStore,
+        IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifactsProvider,
         IServiceProvider serviceProvider,
         IObserverMiddlewares middlewares,
         IEventSerializer eventSerializer,
         ICausationManager causationManager,
+        ILogger<Observers> logger,
         ILoggerFactory loggerFactory)
     {
         _eventStore = eventStore;
+        _eventTypes = eventTypes;
         _clientArtifactsProvider = clientArtifactsProvider;
         _serviceProvider = serviceProvider;
         _middlewares = middlewares;
         _eventSerializer = eventSerializer;
         _causationManager = causationManager;
+        _logger = logger;
         _loggerFactory = loggerFactory;
         eventStore.Connection.Lifecycle.OnConnected += Register;
     }
@@ -57,6 +68,7 @@ public class Observers : IObservers
     /// <inheritdoc/>
     public Task Discover()
     {
+        _logger.DiscoverAllObservers();
         var logger = _loggerFactory.CreateLogger<ObserverInvoker>();
         var handlers = _clientArtifactsProvider.Observers
                             .ToDictionary(
@@ -130,6 +142,7 @@ public class Observers : IObservers
 
     void RegisterObserver(ObserverHandler handler)
     {
+        _logger.RegisteringObservers(handler.Name);
         var registration = new RegisterObserver
         {
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
@@ -142,14 +155,45 @@ public class Observers : IObservers
         };
         var messages = new BehaviorSubject<ObserverClientMessage>(new(new(registration)));
 
-        Console.WriteLine($"Hello - {registration.ObserverId}");
-        var eventsToObserve = _eventStore.Connection.Services.Observers.Observe(messages);
+        var eventsToObserve = _eventStore.Connection.Services.ClientObservers.Observe(messages);
         eventsToObserve.Subscribe(async events =>
         {
-            Console.WriteLine("hello");
+            var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
+            var exceptionMessages = Enumerable.Empty<string>();
+            var exceptionStackTrace = string.Empty;
+            var state = ObservationState.Success;
+
+            foreach (var @event in events.Events)
+            {
+                _logger.EventReceived(@event.Metadata.Type.Id, handler.ObserverId);
+
+                try
+                {
+                    var context = @event.Context.ToKernel();
+                    var metadata = @event.Metadata.ToKernel();
+
+                    BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
+                    var eventType = _eventTypes.GetClrTypeFor(metadata.Type.Id);
+
+                    var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
+
+                    await handler.OnNext(metadata, context, content);
+                    lastSuccessfullyObservedEvent = @event.Metadata.SequenceNumber;
+                }
+                catch (Exception ex)
+                {
+                    exceptionMessages = ex.GetAllMessages();
+                    exceptionStackTrace = ex.StackTrace ?? string.Empty;
+                    state = ObservationState.Failed;
+                }
+            }
+
             var result = new ObservationResult
             {
-                State = ObservationState.Success
+                State = state,
+                LastSuccessfulObservation = lastSuccessfullyObservedEvent,
+                ExceptionMessages = exceptionMessages.ToList(),
+                ExceptionStackTrace = exceptionStackTrace
             };
             messages.OnNext(new(new(result)));
             await Task.CompletedTask;

@@ -61,4 +61,10 @@ public class EventContext
     /// </summary>
     [ProtoMember(8)]
     public Identity CausedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the state relevant for the observer observing.
+    /// </summary>
+    [ProtoMember(9)]
+    public EventObservationState ObservationState { get; set; }
 }

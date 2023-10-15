@@ -54,11 +54,13 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         bool isRunningWithDebugger)
     {
         _logger.ClientConnected(connectionId);
-        State.Clients.Add(new ConnectedClient(
-            connectionId,
-            version,
-            DateTimeOffset.UtcNow,
-            isRunningWithDebugger));
+        State.Clients.Add(new ConnectedClient
+        {
+            ConnectionId = connectionId,
+            Version = version,
+            LastSeen = DateTimeOffset.UtcNow,
+            IsRunningWithDebugger = isRunningWithDebugger
+        });
         _metrics?.SetConnectedClients(State.Clients.Count);
 
         await WriteStateAsync();
@@ -86,8 +88,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         var client = State.Clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
         if (client is not null)
         {
-            State.Clients.Remove(client);
-            State.Clients.Add(client with { LastSeen = DateTimeOffset.UtcNow });
+            client.LastSeen = DateTimeOffset.UtcNow;
             await WriteStateAsync();
             return true;
         }

@@ -99,27 +99,21 @@ public class ObserverHandler
     /// <summary>
     /// Handle next event.
     /// </summary>
-    /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>
+    /// <param name="metadata"><see cref="EventMetadata"/> for the event.</param>
+    /// <param name="context"><see cref="EventContext"/> for the event.</param>
+    /// <param name="content">Actual content.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task OnNext(AppendedEvent @event)
+    public async Task OnNext(EventMetadata metadata, EventContext context, object content)
     {
-        BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = @event.Context.CausedBy });
-        var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.Type.Id);
-
         _causationManager.Add(CausationType, new Dictionary<string, string>
         {
             { CausationObserverIdProperty, ObserverId.ToString() },
-            { CausationEventTypeIdProperty, @event.Metadata.Type.Id.ToString() },
-            { CausationEventTypeGenerationProperty, @event.Metadata.Type.Generation.ToString() },
+            { CausationEventTypeIdProperty, metadata.Type.Id.ToString() },
+            { CausationEventTypeGenerationProperty, metadata.Type.Generation.ToString() },
             { CausationEventSequenceIdProperty, EventSequenceId.ToString() },
-            { CausationEventSequenceNumberProperty, @event.Metadata.SequenceNumber.ToString() }
+            { CausationEventSequenceNumberProperty, metadata.SequenceNumber.ToString() }
         });
 
-        // TODO: Optimize this. It shouldn't be necessary to go from Expando to Json and back to the actual type.
-        var json = await _eventSerializer.Serialize(@event.Content);
-        var content = await _eventSerializer.Deserialize(eventType, json);
-        await _observerInvoker.Invoke(content, @event.Context);
-
-        BaseIdentityProvider.ClearCurrentIdentity();
+        await _observerInvoker.Invoke(content, context);
     }
 }

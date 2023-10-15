@@ -103,6 +103,11 @@ public class ObserverState
     public string CurrentSubscriptionType { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the current subscription state.
+    /// </summary>
+    public object? CurrentSubscriptionState { get; set; }
+
+    /// <summary>
     /// Gets or sets the current subscription silo address.
     /// </summary>
     public SiloAddress CurrentSubscriptionSiloAddress { get; set; } = SiloAddress.Zero;

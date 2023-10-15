@@ -51,6 +51,7 @@ public abstract class ObserverWorker : Grain
         {
             _currentSubscription = value;
             State.CurrentSubscriptionType = _currentSubscription.SubscriberType.AssemblyQualifiedName;
+            State.CurrentSubscriptionState = _currentSubscription.State;
             State.CurrentSubscriptionSiloAddress = _currentSubscription.SiloAddress;
         }
     }
@@ -226,12 +227,12 @@ public abstract class ObserverWorker : Grain
             TenantId,
             EventSequenceId,
             @event.Context.EventSourceId,
-            CurrentSubscription.SiloAddress.ToString(),
+            CurrentSubscription.SiloAddress.ToParsableString(),
             SourceMicroserviceId,
             SourceTenantId);
 
         var subscriber = (GrainFactory.GetGrain(CurrentSubscription.SubscriberType, ObserverId, key) as IObserverSubscriber)!;
-        return subscriber.OnNext(new[] { @event }, new(@event.Context.ObservationState));
+        return subscriber.OnNext(new[] { @event }, new(@event.Context.ObservationState, CurrentSubscription.State));
     }
 
     /// <summary>
@@ -242,6 +243,7 @@ public abstract class ObserverWorker : Grain
     {
         var subscriptionType = State.CurrentSubscriptionType;
         var siloAddress = State.CurrentSubscriptionSiloAddress;
+        var state = State.CurrentSubscriptionState;
         await _observerState.ReadStateAsync();
         if (string.IsNullOrEmpty(subscriptionType))
         {
@@ -255,7 +257,8 @@ public abstract class ObserverWorker : Grain
                 new(MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId),
                 State.EventTypes,
                 Type.GetType(subscriptionType)!,
-                siloAddress);
+                siloAddress,
+                state);
         }
     }
 

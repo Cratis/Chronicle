@@ -176,7 +176,6 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton(Globals.JsonSerializerOptions)
             .AddSingleton<IConnectionLifecycle, ConnectionLifecycle>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
-            .AddTransient<IClientObservers, ClientObservers>()
             .AddSingleton<IReducersRegistrar, ReducersRegistrar>()
             .AddSingleton<IReducerValidator, ReducerValidator>()
             .AddTransient<IClientReducers, ClientReducers>()
@@ -203,7 +202,6 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<PIIMetadataProvider>()
             .AddSingleton(typeof(IIdentityProvider), _identityProviderType)
             .AddSingleton<IRules, Rules.Rules>()
-            .AddTransient<ClientObservers>()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>));
 
         _logger.ConfiguringCompliance();

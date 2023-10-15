@@ -28,8 +28,9 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// <param name="type"><see cref="ObserverType"/>.</param>
     /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
     /// <param name="siloAddress">Address of the Orleans Silo the subscriber should be running on.</param>
+    /// <param name="state">Optional state associated with the subscription.</param>
     /// <returns>Awaitable task.</returns>
-    Task Subscribe<TObserverSubscriber>(ObserverName name, ObserverType type, IEnumerable<EventType> eventTypes, SiloAddress siloAddress)
+    Task Subscribe<TObserverSubscriber>(ObserverName name, ObserverType type, IEnumerable<EventType> eventTypes, SiloAddress siloAddress, object? state = null)
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>

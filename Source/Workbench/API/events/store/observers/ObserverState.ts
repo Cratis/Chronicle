@@ -51,6 +51,9 @@ export class ObserverState {
     @field(String)
     currentSubscriptionType!: string;
 
+    @field(Object)
+    currentSubscriptionState?: any;
+
     @field(SiloAddress)
     currentSubscriptionSiloAddress!: SiloAddress;
 }

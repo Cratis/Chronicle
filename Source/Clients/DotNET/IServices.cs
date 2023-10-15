@@ -20,10 +20,15 @@ public interface IServices
     /// <summary>
     /// Gets the <see cref="IEventTypes"/> service.
     /// </summary>
-    IEventTypes EventTypes { get; }
+    IEventTypes EventTypes { get; }
 
     /// <summary>
-    /// Gets the <see cref="IObservers"/>  service.
+    /// Gets the <see cref="IObservers"/> service.
     /// </summary>
-    IObservers Observers { get; }
+    IObservers Observers { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IClientObservers"/> service.
+    /// </summary>
+    IClientObservers ClientObservers { get; }
 }

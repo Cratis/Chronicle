@@ -25,6 +25,7 @@ public class EventStore : IEventStore
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
     readonly IEventSerializer _eventSerializer;
+    readonly ILogger<EventStore> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStore"/> class.
@@ -53,6 +54,7 @@ public class EventStore : IEventStore
         JsonSerializerOptions jsonSerializerOptions,
         ILoggerFactory loggerFactory)
     {
+        _logger = loggerFactory.CreateLogger<EventStore>();
         _eventStoreName = eventStoreName;
         _tenantId = tenantId;
         _causationManager = causationManager;
@@ -88,11 +90,13 @@ public class EventStore : IEventStore
 
         Observers = new Observers(
             this,
+            EventTypes,
             clientArtifactsProvider,
             serviceProvider,
             new ObserverMiddlewares(clientArtifactsProvider, serviceProvider),
             _eventSerializer,
             causationManager,
+            loggerFactory.CreateLogger<Observers>(),
             loggerFactory);
 
         Reducers = new Reducers.Reducers(this, clientArtifactsProvider);
@@ -135,6 +139,7 @@ public class EventStore : IEventStore
     /// <inheritdoc/>
     public Task DiscoverAll()
     {
+        _logger.DiscoverAllArtifacts();
         return Task.WhenAll(
             EventTypes.Discover(),
             Observers.Discover(),

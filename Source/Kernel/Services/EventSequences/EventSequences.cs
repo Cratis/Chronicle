@@ -3,12 +3,12 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Contracts.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Kernel.Services.Auditing;
-using Aksio.Cratis.Kernel.Services.Events;
-using Aksio.Cratis.Kernel.Services.Identities;
 
 namespace Aksio.Cratis.Kernel.Services.EventSequences;
 

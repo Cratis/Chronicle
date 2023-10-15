@@ -6,7 +6,9 @@ using Aksio.Cratis.Configuration;
 using Basic;
 using Microsoft.Extensions.Logging;
 
-using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+using var loggerFactory = LoggerFactory.Create(builder => builder
+    .SetMinimumLevel(LogLevel.Trace)
+    .AddConsole());
 
 using var client = new CratisClient(
         new CratisOptions(

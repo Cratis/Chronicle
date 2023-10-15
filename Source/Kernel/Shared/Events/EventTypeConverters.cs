@@ -22,4 +22,12 @@ public static class EventTypeConverters
             IsPublic = type.IsPublic
         };
     }
+
+    /// <summary>
+    /// Convert to Kernel representation.
+    /// </summary>
+    /// <param name="eventType"><see cref="Kernel.Contracts.Events.EventType"/> to convert from.</param>
+    /// <returns>Converted <see cref="EventType"/>.</returns>
+    public static EventType ToKernel(this Kernel.Contracts.Events.EventType eventType) =>
+        new(eventType.Id, eventType.Generation, eventType.IsPublic);
 }

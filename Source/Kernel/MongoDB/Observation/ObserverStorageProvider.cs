@@ -81,6 +81,7 @@ public class ObserverStorageProvider : IGrainStorage
         };
         state.FailedPartitions = failedPartitions;
         state.CurrentSubscriptionType = actualGrainState.State?.CurrentSubscriptionType;
+        state.CurrentSubscriptionState = actualGrainState.State?.CurrentSubscriptionState;
         state.CurrentSubscriptionSiloAddress = actualGrainState.State?.CurrentSubscriptionSiloAddress;
         actualGrainState.State = state;
     }

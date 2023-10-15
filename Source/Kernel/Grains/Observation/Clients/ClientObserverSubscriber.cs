@@ -5,7 +5,6 @@ using System.Text.Json;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Grains.Observation.Placement;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
@@ -24,32 +23,29 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 [ConnectedObserverPlacement]
 public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
 {
-    readonly ILogger<ClientObserverSubscriber> _logger;
-    readonly IHttpClientFactory _httpClientFactory;
+    readonly IObserverMediator _observerMediator;
     readonly JsonSerializerOptions _jsonSerializerOptions;
+    readonly ILogger<ClientObserverSubscriber> _logger;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
     ObserverId _observerId = ObserverId.Unspecified;
     TenantId _tenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
-    IConnectedClients? _connectedClients;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientObserverSubscriber"/> class.
     /// </summary>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> for connecting to the client.</param>
+    /// <param name="observerMediator"><see cref="IObserverMediator"/> for notifying actual clients.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientObserverSubscriber(
-        ILogger<ClientObserverSubscriber> logger,
-        IHttpClientFactory httpClientFactory,
-        JsonSerializerOptions jsonSerializerOptions)
+        IObserverMediator observerMediator,
+        JsonSerializerOptions jsonSerializerOptions,
+        ILogger<ClientObserverSubscriber> logger)
     {
-        _logger = logger;
-        _httpClientFactory = httpClientFactory;
+        _observerMediator = observerMediator;
         _jsonSerializerOptions = jsonSerializerOptions;
+        _logger = logger;
     }
-
-    IConnectedClients ConnectedClients => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(0);
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -66,7 +62,6 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        /*
         foreach (var @event in events)
         {
             _logger.EventReceived(
@@ -78,39 +73,23 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
                 @event.Context.SequenceNumber);
         }
 
-        if (context.Metadata is JsonElement connectedClientJsonObject)
+        if (context.State == null && context.State is not JsonElement) throw new MissingStateForObserverSubscriber(_observerId);
+        var connectedClientAsJsonObject = (JsonElement)context.State;
+        var connectedClient = connectedClientAsJsonObject.Deserialize<ConnectedClient>(_jsonSerializerOptions)!;
+        var tcs = new TaskCompletionSource<ObserverSubscriberResult>();
+
+        try
         {
-            var connectedClient = connectedClientJsonObject.Deserialize<ConnectedClient>(_jsonSerializerOptions);
-            if (connectedClient is not null)
-            {
-                using var httpClient = _httpClientFactory.CreateClient(Grains.Clients.ConnectedClients.ConnectedClientsHttpClient);
-                httpClient.BaseAddress = connectedClient.ClientUri;
-
-                using var jsonContent = JsonContent.Create(events, options: _jsonSerializerOptions);
-                httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
-                var response = await httpClient.PostAsync($"/.cratis/observers/{_observerId}", jsonContent);
-                var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
-                var state = ObserverSubscriberState.Ok;
-                var lastSuccessfullyObservedEvent = ((JsonElement)commandResult.Response!).Deserialize<EventSequenceNumber>(Globals.JsonSerializerOptions)!;
-
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                {
-                    await ConnectedClients.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
-                    state = ObserverSubscriberState.Disconnected;
-                }
-                else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)
-                {
-                    state = ObserverSubscriberState.Failed;
-                }
-
-                return new ObserverSubscriberResult(state, lastSuccessfullyObservedEvent, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
-            }
+            _observerMediator.OnNext(connectedClient.ConnectionId, events, tcs);
+            return await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         }
-
-        return new ObserverSubscriberResult(ObserverSubscriberState.Disconnected, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
-        */
-
-        await Task.CompletedTask;
-        throw new NotImplementedException();
+        catch (TaskCanceledException)
+        {
+            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
+        }
+        catch (TimeoutException)
+        {
+            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Timeout");
+        }
     }
 }

@@ -31,7 +31,6 @@ public class CratisConnection : ICratisConnection
     IServices _services;
     IDisposable? _keepAliveSubscription;
     TaskCompletionSource? _connectTcs;
-    bool _initialConnection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CratisConnection"/> class.
@@ -107,9 +106,14 @@ public class CratisConnection : ICratisConnection
 
         try
         {
+            _services = new Services(
+                _channel.CreateGrpcService<IEventSequences>(),
+                _channel.CreateGrpcService<IEventTypes>(),
+                _channel.CreateGrpcService<IObservers>(),
+                _channel.CreateGrpcService<IClientObservers>());
+
             await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_options.ConnectTimeout));
             _logger.Connected();
-            _initialConnection = true;
             await Lifecycle.Connected();
         }
         catch (TimeoutException)
@@ -118,11 +122,6 @@ public class CratisConnection : ICratisConnection
         }
         finally
         {
-            _services = new Services(
-                _channel.CreateGrpcService<IEventSequences>(),
-                _channel.CreateGrpcService<IEventTypes>(),
-                _channel.CreateGrpcService<IObservers>());
-
             StartWatchDog();
         }
     }
@@ -166,7 +165,10 @@ public class CratisConnection : ICratisConnection
 
     void HandleConnection(ConnectionKeepAlive keepAlive)
     {
-        _connectTcs?.SetResult();
+        if (_connectTcs?.Task.IsCompleted == false)
+        {
+            _connectTcs?.SetResult();
+        }
         _lastKeepAlive = DateTimeOffset.UtcNow;
         _connectionService?.ConnectionKeepAlive(keepAlive);
     }
@@ -186,7 +188,7 @@ public class CratisConnection : ICratisConnection
                     }
                 }
 
-                if (_initialConnection)
+                if (_connectTcs?.Task.IsCompleted == true)
                 {
                     _logger.Disconnected();
                     await Lifecycle.Disconnected();

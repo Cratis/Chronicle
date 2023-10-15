@@ -21,6 +21,7 @@ public class ObserverStateClassMap : IBsonClassMapFor<ObserverState>
         classMap.MapIdProperty(_ => _.Id);
         classMap.UnmapProperty(_ => _.FailedPartitions);
         classMap.UnmapProperty(_ => _.CurrentSubscriptionType);
+        classMap.UnmapProperty(_ => _.CurrentSubscriptionState);
         classMap.UnmapProperty(_ => _.CurrentSubscriptionSiloAddress);
     }
 }

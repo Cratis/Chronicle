@@ -6,8 +6,25 @@ namespace Aksio.Cratis.Connections;
 /// <summary>
 /// Represents the information related to a connected client.
 /// </summary>
-/// <param name="ConnectionId">The unique connection id.</param>
-/// <param name="Version">Version of the client.</param>
-/// <param name="LastSeen">The date and time the client was last seen.</param>
-/// <param name="IsRunningWithDebugger">Whether or not the client is running with debugger attached.</param>
-public record ConnectedClient(ConnectionId ConnectionId, string Version, DateTimeOffset LastSeen, bool IsRunningWithDebugger);
+public class ConnectedClient
+{
+    /// <summary>
+    /// Gets the unique connection id.
+    /// </summary>
+    public ConnectionId ConnectionId { get; init; } = ConnectionId.NotSet;
+
+    /// <summary>
+    /// Gets the version of the client.
+    /// </summary>
+    public string Version { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the date and time the client was last seen.
+    /// </summary>
+    public DateTimeOffset LastSeen { get; set; }
+
+    /// <summary>
+    /// Gets whether or not the client is running with debugger attached.
+    /// </summary>
+    public bool IsRunningWithDebugger { get; init; }
+}

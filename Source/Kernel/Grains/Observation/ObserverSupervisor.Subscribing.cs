@@ -17,9 +17,10 @@ public partial class ObserverSupervisor
         ObserverName name,
         ObserverType type,
         IEnumerable<EventType> eventTypes,
-        SiloAddress siloAddress)
+        SiloAddress siloAddress,
+        object? state = null)
         where TObserverSubscriber : IObserverSubscriber
-        => Subscribe(name, type, typeof(TObserverSubscriber), eventTypes, siloAddress);
+        => Subscribe(name, type, typeof(TObserverSubscriber), eventTypes, siloAddress, state);
 
     /// <inheritdoc/>
     public async Task Unsubscribe()
@@ -37,16 +38,17 @@ public partial class ObserverSupervisor
         ObserverType type,
         Type subscriberType,
         IEnumerable<EventType> eventTypes,
-        SiloAddress siloAddress)
+        SiloAddress siloAddress,
+        object? state = null)
     {
         _logger.Subscribing(name, type, _observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
+        _failedPartitionSupervisor = new(_observerId, _observerKey, State.Name, eventTypes, State.FailedPartitions, GrainFactory);
+        await ReadStateAsync();
 
         State.Name = name;
         State.Type = type;
 
-        _failedPartitionSupervisor = new(_observerId, _observerKey, State.Name, eventTypes, State.FailedPartitions, GrainFactory);
-        await ReadStateAsync();
-        CurrentSubscription = new(_observerId, _observerKey, eventTypes, subscriberType, siloAddress);
+        CurrentSubscription = new(_observerId, _observerKey, eventTypes, subscriberType, siloAddress, state);
 
         if (State.RunningState == ObserverRunningState.Rewinding)
         {

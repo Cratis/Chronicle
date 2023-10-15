@@ -19,6 +19,6 @@ internal static partial class CratisConnectionLogMessages
     [LoggerMessage(4, LogLevel.Information, "Reconnecting to Cratis Kernel")]
     internal static partial void Reconnecting(this ILogger<CratisConnection> logger);
 
-    [LoggerMessage(5, LogLevel.Information, "Timed out during connecting to Cratis Kernel")]
+    [LoggerMessage(5, LogLevel.Error, "Timed out during connecting to Cratis Kernel")]
     internal static partial void TimedOut(this ILogger<CratisConnection> logger);
 }

@@ -62,7 +62,7 @@ public record ObserverSubscriberKey(
 
         MicroserviceId? sourceMicroserviceId = null;
         TenantId? sourceTenantId = null;
-        if (elements.Length > 4)
+        if (elements.Length > 5)
         {
             sourceMicroserviceId = (MicroserviceId)elements[5];
             sourceTenantId = (TenantId)elements[6];

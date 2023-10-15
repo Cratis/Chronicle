@@ -13,7 +13,9 @@ namespace Aksio.Cratis;
 /// <param name="EventSequences"><see cref="IEventSequences"/> instance.</param>
 /// <param name="EventTypes"><see cref="IEventTypes"/> instance.</param>
 /// <param name="Observers"><see cref="IObservers"/> instance.</param>
+/// <param name="ClientObservers"><see cref="IClientObservers"/> instance.</param>
 public record Services(
     IEventSequences EventSequences,
     IEventTypes EventTypes,
-    IObservers Observers) : IServices;
+    IObservers Observers,
+    IClientObservers ClientObservers) : IServices;
