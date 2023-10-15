@@ -54,6 +54,7 @@ public class CratisClient : ICratisClient, IDisposable
         _jsonSchemaGenerator = new JsonSchemaGenerator(_complianceMetadataResolver);
         _connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
         _connection = new CratisConnection(
+            options,
             _connectionLifecycle,
             new Tasks.Tasks(),
             options.LoggerFactory.CreateLogger<CratisConnection>(),

@@ -21,6 +21,7 @@ namespace Aksio.Cratis;
 /// </summary>
 public class CratisConnection : ICratisConnection
 {
+    readonly CratisOptions _options;
     readonly ITasks _tasks;
     readonly CancellationToken _cancellationToken;
     readonly ILogger<CratisConnection> _logger;
@@ -29,22 +30,27 @@ public class CratisConnection : ICratisConnection
     DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
     IServices _services;
     IDisposable? _keepAliveSubscription;
+    TaskCompletionSource? _connectTcs;
+    bool _initialConnection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CratisConnection"/> class.
     /// </summary>
+    /// <param name="options"><see cref="CratisOptions"/> </param>
     /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
     /// <param name="tasks"><see cref="ITasks"/> to create tasks with.</param>
     /// <param name="logger">Logger for logging.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public CratisConnection(
+        CratisOptions options,
         IConnectionLifecycle connectionLifecycle,
         ITasks tasks,
         ILogger<CratisConnection> logger,
         CancellationToken cancellationToken)
     {
         GrpcClientFactory.AllowUnencryptedHttp2 = true;
+        _options = options;
         Lifecycle = connectionLifecycle;
         _tasks = tasks;
         _cancellationToken = cancellationToken;
@@ -90,19 +96,35 @@ public class CratisConnection : ICratisConnection
         _connectionService = _channel.CreateGrpcService<IConnectionService>();
 
         _lastKeepAlive = DateTimeOffset.UtcNow;
+
+        _connectTcs = new TaskCompletionSource();
+
         _keepAliveSubscription = _connectionService.Connect(new()
         {
             ConnectionId = Lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
         }).Subscribe(HandleConnection);
-        StartWatchDog();
 
-        _services = new Services(
-            _channel.CreateGrpcService<IEventSequences>(),
-            _channel.CreateGrpcService<IEventTypes>(),
-            _channel.CreateGrpcService<IObservers>());
+        try
+        {
+            await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_options.ConnectTimeout));
+            _logger.Connected();
+            _initialConnection = true;
+            await Lifecycle.Connected();
+        }
+        catch (TimeoutException)
+        {
+            _logger.TimedOut();
+        }
+        finally
+        {
+            _services = new Services(
+                _channel.CreateGrpcService<IEventSequences>(),
+                _channel.CreateGrpcService<IEventTypes>(),
+                _channel.CreateGrpcService<IObservers>());
 
-        await Lifecycle.Connected();
+            StartWatchDog();
+        }
     }
 
     GrpcChannel CreateGrpcChannel()
@@ -144,6 +166,7 @@ public class CratisConnection : ICratisConnection
 
     void HandleConnection(ConnectionKeepAlive keepAlive)
     {
+        _connectTcs?.SetResult();
         _lastKeepAlive = DateTimeOffset.UtcNow;
         _connectionService?.ConnectionKeepAlive(keepAlive);
     }
@@ -163,7 +186,12 @@ public class CratisConnection : ICratisConnection
                     }
                 }
 
-                await Lifecycle.Disconnected();
+                if (_initialConnection)
+                {
+                    _logger.Disconnected();
+                    await Lifecycle.Disconnected();
+                }
+                _logger.Reconnecting();
                 await Connect();
             },
             _cancellationToken);

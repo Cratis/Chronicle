@@ -26,6 +26,7 @@ public class CratisOptions
     /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
     /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving instances of things like observers, reducers and other artifacts. Will revert to <see cref="DefaultServiceProvider"/> if not configured.</param>
     /// <param name="artifactsProvider">Optional <see cref="IClientArtifactsProvider"/>. If not specified, it will use the <see cref="DefaultClientArtifactsProvider"/> with both project and package referenced assemblies.</param>
+    /// <param name="connectTimeout">Optional timeout when connecting in seconds. Defaults to 5.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> to use internally in client for logging.</param>
     public CratisOptions(
         CratisUrl url,
@@ -35,6 +36,7 @@ public class CratisOptions
         JsonSerializerOptions? jsonSerializerOptions = null,
         IServiceProvider? serviceProvider = null,
         IClientArtifactsProvider? artifactsProvider = null,
+        int connectTimeout = 5,
         ILoggerFactory? loggerFactory = null)
     {
         Url = url;
@@ -44,6 +46,7 @@ public class CratisOptions
         JsonSerializerOptions = jsonSerializerOptions ?? Globals.JsonSerializerOptions;
         LoggerFactory = loggerFactory ?? new LoggerFactory();
         ServiceProvider = serviceProvider ?? new DefaultServiceProvider();
+        ConnectTimeout = connectTimeout;
         ArtifactsProvider = artifactsProvider ?? new DefaultClientArtifactsProvider(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
     }
 
@@ -81,6 +84,11 @@ public class CratisOptions
     /// Gets the <see cref="IModelNameConvention"/> to use.
     /// </summary>
     public IModelNameConvention ModelNameConvention { get; init; }
+
+    /// <summary>
+    /// Gets the timeout when connecting in seconds.
+    /// </summary>
+    public int ConnectTimeout { get; init; }
 
     /// <summary>
     /// Gets the <see cref="ILoggerFactory"/> to use internally in the client.
