@@ -65,6 +65,13 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithGuidCompoun
     Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber);
 
     /// <summary>
+    /// Notify that the partition has been replayed.
+    /// </summary>
+    /// <param name="partition">The partition that has been replayed.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionReplayed(Key partition);
+
+    /// <summary>
     /// Notify that the partition has failed.
     /// </summary>
     /// <param name="partition">The partition that failed.</param>

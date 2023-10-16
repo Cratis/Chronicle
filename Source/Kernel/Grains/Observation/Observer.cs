@@ -132,10 +132,41 @@ public class Observer : StateMachine<ObserverState>, IObserver
     public Task Replay() => TransitionTo<States.Replay>();
 
     /// <inheritdoc/>
-    public Task ReplayPartition(Key partition) => throw new NotImplementedException();
+    public async Task ReplayPartition(Key partition)
+    {
+        // Todo: Add state saying the partition is being replayed
+        // Honor the state in the Handle method, as we do with failed partitions
+        await _jobsManager.Start<ReplayPartitionJob, ReplayPartitionRequest>(
+            JobId.New(),
+            new(
+                _observerId,
+                _observerKey,
+                _subscription,
+                partition,
+                EventSequenceNumber.First,
+                EventSequenceNumber.Max,
+                State.EventTypes));
+    }
 
     /// <inheritdoc/>
-    public Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber) => throw new NotImplementedException();
+    public async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber)
+    {
+        // Todo: Add state saying the partition is being replayed
+        // Honor the state in the Handle method, as we do with failed partitions
+        await _jobsManager.Start<ReplayPartitionJob, ReplayPartitionRequest>(
+            JobId.New(),
+            new(
+                _observerId,
+                _observerKey,
+                _subscription,
+                partition,
+                EventSequenceNumber.First,
+                EventSequenceNumber.Max,
+                State.EventTypes));
+    }
+
+    /// <inheritdoc/>
+    public Task PartitionReplayed(Key partition) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public async Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
