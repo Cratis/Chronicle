@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
 
@@ -13,14 +14,19 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 /// </summary>
 public class CatchUp : BaseObserverState
 {
+    readonly ObserverKey _observerKey;
     readonly IJobsManager _jobsManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CatchUp"/> class.
     /// </summary>
+    /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
     /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
-    public CatchUp(IJobsManager jobsManager)
+    public CatchUp(
+        ObserverKey observerKey,
+        IJobsManager jobsManager)
     {
+        _observerKey = observerKey;
         _jobsManager = jobsManager;
     }
 
@@ -34,20 +40,31 @@ public class CatchUp : BaseObserverState
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Replay),
-        typeof(Indexing)
+        typeof(Indexing),
+        typeof(Routing),
+        typeof(Disconnected)
     }.ToImmutableList();
 
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        await Task.CompletedTask;
+        var subscription = await Observer.GetSubscription();
+
+        await _jobsManager.Start<ICatchUpJob, CatchUpRequest>(
+            JobId.New(),
+            new CatchUpRequest(
+                state.ObserverId,
+                _observerKey,
+                subscription,
+                state.NextEventSequenceNumber,
+                state.EventTypes));
+
         return state;
     }
 
     /// <inheritdoc/>
     public override Task<ObserverState> OnLeave(ObserverState state)
     {
-        // Set the last event sequence number to the last event sequence number of the event sequence
         return Task.FromResult(state);
     }
 }
