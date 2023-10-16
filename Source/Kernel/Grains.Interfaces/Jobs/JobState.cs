@@ -6,8 +6,14 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// <summary>
 /// Holds the state of a <see cref="IJob{TRequest}"/>.
 /// </summary>
-public class JobState
+/// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
+public class JobState<TRequest>
 {
+    /// <summary>
+    /// Gets or sets the <see cref="JobId"/>.
+    /// </summary>
+    public JobId Id { get; set; } = JobId.NotSet;
+
     /// <summary>
     /// Gets or sets the name of the job.
     /// </summary>
@@ -36,5 +42,5 @@ public class JobState
     /// <summary>
     /// Gets or sets the request associated with the job.
     /// </summary>
-    public object Request { get; set; } = null!;
+    public TRequest Request { get; set; } = default!;
 }
