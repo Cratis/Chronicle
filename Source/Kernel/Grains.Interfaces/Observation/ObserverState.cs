@@ -58,6 +58,11 @@ public class ObserverState
     }
 
     /// <summary>
+    /// Gets or sets the next event sequence number for the event types the observer is observing.
+    /// </summary>
+    public EventSequenceNumber NextEventSequenceNumberForEventTypes { get; set; } = EventSequenceNumber.First;
+
+    /// <summary>
     /// Gets or sets the last handled event in the event log, ever. This value will never reset during a rewind.
     /// </summary>
     public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.First;

@@ -57,7 +57,8 @@ public class Observing : BaseObserverState
     {
         typeof(CatchUp),
         typeof(Replay),
-        typeof(Indexing)
+        typeof(Indexing),
+        typeof(Disconnected)
     }.ToImmutableList();
 
     /// <inheritdoc/>

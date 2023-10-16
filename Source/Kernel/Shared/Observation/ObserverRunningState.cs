@@ -14,9 +14,9 @@ public enum ObserverRunningState
     New = 0,
 
     /// <summary>
-    /// Observer is subscribing.
+    /// Observer is in the routing state. This is the state in which it will figure out what state it should be in.
     /// </summary>
-    Subscribing = 1,
+    Routing = 1,
 
     /// <summary>
     /// Observer is replaying.

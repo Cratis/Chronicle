@@ -5,14 +5,14 @@ using System.Collections.Immutable;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Subscribing.given;
+namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Routing.given;
 
-public class a_subscribing_state : Specification
+public class a_routing_state : Specification
 {
     protected Mock<IObserver> observer;
     protected Mock<IEventSequenceStorage> event_sequence_storage;
     protected Mock<IStateMachine<ObserverState>> state_machine;
-    protected Subscribing state;
+    protected Routing state;
     protected ObserverState stored_state;
     protected ObserverState resulting_stored_state;
     protected TailEventSequenceNumbers tail_event_sequence_numbers;
@@ -22,12 +22,12 @@ public class a_subscribing_state : Specification
     {
         observer = new();
         event_sequence_storage = new();
-        state = new Subscribing(observer.Object, event_sequence_storage.Object);
+        state = new Routing(observer.Object, event_sequence_storage.Object);
         state_machine = new();
         state.SetStateMachine(state_machine.Object);
         stored_state = new ObserverState
         {
-            RunningState = ObserverRunningState.Subscribing,
+            RunningState = ObserverRunningState.Routing,
         };
 
         subscription = new ObserverSubscription(

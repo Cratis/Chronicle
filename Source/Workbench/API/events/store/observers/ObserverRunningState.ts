@@ -4,7 +4,7 @@
 
 export enum ObserverRunningState {
     new = 0,
-    subscribing = 1,
+    routing = 1,
     replaying = 2,
     catchingUp = 3,
     active = 4,

@@ -3,9 +3,9 @@
 
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Subscribing.when_entering;
+namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Routing.when_entering;
 
-public class and_subscribers_event_types_are_different_but_there_are_no_events_in_sequence : given.a_subscribing_state
+public class and_subscribers_event_types_are_different : given.a_routing_state
 {
     void Establish()
     {
@@ -20,18 +20,12 @@ public class and_subscribers_event_types_are_different_but_there_are_no_events_i
                 new EventType("e433be87-2d05-49b1-b093-f0cec977429b", EventGeneration.First)
             }
         };
-
-        tail_event_sequence_numbers = tail_event_sequence_numbers with
-        {
-            Tail = EventSequenceNumber.Unavailable,
-            TailForEventTypes = EventSequenceNumber.Unavailable
-        };
     }
 
     async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
 
     [Fact] void should_only_perform_one_transition() => state_machine.Verify(_ => _.TransitionTo<IState<ObserverState>>(), Once());
-    [Fact] void should_transition_to_observing() => state_machine.Verify(_ => _.TransitionTo<Observing>(), Once());
-    [Fact] void should_set_next_event_sequence_number_to_first() => resulting_stored_state.NextEventSequenceNumber.ShouldEqual(EventSequenceNumber.First);
+    [Fact] void should_transition_to_replay() => state_machine.Verify(_ => _.TransitionTo<Replay>(), Once());
+    [Fact] void should_set_next_event_sequence_number_to_next_after_tail() => resulting_stored_state.NextEventSequenceNumber.ShouldEqual(tail_event_sequence_numbers.Tail.Next());
     [Fact] void should_set_event_types_to_subscribers_event_types() => resulting_stored_state.EventTypes.ShouldEqual(subscription.EventTypes);
 }

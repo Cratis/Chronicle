@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 /// <summary>
 /// Represents the subscribing state of an observer.
 /// </summary>
-public class Subscribing : BaseObserverState
+public class Routing : BaseObserverState
 {
     readonly IObserver _observer;
     readonly IEventSequenceStorage _eventSequenceStorage;
@@ -19,11 +19,11 @@ public class Subscribing : BaseObserverState
     TailEventSequenceNumbers _tailEventSequenceNumbers = TailEventSequenceNumbers.Empty;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Subscribing"/> class.
+    /// Initializes a new instance of the <see cref="Routing"/> class.
     /// </summary>
     /// <param name="observer"><see cref="IObserver"/> the state belongs to.</param>
     /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> provider.</param>
-    public Subscribing(
+    public Routing(
         IObserver observer,
         IEventSequenceStorage eventSequenceStorage)
     {
@@ -33,10 +33,10 @@ public class Subscribing : BaseObserverState
     }
 
     /// <inheritdoc/>
-    public override ObserverRunningState RunningState => ObserverRunningState.Subscribing;
+    public override ObserverRunningState RunningState => ObserverRunningState.Routing;
 
     /// <inheritdoc/>
-    public override StateName Name => "Subscribing";
+    public override StateName Name => "Routing";
 
     /// <inheritdoc/>
     protected override IImmutableList<Type> AllowedTransitions => new[]
@@ -53,6 +53,10 @@ public class Subscribing : BaseObserverState
         _subscription = await _observer.GetSubscription();
         _tailEventSequenceNumbers = await _eventSequenceStorage.GetTailSequenceNumbers(state.EventSequenceId, _subscription.EventTypes);
 
+        if (!_subscription.IsSubscribed)
+        {
+            await _observer.TransitionTo<Disconnected>();
+        }
         if (IsIndexing(state))
         {
             await StateMachine.TransitionTo<Indexing>();
@@ -70,14 +74,18 @@ public class Subscribing : BaseObserverState
             await StateMachine.TransitionTo<Observing>();
         }
 
-        state.EventTypes = _subscription.EventTypes;
-        state.NextEventSequenceNumber = _tailEventSequenceNumbers.Tail.Next();
-
         return state;
     }
 
     /// <inheritdoc/>
-    public override Task<ObserverState> OnLeave(ObserverState state) => Task.FromResult(state);
+    public override Task<ObserverState> OnLeave(ObserverState state)
+    {
+        state.EventTypes = _subscription.EventTypes;
+        state.NextEventSequenceNumber = _tailEventSequenceNumbers.Tail.Next();
+        state.NextEventSequenceNumberForEventTypes = _tailEventSequenceNumbers.TailForEventTypes.Next();
+
+        return Task.FromResult(state);
+    }
 
     bool IsIndexing(ObserverState state) => state.RunningState == ObserverRunningState.Indexing;
 

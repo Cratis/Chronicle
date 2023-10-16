@@ -99,20 +99,16 @@ public class Observer : StateMachine<ObserverState>, IObserver
             typeof(TObserverSubscriber),
             subscriberArgs);
 
-        await TransitionTo<States.Subscribing>();
+        await TransitionTo<States.Routing>();
     }
 
     /// <inheritdoc/>
     public override IImmutableList<IState<ObserverState>> CreateStates() => new IState<ObserverState>[]
     {
         new States.Disconnected(),
-        new States.Subscribing(this, _eventSequenceStorageProvider()),
-        new States.CatchUp(_jobsManager),
-        new States.Replay(
-            _observerKey,
-            _executionContextManager,
-            _eventSequenceStorageProvider,
-            _jobsManager),
+        new States.Routing(this, _eventSequenceStorageProvider()),
+        new States.CatchUp(_observerKey, _jobsManager),
+        new States.Replay(_observerKey, _jobsManager),
         new States.Indexing(),
         new States.Observing(
             this,
