@@ -59,8 +59,6 @@ public class Replay : BaseObserverState
         var subscription = await Observer.GetSubscription();
 
         await _jobsManager.Start<IReplayJob, ReplayRequest>(
-            _observerKey.MicroserviceId,
-            _observerKey.TenantId,
             JobId.New(),
             new ReplayRequest(
                 state.ObserverId,

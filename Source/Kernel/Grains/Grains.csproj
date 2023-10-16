@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Engines/Engines.csproj" />
+        <ProjectReference Include="../Persistence/Persistence.csproj" />
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
     </ItemGroup>
 

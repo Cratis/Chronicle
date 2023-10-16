@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Aksio.Cratis.Kernel.Persistence.Jobs;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
@@ -10,26 +12,42 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// </summary>
 public class JobsManager : Grain, IJobsManager
 {
+    JobsManagerKey _key = JobsManagerKey.NotSet;
+
     /// <inheritdoc/>
-    public Task Start<TJob, TRequest>(MicroserviceId microserviceId, TenantId tenantId, JobId jobId, TRequest request)
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        this.GetPrimaryKeyLong(out var key);
+        _key = key;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task Start<TJob, TRequest>(JobId jobId, TRequest request)
         where TJob : IJob<TRequest>
     {
         var job = GrainFactory.GetGrain<TJob>(
             jobId,
             new JobKey(
-                microserviceId,
-                tenantId));
+                _key.MicroserviceId,
+                _key.TenantId));
 
         return job.Start(request);
     }
 
     /// <inheritdoc/>
-    public Task OnCompleted(MicroserviceId microserviceId, TenantId tenantId, JobId jobId)
+    public Task OnCompleted(JobId jobId)
     {
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task<IImmutableList<TRequest>> GetRunningJobsOfType<TJob, TRequest>()
-        where TJob : IJob<TRequest> => throw new NotImplementedException();
+    public async Task<IImmutableList<TRequest>> GetRunningJobsOfType<TJob, TRequest>()
+        where TJob : IJob<TRequest>
+        where TRequest : class
+    {
+        var storage = ServiceProvider.GetRequiredService<IJobStorage<JobState>>();
+        var jobs = await storage.GetJobs<TJob>(JobStatus.Started);
+        return jobs.Select(_ => (_.Request as TRequest)!).ToImmutableList();
+    }
 }

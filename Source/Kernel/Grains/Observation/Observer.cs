@@ -66,7 +66,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
         _observerKey = ObserverKey.Parse(keyAsString);
 
         _streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-        _jobsManager = GrainFactory.GetGrain<IJobsManager>(0);
+        _jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_observerKey.MicroserviceId, _observerKey.TenantId));
 
         return Task.CompletedTask;
     }
