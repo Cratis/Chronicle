@@ -30,7 +30,7 @@ public class ReplayJob : Job<ReplayRequest, JobState>, IReplayJob
     {
         if (_request == null) return;
         var observer = GrainFactory.GetGrain<IObserver>(_request.ObserverId, _request.ObserverKey);
-        await observer.TransitionTo<Observing>();
+        await observer.TransitionTo<Routing>();
     }
 
     /// <inheritdoc/>
@@ -40,7 +40,8 @@ public class ReplayJob : Job<ReplayRequest, JobState>, IReplayJob
         var index = await _observerKeyIndexes.GetFor(
             request.ObserverKey.MicroserviceId,
             request.ObserverKey.TenantId,
-            request.ObserverId);
+            request.ObserverId,
+            EventSequenceNumber.First);
 
         var keys = await index.GetKeys();
         await foreach (var key in keys)
