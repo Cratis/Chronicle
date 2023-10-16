@@ -1,9 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Aksio.DependencyInversion;
+using Aksio.Strings;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
@@ -54,6 +56,22 @@ public class MongoDBJobStorage<TJobState> : IJobStorage<TJobState>
     {
         var filter = GetIdFilter(jobId);
         await Collection.ReplaceOneAsync(filter, state.ToBsonDocument(), new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IImmutableList<TJobState>> GetJobs<TJobType>(JobStatus status = JobStatus.None)
+    {
+        var jobType = (JobType)typeof(TJobType);
+        var jobTypeFilter = Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobType>(nameof(JobState.Type).ToCamelCase()), jobType);
+        var statusFilter = Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState.Status).ToCamelCase()), status);
+
+        var filter = status == JobStatus.None ?
+                                jobTypeFilter :
+                                Builders<BsonDocument>.Filter.And(jobTypeFilter, statusFilter);
+
+        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
+        var documents = await cursor.ToListAsync().ConfigureAwait(false);
+        return documents.Select(_ => BsonSerializer.Deserialize<TJobState>(_)).ToImmutableList();
     }
 
     FilterDefinition<BsonDocument> GetIdFilter(Guid id) => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, Guid>("_id"), id);
