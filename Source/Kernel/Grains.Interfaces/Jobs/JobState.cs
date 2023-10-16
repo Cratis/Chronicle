@@ -14,6 +14,11 @@ public class JobState
     public JobName Name { get; set; } = JobName.NotSet;
 
     /// <summary>
+    /// Gets or sets the <see cref="JobType"/>.
+    /// </summary>
+    public JobType Type { get; set; } = JobType.NotSet;
+
+    /// <summary>
     /// Gets or sets the <see cref="JobStatus"/>.
     /// </summary>
     public JobStatus Status { get; set; }
