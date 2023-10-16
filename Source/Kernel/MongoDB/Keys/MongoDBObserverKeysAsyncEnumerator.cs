@@ -44,7 +44,13 @@ public class MongoDBObserverKeysAsyncEnumerator : IAsyncEnumerator<Key>
         {
             _current = null;
         }
-        _current = new(_cursor.Current.First(), ArrayIndexers.NoIndexers);
-        return true;
+
+        if (_cursor.Current?.Any() == true)
+        {
+            _current = new(_cursor.Current.First(), ArrayIndexers.NoIndexers);
+            return true;
+        }
+
+        return false;
     }
 }
