@@ -2,12 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 
@@ -51,13 +49,31 @@ public class Replay : BaseObserverState
     {
         var subscription = await Observer.GetSubscription();
 
-        await _jobsManager.Start<IReplayJob, ReplayRequest>(
-            JobId.New(),
-            new ReplayRequest(
-                state.ObserverId,
-                _observerKey,
-                subscription,
-                state.EventTypes));
+        var jobs = await _jobsManager.GetJobsOfType<IReplayJob, ReplayRequest>();
+        var jobsForThisObserver = jobs.Where(_ => _.Request.ObserverId == state.ObserverId && _.Request.ObserverKey == _observerKey);
+        if (jobs.Any(_ => _.Status == JobStatus.Started))
+        {
+            return state;
+        }
+
+        var pausedJob = jobs.FirstOrDefault(_ => _.Status == JobStatus.Paused);
+
+        if (pausedJob is not null)
+        {
+            await _jobsManager.Start<IReplayJob, ReplayRequest>(
+                pausedJob.Id,
+                pausedJob.Request);
+        }
+        else
+        {
+            await _jobsManager.Start<IReplayJob, ReplayRequest>(
+                JobId.New(),
+                new ReplayRequest(
+                    state.ObserverId,
+                    _observerKey,
+                    subscription,
+                    state.EventTypes));
+        }
 
         return state;
     }

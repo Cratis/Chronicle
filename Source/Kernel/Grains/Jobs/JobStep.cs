@@ -33,14 +33,6 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
         _state = state;
     }
 
-    /// <inheritdoc/>
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
-    {
-        _state.State.Name = GetType().Name;
-
-        return Task.CompletedTask;
-    }
-
     /// <summary>
     /// Gets the <see cref="JobStepId"/> for this job step.
     /// </summary>
@@ -60,6 +52,14 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     /// Gets the state for the job step.
     /// </summary>
     protected TState State => _state.State;
+
+    /// <inheritdoc/>
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        _state.State.Name = GetType().Name;
+
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public async Task Start(GrainId jobId, TRequest request)

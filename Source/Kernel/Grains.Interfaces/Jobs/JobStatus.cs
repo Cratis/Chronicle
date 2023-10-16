@@ -29,7 +29,12 @@ public enum JobStatus
     CompletedWithFailures = 3,
 
     /// <summary>
+    /// The job has been paused.
+    /// </summary>
+    Paused = 4,
+
+    /// <summary>
     /// The job has been cancelled.
     /// </summary>
-    Stopped = 4
+    Stopped = 5
 }

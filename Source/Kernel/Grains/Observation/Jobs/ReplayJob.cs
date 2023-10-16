@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a job for replaying an observer.
 /// </summary>
-public class ReplayJob : Job<ReplayRequest, JobState>, IReplayJob
+public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
 {
     readonly IObserverKeyIndexes _observerKeyIndexes;
     ReplayRequest? _request;

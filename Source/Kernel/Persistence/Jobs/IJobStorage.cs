@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Persistence.Jobs;
 /// <summary>
 /// Defines a system that can store job state.
 /// </summary>
-/// <typeparam name="TJobState">Type of <see cref="JobState"/> to store.</typeparam>
+/// <typeparam name="TJobState">Type of <see cref="JobState{T}"/> to store.</typeparam>
 public interface IJobStorage<TJobState>
 {
     /// <summary>
@@ -23,7 +23,7 @@ public interface IJobStorage<TJobState>
     /// Save the state of a job.
     /// </summary>
     /// <param name="jobId">The <see cref="JobId"/> of the job to save.</param>
-    /// <param name="state"><see cref="JobState"/> to save.</param>
+    /// <param name="state"><see cref="JobState{T}"/> to save.</param>
     /// <returns>Awaitable task.</returns>
     Task Save(JobId jobId, TJobState state);
 

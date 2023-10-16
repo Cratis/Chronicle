@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Kernel.MongoDB.Jobs;
 /// <summary>
 /// Represents an implementation of <see cref="IJobStorage{TJobState}"/> for MongoDB.
 /// </summary>
-/// <typeparam name="TJobState">Type of <see cref="JobState"/> to work with.</typeparam>
+/// <typeparam name="TJobState">Type of <see cref="JobState{T}"/> to work with.</typeparam>
 public class MongoDBJobStorage<TJobState> : IJobStorage<TJobState>
 {
     readonly ProviderFor<IEventStoreDatabase> _databaseProvider;
@@ -62,8 +62,8 @@ public class MongoDBJobStorage<TJobState> : IJobStorage<TJobState>
     public async Task<IImmutableList<TJobState>> GetJobs<TJobType>(params JobStatus[] statuses)
     {
         var jobType = (JobType)typeof(TJobType);
-        var jobTypeFilter = Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobType>(nameof(JobState.Type).ToCamelCase()), jobType);
-        var statusFilters = statuses.Select(status => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState.Status).ToCamelCase()), status));
+        var jobTypeFilter = Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobType>(nameof(JobState<object>.Type).ToCamelCase()), jobType);
+        var statusFilters = statuses.Select(status => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState<object>.Status).ToCamelCase()), status));
 
         var filter = statuses.Length == 0 ?
                                 jobTypeFilter :

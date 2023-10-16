@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// <typeparam name="TJobState">Type of state for the job.</typeparam>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Jobs)]
 public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest>
-    where TJobState : JobState
+    where TJobState : JobState<TRequest>
 {
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)

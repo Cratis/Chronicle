@@ -42,12 +42,11 @@ public class JobsManager : Grain, IJobsManager
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<TRequest>> GetRunningJobsOfType<TJob, TRequest>()
+    public async Task<IImmutableList<JobState<TRequest>>> GetJobsOfType<TJob, TRequest>()
         where TJob : IJob<TRequest>
         where TRequest : class
     {
-        var storage = ServiceProvider.GetRequiredService<IJobStorage<JobState>>();
-        var jobs = await storage.GetJobs<TJob>(JobStatus.Started);
-        return jobs.Select(_ => (_.Request as TRequest)!).ToImmutableList();
+        var storage = ServiceProvider.GetRequiredService<IJobStorage<JobState<TRequest>>>();
+        return await storage.GetJobs<TJob>();
     }
 }

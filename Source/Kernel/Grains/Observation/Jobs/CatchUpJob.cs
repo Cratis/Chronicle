@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a job for catching up an observer.
 /// </summary>
-public class CatchUpJob : Job<CatchUpRequest, JobState>, ICatchUpJob
+public class CatchUpJob : Job<CatchUpRequest, JobState<CatchUpRequest>>, ICatchUpJob
 {
     readonly IObserverKeyIndexes _observerKeyIndexes;
     CatchUpRequest? _request;

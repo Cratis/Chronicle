@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Kernel.MongoDB.Jobs;
 /// <summary>
 /// Represents an implementation of <see cref="IJobStorage{TJobState}"/> for MongoDB.
 /// </summary>
-/// <typeparam name="TJobStepState">Type of <see cref="JobState"/> to work with.</typeparam>
+/// <typeparam name="TJobStepState">Type of <see cref="JobStepState"/> to work with.</typeparam>
 public class MongoDBJobStepStorage<TJobStepState> : IJobStepStorage<TJobStepState>
 {
     readonly ProviderFor<IEventStoreDatabase> _databaseProvider;
