@@ -19,6 +19,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         StatusChanged(JobStatus.Started);
         State.Name = GetType().Name;
+        State.Type = GetType();
         await WriteStateAsync();
     }
 
@@ -91,7 +92,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         {
             var id = this.GetPrimaryKey(out var keyExtension);
             var key = (JobKey)keyExtension!;
-            await GrainFactory.GetGrain<IJobsManager>(0).OnCompleted(key.MicroserviceId, key.TenantId, id);
+            await GrainFactory
+                    .GetGrain<IJobsManager>(0, new JobsManagerKey(key.MicroserviceId, key.TenantId))
+                    .OnCompleted(id);
             await OnCompleted();
 
             if (State.Progress.FailedSteps > 0)
