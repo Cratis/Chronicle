@@ -3,7 +3,6 @@
 
 using System.Reactive.Subjects;
 using System.Reflection;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
