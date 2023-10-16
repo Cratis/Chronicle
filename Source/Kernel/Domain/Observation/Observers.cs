@@ -106,7 +106,7 @@ public class Observers : Controller
         [FromRoute] EventSourceId partitionId)
     {
         var observer = _grainFactory.GetGrain<IObserver>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
-        await observer.TryResumePartition(partitionId);
+        await observer.TryRecoverFailedPartition(partitionId);
     }
 
     /// <summary>

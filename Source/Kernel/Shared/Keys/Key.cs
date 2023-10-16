@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Keys;
@@ -16,4 +17,16 @@ public record Key(object Value, ArrayIndexers ArrayIndexers)
     /// Gets the <see cref="Key"/> representing an unset key.
     /// </summary>
     public static readonly Key Undefined = new(null!, ArrayIndexers.NoIndexers);
+
+    /// <summary>
+    /// Implicitly convert from a <see cref="EventSourceId"/> to a <see cref="Key"/>.
+    /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to convert from.</param>
+    public static implicit operator Key(EventSourceId eventSourceId) => new(eventSourceId.Value, ArrayIndexers.NoIndexers);
+
+    /// <summary>
+    /// Implicitly convert from a <see cref="Key"/> to a <see cref="EventSourceId"/>.
+    /// </summary>
+    /// <param name="key"><see cref="Key"/> to convert from.</param>
+    public static implicit operator EventSourceId(Key key) => new(key.Value.ToString()!);
 }

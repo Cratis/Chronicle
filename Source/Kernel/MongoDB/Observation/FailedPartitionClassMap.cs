@@ -17,5 +17,6 @@ public class FailedPartitionClassMap : IBsonClassMapFor<FailedPartition>
     {
         classMap.AutoMap();
         classMap.MapIdProperty(_ => _.Id);
+        classMap.UnmapField(_ => _.LastAttempt);
     }
 }

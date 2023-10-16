@@ -5,6 +5,8 @@ using System.Collections.Immutable;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
@@ -100,6 +102,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
             subscriberArgs);
 
         await TransitionTo<States.Routing>();
+        await TryRecoverAllFailedPartitions();
     }
 
     /// <inheritdoc/>
@@ -129,13 +132,13 @@ public class Observer : StateMachine<ObserverState>, IObserver
     public Task Replay() => TransitionTo<States.Replay>();
 
     /// <inheritdoc/>
-    public Task ReplayPartition(EventSourceId partition) => throw new NotImplementedException();
+    public Task ReplayPartition(Key partition) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task ReplayPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber) => throw new NotImplementedException();
+    public Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public async Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    public async Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
     {
         _logger.PartitionFailed(
             partition,
@@ -147,17 +150,57 @@ public class Observer : StateMachine<ObserverState>, IObserver
             _observerKey.SourceMicroserviceId ?? MicroserviceId.Unspecified,
             _observerKey.SourceTenantId ?? TenantId.NotSet);
 
-        Failures.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
+        var failure = Failures.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
+
+        var time = TimeSpan.FromSeconds((failure.Attempts.Count() - 1) * 2).Add(TimeSpan.FromMilliseconds(100));
+        RegisterTimer(
+            async (_) => await TryRecoverFailedPartition(partition),
+            null,
+            time,
+            TimeSpan.MaxValue);
+
         await _failuresState.WriteStateAsync();
     }
 
     /// <inheritdoc/>
-    public Task TryResumePartition(EventSourceId partition) => throw new NotImplementedException();
+    public Task FailedPartitionRecovered(Key partition)
+    {
+        Failures.Remove(partition);
+        return _failuresState.WriteStateAsync();
+    }
 
     /// <inheritdoc/>
-    public async Task Handle(EventSourceId eventSourceId, IEnumerable<AppendedEvent> events)
+    public async Task TryRecoverFailedPartition(Key partition)
     {
-        if (!_subscription.IsSubscribed || Failures.IsFailed(eventSourceId))
+        var failure = Failures.Get(partition);
+        if (failure is null) return;
+        var lastAttempt = failure.LastAttempt;
+        if (lastAttempt is null) return;
+
+        await _jobsManager.Start<RetryFailedPartitionJob, RetryFailedPartitionRequest>(
+            JobId.New(),
+            new(
+                _observerId,
+                _observerKey,
+                _subscription,
+                partition,
+                lastAttempt.SequenceNumber,
+                State.EventTypes));
+    }
+
+    /// <inheritdoc/>
+    public async Task TryRecoverAllFailedPartitions()
+    {
+        foreach (var partition in Failures.Partitions)
+        {
+            await TryRecoverFailedPartition(partition.Partition);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task Handle(Key partition, IEnumerable<AppendedEvent> events)
+    {
+        if (!_subscription.IsSubscribed || Failures.IsFailed(partition))
         {
             return;
         }
@@ -178,7 +221,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
                         _observerKey.MicroserviceId,
                         _observerKey.TenantId,
                         _observerKey.EventSequenceId,
-                        eventSourceId,
+                        partition,
                         _observerKey.SourceMicroserviceId,
                         _observerKey.SourceTenantId);
 
@@ -222,7 +265,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
 
             if (failed)
             {
-                await PartitionFailed(eventSourceId, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
+                await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
             }
 
             await WriteStateAsync();

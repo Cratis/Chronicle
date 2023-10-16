@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Kernel.Observation;
@@ -21,7 +21,7 @@ public class FailedPartition
     /// <summary>
     /// Gets or sets the partition that is failed.
     /// </summary>
-    public EventSourceId Partition { get; set; } = EventSourceId.Unspecified;
+    public Key Partition { get; set; } = Key.Undefined;
 
     /// <summary>
     /// Gets or sets the <see cref="ObserverId"/> for which this is a failed partition.
@@ -41,6 +41,11 @@ public class FailedPartition
     /// Gets or sets whether or not the failure is resolved.
     /// </summary>
     public bool IsResolved { get; set; }
+
+    /// <summary>
+    /// Gets the last attempt for the failed partition.
+    /// </summary>
+    public FailedPartitionAttempt? LastAttempt => Attempts.LastOrDefault();
 
     /// <summary>
     /// Add an attempt to the failed partition.

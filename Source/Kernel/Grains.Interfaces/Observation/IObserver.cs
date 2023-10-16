@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
 
@@ -53,7 +54,7 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithGuidCompoun
     /// </summary>
     /// <param name="partition">The partition to rewind.</param>
     /// <returns>Awaitable task.</returns>
-    Task ReplayPartition(EventSourceId partition);
+    Task ReplayPartition(Key partition);
 
     /// <summary>
     /// Rewind the observer for a specific partition to a specific sequence number.
@@ -61,7 +62,7 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithGuidCompoun
     /// <param name="partition">The partition to rewind.</param>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to rewind to.</param>
     /// <returns>Awaitable task.</returns>
-    Task ReplayPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber);
+    Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber);
 
     /// <summary>
     /// Notify that the partition has failed.
@@ -71,20 +72,33 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithGuidCompoun
     /// <param name="exceptionMessages">All exception messages.</param>
     /// <param name="exceptionStackTrace">The exception stacktrace.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace);
+    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace);
 
     /// <summary>
-    /// Attempt to resume a partition.
+    /// Notify that the partition has recovered.
+    /// </summary>
+    /// <param name="partition">The partition that has recovered.</param>
+    /// <returns>Awaitable task.</returns>
+    Task FailedPartitionRecovered(Key partition);
+
+    /// <summary>
+    /// Attempt to recover a failed partition.
     /// </summary>
     /// <param name="partition">The partition that is failed.</param>
     /// <returns>Awaitable task.</returns>
-    Task TryResumePartition(EventSourceId partition);
+    Task TryRecoverFailedPartition(Key partition);
+
+    /// <summary>
+    /// Attempt to recover all failed partitions.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task TryRecoverAllFailedPartitions();
 
     /// <summary>
     /// Handle events for an <see cref="EventSourceId"/>.
     /// </summary>
-    /// <param name="eventSourceId"><see cref="EventSourceId"/> to handle events for.</param>
+    /// <param name="partition"><see cref="Key"/> to handle events for.</param>
     /// <param name="events">Collection of <see cref="AppendedEvent"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task Handle(EventSourceId eventSourceId, IEnumerable<AppendedEvent> events);
+    Task Handle(Key partition, IEnumerable<AppendedEvent> events);
 }

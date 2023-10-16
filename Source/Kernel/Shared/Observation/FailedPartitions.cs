@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Keys;
 
 namespace Aksio.Cratis.Kernel.Observation;
 
@@ -37,24 +38,25 @@ public class FailedPartitions
     /// </summary>
     /// <param name="partition">Partition to check.</param>
     /// <returns>True if failed, false if not.</returns>
-    public bool IsFailed(EventSourceId partition) => _partitions.Exists(_ => _.Partition == partition);
+    public bool IsFailed(Key partition) => _partitions.Exists(_ => _.Partition == partition);
 
     /// <summary>
     /// Gets a failed partition by its partition identifier.
     /// </summary>
     /// <param name="partition">Partition to get.</param>
     /// <returns>The failed partition.</returns>
-    public FailedPartition? Get(EventSourceId partition) => _partitions.Find(_ => _.Partition == partition);
+    public FailedPartition? Get(Key partition) => _partitions.Find(_ => _.Partition == partition);
 
     /// <summary>
     /// Register an attempt for a partition.
     /// </summary>
-    /// <param name="partition"><see cref="EventSourceId"/> to register for.</param>
+    /// <param name="partition"><see cref="Key"/> to register for.</param>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> the attempt was for.</param>
     /// <param name="messages">Collection of messages associated with the error.</param>
     /// <param name="stackTrace">The stack trace associated with the error.</param>
-    public void RegisterAttempt(
-        EventSourceId partition,
+    /// <returns>A <see cref="FailedPartition"/> instance.</returns>
+    public FailedPartition RegisterAttempt(
+        Key partition,
         EventSequenceNumber sequenceNumber,
         IEnumerable<string> messages,
         string stackTrace)
@@ -82,5 +84,13 @@ public class FailedPartitions
             Messages = messages,
             StackTrace = stackTrace
         });
+
+        return failure;
     }
+
+    /// <summary>
+    /// Remove a failed partition.
+    /// </summary>
+    /// <param name="partition"><see cref="Key"/> to remove.</param>
+    public void Remove(Key partition) => _partitions.RemoveAll(_ => _.Partition == partition);
 }

@@ -8,6 +8,7 @@ using Aksio.Cratis.Kernel.Keys;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
+
 /// <summary>
 /// Represents a job for replaying an observer.
 /// </summary>

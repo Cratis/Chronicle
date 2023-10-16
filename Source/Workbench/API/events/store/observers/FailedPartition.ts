@@ -4,6 +4,7 @@
 
 import { field } from '@aksio/fundamentals';
 
+import { Key } from './Key';
 import { FailedPartitionAttempt } from './FailedPartitionAttempt';
 
 export class FailedPartition {
@@ -11,8 +12,8 @@ export class FailedPartition {
     @field(String)
     id!: string;
 
-    @field(String)
-    partition!: string;
+    @field(Key)
+    partition!: Key;
 
     @field(String)
     observerId!: string;
@@ -22,4 +23,7 @@ export class FailedPartition {
 
     @field(Boolean)
     isResolved!: boolean;
+
+    @field(FailedPartitionAttempt)
+    lastAttempt?: FailedPartitionAttempt;
 }
