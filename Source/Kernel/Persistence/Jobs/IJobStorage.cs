@@ -38,10 +38,10 @@ public interface IJobStorage<TJobState>
     /// Get all jobs of a given type with a given status.
     /// </summary>
     /// <typeparam name="TJobType">Type of job to get for.</typeparam>
-    /// <param name="status">The <see cref="JobStatus"/> to filter on. Defaults to <see cref="JobStatus.None"/>.</param>
+    /// <param name="statuses">Optional params of <see cref="JobStatus"/> to filter on.</param>
     /// <returns>A collection of job state objects.</returns>
     /// <remarks>
-    /// If <see cref="JobStatus.None"/> is specified, all jobs of the given type will be returned.
+    /// If no job statuses are specified, all jobs of the given type will be returned.
     /// </remarks>
-    Task<IImmutableList<TJobState>> GetJobs<TJobType>(JobStatus status = JobStatus.None);
+    Task<IImmutableList<TJobState>> GetJobs<TJobType>(params JobStatus[] statuses);
 }
