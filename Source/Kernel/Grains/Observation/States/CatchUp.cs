@@ -50,14 +50,32 @@ public class CatchUp : BaseObserverState
     {
         var subscription = await Observer.GetSubscription();
 
-        await _jobsManager.Start<ICatchUpJob, CatchUpRequest>(
-            JobId.New(),
-            new CatchUpRequest(
-                state.ObserverId,
-                _observerKey,
-                subscription,
-                state.NextEventSequenceNumber,
-                state.EventTypes));
+        var jobs = await _jobsManager.GetJobsOfType<ICatchUpJob, CatchUpRequest>();
+        var jobsForThisObserver = jobs.Where(_ => _.Request.ObserverId == state.ObserverId && _.Request.ObserverKey == _observerKey);
+        if (jobs.Any(_ => _.Status == JobStatus.Started))
+        {
+            return state;
+        }
+
+        var pausedJob = jobs.FirstOrDefault(_ => _.Status == JobStatus.Paused);
+
+        if (pausedJob is not null)
+        {
+            await _jobsManager.Start<ICatchUpJob, CatchUpRequest>(
+                pausedJob.Id,
+                pausedJob.Request);
+        }
+        else
+        {
+            await _jobsManager.Start<ICatchUpJob, CatchUpRequest>(
+                JobId.New(),
+                new CatchUpRequest(
+                    state.ObserverId,
+                    _observerKey,
+                    subscription,
+                    state.NextEventSequenceNumber,
+                    state.EventTypes));
+        }
 
         return state;
     }
