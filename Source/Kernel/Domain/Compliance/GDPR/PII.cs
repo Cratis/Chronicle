@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Domain.Compliance.GDPR;
 /// Represents the domain API for PII.
 /// </summary>
 [Route("/api/compliance/gdpr/pii")]
-public class PII : Controller
+public class PII : ControllerBase
 {
     readonly IEventLog _eventLog;
     readonly IPIIManager _piiManager;

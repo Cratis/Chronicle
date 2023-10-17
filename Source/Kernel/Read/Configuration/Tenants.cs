@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Kernel.Read.Configuration.Tenants;
 /// Represents the API for working with tenants.
 /// </summary>
 [Route("/api/configuration/tenants")]
-public class Tenants : Controller
+public class Tenants : ControllerBase
 {
     readonly IGrainFactory _grainFactory;
 

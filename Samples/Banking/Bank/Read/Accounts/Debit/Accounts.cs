@@ -6,7 +6,7 @@ using Concepts.Accounts;
 namespace Read.Accounts.Debit;
 
 [Route("/api/accounts/debit")]
-public class Accounts : Controller
+public class Accounts : ControllerBase
 {
     readonly IMongoCollection<DebitAccount> _accountsCollection;
     readonly IMongoCollection<DebitAccountLatestTransactions> _latestTransactionsCollection;

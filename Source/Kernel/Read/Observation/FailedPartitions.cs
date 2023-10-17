@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Read.Observation;
 /// Represents the API for getting failed partitions.
 /// </summary>
 [Route("/api/events/store/{microserviceId}/{tenantId}/failed-partitions")]
-public class FailedPartitions : Controller
+public class FailedPartitions : ControllerBase
 {
     readonly IFailedPartitionsStorage _failedPartitionsState;
     readonly IExecutionContextManager _executionContextManager;

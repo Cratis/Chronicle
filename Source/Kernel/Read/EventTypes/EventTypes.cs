@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Kernel.Read.EventTypes;
 /// Represents the API for working with event types.
 /// </summary>
 [Route("/api/events/store/{microserviceId}/types")]
-public class EventTypes : Controller
+public class EventTypes : ControllerBase
 {
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
     readonly IExecutionContextManager _executionContextManager;

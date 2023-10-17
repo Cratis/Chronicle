@@ -18,7 +18,7 @@ namespace Aksio.Cratis.Kernel.Domain.EventSequences;
 /// Represents the API for working with the event log.
 /// </summary>
 [Route("/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}")]
-public class EventSequence : Controller
+public class EventSequence : ControllerBase
 {
     readonly IGrainFactory _grainFactory;
     readonly IExecutionContextManager _executionContextManager;

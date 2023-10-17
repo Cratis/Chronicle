@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Kernel.Read.Observation;
 /// Represents the API for working with observers.
 /// </summary>
 [Route("/api/events/store/{microserviceId}/{tenantId}/observers")]
-public class Observers : Controller
+public class Observers : ControllerBase
 {
     readonly ProviderFor<IObserverStorage> _observerStorageProvider;
     readonly IExecutionContextManager _executionContextManager;

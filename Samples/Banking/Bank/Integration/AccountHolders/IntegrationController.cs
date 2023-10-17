@@ -8,7 +8,7 @@ namespace Integration.AccountHolders;
 
 [Route("/api/integration")]
 
-public class IntegrationController : Controller
+public class IntegrationController : ControllerBase
 {
     readonly KontoEierConnector _connector;
     readonly ITenants _tenants;

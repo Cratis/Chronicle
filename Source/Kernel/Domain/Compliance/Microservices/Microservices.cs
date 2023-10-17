@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Kernel.Domain.Compliance.Microservices;
 /// Represents the domain API for microservices.
 /// </summary>
 [Route("/api/compliance/microservices")]
-public class Microservices : Controller
+public class Microservices : ControllerBase
 {
     readonly IEventLog _eventLog;
 

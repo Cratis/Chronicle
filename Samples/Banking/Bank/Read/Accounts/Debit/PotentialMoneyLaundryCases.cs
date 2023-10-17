@@ -4,7 +4,7 @@
 namespace Read.Accounts.Debit;
 
 [Route("/api/accounts/debit/moneylaundry")]
-public class PotentialMoneyLaundryCases : Controller
+public class PotentialMoneyLaundryCases : ControllerBase
 {
     readonly IMongoCollection<PotentialMoneyLaundryCase> _collection;
 

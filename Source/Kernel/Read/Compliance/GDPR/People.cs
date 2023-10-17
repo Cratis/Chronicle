@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Read.Compliance.GDPR;
 /// Represents the API for working with people.
 /// </summary>
 [Route("/api/compliance/gdpr/people")]
-public class People : Controller
+public class People : ControllerBase
 {
     readonly IMongoCollection<Person> _collection;
 

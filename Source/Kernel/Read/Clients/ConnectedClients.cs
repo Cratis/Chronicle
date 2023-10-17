@@ -12,7 +12,7 @@ namespace Read.Clients;
 /// Represents the API for querying connected clients.
 /// </summary>
 [Route("/api/clients/{microserviceId}")]
-public class ConnectedClients : Controller
+public class ConnectedClients : ControllerBase
 {
     readonly IConnectedClientsState _connectedClients;
 

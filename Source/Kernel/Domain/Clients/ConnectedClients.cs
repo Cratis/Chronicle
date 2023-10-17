@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Kernel.Domain.Clients;
 /// Represents the endpoint for clients to connect to.
 /// </summary>
 [Route("/api/clients/{microserviceId}")]
-public class ConnectedClients : Controller
+public class ConnectedClients : ControllerBase
 {
     readonly ILogger<ConnectedClients> _logger;
     readonly IGrainFactory _grainFactory;

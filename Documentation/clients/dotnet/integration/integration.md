@@ -333,7 +333,7 @@ the import. Something like the following:
 ```csharp
 [Route("/api/integration")]
 
-public class IntegrationController : Controller
+public class IntegrationController : ControllerBase
 {
     readonly KontoEierConnector _connector;
 
