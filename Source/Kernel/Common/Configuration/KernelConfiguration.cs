@@ -42,6 +42,7 @@ public class KernelConfiguration : IPerformPostBindOperations
     {
         Tenants[TenantId.NotSet.ToString()] = new();
         Microservices[MicroserviceId.Unspecified.ToString()] = new();
+        Microservices[MicroserviceId.Kernel.ToString()] = new();
         Storage.ConfigureKernelMicroservice(Tenants.Select(_ => _.Key));
     }
 }
