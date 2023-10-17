@@ -55,10 +55,6 @@ public class BootProcedure : IPerformBootProcedure
     {
         Task.Run(async () =>
         {
-            _logger.PrimingEventSequenceCaches();
-            var eventSequenceCaches = _serviceProvider.GetRequiredService<IEventSequenceCaches>()!;
-            await eventSequenceCaches.PrimeAll();
-
             var eventTypeRegistrations = _eventTypes.AllAsRegistrations;
 
             foreach (var (microserviceId, microservice) in _configuration.Microservices)
@@ -96,6 +92,10 @@ public class BootProcedure : IPerformBootProcedure
                     }
                 }
             }
+
+            _logger.PrimingEventSequenceCaches();
+            var eventSequenceCaches = _serviceProvider.GetRequiredService<IEventSequenceCaches>()!;
+            await eventSequenceCaches.PrimeAll();
         }).Wait();
     }
 }
