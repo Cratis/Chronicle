@@ -7,6 +7,7 @@ using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Aksio.MongoDB;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -20,16 +21,20 @@ public class MongoDBProjectionDefinitionsStorage : IProjectionDefinitionsStorage
 {
     readonly ISharedDatabase _sharedDatabase;
     readonly IJsonProjectionSerializer _projectionSerializer;
+    readonly ILogger<MongoDBProjectionDefinitionsStorage> _logger;
 
     /// <summary>
     /// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
     /// </summary>
     /// <param name="sharedDatabase">The <see cref="ISharedDatabase"/>.</param>
     /// <param name="projectionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
-    public MongoDBProjectionDefinitionsStorage(ISharedDatabase sharedDatabase, IJsonProjectionSerializer projectionSerializer)
+    public MongoDBProjectionDefinitionsStorage(
+        ISharedDatabase sharedDatabase,
+        IJsonProjectionSerializer projectionSerializer)
     {
         _sharedDatabase = sharedDatabase;
         _projectionSerializer = projectionSerializer;
+        _logger = logger;
     }
 
     IMongoCollection<BsonDocument> Collection => _sharedDatabase.GetCollection<BsonDocument>("projection-definitions");

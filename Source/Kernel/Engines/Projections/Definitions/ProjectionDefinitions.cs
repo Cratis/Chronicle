@@ -4,6 +4,7 @@
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 
@@ -38,18 +39,15 @@ public class ProjectionDefinitions : IProjectionDefinitions
     }
 
     /// <inheritdoc/>
-    public async Task<ProjectionDefinition> GetFor(ProjectionId projectionId)
+    public async Task<(bool Found, ProjectionDefinition? Projection)> TryGetFor(ProjectionId projectionId)
     {
         await PopulateIfMissing(projectionId);
-        ThrowIfMissingProjectionDefinition(projectionId);
-        return _definitions[projectionId];
-    }
+        if (!_definitions.ContainsKey(projectionId))
+        {
+            return (false, null);
+        }
 
-    /// <inheritdoc/>
-    public async Task<bool> HasFor(ProjectionId projectionId)
-    {
-        await PopulateIfMissing(projectionId);
-        return _definitions.ContainsKey(projectionId);
+        return (true, _definitions[projectionId]);
     }
 
     /// <inheritdoc/>
@@ -60,15 +58,17 @@ public class ProjectionDefinitions : IProjectionDefinitions
     }
 
     /// <inheritdoc/>
-    public async Task<bool> HasChanged(ProjectionDefinition projectionDefinition)
+    public async Task<(bool IsNew, bool HasChanged)> IsNewOrChanged(ProjectionDefinition projectionDefinition)
     {
-        if (!await HasFor(projectionDefinition.Identifier))
+        await PopulateIfMissing(projectionDefinition.Identifier);
+        if (!_definitions.ContainsKey(projectionDefinition.Identifier))
         {
-            return true;
+            return (true, false);
         }
         var incoming = _projectionSerializer.Serialize(projectionDefinition);
         var existing = _projectionSerializer.Serialize(_definitions[projectionDefinition.Identifier]);
-        return !incoming.ToString().Equals(existing.ToString());
+        var changed = !incoming.ToString().Equals(existing.ToString());
+        return (false, changed);
     }
 
     async Task PopulateIfMissing(ProjectionId projectionId)
@@ -77,11 +77,6 @@ public class ProjectionDefinitions : IProjectionDefinitions
         {
             await Populate();
         }
-    }
-
-    void ThrowIfMissingProjectionDefinition(ProjectionId identifier)
-    {
-        if (!_definitions.ContainsKey(identifier)) throw new MissingProjectionDefinition(identifier);
     }
 
     async Task PopulateIfEmpty()
