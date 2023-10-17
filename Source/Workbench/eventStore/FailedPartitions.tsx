@@ -152,7 +152,7 @@ export const FailedPartitions = () => {
                                     observerId: selectedFailedPartition.observerId,
                                     microserviceId: microserviceId,
                                     tenantId: selectedTenant?.id,
-                                    partitionId: selectedFailedPartition.partition,
+                                    partition: selectedFailedPartition.partition.value.toString(),
                                 });
                                 retryCommand.execute();
                             }}>Retry</Button>

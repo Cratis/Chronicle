@@ -6,13 +6,13 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/applications/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/observers/{{observerId}}/replay/{{tenantId}}/{{eventSourceId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/observers/{{observerId}}/replay/{{tenantId}}/{{partition}}');
 
 export interface IReplayPartition {
     microserviceId?: string;
     tenantId?: string;
     observerId?: string;
-    eventSourceId?: string;
+    partition?: string;
 }
 
 export class ReplayPartitionValidator extends CommandValidator {
@@ -20,19 +20,19 @@ export class ReplayPartitionValidator extends CommandValidator {
         microserviceId: new Validator(),
         tenantId: new Validator(),
         observerId: new Validator(),
-        eventSourceId: new Validator(),
+        partition: new Validator(),
     };
 }
 
 export class ReplayPartition extends Command<IReplayPartition> implements IReplayPartition {
-    readonly route: string = '/api/events/store/{{microserviceId}}/observers/{{observerId}}/replay/{{tenantId}}/{{eventSourceId}}';
+    readonly route: string = '/api/events/store/{{microserviceId}}/observers/{{observerId}}/replay/{{tenantId}}/{{partition}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new ReplayPartitionValidator();
 
     private _microserviceId!: string;
     private _tenantId!: string;
     private _observerId!: string;
-    private _eventSourceId!: string;
+    private _partition!: string;
 
     constructor() {
         super(Object, false);
@@ -43,7 +43,7 @@ export class ReplayPartition extends Command<IReplayPartition> implements IRepla
             'microserviceId',
             'tenantId',
             'observerId',
-            'eventSourceId',
+            'partition',
         ];
     }
 
@@ -52,7 +52,7 @@ export class ReplayPartition extends Command<IReplayPartition> implements IRepla
             'microserviceId',
             'tenantId',
             'observerId',
-            'eventSourceId',
+            'partition',
         ];
     }
 
@@ -80,13 +80,13 @@ export class ReplayPartition extends Command<IReplayPartition> implements IRepla
         this._observerId = value;
         this.propertyChanged('observerId');
     }
-    get eventSourceId(): string {
-        return this._eventSourceId;
+    get partition(): string {
+        return this._partition;
     }
 
-    set eventSourceId(value: string) {
-        this._eventSourceId = value;
-        this.propertyChanged('eventSourceId');
+    set partition(value: string) {
+        this._partition = value;
+        this.propertyChanged('partition');
     }
 
     static use(initialValues?: IReplayPartition): [ReplayPartition, SetCommandValues<IReplayPartition>, ClearCommandValues] {
