@@ -10,6 +10,7 @@ import { FailedPartitions } from './FailedPartitions';
 import { Observers } from './Observers';
 import { Projections } from './Projections';
 import { EventSequences } from './EventSequences';
+import { Jobs } from './Jobs';
 
 export const EventStore = () => {
     const [microservices] = AllMicroservices.use();
@@ -46,6 +47,12 @@ export const EventStore = () => {
                 targetPath: 'failed-partitions',
                 routePath: 'failed-partitions/:observerId',
                 content: <FailedPartitions />
+            }, {
+                title: 'Jobs',
+                icon: <icons.GroupWork />,
+                targetPath: 'jobs',
+                routePath: 'jobs',
+                content: <Jobs />
             }]
         } as NavigationItem;
     });
