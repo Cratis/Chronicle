@@ -52,7 +52,7 @@ public class CatchUp : BaseObserverState
 
         var jobs = await _jobsManager.GetJobsOfType<ICatchUpJob, CatchUpRequest>();
         var jobsForThisObserver = jobs.Where(_ => _.Request.ObserverId == state.ObserverId && _.Request.ObserverKey == _observerKey);
-        if (jobs.Any(_ => _.Status == JobStatus.Started))
+        if (jobs.Any(_ => _.Status == JobStatus.Running))
         {
             return state;
         }

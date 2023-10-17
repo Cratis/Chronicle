@@ -40,10 +40,10 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
         var index = await _observerKeyIndexes.GetFor(
             request.ObserverKey.MicroserviceId,
             request.ObserverKey.TenantId,
-            request.ObserverId,
-            EventSequenceNumber.First);
+            request.ObserverId);
 
-        var keys = await index.GetKeys();
+        var keys = await index.GetKeys(EventSequenceNumber.First);
+
         await foreach (var key in keys)
         {
             await AddStep<IHandleEventsForPartition, HandleEventsForPartitionArguments>(
@@ -57,6 +57,7 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
 
             break;
         }
+
 
         await WriteStateAsync();
     }

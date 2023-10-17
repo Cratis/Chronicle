@@ -17,21 +17,27 @@ public static class MongoCollectionExtensions
     /// <param name="collection">Collection to observe.</param>
     /// <param name="initialItems">The initial items.</param>
     /// <param name="handleChanges">Action to handle changes.</param>
+    /// <param name="filter">Optional filter.</param>
     /// <typeparam name="TResult">Type of the items in the result.</typeparam>
     /// <typeparam name="TDocument">Type of document for the collection.</typeparam>
     /// <returns>An observable for the items.</returns>
     public static IObservable<IEnumerable<TResult>> Observe<TResult, TDocument>(
         this IMongoCollection<TDocument> collection,
         IEnumerable<TResult> initialItems,
-        Action<IChangeStreamCursor<ChangeStreamDocument<TDocument>>, List<TResult>> handleChanges)
+        Action<IChangeStreamCursor<ChangeStreamDocument<TDocument>>, List<TResult>> handleChanges,
+        FilterDefinition<ChangeStreamDocument<TDocument>>? filter = null)
     {
         var items = new List<TResult>();
         var observable = new BehaviorSubject<IEnumerable<TResult>>(initialItems);
-        var filter = Builders<ChangeStreamDocument<TDocument>>.Filter.In(
+        var operationTypeFilter = Builders<ChangeStreamDocument<TDocument>>.Filter.In(
             new StringFieldDefinition<ChangeStreamDocument<TDocument>, string>("operationType"),
             new[] { "insert", "replace", "update" });
 
-        var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<TDocument>>().Match(filter);
+        var actualFilter = filter is not null ?
+                            Builders<ChangeStreamDocument<TDocument>>.Filter.And(operationTypeFilter, filter) :
+                            operationTypeFilter;
+
+        var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<TDocument>>().Match(actualFilter);
 
         _ = Task.Run(async () =>
         {

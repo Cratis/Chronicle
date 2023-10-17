@@ -9,8 +9,34 @@ namespace Aksio.Cratis.Kernel.Persistence.Jobs;
 /// <summary>
 /// Defines a system that can store job state.
 /// </summary>
+public interface IJobStorage
+{
+    /// <summary>
+    /// Get all jobs of a given type with a given status.
+    /// </summary>
+    /// <param name="statuses">Optional params of <see cref="JobStatus"/> to filter on.</param>
+    /// <returns>A collection of job state objects.</returns>
+    /// <remarks>
+    /// If no job statuses are specified, all jobs of the given type will be returned.
+    /// </remarks>
+    Task<IImmutableList<JobState<object>>> GetJobs(params JobStatus[] statuses);
+
+    /// <summary>
+    /// Observe jobs of a given type with a given status.
+    /// </summary>
+    /// <param name="statuses">Optional params of <see cref="JobStatus"/> to filter on.</param>
+    /// <returns>An observable of collection of job state objects.</returns>
+    /// <remarks>
+    /// If no job statuses are specified, all jobs of the given type will be returned.
+    /// </remarks>
+    IObservable<IEnumerable<JobState<object>>> ObserveJobs(params JobStatus[] statuses);
+}
+
+/// <summary>
+/// Defines a system that can store job state.
+/// </summary>
 /// <typeparam name="TJobState">Type of <see cref="JobState{T}"/> to store.</typeparam>
-public interface IJobStorage<TJobState>
+public interface IJobStorage<TJobState> : IJobStorage
 {
     /// <summary>
     /// Read the state of a job.

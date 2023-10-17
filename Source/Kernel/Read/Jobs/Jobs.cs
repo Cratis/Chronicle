@@ -3,7 +3,11 @@
 
 using Aksio.Applications.Queries;
 using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Persistence.Jobs;
+using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
+
+namespace Aksio.Cratis.Kernel.Read.Jobs;
 
 /// <summary>
 /// Represents the API for working with jobs.
@@ -11,11 +15,33 @@ using Microsoft.AspNetCore.Mvc;
 [Route("/api/jobs/{microserviceId}")]
 public class Jobs : ControllerBase
 {
+    readonly IExecutionContextManager _executionContextManager;
+    readonly ProviderFor<IJobStorage> _jobStorage;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Jobs"/> class.
+    /// </summary>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="jobStorage">Provider for <see cref="IJobStorage"/> for getting job state.</param>
+    public Jobs(
+        IExecutionContextManager executionContextManager,
+        ProviderFor<IJobStorage> jobStorage)
+    {
+        _executionContextManager = executionContextManager;
+        _jobStorage = jobStorage;
+    }
+
+    /// <summary>
+    /// Observes all jobs for a specific microservice.
+    /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to observe for.</param>
+    /// <returns>A <see cref="ClientObservable{T}"/> for observing a collection of <see cref="JobState{T}"/>.</returns>
     [HttpGet]
     public ClientObservable<IEnumerable<JobState<object>>> AllJobs(
         [FromRoute] MicroserviceId microserviceId)
     {
-        return new ClientObservable<IEnumerable<JobState<object>>>();
+        _executionContextManager.Establish(microserviceId);
+        return _jobStorage().ObserveJobs().ToClientObservable();
     }
 
     [HttpGet("{jobId}/steps")]

@@ -3,12 +3,23 @@
 
 import { useState } from 'react';
 import { Divider, Grid, Stack, Typography } from '@mui/material';
-import { DataGrid, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';
 import { AllJobs } from 'API/jobs/AllJobs';
 import { JobState } from 'API/jobs/JobState';
 import { useRouteParams } from './RouteParams';
 import { AllJobSteps } from 'API/jobs/AllJobSteps';
+import { JobStatus } from 'API/jobs/JobStatus';
 
+const getStatusText = (status: JobStatus) => {
+    switch (status) {
+        case JobStatus.none: return 'None';
+        case JobStatus.running: return 'Running';
+        case JobStatus.completed: return 'Completed';
+        case JobStatus.completedWithFailures: return 'Completed with failures';
+        case JobStatus.paused: return 'Paused';
+        case JobStatus.stopped: return 'Stopped';
+    }
+}
 
 const columns: GridColDef[] = [
     {
@@ -17,14 +28,36 @@ const columns: GridColDef[] = [
         width: 300,
     },
     {
-        headerName: 'Type',
-        field: 'type',
-        width: 500
-    },
-    {
         headerName: 'Status',
         field: 'status',
-        width: 100
+        width: 100,
+        valueGetter: (params: GridValueGetterParams<JobState>) => {
+            return getStatusText(params.row.status);
+        }
+    },
+    {
+        headerName: 'Total steps',
+        field: 'progress.totalSteps',
+        width: 130,
+        valueGetter: (params: GridValueGetterParams<JobState>) => {
+            return params.row.progress.totalSteps;
+        }
+    },
+    {
+        headerName: 'Successful steps',
+        field: 'progress.successFulSteps',
+        width: 130,
+        valueGetter: (params: GridValueGetterParams<JobState>) => {
+            return params.row.progress.successfulSteps;
+        }
+    },
+    {
+        headerName: 'Failed steps',
+        field: 'progress.failedSteps',
+        width: 130,
+        valueGetter: (params: GridValueGetterParams<JobState>) => {
+            return params.row.progress.failedSteps;
+        }
     }
 ];
 
@@ -33,7 +66,7 @@ export const Jobs = () => {
     const { microserviceId } = useRouteParams();
     const [jobs] = AllJobs.use({ microserviceId });
     const [selectedJob, setSelectedJob] = useState<JobState | undefined>(undefined);
-    const [jobSteps] = AllJobSteps.use({ microserviceId, jobId: selectedJob?.id});
+    const [jobSteps] = AllJobSteps.use({ microserviceId, jobId: selectedJob?.id! });
 
     const jobSelected = (selection: GridRowSelectionModel) => {
         const selectedJobs = selection.map(id => jobs.data.find(job => job.id === id));
@@ -59,14 +92,14 @@ export const Jobs = () => {
                 </Grid>
 
                 <Grid item xs={4} >
-                    <DataGrid
+                    {/* <DataGrid
                         columns={columns}
                         filterMode="client"
                         sortingMode="client"
                         getRowId={(row: any) => row.identifier}
                         onRowSelectionModelChange={jobSelected}
-                        rows={jobs}
-                    />
+                        rows={jobs.data}
+                    /> */}
                 </Grid>
             </Grid>
         </Stack>

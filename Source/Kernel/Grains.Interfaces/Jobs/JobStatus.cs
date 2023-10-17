@@ -14,9 +14,9 @@ public enum JobStatus
     None = 0,
 
     /// <summary>
-    /// The job has been started.
+    /// The job has been started and is running.
     /// </summary>
-    Started = 1,
+    Running = 1,
 
     /// <summary>
     /// The job has been completed.

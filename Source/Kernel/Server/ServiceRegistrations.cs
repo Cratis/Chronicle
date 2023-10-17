@@ -45,6 +45,7 @@ public class ServiceRegistrations : Module
         builder.RegisterType<MongoDBConnectedClientsState>().As<IConnectedClientsState>().SingleInstance();
         builder.RegisterType<MongoDBIdentityStore>().As<IIdentityStore>().InstancePerTenant();
         builder.RegisterType<MongoDBObserverKeyIndexes>().As<IObserverKeyIndexes>().InstancePerTenant();
+        builder.RegisterType(typeof(MongoDBJobStorage)).As(typeof(IJobStorage)).InstancePerMicroservice();
         builder.RegisterGeneric(typeof(MongoDBJobStorage<>)).As(typeof(IJobStorage<>)).InstancePerMicroservice();
         builder.RegisterGeneric(typeof(MongoDBJobStepStorage<>)).As(typeof(IJobStepStorage<>)).InstancePerMicroservice();
     }

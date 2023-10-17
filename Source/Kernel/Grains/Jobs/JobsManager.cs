@@ -13,6 +13,16 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public class JobsManager : Grain, IJobsManager
 {
     JobsManagerKey _key = JobsManagerKey.NotSet;
+    readonly IExecutionContextManager _executionContextManager;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JobsManager"/> class.
+    /// </summary>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    public JobsManager(IExecutionContextManager executionContextManager)
+    {
+        _executionContextManager = executionContextManager;
+    }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -26,6 +36,7 @@ public class JobsManager : Grain, IJobsManager
     public Task Start<TJob, TRequest>(JobId jobId, TRequest request)
         where TJob : IJob<TRequest>
     {
+        _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
         var job = GrainFactory.GetGrain<TJob>(
             jobId,
             new JobKey(
@@ -46,6 +57,7 @@ public class JobsManager : Grain, IJobsManager
         where TJob : IJob<TRequest>
         where TRequest : class
     {
+        _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
         var storage = ServiceProvider.GetRequiredService<IJobStorage<JobState<TRequest>>>();
         return await storage.GetJobs<TJob>();
     }
