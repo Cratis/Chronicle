@@ -27,10 +27,10 @@ public static class JsonSchemaExtensions
                 var metadata = new List<ComplianceSchemaMetadata>();
                 foreach (var complianceObject in complianceObjects)
                 {
-                    if (complianceObject is Dictionary<object, object> properties)
+                    if (complianceObject is Dictionary<string, object> properties)
                     {
-                        var metadataType = properties.FirstOrDefault(kvp => (kvp.Key as string) == nameof(ComplianceSchemaMetadata.metadataType));
-                        var details = properties.FirstOrDefault(kvp => (kvp.Key as string) == nameof(ComplianceSchemaMetadata.details));
+                        var metadataType = properties.FirstOrDefault(kvp => kvp.Key == nameof(ComplianceSchemaMetadata.metadataType));
+                        var details = properties.FirstOrDefault(kvp => kvp.Key == nameof(ComplianceSchemaMetadata.details));
                         metadata.Add(new ComplianceSchemaMetadata(Guid.Parse(metadataType.Value.ToString()!), details.Value.ToString()!));
                     }
                 }
