@@ -110,17 +110,23 @@ public class EventSequenceCache : IEventSequenceCache
         var to = from + NumberOfEventsToFetch;
         _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
         _logger.Priming(from, to);
+
         var eventCursor = _eventSequenceStorageProvider().GetRange(_eventSequenceId, from, to).GetAwaiter().GetResult();
 
         lock (_lock)
         {
-            while (eventCursor.MoveNext().GetAwaiter().GetResult())
+            var populateTask = Task.Run(async () =>
             {
-                foreach (var @event in eventCursor.Current)
+                while (await eventCursor.MoveNext())
                 {
-                    AddImplementation(@event);
+                    foreach (var @event in eventCursor.Current)
+                    {
+                        AddImplementation(@event);
+                    }
                 }
-            }
+            });
+
+            populateTask.Wait();
         }
     }
 
