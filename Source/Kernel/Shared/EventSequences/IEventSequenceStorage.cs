@@ -99,7 +99,7 @@ public interface IEventSequenceStorage
     /// <param name="eventSequenceId">The event sequence to get for.</param>
     /// <param name="eventTypes">Event types to get for.</param>
     /// <returns>A dictionary of <see cref="EventType"/> tp <see cref="EventSequenceNumber"/>.</returns>
-    Task<IImmutableDictionary<EventType, EventSequenceNumber>> GetTailSequenceNumbers(EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes);
+    Task<IImmutableDictionary<EventType, EventSequenceNumber>> GetTailSequenceNumbersForEventTypes(EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes);
 
     /// <summary>
     /// Get the next sequence number greater or equal to a specific sequence number with optionally filtered on event types and event source id.

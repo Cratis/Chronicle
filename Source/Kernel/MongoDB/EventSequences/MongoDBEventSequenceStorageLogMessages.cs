@@ -49,5 +49,5 @@ internal static partial class MongoDBEventSequenceStorageLogMessages
     internal static partial void RedactionAlreadyApplied(this ILogger<MongoDBEventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
 
     [LoggerMessage(13, LogLevel.Debug, "Getting tail sequence number for event sequence {EventSequenceId} for event types {EventTypes}")]
-    internal static partial void GettingTailSequenceNumbers(this ILogger<MongoDBEventSequenceStorage> logger, EventSequenceId eventSequenceId, IEnumerable<EventTypeId> eventTypes);
+    internal static partial void GettingTailSequenceNumbersForEventTypes(this ILogger<MongoDBEventSequenceStorage> logger, EventSequenceId eventSequenceId, IEnumerable<Guid> eventTypes);
 }
