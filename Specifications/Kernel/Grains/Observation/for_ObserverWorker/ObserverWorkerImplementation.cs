@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.EventSequences;
-using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 
@@ -28,10 +27,9 @@ public class ObserverWorkerImplementation : ObserverWorker
 
     public ObserverWorkerImplementation(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProviderProvider,
         IPersistentState<ObserverState> observerState,
         ILogger<ObserverWorker> logger)
-        : base(executionContextManager, eventSequenceStorageProviderProvider, observerState, logger)
+        : base(observerState, logger)
     {
     }
 

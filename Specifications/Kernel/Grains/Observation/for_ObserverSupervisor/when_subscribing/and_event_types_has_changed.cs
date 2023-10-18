@@ -16,7 +16,7 @@ public class and_event_types_has_changed : given.an_observer_and_two_event_types
     {
         state.RunningState = ObserverRunningState.Active;
         state.NextEventSequenceNumber = 1;
-        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult((EventSequenceNumber)0));
+        event_sequence.Setup(_ => _.GetTailSequenceNumberForEventTypes(event_types)).Returns(Task.FromResult((EventSequenceNumber)0));
     }
 
     async Task Because() => await observer.Subscribe<ObserverSubscriber>(new_event_types, subscriber_args);
