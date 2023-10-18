@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Schemas;
@@ -40,7 +41,7 @@ public class EventSequencesStorageProvider : IGrainStorage
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
     }
 
-    IMongoCollection<EventSequenceState> Collection => _eventStoreDatabaseProvider().GetCollection<EventSequenceState>(CollectionNames.EventSequences);
+    IMongoCollection<MongoDBEventSequenceState> Collection => _eventStoreDatabaseProvider().GetCollection<MongoDBEventSequenceState>(CollectionNames.EventSequences);
 
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
@@ -53,14 +54,12 @@ public class EventSequencesStorageProvider : IGrainStorage
         var key = MicroserviceAndTenant.Parse(keyAsString!);
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
 
-        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
+        var filter = Builders<MongoDBEventSequenceState>.Filter.Eq(new StringFieldDefinition<MongoDBEventSequenceState, Guid>("_id"), eventSequenceId);
         var cursor = await Collection.FindAsync(filter);
-        actualGrainState.State = await cursor.FirstOrDefaultAsync() ?? new EventSequenceState();
+        var state = await cursor.FirstOrDefaultAsync();
+        actualGrainState.State = state?.ToKernel() ?? new EventSequenceState();
 
-        var eventSchemas = await _schemaStoreProvider().GetLatestForAllEventTypes();
-        var eventTypes = eventSchemas.Select(_ => _.Type).ToArray();
-        var sequenceNumbers = await _eventSequenceStorageProvider().GetTailSequenceNumbersForEventTypes(eventSequenceId, eventTypes);
-        actualGrainState.State.TailSequenceNumberPerEventType = sequenceNumbers.ToDictionary(_ => _.Key.Id, _ => _.Value);
+        await HandleTailSequenceNumbersForEventTypes(actualGrainState, eventSequenceId);
     }
 
     /// <inheritdoc/>
@@ -69,11 +68,30 @@ public class EventSequencesStorageProvider : IGrainStorage
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
         var key = MicroserviceAndTenant.Parse(keyAsString!);
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-        var eventLogState = grainState.State as EventSequenceState;
-        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
-        await Collection.UpdateOneAsync(
+        var eventSequenceState = (grainState.State as EventSequenceState)!;
+        await Write(eventSequenceId, eventSequenceState);
+    }
+
+    async Task HandleTailSequenceNumbersForEventTypes(IGrainState<EventSequenceState> actualGrainState, EventSequenceId eventSequenceId)
+    {
+        if (actualGrainState.State.TailSequenceNumberPerEventType.Count == 0)
+        {
+            var eventSchemas = await _schemaStoreProvider().GetLatestForAllEventTypes();
+            var eventTypes = eventSchemas.Select(_ => _.Type).ToArray();
+            var sequenceNumbers = await _eventSequenceStorageProvider().GetTailSequenceNumbersForEventTypes(eventSequenceId, eventTypes);
+            actualGrainState.State.TailSequenceNumberPerEventType = sequenceNumbers
+                                                                        .Where(_ => _.Value != EventSequenceNumber.Unavailable)
+                                                                        .ToDictionary(_ => _.Key.Id, _ => _.Value);
+            await Write(eventSequenceId, actualGrainState.State);
+        }
+    }
+
+    async Task Write(EventSequenceId eventSequenceId, EventSequenceState state)
+    {
+        var filter = Builders<MongoDBEventSequenceState>.Filter.Eq(new StringFieldDefinition<MongoDBEventSequenceState, Guid>("_id"), eventSequenceId);
+        await Collection.ReplaceOneAsync(
             filter,
-            Builders<EventSequenceState>.Update.Set(_ => _.SequenceNumber, eventLogState!.SequenceNumber),
-            new() { IsUpsert = true }).ConfigureAwait(false);
+            state.ToMongoDB(),
+            new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 }
