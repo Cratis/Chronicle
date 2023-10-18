@@ -59,7 +59,7 @@ public class EventSequencesStorageProvider : IGrainStorage
 
         var eventSchemas = await _schemaStoreProvider().GetLatestForAllEventTypes();
         var eventTypes = eventSchemas.Select(_ => _.Type).ToArray();
-        var sequenceNumbers = await _eventSequenceStorageProvider().GetTailSequenceNumbers(eventSequenceId, eventTypes);
+        var sequenceNumbers = await _eventSequenceStorageProvider().GetTailSequenceNumbersForEventTypes(eventSequenceId, eventTypes);
         actualGrainState.State.TailSequenceNumberPerEventType = sequenceNumbers.ToDictionary(_ => _.Key.Id, _ => _.Value);
     }
 
