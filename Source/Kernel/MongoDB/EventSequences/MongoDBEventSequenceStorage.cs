@@ -444,7 +444,10 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         }
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
-        var cursor = await collection.FindAsync(filter).ConfigureAwait(false);
+        var cursor = await collection.Find(filter)
+                                     .SortBy(_ => _.SequenceNumber)
+                                     .ToCursorAsync()
+                                     .ConfigureAwait(false);
         return new EventCursor(_converterProvider(), cursor);
     }
 
@@ -476,7 +479,10 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
 
-        var cursor = await collection.FindAsync(filter).ConfigureAwait(false);
+        var cursor = await collection.Find(filter)
+                                     .SortBy(_ => _.SequenceNumber)
+                                     .ToCursorAsync()
+                                     .ConfigureAwait(false);
         return new EventCursor(_converterProvider(), cursor);
     }
 
