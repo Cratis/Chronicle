@@ -1,14 +1,11 @@
-import { Layout } from "./Layout/Layout.tsx";
-import { Products } from "./Product/Products.tsx";
+import { Layout } from './Layout/Layout.tsx';
 
 function App() {
-
-
     return (
-        <Layout>
-            <Products/>
-        </Layout>
-    )
+        <div className='App'>
+            <Layout>app content goes here</Layout>
+        </div>
+    );
 }
 
-export default App
+export default App;
