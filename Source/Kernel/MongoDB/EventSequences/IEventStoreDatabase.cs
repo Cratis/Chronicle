@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB;
@@ -26,6 +27,13 @@ public interface IEventStoreDatabase
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> identifier.</param>
     /// <returns>The collection instance.</returns>
     IMongoCollection<Event> GetEventSequenceCollectionFor(EventSequenceId eventSequenceId);
+
+    /// <summary>
+    /// Get the <see cref="IMongoCollection{T}"/> for an event sequence based on identifier as <see cref="BsonDocument"/>.
+    /// </summary>
+    /// <param name="eventSequenceId"><see cref="EventSequenceId"/> identifier.</param>
+    /// <returns>The collection instance.</returns>
+    IMongoCollection<BsonDocument> GetEventSequenceCollectionAsBsonFor(EventSequenceId eventSequenceId);
 
     /// <summary>
     /// Get the <see cref="IMongoCollection{T}"/> for the observer state.
