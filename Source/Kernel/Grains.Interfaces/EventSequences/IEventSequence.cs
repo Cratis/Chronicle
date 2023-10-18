@@ -15,6 +15,12 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 public interface IEventSequence : IGrainWithGuidCompoundKey
 {
     /// <summary>
+    /// Rehydrate the event sequence.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Rehydrate();
+
+    /// <summary>
     /// Get the next sequence number.
     /// </summary>
     /// <returns>Next sequence number.</returns>
