@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers.Clients;
 
 internal static partial class ClientReducersLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Registering reducers")]
+    [LoggerMessage(0, LogLevel.Information, "Registering client reducers")]
     internal static partial void RegisterReducers(this ILogger<ClientReducers> logger);
 
     [LoggerMessage(1, LogLevel.Trace, "Registering reducer with id '{ReducerId}' - friendly name {ReducerName}, for event sequence '{EventSequenceId}'")]
