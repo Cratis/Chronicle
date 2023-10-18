@@ -97,7 +97,7 @@ public class MongoDBSchemaStore : ISchemaStore
     /// <inheritdoc/>
     public async Task<IEnumerable<EventSchema>> GetLatestForAllEventTypes()
     {
-        var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false); ;
+        var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var schemas = result.ToList();
         return schemas
             .GroupBy(_ => _.EventType)
