@@ -1,11 +1,13 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using Aksio.Cratis.Boot;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences.Inboxes;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Configuration;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 using Aksio.Cratis.Kernel.Grains.Projections;
@@ -82,14 +84,20 @@ public class BootProcedure : IPerformBootProcedure
                 var projections = _grainFactory.GetGrain<IProjections>(0);
                 await projections.Rehydrate();
 
-                foreach (var outbox in microservice.Inbox.FromOutboxes)
+                foreach (var (tenantId, _) in _configuration.Tenants)
                 {
-                    foreach (var (tenantId, _) in _configuration.Tenants)
+                    foreach (var outbox in microservice.Inbox.FromOutboxes)
                     {
                         var key = new InboxKey(tenantId, outbox.Microservice);
                         var inbox = _grainFactory.GetGrain<IInbox>((MicroserviceId)microserviceId, key);
                         await inbox.Start();
                     }
+
+                    _logger.RehydratingEventSequences(microserviceId, tenantId);
+                    var stopwatch = Stopwatch.StartNew();
+                    await _grainFactory.GetGrain<IEventSequences>(0, new EventSequencesKey(microserviceId, tenantId)).Rehydrate();
+                    stopwatch.Stop();
+                    _logger.RehydratedEventSequences(microserviceId, tenantId, stopwatch.Elapsed);
                 }
             }
 
