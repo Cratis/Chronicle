@@ -36,21 +36,26 @@ public class ConnectedClients : Controller
     {
         var clientObservable = new ClientObservable<IEnumerable<ConnectedClient>>();
         var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
-        var cancellationToken = new CancellationTokenSource();
+        #pragma warning disable CA2000 // Call System.IDisposable.Dispose on object created by 'new CancellationTokenSource()' - it is disposed when the client disconnects
+        var cancellationTokenSource = new CancellationTokenSource();
 
         _ = Task.Run(
             async () =>
             {
-                while (!cancellationToken.IsCancellationRequested)
+                while (!cancellationTokenSource.IsCancellationRequested)
                 {
                     var clients = await connectedClients.GetAllConnectedClients();
                     clientObservable.OnNext(clients);
                     await Task.Delay(5000);
                 }
             },
-            cancellationToken.Token);
+            cancellationTokenSource.Token);
 
-        clientObservable.ClientDisconnected = () => cancellationToken.Cancel();
+        clientObservable.ClientDisconnected = () =>
+        {
+            cancellationTokenSource.Cancel();
+            cancellationTokenSource.Dispose();
+        };
 
         return clientObservable;
     }
