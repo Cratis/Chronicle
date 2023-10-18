@@ -27,6 +27,29 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     Task<EventSequenceNumber> GetTailSequenceNumber();
 
     /// <summary>
+    /// Get the sequence number of the tail event in the sequence filtered by event types.
+    /// </summary>
+    /// <param name="eventTypes">Event types to filter on.</param>
+    /// <returns>Tail sequence number.</returns>
+    /// <remarks>
+    /// The method will filter down on the event types and give you the highest sequence number for the given event types.
+    /// </remarks>
+    Task<EventSequenceNumber> GetTailSequenceNumberForEventTypes(IEnumerable<EventType> eventTypes);
+
+    /// <summary>
+    /// Get the next sequence number greater or equal to a specific sequence number with optionally filtered on event types and event source id.
+    /// </summary>
+    /// <param name="sequenceNumber">The sequence number to search from.</param>
+    /// <param name="eventTypes">Optional event types to get for.</param>
+    /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for. It won't filter by this if omitted.</param>
+    /// <returns>
+    /// <p>The last sequence number.</p>
+    /// <p>If providing event types, this will give the last sequence number from the selection of event types.</p>
+    /// <p>If no event is found, it will return <see cref="EventSequenceNumber.Unavailable"/>.</p>
+    /// </returns>
+    Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
+
+    /// <summary>
     /// Append a single event to the event store.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>

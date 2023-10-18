@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Dynamic;
 using System.Text.Json;
 using Aksio.Cratis.Auditing;
@@ -260,6 +261,68 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
                                       .SingleOrDefaultAsync()
                                       .ConfigureAwait(false);
         return highest?.SequenceNumber ?? EventSequenceNumber.Unavailable;
+    }
+
+    /// <inheritdoc/>
+    public Task<IImmutableDictionary<EventType, EventSequenceNumber>> GetTailSequenceNumbers(EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes)
+    {
+        var eventTypeIds = eventTypes.Select(_ => _.Id).ToArray();
+        _logger.GettingTailSequenceNumbers(eventSequenceId, eventTypeIds);
+
+        var eventTypesFilter = Builders<Event>.Filter.In(e => e.Type, eventTypeIds);
+
+        /*
+        [
+          {
+            $match:
+              {
+                type: {
+                  $in: [
+                    UUID(
+                      "0510f911-1a18-46c7-ac57-ae69d7c7e1ec"
+                    ),
+                    UUID(
+                      "905f6434-3d74-45b5-bcea-46b25d48519c"
+                    ),
+                    UUID(
+                      "c8c6434b-bfa6-4625-aebf-2f1cf2005134"
+                    ),
+                    UUID(
+                      "9ff93bf8-fbae-4df6-96b0-f339f3c0bfaf"
+                    ),
+                    UUID(
+                      "25bce845-2e6c-4728-8efc-6c23d5020eb4"
+                    ),
+                  ],
+                },
+              },
+          },
+          {
+            $sort:
+              {
+                _id: -1,
+              },
+          },
+          {
+            $group:
+              {
+                _id: "$type",
+                items: {
+                  $push: "$_id",
+                },
+              },
+          },
+          {
+            $project: {
+              items: {
+                $slice: ["$items", 0, 1],
+              },
+            },
+          },
+        ]
+        */
+
+        throw new NotImplementedException();
     }
 
     /// <inheritdoc/>

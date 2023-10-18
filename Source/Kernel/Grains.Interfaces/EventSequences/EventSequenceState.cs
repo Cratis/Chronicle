@@ -21,4 +21,9 @@ public class EventSequenceState
     /// Gets or sets the next event sequence number for the next event being appended.
     /// </summary>
     public EventSequenceNumber SequenceNumber { get; set; } = EventSequenceNumber.First;
+
+    /// <summary>
+    /// Gets or sets the last event sequence number for the last event that was appended.
+    /// </summary>
+    public IDictionary<EventTypeId, EventSequenceNumber> TailSequenceNumberPerEventType { get; set; } = new Dictionary<EventTypeId, EventSequenceNumber>();
 }
