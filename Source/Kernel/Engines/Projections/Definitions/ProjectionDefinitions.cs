@@ -4,7 +4,6 @@
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
-using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 
