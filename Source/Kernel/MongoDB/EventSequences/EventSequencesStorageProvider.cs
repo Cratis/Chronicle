@@ -74,7 +74,8 @@ public class EventSequencesStorageProvider : IGrainStorage
 
     async Task HandleTailSequenceNumbersForEventTypes(IGrainState<EventSequenceState> actualGrainState, EventSequenceId eventSequenceId)
     {
-        if (actualGrainState.State.TailSequenceNumberPerEventType.Count == 0)
+        if (actualGrainState.State.SequenceNumber > EventSequenceNumber.First &&
+            actualGrainState.State.TailSequenceNumberPerEventType.Count == 0)
         {
             var eventSchemas = await _schemaStoreProvider().GetLatestForAllEventTypes();
             var eventTypes = eventSchemas.Select(_ => _.Type).ToArray();
