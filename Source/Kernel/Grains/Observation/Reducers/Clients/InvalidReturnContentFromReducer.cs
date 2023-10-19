@@ -13,7 +13,7 @@ public class InvalidReturnContentFromReducer : Exception
     /// </summary>
     /// <param name="content">The invalid content.</param>
     public InvalidReturnContentFromReducer(string content)
-        : base($"Invalid content from reducer: 'content'")
+        : base($"Invalid content from reducer: '{content}'")
     {
     }
 }
