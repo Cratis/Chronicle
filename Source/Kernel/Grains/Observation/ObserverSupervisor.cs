@@ -6,7 +6,6 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 using Orleans.Streams;
@@ -22,7 +21,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </remarks>
 public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
 {
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<ObserverSupervisor> _logger;
     StreamSubscriptionHandle<AppendedEvent>? _streamSubscription;
@@ -41,16 +39,13 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
     /// Initializes a new instance of the <see cref="ObserverSupervisor"/> class.
     /// </summary>
     /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="ObserverState"/>.</param>
-    /// <param name="eventSequenceStorageProvider"><see creF="IEventSequenceStorage"/> for working with the underlying event sequence.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public ObserverSupervisor(
         [PersistentState(nameof(ObserverState), ObserverState.StorageProvider)] IPersistentState<ObserverState> observerState,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         IExecutionContextManager executionContextManager,
-        ILogger<ObserverSupervisor> logger) : base(executionContextManager, eventSequenceStorageProvider, observerState, logger)
+        ILogger<ObserverSupervisor> logger) : base(observerState, logger)
     {
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _executionContextManager = executionContextManager;
         _logger = logger;
     }
@@ -73,20 +68,20 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        await ReadStateAsync();
-
         _observerId = this.GetPrimaryKey(out var keyAsString);
-
-        // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
-        DelayDeactivation(TimeSpan.MaxValue);
-
         _observerKey = ObserverKey.Parse(keyAsString);
         _eventSequenceId = _observerKey.EventSequenceId;
-        State.EventSequenceId = _eventSequenceId;
         _microserviceId = _observerKey.MicroserviceId;
         _tenantId = _observerKey.TenantId;
         _sourceMicroserviceId = _observerKey.SourceMicroserviceId ?? _microserviceId;
         _sourceTenantId = _observerKey.SourceTenantId ?? _tenantId;
+
+        await ReadStateAsync();
+
+        // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
+        DelayDeactivation(TimeSpan.MaxValue);
+
+        State.EventSequenceId = _eventSequenceId;
 
         _logger.Activating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
 
@@ -96,7 +91,6 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
         var microserviceAndTenant = new MicroserviceAndTenant(_sourceMicroserviceId, _sourceTenantId);
         var streamId = StreamId.Create(microserviceAndTenant, _eventSequenceId);
         _stream = streamProvider.GetStream<AppendedEvent>(streamId);
-
         await base.OnActivateAsync(cancellationToken);
     }
 

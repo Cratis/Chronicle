@@ -74,9 +74,9 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             foreach (var pipeline in projectionPipelineDefinitions)
             {
                 _executionContextManager.Establish(microserviceId);
-                if (await _projectionDefinitions().HasFor(pipeline.ProjectionId))
+
+                if (await _projectionDefinitions().TryGetFor(pipeline.ProjectionId) is (true, ProjectionDefinition projectionDefinition))
                 {
-                    var projectionDefinition = await _projectionDefinitions().GetFor(pipeline.ProjectionId);
                     await _projectionManagerProvider().Register(projectionDefinition, pipeline);
 
                     if (!projectionDefinition.IsActive) continue;
@@ -105,9 +105,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             var projectionDefinition = registration.Projection;
             var pipelineDefinition = registration.Pipeline;
 
-            var isNew = !await _projectionDefinitions().HasFor(projectionDefinition.Identifier);
-            var hasChanged = await _projectionDefinitions().HasChanged(projectionDefinition);
-
+            var (isNew, hasChanged) = await _projectionDefinitions().IsNewOrChanged(projectionDefinition);
             _executionContextManager.Establish(microserviceId);
 
             if (hasChanged || isNew || !_projectionManagerProvider().Exists(projectionDefinition.Identifier))

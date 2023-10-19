@@ -69,8 +69,11 @@ public class ObserverStorageProvider : IGrainStorage
             _.InitialPartitionFailedOn)).ToArray();
 
         var key = GetKeyFrom(observerKey, observerId);
+
         var cursor = await Collection.FindAsync(_ => _.Id == key).ConfigureAwait(false);
-        var state = await cursor.FirstOrDefaultAsync().ConfigureAwait(false) ?? new ObserverState
+        var loadedState = cursor.FirstOrDefault();
+
+        var state = loadedState ?? new ObserverState
         {
             Id = key,
             EventSequenceId = eventSequenceId,

@@ -16,6 +16,8 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public class Replay : ObserverWorker, IReplay
 {
+    readonly IExecutionContextManager _executionContextManager;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly ILogger<Replay> _logger;
     readonly List<FailedPartition> _failedPartitions = new();
 
@@ -34,8 +36,10 @@ public class Replay : ObserverWorker, IReplay
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         [PersistentState(nameof(ObserverState), ObserverState.ReplayStorageProvider)] IPersistentState<ObserverState> observerState,
-        ILogger<Replay> logger) : base(executionContextManager, eventSequenceStorageProvider, observerState, logger)
+        ILogger<Replay> logger) : base(observerState, logger)
     {
+        _executionContextManager = executionContextManager;
+        _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _logger = logger;
     }
 
@@ -53,6 +57,22 @@ public class Replay : ObserverWorker, IReplay
 
     /// <inheritdoc/>
     protected override TenantId? SourceTenantId => _observerKey!.SourceTenantId;
+
+    /// <summary>
+    /// Gets the <see cref="IEventSequenceStorage"/> in the correct context.
+    /// </summary>
+    protected IEventSequenceStorage EventSequenceStorage
+    {
+        get
+        {
+            var tenantId = SourceTenantId ?? TenantId;
+            var microserviceId = SourceMicroserviceId ?? MicroserviceId;
+
+            // TODO: This is a temporary work-around till we fix #264 & #265
+            _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+            return _eventSequenceStorageProvider();
+        }
+    }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -100,7 +120,7 @@ public class Replay : ObserverWorker, IReplay
 
         try
         {
-            var provider = EventSequenceStorageProvider;
+            var provider = EventSequenceStorage;
 
             var next = State.NextEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : State.NextEventSequenceNumber;
             var nextSequenceNumber = await provider.GetNextSequenceNumberGreaterOrEqualThan(_observerKey!.EventSequenceId!, next, State.EventTypes);
@@ -110,7 +130,7 @@ public class Replay : ObserverWorker, IReplay
             }
 
             var tailSequenceNumber = await provider.GetTailSequenceNumber(_observerKey!.EventSequenceId!, State.EventTypes);
-            var headSequenceNumber = await EventSequenceStorageProvider.GetHeadSequenceNumber(State.EventSequenceId, State.EventTypes);
+            var headSequenceNumber = await EventSequenceStorage.GetHeadSequenceNumber(State.EventSequenceId, State.EventTypes);
             using var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, nextSequenceNumber, eventTypes: State.EventTypes);
             while (await cursor.MoveNext())
             {

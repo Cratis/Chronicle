@@ -31,7 +31,7 @@ public class EventSequenceCache : IEventSequenceCache
     /// <summary>
     /// The number of events to fetch from the event store.
     /// </summary>
-    public const int NumberOfEventsToFetch = 1000;
+    public const int NumberOfEventsToFetch = 100;
 
 #pragma warning disable CA1051, SA1600, MA0016 // Elements should be documented + concrete type should not be used + visible instance fields.
     protected readonly Dictionary<EventSequenceNumber, CachedAppendedEvent> _eventsBySequenceNumber = new();
@@ -108,19 +108,25 @@ public class EventSequenceCache : IEventSequenceCache
         }
 
         var to = from + NumberOfEventsToFetch;
-        _logger.Priming(from, to);
         _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
+        _logger.Priming(from, to);
+
         var eventCursor = _eventSequenceStorageProvider().GetRange(_eventSequenceId, from, to).GetAwaiter().GetResult();
 
         lock (_lock)
         {
-            while (eventCursor.MoveNext().GetAwaiter().GetResult())
+            var populateTask = Task.Run(async () =>
             {
-                foreach (var @event in eventCursor.Current)
+                while (await eventCursor.MoveNext())
                 {
-                    AddImplementation(@event);
+                    foreach (var @event in eventCursor.Current)
+                    {
+                        AddImplementation(@event);
+                    }
                 }
-            }
+            });
+
+            populateTask.Wait();
         }
     }
 

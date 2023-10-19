@@ -30,8 +30,8 @@ public class MongoDBIdentityStore : IIdentityStore
     /// <inheritdoc/>
     public async Task Populate()
     {
-        var result = await GetCollection().FindAsync(_ => true);
-        var allIdentities = await result.ToListAsync();
+        var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
+        var allIdentities = await result.ToListAsync().ConfigureAwait(false);
         _identitiesByIdentityId = allIdentities.ToDictionary(_ => (IdentityId)_.Id, _ => new Identity(_.Subject, _.Name, _.UserName));
         _identityIdsBySubject = _identitiesByIdentityId
                                     .Where(_ => !string.IsNullOrEmpty(_.Value.Subject))
@@ -95,7 +95,7 @@ public class MongoDBIdentityStore : IIdentityStore
             Name = identity.Name,
             Subject = identity.Subject,
             UserName = identity.UserName
-        });
+        }).ConfigureAwait(false);
         return identityId;
     }
 

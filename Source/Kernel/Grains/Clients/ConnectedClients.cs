@@ -4,21 +4,20 @@
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Kernel.Orleans.Observers;
 using Microsoft.Extensions.Logging;
-using Orleans.Providers;
 
 namespace Aksio.Cratis.Kernel.Grains.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClients"/>.
 /// </summary>
-[StorageProvider(ProviderName = ConnectedClientsState.StorageProvider)]
-public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
+public class ConnectedClients : Grain, IConnectedClients
 {
     /// <summary>
     /// Gets the name of the HTTP client for connected clients.
     /// </summary>
     public const string ConnectedClientsHttpClient = "connected-clients";
 
+    readonly IList<ConnectedClient> _clients = new List<ConnectedClient>();
     readonly ILogger<ConnectedClients> _logger;
     readonly IConnectedClientsMetricsFactory _metricsFactory;
     readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers;
@@ -48,7 +47,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     }
 
     /// <inheritdoc/>
-    public async Task OnClientConnected(
+    public Task OnClientConnected(
         ConnectionId connectionId,
         Uri clientUri,
         string version,
@@ -58,53 +57,52 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         var microserviceId = (MicroserviceId)this.GetPrimaryKey();
 
         _logger.ClientConnected(microserviceId, connectionId);
-        State.Clients.Where(_ => _.ClientUri == clientUri).ToList().ForEach(_ => State.Clients.Remove(_));
-        State.Clients.Add(new ConnectedClient(
+        _clients.Where(_ => _.ClientUri == clientUri).ToList().ForEach(_ => _clients.Remove(_));
+        _clients.Add(new ConnectedClient(
             connectionId,
             clientUri,
             version,
             DateTimeOffset.UtcNow,
             isRunningWithDebugger,
             isMultiTenanted));
-        _metrics?.SetConnectedClients(State.Clients.Count);
+        _metrics?.SetConnectedClients(_clients.Count);
 
-        await WriteStateAsync();
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task OnClientDisconnected(ConnectionId connectionId, string reason)
+    public Task OnClientDisconnected(ConnectionId connectionId, string reason)
     {
         var microserviceId = (MicroserviceId)this.GetPrimaryKey();
         _logger.ClientDisconnected(microserviceId, connectionId, reason);
 
-        var client = State.Clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
+        var client = _clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
         if (client is not null)
         {
-            State.Clients.Remove(client);
-
-            await WriteStateAsync();
+            _clients.Remove(client);
             _clientDisconnectedObservers.Notify(_ => _.OnClientDisconnected(client));
         }
-        _metrics?.SetConnectedClients(State.Clients.Count);
+        _metrics?.SetConnectedClients(_clients.Count);
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task<bool> OnClientPing(ConnectionId connectionId)
+    public Task<bool> OnClientPing(ConnectionId connectionId)
     {
-        var client = State.Clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
+        var client = _clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
         if (client is not null)
         {
-            State.Clients.Where(_ => _.ClientUri == client.ClientUri).ToList().ForEach(_ => State.Clients.Remove(_));
-            State.Clients.Add(client with { LastSeen = DateTimeOffset.UtcNow });
-            await WriteStateAsync();
-            return true;
+            _clients.Where(_ => _.ClientUri == client.ClientUri).ToList().ForEach(_ => _clients.Remove(_));
+            _clients.Add(client with { LastSeen = DateTimeOffset.UtcNow });
+            return Task.FromResult(true);
         }
 
-        return false;
+        return Task.FromResult(false);
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ConnectedClient>> GetAllConnectedClients() => Task.FromResult(State.Clients.AsEnumerable());
+    public Task<IEnumerable<ConnectedClient>> GetAllConnectedClients() => Task.FromResult(_clients.AsEnumerable());
 
     /// <inheritdoc/>
     public Task SubscribeDisconnected(INotifyClientDisconnected subscriber)
@@ -121,14 +119,14 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     }
 
     /// <inheritdoc/>
-    public Task<bool> IsConnected(ConnectionId connectionId) => Task.FromResult(State.Clients.Any(_ => _.ConnectionId == connectionId));
+    public Task<bool> IsConnected(ConnectionId connectionId) => Task.FromResult(_clients.Any(_ => _.ConnectionId == connectionId));
 
     /// <inheritdoc/>
-    public Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId) => Task.FromResult(State.Clients.First(_ => _.ConnectionId == connectionId));
+    public Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId) => Task.FromResult(_clients.First(_ => _.ConnectionId == connectionId));
 
     async Task ReviseConnectedClients(object state)
     {
-        foreach (var connectedClient in State.Clients.ToArray())
+        foreach (var connectedClient in _clients.ToArray())
         {
             if (connectedClient.IsRunningWithDebugger) continue;
 

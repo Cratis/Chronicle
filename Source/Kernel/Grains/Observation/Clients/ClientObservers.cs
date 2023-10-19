@@ -30,6 +30,8 @@ public class ClientObservers : Grain, IClientObservers
 
         var microserviceId = (MicroserviceId)this.GetPrimaryKey();
 
+        var registrationTasks = new List<Task>();
+
         foreach (var registration in registrations)
         {
             foreach (var tenantId in tenants)
@@ -40,8 +42,10 @@ public class ClientObservers : Grain, IClientObservers
                     registration.EventSequenceId);
                 var key = new ObserverKey(microserviceId, tenantId, registration.EventSequenceId);
                 var observer = GrainFactory.GetGrain<IClientObserver>(registration.ObserverId, key);
-                await observer.Start(registration.Name, connectionId, registration.EventTypes);
+                registrationTasks.Add(observer.Start(registration.Name, connectionId, registration.EventTypes));
             }
         }
+
+        await Task.WhenAll(registrationTasks);
     }
 }

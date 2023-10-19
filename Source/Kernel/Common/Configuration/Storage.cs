@@ -55,11 +55,26 @@ public class Storage
                 ["readModels"] = Cluster,
                 ["eventStore"] = Cluster
             };
+
+            if (!microservice.Value.Tenants.ContainsKey(TenantId.Development.ToString()))
+            {
+                microservice.Value.Tenants[TenantId.Development.ToString()] = new StorageTypes
+                {
+                    ["readModels"] = Cluster,
+                    ["eventStore"] = Cluster
+                };
+            }
         }
 
         foreach (var tenant in tenants)
         {
             Microservices[MicroserviceId.Kernel].Tenants[tenant] = new StorageTypes
+            {
+                ["readModels"] = Cluster,
+                ["eventStore"] = Cluster
+            };
+
+            Microservices[MicroserviceId.Unspecified].Tenants[tenant] = new StorageTypes
             {
                 ["readModels"] = Cluster,
                 ["eventStore"] = Cluster

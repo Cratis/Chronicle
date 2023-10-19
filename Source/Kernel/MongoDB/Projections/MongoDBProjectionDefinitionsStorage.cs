@@ -26,7 +26,9 @@ public class MongoDBProjectionDefinitionsStorage : IProjectionDefinitionsStorage
     /// </summary>
     /// <param name="sharedDatabase">The <see cref="ISharedDatabase"/>.</param>
     /// <param name="projectionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
-    public MongoDBProjectionDefinitionsStorage(ISharedDatabase sharedDatabase, IJsonProjectionSerializer projectionSerializer)
+    public MongoDBProjectionDefinitionsStorage(
+        ISharedDatabase sharedDatabase,
+        IJsonProjectionSerializer projectionSerializer)
     {
         _sharedDatabase = sharedDatabase;
         _projectionSerializer = projectionSerializer;

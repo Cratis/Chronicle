@@ -3,8 +3,8 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 
@@ -16,27 +16,20 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public abstract class ObserverWorker : Grain
 {
     readonly ILogger<ObserverWorker> _logger;
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProviderProvider;
-    readonly IExecutionContextManager _executionContextManager;
     readonly IPersistentState<ObserverState> _observerState;
     ObserverSubscription _currentSubscription = ObserverSubscription.Unsubscribed;
     IObserverSupervisor? _supervisor;
+    IEventSequence? _eventSequence;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverWorker"/> class.
     /// </summary>
-    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
-    /// <param name="eventSequenceStorageProviderProvider"><see creF="IEventSequenceStorage"/> for working with the underlying event sequence.</param>
     /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="ObserverState"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     protected ObserverWorker(
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProviderProvider,
         IPersistentState<ObserverState> observerState,
         ILogger<ObserverWorker> logger)
     {
-        _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
-        _executionContextManager = executionContextManager;
         _observerState = observerState;
         _logger = logger;
     }
@@ -110,20 +103,9 @@ public abstract class ObserverWorker : Grain
     };
 
     /// <summary>
-    /// Gets the <see cref="IEventSequenceStorage"/> in the correct context.
+    /// Gets the <see cref="IEventSequence"/> the observer is for.
     /// </summary>
-    protected IEventSequenceStorage EventSequenceStorageProvider
-    {
-        get
-        {
-            var tenantId = SourceTenantId ?? TenantId;
-            var microserviceId = SourceMicroserviceId ?? MicroserviceId;
-
-            // TODO: This is a temporary work-around till we fix #264 & #265
-            _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
-            return _eventSequenceStorageProviderProvider();
-        }
-    }
+    protected IEventSequence EventSequence => _eventSequence ??= GrainFactory.GetGrain<IEventSequence>(EventSequenceId, new MicroserviceAndTenant(MicroserviceId, TenantId));
 
     /// <summary>
     /// Notify that the partition has failed.

@@ -16,4 +16,10 @@ internal static partial class BootProcedureLogMessages
 
     [LoggerMessage(3, LogLevel.Information, "Rehydrating projections")]
     internal static partial void RehydrateProjections(this ILogger logger);
+
+    [LoggerMessage(4, LogLevel.Information, "Rehydrating event sequences for microservice {MicroserviceId} and tenant {TenantId}")]
+    internal static partial void RehydratingEventSequences(this ILogger logger, MicroserviceId microserviceId, TenantId tenantId);
+
+    [LoggerMessage(5, LogLevel.Information, "Rehydrated event sequences for microservice {MicroserviceId} and tenant {TenantId} in {Elapsed}")]
+    internal static partial void RehydratedEventSequences(this ILogger logger, MicroserviceId microserviceId, TenantId tenantId, TimeSpan elapsed);
 }

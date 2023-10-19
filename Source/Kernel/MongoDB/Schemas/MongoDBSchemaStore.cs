@@ -6,6 +6,7 @@ using Aksio.Cratis.Kernel.MongoDB;
 using Aksio.Cratis.Kernel.Schemas;
 using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Schemas;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using NJsonSchema;
 
@@ -18,21 +19,32 @@ namespace Aksio.Cratis.Events.MongoDB.Schemas;
 public class MongoDBSchemaStore : ISchemaStore
 {
     readonly ISharedDatabase _sharedDatabase;
+    readonly IExecutionContextManager _executionContextManager;
+    readonly ILogger<MongoDBSchemaStore> _logger;
     Dictionary<EventTypeId, Dictionary<EventGeneration, EventSchema>> _schemasByTypeAndGeneration = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBSchemaStore"/> class.
     /// </summary>
     /// <param name="sharedDatabase">The <see cref="ISharedDatabase"/>.</param>
-    public MongoDBSchemaStore(ISharedDatabase sharedDatabase)
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="logger">Logger for logging.</param>
+    public MongoDBSchemaStore(
+        ISharedDatabase sharedDatabase,
+        IExecutionContextManager executionContextManager,
+        ILogger<MongoDBSchemaStore> logger)
     {
         _sharedDatabase = sharedDatabase;
+        _executionContextManager = executionContextManager;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
-    public Task Populate()
+    public async Task Populate()
     {
-        var findResult = GetCollection().Find(_ => true);
+        _logger.Populating(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId);
+
+        var findResult = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var allSchemas = findResult.ToList();
 
         _schemasByTypeAndGeneration =
@@ -40,12 +52,10 @@ public class MongoDBSchemaStore : ISchemaStore
             .ToDictionary(
                 _ => (EventTypeId)_.Key,
                 _ => _.ToDictionary(es => (EventGeneration)es.Generation, es => es.ToEventSchema()));
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task Register(EventType type, string friendlyName, JsonSchema schema)
+    public async Task Register(EventType type, string friendlyName, JsonSchema schema)
     {
         // If we have a schema for the event type on the given generation and the schemas differ - throw an exception (only in production)
         // .. if they're the same. Ignore saving.
@@ -61,51 +71,62 @@ public class MongoDBSchemaStore : ISchemaStore
         {
             _schemasByTypeAndGeneration[type.Id] = new();
         }
+
         eventSchema.Schema.ResetFlattenedProperties();
-        var mongoEventSchema = eventSchema.ToMongoDB();
+
+        if (_schemasByTypeAndGeneration[type.Id].TryGetValue(type.Generation, out var existingSchema))
+        {
+            existingSchema.Schema.ResetFlattenedProperties();
+            if (existingSchema.Schema.ToJson() == schema.ToJson())
+            {
+                return;
+            }
+        }
+
         schema.EnsureFlattenedProperties();
+        _logger.Registering(friendlyName, type.Id, type.Generation, _executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId);
+
+        var mongoEventSchema = eventSchema.ToMongoDB();
         _schemasByTypeAndGeneration[type.Id][type.Generation] = eventSchema;
-        GetCollection().ReplaceOne(
+        await GetCollection().ReplaceOneAsync(
             _ => _.Id == mongoEventSchema.Id,
             mongoEventSchema,
-            new ReplaceOptions { IsUpsert = true });
-
-        return Task.CompletedTask;
+            new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventSchema>> GetLatestForAllEventTypes()
+    public async Task<IEnumerable<EventSchema>> GetLatestForAllEventTypes()
     {
-        var result = GetCollection().Find(_ => true);
+        var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var schemas = result.ToList();
-        return Task.FromResult(schemas
+        return schemas
             .GroupBy(_ => _.EventType)
-            .Select(_ => _.OrderByDescending(_ => _.Generation).First().ToEventSchema()));
+            .Select(_ => _.OrderByDescending(_ => _.Generation).First().ToEventSchema());
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventSchema>> GetAllGenerationsForEventType(EventType eventType)
+    public async Task<IEnumerable<EventSchema>> GetAllGenerationsForEventType(EventType eventType)
     {
         var collection = GetCollection();
         var filter = Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, eventType.Id.Value);
-        var result = collection.Find(filter);
+        var result = await collection.FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
-        return Task.FromResult(schemas
+        return schemas
             .OrderBy(_ => _.Generation)
-            .Select(_ => _.ToEventSchema()));
+            .Select(_ => _.ToEventSchema());
     }
 
     /// <inheritdoc/>
-    public Task<EventSchema> GetFor(EventTypeId type, EventGeneration? generation = default)
+    public async Task<EventSchema> GetFor(EventTypeId type, EventGeneration? generation = default)
     {
         generation ??= EventGeneration.First;
         if (_schemasByTypeAndGeneration.TryGetValue(type, out var generationalSchemas) && generationalSchemas.TryGetValue(generation, out var schema))
         {
-            return Task.FromResult(schema);
+            return schema;
         }
 
         var filter = GetFilterForSpecificSchema(type, generation);
-        var result = GetCollection().Find(filter);
+        var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
         _schemasByTypeAndGeneration[type] = schemas.ToDictionary(_ => (EventGeneration)_.Generation, _ => _.ToEventSchema());
 
@@ -114,22 +135,22 @@ public class MongoDBSchemaStore : ISchemaStore
             throw new MissingEventSchemaForEventType(type, generation);
         }
 
-        return Task.FromResult(schemas[0].ToEventSchema());
+        return schemas[0].ToEventSchema();
     }
 
     /// <inheritdoc/>
-    public Task<bool> HasFor(EventTypeId type, EventGeneration? generation = default)
+    public async Task<bool> HasFor(EventTypeId type, EventGeneration? generation = default)
     {
         generation ??= EventGeneration.First;
         if (_schemasByTypeAndGeneration.TryGetValue(type, out var generationalSchemas) && generationalSchemas.ContainsKey(generation))
         {
-            return Task.FromResult(true);
+            return true;
         }
 
         var filter = GetFilterForSpecificSchema(type, generation);
-        var result = GetCollection().Find(filter);
+        var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
-        return Task.FromResult(schemas.Count == 1);
+        return schemas.Count == 1;
     }
 
     IMongoCollection<EventSchemaMongoDB> GetCollection() => _sharedDatabase.GetCollection<EventSchemaMongoDB>(CollectionNames.Schemas);
