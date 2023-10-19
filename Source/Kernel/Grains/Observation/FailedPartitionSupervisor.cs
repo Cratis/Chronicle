@@ -12,6 +12,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsState>
 {
+    readonly object _lock = new();
     readonly ObserverId _observerId;
     readonly ObserverKey _observerKey;
     readonly ObserverName _observerName;
@@ -51,7 +52,13 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
     public bool HasFailedPartitions => _failedPartitions.Count != 0;
 
     /// <inheritdoc/>
-    public FailedPartitionsState GetState() => new() { FailedPartitions = _failedPartitions.ToArray() };
+    public FailedPartitionsState GetState()
+    {
+        lock (_lock)
+        {
+            return new() { FailedPartitions = _failedPartitions.ToArray() };
+        }
+    }
 
     /// <summary>
     /// Indicates to the supervisor that a partition has failed.
@@ -74,8 +81,11 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
             return;
         }
 
-        if (_failedPartitions.Exists(_ => _.Partition == partitionId))
-            return;
+        lock (_lock)
+        {
+            if (_failedPartitions.Exists(_ => _.Partition == partitionId))
+                return;
+        }
         await StartRecovery(partitionId, sequenceNumber, exceptionMessages, exceptionStackTrace, occurred);
     }
 
@@ -87,12 +97,20 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
     /// <returns>Task.</returns>
     public async Task AssessRecovery(EventSourceId partitionId, EventSequenceNumber recoveredTo)
     {
-        var failedPartition = _failedPartitions.Find(_ => _.Partition == partitionId);
+        FailedPartition? failedPartition;
+
+        lock (_lock)
+        {
+            failedPartition = _failedPartitions.Find(_ => _.Partition == partitionId);
+        }
         if (failedPartition is null)
             return;
         if (failedPartition.SetRecoveredTo(recoveredTo))
         {
-            _failedPartitions.Remove(failedPartition);
+            lock (_lock)
+            {
+                _failedPartitions.Remove(failedPartition);
+            }
             await GetRecoveryGrain(partitionId).Reset();
         }
         else
@@ -109,7 +127,11 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
     /// <returns>True if this partition is failing, false otherwise.</returns>
     public bool EventBelongsToFailingPartition(EventSourceId eventSourceId, EventSequenceNumber eventSequenceNumber)
     {
-        var failedPartition = _failedPartitions.Find(_ => _.Partition == eventSourceId);
+        FailedPartition? failedPartition;
+        lock (_lock)
+        {
+            failedPartition = _failedPartitions.Find(_ => _.Partition == eventSourceId);
+        }
         if (failedPartition is null)
             return false;
         failedPartition.Head = eventSequenceNumber;
@@ -122,9 +144,14 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
     /// <returns>Awaitable task.</returns>
     public async Task TryRecoveringAnyFailedPartitions()
     {
-        foreach (var failedPartition in _failedPartitions)
+        var failedPartitions = Enumerable.Empty<FailedPartition>();
+        lock (_lock)
         {
-            await TryRecoveringPartition(failedPartition.Partition);
+            failedPartitions = _failedPartitions.ToArray();
+        }
+        foreach (var failedPartition in failedPartitions)
+        {
+            await TryRecoveringPartition(failedPartition);
         }
     }
 
@@ -135,11 +162,16 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
     /// <returns>Awaitable task.</returns>
     public async Task TryRecoveringPartition(EventSourceId partition)
     {
-        var failedPartition = _failedPartitions.Find(_ => _.Partition == partition);
+        FailedPartition? failedPartition;
+
+        lock (_lock)
+        {
+            failedPartition = _failedPartitions.Find(_ => _.Partition == partition);
+        }
+
         if (failedPartition is null) return;
 
-        await GetRecoveryGrain(failedPartition.Partition)
-            .ResumeRecovery();
+        await TryRecoveringPartition(failedPartition);
     }
 
     /// <summary>
@@ -148,13 +180,25 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
     /// <returns>Awaitable task.</returns>
     public async Task Reset()
     {
-        foreach (var failedPartition in _failedPartitions)
+        var failedPartitions = Enumerable.Empty<FailedPartition>();
+        lock (_lock)
+        {
+            failedPartitions = _failedPartitions.ToArray();
+        }
+        foreach (var failedPartition in failedPartitions)
         {
             await GetRecoveryGrain(failedPartition.Partition).Reset();
         }
-        _failedPartitions.Clear();
+
+        lock (_lock)
+        {
+            _failedPartitions.Clear();
+        }
     }
 
+    async Task TryRecoveringPartition(FailedPartition failedPartition) =>
+        await GetRecoveryGrain(failedPartition.Partition)
+            .ResumeRecovery();
     async Task StartRecovery(
         EventSourceId partitionId,
         EventSequenceNumber sequenceNumber,
