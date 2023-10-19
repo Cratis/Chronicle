@@ -116,14 +116,18 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumberForEventTypes(IEnumerable<EventType> eventTypes)
     {
-        var tailSequenceNumber = EventSequenceNumber.Unavailable;
-        foreach (var eventType in eventTypes)
+        var sequenceNumber = State.TailSequenceNumberPerEventType
+                    .Where(_ => eventTypes.Any(e => e.Id == _.Key) && _.Value != EventSequenceNumber.Unavailable)
+                    .Select(_ => _.Value)
+                    .OrderByDescending(_ => _)
+                    .SingleOrDefault();
+
+        if (sequenceNumber is null)
         {
-            var sequenceNumber = State.TailSequenceNumberPerEventType.TryGetValue(eventType.Id, out var value) ? value : EventSequenceNumber.Unavailable;
-            if (sequenceNumber > tailSequenceNumber) tailSequenceNumber = sequenceNumber;
+            return Task.FromResult(EventSequenceNumber.Unavailable);
         }
 
-        return Task.FromResult(tailSequenceNumber);
+        return Task.FromResult(sequenceNumber);
     }
 
     /// <inheritdoc/>
