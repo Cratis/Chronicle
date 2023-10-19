@@ -3,14 +3,12 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 type Theme = 'light' | 'dark';
 
 interface LayoutConfig {
-    ripple: boolean;
     inputStyle: string;
     colorScheme: string;
     theme: Theme;
     scale: number;
 }
 
-// Define a type for the context
 interface LayoutContextType {
     layoutConfig: LayoutConfig;
     setLayoutConfig: (config: LayoutConfig) => void;
@@ -34,18 +32,11 @@ interface LayoutProviderProps {
 
 export function LayoutProvider({ children }: LayoutProviderProps) {
     const [layoutConfig, setLayoutConfig] = useState<LayoutConfig>({
-        ripple: false,
         inputStyle: 'outlined',
         colorScheme: 'light',
         theme: 'light',
         scale: 16,
     });
-
-    const color = layoutConfig.theme === 'light' ? '#333' : '#FFF';
-    const backgroundColor = layoutConfig.theme === 'light' ? '#FFF' : '#333';
-
-    document.body.style.color = color;
-    document.body.style.backgroundColor = backgroundColor;
 
     const toggleTheme = () => {
         setLayoutConfig((prevConfig) => ({
