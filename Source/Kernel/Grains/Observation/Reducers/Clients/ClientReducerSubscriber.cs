@@ -144,10 +144,9 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                     }
                     catch
                     {
-                        throw new InvalidReturnContentFromReducer(contentAsString);
+                        throw new InvalidReturnContentFromReducer(response.StatusCode, contentAsString);
                     }
 
-                    // commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
                     if (response.StatusCode == HttpStatusCode.NotFound)
                     {
                         await ConnectedClientsGrain.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");

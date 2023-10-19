@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
+
 namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers.Clients;
 
 /// <summary>
@@ -11,9 +13,10 @@ public class InvalidReturnContentFromReducer : Exception
     /// <summary>
     /// Initializes a new instance of the <see cref="InvalidReturnContentFromReducer"/> class.
     /// </summary>
+    /// <param name="httpStatusCode">The <see cref="HttpStatusCode"/> for the response.</param>
     /// <param name="content">The invalid content.</param>
-    public InvalidReturnContentFromReducer(string content)
-        : base($"Invalid content from reducer: '{content}'")
+    public InvalidReturnContentFromReducer(HttpStatusCode httpStatusCode, string content)
+        : base($"Invalid content returned from reducer, status code '{httpStatusCode}', content: '{content}'")
     {
     }
 }
