@@ -1,27 +1,31 @@
-import { AppTopbarRef, ChildContainerProps } from './layout';
-import React, { useRef } from 'react';
+import { ReactNode, useRef } from 'react';
 import { Footer } from './Footer';
-import { Topbar } from './Topbar';
+import { AppTopbarRef, Topbar } from './Topbar/Topbar';
 import { Sidebar } from './Sidebar';
 
-export function Layout({ children }: ChildContainerProps) {
+export interface LayoutProps {
+    children: ReactNode;
+}
+
+
+export function Layout({ children }: LayoutProps) {
     const topbarRef = useRef<AppTopbarRef>(null);
     const sidebarRef = useRef<HTMLDivElement>(null);
 
     return (
-        <React.Fragment>
+        <>
             <div className='layout'>
-                <Topbar ref={topbarRef} />
+                <Topbar ref={topbarRef}/>
                 <div ref={sidebarRef} className='layout-sidebar'>
-                    <Sidebar />
+                    <Sidebar/>
                 </div>
                 <div className='layout-main-container'>
                     <div className='layout-main'>{children}</div>
-                    <Footer />
+                    <Footer/>
                 </div>
                 {/* <AppConfig /> */}
                 <div className='layout-mask'></div>
             </div>
-        </React.Fragment>
+        </>
     );
 }

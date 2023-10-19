@@ -1,7 +1,7 @@
 import { CSSTransition } from 'react-transition-group';
 import { MenuContext } from './context/MenuContext';
 import { classNames } from 'primereact/utils';
-import { AppMenuItemProps } from './layout';
+import { AppMenuItemProps } from '../refactorThis/layout';
 import { Ripple } from 'primereact/ripple';
 import React, { useContext } from 'react';
 

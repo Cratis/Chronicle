@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
+import { useDarkMode } from "usehooks-ts";
 
 type Theme = 'light' | 'dark';
 
@@ -31,10 +32,11 @@ interface LayoutProviderProps {
 }
 
 export function LayoutProvider({ children }: LayoutProviderProps) {
+    const {isDarkMode} = useDarkMode();
     const [layoutConfig, setLayoutConfig] = useState<LayoutConfig>({
         inputStyle: 'outlined',
-        colorScheme: 'light',
-        theme: 'light',
+        colorScheme: isDarkMode ? 'dark' : 'light',
+        theme: isDarkMode ? 'dark' : 'light',
         scale: 16,
     });
 

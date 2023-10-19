@@ -1,10 +1,10 @@
-import { Layout } from './Layout/Layout.tsx';
+import { Layout } from "./Layout/Layout";
+import { useColorScheme } from "./Utils/useColorScheme";
 
 function App() {
+    useColorScheme();
     return (
-        <div className='App'>
-            <Layout>app content goes here</Layout>
-        </div>
+        <Layout>app content goes here</Layout>
     );
 }
 

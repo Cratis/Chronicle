@@ -1,7 +1,7 @@
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { useEffect, useState } from "react";
-import { ProductService } from "./ProductService.ts";
+import { ProductService } from "./ProductService";
 
 interface Product {
     id: string;
