@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events;
+
 namespace Aksio.Cratis.Kernel.Keys;
 
 /// <summary>
@@ -11,8 +13,9 @@ public interface IObserverKeyIndex
     /// <summary>
     /// Get the keys for a specific microservice and tenant.
     /// </summary>
+    /// <param name="fromEventSequenceNumber">The from <see cref="EventSequenceNumber"/> to get keys from.</param>
     /// <returns>All the <see cref="IObserverKeys"/>.</returns>
-    Task<IObserverKeys> GetKeys();
+    Task<IObserverKeys> GetKeys(EventSequenceNumber fromEventSequenceNumber);
 
     /// <summary>
     /// Add a key to the index.

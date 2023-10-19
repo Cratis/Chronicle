@@ -29,11 +29,6 @@ public static class WellKnownGrainStorageProviders
     public const string TenantConfiguration = "tenant-configuration-state";
 
     /// <summary>
-    /// The name of the storage provider used for connected clients.
-    /// </summary>
-    public const string ConnectedClients = "connected-clients-state";
-
-    /// <summary>
     /// THe name of the storage provider used for jobs.
     /// </summary>
     public const string Jobs = "job-state";

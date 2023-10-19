@@ -138,6 +138,22 @@ public class MongoDBJobStorage<TJobState> : MongoDBJobStorage, IJobStorage<TJobS
         await Collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 
+    /// <inheritdoc/>
+    public async Task<IImmutableList<TJobState>> GetJobs<TJobType>(params JobStatus[] statuses)
+    {
+        var jobType = (JobType)typeof(TJobType);
+        var jobTypeFilter = Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobType>(nameof(JobState<object>.Type).ToCamelCase()), jobType);
+        var statusFilters = statuses.Select(status => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState<object>.Status).ToCamelCase()), status));
+
+        var filter = statuses.Length == 0 ?
+                                jobTypeFilter :
+                                Builders<BsonDocument>.Filter.And(jobTypeFilter, Builders<BsonDocument>.Filter.Or(statusFilters));
+
+        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
+        var documents = await cursor.ToListAsync().ConfigureAwait(false);
+        return documents.Select(_ => BsonSerializer.Deserialize<TJobState>(_)).ToImmutableList();
+    }
+
     bool RemoveTypeInfo(BsonDocument document, BsonDocument? parent = null, string? childProperty = null)
     {
         var elementsToRemove = new List<string>();
@@ -161,22 +177,6 @@ public class MongoDBJobStorage<TJobState> : MongoDBJobStorage, IJobStorage<TJobS
         }
 
         return false;
-    }
-
-    /// <inheritdoc/>
-    public async Task<IImmutableList<TJobState>> GetJobs<TJobType>(params JobStatus[] statuses)
-    {
-        var jobType = (JobType)typeof(TJobType);
-        var jobTypeFilter = Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobType>(nameof(JobState<object>.Type).ToCamelCase()), jobType);
-        var statusFilters = statuses.Select(status => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState<object>.Status).ToCamelCase()), status));
-
-        var filter = statuses.Length == 0 ?
-                                jobTypeFilter :
-                                Builders<BsonDocument>.Filter.And(jobTypeFilter, Builders<BsonDocument>.Filter.Or(statusFilters));
-
-        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        var documents = await cursor.ToListAsync().ConfigureAwait(false);
-        return documents.Select(_ => BsonSerializer.Deserialize<TJobState>(_)).ToImmutableList();
     }
 
     FilterDefinition<BsonDocument> GetIdFilter(Guid id) => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, Guid>("_id"), id);
