@@ -68,20 +68,25 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        await ReadStateAsync();
-
         _observerId = this.GetPrimaryKey(out var keyAsString);
-
-        // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
-        DelayDeactivation(TimeSpan.MaxValue);
-
         _observerKey = ObserverKey.Parse(keyAsString);
         _eventSequenceId = _observerKey.EventSequenceId;
-        State.EventSequenceId = _eventSequenceId;
         _microserviceId = _observerKey.MicroserviceId;
         _tenantId = _observerKey.TenantId;
         _sourceMicroserviceId = _observerKey.SourceMicroserviceId ?? _microserviceId;
         _sourceTenantId = _observerKey.SourceTenantId ?? _tenantId;
+
+        if (_observerId == "90ae2ada-b90e-4b28-b9e8-2c106de96044" && _microserviceId == "85dc950d-1900-4407-a484-ec1e83da16c6" && _tenantId == "c6184dbb-585a-4687-b82e-b4004709af24")
+        {
+            Console.WriteLine("ObserverSupervisor.OnActivateAsync");
+        }
+
+        await ReadStateAsync();
+
+        // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
+        DelayDeactivation(TimeSpan.MaxValue);
+
+        State.EventSequenceId = _eventSequenceId;
 
         _logger.Activating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
 
@@ -91,7 +96,6 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
         var microserviceAndTenant = new MicroserviceAndTenant(_sourceMicroserviceId, _sourceTenantId);
         var streamId = StreamId.Create(microserviceAndTenant, _eventSequenceId);
         _stream = streamProvider.GetStream<AppendedEvent>(streamId);
-
         await base.OnActivateAsync(cancellationToken);
     }
 
