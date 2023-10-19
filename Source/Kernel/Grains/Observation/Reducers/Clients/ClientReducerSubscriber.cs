@@ -144,7 +144,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                     }
                     catch
                     {
-                        throw new InvalidReturnContentFromReducer(response.StatusCode, contentAsString);
+                        throw new InvalidReturnContentFromReducer(response.StatusCode, response.ReasonPhrase ?? "[n/a]", contentAsString);
                     }
 
                     if (response.StatusCode == HttpStatusCode.NotFound)

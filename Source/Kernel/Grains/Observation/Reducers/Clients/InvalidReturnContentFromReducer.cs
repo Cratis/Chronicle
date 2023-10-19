@@ -14,9 +14,10 @@ public class InvalidReturnContentFromReducer : Exception
     /// Initializes a new instance of the <see cref="InvalidReturnContentFromReducer"/> class.
     /// </summary>
     /// <param name="httpStatusCode">The <see cref="HttpStatusCode"/> for the response.</param>
+    /// <param name="reason">The reason for failing.</param>
     /// <param name="content">The invalid content.</param>
-    public InvalidReturnContentFromReducer(HttpStatusCode httpStatusCode, string content)
-        : base($"Invalid content returned from reducer, status code '{httpStatusCode}', content: '{content}'")
+    public InvalidReturnContentFromReducer(HttpStatusCode httpStatusCode, string reason, string content)
+        : base($"Invalid content returned from reducer, status code '{httpStatusCode}', with reason phrase '{reason}' and content: '{content}'")
     {
     }
 }
