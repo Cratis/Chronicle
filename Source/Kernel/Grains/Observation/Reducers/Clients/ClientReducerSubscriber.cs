@@ -134,8 +134,20 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                     using var jsonContent = JsonContent.Create(reduce, options: _jsonSerializerOptions);
                     httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
                     var response = await httpClient.PostAsync($"/.cratis/reducers/{_reducerId}", jsonContent);
-                    commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
 
+                    var contentAsString = string.Empty;
+
+                    try
+                    {
+                        contentAsString = await response.Content.ReadAsStringAsync();
+                        commandResult = JsonSerializer.Deserialize<CommandResult>(contentAsString, _jsonSerializerOptions)!;
+                    }
+                    catch
+                    {
+                        throw new InvalidReturnContentFromReducer(contentAsString);
+                    }
+
+                    // commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
                     if (response.StatusCode == HttpStatusCode.NotFound)
                     {
                         await ConnectedClientsGrain.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
