@@ -10,6 +10,6 @@ internal static partial class ObserversLogMessages
     [LoggerMessage(0, LogLevel.Information, "Registering observers")]
     internal static partial void RegisterObservers(this ILogger<Observers> logger);
 
-    [LoggerMessage(1, LogLevel.Information, "Observers registered, it took {Elapsed}")]
-    internal static partial void ObserversRegistered(this ILogger<Observers> logger, TimeSpan elapsed);
+    [LoggerMessage(1, LogLevel.Information, "Registered {ObserverCount} observers for microservice {MicroserviceId}, it took {Elapsed}")]
+    internal static partial void ObserversRegistered(this ILogger<Observers> logger, int observerCount, MicroserviceId microserviceId, TimeSpan elapsed);
 }

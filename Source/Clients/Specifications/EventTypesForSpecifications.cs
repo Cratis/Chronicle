@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Specifications;
 
@@ -16,6 +17,9 @@ public class EventTypesForSpecifications : IEventTypes
 
     /// <inheritdoc/>
     public IEnumerable<EventType> All => _eventTypes.Values;
+
+    /// <inheritdoc/>
+    public IEnumerable<EventTypeRegistration> AllAsRegistrations => _eventTypes.Select(_ => new EventTypeRegistration(_.Value, _.Key.Name, "{}"!));
 
     /// <inheritdoc/>
     public Type GetClrTypeFor(EventTypeId eventTypeId) => _clrTypesByEventType[eventTypeId];

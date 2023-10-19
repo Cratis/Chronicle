@@ -3,7 +3,6 @@
 
 using Aksio.Cratis;
 using Aksio.Cratis.Kernel.MongoDB;
-using Aksio.Cratis.Kernel.MongoDB.Clients;
 using Aksio.Cratis.Kernel.MongoDB.Reminders;
 using Aksio.Cratis.Kernel.MongoDB.Tenants;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
@@ -34,7 +33,6 @@ public static class SiloBuilderExtensions
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.Observers, (serviceProvider, _) => serviceProvider.GetRequiredService<ObserverGrainStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.FailedPartitions, (serviceProvider, _) => serviceProvider.GetRequiredService<FailedPartitionGrainStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.TenantConfiguration, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
-            services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.ConnectedClients, (serviceProvider, _) => serviceProvider.GetRequiredService<ConnectedClientsStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.Jobs, (serviceProvider, _) => serviceProvider.GetRequiredService<JobGrainStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.JobSteps, (serviceProvider, _) => serviceProvider.GetRequiredService<JobStepGrainStorageProvider>());
         });

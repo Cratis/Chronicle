@@ -48,6 +48,8 @@ public class KernelConfiguration : IPerformPostBindOperations
         {
             Name = "Shared"
         };
+        Microservices[MicroserviceId.Unspecified.ToString()] = new() { Name = "Shared" };
+        Microservices[MicroserviceId.Kernel.ToString()] = new() { Name = "Kernel" };
         Storage.ConfigureKernelMicroservice(Tenants.Select(_ => _.Key));
     }
 }

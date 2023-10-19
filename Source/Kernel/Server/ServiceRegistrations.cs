@@ -9,9 +9,7 @@ using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Engines.Changes;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
-using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.MongoDB.Clients;
 using Aksio.Cratis.Kernel.MongoDB.EventSequences;
 using Aksio.Cratis.Kernel.MongoDB.Identities;
 using Aksio.Cratis.Kernel.MongoDB.Jobs;
@@ -42,7 +40,6 @@ public class ServiceRegistrations : Module
         builder.RegisterType<MongoDBEventSequenceStorage>().As<IEventSequenceStorage>().SingleInstance();
         builder.RegisterType<MongoDBObserverStorage>().As<IObserverStorage>().SingleInstance();
         builder.RegisterType<MongoDBFailedPartitionStorage>().As<IFailedPartitionsStorage>().SingleInstance();
-        builder.RegisterType<MongoDBConnectedClientsState>().As<IConnectedClientsState>().SingleInstance();
         builder.RegisterType<MongoDBIdentityStore>().As<IIdentityStore>().InstancePerTenant();
         builder.RegisterType<MongoDBObserverKeyIndexes>().As<IObserverKeyIndexes>().InstancePerTenant();
         builder.RegisterType(typeof(MongoDBJobStorage)).As(typeof(IJobStorage)).InstancePerMicroservice();

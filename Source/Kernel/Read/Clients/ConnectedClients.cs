@@ -14,15 +14,15 @@ namespace Read.Clients;
 [Route("/api/clients/{microserviceId}")]
 public class ConnectedClients : ControllerBase
 {
-    readonly IConnectedClientsState _connectedClients;
+    readonly IGrainFactory _grainFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
     /// </summary>
-    /// <param name="connectedClients">The <see cref="IConnectedClientsState"/>.</param>
-    public ConnectedClients(IConnectedClientsState connectedClients)
+    /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
+    public ConnectedClients(IGrainFactory grainFactory)
     {
-        _connectedClients = connectedClients;
+        _grainFactory = grainFactory;
     }
 
     /// <summary>
@@ -31,21 +31,32 @@ public class ConnectedClients : ControllerBase
     /// <param name="microserviceId"><see cref="MicroserviceId"/> to observe for.</param>
     /// <returns>Client observable of a collection of <see cref="ConnectedClient"/>.</returns>
     [HttpGet]
-    public Task<ClientObservable<IEnumerable<ConnectedClient>>> ConnectedClientsForMicroservice(
+    public ClientObservable<IEnumerable<ConnectedClient>> ConnectedClientsForMicroservice(
         [FromRoute] MicroserviceId microserviceId)
     {
         var clientObservable = new ClientObservable<IEnumerable<ConnectedClient>>();
-        var observable = _connectedClients.GetAllForMicroservice(microserviceId);
-        var subscription = observable.Subscribe(_ => clientObservable.OnNext(_));
+        var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
+        #pragma warning disable CA2000 // Call System.IDisposable.Dispose on object created by 'new CancellationTokenSource()' - it is disposed when the client disconnects
+        var cancellationTokenSource = new CancellationTokenSource();
+
+        _ = Task.Run(
+            async () =>
+            {
+                while (!cancellationTokenSource.IsCancellationRequested)
+                {
+                    var clients = await connectedClients.GetAllConnectedClients();
+                    clientObservable.OnNext(clients);
+                    await Task.Delay(5000);
+                }
+            },
+            cancellationTokenSource.Token);
+
         clientObservable.ClientDisconnected = () =>
         {
-            subscription.Dispose();
-            if (observable is IDisposable disposableObservable)
-            {
-                disposableObservable.Dispose();
-            }
+            cancellationTokenSource.Cancel();
+            cancellationTokenSource.Dispose();
         };
 
-        return Task.FromResult(clientObservable);
+        return clientObservable;
     }
 }

@@ -66,20 +66,25 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     /// <inheritdoc/>
     public async Task Rehydrate()
     {
+        _logger.Rehydrate();
+
         foreach (var microserviceId in _microservices.GetMicroserviceIds())
         {
             _executionContextManager.Establish(microserviceId);
             var projectionPipelineDefinitions = await _projectionPipelineDefinitions().GetAll();
             foreach (var pipeline in projectionPipelineDefinitions)
             {
-                if (await _projectionDefinitions().HasFor(pipeline.ProjectionId))
+                _executionContextManager.Establish(microserviceId);
+
+                if (await _projectionDefinitions().TryGetFor(pipeline.ProjectionId) is (true, ProjectionDefinition projectionDefinition))
                 {
+                    await _projectionManagerProvider().Register(projectionDefinition, pipeline);
+
+                    if (!projectionDefinition.IsActive) continue;
+
                     foreach (var tenant in _configuration.Tenants.GetTenantIds())
                     {
                         _executionContextManager.Establish(tenant, CorrelationId.New(), microserviceId);
-                        var projectionDefinition = await _projectionDefinitions().GetFor(pipeline.ProjectionId);
-                        await _projectionManagerProvider().Register(projectionDefinition, pipeline);
-
                         var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
                         await GrainFactory.GetGrain<IProjection>(pipeline.ProjectionId, key).Ensure();
                     }
@@ -101,10 +106,10 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             var projectionDefinition = registration.Projection;
             var pipelineDefinition = registration.Pipeline;
 
-            var isNew = !await _projectionDefinitions().HasFor(projectionDefinition.Identifier);
-            var hasChanged = await _projectionDefinitions().HasChanged(projectionDefinition);
+            var (isNew, hasChanged) = await _projectionDefinitions().IsNewOrChanged(projectionDefinition);
+            _executionContextManager.Establish(microserviceId);
 
-            if (hasChanged || isNew)
+            if (hasChanged || isNew || !_projectionManagerProvider().Exists(projectionDefinition.Identifier))
             {
                 await RegisterProjectionAndPipeline(
                     microserviceId,
@@ -159,21 +164,20 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             _executionContextManager.Establish(tenant, CorrelationId.New(), microserviceId);
             await _projectionManagerProvider().Register(projectionDefinition, pipelineDefinition);
 
-            if (projectionDefinition.IsActive)
+            if (!projectionDefinition.IsActive) continue;
+
+            var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
+            var projection = GrainFactory.GetGrain<IProjection>(projectionDefinition.Identifier, key);
+            await projection.Ensure();
+            await projection.RefreshDefinition();
+            if (isNew)
             {
-                var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
-                var projection = GrainFactory.GetGrain<IProjection>(projectionDefinition.Identifier, key);
-                await projection.Ensure();
-                await projection.RefreshDefinition();
-                if (isNew)
-                {
-                    _logger.ProjectionIsNew(projectionDefinition.Identifier, projectionDefinition.Name);
-                }
-                else
-                {
-                    _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
-                    await projection.Rewind();
-                }
+                _logger.ProjectionIsNew(projectionDefinition.Identifier, projectionDefinition.Name);
+            }
+            else
+            {
+                _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
+                await projection.Rewind();
             }
         }
     }

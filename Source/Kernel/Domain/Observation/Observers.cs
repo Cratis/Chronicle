@@ -68,7 +68,7 @@ public class Observers : ControllerBase
             await observers.Register(connectionId, registrations, tenants);
 
             stopwatch.Stop();
-            _logger.ObserversRegistered(stopwatch.Elapsed);
+            _logger.ObserversRegistered(registrations.Count(), microserviceId, stopwatch.Elapsed);
         });
 
         return Task.CompletedTask;

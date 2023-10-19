@@ -1,3 +1,59 @@
+# [v9.5.8] - 2023-10-10 [PR: #987](https://github.com/aksio-insurtech/Cratis/pull/987)
+
+### Fixed
+
+- Fixing server crash at startup by upgrading the dependency to `Fundamentals` package, which has a fix for what is classified as assembly referenced packages - avoiding duplicates in type discovery.
+
+
+# [v9.5.7] - 2023-10-10 [PR: #986](https://github.com/aksio-insurtech/Cratis/pull/986)
+
+### Fixed
+
+- Adding package referenced assemblies to default artifacts discovery so that we get types from the Cratis SDK, e.g. `EventRedacted` event type.
+- Register system event types, e.g. `EventRedacted` in all event stores.
+
+
+# [v9.5.6] - 2023-10-9 [PR: #0]()
+
+No release notes
+
+# [v9.5.5] - 2023-10-9 [PR: #0]()
+
+No release notes
+
+# [v9.5.4] - 2023-10-9 [PR: #985](https://github.com/aksio-insurtech/Cratis/pull/985)
+
+### Fixed
+
+- Removing a `console.log()` from the workbench when looking at event details.
+- Fixing rehydration of projections to not activate projections that are marked as non active (`IsActive=false`)
+
+
+# [v9.5.3] - 2023-10-6 [PR: #983](https://github.com/aksio-insurtech/Cratis/pull/983)
+
+### Fixed
+
+- Adding more logging to see what is going on @ startup.
+- Making sure we register projections that aren't registered with the `ProjectionManager`.
+
+
+# [v9.5.2] - 2023-10-6 [PR: #981](https://github.com/aksio-insurtech/Cratis/pull/981)
+
+### Fixed
+
+- Projection registration internally was registering per tenant, while it should be per microservice.
+- Added more logging for projection registration.
+
+
+# [v9.5.1] - 2023-10-3 [PR: #975](https://github.com/aksio-insurtech/Cratis/pull/975)
+
+### Fixed
+
+- Skipping `_id` properties in changeset when creating update definition for Mongo, as this is implicitly set by the MongoDB C# driver and will cause an exception if its there.
+- FIxing conversion check ordering to make sure we get correct types (complex types first, then value types, dictionaries, enumerables).
+- Adding support for dictionary types for the entire Reducer & Projection pipelines, including the MongoDB Sink.
+
+
 # [v9.5.0] - 2023-9-29 [PR: #974](https://github.com/aksio-insurtech/Cratis/pull/974)
 
 ### Added

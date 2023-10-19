@@ -25,23 +25,16 @@ public interface IProjectionDefinitions
     Task Register(ProjectionDefinition definition);
 
     /// <summary>
-    /// Check if a projection has a definition, based on its identifier.
-    /// </summary>
-    /// <param name="projectionId"><see cref="ProjectionId"/> to check for.</param>
-    /// <returns>True if exists, false if not.</returns>
-    Task<bool> HasFor(ProjectionId projectionId);
-
-    /// <summary>
-    /// Get the <see cref="ProjectionDefinition"/> based on its identifier.
+    /// Try to get the <see cref="ProjectionDefinition"/> based on its identifier.
     /// </summary>
     /// <param name="projectionId"><see cref="ProjectionId"/> to get for.</param>
-    /// <returns><see cref="ProjectionDefinition"/> instance.</returns>
-    Task<ProjectionDefinition> GetFor(ProjectionId projectionId);
+    /// <returns>Tuple of boolean telling if it was found and a <see cref="ProjectionDefinition"/> instance, if found.</returns>
+    Task<(bool Found, ProjectionDefinition? Projection)> TryGetFor(ProjectionId projectionId);
 
     /// <summary>
     /// Compare an incoming <see cref="ProjectionDefinition"/> to existing to see if the definition has changed.
     /// </summary>
     /// <param name="projectionDefinition"><see cref="ProjectionDefinition"/> to compare.</param>
-    /// <returns>True if it has changed, false if not.</returns>
-    Task<bool> HasChanged(ProjectionDefinition projectionDefinition);
+    /// <returns>Tuple containing a boolean for whether or not it is new and one for whether or not it has changed. Both can be false, meaning we the exact same projection definition.</returns>
+    Task<(bool IsNew, bool HasChanged)> IsNewOrChanged(ProjectionDefinition projectionDefinition);
 }
