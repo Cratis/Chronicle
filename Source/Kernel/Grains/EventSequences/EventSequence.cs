@@ -125,7 +125,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                         .Where(_ => eventTypes.Any(e => e.Id == _.Key) && _.Value != EventSequenceNumber.Unavailable)
                         .Select(_ => _.Value)
                         .OrderByDescending(_ => _)
-                        .SingleOrDefault();
+                        .FirstOrDefault();
         }
         catch (Exception ex)
         {
