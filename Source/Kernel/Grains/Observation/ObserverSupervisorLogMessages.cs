@@ -60,4 +60,16 @@ internal static partial class ObserverSupervisorLogMessages
 
     [LoggerMessage(15, LogLevel.Information, "Ignoring rewinding for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'. The disconnect state is {DisconnectState} and subscription state is {SubscriptionState}")]
     internal static partial void IgnoringRewinding(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId, bool disconnectState, bool subscriptionState);
+
+    [LoggerMessage(16, LogLevel.Debug, "Trying to recover any failed partitions for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'.")]
+    internal static partial void TryRecoveringAnyFailedPartitions(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
+
+    [LoggerMessage(17, LogLevel.Debug, "Getting tail sequence number for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}' for event types {EventTypes}")]
+    internal static partial void GettingTailSequenceNumberForEventTypes(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId, IEnumerable<EventType> eventTypes);
+
+    [LoggerMessage(18, LogLevel.Debug, "Getting tail sequence number for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    internal static partial void GettingTailSequenceNumber(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
+
+    [LoggerMessage(19, LogLevel.Debug, "Getting next sequence number greater or equal than {EventSequenceNumber} for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}' for event types {EventTypes}")]
+    internal static partial void GettingNextSequenceNumberGreaterOrEqualThan(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId, EventSequenceNumber eventSequenceNumber, IEnumerable<EventType> eventTypes);
 }

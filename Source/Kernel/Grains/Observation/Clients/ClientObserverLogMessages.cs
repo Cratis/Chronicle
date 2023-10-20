@@ -22,6 +22,6 @@ internal static partial class ClientObserverLogMessages
     [LoggerMessage(3, LogLevel.Debug, "Getting connected client for observer '{ObserverId}' with connection id {connectionId} for microservice {microserviceId} on sequence {eventSequenceId} for tenant {tenantId}")]
     internal static partial void GettingConnectedClient(this ILogger<ClientObserver> logger, MicroserviceId microserviceId, ConnectionId connectionId, ObserverId observerId, EventSequenceId eventSequenceId, TenantId tenantId);
 
-    [LoggerMessage(4, LogLevel.Debug, "Subscribing client observer '{ObserverId}' for events for microservice {microserviceId} on sequence {eventSequenceId} for tenant {tenantId}")]
+    [LoggerMessage(4, LogLevel.Error, "Subscribing client observer '{ObserverId}' for events for microservice {microserviceId} on sequence {eventSequenceId} for tenant {tenantId}")]
     internal static partial void SubscribingForEvents(this ILogger<ClientObserver> logger, MicroserviceId microserviceId, ObserverId observerId, EventSequenceId eventSequenceId, TenantId tenantId);
 }

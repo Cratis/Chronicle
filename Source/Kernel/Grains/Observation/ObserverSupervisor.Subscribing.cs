@@ -53,6 +53,7 @@ public partial class ObserverSupervisor
 
         await UnsubscribeStream();
 
+        _logger.GettingTailSequenceNumberForEventTypes(_observerId, _microserviceId, _eventSequenceId, _tenantId, eventTypes);
         var lastSequenceNumber = await EventSequence.GetTailSequenceNumberForEventTypes(eventTypes);
         if (HasDefinitionChanged(eventTypes) && lastSequenceNumber != EventSequenceNumber.Unavailable)
         {
@@ -65,6 +66,7 @@ public partial class ObserverSupervisor
         State.RunningState = ObserverRunningState.Subscribing;
         State.EventTypes = eventTypes;
 
+        _logger.GettingTailSequenceNumber(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         var tailSequenceNumber = await EventSequence.GetTailSequenceNumber();
         var nextSequenceNumber = lastSequenceNumber.Next();
 
@@ -72,6 +74,14 @@ public partial class ObserverSupervisor
             lastSequenceNumber < tailSequenceNumber &&
             State.NextEventSequenceNumber != EventSequenceNumber.Unavailable)
         {
+            _logger.GettingNextSequenceNumberGreaterOrEqualThan(
+                _observerId,
+                _microserviceId,
+                _eventSequenceId,
+                _tenantId,
+                nextSequenceNumber,
+                State.EventTypes);
+
             var highestNumber = await EventSequence.GetNextSequenceNumberGreaterOrEqualThan(
                 nextSequenceNumber,
                 State.EventTypes);
