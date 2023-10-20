@@ -34,6 +34,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     ObserverSubscription _subscription;
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
+    IDisposable? _retryFailureTimer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
@@ -129,7 +130,13 @@ public class Observer : StateMachine<ObserverState>, IObserver
     }
 
     /// <inheritdoc/>
-    public Task Replay() => TransitionTo<States.Replay>();
+    public async Task Replay()
+    {
+        if (State.RunningState == ObserverRunningState.Active)
+        {
+            await TransitionTo<States.Replay>();
+        }
+    }
 
     /// <inheritdoc/>
     public async Task ReplayPartition(Key partition)
@@ -182,13 +189,21 @@ public class Observer : StateMachine<ObserverState>, IObserver
             _observerKey.SourceTenantId ?? TenantId.NotSet);
 
         var failure = Failures.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
+        var time = TimeSpan.FromSeconds((failure.Attempts.Count() - 1) * 2);
+        if (time.TotalMilliseconds == 0)
+        {
+            time = TimeSpan.FromMilliseconds(100);
+        }
 
-        var time = TimeSpan.FromSeconds((failure.Attempts.Count() - 1) * 2).Add(TimeSpan.FromMilliseconds(100));
-        RegisterTimer(
-            async (_) => await TryRecoverFailedPartition(partition),
+        _retryFailureTimer = RegisterTimer(
+            async (_) =>
+            {
+                _retryFailureTimer?.Dispose();
+                await TryRecoverFailedPartition(partition);
+            },
             null,
             time,
-            TimeSpan.MaxValue);
+            TimeSpan.FromDays(30));
 
         await _failuresState.WriteStateAsync();
     }
@@ -208,7 +223,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
         var lastAttempt = failure.LastAttempt;
         if (lastAttempt is null) return;
 
-        await _jobsManager.Start<RetryFailedPartitionJob, RetryFailedPartitionRequest>(
+        await _jobsManager.Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(
             JobId.New(),
             new(
                 _observerId,
@@ -313,13 +328,14 @@ public class Observer : StateMachine<ObserverState>, IObserver
     }
 
     /// <inheritdoc/>
-    protected override async Task OnAfterEnteringState(IState<ObserverState> state)
+    protected override Task OnBeforeEnteringState(IState<ObserverState> state)
     {
         if (state is States.BaseObserverState observerState)
         {
             State.RunningState = observerState.RunningState;
-            await WriteStateAsync();
         }
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
