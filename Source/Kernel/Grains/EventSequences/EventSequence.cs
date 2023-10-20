@@ -154,6 +154,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             _logger.FailedGettingNextSequenceNumberGreaterOrEqualThan(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), ex);
         }
 
+        _logger.NextSequenceNumberGreaterOrEqualThan(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), result);
+
         return result;
     }
 

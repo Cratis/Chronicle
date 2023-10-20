@@ -44,4 +44,7 @@ internal static partial class EventSequenceLogMessages
 
     [LoggerMessage(10, LogLevel.Error, "Failed getting tail sequence number greater or equal than {SequenceNumber} for event types from event sequence {EventSequenceId} for microservice '{MicroserviceId}' on tenant {TenantId} for event types {EventTypes}")]
     internal static partial void FailedGettingNextSequenceNumberGreaterOrEqualThan(this ILogger<EventSequence> logger, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, Exception exception);
+
+    [LoggerMessage(11, LogLevel.Debug, "Sequence number is {Result} when getting tail sequence number greater or equal than {SequenceNumber} for event types from event sequence {EventSequenceId} for microservice '{MicroserviceId}' on tenant {TenantId} for event types {EventTypes}")]
+    internal static partial void NextSequenceNumberGreaterOrEqualThan(this ILogger<EventSequence> logger, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, EventSequenceNumber result);
 }
