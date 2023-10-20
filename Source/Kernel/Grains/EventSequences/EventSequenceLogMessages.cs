@@ -32,4 +32,10 @@ internal static partial class EventSequenceLogMessages
 
     [LoggerMessage(6, LogLevel.Information, "Getting tail sequence number for event types from event sequence {EventSequenceId} for microservice '{MicroserviceId}' on tenant {TenantId} for event types {EventTypes}")]
     internal static partial void GettingTailSequenceNumberForEventTypes(this ILogger<EventSequence> logger, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes);
+
+    [LoggerMessage(7, LogLevel.Information, "Sequence number is {SequenceNumber} when getting tail sequence number for event types from event sequence {EventSequenceId} for microservice '{MicroserviceId}' on tenant {TenantId} for event types {EventTypes}")]
+    internal static partial void ResultForGettingTailSequenceNumberForEventTypes(this ILogger<EventSequence> logger, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes, EventSequenceNumber sequenceNumber);
+
+    [LoggerMessage(8, LogLevel.Error, "Failed getting tail sequence number for event types from event sequence {EventSequenceId} for microservice '{MicroserviceId}' on tenant {TenantId} for event types {EventTypes}")]
+    internal static partial void FailedGettingTailSequenceNumberForEventTypes(this ILogger<EventSequence> logger, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes, Exception exception);
 }

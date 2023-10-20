@@ -118,17 +118,22 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     {
         _logger.GettingTailSequenceNumberForEventTypes(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, eventTypes);
 
-        var sequenceNumber = State.TailSequenceNumberPerEventType
-                    .Where(_ => eventTypes.Any(e => e.Id == _.Key) && _.Value != EventSequenceNumber.Unavailable)
-                    .Select(_ => _.Value)
-                    .OrderByDescending(_ => _)
-                    .SingleOrDefault();
-
-        if (sequenceNumber is null)
+        var sequenceNumber = EventSequenceNumber.Unavailable;
+        try
         {
-            return Task.FromResult(EventSequenceNumber.Unavailable);
+            sequenceNumber = State.TailSequenceNumberPerEventType
+                        .Where(_ => eventTypes.Any(e => e.Id == _.Key) && _.Value != EventSequenceNumber.Unavailable)
+                        .Select(_ => _.Value)
+                        .OrderByDescending(_ => _)
+                        .SingleOrDefault();
+        }
+        catch (Exception ex)
+        {
+            _logger.FailedGettingTailSequenceNumberForEventTypes(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, eventTypes, ex);
         }
 
+        sequenceNumber ??= EventSequenceNumber.Unavailable;
+        _logger.ResultForGettingTailSequenceNumberForEventTypes(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, eventTypes, sequenceNumber);
         return Task.FromResult(sequenceNumber);
     }
 
