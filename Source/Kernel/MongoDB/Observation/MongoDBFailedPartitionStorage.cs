@@ -39,6 +39,7 @@ public class MongoDBFailedPartitionStorage : IFailedPartitionsStorage
             });
         }
     }
+
     IMongoCollection<FailedPartition> Collection => _eventStoreDatabaseProvider().GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
 
     /// <inheritdoc/>
