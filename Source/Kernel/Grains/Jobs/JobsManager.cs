@@ -12,8 +12,8 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// </summary>
 public class JobsManager : Grain, IJobsManager
 {
-    JobsManagerKey _key = JobsManagerKey.NotSet;
     readonly IExecutionContextManager _executionContextManager;
+    JobsManagerKey _key = JobsManagerKey.NotSet;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobsManager"/> class.
