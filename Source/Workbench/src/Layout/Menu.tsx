@@ -24,12 +24,12 @@ export const Menu = () => {
 
     return (
         <MenuProvider>
-            <ul className='layout-menu'>
+            <ul>
                 {model.map((item, idx) => {
                     return !item?.separator ? (
                         <Menuitem item={item} root={true} index={idx} key={idx} />
                     ) : (
-                        <li className='menu-separator'></li>
+                        <li></li>
                     );
                 })}
             </ul>
