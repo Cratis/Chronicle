@@ -1,25 +1,4 @@
-import React, { Dispatch, SetStateAction, HTMLAttributeAnchorTarget, ReactNode, MutableRefObject } from 'react';
-
-
-export interface AppBreadcrumbProps {
-    className?: string;
-}
-
-export interface Breadcrumb {
-    labels?: string[];
-    to?: string;
-}
-
-export interface BreadcrumbItem {
-    label: string;
-    to?: string;
-    items?: BreadcrumbItem[];
-}
-
-
-export type ChildContainerProps = {
-    children: ReactNode;
-};
+import React, { Dispatch, SetStateAction, HTMLAttributeAnchorTarget, } from 'react';
 
 export type LayoutConfig = {
     inputStyle: string;
@@ -33,33 +12,14 @@ export interface LayoutContextProps {
     setLayoutConfig: Dispatch<SetStateAction<LayoutConfig>>;
 }
 
-export interface MenuContextProps {
-    activeMenu: string;
-    setActiveMenu: Dispatch<SetStateAction<string>>;
-}
-
-
 export interface AppConfigProps {
     simple?: boolean;
-}
-
-
-export type NodeRef = MutableRefObject<ReactNode>;
-export interface AppTopbarRef {
-    menubutton?: HTMLButtonElement | null;
-    topbarmenu?: HTMLDivElement | null;
-    topbarmenubutton?: HTMLButtonElement | null;
 }
 
 type CommandProps = {
     originalEvent: React.MouseEvent<HTMLAnchorElement, MouseEvent>;
     item: AppMenuItem;
 };
-
-export interface MenuProps {
-    model: MenuModel[];
-}
-
 export interface MenuModel {
     label: string;
     icon?: string;
@@ -69,7 +29,6 @@ export interface MenuModel {
     target?: HTMLAttributeAnchorTarget;
     separator?: boolean;
 }
-
 export interface AppMenuItem extends MenuModel {
     items?: AppMenuItem[];
     badge?: 'UPDATED' | 'NEW';
@@ -81,7 +40,6 @@ export interface AppMenuItem extends MenuModel {
     replaceUrl?: boolean;
     command?: ({ originalEvent, item }: CommandProps) => void;
 }
-
 export interface AppMenuItemProps {
     item?: AppMenuItem;
     parentKey?: string;
