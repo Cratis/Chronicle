@@ -142,7 +142,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         EventSequenceNumber sequenceNumber,
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null) =>
-        EventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(_eventSequenceId, sequenceNumber, eventTypes, eventSourceId);
+        Task.Run(async () => await EventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(_eventSequenceId, sequenceNumber, eventTypes, eventSourceId));
 
     /// <inheritdoc/>
     public async Task Append(
