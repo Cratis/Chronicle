@@ -138,11 +138,24 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     }
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(
+    public async Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(
         EventSequenceNumber sequenceNumber,
         IEnumerable<EventType>? eventTypes = null,
-        EventSourceId? eventSourceId = null) =>
-        Task.Run(async () => await EventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(_eventSequenceId, sequenceNumber, eventTypes, eventSourceId));
+        EventSourceId? eventSourceId = null)
+    {
+        var result = EventSequenceNumber.Unavailable;
+        try
+        {
+            _logger.GettingNextSequenceNumberGreaterOrEqualThan(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>());
+            result = await EventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(_eventSequenceId, sequenceNumber, eventTypes, eventSourceId);
+        }
+        catch (Exception ex)
+        {
+            _logger.FailedGettingNextSequenceNumberGreaterOrEqualThan(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), ex);
+        }
+
+        return result;
+    }
 
     /// <inheritdoc/>
     public async Task Append(
