@@ -1,3 +1,4 @@
+using System;
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
@@ -15,6 +16,7 @@ public class CartReducer : IReducerFor<Cart>
 
     public Task<Cart> ItemAdded(ItemAddedToCart @event, Cart? initial, EventContext context)
     {
+        throw new NotImplementedException();
         initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
         return Task.FromResult(initial with
         {
