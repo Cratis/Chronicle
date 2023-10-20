@@ -57,6 +57,7 @@ public partial class ObserverSupervisor
         var lastSequenceNumber = await EventSequence.GetTailSequenceNumberForEventTypes(eventTypes);
         if (HasDefinitionChanged(eventTypes) && lastSequenceNumber != EventSequenceNumber.Unavailable)
         {
+            _logger.DefinitionChanged(_observerId, _microserviceId, _eventSequenceId, _tenantId);
             State.EventTypes = eventTypes;
             await WriteStateAsync();
             await Rewind();

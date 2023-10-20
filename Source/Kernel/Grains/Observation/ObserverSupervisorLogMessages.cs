@@ -72,4 +72,7 @@ internal static partial class ObserverSupervisorLogMessages
 
     [LoggerMessage(19, LogLevel.Debug, "Getting next sequence number greater or equal than {EventSequenceNumber} for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}' for event types {EventTypes}")]
     internal static partial void GettingNextSequenceNumberGreaterOrEqualThan(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId, EventSequenceNumber eventSequenceNumber, IEnumerable<EventType> eventTypes);
+
+    [LoggerMessage(20, LogLevel.Debug, "Definition has changed for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    internal static partial void DefinitionChanged(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
 }

@@ -29,4 +29,7 @@ internal static partial class EventSequenceLogMessages
 
     [LoggerMessage(5, LogLevel.Information, "Redacting events with event source id {EventSourceId} and event types {EventTypes} in event sequence {EventSequenceId} for microservice '{MicroserviceId}' on tenant {TenantId}")]
     internal static partial void RedactingMultiple(this ILogger<EventSequence> logger, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
+
+    [LoggerMessage(6, LogLevel.Information, "Getting tail sequence number for event types from event sequence {EventSequenceId} for microservice '{MicroserviceId}' on tenant {TenantId} for event types {EventTypes}")]
+    internal static partial void GettingTailSequenceNumberForEventTypes(this ILogger<EventSequence> logger, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes);
 }
