@@ -14,4 +14,7 @@ internal static partial class ClientObserversLogMessages
 
     [LoggerMessage(1, LogLevel.Trace, "Registering observer with id '{ObserverId}' - friendly name {ObserverName}, for event sequence '{EventSequenceId}'")]
     internal static partial void RegisterObserver(this ILogger<ClientObservers> logger, ObserverId observerId, ObserverName observerName, EventSequenceId eventSequenceId);
+
+    [LoggerMessage(2, LogLevel.Error, "Failed to register observer with id '{ObserverId}' for microservice '{MicroserviceId}' and tenant '{TenantId}'")]
+    internal static partial void FailedToRegisterObserver(this ILogger<ClientObservers> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, Exception exception);
 }
