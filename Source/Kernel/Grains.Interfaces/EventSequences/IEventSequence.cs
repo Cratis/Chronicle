@@ -25,14 +25,12 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// Get the next sequence number.
     /// </summary>
     /// <returns>Next sequence number.</returns>
-    [AlwaysInterleave]
     Task<EventSequenceNumber> GetNextSequenceNumber();
 
     /// <summary>
     /// Get the sequence number of the last (tail) event in the sequence.
     /// </summary>
     /// <returns>Tail sequence number.</returns>
-    [AlwaysInterleave]
     Task<EventSequenceNumber> GetTailSequenceNumber();
 
     /// <summary>
