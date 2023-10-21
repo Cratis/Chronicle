@@ -107,6 +107,10 @@ public partial class ObserverSupervisor
         {
             State.RunningState = ObserverRunningState.CatchingUp;
         }
+        else
+        {
+            State.RunningState = ObserverRunningState.Active;
+        }
 
         _logger.WriteState(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         await WriteStateAsync();
