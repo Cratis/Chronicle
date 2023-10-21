@@ -97,11 +97,6 @@ public class ObserverState
     public bool IsDisconnected => RunningState == ObserverRunningState.Disconnected;
 
     /// <summary>
-    /// Gets or sets the current subscription.
-    /// </summary>
-    public ObserverSubscription CurrentSubscription { get; set; } = ObserverSubscription.Unsubscribed;
-
-    /// <summary>
     /// Gets or sets the current subscription type.
     /// </summary>
     public string CurrentSubscriptionType { get; set; } = string.Empty;
@@ -110,6 +105,11 @@ public class ObserverState
     /// Gets or sets the current subscription arguments.
     /// </summary>
     public object? CurrentSubscriptionArguments { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current subscription event types.
+    /// </summary>
+    public IEnumerable<EventType> CurrentSubscriptionEventTypes { get; set; }
 
     /// <summary>
     /// Gets or sets the tail event sequence number for the event sequence. This is used internally and retrieved on read, not stored.

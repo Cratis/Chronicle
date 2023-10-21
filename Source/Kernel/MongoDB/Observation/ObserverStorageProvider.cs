@@ -59,7 +59,7 @@ public class ObserverStorageProvider : IGrainStorage
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var actualGrainState = (grainState as IGrainState<ObserverState>)!;
-        var currentSubscription = actualGrainState.State.CurrentSubscription;
+        var currentSubscriptionEventTypes = actualGrainState.State.CurrentSubscriptionEventTypes;
         var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
         var eventSequenceId = observerKey.EventSequenceId;
@@ -93,7 +93,7 @@ public class ObserverStorageProvider : IGrainStorage
         state.CurrentSubscriptionArguments = actualGrainState.State?.CurrentSubscriptionArguments;
         actualGrainState.State = state;
 
-        if (currentSubscription.EventTypes.Any())
+        if (currentSubscriptionEventTypes.Any())
         {
             actualGrainState.State.TailEventSequenceNumber = await _eventSequenceStorageProvider().GetTailSequenceNumber(eventSequenceId);
             if (actualGrainState.State.NextEventSequenceNumber < actualGrainState.State.TailEventSequenceNumber)
@@ -101,7 +101,7 @@ public class ObserverStorageProvider : IGrainStorage
                 actualGrainState.State.NextEventSequenceNumberForEventTypes = await _eventSequenceStorageProvider().GetNextSequenceNumberGreaterOrEqualThan(
                     eventSequenceId,
                     actualGrainState.State.NextEventSequenceNumber,
-                    actualGrainState.State.CurrentSubscription.EventTypes);
+                    actualGrainState.State.CurrentSubscriptionEventTypes);
             }
         }
     }
