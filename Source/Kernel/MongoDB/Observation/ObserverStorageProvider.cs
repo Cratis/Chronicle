@@ -93,7 +93,7 @@ public class ObserverStorageProvider : IGrainStorage
         state.CurrentSubscriptionArguments = actualGrainState.State?.CurrentSubscriptionArguments;
         actualGrainState.State = state;
 
-        if (currentSubscriptionEventTypes.Any())
+        if (currentSubscriptionEventTypes?.Any() ?? false)
         {
             actualGrainState.State.TailEventSequenceNumber = await _eventSequenceStorageProvider().GetTailSequenceNumber(eventSequenceId);
             if (actualGrainState.State.NextEventSequenceNumber < actualGrainState.State.TailEventSequenceNumber)
