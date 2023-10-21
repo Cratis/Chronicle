@@ -52,4 +52,10 @@ export class ObserverState {
 
     @field(Object)
     currentSubscriptionArguments?: any;
+
+    @field(Number)
+    tailEventSequenceNumber!: number;
+
+    @field(Number)
+    nextEventSequenceNumberForEventTypes!: number;
 }

@@ -43,6 +43,7 @@ public abstract class ObserverWorker : Grain
         set
         {
             _currentSubscription = value;
+            State.CurrentSubscription = value;
             State.CurrentSubscriptionType = _currentSubscription.SubscriberType.AssemblyQualifiedName;
             State.CurrentSubscriptionArguments = _currentSubscription.Arguments;
         }

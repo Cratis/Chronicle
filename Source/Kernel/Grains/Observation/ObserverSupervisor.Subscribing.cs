@@ -34,8 +34,8 @@ public partial class ObserverSupervisor
     {
         _logger.Subscribing(_observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
         _failedPartitionSupervisor = new(_observerId, _observerKey, State.Name, eventTypes, State.FailedPartitions, GrainFactory);
-        await ReadStateAsync();
         CurrentSubscription = new(_observerId, _observerKey, eventTypes, subscriberType, subscriberArgs!);
+        await ReadStateAsync();
 
         if (State.RunningState == ObserverRunningState.Rewinding)
         {
@@ -68,7 +68,7 @@ public partial class ObserverSupervisor
         State.EventTypes = eventTypes;
 
         _logger.GettingTailSequenceNumber(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-        var tailSequenceNumber = await EventSequence.GetTailSequenceNumber();
+        var tailSequenceNumber = State.TailEventSequenceNumber;
         var nextSequenceNumber = lastSequenceNumber.Next();
 
         if (lastSequenceNumber != EventSequenceNumber.Unavailable &&
@@ -83,10 +83,7 @@ public partial class ObserverSupervisor
                 nextSequenceNumber,
                 State.EventTypes);
 
-            var highestNumber = await EventSequence.GetNextSequenceNumberGreaterOrEqualThan(
-                nextSequenceNumber,
-                State.EventTypes);
-
+            var highestNumber = State.NextEventSequenceNumberForEventTypes;
             if (highestNumber == EventSequenceNumber.Unavailable)
             {
                 State.RunningState = ObserverRunningState.Active;

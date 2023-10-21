@@ -97,6 +97,11 @@ public class ObserverState
     public bool IsDisconnected => RunningState == ObserverRunningState.Disconnected;
 
     /// <summary>
+    /// Gets or sets the current subscription.
+    /// </summary>
+    public ObserverSubscription CurrentSubscription { get; set; } = ObserverSubscription.Unsubscribed;
+
+    /// <summary>
     /// Gets or sets the current subscription type.
     /// </summary>
     public string CurrentSubscriptionType { get; set; } = string.Empty;
@@ -105,6 +110,19 @@ public class ObserverState
     /// Gets or sets the current subscription arguments.
     /// </summary>
     public object? CurrentSubscriptionArguments { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tail event sequence number for the event sequence. This is used internally and retrieved on read, not stored.
+    /// </summary>
+    public EventSequenceNumber TailEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
+    /// Gets or sets the next event sequence number for the event types. This is used internally and retrieved on read, not stored.
+    /// </summary>
+    /// <remarks>
+    /// This is used to determine if the observer is behind and we can fast forward it or have to do a catch up.
+    /// </remarks>
+    public EventSequenceNumber NextEventSequenceNumberForEventTypes { get; set; } = EventSequenceNumber.Unavailable;
 
     /// <summary>
     /// Add a failed partition.
