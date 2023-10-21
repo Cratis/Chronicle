@@ -102,12 +102,10 @@ public partial class ObserverSupervisor
             State.NextEventSequenceNumber == nextSequenceNumber)
         {
             State.RunningState = ObserverRunningState.Active;
-            _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         }
         else if (State.NextEventSequenceNumber < nextSequenceNumber)
         {
             State.RunningState = ObserverRunningState.CatchingUp;
-            _logger.CatchingUp(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         }
 
         _logger.WriteState(_observerId, _microserviceId, _eventSequenceId, _tenantId);
@@ -116,10 +114,12 @@ public partial class ObserverSupervisor
 
         if (State.RunningState == ObserverRunningState.CatchingUp)
         {
+            _logger.CatchingUp(_observerId, _microserviceId, _eventSequenceId, _tenantId);
             await StartCatchup();
         }
         else
         {
+            _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
             await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
         }
     }
