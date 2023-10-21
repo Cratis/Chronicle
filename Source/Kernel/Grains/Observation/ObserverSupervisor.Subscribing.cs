@@ -67,7 +67,7 @@ public partial class ObserverSupervisor
         State.RunningState = ObserverRunningState.Subscribing;
         State.EventTypes = eventTypes;
 
-        _logger.GettingTailSequenceNumber(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+        _logger.TailSequenceNumber(_observerId, _microserviceId, _eventSequenceId, _tenantId, State.TailEventSequenceNumber);
         var tailSequenceNumber = State.TailEventSequenceNumber;
         var nextSequenceNumber = lastSequenceNumber.Next();
 
@@ -75,16 +75,15 @@ public partial class ObserverSupervisor
             lastSequenceNumber < tailSequenceNumber &&
             State.NextEventSequenceNumber != EventSequenceNumber.Unavailable)
         {
-            _logger.GettingNextSequenceNumberGreaterOrEqualThan(
+            _logger.NextEventSequenceNumberForEventTypes(
                 _observerId,
                 _microserviceId,
                 _eventSequenceId,
                 _tenantId,
-                nextSequenceNumber,
+                State.NextEventSequenceNumberForEventTypes,
                 State.EventTypes);
 
-            var highestNumber = State.NextEventSequenceNumberForEventTypes;
-            if (highestNumber == EventSequenceNumber.Unavailable)
+            if (State.NextEventSequenceNumberForEventTypes == EventSequenceNumber.Unavailable)
             {
                 State.RunningState = ObserverRunningState.Active;
                 var previousNext = State.NextEventSequenceNumber;
@@ -111,6 +110,7 @@ public partial class ObserverSupervisor
             _logger.CatchingUp(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         }
 
+        _logger.WriteState(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         await WriteStateAsync();
 
         if (State.RunningState == ObserverRunningState.CatchingUp)
