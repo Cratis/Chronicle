@@ -78,4 +78,7 @@ internal static partial class ObserverSupervisorLogMessages
 
     [LoggerMessage(21, LogLevel.Debug, "Write state for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void WriteState(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
+
+    [LoggerMessage(22, LogLevel.Debug, "State written for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    internal static partial void StateWritten(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
 }
