@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Kernel.Contracts.Events;
 using Aksio.Cratis.Schemas;
 
@@ -34,6 +35,9 @@ public class EventTypes : IEventTypes
     }
 
     /// <inheritdoc/>
+    public IEnumerable<EventTypeRegistration> AllAsRegistrations { get; private set; } = Enumerable.Empty<EventTypeRegistration>();
+
+    /// <inheritdoc/>
     public Task Discover()
     {
         var eventTypes = _clientArtifacts.EventTypes.Select(_ => new
@@ -54,6 +58,16 @@ public class EventTypes : IEventTypes
             _typesByEventType[eventType.EventType] = eventType.ClrType;
         }
 
+        AllAsRegistrations = eventTypes.Select(_ =>
+           {
+               return new EventTypeRegistration
+               {
+                   Type = _.EventType.ToContract(),
+                   FriendlyName = _.ClrType.Name,
+                   Schema = _jsonSchemaGenerator.Generate(_.ClrType).ToJson()
+               };
+           }).ToArray();
+
         return Task.CompletedTask;
     }
 
@@ -73,9 +87,6 @@ public class EventTypes : IEventTypes
             Types = registrations
         });
     }
-
-    /// <inheritdoc/>
-    public IEnumerable<EventTypeRegistration> AllAsRegistrations { get; }
 
     /// <inheritdoc/>
     public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.Id == eventTypeId);
