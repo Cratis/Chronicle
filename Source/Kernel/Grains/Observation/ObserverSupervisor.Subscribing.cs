@@ -45,6 +45,8 @@ public partial class ObserverSupervisor
         _failedPartitionSupervisor = new(_observerId, _observerKey, State.Name, eventTypes, State.FailedPartitions, GrainFactory);
         CurrentSubscription = new(_observerId, _observerKey, eventTypes, subscriberType, siloAddress, state);
         await ReadStateAsync();
+        State.Name = name;
+        State.Type = type;
 
         if (State.RunningState == ObserverRunningState.Rewinding)
         {
