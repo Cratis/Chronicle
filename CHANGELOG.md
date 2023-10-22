@@ -1,3 +1,11 @@
+# [v9.5.10] - 2023-10-22 [PR: #993](https://github.com/aksio-insurtech/Cratis/pull/993)
+
+### Fixed
+
+- Moving underlying database communication from `ObserverSupervisor` to the state provider for increased stability and avoiding `Task`dead lock scenarios.
+- Fixed so that the running state of an observer is reflected correctly, it could in some cases become active but showed "Subscribing" - as "Active" and subscribing to the underlying stream is the default, but was not reflected in the `RunningState` property.
+
+
 # [v9.5.9] - 2023-10-19 [PR: #992](https://github.com/aksio-insurtech/Cratis/pull/992)
 
 ### Changed
