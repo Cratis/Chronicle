@@ -224,6 +224,7 @@ public abstract class ObserverWorker : Grain
     {
         var subscriptionType = State.CurrentSubscriptionType;
         var subscriptionArguments = State.CurrentSubscriptionArguments;
+        var subscriptionEventTypes = State.CurrentSubscriptionEventTypes;
         await _observerState.ReadStateAsync();
         if (string.IsNullOrEmpty(subscriptionType))
         {
@@ -235,7 +236,7 @@ public abstract class ObserverWorker : Grain
             CurrentSubscription = new(
                 ObserverId,
                 new(MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId),
-                State.EventTypes,
+                subscriptionEventTypes,
                 Type.GetType(subscriptionType)!,
                 subscriptionArguments!);
         }
