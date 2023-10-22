@@ -12,7 +12,6 @@ using Aksio.Cratis.Kernel.Observation;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Runtime;
 using Orleans.Storage;
-using ConnectedClientsState = Aksio.Cratis.Kernel.Grains.Clients.ConnectedClientsState;
 
 namespace Orleans.Hosting;
 

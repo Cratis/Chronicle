@@ -8,7 +8,6 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Contracts.EventSequences;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
 
 namespace Aksio.Cratis.Kernel.Services.EventSequences;
 
@@ -53,6 +52,6 @@ public class EventSequences : IEventSequences
         return new AppendResponse();
     }
 
-    IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
-        _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new MicroserviceAndTenant(microserviceId, tenantId));
+    Grains.EventSequences.IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
+        _grainFactory.GetGrain<Grains.EventSequences.IEventSequence>(eventSequenceId, keyExtension: new MicroserviceAndTenant(microserviceId, tenantId));
 }

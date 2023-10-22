@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Kernel.Contracts.Events;
 
 namespace Aksio.Cratis.Events;
 
@@ -10,6 +10,11 @@ namespace Aksio.Cratis.Events;
 /// </summary>
 public interface IEventTypes
 {
+    /// <summary>
+    /// Get all event types as <see cref="EventTypeRegistration"/>.
+    /// </summary>
+    IEnumerable<EventTypeRegistration> AllAsRegistrations { get; }
+
     /// <summary>
     /// Discover all event types from the entry assembly and dependencies.
     /// </summary>
@@ -21,11 +26,6 @@ public interface IEventTypes
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Register();
-
-    /// <summary>
-    /// Get all event types as <see cref="EventTypeRegistration"/>.
-    /// </summary>
-    IEnumerable<EventTypeRegistration> AllAsRegistrations { get; }
 
     /// <summary>
     /// Check if there is a registered <see cref="Type">Clr Type</see> for a specific <see cref="EventTypeId"/>.

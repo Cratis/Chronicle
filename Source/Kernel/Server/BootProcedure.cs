@@ -69,9 +69,9 @@ public class BootProcedure : IPerformBootProcedure
 
                 foreach (var eventTypeRegistration in eventTypeRegistrations)
                 {
-                    var schema = await JsonSchema.FromJsonAsync(eventTypeRegistration.Schema.ToJsonString());
+                    var schema = await JsonSchema.FromJsonAsync(eventTypeRegistration.Schema);
                     await schemaStore.Register(
-                        eventTypeRegistration.Type,
+                        eventTypeRegistration.Type.ToKernel(),
                         eventTypeRegistration.FriendlyName,
                         schema);
                 }
