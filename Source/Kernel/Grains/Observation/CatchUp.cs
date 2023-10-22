@@ -98,12 +98,16 @@ public class CatchUp : ObserverWorker, ICatchUp
     }
 
     /// <inheritdoc/>
-    public async Task Stop()
+    public Task Stop()
     {
-        _logger.Stopping(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
-        _isRunning = false;
-        _timer?.Dispose();
-        await WriteStateAsync();
+        if (_isRunning || _timer is not null)
+        {
+            _logger.Stopping(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
+            _isRunning = false;
+            _timer?.Dispose();
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
