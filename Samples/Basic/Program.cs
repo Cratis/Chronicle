@@ -18,12 +18,34 @@ using var client = new CratisClient(
 
 var eventStore = client.GetEventStore(Guid.Empty.ToString());
 await eventStore.DiscoverAll();
-await eventStore.EventLog.Append(
-    eventSourceId: Guid.NewGuid(),
-    new ItemAddedToCart(
-        PersonId: new(Guid.NewGuid()),
-        MaterialId: new(Guid.NewGuid()),
-        Quantity: 1));
 
-Console.WriteLine("Press a key to exit...");
-Console.ReadKey();
+async Task AddItemToCart()
+{
+    await eventStore.EventLog.Append(
+        eventSourceId: Guid.NewGuid(),
+        new ItemAddedToCart(
+            PersonId: new(Guid.NewGuid()),
+            MaterialId: new(Guid.NewGuid()),
+            Quantity: 1));
+}
+
+while (true)
+{
+
+    Console.WriteLine("\n\n****** Menu *******");
+    Console.WriteLine("---------------------");
+    Console.WriteLine("I - Add item to cart");
+    Console.WriteLine("---------------------");
+    Console.WriteLine("Q - Exit");
+    Console.WriteLine("****** Menu *******");
+    var key = Console.ReadKey();
+    switch (key.Key)
+    {
+        case ConsoleKey.Q:
+            return;
+
+        case ConsoleKey.I:
+            await AddItemToCart();
+            break;
+    }
+}
