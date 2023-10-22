@@ -6,6 +6,7 @@ using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Grains.Workers;
+using Orleans.Concurrency;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 
@@ -40,6 +41,7 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <remarks>
     /// The method will filter down on the event types and give you the highest sequence number for the given event types.
     /// </remarks>
+    [AlwaysInterleave]
     Task<EventSequenceNumber> GetTailSequenceNumberForEventTypes(IEnumerable<EventType> eventTypes);
 
     /// <summary>
@@ -53,6 +55,7 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <p>If providing event types, this will give the last sequence number from the selection of event types.</p>
     /// <p>If no event is found, it will return <see cref="EventSequenceNumber.Unavailable"/>.</p>
     /// </returns>
+    [AlwaysInterleave]
     Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
 
     /// <summary>

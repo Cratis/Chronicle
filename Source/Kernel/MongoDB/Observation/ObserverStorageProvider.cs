@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
@@ -18,18 +19,22 @@ namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 public class ObserverStorageProvider : IGrainStorage
 {
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverStorageProvider"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     public ObserverStorageProvider(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
+        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
     {
         ExecutionContextManager = executionContextManager;
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
+        _eventSequenceStorageProvider = eventSequenceStorageProvider;
     }
 
     /// <summary>
@@ -54,6 +59,7 @@ public class ObserverStorageProvider : IGrainStorage
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var actualGrainState = (grainState as IGrainState<ObserverState>)!;
+        var currentSubscriptionEventTypes = actualGrainState.State.CurrentSubscriptionEventTypes;
         var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
         var eventSequenceId = observerKey.EventSequenceId;
@@ -86,6 +92,18 @@ public class ObserverStorageProvider : IGrainStorage
         state.CurrentSubscriptionType = actualGrainState.State?.CurrentSubscriptionType;
         state.CurrentSubscriptionArguments = actualGrainState.State?.CurrentSubscriptionArguments;
         actualGrainState.State = state;
+
+        if (currentSubscriptionEventTypes?.Any() ?? false)
+        {
+            actualGrainState.State.TailEventSequenceNumber = await _eventSequenceStorageProvider().GetTailSequenceNumber(eventSequenceId);
+            if (actualGrainState.State.NextEventSequenceNumber < actualGrainState.State.TailEventSequenceNumber)
+            {
+                actualGrainState.State.NextEventSequenceNumberForEventTypes = await _eventSequenceStorageProvider().GetNextSequenceNumberGreaterOrEqualThan(
+                    eventSequenceId,
+                    actualGrainState.State.NextEventSequenceNumber,
+                    actualGrainState.State.CurrentSubscriptionEventTypes);
+            }
+        }
     }
 
     /// <inheritdoc/>

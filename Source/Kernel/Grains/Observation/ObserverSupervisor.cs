@@ -207,6 +207,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
 
     void TryRecoveringAnyFailedPartitions()
     {
+        _logger.TryRecoveringAnyFailedPartitions(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         _recoverFailedPartitionsTimer = RegisterTimer(
             (object state) =>
             {

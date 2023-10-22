@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
@@ -20,9 +21,12 @@ public class ReplayStorageProvider : ObserverStorageProvider
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     public ReplayStorageProvider(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider) : base(executionContextManager, eventStoreDatabaseProvider)
+        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
+        : base(executionContextManager, eventStoreDatabaseProvider, eventSequenceStorageProvider)
     {
     }
 

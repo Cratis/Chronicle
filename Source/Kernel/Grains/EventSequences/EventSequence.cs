@@ -116,26 +116,48 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumberForEventTypes(IEnumerable<EventType> eventTypes)
     {
-        var sequenceNumber = State.TailSequenceNumberPerEventType
-                    .Where(_ => eventTypes.Any(e => e.Id == _.Key) && _.Value != EventSequenceNumber.Unavailable)
-                    .Select(_ => _.Value)
-                    .OrderByDescending(_ => _)
-                    .SingleOrDefault();
+        _logger.GettingTailSequenceNumberForEventTypes(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, eventTypes);
 
-        if (sequenceNumber is null)
+        var sequenceNumber = EventSequenceNumber.Unavailable;
+        try
         {
-            return Task.FromResult(EventSequenceNumber.Unavailable);
+            sequenceNumber = State.TailSequenceNumberPerEventType
+                        .Where(_ => eventTypes.Any(e => e.Id == _.Key) && _.Value != EventSequenceNumber.Unavailable)
+                        .Select(_ => _.Value)
+                        .OrderByDescending(_ => _)
+                        .FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            _logger.FailedGettingTailSequenceNumberForEventTypes(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, eventTypes, ex);
         }
 
+        sequenceNumber ??= EventSequenceNumber.Unavailable;
+        _logger.ResultForGettingTailSequenceNumberForEventTypes(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, eventTypes, sequenceNumber);
         return Task.FromResult(sequenceNumber);
     }
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(
+    public async Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(
         EventSequenceNumber sequenceNumber,
         IEnumerable<EventType>? eventTypes = null,
-        EventSourceId? eventSourceId = null) =>
-        EventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(_eventSequenceId, sequenceNumber, eventTypes, eventSourceId);
+        EventSourceId? eventSourceId = null)
+    {
+        var result = EventSequenceNumber.Unavailable;
+        try
+        {
+            _logger.GettingNextSequenceNumberGreaterOrEqualThan(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>());
+            result = await EventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(_eventSequenceId, sequenceNumber, eventTypes, eventSourceId);
+        }
+        catch (Exception ex)
+        {
+            _logger.FailedGettingNextSequenceNumberGreaterOrEqualThan(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), ex);
+        }
+
+        _logger.NextSequenceNumberGreaterOrEqualThan(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), result);
+
+        return result;
+    }
 
     /// <inheritdoc/>
     public async Task Append(

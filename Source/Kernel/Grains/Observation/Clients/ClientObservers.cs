@@ -30,7 +30,7 @@ public class ClientObservers : Grain, IClientObservers
 
         var microserviceId = (MicroserviceId)this.GetPrimaryKey();
 
-        var registrationTasks = new List<Task>();
+        var registrationTasks = new Dictionary<string, Task>();
 
         foreach (var registration in registrations)
         {
@@ -42,10 +42,20 @@ public class ClientObservers : Grain, IClientObservers
                     registration.EventSequenceId);
                 var key = new ObserverKey(microserviceId, tenantId, registration.EventSequenceId);
                 var observer = GrainFactory.GetGrain<IClientObserver>(registration.ObserverId, key);
-                registrationTasks.Add(observer.Start(registration.Name, connectionId, registration.EventTypes));
+                var task = observer.Start(registration.Name, connectionId, registration.EventTypes);
+                registrationTasks.Add($"{registration.ObserverId}#{key}", task);
             }
         }
 
-        await Task.WhenAll(registrationTasks);
+        await Task.WhenAll(registrationTasks.Values);
+
+        foreach (var task in registrationTasks.Values.Where(_ => _.IsFaulted))
+        {
+            var key = registrationTasks.Keys.First(_ => registrationTasks[_] == task);
+            var parts = key.Split('#');
+            var observerId = (ObserverId)parts[0];
+            var observerKey = ObserverKey.Parse(parts[1]);
+            _logger.FailedToRegisterObserver(observerId, observerKey.MicroserviceId, observerKey.TenantId, task.Exception!.InnerException!);
+        }
     }
 }

@@ -107,6 +107,24 @@ public class ObserverState
     public object? CurrentSubscriptionArguments { get; set; }
 
     /// <summary>
+    /// Gets or sets the current subscription event types.
+    /// </summary>
+    public IEnumerable<EventType> CurrentSubscriptionEventTypes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tail event sequence number for the event sequence. This is used internally and retrieved on read, not stored.
+    /// </summary>
+    public EventSequenceNumber TailEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
+    /// Gets or sets the next event sequence number for the event types. This is used internally and retrieved on read, not stored.
+    /// </summary>
+    /// <remarks>
+    /// This is used to determine if the observer is behind and we can fast forward it or have to do a catch up.
+    /// </remarks>
+    public EventSequenceNumber NextEventSequenceNumberForEventTypes { get; set; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
     /// Add a failed partition.
     /// </summary>
     /// <param name="failedPartition"><see cref="FailedPartition"/> to add.</param>
