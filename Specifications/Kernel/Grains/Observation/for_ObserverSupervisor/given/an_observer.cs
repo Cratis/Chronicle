@@ -22,7 +22,6 @@ public class an_observer_supervisor : GrainSpecification
     protected EventSequenceNumberToken subscribed_token;
     protected List<EventSequenceNumberToken> subscribed_tokens;
     protected List<Mock<StreamSubscriptionHandle<AppendedEvent>>> subscription_handles;
-    protected Mock<IEventSequenceStorage> event_sequence_storage_provider;
     protected List<IAsyncObserver<AppendedEvent>> observers;
     protected MicroserviceId microservice_id;
     protected TenantId tenant_id;
@@ -36,9 +35,12 @@ public class an_observer_supervisor : GrainSpecification
     protected object subscriber_args;
     protected override Guid GrainId => _grainId;
     protected override string GrainKeyExtension => _grainKeyExtension;
+    protected Mock<EventSequences.IEventSequence> event_sequence;
 
     protected override Grain GetGrainInstance()
     {
+        event_sequence = new();
+
         persistent_state = new();
         persistent_state.Setup(_ => _.State).Returns(() => state);
         persistent_state.Setup(_ => _.WriteStateAsync()).Returns(() =>
@@ -48,10 +50,8 @@ public class an_observer_supervisor : GrainSpecification
             return Task.CompletedTask;
         });
 
-        event_sequence_storage_provider = new();
         observer = new ObserverSupervisor(
             persistent_state.Object,
-            () => event_sequence_storage_provider.Object,
             Mock.Of<IExecutionContextManager>(),
             Mock.Of<ILogger<ObserverSupervisor>>());
 
@@ -69,6 +69,7 @@ public class an_observer_supervisor : GrainSpecification
 
     protected override void OnBeforeGrainActivate()
     {
+        grain_factory.Setup(_ => _.GetGrain<EventSequences.IEventSequence>(IsAny<Guid>(), IsAny<string>(), null!)).Returns(event_sequence.Object);
         subscriber_args = Guid.NewGuid();
         state = new()
         {

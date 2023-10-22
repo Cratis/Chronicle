@@ -75,6 +75,9 @@ public class EventTypes : IEventTypes
     }
 
     /// <inheritdoc/>
+    public IEnumerable<EventTypeRegistration> AllAsRegistrations { get; }
+
+    /// <inheritdoc/>
     public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.Id == eventTypeId);
 
     /// <inheritdoc/>

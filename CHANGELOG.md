@@ -1,3 +1,61 @@
+# [v9.5.9] - 2023-10-19 [PR: #992](https://github.com/aksio-insurtech/Cratis/pull/992)
+
+### Changed
+
+- Changing number of events priming the cache with. Going from 1000 to 100. This makes much more sense based on what the cache is for (catching up). The cache is most likely going away or will change to something else in the future anyways.
+
+### Fixed
+
+- Log Levels have been modified for a lot of log statements from Information to Debug.
+- Make sure all calls in the `MongoDBEventSequenceStorageProvider` has `.ConfigureAwait(false)` to not return to the same task context.
+- Saving round trips to MongoDB for `ProjectionDefinitions` by changing from `HasFor/GetFor` to a `TryGetFor` pattern.
+- Reorder startup sequence, making sure event schemas are populated first.
+- Changing observers to ask the event sequence grain instead of the database - which is much more consistent and correct. Saves quite a lot of roundtrips to the database.
+- Fixing a problem in the `EventSequenceCache` that caused a dead lock during startup and grain calls timing out while subscribing to the persistent stream.
+- Adding more state to an event sequence. Holding a dictionary of tail sequence numbers per event type. This will be populated automatically based on an aggregation from the event sequence if this state is missing. This speeds up lookups from observers and others needing this information. It also saves on round trips to the database.
+- Automatically rehydrating all event sequences at startup, making them ready with state from the start.
+- "Fixing" our "magic" microservices and tenants that are added (Unspecified, NotSet, Development, Kernel) so that they have configuration data. This whole thing will be completely changed in [version 10](https://github.com/aksio-insurtech/Cratis/issues?q=is%3Aopen+is%3Aissue+milestone%3A10.0.0)
+- Adding `.SortBy()` to event sequence calls for getting events, to guarantee they come in order.
+- Adding concurrency locks for `RecoveringFailedPartition` supervisor on the internal collection of failed partitions.
+- Adding an explicit exception if reducer content returned is invalid.
+- Improved performance during registration of observers, rather than waiting invidiual `.Start()` methods on the `ClientObserver` grain, we queue them and do `Task.WhenAll()`. This is the recommended approach from the Orleans team.
+
+### Removed
+
+- Removing persistence of connected clients, this was a complete abuse to be able to get a nice reactive view in the workbench. This is now instead asking the `ConnectedClients` grain on a schedule and still being reactive. This saves a lot of traffic to the database.
+
+
+# [v9.5.8] - 2023-10-10 [PR: #987](https://github.com/aksio-insurtech/Cratis/pull/987)
+
+### Fixed
+
+- Fixing server crash at startup by upgrading the dependency to `Fundamentals` package, which has a fix for what is classified as assembly referenced packages - avoiding duplicates in type discovery.
+
+
+# [v9.5.7] - 2023-10-10 [PR: #986](https://github.com/aksio-insurtech/Cratis/pull/986)
+
+### Fixed
+
+- Adding package referenced assemblies to default artifacts discovery so that we get types from the Cratis SDK, e.g. `EventRedacted` event type.
+- Register system event types, e.g. `EventRedacted` in all event stores.
+
+
+# [v9.5.6] - 2023-10-9 [PR: #0]()
+
+No release notes
+
+# [v9.5.5] - 2023-10-9 [PR: #0]()
+
+No release notes
+
+# [v9.5.4] - 2023-10-9 [PR: #985](https://github.com/aksio-insurtech/Cratis/pull/985)
+
+### Fixed
+
+- Removing a `console.log()` from the workbench when looking at event details.
+- Fixing rehydration of projections to not activate projections that are marked as non active (`IsActive=false`)
+
+
 # [v9.5.3] - 2023-10-6 [PR: #983](https://github.com/aksio-insurtech/Cratis/pull/983)
 
 ### Fixed

@@ -71,6 +71,19 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         _logger = logger;
     }
 
+    IEventSequenceStorage EventSequenceStorage
+    {
+        get
+        {
+            // TODO: This is a temporary work-around till we fix #264 & #265
+            _executionContextManager.Establish(
+                _microserviceAndTenant.TenantId,
+                _executionContextManager.Current.CorrelationId,
+                _microserviceAndTenant.MicroserviceId);
+            return _eventSequenceStorageProvider();
+        }
+    }
+
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
@@ -80,7 +93,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _stream = streamProvider.GetStream<AppendedEvent>(streamId);
 
-        _appendedEventsCount = await _eventSequenceStorageProvider().GetCount(_eventSequenceId);
+        _appendedEventsCount = await EventSequenceStorage.GetCount(_eventSequenceId);
 
         _metrics = _metricsFactory.CreateFor(
             _eventSequenceId,
@@ -92,10 +105,59 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     }
 
     /// <inheritdoc/>
+    public Task Rehydrate() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task<EventSequenceNumber> GetNextSequenceNumber() => Task.FromResult(State.SequenceNumber);
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumber() => Task.FromResult(State.SequenceNumber - 1);
+
+    /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetTailSequenceNumberForEventTypes(IEnumerable<EventType> eventTypes)
+    {
+        _logger.GettingTailSequenceNumberForEventTypes(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, eventTypes);
+
+        var sequenceNumber = EventSequenceNumber.Unavailable;
+        try
+        {
+            sequenceNumber = State.TailSequenceNumberPerEventType
+                        .Where(_ => eventTypes.Any(e => e.Id == _.Key) && _.Value != EventSequenceNumber.Unavailable)
+                        .Select(_ => _.Value)
+                        .OrderByDescending(_ => _)
+                        .FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            _logger.FailedGettingTailSequenceNumberForEventTypes(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, eventTypes, ex);
+        }
+
+        sequenceNumber ??= EventSequenceNumber.Unavailable;
+        _logger.ResultForGettingTailSequenceNumberForEventTypes(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, eventTypes, sequenceNumber);
+        return Task.FromResult(sequenceNumber);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<EventType>? eventTypes = null,
+        EventSourceId? eventSourceId = null)
+    {
+        var result = EventSequenceNumber.Unavailable;
+        try
+        {
+            _logger.GettingNextSequenceNumberGreaterOrEqualThan(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>());
+            result = await EventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(_eventSequenceId, sequenceNumber, eventTypes, eventSourceId);
+        }
+        catch (Exception ex)
+        {
+            _logger.FailedGettingNextSequenceNumberGreaterOrEqualThan(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), ex);
+        }
+
+        _logger.NextSequenceNumberGreaterOrEqualThan(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), result);
+
+        return result;
+    }
 
     /// <inheritdoc/>
     public async Task Append(
@@ -144,6 +206,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                         compliantEventAsExpandoObject);
 
                     await _stream!.OnNextAsync(appendedEvent, new EventSequenceNumberToken(State.SequenceNumber));
+
+                    State.TailSequenceNumberPerEventType[eventType.Id] = State.SequenceNumber;
 
                     _metrics?.AppendedEvent(eventSourceId, eventName);
                     _appendedEventsCount++;
@@ -243,7 +307,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             _eventSequenceId,
             sequenceNumber);
 
-        var affectedEvent = await _eventSequenceStorageProvider().Redact(
+        var affectedEvent = await EventSequenceStorage.Redact(
             _eventSequenceId,
             sequenceNumber,
             reason,
@@ -268,7 +332,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             eventSourceId,
             eventTypes);
 
-        var affectedEventTypes = await _eventSequenceStorageProvider().Redact(
+        var affectedEventTypes = await EventSequenceStorage.Redact(
             _eventSequenceId,
             eventSourceId,
             reason,

@@ -7,6 +7,6 @@ namespace Aksio.Cratis.Kernel.Domain.Observation;
 
 internal static partial class ReducersLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Registering Reducers")]
+    [LoggerMessage(0, LogLevel.Information, "Registering client Reducers")]
     internal static partial void RegisterReducers(this ILogger<Reducers> logger);
 }

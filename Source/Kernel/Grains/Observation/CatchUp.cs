@@ -16,6 +16,8 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public class CatchUp : ObserverWorker, ICatchUp
 {
+    readonly IExecutionContextManager _executionContextManager;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly ILogger<CatchUp> _logger;
     readonly List<FailedPartition> _failedPartitions = new();
     ObserverKey? _observerKey;
@@ -33,8 +35,10 @@ public class CatchUp : ObserverWorker, ICatchUp
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         [PersistentState(nameof(ObserverState), ObserverState.CatchUpStorageProvider)] IPersistentState<ObserverState> observerState,
-        ILogger<CatchUp> logger) : base(executionContextManager, eventSequenceStorageProvider, observerState, logger)
+        ILogger<CatchUp> logger) : base(observerState, logger)
     {
+        _executionContextManager = executionContextManager;
+        _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _logger = logger;
     }
 
@@ -52,6 +56,22 @@ public class CatchUp : ObserverWorker, ICatchUp
 
     /// <inheritdoc/>
     protected override TenantId? SourceTenantId => _observerKey!.SourceTenantId;
+
+    /// <summary>
+    /// Gets the <see cref="IEventSequenceStorage"/> in the correct context.
+    /// </summary>
+    protected IEventSequenceStorage EventSequenceStorage
+    {
+        get
+        {
+            var tenantId = SourceTenantId ?? TenantId;
+            var microserviceId = SourceMicroserviceId ?? MicroserviceId;
+
+            // TODO: This is a temporary work-around till we fix #264 & #265
+            _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+            return _eventSequenceStorageProvider();
+        }
+    }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -96,7 +116,7 @@ public class CatchUp : ObserverWorker, ICatchUp
     async Task PerformCatchUp(object arg)
     {
         _timer?.Dispose();
-        var provider = EventSequenceStorageProvider;
+        var provider = EventSequenceStorage;
 
         var next = State.NextEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : State.NextEventSequenceNumber;
         var nextSequenceNumber = await provider.GetNextSequenceNumberGreaterOrEqualThan(_observerKey!.EventSequenceId!, next, State.EventTypes);

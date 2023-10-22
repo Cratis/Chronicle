@@ -56,4 +56,13 @@ export class ObserverState {
 
     @field(SiloAddress)
     currentSubscriptionSiloAddress!: SiloAddress;
+
+    @field(EventType, true)
+    currentSubscriptionEventTypes!: EventType[];
+
+    @field(Number)
+    tailEventSequenceNumber!: number;
+
+    @field(Number)
+    nextEventSequenceNumberForEventTypes!: number;
 }

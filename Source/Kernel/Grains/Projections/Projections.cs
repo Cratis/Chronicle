@@ -74,10 +74,12 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             foreach (var pipeline in projectionPipelineDefinitions)
             {
                 _executionContextManager.Establish(microserviceId);
-                if (await _projectionDefinitions().HasFor(pipeline.ProjectionId))
+
+                if (await _projectionDefinitions().TryGetFor(pipeline.ProjectionId) is (true, ProjectionDefinition projectionDefinition))
                 {
-                    var projectionDefinition = await _projectionDefinitions().GetFor(pipeline.ProjectionId);
                     await _projectionManagerProvider().Register(projectionDefinition, pipeline);
+
+                    if (!projectionDefinition.IsActive) continue;
 
                     foreach (var tenant in _configuration.Tenants.GetTenantIds())
                     {
@@ -103,9 +105,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             var projectionDefinition = registration.Projection;
             var pipelineDefinition = registration.Pipeline;
 
-            var isNew = !await _projectionDefinitions().HasFor(projectionDefinition.Identifier);
-            var hasChanged = await _projectionDefinitions().HasChanged(projectionDefinition);
-
+            var (isNew, hasChanged) = await _projectionDefinitions().IsNewOrChanged(projectionDefinition);
             _executionContextManager.Establish(microserviceId);
 
             if (hasChanged || isNew || !_projectionManagerProvider().Exists(projectionDefinition.Identifier))
@@ -163,21 +163,20 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             _executionContextManager.Establish(tenant, CorrelationId.New(), microserviceId);
             await _projectionManagerProvider().Register(projectionDefinition, pipelineDefinition);
 
-            if (projectionDefinition.IsActive)
+            if (!projectionDefinition.IsActive) continue;
+
+            var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
+            var projection = GrainFactory.GetGrain<IProjection>(projectionDefinition.Identifier, key);
+            await projection.Ensure();
+            await projection.RefreshDefinition();
+            if (isNew)
             {
-                var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
-                var projection = GrainFactory.GetGrain<IProjection>(projectionDefinition.Identifier, key);
-                await projection.Ensure();
-                await projection.RefreshDefinition();
-                if (isNew)
-                {
-                    _logger.ProjectionIsNew(projectionDefinition.Identifier, projectionDefinition.Name);
-                }
-                else
-                {
-                    _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
-                    await projection.Rewind();
-                }
+                _logger.ProjectionIsNew(projectionDefinition.Identifier, projectionDefinition.Name);
+            }
+            else
+            {
+                _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
+                await projection.Rewind();
             }
         }
     }

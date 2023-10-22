@@ -13,10 +13,10 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 internal static partial class ObserverSupervisorLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Subscribing observer {Name} ({ObserverId}) of type {Type} with subscriber type {SubscriberType} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    [LoggerMessage(0, LogLevel.Debug, "Subscribing observer {Name} ({ObserverId}) of type {Type} with subscriber type {SubscriberType} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void Subscribing(this ILogger<ObserverSupervisor> logger, ObserverName name, ObserverType type, ObserverId observerId, Type subscriberType, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
 
-    [LoggerMessage(1, LogLevel.Information, "Unsubscribing observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    [LoggerMessage(1, LogLevel.Debug, "Unsubscribing observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void Unsubscribing(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
 
     [LoggerMessage(2, LogLevel.Information, "Rewinding observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
@@ -25,13 +25,13 @@ internal static partial class ObserverSupervisorLogMessages
     [LoggerMessage(3, LogLevel.Information, "Catching up observer {ObserverId} up for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void CatchingUp(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
 
-    [LoggerMessage(4, LogLevel.Information, "Observer {ObserverId} is now active up for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    [LoggerMessage(4, LogLevel.Debug, "Observer {ObserverId} is now active up for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void Active(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
 
     [LoggerMessage(5, LogLevel.Information, "Replaying observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void Replaying(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
 
-    [LoggerMessage(6, LogLevel.Information, "Offset is at tail for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    [LoggerMessage(6, LogLevel.Debug, "Offset is at tail for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void OffsetIsAtTail(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
 
     [LoggerMessage(7, LogLevel.Debug, "Clearing out failed partitions for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
@@ -60,4 +60,25 @@ internal static partial class ObserverSupervisorLogMessages
 
     [LoggerMessage(15, LogLevel.Information, "Ignoring rewinding for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'. The disconnect state is {DisconnectState} and subscription state is {SubscriptionState}")]
     internal static partial void IgnoringRewinding(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId, bool disconnectState, bool subscriptionState);
+
+    [LoggerMessage(16, LogLevel.Debug, "Trying to recover any failed partitions for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'.")]
+    internal static partial void TryRecoveringAnyFailedPartitions(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
+
+    [LoggerMessage(17, LogLevel.Debug, "Getting tail sequence number for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}' for event types {EventTypes}")]
+    internal static partial void GettingTailSequenceNumberForEventTypes(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId, IEnumerable<EventType> eventTypes);
+
+    [LoggerMessage(18, LogLevel.Debug, "Tail sequence number is {EventSequenceNumber} for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    internal static partial void TailSequenceNumber(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(19, LogLevel.Debug, "Next sequence for event types is {EventSequenceNumber} for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}' for event types {EventTypes}")]
+    internal static partial void NextEventSequenceNumberForEventTypes(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId, EventSequenceNumber eventSequenceNumber, IEnumerable<EventType> eventTypes);
+
+    [LoggerMessage(20, LogLevel.Debug, "Definition has changed for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    internal static partial void DefinitionChanged(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
+
+    [LoggerMessage(21, LogLevel.Debug, "Write state for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    internal static partial void WriteState(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
+
+    [LoggerMessage(22, LogLevel.Debug, "State written for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    internal static partial void StateWritten(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
 }

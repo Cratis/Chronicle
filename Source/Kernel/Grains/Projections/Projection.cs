@@ -82,7 +82,8 @@ public class Projection : Grain, IProjection
         // TODO: This is a temporary work-around till we fix #264 & #265
         _executionContextManager.Establish(_tenantId!, CorrelationId.New(), _microserviceId);
 
-        _definition = await _projectionDefinitionsProvider().GetFor(_projectionId);
+        var (_, projectionDefinition) = await _projectionDefinitionsProvider().TryGetFor(_projectionId);
+        _definition = projectionDefinition;
         _projection = _projectionManagerProvider().Get(_definition!.Identifier);
         _definitionObservers.Notify(_ => _.OnProjectionDefinitionsChanged());
     }

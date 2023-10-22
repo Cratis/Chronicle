@@ -23,5 +23,8 @@ public class ObserverStateClassMap : IBsonClassMapFor<ObserverState>
         classMap.UnmapProperty(_ => _.CurrentSubscriptionType);
         classMap.UnmapProperty(_ => _.CurrentSubscriptionState);
         classMap.UnmapProperty(_ => _.CurrentSubscriptionSiloAddress);
+        classMap.UnmapProperty(_ => _.CurrentSubscriptionEventTypes);
+        classMap.UnmapProperty(_ => _.TailEventSequenceNumber);
+        classMap.UnmapProperty(_ => _.NextEventSequenceNumberForEventTypes);
     }
 }

@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Specifications;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 
@@ -14,7 +12,6 @@ public class an_observer_worker : GrainSpecification
     protected Mock<IPersistentState<ObserverState>> persistent_state;
     protected ObserverState state;
     protected ObserverState state_on_write;
-    protected Mock<IEventSequenceStorage> event_sequence_storage_provider;
     protected Mock<IObserverSupervisor> supervisor;
     protected Mock<IObserverSubscriber> subscriber;
     protected override Guid GrainId => state.ObserverId;
@@ -26,9 +23,12 @@ public class an_observer_worker : GrainSpecification
 
     protected ObserverWorkerImplementation worker;
     protected virtual IEnumerable<AppendedEvent> events => Enumerable.Empty<AppendedEvent>();
+    protected Mock<EventSequences.IEventSequence> event_sequence;
 
     protected override Grain GetGrainInstance()
     {
+        event_sequence = new();
+
         state = new()
         {
             ObserverId = Guid.NewGuid(),
@@ -43,13 +43,11 @@ public class an_observer_worker : GrainSpecification
         });
 
         supervisor = new();
-        event_sequence_storage_provider = new();
         subscriber = new();
         subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
 
         worker = new ObserverWorkerImplementation(
             Mock.Of<IExecutionContextManager>(),
-            () => event_sequence_storage_provider.Object,
             persistent_state.Object,
             Mock.Of<ILogger<ObserverWorker>>());
 
@@ -61,11 +59,8 @@ public class an_observer_worker : GrainSpecification
 
     protected override void OnBeforeGrainActivate()
     {
+        grain_factory.Setup(_ => _.GetGrain<EventSequences.IEventSequence>(IsAny<Guid>(), IsAny<string>(), null!)).Returns(event_sequence.Object);
         grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), state.ObserverId, IsAny<string>())).Returns(subscriber.Object);
         grain_factory.Setup(_ => _.GetGrain<IObserverSupervisor>(IsAny<Guid>(), IsAny<string>(), IsAny<string>())).Returns(supervisor.Object);
-
-        event_sequence_storage_provider
-            .Setup(_ => _.GetFromSequenceNumber(IsAny<EventSequenceId>(), IsAny<EventSequenceNumber>(), IsAny<EventSourceId>(), IsAny<IEnumerable<EventType>>()))
-            .Returns(() => Task.FromResult<IEventCursor>(new EventCursorForSpecifications(events)));
     }
 }

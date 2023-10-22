@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Dynamic;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
@@ -91,6 +92,14 @@ public interface IEventSequenceStorage
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for. It won't filter by this if omitted.</param>
     /// <returns>The last sequence number. If providing event types, this will give the last sequence number from the selection of event types.</returns>
     Task<EventSequenceNumber> GetTailSequenceNumber(EventSequenceId eventSequenceId, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
+
+    /// <summary>
+    /// Get the sequence number of the last event as part for given event types.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence to get for.</param>
+    /// <param name="eventTypes">Event types to get for.</param>
+    /// <returns>A dictionary of <see cref="EventType"/> tp <see cref="EventSequenceNumber"/>.</returns>
+    Task<IImmutableDictionary<EventType, EventSequenceNumber>> GetTailSequenceNumbersForEventTypes(EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes);
 
     /// <summary>
     /// Get the next sequence number greater or equal to a specific sequence number with optionally filtered on event types and event source id.

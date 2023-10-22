@@ -43,12 +43,8 @@ public partial class ObserverSupervisor
     {
         _logger.Subscribing(name, type, _observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
         _failedPartitionSupervisor = new(_observerId, _observerKey, State.Name, eventTypes, State.FailedPartitions, GrainFactory);
-        await ReadStateAsync();
-
-        State.Name = name;
-        State.Type = type;
-
         CurrentSubscription = new(_observerId, _observerKey, eventTypes, subscriberType, siloAddress, state);
+        await ReadStateAsync();
 
         if (State.RunningState == ObserverRunningState.Rewinding)
         {
@@ -66,9 +62,11 @@ public partial class ObserverSupervisor
 
         await UnsubscribeStream();
 
-        var lastSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, eventTypes);
+        _logger.GettingTailSequenceNumberForEventTypes(_observerId, _microserviceId, _eventSequenceId, _tenantId, eventTypes);
+        var lastSequenceNumber = await EventSequence.GetTailSequenceNumberForEventTypes(eventTypes);
         if (HasDefinitionChanged(eventTypes) && lastSequenceNumber != EventSequenceNumber.Unavailable)
         {
+            _logger.DefinitionChanged(_observerId, _microserviceId, _eventSequenceId, _tenantId);
             State.EventTypes = eventTypes;
             await WriteStateAsync();
             await Rewind();
@@ -78,19 +76,23 @@ public partial class ObserverSupervisor
         State.RunningState = ObserverRunningState.Subscribing;
         State.EventTypes = eventTypes;
 
-        var tailSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId);
+        _logger.TailSequenceNumber(_observerId, _microserviceId, _eventSequenceId, _tenantId, State.TailEventSequenceNumber);
+        var tailSequenceNumber = State.TailEventSequenceNumber;
         var nextSequenceNumber = lastSequenceNumber.Next();
 
         if (lastSequenceNumber != EventSequenceNumber.Unavailable &&
             lastSequenceNumber < tailSequenceNumber &&
             State.NextEventSequenceNumber != EventSequenceNumber.Unavailable)
         {
-            var highestNumber = await _eventSequenceStorageProvider().GetNextSequenceNumberGreaterOrEqualThan(
+            _logger.NextEventSequenceNumberForEventTypes(
+                _observerId,
+                _microserviceId,
                 _eventSequenceId,
-                nextSequenceNumber,
+                _tenantId,
+                State.NextEventSequenceNumberForEventTypes,
                 State.EventTypes);
 
-            if (highestNumber == EventSequenceNumber.Unavailable)
+            if (State.NextEventSequenceNumberForEventTypes == EventSequenceNumber.Unavailable)
             {
                 State.RunningState = ObserverRunningState.Active;
                 var previousNext = State.NextEventSequenceNumber;
@@ -109,22 +111,28 @@ public partial class ObserverSupervisor
             State.NextEventSequenceNumber == nextSequenceNumber)
         {
             State.RunningState = ObserverRunningState.Active;
-            _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         }
         else if (State.NextEventSequenceNumber < nextSequenceNumber)
         {
             State.RunningState = ObserverRunningState.CatchingUp;
-            _logger.CatchingUp(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+        }
+        else
+        {
+            State.RunningState = ObserverRunningState.Active;
         }
 
+        _logger.WriteState(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         await WriteStateAsync();
+        _logger.StateWritten(_observerId, _microserviceId, _eventSequenceId, _tenantId);
 
         if (State.RunningState == ObserverRunningState.CatchingUp)
         {
+            _logger.CatchingUp(_observerId, _microserviceId, _eventSequenceId, _tenantId);
             await StartCatchup();
         }
         else
         {
+            _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
             await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
         }
     }

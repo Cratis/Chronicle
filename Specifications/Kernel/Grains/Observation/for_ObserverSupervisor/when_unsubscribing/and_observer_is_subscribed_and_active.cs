@@ -7,7 +7,7 @@ public class and_observer_is_subscribed_and_active : given.an_observer_and_two_e
 {
     async Task Establish()
     {
-        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult(EventSequenceNumber.Unavailable));
+        event_sequence.Setup(_ => _.GetTailSequenceNumberForEventTypes(event_types)).Returns(Task.FromResult(EventSequenceNumber.Unavailable));
         await observer.Subscribe<ObserverSubscriber>(event_types);
     }
 
