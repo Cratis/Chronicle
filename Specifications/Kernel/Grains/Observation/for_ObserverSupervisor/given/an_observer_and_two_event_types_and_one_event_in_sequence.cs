@@ -23,6 +23,7 @@ public class an_observer_and_two_event_types_and_one_event_in_sequence : an_obse
 
         event_sequence.Setup(_ => _.GetTailSequenceNumber()).Returns(Task.FromResult(EventSequenceNumber.First));
         event_sequence.Setup(_ => _.GetTailSequenceNumberForEventTypes(event_types)).Returns(Task.FromResult(EventSequenceNumber.First));
+        state.NextEventSequenceNumberForEventTypes = EventSequenceNumber.First;
         persistent_state.Invocations.Clear();
     }
 }
