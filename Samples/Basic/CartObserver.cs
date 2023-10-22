@@ -11,7 +11,7 @@ public class CartObserver
 {
     public Task ItemAdded(ItemAddedToCart @event, EventContext context)
     {
-        Console.WriteLine($"Item added to cart for person with id: {@event.PersonId} and material with id: {@event.MaterialId}");
+        Console.WriteLine($"Item added to cart for person with id: {@event.PersonId} and material with id: {@event.MaterialId} - EventSequenceNumber {context.SequenceNumber}");
         return Task.CompletedTask;
     }
 
