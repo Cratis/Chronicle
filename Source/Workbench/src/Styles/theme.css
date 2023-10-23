@@ -6,6 +6,9 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
+    --topbar-height: 80px;
+    --sidebar-width: 300px;
+    --footer-height: 50px;
 }
 
 body.light {
