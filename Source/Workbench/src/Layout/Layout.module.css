@@ -1,0 +1,42 @@
+.layout-container {
+    display: flex;
+    background: blue;
+}
+
+header {
+    width: 100%;
+    height: var(--topbar-height);
+    position: fixed;
+    top: 0;
+    background-color: var(--surface-0);
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+aside {
+    width: var(--sidebar-width);
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background-color: var(--surface-a);
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+main {
+    flex: 1;
+    height: calc(100vh - var(--topbar-height) - var(--footer-height));
+    margin-top: var(--topbar-height);
+    margin-left: var(--sidebar-width);
+    margin-bottom: var(--footer-height);
+    overflow: auto;
+}
+
+footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    height: var(--footer-height);
+    background-color: var(--surface-0);
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
