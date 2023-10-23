@@ -25,6 +25,7 @@ public static class SerializationConfigurationExtensions
     {
         var options = new JsonSerializerOptions(Globals.JsonSerializerOptions);
         options.Converters.Add(new TypeJsonConverter());
+        options.Converters.Add(new KeyJsonConverter());
         options.Converters.Add(new PropertyPathJsonConverter());
         options.Converters.Add(new PropertyPathChildrenDefinitionDictionaryJsonConverter());
         options.Converters.Add(new PropertyExpressionDictionaryConverter());
