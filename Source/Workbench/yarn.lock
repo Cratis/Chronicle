@@ -2469,6 +2469,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"primeicons@npm:^6.0.1":
+  version: 6.0.1
+  resolution: "primeicons@npm:6.0.1"
+  checksum: a1412fee16ddbd24e06052a7e94b973cf6f68fadb5349192101388f2681f822b3bde077948e6d53e9949f87148b495e4bf2b149ad07242de068d2e7233f4446c
+  languageName: node
+  linkType: hard
+
 "primereact@npm:^10.0.3":
   version: 10.0.3
   resolution: "primereact@npm:10.0.3"
@@ -3076,6 +3083,7 @@ __metadata:
     eslint: 8.45.0
     eslint-plugin-react-hooks: 4.6.0
     eslint-plugin-react-refresh: 0.4.3
+    primeicons: ^6.0.1
     primereact: ^10.0.3
     react: 18.2.0
     react-dom: 18.2.0

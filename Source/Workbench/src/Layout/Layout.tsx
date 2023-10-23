@@ -1,22 +1,19 @@
 import { ReactNode } from 'react';
 import { Footer } from './Footer';
 import { Topbar } from './Topbar/Topbar';
-import { Sidebar } from './Sidebar';
+import { SidebarComponent } from './Sidebar/Sidebar';
 
 export interface LayoutProps {
     children: ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
-
-    // Layout module css classes file
-
     return (
         <>
-            <div >
+            <div>
                 <Topbar />
-                <div >
-                    <Sidebar />
+                <div>
+                    <SidebarComponent />
                 </div>
                 <div>
                     <div>{children}</div>
