@@ -7,6 +7,7 @@ using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using Orleans.Runtime;
 using Orleans.Storage;
@@ -20,6 +21,7 @@ public class ObserverStorageProvider : IGrainStorage
 {
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
+    readonly ILogger<ObserverStorageProvider> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverStorageProvider"/> class.
@@ -27,14 +29,17 @@ public class ObserverStorageProvider : IGrainStorage
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ObserverStorageProvider(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
+        ILogger<ObserverStorageProvider> logger)
     {
         ExecutionContextManager = executionContextManager;
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
+        _logger = logger;
     }
 
     /// <summary>
@@ -95,13 +100,22 @@ public class ObserverStorageProvider : IGrainStorage
 
         if (currentSubscriptionEventTypes?.Any() ?? false)
         {
+            _logger.GettingTailSequenceNumber(observerId, observerKey.TenantId, observerKey.MicroserviceId);
+
             actualGrainState.State.TailEventSequenceNumber = await _eventSequenceStorageProvider().GetTailSequenceNumber(eventSequenceId);
+
+            _logger.GotTailSequenceNumber(observerId, observerKey.TenantId, observerKey.MicroserviceId, actualGrainState.State.TailEventSequenceNumber);
+
             if (actualGrainState.State.NextEventSequenceNumber < actualGrainState.State.TailEventSequenceNumber)
             {
+                _logger.GettingNextSequenceNumberGreaterOrEqualThan(observerId, observerKey.TenantId, observerKey.MicroserviceId, actualGrainState.State.NextEventSequenceNumber);
+
                 actualGrainState.State.NextEventSequenceNumberForEventTypes = await _eventSequenceStorageProvider().GetNextSequenceNumberGreaterOrEqualThan(
                     eventSequenceId,
                     actualGrainState.State.NextEventSequenceNumber,
-                    actualGrainState.State.CurrentSubscriptionEventTypes);
+                    currentSubscriptionEventTypes);
+
+                _logger.GotNextSequenceNumber(observerId, observerKey.TenantId, observerKey.MicroserviceId, actualGrainState.State.NextEventSequenceNumberForEventTypes);
             }
         }
     }

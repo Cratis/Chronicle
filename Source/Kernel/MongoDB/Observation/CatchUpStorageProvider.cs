@@ -6,6 +6,7 @@ using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
 using Aksio.Strings;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using Orleans.Runtime;
 
@@ -22,11 +23,13 @@ public class CatchUpStorageProvider : ObserverStorageProvider
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public CatchUpStorageProvider(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
-        : base(executionContextManager, eventStoreDatabaseProvider, eventSequenceStorageProvider)
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
+        ILogger<ObserverStorageProvider> logger)
+        : base(executionContextManager, eventStoreDatabaseProvider, eventSequenceStorageProvider, logger)
     {
     }
 

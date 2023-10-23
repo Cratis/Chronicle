@@ -328,7 +328,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 
         if (eventTypes?.Any() ?? false)
         {
-            filters.Add(Builders<Event>.Filter.Or(eventTypes.Select(_ => Builders<Event>.Filter.Eq(e => e.Type, _.Id)).ToArray()));
+            filters.Add(Builders<Event>.Filter.In(_ => _.Type, eventTypes.Select(_ => _.Id.Value).ToArray()));
         }
         if (eventSourceId?.IsSpecified == true)
         {
