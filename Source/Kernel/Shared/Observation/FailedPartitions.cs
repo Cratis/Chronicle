@@ -38,7 +38,7 @@ public class FailedPartitions
     /// </summary>
     /// <param name="partition">Partition to check.</param>
     /// <returns>True if failed, false if not.</returns>
-    public bool IsFailed(Key partition) => _partitions.Exists(_ => _.Partition == partition);
+    public bool IsFailed(Key partition) => _partitions.Exists(_ => _.Partition.Equals(partition));
 
     /// <summary>
     /// Gets a failed partition by its partition identifier.
