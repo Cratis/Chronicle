@@ -59,6 +59,20 @@ public class ArrayIndexers
     /// <returns>True if it has it, false if not.</returns>
     public bool HasFor(PropertyPath propertyPath) => _arrayIndexers.ContainsKey(propertyPath);
 
+    /// <inheritdoc/>
+    public override bool Equals(object? obj)
+    {
+        if (obj is ArrayIndexers other)
+        {
+            return All.SequenceEqual(other.All);
+        }
+
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => base.GetHashCode();
+
     void ThrowIfMissingArrayIndexerForPropertyPath(PropertyPath propertyPath)
     {
         if (!_arrayIndexers.ContainsKey(propertyPath))
