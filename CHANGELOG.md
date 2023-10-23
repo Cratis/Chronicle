@@ -1,3 +1,10 @@
+# [v9.5.12] - 2023-10-23 [PR: #995](https://github.com/aksio-insurtech/Cratis/pull/995)
+
+### Fixed
+
+- Observers ended up being in a stale state due to not getting the actual next sequence number based on the event types. This is now fixed.
+- Optimizing query for getting next event sequence number greater or equal to a given sequence number by using `.In()` rather than a collection of `.Or()` statements for the event types.
+
 # [v9.5.11] - 2023-10-23 [PR: #0]()
 
 ### Fixed
