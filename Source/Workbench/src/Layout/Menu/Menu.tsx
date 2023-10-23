@@ -2,8 +2,7 @@ import { Menuitem } from './MenuItem';
 
 export const Menu = () => {
     return (
-        <div>
-            Main Menu
+        <div className='mt-8' >
             <Menuitem />
         </div>
     );

@@ -17,16 +17,12 @@
     border-right: 2px solid var(--surface-border);
     background-color: var(--surface-0);
     overflow-x: hidden;
-}
-
-.topSection {
-    display: flex;
-    justify-content: space-between;
-    gap: 3;
+    padding-top: 20px;
 }
 
 .persona {
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-top: 5rem;
 }

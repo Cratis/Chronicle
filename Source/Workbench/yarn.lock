@@ -3540,11 +3540,8 @@ __metadata:
     eslint: 8.45.0
     eslint-plugin-react-hooks: 4.6.0
     eslint-plugin-react-refresh: 0.4.3
-<<<<<<< HEAD
-    primeicons: ^6.0.1
-=======
     postcss: ^8.4.31
->>>>>>> 6f37201b015dc1425534a39b2a53fae21b72eaaa
+    primeicons: ^6.0.1
     primereact: ^10.0.3
     react: 18.2.0
     react-dom: 18.2.0
