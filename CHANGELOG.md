@@ -3,6 +3,7 @@
 ### Fixed
 
 - Fixing `CatchUp` and `Replay` to not write state on the `Stop()` method, as it is not altering any `ObserverState` at that point. This fixes a problem we've seen were observers seem to be observing events multiple times. The reason for this is that the in-memory state representation of the grain is stale. Observer worker jobs share the state with the parent supervisor, but it is not synchronized and only updated when absolutely needed. This whole thing will be ripped out in an upcoming version with a complete rewrite of how observers work.ease notes
+
 # [v9.5.10] - 2023-10-22 [PR: #993](https://github.com/aksio-insurtech/Cratis/pull/993)
 
 ### Fixed
