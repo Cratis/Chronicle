@@ -2,7 +2,7 @@ import { Menuitem } from './MenuItem';
 
 export const Menu = () => {
     return (
-        <div className='mt-8' >
+        <div className='p-4' >
             <Menuitem />
         </div>
     );

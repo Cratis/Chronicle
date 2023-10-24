@@ -1,0 +1,11 @@
+@import url(./lara-dark-indigo/theme.css) layer(theme);
+
+@layer theme {
+    :root {
+        --surface-a: rgb(22, 29, 47);
+        --border-color: rgba(241, 245, 249, .12);
+        --cratis-sidebar-bg: var(--surface-a);
+        --cratis-topbar-bg: var(--surface-a);
+        --cratis-layout-border-color: var(--border-color);
+    }
+}

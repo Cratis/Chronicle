@@ -6,8 +6,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
-    --topbar-height: 80px;
-    --sidebar-width: 300px;
+    --topbar-height: 4rem;
+    --sidebar-width: 280px;
     --footer-height: 50px;
 }
 

@@ -11,7 +11,14 @@ import './Styles/theme.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-        <PrimeReactProvider>
+        <PrimeReactProvider value={{
+            unstyled: true,
+            pt: {
+                button: {
+
+                }
+            }
+        }} >
             <App />
         </PrimeReactProvider>
     </React.StrictMode>

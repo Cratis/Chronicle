@@ -5,17 +5,16 @@
 header {
     height: var(--topbar-height);
     top: 0;
-    left: 0;
+    left: var(--sidebar-width);
     position: fixed;
-    background-color: var(--surface-0);
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    background-color: var(--cratis-topbar-bg);
+    border-bottom: 1px solid var(--cratis-layout-border-color);
     right: 0;
-    margin-left: var(--sidebar-width);
-    transition: margin-left .3s;
+    transition: left .3s;
 }
 
 .sidebarClosed header, .sidebarHidden header {
-    margin-left: 0;
+    left: 0;
 }
 
 aside {
@@ -24,9 +23,9 @@ aside {
     position: fixed;
     top: 0;
     left: 0;
-    background-color: var(--surface-a);
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    background-color: var(--cratis-sidebar-bg);
     transition: left .3s;
+    box-shadow: var(--cratis-layout-border-color) -1px 0 0 0 inset;
 }
 
 .sidebarClosed aside {
@@ -48,12 +47,11 @@ main {
 }
 
 footer {
-    display:none;
+    display: none;
     position: fixed;
     bottom: 0;
     width: 100%;
     height: var(--footer-height);
-    background-color: var(--surface-0);
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    background-color: var(--cratis-surface-a);
 }
 
