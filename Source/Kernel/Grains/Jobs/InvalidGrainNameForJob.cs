@@ -16,5 +16,4 @@ public class InvalidGrainNameForJob : Exception
         : base($"Grain type '{grainType.Name}' is invalid. No interface for the grain was matched. It should follow the convention of `IFoo` -> `Foo`.")
     {
     }
-
 }
