@@ -25,12 +25,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         StatusChanged(JobStatus.Running);
 
         var type = GetType();
-        var grainType = type.GetInterfaces().SingleOrDefault(_ => _.Name == $"I{type.Name}");
-        if (grainType is null)
-        {
-            throw new InvalidGrainNameForJob(type);
-        }
-
+        var grainType = type.GetInterfaces().SingleOrDefault(_ => _.Name == $"I{type.Name}") ?? throw new InvalidGrainNameForJob(type);
         State.Name = GetType().Name;
         State.Type = grainType;
         await WriteStateAsync();
