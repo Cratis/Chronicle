@@ -42,7 +42,10 @@ const columns: GridColDef[] = [
     {
         headerName: 'Partition',
         field: 'partition',
-        width: 250
+        width: 250,
+        valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
+            return Object.values(params.row.partition.value).join('');
+        }
     },
     {
         headerName: 'Sequence Number',
