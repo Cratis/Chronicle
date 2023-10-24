@@ -28,6 +28,9 @@ export class JobState {
     @field(JobProgress)
     progress!: JobProgress;
 
+    @field(Boolean)
+    remove!: boolean;
+
     @field(Object)
     request!: any;
 }

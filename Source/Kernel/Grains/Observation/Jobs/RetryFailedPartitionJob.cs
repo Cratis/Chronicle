@@ -13,6 +13,9 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
     RetryFailedPartitionRequest? _request;
 
     /// <inheritdoc/>
+    protected override bool RemoveAfterCompleted => true;
+
+    /// <inheritdoc/>
     public override async Task OnCompleted()
     {
         if (_request == null) return;

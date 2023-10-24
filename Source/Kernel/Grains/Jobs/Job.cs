@@ -17,7 +17,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <summary>
     /// Gets whether or not to clean up data after the job has completed.
     /// </summary>
-    protected virtual bool CleanUpAfterCompleted => false;
+    protected virtual bool RemoveAfterCompleted => false;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -118,6 +118,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             {
                 StatusChanged(JobStatus.Completed);
             }
+
+            State.Remove = RemoveAfterCompleted;
         }
     }
 

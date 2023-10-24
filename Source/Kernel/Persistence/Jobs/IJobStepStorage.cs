@@ -15,7 +15,7 @@ public interface IJobStepStorage
     /// </summary>
     /// <param name="jobId"><see cref="JobId"/> the step belongs to.</param>
     /// <returns>Awaitable task.</returns>
-    Task RemoveAllFor(JobId jobId);
+    Task RemoveAllForJob(JobId jobId);
 
     /// <summary>
     /// Remove the state for a specific job step.

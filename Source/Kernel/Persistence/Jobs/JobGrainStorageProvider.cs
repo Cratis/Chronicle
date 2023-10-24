@@ -56,7 +56,18 @@ public class JobGrainStorageProvider : IGrainStorage
             var key = (JobKey)keyExtension!;
             _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
             var storage = _serviceProvider.GetRequiredService<IJobStorage<T>>();
-            await storage.Save(jobId, grainState.State);
+            var stepStorage = _serviceProvider.GetRequiredService<IJobStepStorage>();
+            var state = (grainState.State as IJobState)!;
+
+            if (state.Remove)
+            {
+                await stepStorage.RemoveAllForJob(jobId);
+                await storage.Remove(jobId);
+            }
+            else
+            {
+                await storage.Save(jobId, grainState.State);
+            }
         }
     }
 }

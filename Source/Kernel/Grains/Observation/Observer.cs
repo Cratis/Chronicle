@@ -218,8 +218,6 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <inheritdoc/>
     public async Task TryRecoverFailedPartition(Key partition)
     {
-        await CancelAndDeleteAnyRunningRetryJobsForPartition(partition);
-
         var failure = Failures.Get(partition);
         if (failure is null) return;
         var lastAttempt = failure.LastAttempt;
@@ -345,16 +343,6 @@ public class Observer : StateMachine<ObserverState>, IObserver
     {
         if (_stateWritingSuspended) return Task.CompletedTask;
         return base.WriteStateAsync();
-    }
-
-    async Task CancelAndDeleteAnyRunningRetryJobsForPartition(Key partition)
-    {
-        var existingRetryJobs = await _jobsManager.GetJobsOfType<IRetryFailedPartitionJob, RetryFailedPartitionRequest>();
-        foreach (var job in existingRetryJobs.Where(_ => _.Request.Key == partition))
-        {
-            await _jobsManager.Cancel(job.Id);
-            await _jobsManager.Delete(job.Id);
-        }
     }
 
     class WriteSuspension : IDisposable

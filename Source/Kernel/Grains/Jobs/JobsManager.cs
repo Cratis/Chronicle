@@ -67,7 +67,7 @@ public class JobsManager : Grain, IJobsManager
     public async Task Delete(JobId jobId)
     {
         _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
-        await _jobStepStorageProvider().RemoveAllFor(jobId);
+        await _jobStepStorageProvider().RemoveAllForJob(jobId);
         await _jobStorageProvider().Remove(jobId);
     }
 

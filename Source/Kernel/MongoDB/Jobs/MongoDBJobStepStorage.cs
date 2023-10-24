@@ -37,7 +37,7 @@ public class MongoDBJobStepStorage : IJobStepStorage
     protected IMongoCollection<BsonDocument> FailedCollection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.FailedJobSteps);
 
     /// <inheritdoc/>
-    public async Task RemoveAllFor(JobId jobId)
+    public async Task RemoveAllForJob(JobId jobId)
     {
         await Collection.DeleteOneAsync(GetJobIdFilter(jobId)).ConfigureAwait(false);
         await FailedCollection.DeleteOneAsync(GetJobIdFilter(jobId)).ConfigureAwait(false);
