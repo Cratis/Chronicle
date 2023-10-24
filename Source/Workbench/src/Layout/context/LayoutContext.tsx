@@ -1,58 +1,45 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { useDarkMode } from "usehooks-ts";
+import { createContext, useState, ReactNode, useContext } from 'react';
 
-type Theme = 'light' | 'dark';
-
-interface LayoutConfig {
-    inputStyle: string;
-    colorScheme: string;
-    theme: Theme;
-    scale: number;
+interface ILayoutConfig {
+    leftSidebarOpen: boolean;
 }
 
-interface LayoutContextType {
-    layoutConfig: LayoutConfig;
-    setLayoutConfig: (config: LayoutConfig) => void;
-    theme: Theme;
-    toggleTheme: () => void;
+interface ILayoutContext {
+    layoutConfig: ILayoutConfig;
+    setLayoutConfig: (config: ILayoutConfig) => void;
+    toggleLeftSidebar: () => void;
 }
 
-const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
-
-export function useLayout() {
-    const context = useContext(LayoutContext);
-    if (!context) {
-        Error('useLayout must be used within a LayoutProvider');
+const defaultLayoutContext: ILayoutContext = {
+    layoutConfig: {
+        leftSidebarOpen: true
+    },
+    setLayoutConfig: () => {
+    },
+    toggleLeftSidebar: () => {
     }
-    return context;
-}
+};
 
-interface LayoutProviderProps {
-    children: ReactNode;
-}
+export const LayoutContext = createContext<ILayoutContext>(defaultLayoutContext);
+export const useLayoutContext = () => useContext(LayoutContext);
+export const LayoutProvider = (props: { children: ReactNode }) => {
 
-export function LayoutProvider({ children }: LayoutProviderProps) {
-    const {isDarkMode} = useDarkMode();
-    const [layoutConfig, setLayoutConfig] = useState<LayoutConfig>({
-        inputStyle: 'outlined',
-        colorScheme: isDarkMode ? 'dark' : 'light',
-        theme: isDarkMode ? 'dark' : 'light',
-        scale: 16,
-    });
+    const [layoutConfig, setLayoutConfig] = useState<ILayoutConfig>(defaultLayoutContext.layoutConfig);
 
-    const toggleTheme = () => {
-        setLayoutConfig((prevConfig) => ({
-            ...prevConfig,
-            theme: prevConfig.theme === 'light' ? 'dark' : 'light',
-        }));
+    const toggleLeftSidebar = () => {
+        setLayoutConfig({
+            ...layoutConfig,
+            leftSidebarOpen: !layoutConfig.leftSidebarOpen
+        });
     };
 
-    const value: LayoutContextType = {
-        layoutConfig,
-        setLayoutConfig,
-        theme: layoutConfig.theme,
-        toggleTheme,
-    };
-
-    return <LayoutContext.Provider value={value}>{children}</LayoutContext.Provider>;
+    return (
+        <LayoutContext.Provider value={{
+            layoutConfig,
+            setLayoutConfig,
+            toggleLeftSidebar
+        }}>
+            {props.children}
+        </LayoutContext.Provider>
+    );
 }

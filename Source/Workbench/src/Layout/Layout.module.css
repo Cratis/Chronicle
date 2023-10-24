@@ -1,15 +1,20 @@
-.layout-container {
-    display: flex;
-    background: blue;
+.layoutContainer {
+
 }
 
 header {
-    width: 100%;
     height: var(--topbar-height);
-    position: fixed;
     top: 0;
+    left:0;
+    position:fixed;
     background-color: var(--surface-0);
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    right: 0;
+    margin-left: var(--sidebar-width);
+    transition: margin-left .3s;
+}
+.sidebarClosed header {
+    margin-left: 0;
 }
 
 aside {
@@ -20,15 +25,25 @@ aside {
     left: 0;
     background-color: var(--surface-a);
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    transition: left .3s;
+}
+
+.sidebarClosed aside {
+    left: calc(-1 * var(--sidebar-width));
 }
 
 main {
-    flex: 1;
+
     height: calc(100vh - var(--topbar-height) - var(--footer-height));
     margin-top: var(--topbar-height);
-    margin-left: var(--sidebar-width);
+    padding-left: var(--sidebar-width);
     margin-bottom: var(--footer-height);
     overflow: auto;
+    transition: padding-left .3s;
+}
+
+.sidebarClosed main {
+    padding-left: 0;
 }
 
 footer {

@@ -6,7 +6,6 @@ import App from './App';
 import React from 'react';
 import './Styles/tailwind.css'
 import './Styles/theme.css'
-import 'primeicons/primeicons.css';
 
 
 
