@@ -58,7 +58,6 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
             break;
         }
 
-
         await WriteStateAsync();
     }
 }
