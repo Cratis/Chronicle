@@ -61,7 +61,7 @@ public class Observers : ControllerBase
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
 
         var clientObservable = new ClientObservable<IEnumerable<ObserverInformation>>();
-        var observable = _observerStorageProvider().All;
+        var observable = _observerStorageProvider().ObserveAll();
         var subscription = observable.Subscribe(_ => clientObservable.OnNext(_));
         clientObservable.ClientDisconnected = () =>
         {

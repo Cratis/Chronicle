@@ -16,7 +16,8 @@ public interface IObserverStorage
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> for all instances of <see cref="ObserverInformation"/>.
     /// </summary>
-    IObservable<IEnumerable<ObserverInformation>> All { get; }
+    /// <returns>An observable of collection of <see cref="ObserverInformation"/>.</returns>
+    IObservable<IEnumerable<ObserverInformation>> ObserveAll();
 
     /// <summary>
     /// Get the information for a specific observer.

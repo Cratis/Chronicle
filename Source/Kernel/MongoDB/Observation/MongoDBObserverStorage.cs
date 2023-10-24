@@ -30,17 +30,14 @@ public class MongoDBObserverStorage : IObserverStorage
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
 
-    /// <inheritdoc/>
-    public IObservable<IEnumerable<ObserverInformation>> All
-    {
-        get
-        {
-            var observerInformation = GetAllObservers().GetAwaiter().GetResult();
-            return Collection.Observe(observerInformation, HandleChangesForObservers);
-        }
-    }
-
     IMongoCollection<ObserverState> Collection => _eventStoreDatabaseProvider().GetObserverStateCollection();
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ObserverInformation>> ObserveAll()
+    {
+        var observerInformation = GetAllObservers().GetAwaiter().GetResult();
+        return Collection.Observe(observerInformation, HandleChangesForObservers);
+    }
 
     /// <inheritdoc/>
     public Task<ObserverInformation> GetObserver(ObserverId observerId) =>
@@ -101,7 +98,7 @@ public class MongoDBObserverStorage : IObserverStorage
         foreach (var changedObserver in cursor.Current.Select(_ => _.FullDocument))
         {
             var observerInformation = ToObserverInformation(changedObserver);
-            var observer = observers.Find(_ => _.ObserverId == changedObserver.Id);
+            var observer = observers.Find(_ => _.ObserverId == changedObserver.ObserverId);
             if (observer is not null)
             {
                 var index = observers.IndexOf(observer);
