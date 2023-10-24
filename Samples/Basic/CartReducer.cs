@@ -16,7 +16,6 @@ public class CartReducer : IReducerFor<Cart>
 
     public Task<Cart> ItemAdded(ItemAddedToCart @event, Cart? initial, EventContext context)
     {
-        throw new NotImplementedException();
         initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
         return Task.FromResult(initial with
         {
