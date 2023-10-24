@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Properties;
 
