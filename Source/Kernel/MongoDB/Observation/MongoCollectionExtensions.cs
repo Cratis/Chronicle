@@ -27,7 +27,7 @@ public static class MongoCollectionExtensions
         Action<IChangeStreamCursor<ChangeStreamDocument<TDocument>>, List<TResult>> handleChanges,
         FilterDefinition<ChangeStreamDocument<TDocument>>? filter = null)
     {
-        var items = new List<TResult>();
+        var items = new List<TResult>(initialItems);
         var observable = new BehaviorSubject<IEnumerable<TResult>>(initialItems);
         var operationTypeFilter = Builders<ChangeStreamDocument<TDocument>>.Filter.In(
             new StringFieldDefinition<ChangeStreamDocument<TDocument>, string>("operationType"),
