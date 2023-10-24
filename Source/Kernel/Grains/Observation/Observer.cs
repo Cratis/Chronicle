@@ -75,6 +75,14 @@ public class Observer : StateMachine<ObserverState>, IObserver
     }
 
     /// <inheritdoc/>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        State.RunningState = ObserverRunningState.Disconnected;
+        await WriteStateAsync();
+        await base.OnDeactivateAsync(reason, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task SetNameAndType(ObserverName name, ObserverType type)
     {
         State.Name = name;
