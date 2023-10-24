@@ -88,13 +88,15 @@ public class KeyJsonConverter : JsonConverter<Key>
             }
         }
 
-        return new Key(new EventSourceId(value!), new ArrayIndexers(arrayIndexers));
+        return new Key(value!, new ArrayIndexers(arrayIndexers));
     }
 
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, Key value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
+        writer.WritePropertyName("value");
+        writer.WriteStringValue(value.Value.ToString());
         writer.WriteStartArray("arrayIndexers");
         foreach (var arrayIndexer in value.ArrayIndexers.All)
         {
