@@ -22,6 +22,20 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
         where TJob : IJob<TRequest>;
 
     /// <summary>
+    /// Cancel a job if running.
+    /// </summary>
+    /// <param name="jobId"><see cref="JobId"/> to cancel.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Cancel(JobId jobId);
+
+    /// <summary>
+    /// Delete an existing job.
+    /// </summary>
+    /// <param name="jobId"><see cref="JobId"/> to remove.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Delete(JobId jobId);
+
+    /// <summary>
     /// Report back completion of a job.
     /// </summary>
     /// <param name="jobId">The identifier of the job completed.</param>

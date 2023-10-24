@@ -57,6 +57,17 @@ public class MongoDBJobStorage : IJobStorage
         return Collection.Observe(initialItems, HandleChangesForJobs, filter);
     }
 
+    /// <inheritdoc/>
+    public async Task Remove(JobId jobId) =>
+        await Collection.DeleteOneAsync(GetIdFilter(jobId)).ConfigureAwait(false);
+
+    /// <summary>
+    /// Get the filter for a given <see cref="JobId"/>.
+    /// </summary>
+    /// <param name="id"><see cref="Guid"/> identifier of the job.</param>
+    /// <returns><see cref="FilterDefinition{T}"/> for the BsonDocument.</returns>
+    protected FilterDefinition<BsonDocument> GetIdFilter(Guid id) => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, Guid>("_id"), id);
+
     async Task<List<BsonDocument>> GetJobsRaw(params JobStatus[] statuses)
     {
         var statusFilters = statuses.Select(status => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState<object>.Status).ToCamelCase()), status));
@@ -123,12 +134,6 @@ public class MongoDBJobStorage<TJobState> : MongoDBJobStorage, IJobStorage<TJobS
     }
 
     /// <inheritdoc/>
-    public Task Remove(JobId jobId)
-    {
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
     public async Task Save(JobId jobId, TJobState state)
     {
         var filter = GetIdFilter(jobId);
@@ -142,7 +147,7 @@ public class MongoDBJobStorage<TJobState> : MongoDBJobStorage, IJobStorage<TJobS
     public async Task<IImmutableList<TJobState>> GetJobs<TJobType>(params JobStatus[] statuses)
     {
         var jobType = (JobType)typeof(TJobType);
-        var jobTypeFilter = Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobType>(nameof(JobState<object>.Type).ToCamelCase()), jobType);
+        var jobTypeFilter = Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(nameof(JobState<object>.Type).ToCamelCase()), jobType);
         var statusFilters = statuses.Select(status => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState<object>.Status).ToCamelCase()), status));
 
         var filter = statuses.Length == 0 ?
@@ -178,6 +183,4 @@ public class MongoDBJobStorage<TJobState> : MongoDBJobStorage, IJobStorage<TJobS
 
         return false;
     }
-
-    FilterDefinition<BsonDocument> GetIdFilter(Guid id) => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, Guid>("_id"), id);
 }

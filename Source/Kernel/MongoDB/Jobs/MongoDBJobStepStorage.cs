@@ -11,15 +11,14 @@ using MongoDB.Driver;
 namespace Aksio.Cratis.Kernel.MongoDB.Jobs;
 
 /// <summary>
-/// Represents an implementation of <see cref="IJobStorage{TJobState}"/> for MongoDB.
+/// Represents an implementation of <see cref="IJobStorage"/> for MongoDB.
 /// </summary>
-/// <typeparam name="TJobStepState">Type of <see cref="JobStepState"/> to work with.</typeparam>
-public class MongoDBJobStepStorage<TJobStepState> : IJobStepStorage<TJobStepState>
+public class MongoDBJobStepStorage : IJobStepStorage
 {
     readonly ProviderFor<IEventStoreDatabase> _databaseProvider;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBJobStorage{TJobState}"/> class.
+    /// Initializes a new instance of the <see cref="MongoDBJobStorage"/> class.
     /// </summary>
     /// <param name="databaseProvider">Provider for <see cref="IEventStoreDatabase"/> for persistence.</param>
     public MongoDBJobStepStorage(ProviderFor<IEventStoreDatabase> databaseProvider)
@@ -27,8 +26,81 @@ public class MongoDBJobStepStorage<TJobStepState> : IJobStepStorage<TJobStepStat
         _databaseProvider = databaseProvider;
     }
 
-    IMongoCollection<BsonDocument> Collection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.JobSteps);
-    IMongoCollection<BsonDocument> FailedCollection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.FailedJobSteps);
+    /// <summary>
+    /// Gets the <see cref="IMongoCollection{T}"/> for the job steps.
+    /// </summary>
+    protected IMongoCollection<BsonDocument> Collection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.JobSteps);
+
+    /// <summary>
+    /// Gets the <see cref="IMongoCollection{T}"/> for the failed job steps.
+    /// </summary>
+    protected IMongoCollection<BsonDocument> FailedCollection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.FailedJobSteps);
+
+    /// <inheritdoc/>
+    public async Task RemoveAllFor(JobId jobId)
+    {
+        await Collection.DeleteOneAsync(GetJobIdFilter(jobId)).ConfigureAwait(false);
+        await FailedCollection.DeleteOneAsync(GetJobIdFilter(jobId)).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task Remove(JobId jobId, JobStepId jobStepId)
+    {
+        await Collection.DeleteOneAsync(GetIdFilter(jobId, jobStepId)).ConfigureAwait(false);
+        await FailedCollection.DeleteOneAsync(GetIdFilter(jobId, jobStepId)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Get the id filter for a given <see cref="JobId"/> and <see cref="JobStepId"/>.
+    /// </summary>
+    /// <param name="jobId">Identifier of the job.</param>
+    /// <returns><see cref="FilterDefinition{T}"/> for the BsonDocument.</returns>
+    protected FilterDefinition<BsonDocument> GetJobIdFilter(Guid jobId) =>
+        Builders<BsonDocument>.Filter.Eq(
+            new StringFieldDefinition<BsonDocument, BsonDocument>("_id"),
+            new BsonDocument
+            {
+                {
+                    "jobId",
+                    new BsonBinaryData(jobId, GuidRepresentation.Standard)
+                }
+            });
+
+    /// <summary>
+    /// Get the id filter for a given <see cref="JobId"/> and <see cref="JobStepId"/>.
+    /// </summary>
+    /// <param name="jobId">Identifier of the job.</param>
+    /// <param name="jobStepId">Identifier of the job step.</param>
+    /// <returns><see cref="FilterDefinition{T}"/> for the BsonDocument.</returns>
+    protected FilterDefinition<BsonDocument> GetIdFilter(Guid jobId, Guid jobStepId) =>
+        Builders<BsonDocument>.Filter.Eq(
+            new StringFieldDefinition<BsonDocument, BsonDocument>("_id"),
+            new BsonDocument
+            {
+                {
+                    "jobId",
+                    new BsonBinaryData(jobId, GuidRepresentation.Standard)
+                },
+                {
+                    "jobStepId", new BsonBinaryData(jobStepId, GuidRepresentation.Standard)
+                }
+            });
+}
+
+/// <summary>
+/// Represents an implementation of <see cref="IJobStorage{TJobState}"/> for MongoDB.
+/// </summary>
+/// <typeparam name="TJobStepState">Type of <see cref="JobStepState"/> to work with.</typeparam>
+public class MongoDBJobStepStorage<TJobStepState> : MongoDBJobStepStorage, IJobStepStorage<TJobStepState>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MongoDBJobStorage{TJobState}"/> class.
+    /// </summary>
+    /// <param name="databaseProvider">Provider for <see cref="IEventStoreDatabase"/> for persistence.</param>
+    public MongoDBJobStepStorage(ProviderFor<IEventStoreDatabase> databaseProvider)
+        : base(databaseProvider)
+    {
+    }
 
     /// <inheritdoc/>
     public async Task<TJobStepState?> Read(JobId jobId, JobStepId jobStepId)
@@ -45,13 +117,6 @@ public class MongoDBJobStepStorage<TJobStepState> : IJobStepStorage<TJobStepStat
     }
 
     /// <inheritdoc/>
-    public Task Remove(JobId jobId, JobStepId jobStepId)
-    {
-        var filter = GetIdFilter(jobId, jobStepId);
-        return Collection.DeleteOneAsync(filter);
-    }
-
-    /// <inheritdoc/>
     public async Task Save(JobId jobId, JobStepId jobStepId, TJobStepState state)
     {
         var filter = GetIdFilter(jobId, jobStepId);
@@ -59,18 +124,4 @@ public class MongoDBJobStepStorage<TJobStepState> : IJobStepStorage<TJobStepStat
         var collection = jobStepState.Status == JobStepStatus.Failed ? FailedCollection : Collection;
         await collection.ReplaceOneAsync(filter, state.ToBsonDocument(), new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
-
-    FilterDefinition<BsonDocument> GetIdFilter(Guid jobId, Guid jobStepId) =>
-        Builders<BsonDocument>.Filter.Eq(
-            new StringFieldDefinition<BsonDocument, BsonDocument>("_id"),
-            new BsonDocument
-            {
-                {
-                    "jobId",
-                    new BsonBinaryData(jobId, GuidRepresentation.Standard)
-                },
-                {
-                    "jobStepId", new BsonBinaryData(jobStepId, GuidRepresentation.Standard)
-                }
-            });
 }

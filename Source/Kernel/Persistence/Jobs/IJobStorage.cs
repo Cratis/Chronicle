@@ -30,6 +30,13 @@ public interface IJobStorage
     /// If no job statuses are specified, all jobs of the given type will be returned.
     /// </remarks>
     IObservable<IEnumerable<JobState<object>>> ObserveJobs(params JobStatus[] statuses);
+
+    /// <summary>
+    /// Remove a job.
+    /// </summary>
+    /// <param name="jobId">The <see cref="JobId"/> of the job to remove.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Remove(JobId jobId);
 }
 
 /// <summary>
@@ -52,13 +59,6 @@ public interface IJobStorage<TJobState> : IJobStorage
     /// <param name="state"><see cref="JobState{T}"/> to save.</param>
     /// <returns>Awaitable task.</returns>
     Task Save(JobId jobId, TJobState state);
-
-    /// <summary>
-    /// Remove a job.
-    /// </summary>
-    /// <param name="jobId">The <see cref="JobId"/> of the job to remove.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Remove(JobId jobId);
 
     /// <summary>
     /// Get all jobs of a given type with a given status.

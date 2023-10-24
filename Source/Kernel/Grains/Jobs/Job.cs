@@ -14,12 +14,25 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest>
     where TJobState : JobState<TRequest>
 {
+    /// <summary>
+    /// Gets whether or not to clean up data after the job has completed.
+    /// </summary>
+    protected virtual bool CleanUpAfterCompleted => false;
+
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         StatusChanged(JobStatus.Running);
+
+        var type = GetType();
+        var grainType = type.GetInterfaces().SingleOrDefault(_ => _.Name == $"I{type.Name}");
+        if (grainType is null)
+        {
+            throw new InvalidGrainNameForJob(type);
+        }
+
         State.Name = GetType().Name;
-        State.Type = GetType();
+        State.Type = grainType;
         await WriteStateAsync();
     }
 
