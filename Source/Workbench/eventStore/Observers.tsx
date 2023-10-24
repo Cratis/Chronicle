@@ -36,6 +36,8 @@ const observerTypes: { [key: number]: string; } = {
     4: 'Reducer'
 };
 
+const UnavailableSequenceNumber = 18446744073709552000;
+
 export const Observers = () => {
     const { microserviceId } = useRouteParams();
     const navigate = useNavigate();
@@ -88,6 +90,18 @@ export const Observers = () => {
             width: 200,
         },
         {
+            headerName: 'Last Handled Event',
+            field: 'lastHandledEventSequenceNumber',
+            width: 200,
+            valueGetter: (params: GridValueGetterParams<ObserverInformation>) => {
+                const sequenceNumber = params.row.lastHandledEventSequenceNumber;
+                if (sequenceNumber == UnavailableSequenceNumber) {
+                    return 'N/A';
+                }
+                return sequenceNumber;
+            }
+        },
+        {
             headerName: 'Failures',
             field: 'failedPartitions',
             width: 200,
@@ -95,7 +109,7 @@ export const Observers = () => {
                 return (
                     <>
                         {params.row.failedPartitions.length > 0 &&
-                            <Link style={{ cursor: 'pointer'}} onClick={() => {
+                            <Link style={{ cursor: 'pointer' }} onClick={() => {
                                 navigate(`/event-store/${microserviceId}/failed-partitions/${params.row.observerId}`);
                             }}>{params.row.failedPartitions.length}</Link>
                         }
