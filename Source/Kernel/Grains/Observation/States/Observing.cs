@@ -69,13 +69,7 @@ public class Observing : BaseObserverState
         var stream = _streamProvider.GetStream<AppendedEvent>(streamId);
 
         _streamSubscription = await stream.SubscribeAsync(
-            async (@event, _) =>
-            {
-                if (state.EventTypes.Any(et => et == @event.Metadata.Type))
-                {
-                    await _observer.Handle(@event.Context.EventSourceId, new[] { @event });
-                }
-            },
+            async (@event, _) => await _observer.Handle(@event.Context.EventSourceId, new[] { @event }),
             new EventSequenceNumberToken(state.NextEventSequenceNumber));
 
         await stream.WarmUp();

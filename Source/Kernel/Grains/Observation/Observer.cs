@@ -259,6 +259,14 @@ public class Observer : StateMachine<ObserverState>, IObserver
             return;
         }
 
+        var shouldHandle = events.Any(_ => State.EventTypes.Contains(_.Metadata.Type));
+        if (!shouldHandle)
+        {
+            State.NextEventSequenceNumber = events.Last().Metadata.SequenceNumber.Next();
+            await WriteStateAsync();
+            return;
+        }
+
         var failed = false;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
