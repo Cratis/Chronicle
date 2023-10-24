@@ -110,7 +110,10 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
                         failed = true;
                         exceptionMessages = result.ExceptionMessages;
                         exceptionStackTrace = result.ExceptionStackTrace;
-                        tailEventSequenceNumber = result.LastSuccessfulObservation;
+                        if (result.LastSuccessfulObservation != EventSequenceNumber.Unavailable)
+                        {
+                            tailEventSequenceNumber = result.LastSuccessfulObservation;
+                        }
                         break;
                     case ObserverSubscriberState.Disconnected:
                         failed = true;
