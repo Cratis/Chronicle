@@ -21,7 +21,7 @@ public record JobType(string Value) : ConceptAs<string>(Value)
     /// Implicitly convert from <see cref="Type"/> to <see cref="JobType"/>.
     /// </summary>
     /// <param name="type"><see cref="Type"/> to convert from.</param>
-    public static implicit operator JobType(Type type) => new(type.FullName ?? type.Name);
+    public static implicit operator JobType(Type type) => new(type.AssemblyQualifiedName ?? type.Name);
 
     /// <summary>
     /// Implicitly convert from <see cref="JobType"/> to <see cref="Type"/>.
