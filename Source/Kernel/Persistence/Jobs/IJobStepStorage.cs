@@ -24,6 +24,13 @@ public interface IJobStepStorage
     /// <param name="jobStepId"><see cref="JobStepId"/> for the step.</param>
     /// <returns>Awaitable task.</returns>
     Task Remove(JobId jobId, JobStepId jobStepId);
+
+    /// <summary>
+    /// Observe job steps for a specific job.
+    /// </summary>
+    /// <param name="jobId"><see cref="JobId"/> to observe for.</param>
+    /// <returns>An observable of collection of job step state objects.</returns>
+    IObservable<IEnumerable<JobStepState>> ObserveForJob(JobId jobId);
 }
 
 /// <summary>

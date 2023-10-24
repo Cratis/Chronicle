@@ -50,6 +50,12 @@ public class MongoDBJobStepStorage : IJobStepStorage
         await FailedCollection.DeleteOneAsync(GetIdFilter(jobId, jobStepId)).ConfigureAwait(false);
     }
 
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<JobStepState>> ObserveForJob(JobId jobId)
+    {
+        throw new NotImplementedException();
+    }
+
     /// <summary>
     /// Get the id filter for a given <see cref="JobId"/> and <see cref="JobStepId"/>.
     /// </summary>

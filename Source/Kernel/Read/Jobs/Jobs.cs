@@ -17,18 +17,22 @@ public class Jobs : ControllerBase
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IJobStorage> _jobStorage;
+    readonly ProviderFor<IJobStepStorage> _jobStepStorage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Jobs"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jobStorage">Provider for <see cref="IJobStorage"/> for getting job state.</param>
+    /// <param name="jobStepStorage">Provider for <see cref="IJobStepStorage"/> for getting job step state.</param>
     public Jobs(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IJobStorage> jobStorage)
+        ProviderFor<IJobStorage> jobStorage,
+        ProviderFor<IJobStepStorage> jobStepStorage)
     {
         _executionContextManager = executionContextManager;
         _jobStorage = jobStorage;
+        _jobStepStorage = jobStepStorage;
     }
 
     /// <summary>
@@ -56,6 +60,6 @@ public class Jobs : ControllerBase
         [FromRoute] MicroserviceId microserviceId)
     {
         _executionContextManager.Establish(microserviceId);
-        return new ClientObservable<IEnumerable<JobStepState>>();
+        return _jobStepStorage().ObserveForJob(jobId).ToClientObservable();
     }
 }
