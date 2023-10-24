@@ -5,15 +5,16 @@
 header {
     height: var(--topbar-height);
     top: 0;
-    left:0;
-    position:fixed;
+    left: 0;
+    position: fixed;
     background-color: var(--surface-0);
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
     right: 0;
     margin-left: var(--sidebar-width);
     transition: margin-left .3s;
 }
-.sidebarClosed header {
+
+.sidebarClosed header, .sidebarHidden header {
     margin-left: 0;
 }
 
@@ -42,11 +43,12 @@ main {
     transition: padding-left .3s;
 }
 
-.sidebarClosed main {
+.sidebarClosed main, .sidebarHidden main {
     padding-left: 0;
 }
 
 footer {
+    display:none;
     position: fixed;
     bottom: 0;
     width: 100%;

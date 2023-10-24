@@ -17,10 +17,12 @@ export function Layout({ children }: LayoutProps) {
                 {(value) => (
                     <>
                         <div
-                            className={`${css.layoutContainer} ${!value.layoutConfig.leftSidebarOpen ? css.sidebarClosed : ''}`}>
-                            <aside>
-                                <Sidebar/>
-                            </aside>
+                            className={`
+                            ${css.layoutContainer} 
+                            ${!value.layoutConfig.leftSidebarOpen ? css.sidebarClosed : ''}
+                            ${value.layoutConfig.leftSidebarHidden ? css.sidebarHidden : ''}
+                            `}>
+                            {!value.layoutConfig.leftSidebarHidden && <aside><Sidebar/></aside>}
                             <main>
                                 <header>
                                     <Topbar/>

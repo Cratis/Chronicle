@@ -12,11 +12,11 @@ export interface AppTopbarRef {
 }
 
 export const Topbar = forwardRef<AppTopbarRef>(() => {
-    const { toggleLeftSidebar } = useLayoutContext();
+    const { toggleLeftSidebarOpen, layoutConfig } = useLayoutContext();
 
     return <div className={classes.container}>
-        <Button icon={FaHamburger} onClick={toggleLeftSidebar} className="p-button-rounded p-button-text"/>
-
+        {!layoutConfig.leftSidebarHidden &&
+            <Button icon={FaHamburger} onClick={toggleLeftSidebarOpen} className="p-button-rounded p-button-text"/>}
         <ThemeSwitch/>
     </div>;
 });
