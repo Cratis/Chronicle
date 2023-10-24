@@ -44,11 +44,18 @@ public class Jobs : ControllerBase
         return _jobStorage().ObserveJobs().ToClientObservable();
     }
 
+    /// <summary>
+    /// Observes all job steps for a specific job and microservice.
+    /// </summary>
+    /// <param name="jobId"><see cref="JobId"/> to observe for.</param>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to observer for.</param>
+    /// <returns>A <see cref="ClientObservable{T}"/> for observing a collection of <see cref="JobStepState"/>.</returns>
     [HttpGet("{jobId}/steps")]
     public ClientObservable<IEnumerable<JobStepState>> AllJobSteps(
         [FromRoute] JobId jobId,
         [FromRoute] MicroserviceId microserviceId)
     {
+        _executionContextManager.Establish(microserviceId);
         return new ClientObservable<IEnumerable<JobStepState>>();
     }
 }
