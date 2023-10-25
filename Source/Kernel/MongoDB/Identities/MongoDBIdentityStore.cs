@@ -123,6 +123,7 @@ public class MongoDBIdentityStore : IIdentityStore
 
     bool TryGetSingleFor(Identity identity, out IdentityId identityId)
     {
+        var userName = identity.UserName.ToLowerInvariant();
         _logger.TryingToGetSingleFor(identity.UserName, identity.Subject);
 
         if (!string.IsNullOrEmpty(identity.Subject) && _identityIdsBySubject.ContainsKey(identity.Subject))
@@ -132,9 +133,9 @@ public class MongoDBIdentityStore : IIdentityStore
             return true;
         }
 
-        if (!string.IsNullOrEmpty(identity.UserName) && _identityIdsByUserName.ContainsKey(identity.UserName.ToLowerInvariant()))
+        if (!string.IsNullOrEmpty(identity.UserName) && _identityIdsByUserName.ContainsKey(userName))
         {
-            identityId = _identityIdsByUserName[identity.UserName];
+            identityId = _identityIdsByUserName[userName];
             _logger.UserFoundByName(identity.UserName, identityId);
             return true;
         }
