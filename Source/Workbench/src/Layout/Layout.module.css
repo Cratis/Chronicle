@@ -1,7 +1,3 @@
-.layoutContainer {
-
-}
-
 header {
     height: var(--topbar-height);
     top: 0;
@@ -10,10 +6,11 @@ header {
     background-color: var(--cratis-topbar-bg);
     border-bottom: 1px solid var(--cratis-layout-border-color);
     right: 0;
-    transition: left .3s;
+    transition: left 0.3s;
 }
 
-.sidebarClosed header, .sidebarHidden header {
+.sidebarClosed header,
+.sidebarHidden header {
     left: 0;
 }
 
@@ -24,7 +21,8 @@ aside {
     top: 0;
     left: 0;
     background-color: var(--cratis-sidebar-bg);
-    transition: left .3s;
+    color: var(--cratis-sidebar-textColor);
+    transition: left 0.3s;
     box-shadow: var(--cratis-layout-border-color) -1px 0 0 0 inset;
 }
 
@@ -33,16 +31,17 @@ aside {
 }
 
 main {
-
     height: calc(100vh - var(--topbar-height) - var(--footer-height));
     margin-top: var(--topbar-height);
     padding-left: var(--sidebar-width);
     margin-bottom: var(--footer-height);
     overflow: auto;
-    transition: padding-left .3s;
+    transition: padding-left 0.3s;
+    color: var(--surface-900);
 }
 
-.sidebarClosed main, .sidebarHidden main {
+.sidebarClosed main,
+.sidebarHidden main {
     padding-left: 0;
 }
 
@@ -54,4 +53,3 @@ footer {
     height: var(--footer-height);
     background-color: var(--cratis-surface-a);
 }
-

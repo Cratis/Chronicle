@@ -1,9 +1,9 @@
-import { forwardRef } from 'react';
-import { ThemeSwitch } from './ThemeSwitch';
-import classes from './Topbar.module.css';
-import { Button } from "primereact/button";
 import { useLayoutContext } from "../context/LayoutContext";
+import { ThemeSwitch } from './ThemeSwitch';
+import { Button } from "primereact/button";
+import classes from './Topbar.module.css';
 import { FaBars } from "react-icons/fa6";
+import { forwardRef } from 'react';
 
 export interface AppTopbarRef {
     menubutton?: HTMLButtonElement | null;

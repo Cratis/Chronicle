@@ -3,8 +3,10 @@
 @layer theme {
     :root {
         --surface-a: rgb(22, 29, 47);
-        --border-color: rgba(241, 245, 249, .12);
+        --surface-b: rgba(255, 255, 255, 100);
+        --border-color: rgba(241, 245, 249, 0.12);
         --cratis-sidebar-bg: var(--surface-a);
+        --cratis-sidebar-textColor: var(--surface-b);
         --cratis-topbar-bg: var(--surface-a);
         --cratis-layout-border-color: var(--border-color);
     }

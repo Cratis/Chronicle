@@ -5,6 +5,7 @@
         --surface-a: #ffffff;
         --surface-b: rgb(22, 29, 47);
         --cratis-sidebar-bg: var(--surface-b);
+        --cratis-sidebar-textColor: var( --surface-a);
         --cratis-topbar-bg: var(--surface-a);
         --cratis-layout-border-color: var(--border-color);
     }
