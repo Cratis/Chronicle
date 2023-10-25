@@ -1,3 +1,14 @@
+# [v9.5.13] - 2023-10-25 [PR: #996](https://github.com/aksio-insurtech/Cratis/pull/996)
+
+### Added
+
+- Trace logging to `MongoDBIdentityStore`. One should be aware that there is a compliance aspect of these logs, as the user name is present in the log. By default this log will not show up, as it is `Trace` level, but if one configures Cratis with a `Verbose` level, these logs will show up.
+
+### Fixed
+
+- Fixing fallback resolution to username when subject is missing. This practically never kicked in.
+
+
 # [v9.5.12] - 2023-10-23 [PR: #995](https://github.com/aksio-insurtech/Cratis/pull/995)
 
 ### Fixed
