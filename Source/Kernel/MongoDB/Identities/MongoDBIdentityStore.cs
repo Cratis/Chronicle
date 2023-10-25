@@ -125,23 +125,18 @@ public class MongoDBIdentityStore : IIdentityStore
     {
         _logger.TryingToGetSingleFor(identity.UserName, identity.Subject);
 
-        if (!string.IsNullOrEmpty(identity.Subject))
+        if (!string.IsNullOrEmpty(identity.Subject) && _identityIdsBySubject.ContainsKey(identity.Subject))
         {
-            if (_identityIdsBySubject.ContainsKey(identity.Subject))
-            {
-                identityId = _identityIdsBySubject[identity.Subject];
-                _logger.UserFoundBySubject(identity.Subject, identityId);
-                return true;
-            }
+            identityId = _identityIdsBySubject[identity.Subject];
+            _logger.UserFoundBySubject(identity.Subject, identityId);
+            return true;
         }
-        else if (!string.IsNullOrEmpty(identity.UserName))
+
+        if (!string.IsNullOrEmpty(identity.UserName) && _identityIdsByUserName.ContainsKey(identity.UserName.ToLowerInvariant()))
         {
-            if (_identityIdsByUserName.ContainsKey(identity.UserName.ToLowerInvariant()))
-            {
-                identityId = _identityIdsByUserName[identity.UserName];
-                _logger.UserFoundByName(identity.UserName, identityId);
-                return true;
-            }
+            identityId = _identityIdsByUserName[identity.UserName];
+            _logger.UserFoundByName(identity.UserName, identityId);
+            return true;
         }
         identityId = Guid.Empty;
         _logger.UserNotFound(identity.UserName, identity.Subject);

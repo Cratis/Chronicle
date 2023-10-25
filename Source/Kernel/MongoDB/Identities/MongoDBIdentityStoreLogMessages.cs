@@ -8,21 +8,21 @@ namespace Aksio.Cratis.Kernel.MongoDB.Identities;
 
 internal static partial class MongoDBIdentityStoreLogMessages
 {
-    [LoggerMessage(0, LogLevel.Debug, "Populating MongoDB Identity Store")]
+    [LoggerMessage(0, LogLevel.Trace, "Populating MongoDB Identity Store")]
     internal static partial void Populating(this ILogger<MongoDBIdentityStore> logger);
 
-    [LoggerMessage(1, LogLevel.Debug, "Identity registered by user name '{UserName}' with identifier '{IdentityId}'")]
+    [LoggerMessage(1, LogLevel.Trace, "Identity registered by user name {UserName} with identifier {IdentityId}")]
     internal static partial void IdentityRegisteredByUserName(this ILogger<MongoDBIdentityStore> logger, string userName, IdentityId identityId);
 
-    [LoggerMessage(2, LogLevel.Debug, "Trying to get single for '{UserName}' and '{Subject}'")]
+    [LoggerMessage(2, LogLevel.Trace, "Trying to get single for {UserName} and {Subject}")]
     internal static partial void TryingToGetSingleFor(this ILogger<MongoDBIdentityStore> logger, string userName, string subject);
 
-    [LoggerMessage(3, LogLevel.Debug, "User found by subject '{Subject}' with identifier '{IdentityId}'")]
+    [LoggerMessage(3, LogLevel.Trace, "User found by subject {Subject} with identifier {IdentityId}")]
     internal static partial void UserFoundBySubject(this ILogger<MongoDBIdentityStore> logger, string subject, IdentityId identityId);
 
-    [LoggerMessage(4, LogLevel.Debug, "User found by name '{UserName}' with identifier '{IdentityId}'")]
+    [LoggerMessage(4, LogLevel.Trace, "User found by name {UserName} with identifier {IdentityId}")]
     internal static partial void UserFoundByName(this ILogger<MongoDBIdentityStore> logger, string userName, IdentityId identityId);
 
-    [LoggerMessage(5, LogLevel.Debug, "User not found for '{UserName}' and '{Subject}'")]
+    [LoggerMessage(5, LogLevel.Trace, "User not found for {UserName} and {Subject}")]
     internal static partial void UserNotFound(this ILogger<MongoDBIdentityStore> logger, string userName, string subject);
 }
