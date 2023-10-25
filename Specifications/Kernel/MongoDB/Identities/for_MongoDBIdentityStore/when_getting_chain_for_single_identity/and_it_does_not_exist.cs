@@ -18,5 +18,5 @@ public class and_it_does_not_exist : given.no_identities_registered
     [Fact] void should_insert_the_identity() => inserted_identities.Count.ShouldEqual(1);
     [Fact] void should_insert_the_identity_with_the_correct_subject() => inserted_identities[0].Subject.ShouldEqual(identity.Subject);
     [Fact] void should_insert_the_identity_with_the_correct_name() => inserted_identities[0].Name.ShouldEqual(identity.Name);
-    [Fact] void should_insert_the_identity_with_the_correct_user_name() => inserted_identities[0].UserName.ShouldEqual(identity.UserName);
+    [Fact] void should_insert_the_identity_with_the_correct_user_name() => inserted_identities[0].UserName.ShouldEqual(identity.UserName.ToLowerInvariant());
 }

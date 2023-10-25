@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Identities;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStore.given;
 
@@ -37,6 +38,6 @@ public class two_identities_registered : all_dependencies
         };
         identities_from_database.Add(second_identity_from_database);
 
-        store = new(database.Object);
+        store = new(database.Object, Mock.Of<ILogger<MongoDBIdentityStore>>());
     }
 }
