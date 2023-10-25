@@ -1,3 +1,62 @@
+# [v9.5.13] - 2023-10-25 [PR: #996](https://github.com/aksio-insurtech/Cratis/pull/996)
+
+### Added
+
+- Trace logging to `MongoDBIdentityStore`. One should be aware that there is a compliance aspect of these logs, as the user name is present in the log. By default this log will not show up, as it is `Trace` level, but if one configures Cratis with a `Verbose` level, these logs will show up.
+
+### Fixed
+
+- Fixing fallback resolution to username when subject is missing. This practically never kicked in.
+
+
+# [v9.5.12] - 2023-10-23 [PR: #995](https://github.com/aksio-insurtech/Cratis/pull/995)
+
+### Fixed
+
+- Observers ended up being in a stale state due to not getting the actual next sequence number based on the event types. This is now fixed.
+- Optimizing query for getting next event sequence number greater or equal to a given sequence number by using `.In()` rather than a collection of `.Or()` statements for the event types.
+
+# [v9.5.11] - 2023-10-23 [PR: #0]()
+
+### Fixed
+
+- Fixing `CatchUp` and `Replay` to not write state on the `Stop()` method, as it is not altering any `ObserverState` at that point. This fixes a problem we've seen were observers seem to be observing events multiple times. The reason for this is that the in-memory state representation of the grain is stale. Observer worker jobs share the state with the parent supervisor, but it is not synchronized and only updated when absolutely needed. This whole thing will be ripped out in an upcoming version with a complete rewrite of how observers work.ease notes
+
+# [v9.5.10] - 2023-10-22 [PR: #993](https://github.com/aksio-insurtech/Cratis/pull/993)
+
+### Fixed
+
+- Moving underlying database communication from `ObserverSupervisor` to the state provider for increased stability and avoiding `Task`dead lock scenarios.
+- Fixed so that the running state of an observer is reflected correctly, it could in some cases become active but showed "Subscribing" - as "Active" and subscribing to the underlying stream is the default, but was not reflected in the `RunningState` property.
+
+
+# [v9.5.9] - 2023-10-19 [PR: #992](https://github.com/aksio-insurtech/Cratis/pull/992)
+
+### Changed
+
+- Changing number of events priming the cache with. Going from 1000 to 100. This makes much more sense based on what the cache is for (catching up). The cache is most likely going away or will change to something else in the future anyways.
+
+### Fixed
+
+- Log Levels have been modified for a lot of log statements from Information to Debug.
+- Make sure all calls in the `MongoDBEventSequenceStorageProvider` has `.ConfigureAwait(false)` to not return to the same task context.
+- Saving round trips to MongoDB for `ProjectionDefinitions` by changing from `HasFor/GetFor` to a `TryGetFor` pattern.
+- Reorder startup sequence, making sure event schemas are populated first.
+- Changing observers to ask the event sequence grain instead of the database - which is much more consistent and correct. Saves quite a lot of roundtrips to the database.
+- Fixing a problem in the `EventSequenceCache` that caused a dead lock during startup and grain calls timing out while subscribing to the persistent stream.
+- Adding more state to an event sequence. Holding a dictionary of tail sequence numbers per event type. This will be populated automatically based on an aggregation from the event sequence if this state is missing. This speeds up lookups from observers and others needing this information. It also saves on round trips to the database.
+- Automatically rehydrating all event sequences at startup, making them ready with state from the start.
+- "Fixing" our "magic" microservices and tenants that are added (Unspecified, NotSet, Development, Kernel) so that they have configuration data. This whole thing will be completely changed in [version 10](https://github.com/aksio-insurtech/Cratis/issues?q=is%3Aopen+is%3Aissue+milestone%3A10.0.0)
+- Adding `.SortBy()` to event sequence calls for getting events, to guarantee they come in order.
+- Adding concurrency locks for `RecoveringFailedPartition` supervisor on the internal collection of failed partitions.
+- Adding an explicit exception if reducer content returned is invalid.
+- Improved performance during registration of observers, rather than waiting invidiual `.Start()` methods on the `ClientObserver` grain, we queue them and do `Task.WhenAll()`. This is the recommended approach from the Orleans team.
+
+### Removed
+
+- Removing persistence of connected clients, this was a complete abuse to be able to get a nice reactive view in the workbench. This is now instead asking the `ConnectedClients` grain on a schedule and still being reactive. This saves a lot of traffic to the database.
+
+
 # [v9.5.8] - 2023-10-10 [PR: #987](https://github.com/aksio-insurtech/Cratis/pull/987)
 
 ### Fixed

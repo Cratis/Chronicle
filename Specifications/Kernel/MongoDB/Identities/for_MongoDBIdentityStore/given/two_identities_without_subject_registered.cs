@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStore.given;
 
-public class two_identities_registered : all_dependencies
+public class two_identities_without_subject_registered : all_dependencies
 {
     protected MongoDBIdentityStore store;
     protected IdentityId first_identity;
@@ -22,7 +22,7 @@ public class two_identities_registered : all_dependencies
         first_identity_from_database = new MongoDBIdentity
         {
             Id = first_identity,
-            Subject = "First subject",
+            Subject = string.Empty,
             Name = "First name",
             UserName = "First user name"
         };
@@ -32,7 +32,7 @@ public class two_identities_registered : all_dependencies
         second_identity_from_database = new MongoDBIdentity
         {
             Id = second_identity,
-            Subject = "Second subject",
+            Subject = string.Empty,
             Name = "Second name",
             UserName = "Second user name"
         };
