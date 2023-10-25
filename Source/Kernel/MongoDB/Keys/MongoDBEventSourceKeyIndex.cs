@@ -29,7 +29,7 @@ public class MongoDBEventSourceKeyIndex : IObserverKeyIndex
     /// <inheritdoc/>
     public Task<IObserverKeys> GetKeys(EventSequenceNumber fromEventSequenceNumber)
     {
-        return Task.FromResult<IObserverKeys>(new MongoDBObserverKeys(_collection));
+        return Task.FromResult<IObserverKeys>(new MongoDBObserverKeys(_collection, fromEventSequenceNumber));
     }
 
     /// <inheritdoc/>
