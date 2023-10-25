@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Aksio.Collections;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.MongoDB;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Identities;
@@ -14,6 +16,7 @@ namespace Aksio.Cratis.Kernel.MongoDB.Identities;
 public class MongoDBIdentityStore : IIdentityStore
 {
     readonly IClusterDatabase _database;
+    readonly ILogger<MongoDBIdentityStore> _logger;
     Dictionary<IdentityId, Identity> _identitiesByIdentityId = new();
     Dictionary<string, IdentityId> _identityIdsBySubject = new();
     Dictionary<string, IdentityId> _identityIdsByUserName = new();
@@ -22,21 +25,28 @@ public class MongoDBIdentityStore : IIdentityStore
     /// Initializes a new instance of the <see cref="MongoDBIdentityStore"/> class.
     /// </summary>
     /// <param name="database">The cluster database.</param>
-    public MongoDBIdentityStore(IClusterDatabase database)
+    /// <param name="logger">Logger for logging.</param>
+    public MongoDBIdentityStore(
+        IClusterDatabase database,
+        ILogger<MongoDBIdentityStore> logger)
     {
         _database = database;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
     public async Task Populate()
     {
+        _logger.Populating();
+
         var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var allIdentities = await result.ToListAsync().ConfigureAwait(false);
         _identitiesByIdentityId = allIdentities.ToDictionary(_ => (IdentityId)_.Id, _ => new Identity(_.Subject, _.Name, _.UserName));
         _identityIdsBySubject = _identitiesByIdentityId
                                     .Where(_ => !string.IsNullOrEmpty(_.Value.Subject))
                                     .ToDictionary(_ => _.Value.Subject, _ => _.Key);
-        _identityIdsByUserName = _identitiesByIdentityId.ToDictionary(_ => _.Value.UserName, _ => _.Key);
+        _identityIdsByUserName = _identitiesByIdentityId.ToDictionary(_ => _.Value.UserName.ToLowerInvariant(), _ => _.Key);
+        _identityIdsByUserName.ForEach(_ => _logger.IdentityRegisteredByUserName(_.Key, _.Value));
     }
 
     /// <inheritdoc/>
@@ -81,12 +91,14 @@ public class MongoDBIdentityStore : IIdentityStore
     /// <inheritdoc/>
     public async Task<IdentityId> GetSingleFor(Identity identity)
     {
+        var userName = identity.UserName.ToLowerInvariant();
+
         if (TryGetSingleFor(identity, out var identityId)) return identityId;
         await Populate();
         if (TryGetSingleFor(identity, out identityId)) return identityId;
 
         identityId = IdentityId.New();
-        _identityIdsByUserName[identity.UserName] = identityId;
+        _identityIdsByUserName[userName] = identityId;
         _identitiesByIdentityId[identityId] = identity;
 
         await GetCollection().InsertOneAsync(new MongoDBIdentity
@@ -94,7 +106,7 @@ public class MongoDBIdentityStore : IIdentityStore
             Id = identityId,
             Name = identity.Name,
             Subject = identity.Subject,
-            UserName = identity.UserName
+            UserName = userName
         }).ConfigureAwait(false);
         return identityId;
     }
@@ -111,23 +123,28 @@ public class MongoDBIdentityStore : IIdentityStore
 
     bool TryGetSingleFor(Identity identity, out IdentityId identityId)
     {
+        _logger.TryingToGetSingleFor(identity.UserName, identity.Subject);
+
         if (!string.IsNullOrEmpty(identity.Subject))
         {
             if (_identityIdsBySubject.ContainsKey(identity.Subject))
             {
                 identityId = _identityIdsBySubject[identity.Subject];
+                _logger.UserFoundBySubject(identity.Subject, identityId);
                 return true;
             }
         }
         else if (!string.IsNullOrEmpty(identity.UserName))
         {
-            if (_identityIdsByUserName.ContainsKey(identity.UserName))
+            if (_identityIdsByUserName.ContainsKey(identity.UserName.ToLowerInvariant()))
             {
                 identityId = _identityIdsByUserName[identity.UserName];
+                _logger.UserFoundByName(identity.UserName, identityId);
                 return true;
             }
         }
         identityId = Guid.Empty;
+        _logger.UserNotFound(identity.UserName, identity.Subject);
 
         return false;
     }
