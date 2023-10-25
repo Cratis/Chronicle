@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
@@ -31,13 +30,12 @@ public class MongoDBObserverKeyIndexes : IObserverKeyIndexes
 
     /// <inheritdoc/>
     public async Task<IObserverKeyIndex> GetFor(
-        MicroserviceId microserviceId,
-        TenantId tenantId,
-        ObserverId observerId)
+        ObserverId observerId,
+        ObserverKey observerKey)
     {
-        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+        _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
         var database = _eventStoreDatabaseProvider();
-        var collection = database.GetEventSequenceCollectionFor(EventSequenceId.Log);
+        var collection = database.GetEventSequenceCollectionFor(observerKey.EventSequenceId);
         await Task.CompletedTask;
         return new MongoDBEventSourceKeyIndex(collection);
     }

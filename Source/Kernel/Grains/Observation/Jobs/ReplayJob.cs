@@ -38,9 +38,8 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
     {
         _request = request;
         var index = await _observerKeyIndexes.GetFor(
-            request.ObserverKey.MicroserviceId,
-            request.ObserverKey.TenantId,
-            request.ObserverId);
+            request.ObserverId,
+            request.ObserverKey);
 
         var keys = await index.GetKeys(EventSequenceNumber.First);
 

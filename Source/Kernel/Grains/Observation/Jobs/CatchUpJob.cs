@@ -37,9 +37,8 @@ public class CatchUpJob : Job<CatchUpRequest, JobState<CatchUpRequest>>, ICatchU
     {
         _request = request;
         var index = await _observerKeyIndexes.GetFor(
-            request.ObserverKey.MicroserviceId,
-            request.ObserverKey.TenantId,
-            request.ObserverId);
+            request.ObserverId,
+            request.ObserverKey);
 
         var keys = await index.GetKeys(request.FromEventSequenceNumber);
         await foreach (var key in keys)

@@ -13,9 +13,8 @@ public interface IObserverKeyIndexes
     /// <summary>
     /// Get the key index for a specific observer, event sequence, microservice and tenant.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> the index is for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the index is for.</param>
     /// <param name="observerId"><see cref="ObserverId"/> the index is for.</param>
+    /// <param name="observerKey"><see cref="ObserverKey"/> for the observer.</param>
     /// <returns><see cref="IObserverKeyIndex"/> to work with.</returns>
-    Task<IObserverKeyIndex> GetFor(MicroserviceId microserviceId, TenantId tenantId, ObserverId observerId);
+    Task<IObserverKeyIndex> GetFor(ObserverId observerId, ObserverKey observerKey);
 }
