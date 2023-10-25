@@ -6,6 +6,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Events.EventSequences;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Microsoft.AspNetCore.Mvc;
 using EventRedacted = Aksio.Cratis.Kernel.Events.EventSequences.EventRedacted;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
@@ -182,5 +183,5 @@ public class EventSequence : ControllerBase
     }
 
     IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
-        _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new MicroserviceAndTenant(microserviceId, tenantId));
+        _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new EventSequenceKey(microserviceId, tenantId));
 }

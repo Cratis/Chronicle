@@ -51,7 +51,7 @@ public class EventSequencesStorageProvider : IGrainStorage
     {
         var actualGrainState = (grainState as IGrainState<EventSequenceState>)!;
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
-        var key = MicroserviceAndTenant.Parse(keyAsString!);
+        var key = EventSequenceKey.Parse(keyAsString!);
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
 
         var filter = Builders<MongoDBEventSequenceState>.Filter.Eq(new StringFieldDefinition<MongoDBEventSequenceState, Guid>("_id"), eventSequenceId);
@@ -66,7 +66,7 @@ public class EventSequencesStorageProvider : IGrainStorage
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
-        var key = MicroserviceAndTenant.Parse(keyAsString!);
+        var key = EventSequenceKey.Parse(keyAsString!);
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
         var eventSequenceState = (grainState.State as EventSequenceState)!;
         await Write(eventSequenceId, eventSequenceState);

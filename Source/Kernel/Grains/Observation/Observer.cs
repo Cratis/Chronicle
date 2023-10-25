@@ -40,18 +40,15 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// Initializes a new instance of the <see cref="Observer"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Observer(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
         IPersistentState<FailedPartitions> failures,
         ILogger<Observer> logger)
     {
         _executionContextManager = executionContextManager;
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _failuresState = failures;
         _logger = logger;
         _subscription = ObserverSubscription.Unsubscribed;

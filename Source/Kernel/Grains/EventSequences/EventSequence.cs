@@ -38,7 +38,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly ILogger<EventSequence> _logger;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
-    MicroserviceAndTenant _microserviceAndTenant = MicroserviceAndTenant.NotSet;
+    EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
     IAsyncStream<AppendedEvent>? _stream;
     IEventSequenceMetrics? _metrics;
     long _appendedEventsCount;
@@ -83,9 +83,9 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         {
             // TODO: This is a temporary work-around till we fix #264 & #265
             _executionContextManager.Establish(
-                _microserviceAndTenant.TenantId,
+                _eventSequenceKey.TenantId,
                 _executionContextManager.Current.CorrelationId,
-                _microserviceAndTenant.MicroserviceId);
+                _eventSequenceKey.MicroserviceId);
             return _eventSequenceStorageProvider();
         }
     }
@@ -93,9 +93,9 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _eventSequenceId = this.GetPrimaryKey(out var streamNamespace);
-        _microserviceAndTenant = MicroserviceAndTenant.Parse(streamNamespace);
-        var streamId = StreamId.Create(_microserviceAndTenant, (Guid)_eventSequenceId);
+        _eventSequenceId = this.GetPrimaryKey(out var key);
+        _eventSequenceKey = (EventSequenceKey)key;
+        var streamId = StreamId.Create(_eventSequenceKey, (Guid)_eventSequenceId);
         var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _stream = streamProvider.GetStream<AppendedEvent>(streamId);
 
@@ -103,8 +103,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 
         _metrics = _metricsFactory.CreateFor(
             _eventSequenceId,
-            _microserviceAndTenant.MicroserviceId,
-            _microserviceAndTenant.TenantId,
+            _eventSequenceKey.MicroserviceId,
+            _eventSequenceKey.TenantId,
             () => _appendedEventsCount);
 
         await base.OnActivateAsync(cancellationToken);
@@ -159,8 +159,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             var eventSchema = await _schemaStoreProvider().GetFor(eventType.Id, eventType.Generation);
             eventName = eventSchema.Schema.GetDisplayName();
             _logger.Appending(
-                _microserviceAndTenant.MicroserviceId,
-                _microserviceAndTenant.TenantId,
+                _eventSequenceKey.MicroserviceId,
+                _eventSequenceKey.TenantId,
                 _eventSequenceId,
                 eventType,
                 eventName,
@@ -183,7 +183,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                             State.SequenceNumber,
                             DateTimeOffset.UtcNow,
                             validFrom ?? DateTimeOffset.MinValue,
-                            _microserviceAndTenant.TenantId,
+                            _eventSequenceKey.TenantId,
                             _executionContextManager.Current.CorrelationId,
                             causation,
                             causedBy),
@@ -211,8 +211,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         {
             _metrics?.FailedAppending(eventSourceId, eventName);
             _logger.FailedAppending(
-                _microserviceAndTenant.MicroserviceId,
-                _microserviceAndTenant.TenantId,
+                _eventSequenceKey.MicroserviceId,
+                _eventSequenceKey.TenantId,
                 eventType,
                 ex.StreamId,
                 ex.EventSourceId,
@@ -224,8 +224,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         catch (Exception ex)
         {
             _logger.ErrorAppending(
-                _microserviceAndTenant.MicroserviceId,
-                _microserviceAndTenant.TenantId,
+                _eventSequenceKey.MicroserviceId,
+                _eventSequenceKey.TenantId,
                 _eventSequenceId,
                 eventSourceId,
                 State.SequenceNumber,
@@ -269,8 +269,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         DateTimeOffset? validFrom = default)
     {
         _logger.Compensating(
-            _microserviceAndTenant.MicroserviceId,
-            _microserviceAndTenant.TenantId,
+            _eventSequenceKey.MicroserviceId,
+            _eventSequenceKey.TenantId,
             eventType,
             _eventSequenceId,
             sequenceNumber);
@@ -286,8 +286,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         Identity causedBy)
     {
         _logger.Redacting(
-            _microserviceAndTenant.MicroserviceId,
-            _microserviceAndTenant.TenantId,
+            _eventSequenceKey.MicroserviceId,
+            _eventSequenceKey.TenantId,
             _eventSequenceId,
             sequenceNumber);
 
@@ -310,8 +310,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         Identity causedBy)
     {
         _logger.RedactingMultiple(
-            _microserviceAndTenant.MicroserviceId,
-            _microserviceAndTenant.TenantId,
+            _eventSequenceKey.MicroserviceId,
+            _eventSequenceKey.TenantId,
             _eventSequenceId,
             eventSourceId,
             eventTypes);
@@ -331,11 +331,11 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         EventSourceId eventSourceId,
         IEnumerable<EventType> affectedEventTypes)
     {
-        _executionContextManager.Establish(_microserviceAndTenant.TenantId, _executionContextManager.Current.CorrelationId, _microserviceAndTenant.MicroserviceId);
+        _executionContextManager.Establish(_eventSequenceKey.TenantId, _executionContextManager.Current.CorrelationId, _eventSequenceKey.MicroserviceId);
         var observers = await _observerStorageProvider().GetObserversForEventTypes(affectedEventTypes);
         foreach (var observer in observers)
         {
-            var key = new ObserverKey(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId);
+            var key = new ObserverKey(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId);
             await GrainFactory.GetGrain<IObserver>(observer.ObserverId, key).ReplayPartition(eventSourceId);
         }
     }
