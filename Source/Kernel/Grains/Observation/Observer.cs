@@ -3,14 +3,13 @@
 
 using System.Collections.Immutable;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Runtime;
@@ -25,7 +24,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public class Observer : StateMachine<ObserverState>, IObserver
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly ILogger<Observer> _logger;
     readonly IPersistentState<FailedPartitions> _failuresState;
     IStreamProvider _streamProvider = null!;
@@ -35,6 +33,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
     IDisposable? _retryFailureTimer;
+    IEventSequence _eventSequence = null!;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
@@ -67,6 +66,10 @@ public class Observer : StateMachine<ObserverState>, IObserver
 
         _streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_observerKey.MicroserviceId, _observerKey.TenantId));
+
+        _eventSequence = GrainFactory.GetGrain<IEventSequence>(
+            _observerKey.EventSequenceId,
+            new EventSequenceKey(_observerKey.MicroserviceId, _observerKey.TenantId));
 
         return Task.CompletedTask;
     }
@@ -115,7 +118,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     public override IImmutableList<IState<ObserverState>> CreateStates() => new IState<ObserverState>[]
     {
         new States.Disconnected(),
-        new States.Routing(this, _eventSequenceStorageProvider()),
+        new States.Routing(this, _eventSequence),
         new States.CatchUp(_observerKey, _jobsManager),
         new States.Replay(_observerKey, _jobsManager),
         new States.Indexing(),

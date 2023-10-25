@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
 
@@ -14,21 +16,22 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 public class Routing : BaseObserverState
 {
     readonly IObserver _observer;
-    readonly IEventSequenceStorage _eventSequenceStorage;
+    readonly IEventSequence _eventSequence;
     ObserverSubscription _subscription;
-    TailEventSequenceNumbers _tailEventSequenceNumbers = TailEventSequenceNumbers.Empty;
+    EventSequenceNumber _tailEventSequenceNumber = EventSequenceNumber.Unavailable;
+    EventSequenceNumber _tailEventSequenceNumberForEventTypes = EventSequenceNumber.Unavailable;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Routing"/> class.
     /// </summary>
     /// <param name="observer"><see cref="IObserver"/> the state belongs to.</param>
-    /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> provider.</param>
+    /// <param name="eventSequence"><see cref="IEventSequenceStorage"/> provider.</param>
     public Routing(
         IObserver observer,
-        IEventSequenceStorage eventSequenceStorage)
+        IEventSequence eventSequence)
     {
         _observer = observer;
-        _eventSequenceStorage = eventSequenceStorage;
+        _eventSequence = eventSequence;
         _subscription = ObserverSubscription.Unsubscribed;
     }
 
@@ -51,7 +54,8 @@ public class Routing : BaseObserverState
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
         _subscription = await _observer.GetSubscription();
-        _tailEventSequenceNumbers = await _eventSequenceStorage.GetTailSequenceNumbers(state.EventSequenceId, _subscription.EventTypes);
+        _tailEventSequenceNumber = await _eventSequence.GetTailSequenceNumber();
+        _tailEventSequenceNumberForEventTypes = await _eventSequence.GetTailSequenceNumberForEventTypes(_subscription.EventTypes);
 
         if (!_subscription.IsSubscribed)
         {
@@ -81,8 +85,8 @@ public class Routing : BaseObserverState
     public override Task<ObserverState> OnLeave(ObserverState state)
     {
         state.EventTypes = _subscription.EventTypes;
-        state.NextEventSequenceNumber = _tailEventSequenceNumbers.Tail.Next();
-        state.NextEventSequenceNumberForEventTypes = _tailEventSequenceNumbers.TailForEventTypes.Next();
+        state.NextEventSequenceNumber = _tailEventSequenceNumber.Next();
+        state.NextEventSequenceNumberForEventTypes = _tailEventSequenceNumberForEventTypes.Next();
 
         return Task.FromResult(state);
     }
@@ -94,14 +98,14 @@ public class Routing : BaseObserverState
         IsFallingBehind();
 
     bool IsFallingBehind() =>
-        !_tailEventSequenceNumbers.TailForEventTypes.IsUnavailable && _tailEventSequenceNumbers.TailForEventTypes < _tailEventSequenceNumbers.Tail;
+        !_tailEventSequenceNumberForEventTypes.IsUnavailable && _tailEventSequenceNumberForEventTypes < _tailEventSequenceNumber;
 
     bool NeedsToReplay(ObserverState state) =>
         state.RunningState == ObserverRunningState.Replaying ||
         (HasDefinitionChanged(state) && HasEventsInSequence());
 
     bool HasEventsInSequence() =>
-        _tailEventSequenceNumbers.Tail.IsActualValue && _tailEventSequenceNumbers.TailForEventTypes.IsActualValue;
+        _tailEventSequenceNumber.IsActualValue && _tailEventSequenceNumberForEventTypes.IsActualValue;
 
     bool HasDefinitionChanged(ObserverState state) =>
         state.EventTypes.Count() != _subscription.EventTypes.Count() ||
