@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
@@ -65,13 +64,18 @@ public class ImmediateProjection : Grain, IImmediateProjection
     {
         if (_projectionKey is null)
         {
-            return new ImmediateProjectionResult(new JsonObject(), Array.Empty<PropertyPath>(), 0);
+            return ImmediateProjectionResult.Empty;
         }
 
         // TODO: This is a temporary work-around till we fix #264 & #265
         _executionContextManager.Establish(_projectionKey.TenantId, CorrelationId.New(), _projectionKey.MicroserviceId);
 
         var projection = _projectionManagerProvider().Get(projectionId);
+
+        if (!projection.EventTypes.Any())
+        {
+            return ImmediateProjectionResult.Empty;
+        }
 
         var affectedProperties = new HashSet<PropertyPath>();
 
