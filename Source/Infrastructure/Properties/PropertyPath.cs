@@ -56,22 +56,6 @@ public class PropertyPath
     }
 
     /// <summary>
-    /// Create a new <see cref="PropertyPath"/> from segments.
-    /// </summary>
-    /// <param name="segments">Segments to initialize it with.</param>
-    /// <returns>A new <see cref="PropertyPath"/> instance.</returns>
-    public static PropertyPath CreateFrom(IPropertyPathSegment[] segments)
-    {
-        var current = Root;
-        foreach (var segment in segments)
-        {
-            current += segment;
-        }
-
-        return current;
-    }
-
-    /// <summary>
     /// Gets the full path of the property.
     /// </summary>
     public string Path { get; }
@@ -170,6 +154,22 @@ public class PropertyPath
             ThisAccessor => left.AddThisAccessor(),
             _ => left
         };
+    }
+
+    /// <summary>
+    /// Create a new <see cref="PropertyPath"/> from segments.
+    /// </summary>
+    /// <param name="segments">Segments to initialize it with.</param>
+    /// <returns>A new <see cref="PropertyPath"/> instance.</returns>
+    public static PropertyPath CreateFrom(IPropertyPathSegment[] segments)
+    {
+        var current = Root;
+        foreach (var segment in segments)
+        {
+            current += segment;
+        }
+
+        return current;
     }
 
     /// <summary>
