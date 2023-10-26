@@ -6,6 +6,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions;
+using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.Keys;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
@@ -21,6 +22,7 @@ namespace Aksio.Cratis.Kernel.Engines.Projections;
 public class ProjectionFactory : IProjectionFactory
 {
     readonly IModelPropertyExpressionResolvers _propertyMapperExpressionResolvers;
+    readonly IEventValueProviderExpressionResolvers _eventValueProviderExpressionResolvers;
     readonly IKeyExpressionResolvers _keyExpressionResolvers;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly IEventSequenceStorage _eventProvider;
@@ -29,16 +31,19 @@ public class ProjectionFactory : IProjectionFactory
     /// Initializes a new instance of the <see cref="ProjectionFactory"/> class.
     /// </summary>
     /// <param name="propertyMapperExpressionResolvers"><see cref="IModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
+    /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving expressions for accessing values on events.</param>
     /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for providing events from the event store.</param>
     public ProjectionFactory(
         IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
+        IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers,
         IKeyExpressionResolvers keyExpressionResolvers,
         IExpandoObjectConverter expandoObjectConverter,
         IEventSequenceStorage eventProvider)
     {
         _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
+        _eventValueProviderExpressionResolvers = eventValueProviderExpressionResolvers;
         _keyExpressionResolvers = keyExpressionResolvers;
         _expandoObjectConverter = expandoObjectConverter;
         _eventProvider = eventProvider;
@@ -100,6 +105,27 @@ public class ProjectionFactory : IProjectionFactory
         SetParentOnAllChildProjections(projection, childProjections);
         ResolveEventsForProjection(projection, childProjections, projectionDefinition, actualIdentifiedByProperty, hasParent);
 
+        if (projectionDefinition.FromEventProperty is not null)
+        {
+            var schemaProperty = model.Schema.GetSchemaPropertyForPropertyPath(childrenAccessorProperty);
+            schemaProperty ??= new JsonSchemaProperty
+            {
+                Type = projection.Model.Schema.Type,
+                Format = projection.Model.Schema.Format
+            };
+
+            var valueProvider = _eventValueProviderExpressionResolvers.Resolve(schemaProperty!, projectionDefinition.FromEventProperty.PropertyExpression);
+
+            projection.Event.Subscribe(_ =>
+            {
+                Console.WriteLine("ASDASD");
+            });
+
+            projection.Event
+                 .WhereEventTypeEquals(projectionDefinition.FromEventProperty.EventType)
+                .AddChildFromEventProperty(valueProvider);
+        }
+
         var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
@@ -120,10 +146,10 @@ public class ProjectionFactory : IProjectionFactory
                     var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
                     projected = projected
                         .ResolveJoin(_eventProvider, joinEventType, joinDefinition.On)
-                        .Project(
-                            childrenAccessorProperty,
-                            actualIdentifiedByProperty,
-                            joinPropertyMappers);
+                                        .Project(
+                                            childrenAccessorProperty,
+                                            actualIdentifiedByProperty,
+                                            joinPropertyMappers);
                 }
             }
         }
@@ -161,8 +187,20 @@ public class ProjectionFactory : IProjectionFactory
         return projection;
     }
 
-    PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(IProjection projection, PropertyPath propertyPath, string expression) =>
-        _propertyMapperExpressionResolvers.Resolve(propertyPath, projection.Model.Schema.GetSchemaPropertyForPropertyPath(propertyPath)!, expression);
+    PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(IProjection projection, PropertyPath propertyPath, string expression)
+    {
+        var schemaProperty = projection.Model.Schema.GetSchemaPropertyForPropertyPath(propertyPath);
+        if (propertyPath.LastSegment is ThisAccessor)
+        {
+            schemaProperty = new JsonSchemaProperty
+            {
+                Type = projection.Model.Schema.Type,
+                Format = projection.Model.Schema.Format
+            };
+        }
+
+        return _propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty!, expression);
+    }
 
     void ResolveEventsForProjection(IProjection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
     {

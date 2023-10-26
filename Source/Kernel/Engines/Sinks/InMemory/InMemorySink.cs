@@ -2,11 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Projections;
+using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Sinks;
 using Aksio.Json;
@@ -24,7 +26,6 @@ public class InMemorySink : ISink, IDisposable
     readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
     readonly Model _model;
     readonly ITypeFormats _typeFormats;
-    readonly IObjectComparer _comparer;
     bool _isReplaying;
 
     /// <summary>
@@ -32,15 +33,12 @@ public class InMemorySink : ISink, IDisposable
     /// </summary>
     /// <param name="model">The target <see cref="Model"/>.</param>
     /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
-    /// <param name="comparer"><see cref="IObjectComparer"/> used for complex comparisons of objects.</param>
     public InMemorySink(
         Model model,
-        ITypeFormats typeFormats,
-        IObjectComparer comparer)
+        ITypeFormats typeFormats)
     {
         _model = model;
         _typeFormats = typeFormats;
-        _comparer = comparer;
     }
 
     /// <inheritdoc/>
@@ -59,12 +57,6 @@ public class InMemorySink : ISink, IDisposable
     {
         var collection = Collection;
         var keyValue = GetActualKeyValue(key);
-
-        if (keyValue is ExpandoObject)
-        {
-            return Task.FromResult<ExpandoObject?>(collection.SingleOrDefault(kvp => _comparer.Equals(kvp.Key, keyValue, out _)).Value);
-        }
-
         if (collection.TryGetValue(keyValue, out var value)) return Task.FromResult<ExpandoObject?>(value);
 
         return Task.FromResult<ExpandoObject?>(null);
@@ -117,9 +109,16 @@ public class InMemorySink : ISink, IDisposable
 
     object GetActualKeyValue(Key key)
     {
-        if (key.Value is ExpandoObject)
+        if (key.Value is ExpandoObject expandoKey)
         {
-            return key.Value;
+            var stringBuilder = new StringBuilder();
+            foreach (var (_, value) in expandoKey.GetKeyValuePairs().OrderBy(_ => _.Key))
+            {
+                if (stringBuilder.Length > 0) stringBuilder.Append('_');
+                stringBuilder.Append(value);
+            }
+
+            return stringBuilder.ToString();
         }
 
         var targetType = _model.Schema.GetTargetTypeForPropertyPath("id", _typeFormats);

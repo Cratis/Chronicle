@@ -16,12 +16,20 @@ namespace Aksio.Cratis.Properties;
 /// <summary>
 /// Represents an encapsulation of a property in the system - used for accessing properties on objects.
 /// </summary>
+/// <remarks>
+/// <see cref="PropertyPath"/> is an immutable type. Every operation performed on it will return a new instance.
+/// </remarks>
 public class PropertyPath
 {
     /// <summary>
     /// Represents the not set value.
     /// </summary>
     public const string NotSetValue = "*NotSet*";
+
+    /// <summary>
+    /// Represents the this accessor.
+    /// </summary>
+    public const string ThisAccessorValue = "$this";
 
     /// <summary>
     /// Represents the root path.
@@ -42,17 +50,25 @@ public class PropertyPath
     /// <param name="path">Path to the property relative within an object.</param>
     public PropertyPath(string path)
     {
-        _segments = path.Split('.').Select<string, IPropertyPathSegment>(_ =>
-        {
-            var match = ArrayIndexRegex!.Match(_);
-            if (match.Success)
-            {
-                return new ArrayProperty(match.Groups["property"].Value.ToCamelCase());
-            }
-            return new PropertyName(_.ToCamelCase());
-        }).ToArray();
+        _segments = path.Split('.').Select(ResolvePropertyPathSegment).ToArray();
 
         Path = string.Join('.', (IEnumerable<object>)_segments);
+    }
+
+    /// <summary>
+    /// Create a new <see cref="PropertyPath"/> from segments.
+    /// </summary>
+    /// <param name="segments">Segments to initialize it with.</param>
+    /// <returns>A new <see cref="PropertyPath"/> instance.</returns>
+    public static PropertyPath CreateFrom(IPropertyPathSegment[] segments)
+    {
+        var current = Root;
+        foreach (var segment in segments)
+        {
+            current += segment;
+        }
+
+        return current;
     }
 
     /// <summary>
@@ -151,6 +167,7 @@ public class PropertyPath
         {
             PropertyName => left.AddProperty(segment.Value),
             ArrayProperty => left.AddArrayIndex(segment.Value),
+            ThisAccessor => left.AddThisAccessor(),
             _ => left
         };
     }
@@ -207,6 +224,13 @@ public class PropertyPath
         }
         return new($"{Path}.{builder}");
     }
+
+    /// <summary>
+    /// Adds a <see cref="ThisAccessorValue"/> as segment by creating a new <see cref="PropertyPath"/>.
+    /// </summary>
+    /// <returns>A new <see cref="PropertyPath"/> with the segment appended.</returns>
+    /// <remarks>This operation does not mutate the original.</remarks>
+    public PropertyPath AddThisAccessor() => new($"{Path}.{ThisAccessorValue}");
 
     /// <summary>
     /// Check whether or not there is a value at the path of the property for a specific target.
@@ -313,4 +337,18 @@ public class PropertyPath
 
     /// <inheritdoc/>
     public override int GetHashCode() => Path.GetHashCode();
+
+    IPropertyPathSegment ResolvePropertyPathSegment(string segment)
+    {
+        var match = ArrayIndexRegex!.Match(segment);
+        if (match.Success)
+        {
+            return new ArrayProperty(match.Groups["property"].Value.ToCamelCase());
+        }
+        if (segment == ThisAccessorValue)
+        {
+            return new ThisAccessor();
+        }
+        return new PropertyName(segment.ToCamelCase());
+    }
 }

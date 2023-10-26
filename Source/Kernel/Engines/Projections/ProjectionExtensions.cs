@@ -130,6 +130,26 @@ public static class ProjectionExtensions
     }
 
     /// <summary>
+    /// Add a child from the value of an event property.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="valueProvider">The <see cref="ValueProvider{T}"/> for getting the value from the event.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> AddChildFromEventProperty(
+        this IObservable<ProjectionEventContext> observable,
+        ValueProvider<AppendedEvent> valueProvider)
+    {
+        observable.Subscribe(_ =>
+        {
+            var value = valueProvider(_.Event);
+
+            Console.WriteLine("Hello");
+        });
+
+        return observable;
+    }
+
+    /// <summary>
     /// Remove item based on event.
     /// </summary>
     /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
