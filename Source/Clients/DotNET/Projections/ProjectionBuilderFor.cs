@@ -82,6 +82,7 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
             _joinDefinitions,
             _childrenDefinitions,
             _allDefinition,
+            null,
             _removedWithEvent == default ? default : new RemovedWithDefinition(_removedWithEvent));
     }
 }

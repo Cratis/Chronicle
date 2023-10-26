@@ -54,7 +54,7 @@ public class AddChildBuilder<TParentModel, TChildModel, TEvent> : IAddChildBuild
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
     {
-        _fromBuilder!.UsingParentCompositeKey<TKeyType>(builderCallback);
+        _fromBuilder!.UsingParentCompositeKey(builderCallback);
         return this;
     }
 
