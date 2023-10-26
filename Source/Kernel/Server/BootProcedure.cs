@@ -10,6 +10,7 @@ using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
+using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Projections;
 using NJsonSchema;
 
@@ -98,6 +99,9 @@ public class BootProcedure : IPerformBootProcedure
                     await _grainFactory.GetGrain<IEventSequences>(0, new EventSequencesKey(microserviceId, tenantId)).Rehydrate();
                     stopwatch.Stop();
                     _logger.RehydratedEventSequences(microserviceId, tenantId, stopwatch.Elapsed);
+
+                    _logger.RehydrateJobs(microserviceId, tenantId);
+                    await _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(microserviceId, tenantId)).Rehydrate();
                 }
             }
 

@@ -9,6 +9,15 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public interface IJob : IGrainWithGuidCompoundKey
 {
     /// <summary>
+    /// Resume a job, either its paused, stopped or didn't get to finish before the host stopped.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// This method won't do anything if the job is already running.
+    /// </remarks>
+    Task Resume();
+
+    /// <summary>
     /// Stop a running job.
     /// </summary>
     /// <returns>Awaitable task.</returns>

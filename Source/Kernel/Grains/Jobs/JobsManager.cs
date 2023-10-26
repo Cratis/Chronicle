@@ -43,6 +43,18 @@ public class JobsManager : Grain, IJobsManager
     }
 
     /// <inheritdoc/>
+    public async Task Rehydrate()
+    {
+        _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
+        var runningJobs = await _jobStorageProvider().GetJobs(JobStatus.Running);
+        foreach (var runningJob in runningJobs)
+        {
+            var grainType = (Type)runningJob.Type;
+            GrainFactory.GetGrain(grainType, runningJob.Id, new JobKey(_key.MicroserviceId, _key.TenantId));
+        }
+    }
+
+    /// <inheritdoc/>
     public Task Start<TJob, TRequest>(JobId jobId, TRequest request)
         where TJob : IJob<TRequest>
     {

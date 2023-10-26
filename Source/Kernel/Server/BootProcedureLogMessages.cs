@@ -22,4 +22,7 @@ internal static partial class BootProcedureLogMessages
 
     [LoggerMessage(5, LogLevel.Information, "Rehydrated event sequences for microservice {MicroserviceId} and tenant {TenantId} in {Elapsed}")]
     internal static partial void RehydratedEventSequences(this ILogger logger, MicroserviceId microserviceId, TenantId tenantId, TimeSpan elapsed);
+
+    [LoggerMessage(6, LogLevel.Information, "Rehydrated jobs for microservice {MicroserviceId} and tenant {TenantId}")]
+    internal static partial void RehydrateJobs(this ILogger logger, MicroserviceId microserviceId, TenantId tenantId);
 }

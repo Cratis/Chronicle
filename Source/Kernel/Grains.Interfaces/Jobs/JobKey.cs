@@ -11,6 +11,11 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public record JobKey(MicroserviceId MicroserviceId, TenantId TenantId)
 {
     /// <summary>
+    /// Represents an unset key.
+    /// </summary>
+    public static readonly JobKey NotSet = new(MicroserviceId.Unspecified, TenantId.NotSet);
+
+    /// <summary>
     /// Implicitly convert from string to <see cref="JobKey"/>.
     /// </summary>
     /// <param name="key">String representation of the key.</param>

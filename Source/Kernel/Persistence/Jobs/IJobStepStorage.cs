@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 
 namespace Aksio.Cratis.Kernel.Persistence.Jobs;
@@ -24,6 +25,13 @@ public interface IJobStepStorage
     /// <param name="jobStepId"><see cref="JobStepId"/> for the step.</param>
     /// <returns>Awaitable task.</returns>
     Task Remove(JobId jobId, JobStepId jobStepId);
+
+    /// <summary>
+    /// Get all job steps for a specific job.
+    /// </summary>
+    /// <param name="jobId"><see cref="JobId"/> to get for.</param>
+    /// <returns>A collection of job step state objects.</returns>
+    Task<IImmutableSet<JobStepState>> GetForJob(JobId jobId);
 
     /// <summary>
     /// Observe job steps for a specific job.

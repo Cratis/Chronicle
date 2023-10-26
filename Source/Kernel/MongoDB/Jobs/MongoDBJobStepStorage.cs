@@ -51,6 +51,15 @@ public class MongoDBJobStepStorage : IJobStepStorage
     }
 
     /// <inheritdoc/>
+    public Task<IEnumerable<JobStepState>> GetForJob(JobId jobId)
+    {
+        var filter = GetJobIdFilter(jobId);
+        var cursor = Collection.FindAsync(filter).ConfigureAwait(false);
+
+
+    }
+
+    /// <inheritdoc/>
     public IObservable<IEnumerable<JobStepState>> ObserveForJob(JobId jobId)
     {
         throw new NotImplementedException();

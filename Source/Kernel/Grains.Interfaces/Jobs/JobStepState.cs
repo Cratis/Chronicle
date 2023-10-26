@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Orleans.Runtime;
+
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
@@ -8,6 +10,11 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// </summary>
 public class JobStepState
 {
+    /// <summary>
+    /// Gets or sets the <see cref="GrainId"/>.
+    /// </summary>
+    public GrainId GrainId { get; set; }
+
     /// <summary>
     /// Gets or sets the name of the job step.
     /// </summary>

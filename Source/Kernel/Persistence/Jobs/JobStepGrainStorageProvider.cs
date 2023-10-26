@@ -59,6 +59,8 @@ public class JobStepGrainStorageProvider : IGrainStorage
 
             await storage.Save(key.JobId, jobStepId, grainState.State);
             var actualState = (grainState.State as JobStepState)!;
+            actualState.GrainId = grainId;
+
             if (actualState.StatusChanges.Count > 1 &&
                 actualState.StatusChanges[^1].Status == JobStepStatus.Failed &&
                 actualState.StatusChanges[^2].Status == JobStepStatus.Running)

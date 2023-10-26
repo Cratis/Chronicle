@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Persistence.Jobs;
+using Microsoft.Extensions.DependencyInjection;
 using Orleans.Providers;
 
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
@@ -14,6 +16,10 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest>
     where TJobState : JobState<TRequest>
 {
+    bool _isRunning;
+    JobId _jobId = JobId.NotSet;
+    JobKey _jobKey = JobKey.NotSet;
+
     /// <summary>
     /// Gets whether or not to clean up data after the job has completed.
     /// </summary>
@@ -23,6 +29,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         StatusChanged(JobStatus.Running);
+
+        _jobId = this.GetPrimaryKey(out var keyExtension);
+        _jobKey = (JobKey)keyExtension;
 
         var type = GetType();
         var grainType = type.GetInterfaces().SingleOrDefault(_ => _.Name == $"I{type.Name}") ?? throw new InvalidGrainNameForJob(type);
@@ -34,8 +43,26 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <inheritdoc/>
     public Task Start(TRequest request)
     {
+        _isRunning = true;
         State.Request = request!;
         return StartJob(request);
+    }
+
+    /// <inheritdoc/>
+    public async Task Resume()
+    {
+        if (_isRunning) return;
+
+        var executionContextManager = ServiceProvider.GetRequiredService<IExecutionContextManager>();
+        executionContextManager.Establish(_jobKey.TenantId, executionContextManager.Current.CorrelationId, _jobKey.MicroserviceId);
+
+        var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
+        var steps = await stepStorage.GetForJob(_jobId);
+        foreach (var step in steps)
+        {
+            var stepType = (Type)step.Type;
+            GrainFactory.GetGrain(stepType, step.Id, new JobStepKey(_jobId, _jobKey.MicroserviceId, _jobKey.TenantId));
+        }
     }
 
     /// <inheritdoc/>

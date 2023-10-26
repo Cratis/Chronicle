@@ -11,6 +11,12 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public interface IJobsManager : IGrainWithIntegerCompoundKey
 {
     /// <summary>
+    /// Rehydrates the jobs manager and all running jobs.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Rehydrate();
+
+    /// <summary>
     /// Start a job.
     /// </summary>
     /// <param name="jobId">The <see cref="JobId"/> uniquely identifying the job.</param>
