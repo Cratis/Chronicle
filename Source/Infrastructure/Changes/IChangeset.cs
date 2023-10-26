@@ -73,6 +73,13 @@ public interface IChangeset<TSource, TTarget>
     IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, IArrayIndexers arrayIndexers);
 
     /// <summary>
+    /// Adds a child as is to a given children property.
+    /// </summary>
+    /// <param name="childrenProperty"><see cref="PropertyPath"/> for accessing the children collection.</param>
+    /// <param name="child">Child to add.</param>
+    void AddChild(PropertyPath childrenProperty, object child);
+
+    /// <summary>
     /// Applies properties to the child in the model to the <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
     /// <typeparam name="TChild">Type of child.</typeparam>
