@@ -117,7 +117,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
     public async Task<ProjectionResult<TModel>> GetById(EventSourceId eventSourceId, object? modelId = null)
     {
         var projectedEventsCount = 0;
-        modelId ??= eventSourceId;
+        modelId ??= eventSourceId.Value;
         var cursor = await _eventSequenceStorage.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
         while (await cursor.MoveNext())
         {
