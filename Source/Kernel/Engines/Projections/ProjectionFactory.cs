@@ -115,15 +115,9 @@ public class ProjectionFactory : IProjectionFactory
             };
 
             var valueProvider = _eventValueProviderExpressionResolvers.Resolve(schemaProperty!, projectionDefinition.FromEventProperty.PropertyExpression);
-
-            projection.Event.Subscribe(_ =>
-            {
-                Console.WriteLine("ASDASD");
-            });
-
             projection.Event
-                 .WhereEventTypeEquals(projectionDefinition.FromEventProperty.EventType)
-                .AddChildFromEventProperty(valueProvider);
+                 .WhereEventTypeEquals(projectionDefinition.FromEventProperty.Event)
+                .AddChildFromEventProperty(childrenAccessorProperty, valueProvider);
         }
 
         var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
@@ -208,7 +202,12 @@ public class ProjectionFactory : IProjectionFactory
         var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
         eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
 
-        if (projectionDefinition.RemovedWith != default)
+        if (projectionDefinition.FromEventProperty is not null)
+        {
+            eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.FromEventProperty.Event, KeyResolvers.FromEventSourceId));
+        }
+
+        if (projectionDefinition.RemovedWith is not null)
         {
             eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId));
             projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);

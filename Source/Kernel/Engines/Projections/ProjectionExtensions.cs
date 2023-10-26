@@ -9,6 +9,7 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Properties;
+using Aksio.Reflection;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 
@@ -133,17 +134,23 @@ public static class ProjectionExtensions
     /// Add a child from the value of an event property.
     /// </summary>
     /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="childrenProperty">The property in which children are stored on the object.</param>///
     /// <param name="valueProvider">The <see cref="ValueProvider{T}"/> for getting the value from the event.</param>
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> AddChildFromEventProperty(
         this IObservable<ProjectionEventContext> observable,
+        PropertyPath childrenProperty,
         ValueProvider<AppendedEvent> valueProvider)
     {
         observable.Subscribe(_ =>
         {
             var value = valueProvider(_.Event);
+            if (!value.GetType().IsAPrimitiveType())
+            {
+                value = value.AsExpandoObject();
+            }
 
-            Console.WriteLine("Hello");
+            _.Changeset.AddChild(childrenProperty, value);
         });
 
         return observable;

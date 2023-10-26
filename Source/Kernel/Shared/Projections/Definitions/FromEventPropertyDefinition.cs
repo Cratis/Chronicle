@@ -8,6 +8,6 @@ namespace Aksio.Cratis.Projections.Definitions;
 /// <summary>
 /// Represents the definition of a child projection based on one property in an event.
 /// </summary>
-/// <param name="EventType"><see cref="EventType"/> the property is on.</param>
+/// <param name="Event"><see cref="EventType"/> the property is on.</param>
 /// <param name="PropertyExpression"><see cref="PropertyExpression"/> within the event.</param>
-public record FromEventPropertyDefinition(EventType EventType, PropertyExpression PropertyExpression);
+public record FromEventPropertyDefinition(EventType Event, PropertyExpression PropertyExpression);
