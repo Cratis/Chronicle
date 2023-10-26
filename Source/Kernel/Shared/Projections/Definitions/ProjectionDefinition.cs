@@ -33,7 +33,7 @@ public record ProjectionDefinition(
     IDictionary<EventType, JoinDefinition> Join,
     IDictionary<PropertyPath, ChildrenDefinition> Children,
     AllDefinition All,
-    FromEventPropertyDefinition? FromEventProperty,
+    FromEventPropertyDefinition? FromEventProperty = default,
     RemovedWithDefinition? RemovedWith = default)
 {
     /// <summary>

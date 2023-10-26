@@ -27,8 +27,8 @@ public record ChildrenDefinition(
     IDictionary<EventType, JoinDefinition> Join,
     IDictionary<PropertyPath, ChildrenDefinition> Children,
     AllDefinition All,
-    FromEventPropertyDefinition? FromEventProperty,
-    RemovedWithDefinition? RemovedWith) :
+    FromEventPropertyDefinition? FromEventProperty = default,
+    RemovedWithDefinition? RemovedWith = default) :
     ProjectionDefinition(
         Guid.Empty,
         string.Empty,
