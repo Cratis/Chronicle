@@ -259,7 +259,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
             return;
         }
 
-        var shouldHandle = events.Any(_ => State.EventTypes.Contains(_.Metadata.Type));
+        var shouldHandle = events.Any(_ => _subscription.EventTypes.Contains(_.Metadata.Type));
         if (!shouldHandle)
         {
             State.NextEventSequenceNumber = events.Last().Metadata.SequenceNumber.Next();
