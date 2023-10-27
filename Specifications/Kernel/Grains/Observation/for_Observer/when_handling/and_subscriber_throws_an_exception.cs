@@ -5,7 +5,7 @@ using Aksio.Cratis.Kernel.Keys;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
-public class and_subscriber_throws_an_exception : given.an_observer_with_subscription
+public class and_subscriber_throws_an_exception : given.an_observer_with_subscription_for_specific_event_type
 {
     const string exception_message = "Something went wrong";
     const string event_source_id = "Something";
@@ -14,12 +14,12 @@ public class and_subscriber_throws_an_exception : given.an_observer_with_subscri
     void Establish() =>
         subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Throws(new ExceptionWithPreDefinedStackTrace(exception_message, exception_stack_trace));
 
-    async Task Because() => await observer.Handle(event_source_id, new[] { AppendedEvent.EmptyWithEventSequenceNumber(42UL) });
+    async Task Because() => await observer.Handle(event_source_id, new[] { AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL) });
 
     [Fact] void should_write_state_once() => written_states.Count.ShouldEqual(1);
     [Fact] void should_write_failed_partitions_state_once() => written_failed_partitions_states.Count.ShouldEqual(1);
     [Fact] void should_add_failed_partition() => written_failed_partitions_states[0].Partitions.Count().ShouldEqual(1);
-    [Fact] void should_capture_partition() => written_failed_partitions_states[0].Partitions.First().Partition.ShouldEqual((Key)event_source_id);
+    [Fact] void should_capture_partition() => written_failed_partitions_states[0].Partitions.First().Partition.Value.ShouldEqual(event_source_id);
     [Fact] void should_capture_exception_message() => written_failed_partitions_states[0].Partitions.First().Attempts.First().Messages.First().ShouldEqual(exception_message);
     [Fact] void should_capture_exception_stack_Trace() => written_failed_partitions_states[0].Partitions.First().Attempts.First().StackTrace.ShouldEqual(exception_stack_trace);
     [Fact] void should_capture_event_sequence_number() => written_failed_partitions_states[0].Partitions.First().Attempts.First().SequenceNumber.ShouldEqual((EventSequenceNumber)42UL);

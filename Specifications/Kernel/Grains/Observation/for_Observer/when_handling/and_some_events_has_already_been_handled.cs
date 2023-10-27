@@ -3,12 +3,12 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
-public class and_some_events_has_already_been_handled : given.an_observer_with_subscription
+public class and_some_events_has_already_been_handled : given.an_observer_with_subscription_for_specific_event_type
 {
     readonly IEnumerable<AppendedEvent> events = new[]
     {
-        AppendedEvent.EmptyWithEventSequenceNumber(42UL),
-        AppendedEvent.EmptyWithEventSequenceNumber(43UL),
+        AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL),
+        AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL),
     };
 
     void Establish()
