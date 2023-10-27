@@ -25,6 +25,12 @@ public record Key(object Value, ArrayIndexers ArrayIndexers)
     public static implicit operator Key(EventSourceId eventSourceId) => new(eventSourceId.Value, ArrayIndexers.NoIndexers);
 
     /// <summary>
+    /// Implicitly convert from a <see cref="string"/> to a <see cref="Key"/>.
+    /// </summary>
+    /// <param name="value">String to convert from.</param>
+    public static implicit operator Key(string value) => new(value, ArrayIndexers.NoIndexers);
+
+    /// <summary>
     /// Implicitly convert from a <see cref="Key"/> to a <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="key"><see cref="Key"/> to convert from.</param>
