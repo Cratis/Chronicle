@@ -21,5 +21,8 @@ public class NullJob : IJob
     public Task OnStepSuccessful(JobStepId stepId) => Task.CompletedTask;
 
     /// <inheritdoc/>
+    public Task Resume() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task Stop() => Task.CompletedTask;
 }
