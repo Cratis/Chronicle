@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
@@ -40,6 +39,7 @@ public class a_routing_state : Specification
 
         observer.Setup(_ => _.GetSubscription()).Returns(() => Task.FromResult(subscription));
 
-        tail_event_sequence_numbers = new TailEventSequenceNumbers(stored_state.EventSequenceId, subscription.EventTypes.ToImmutableList(), 0, 0);
+        event_sequence.Setup(_ => _.GetTailSequenceNumber()).Returns(() => Task.FromResult(EventSequenceNumber.First));
+        event_sequence.Setup(_ => _.GetTailSequenceNumberForEventTypes(It.IsAny<IEnumerable<EventType>>())).Returns(() => Task.FromResult(EventSequenceNumber.First));
     }
 }

@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
-public class and_events_has_already_been_handled : given.an_observer_with_subscription
+public class and_events_has_already_been_handled : given.an_observer_with_subscription_for_specific_event_type
 {
     void Establish()
     {
@@ -11,7 +11,7 @@ public class and_events_has_already_been_handled : given.an_observer_with_subscr
         state.LastHandledEventSequenceNumber = 54UL;
     }
 
-    async Task Because() => await observer.Handle("Something", new[] { AppendedEvent.EmptyWithEventSequenceNumber(43UL) });
+    async Task Because() => await observer.Handle("Something", new[] { AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL) });
 
     [Fact] void should_not_forward_to_subscriber() => subscriber.Verify(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()), Never);
     [Fact] void should_not_set_next_sequence_number() => state.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)53UL);

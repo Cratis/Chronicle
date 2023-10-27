@@ -5,7 +5,7 @@ using Aksio.Cratis.Kernel.Observation;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
-public class and_partition_is_failed : given.an_observer_with_subscription
+public class and_partition_is_failed : given.an_observer_with_subscription_for_specific_event_type
 {
     const string event_source_id = "Something";
 
@@ -28,7 +28,7 @@ public class and_partition_is_failed : given.an_observer_with_subscription
         state.LastHandledEventSequenceNumber = 54UL;
     }
 
-    async Task Because() => await observer.Handle(event_source_id, new[] { AppendedEvent.EmptyWithEventSequenceNumber(43UL) });
+    async Task Because() => await observer.Handle("Something", new[] { AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL) });
 
     [Fact] void should_not_forward_to_subscriber() => subscriber.Verify(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()), Never);
     [Fact] void should_not_set_next_sequence_number() => state.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)53UL);
