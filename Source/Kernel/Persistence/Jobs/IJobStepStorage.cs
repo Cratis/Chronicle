@@ -31,7 +31,7 @@ public interface IJobStepStorage
     /// </summary>
     /// <param name="jobId"><see cref="JobId"/> to get for.</param>
     /// <returns>A collection of job step state objects.</returns>
-    Task<IImmutableSet<JobStepState>> GetForJob(JobId jobId);
+    Task<IImmutableList<JobStepState>> GetForJob(JobId jobId);
 
     /// <summary>
     /// Observe job steps for a specific job.

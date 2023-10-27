@@ -9,16 +9,13 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// <summary>
 /// Represents a step in a job.
 /// </summary>
-/// <typeparam name="TRequest">Type of the request for the job.</typeparam>
-public interface IJobStep<TRequest> : ISyncWorker<TRequest, object>, IGrainWithGuidCompoundKey
+public interface IJobStep : IGrainWithGuidCompoundKey
 {
     /// <summary>
-    /// Start the job step.
+    /// Resume a job step.
     /// </summary>
-    /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>
-    /// <param name="request">Request to start it with.</param>
     /// <returns>Awaitable task.</returns>
-    Task Start(GrainId jobId, TRequest request);
+    Task Resume();
 
     /// <summary>
     /// Stop the job step.
@@ -40,4 +37,19 @@ public interface IJobStep<TRequest> : ISyncWorker<TRequest, object>, IGrainWithG
     /// <param name="exceptionStackTrace">Exception stack trace.</param>
     /// <returns>Awaitable task.</returns>
     Task ReportFailure(IList<string> exceptionMessages, string exceptionStackTrace);
+}
+
+/// <summary>
+/// Represents a step in a job.
+/// </summary>
+/// <typeparam name="TRequest">Type of the request for the job.</typeparam>
+public interface IJobStep<TRequest> : ISyncWorker<TRequest, object>, IJobStep
+{
+    /// <summary>
+    /// Start the job step.
+    /// </summary>
+    /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>
+    /// <param name="request">Request to start it with.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Start(GrainId jobId, TRequest request);
 }

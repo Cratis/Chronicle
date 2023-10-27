@@ -7,17 +7,17 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 
-internal static partial class ObserverStorageProviderLogMessages
+internal static partial class MongoDBObserverStorageLogMessages
 {
     [LoggerMessage(0, LogLevel.Trace, "Getting tail sequence number for observer {ObserverId} for tenant {TenantId} and microservice {MicroserviceId}")]
-    internal static partial void GettingTailSequenceNumber(this ILogger<ObserverStorageProvider> logger, ObserverId observerId, TenantId tenantId, MicroserviceId microserviceId);
+    internal static partial void GettingTailSequenceNumber(this ILogger<MongoDBObserverStorage> logger, ObserverId observerId, TenantId tenantId, MicroserviceId microserviceId);
 
     [LoggerMessage(1, LogLevel.Trace, "Got tail sequence number {TailSequenceNumber} for observer {ObserverId} for tenant {TenantId} and microservice {MicroserviceId}")]
-    internal static partial void GotTailSequenceNumber(this ILogger<ObserverStorageProvider> logger, ObserverId observerId, TenantId tenantId, MicroserviceId microserviceId, EventSequenceNumber tailSequenceNumber);
+    internal static partial void GotTailSequenceNumber(this ILogger<MongoDBObserverStorage> logger, ObserverId observerId, TenantId tenantId, MicroserviceId microserviceId, EventSequenceNumber tailSequenceNumber);
 
     [LoggerMessage(2, LogLevel.Trace, "Getting next sequence number greater or equal than {SequenceNumber} for observer {ObserverId} for tenant {TenantId} and microservice {MicroserviceId}")]
-    internal static partial void GettingNextSequenceNumberGreaterOrEqualThan(this ILogger<ObserverStorageProvider> logger, ObserverId observerId, TenantId tenantId, MicroserviceId microserviceId, EventSequenceNumber sequenceNumber);
+    internal static partial void GettingNextSequenceNumberGreaterOrEqualThan(this ILogger<MongoDBObserverStorage> logger, ObserverId observerId, TenantId tenantId, MicroserviceId microserviceId, EventSequenceNumber sequenceNumber);
 
     [LoggerMessage(3, LogLevel.Trace, "Got next sequence number {NextSequenceNumber} for observer {ObserverId} for tenant {TenantId} and microservice {MicroserviceId}")]
-    internal static partial void GotNextSequenceNumber(this ILogger<ObserverStorageProvider> logger, ObserverId observerId, TenantId tenantId, MicroserviceId microserviceId, EventSequenceNumber nextSequenceNumber);
+    internal static partial void GotNextSequenceNumber(this ILogger<MongoDBObserverStorage> logger, ObserverId observerId, TenantId tenantId, MicroserviceId microserviceId, EventSequenceNumber nextSequenceNumber);
 }

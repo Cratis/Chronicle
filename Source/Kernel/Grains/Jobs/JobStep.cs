@@ -75,6 +75,9 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     }
 
     /// <inheritdoc/>
+    public Task Resume() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task Stop() => Task.CompletedTask;
 
     /// <inheritdoc/>

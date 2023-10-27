@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Aksio.DependencyInversion;
@@ -51,12 +52,11 @@ public class MongoDBJobStepStorage : IJobStepStorage
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<JobStepState>> GetForJob(JobId jobId)
+    public async Task<IImmutableList<JobStepState>> GetForJob(JobId jobId)
     {
         var filter = GetJobIdFilter(jobId);
-        var cursor = Collection.FindAsync(filter).ConfigureAwait(false);
-
-
+        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
+        return cursor.ToList().Select(_ => BsonSerializer.Deserialize<JobStepState>(_)).ToImmutableList();
     }
 
     /// <inheritdoc/>

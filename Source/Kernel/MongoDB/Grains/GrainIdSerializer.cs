@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.MongoDB.Grains;
 public class GrainIdSerializer : IBsonSerializer<GrainId>
 {
     /// <inheritdoc/>
-    public Type ValueType => typeof(GrainId)
+    public Type ValueType => typeof(GrainId);
 
     /// <inheritdoc/>
     public GrainId Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args) => GrainId.Parse(context.Reader.ReadString());

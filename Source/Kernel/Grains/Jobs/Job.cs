@@ -60,8 +60,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         var steps = await stepStorage.GetForJob(_jobId);
         foreach (var step in steps)
         {
-            var stepType = (Type)step.Type;
-            GrainFactory.GetGrain(stepType, step.Id, new JobStepKey(_jobId, _jobKey.MicroserviceId, _jobKey.TenantId));
+            var jobStep = (GrainFactory.GetGrain(step.GrainId) as IJobStep)!;
+            await jobStep.Resume();
         }
     }
 
