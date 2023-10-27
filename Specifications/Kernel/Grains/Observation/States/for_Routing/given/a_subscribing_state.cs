@@ -4,13 +4,14 @@
 using System.Collections.Immutable;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
+using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Routing.given;
 
 public class a_routing_state : Specification
 {
     protected Mock<IObserver> observer;
-    protected Mock<IEventSequenceStorage> event_sequence_storage;
+    protected Mock<IEventSequence> event_sequence;
     protected Mock<IStateMachine<ObserverState>> state_machine;
     protected Routing state;
     protected ObserverState stored_state;
@@ -21,8 +22,8 @@ public class a_routing_state : Specification
     void Establish()
     {
         observer = new();
-        event_sequence_storage = new();
-        state = new Routing(observer.Object, event_sequence_storage.Object);
+        event_sequence = new();
+        state = new Routing(observer.Object, event_sequence.Object);
         state_machine = new();
         state.SetStateMachine(state_machine.Object);
         stored_state = new ObserverState
@@ -40,9 +41,5 @@ public class a_routing_state : Specification
         observer.Setup(_ => _.GetSubscription()).Returns(() => Task.FromResult(subscription));
 
         tail_event_sequence_numbers = new TailEventSequenceNumbers(stored_state.EventSequenceId, subscription.EventTypes.ToImmutableList(), 0, 0);
-
-        event_sequence_storage
-            .Setup(_ => _.GetTailSequenceNumbers(stored_state.EventSequenceId, IsAny<IEnumerable<EventType>>()))
-            .Returns(() => Task.FromResult(tail_event_sequence_numbers));
     }
 }

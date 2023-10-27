@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.given;
 public class an_observer : GrainSpecification<ObserverState>
 {
     protected Observer observer;
-    protected Mock<IEventSequenceStorage> event_sequence_storage;
+    protected Mock<IExecutionContextManager> execution_context_manager;
     protected Mock<IStreamProvider> stream_provider;
     protected Mock<IStreamProvider> sequence_stream_provider;
     protected Mock<IObserverSubscriber> subscriber;
@@ -29,7 +29,7 @@ public class an_observer : GrainSpecification<ObserverState>
 
     protected override Grain GetGrainInstance()
     {
-        event_sequence_storage = new();
+        execution_context_manager = new();
         failed_partitions_persistent_state = new();
         failed_partitions_state = new();
         failed_partitions_persistent_state.SetupGet(_ => _.State).Returns(failed_partitions_state);
@@ -42,7 +42,7 @@ public class an_observer : GrainSpecification<ObserverState>
             }).Returns(Task.CompletedTask);
 
         observer = new Observer(
-            () => event_sequence_storage.Object,
+            execution_context_manager.Object,
             failed_partitions_persistent_state.Object,
             Mock.Of<ILogger<Observer>>());
 

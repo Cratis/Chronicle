@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Observation;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_failing_partition;
@@ -40,7 +41,7 @@ public class and_partition_is_already_failed : given.an_observer
 
     [Fact] void should_have_only_one_failed_partition() => failed_partitions_state.Partitions.Count().ShouldEqual(1);
     [Fact] void should_have_two_attempts() => failed_partitions_state.Partitions.First().Attempts.Count().ShouldEqual(2);
-    [Fact] void should_have_the_correct_partition() => failed_partitions_state.Partitions.First().Partition.ShouldEqual((EventSourceId)event_source_id);
+    [Fact] void should_have_the_correct_partition() => failed_partitions_state.Partitions.First().Partition.ShouldEqual((Key)event_source_id);
     [Fact] void should_have_the_correct_tail_for_the_first_attempt() => failed_partitions_state.Partitions.First().Attempts.First().SequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_have_the_correct_message_for_the_first_attempt() => failed_partitions_state.Partitions.First().Attempts.First().Messages.First().ShouldEqual(first_message);
     [Fact] void should_have_the_correct_stack_trace_for_the_first_attempt() => failed_partitions_state.Partitions.First().Attempts.First().StackTrace.ShouldEqual(first_stack_trace);

@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Keys;
+
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
 public class and_subscriber_returns_failed : given.an_observer_with_subscription
@@ -26,7 +28,7 @@ public class and_subscriber_returns_failed : given.an_observer_with_subscription
     [Fact] void should_write_state_once() => written_states.Count.ShouldEqual(1);
     [Fact] void should_write_failed_partitions_state_once() => written_failed_partitions_states.Count.ShouldEqual(1);
     [Fact] void should_add_failed_partition() => written_failed_partitions_states[0].Partitions.Count().ShouldEqual(1);
-    [Fact] void should_capture_partition() => written_failed_partitions_states[0].Partitions.First().Partition.ShouldEqual((EventSourceId)event_source_id);
+    [Fact] void should_capture_partition() => written_failed_partitions_states[0].Partitions.First().Partition.ShouldEqual((Key)event_source_id);
     [Fact] void should_capture_exception_message() => written_failed_partitions_states[0].Partitions.First().Attempts.First().Messages.First().ShouldEqual(exception_message);
     [Fact] void should_capture_exception_stack_Trace() => written_failed_partitions_states[0].Partitions.First().Attempts.First().StackTrace.ShouldEqual(exception_stack_trace);
     [Fact] void should_capture_event_sequence_number() => written_failed_partitions_states[0].Partitions.First().Attempts.First().SequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
