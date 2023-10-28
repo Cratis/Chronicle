@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Aksio.DependencyInversion;
 using Aksio.Strings;
@@ -41,14 +42,14 @@ public class MongoDBJobStepStorage : IJobStepStorage
     /// <inheritdoc/>
     public async Task RemoveAllForJob(JobId jobId)
     {
-        await Collection.DeleteOneAsync(GetJobIdFilter(jobId)).ConfigureAwait(false);
-        await FailedCollection.DeleteOneAsync(GetJobIdFilter(jobId)).ConfigureAwait(false);
+        await Collection.DeleteOneAsync(GetJobIdFilter<BsonDocument>(jobId)).ConfigureAwait(false);
+        await FailedCollection.DeleteOneAsync(GetJobIdFilter<BsonDocument>(jobId)).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
     public async Task RemoveAllNonFailedForJob(JobId jobId)
     {
-        await Collection.DeleteOneAsync(GetJobIdFilter(jobId)).ConfigureAwait(false);
+        await Collection.DeleteOneAsync(GetJobIdFilter<BsonDocument>(jobId)).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -61,7 +62,7 @@ public class MongoDBJobStepStorage : IJobStepStorage
     /// <inheritdoc/>
     public async Task<IImmutableList<JobStepState>> GetForJob(JobId jobId, params JobStepStatus[] statuses)
     {
-        var filter = GetJobIdFilter(jobId);
+        var filter = GetJobIdFilter<BsonDocument>(jobId);
         if (statuses.Length > 0)
         {
             filter &= Builders<BsonDocument>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
@@ -74,17 +75,22 @@ public class MongoDBJobStepStorage : IJobStepStorage
     /// <inheritdoc/>
     public IObservable<IEnumerable<JobStepState>> ObserveForJob(JobId jobId)
     {
-        throw new NotImplementedException();
+        var filter = GetJobIdFilter<ChangeStreamDocument<BsonDocument>>(jobId, "fullDocument.");
+        var initialItems = GetForJob(jobId).GetAwaiter().GetResult();
+
+        return Collection.Observe(initialItems, HandleChangesForJobSteps, filter);
     }
 
     /// <summary>
     /// Get the id filter for a given <see cref="JobId"/> and <see cref="JobStepId"/>.
     /// </summary>
     /// <param name="jobId">Identifier of the job.</param>
+    /// <param name="prefix">The prefix to prepend to the field to query for.</param>
+    /// <typeparam name="TDocument">Type of document to query.</typeparam>
     /// <returns><see cref="FilterDefinition{T}"/> for the BsonDocument.</returns>
-    protected FilterDefinition<BsonDocument> GetJobIdFilter(Guid jobId) =>
-        Builders<BsonDocument>.Filter.Eq(
-            new StringFieldDefinition<BsonDocument, BsonBinaryData>("_id.jobId"),
+    protected FilterDefinition<TDocument> GetJobIdFilter<TDocument>(Guid jobId, string prefix = "") =>
+        Builders<TDocument>.Filter.Eq(
+            new StringFieldDefinition<TDocument, BsonBinaryData>($"{prefix}_id.jobId"),
             new BsonBinaryData(jobId, GuidRepresentation.Standard));
 
     /// <summary>
@@ -106,6 +112,14 @@ public class MongoDBJobStepStorage : IJobStepStorage
                     "jobStepId", new BsonBinaryData(jobStepId, GuidRepresentation.Standard)
                 }
             });
+
+    void HandleChangesForJobSteps(IChangeStreamCursor<ChangeStreamDocument<BsonDocument>> cursor, List<JobStepState> jobs)
+    {
+        foreach (var change in cursor.Current)
+        {
+            var state = BsonSerializer.Deserialize<JobStepState>(change.FullDocument);
+        }
+    }
 }
 
 /// <summary>
@@ -143,6 +157,9 @@ public class MongoDBJobStepStorage<TJobStepState> : MongoDBJobStepStorage, IJobS
         var filter = GetIdFilter(jobId, jobStepId);
         var jobStepState = (state as JobStepState)!;
         var collection = jobStepState.Status == JobStepStatus.Failed ? FailedCollection : Collection;
-        await collection.ReplaceOneAsync(filter, state.ToBsonDocument(), new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+
+        var document = state.ToBsonDocument();
+        document.RemoveTypeInfo();
+        await collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 }

@@ -9,19 +9,31 @@ import { JobState } from 'API/jobs/JobState';
 import { useRouteParams } from './RouteParams';
 import { AllJobSteps } from 'API/jobs/AllJobSteps';
 import { JobStatus } from 'API/jobs/JobStatus';
+import { JobStepState } from 'API/jobs/JobStepState';
+import { JobStepStatus } from 'API/jobs/JobStepStatus';
 
-const getStatusText = (status: JobStatus) => {
+const getJobStatusText = (status: JobStatus) => {
     switch (status) {
         case JobStatus.none: return 'None';
         case JobStatus.running: return 'Running';
-        case JobStatus.completed: return 'Completed';
+        case JobStatus.completedSuccessfully: return 'Completed successfully';
         case JobStatus.completedWithFailures: return 'Completed with failures';
         case JobStatus.paused: return 'Paused';
         case JobStatus.stopped: return 'Stopped';
     }
 }
 
-const columns: GridColDef[] = [
+const getJobStepStatusText = (status: JobStepStatus) => {
+    switch (status) {
+        case JobStepStatus.unknown: return 'None';
+        case JobStepStatus.scheduled: return 'Scheduled';
+        case JobStepStatus.running: return 'Running';
+        case JobStepStatus.succeeded: return 'Succeeded';
+        case JobStepStatus.failed: return 'Failed';
+    }
+}
+
+const jobColumns: GridColDef[] = [
     {
         headerName: 'Name',
         field: 'name',
@@ -32,7 +44,7 @@ const columns: GridColDef[] = [
         field: 'status',
         width: 100,
         valueGetter: (params: GridValueGetterParams<JobState>) => {
-            return getStatusText(params.row.status);
+            return getJobStatusText(params.row.status);
         }
     },
     {
@@ -61,6 +73,22 @@ const columns: GridColDef[] = [
     }
 ];
 
+const jobStepColumns: GridColDef[] = [
+    {
+        headerName: 'Name',
+        field: 'name',
+        width: 300,
+    },
+    {
+        headerName: 'Status',
+        field: 'status',
+        width: 200,
+        valueGetter: (params: GridValueGetterParams<JobState>) => {
+            return getJobStepStatusText(params.row.status);
+        }
+    },
+]
+
 
 export const Jobs = () => {
     const { microserviceId } = useRouteParams();
@@ -82,7 +110,7 @@ export const Jobs = () => {
             <Grid container spacing={2} sx={{ height: '100%' }}>
                 <Grid item xs={8}>
                     <DataGrid
-                        columns={columns}
+                        columns={jobColumns}
                         filterMode="client"
                         sortingMode="client"
                         getRowId={(row: JobState) => row.id}
@@ -92,14 +120,14 @@ export const Jobs = () => {
                 </Grid>
 
                 <Grid item xs={4} >
-                    {/* <DataGrid
-                        columns={columns}
+                    <DataGrid
+                        columns={jobStepColumns}
                         filterMode="client"
                         sortingMode="client"
-                        getRowId={(row: any) => row.identifier}
-                        onRowSelectionModelChange={jobSelected}
-                        rows={jobs.data}
-                    /> */}
+                        getRowId={(row: JobStepState) => row.grainId}
+                        onRowSelectionModelChange={() => {}}
+                        rows={jobSteps.data}
+                    />
                 </Grid>
             </Grid>
         </Stack>

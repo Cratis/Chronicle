@@ -79,7 +79,7 @@ public class MongoDBJobStorage : IJobStorage
         return await cursor.ToListAsync().ConfigureAwait(false);
     }
 
-    void HandleChangesForJobs(IChangeStreamCursor<ChangeStreamDocument<BsonDocument>> cursor, List<JobState<object>> observers)
+    void HandleChangesForJobs(IChangeStreamCursor<ChangeStreamDocument<BsonDocument>> cursor, List<JobState<object>> jobs)
     {
         foreach (var changedJob in cursor.Current.Select(_ => _.FullDocument))
         {
@@ -88,17 +88,17 @@ public class MongoDBJobStorage : IJobStorage
             if (jobType is not null)
             {
                 var interfaces = jobType.GetInterfaces();
-                var observer = observers.Find(_ => _.Id == (JobId)changedJob["_id"].AsGuid);
+                var observer = jobs.Find(_ => _.Id == (JobId)changedJob["_id"].AsGuid);
 
                 var jobState = BsonSerializer.Deserialize<JobState<object>>(changedJob);
                 if (observer is not null)
                 {
-                    var index = observers.IndexOf(observer);
-                    observers[index] = jobState;
+                    var index = jobs.IndexOf(observer);
+                    jobs[index] = jobState;
                 }
                 else
                 {
-                    observers.Add(jobState);
+                    jobs.Add(jobState);
                 }
             }
         }
@@ -139,7 +139,7 @@ public class MongoDBJobStorage<TJobState> : MongoDBJobStorage, IJobStorage<TJobS
         var filter = GetIdFilter(jobId);
         var document = state.ToBsonDocument();
         document.Remove("_id");
-        RemoveTypeInfo(document);
+        document.RemoveTypeInfo();
         await Collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 
@@ -157,30 +157,5 @@ public class MongoDBJobStorage<TJobState> : MongoDBJobStorage, IJobStorage<TJobS
         var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
         var documents = await cursor.ToListAsync().ConfigureAwait(false);
         return documents.Select(_ => BsonSerializer.Deserialize<TJobState>(_)).ToImmutableList();
-    }
-
-    bool RemoveTypeInfo(BsonDocument document, BsonDocument? parent = null, string? childProperty = null)
-    {
-        var elementsToRemove = new List<string>();
-
-        foreach (var child in document.Where(_ => _.Value is BsonDocument))
-        {
-            if (RemoveTypeInfo(child.Value.AsBsonDocument, document, child.Name))
-            {
-                elementsToRemove.Add(child.Name);
-            }
-        }
-
-        foreach (var elementToRemove in elementsToRemove)
-        {
-            document.Remove(elementToRemove);
-        }
-
-        if (!string.IsNullOrEmpty(childProperty) && parent is not null)
-        {
-            return document.Any(_ => _.Name == "_t");
-        }
-
-        return false;
     }
 }
