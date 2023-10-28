@@ -45,6 +45,12 @@ public class MongoDBJobStepStorage : IJobStepStorage
     }
 
     /// <inheritdoc/>
+    public async Task RemoveAllNonFailedForJob(JobId jobId)
+    {
+        await Collection.DeleteOneAsync(GetJobIdFilter(jobId)).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     public async Task Remove(JobId jobId, JobStepId jobStepId)
     {
         await Collection.DeleteOneAsync(GetIdFilter(jobId, jobStepId)).ConfigureAwait(false);
@@ -72,14 +78,8 @@ public class MongoDBJobStepStorage : IJobStepStorage
     /// <returns><see cref="FilterDefinition{T}"/> for the BsonDocument.</returns>
     protected FilterDefinition<BsonDocument> GetJobIdFilter(Guid jobId) =>
         Builders<BsonDocument>.Filter.Eq(
-            new StringFieldDefinition<BsonDocument, BsonDocument>("_id"),
-            new BsonDocument
-            {
-                {
-                    "jobId",
-                    new BsonBinaryData(jobId, GuidRepresentation.Standard)
-                }
-            });
+            new StringFieldDefinition<BsonDocument, BsonBinaryData>("_id.jobId"),
+            new BsonBinaryData(jobId, GuidRepresentation.Standard));
 
     /// <summary>
     /// Get the id filter for a given <see cref="JobId"/> and <see cref="JobStepId"/>.
