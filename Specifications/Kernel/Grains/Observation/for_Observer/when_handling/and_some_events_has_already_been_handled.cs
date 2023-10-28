@@ -13,8 +13,12 @@ public class and_some_events_has_already_been_handled : given.an_observer_with_s
 
     void Establish()
     {
-        state.NextEventSequenceNumber = 43UL;
-        state.LastHandledEventSequenceNumber = 42UL;
+        state = state with
+        {
+            NextEventSequenceNumber = 43UL,
+            LastHandledEventSequenceNumber = 42UL
+        };
+
         subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok(43UL)));
     }
 

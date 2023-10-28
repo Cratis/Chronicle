@@ -9,9 +9,12 @@ public class and_subscribers_event_types_are_different : given.a_routing_state
 {
     void Establish()
     {
-        stored_state.EventTypes = new[]
+        stored_state = stored_state with
         {
-            new EventType("31252720-dcbb-47ae-927d-26070f7ef8ae", EventGeneration.First)
+            EventTypes = new[]
+            {
+                new EventType("31252720-dcbb-47ae-927d-26070f7ef8ae", EventGeneration.First)
+            }
         };
         subscription = subscription with
         {

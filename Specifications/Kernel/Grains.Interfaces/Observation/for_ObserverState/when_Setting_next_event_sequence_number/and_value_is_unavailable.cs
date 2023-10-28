@@ -15,7 +15,7 @@ public class and_value_is_unavailable : Specification
         };
     }
 
-    void Because() => state.NextEventSequenceNumber = EventSequenceNumber.Unavailable;
+    void Because() => state = state with { NextEventSequenceNumber = EventSequenceNumber.Unavailable };
 
     [Fact] void should_set_next_event_sequence_number_to_first() => state.NextEventSequenceNumber.ShouldEqual(EventSequenceNumber.First);
 }

@@ -8,7 +8,7 @@ public class and_subscriber_is_successful_but_last_handled_is_ahead : given.an_o
     void Establish()
     {
         subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok(42UL)));
-        state.LastHandledEventSequenceNumber = 44UL;
+        state = state with { LastHandledEventSequenceNumber = 44UL };
     }
 
     async Task Because() => await observer.Handle("Something", new[] { AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL) });

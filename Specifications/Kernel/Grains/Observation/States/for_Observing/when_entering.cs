@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Observing;
 
 public class when_entering : given.an_observing_state
 {
-    void Establish() => stored_state.NextEventSequenceNumber = 42UL;
+    void Establish() => stored_state = stored_state with { NextEventSequenceNumber = 42UL };
 
     async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
 

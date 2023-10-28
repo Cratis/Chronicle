@@ -3,13 +3,17 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
-public class and_subsciption_is_disconnected_with_last_successful_observation_being_unavailable : given.an_observer_with_subscription_for_specific_event_type
+public class and_subscription_is_disconnected_with_last_successful_observation_being_unavailable : given.an_observer_with_subscription_for_specific_event_type
 {
     void Establish()
     {
         subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable)));
-        state.NextEventSequenceNumber = 33UL;
-        state.LastHandledEventSequenceNumber = 34UL;
+
+        state = state with
+        {
+            NextEventSequenceNumber = 33UL,
+            LastHandledEventSequenceNumber = 34UL
+        };
     }
 
     async Task Because() => await observer.Handle("Something", new[] { AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL) });

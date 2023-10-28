@@ -7,7 +7,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Routing.when_enterin
 
 public class and_it_is_already_catching_up : given.a_routing_state
 {
-    void Establish() => stored_state.RunningState = ObserverRunningState.CatchingUp;
+    void Establish() => stored_state = stored_state with { RunningState = ObserverRunningState.CatchingUp };
 
     async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
 

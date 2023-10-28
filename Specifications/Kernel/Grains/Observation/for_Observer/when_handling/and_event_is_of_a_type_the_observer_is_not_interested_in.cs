@@ -7,8 +7,11 @@ public class and_event_is_of_a_type_the_observer_is_not_interested_in : given.an
 {
     void Establish()
     {
-        state.NextEventSequenceNumber = 53UL;
-        state.LastHandledEventSequenceNumber = 52UL;
+        state = state with
+        {
+            NextEventSequenceNumber = 53UL,
+            LastHandledEventSequenceNumber = 52UL
+        };
     }
 
     async Task Because() => await observer.Handle("Something", new[] { AppendedEvent.EmptyWithEventSequenceNumber(53UL) });

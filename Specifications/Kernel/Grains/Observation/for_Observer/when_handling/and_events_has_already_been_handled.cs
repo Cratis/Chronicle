@@ -7,8 +7,11 @@ public class and_events_has_already_been_handled : given.an_observer_with_subscr
 {
     void Establish()
     {
-        state.NextEventSequenceNumber = 53UL;
-        state.LastHandledEventSequenceNumber = 54UL;
+        state = state with
+        {
+            NextEventSequenceNumber = 53UL,
+            LastHandledEventSequenceNumber = 54UL
+        };
     }
 
     async Task Because() => await observer.Handle("Something", new[] { AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL) });

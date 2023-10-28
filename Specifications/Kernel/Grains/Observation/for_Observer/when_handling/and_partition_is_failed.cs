@@ -24,8 +24,11 @@ public class and_partition_is_failed : given.an_observer_with_subscription_for_s
                 }
             }
         });
-        state.NextEventSequenceNumber = 53UL;
-        state.LastHandledEventSequenceNumber = 54UL;
+        state = state with
+        {
+            NextEventSequenceNumber = 53UL,
+            LastHandledEventSequenceNumber = 54UL
+        };
     }
 
     async Task Because() => await observer.Handle("Something", new[] { AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL) });
