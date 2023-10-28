@@ -170,10 +170,12 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                     return new ExpandoObject();
                 }) ?? Task.CompletedTask);
 
+#pragma warning disable CA1508 // Avoid dead conditional code - false positive
                 if (reduceResult is null)
                 {
                     return new ObserverSubscriberResult(state, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
                 }
+#pragma warning restore CA1508 // Avoid dead conditional code
 
                 return new ObserverSubscriberResult(state, reduceResult.LastSuccessfullyObservedEvent, reduceResult.ErrorMessages, reduceResult.StackTrace);
             }
