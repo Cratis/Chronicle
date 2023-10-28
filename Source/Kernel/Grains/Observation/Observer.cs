@@ -77,7 +77,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        State.RunningState = ObserverRunningState.Disconnected;
+        State = State with { RunningState = ObserverRunningState.Disconnected };
         await WriteStateAsync();
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
@@ -85,8 +85,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <inheritdoc/>
     public async Task SetNameAndType(ObserverName name, ObserverType type)
     {
-        State.Name = name;
-        State.Type = type;
+        State = State with { Name = name, Type = type };
         await WriteStateAsync();
     }
 
@@ -262,7 +261,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
         var shouldHandle = events.Any(_ => _subscription.EventTypes.Contains(_.Metadata.Type));
         if (!shouldHandle)
         {
-            State.NextEventSequenceNumber = events.Last().Metadata.SequenceNumber.Next();
+            State = State with { NextEventSequenceNumber = events.Last().Metadata.SequenceNumber.Next() };
             await WriteStateAsync();
             return;
         }
@@ -311,10 +310,10 @@ public class Observer : StateMachine<ObserverState>, IObserver
                         }
                     }
 
-                    State.NextEventSequenceNumber = result.LastSuccessfulObservation.Next();
+                    State = State with { NextEventSequenceNumber = result.LastSuccessfulObservation.Next() };
                     if (State.LastHandledEventSequenceNumber < result.LastSuccessfulObservation)
                     {
-                        State.LastHandledEventSequenceNumber = result.LastSuccessfulObservation;
+                        State = State with { LastHandledEventSequenceNumber = result.LastSuccessfulObservation };
                     }
                 }
                 catch (Exception ex)
@@ -348,7 +347,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     {
         if (state is States.BaseObserverState observerState)
         {
-            State.RunningState = observerState.RunningState;
+            State = State with { RunningState = observerState.RunningState };
         }
 
         return Task.CompletedTask;

@@ -84,11 +84,12 @@ public class Routing : BaseObserverState
     /// <inheritdoc/>
     public override Task<ObserverState> OnLeave(ObserverState state)
     {
-        state.EventTypes = _subscription.EventTypes;
-        state.NextEventSequenceNumber = _tailEventSequenceNumber.Next();
-        state.NextEventSequenceNumberForEventTypes = _tailEventSequenceNumberForEventTypes.Next();
-
-        return Task.FromResult(state);
+        return Task.FromResult(state with
+        {
+            EventTypes = _subscription.EventTypes,
+            NextEventSequenceNumber = _tailEventSequenceNumber.Next(),
+            NextEventSequenceNumberForEventTypes = _tailEventSequenceNumberForEventTypes.Next()
+        });
     }
 
     bool IsIndexing(ObserverState state) => state.RunningState == ObserverRunningState.Indexing;

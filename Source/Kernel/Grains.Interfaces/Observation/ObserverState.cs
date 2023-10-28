@@ -10,65 +10,48 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Represents the state used for an observer.
 /// </summary>
-public class ObserverState
+/// <param name="EventTypes">The event types the observer is observing.</param>
+/// <param name="EventSequenceId">The <see cref="EventSequenceId"/> for the sequence being observed.</param>
+/// <param name="ObserverId">The <see cref="ObserverId"/> representing the observer uniquely.</param>
+/// <param name="Name">The name of the observer.</param>
+/// <param name="Type">The type of observer.</param>
+/// <param name="NextEventSequenceNumberForEventTypes">The next <see cref="EventSequenceNumber"/> for the event types the observer is for.</param>
+/// <param name="LastHandledEventSequenceNumber">The <see cref="EventSequenceNumber"/> of the last event the observer handled.</param>
+/// <param name="RunningState">The <see cref="ObserverRunningState"/> of the observer.</param>
+public record ObserverState(
+    IEnumerable<EventType> EventTypes,
+    EventSequenceId EventSequenceId,
+    ObserverId ObserverId,
+    ObserverName Name,
+    ObserverType Type,
+    EventSequenceNumber NextEventSequenceNumberForEventTypes,
+    EventSequenceNumber LastHandledEventSequenceNumber,
+    ObserverRunningState RunningState)
 {
     EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
 
     /// <summary>
-    /// Gets or sets the identifier of the observer state.
+    /// Initializes a new instance of the <see cref="ObserverState"/> class.
     /// </summary>
-    public string Id { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the event types the observer is observing.
-    /// </summary>
-    public IEnumerable<EventType> EventTypes { get; set; } = Array.Empty<EventType>();
-
-    /// <summary>
-    /// Gets or sets the <see cref="EventSequenceId"/> the state is for.
-    /// </summary>
-    public EventSequenceId EventSequenceId { get; set; } = EventSequenceId.Unspecified;
-
-    /// <summary>
-    /// Gets or sets the <see cref="EventSequenceId"/> the state is for.
-    /// </summary>
-    public ObserverId ObserverId { get; set; } = ObserverId.Unspecified;
-
-    /// <summary>
-    /// Gets or sets a friendly name for the observer.
-    /// </summary>
-    public ObserverName Name { get; set; } = ObserverName.NotSpecified;
-
-    /// <summary>
-    /// Gets or sets the <see cref="ObserverType"/>.
-    /// </summary>
-    public ObserverType Type { get; set; } = ObserverType.Unknown;
-
-    /// <summary>
-    /// Gets or sets the expected next event sequence number into the event log.
-    /// </summary>
-    /// <remarks>
-    /// When setting a value that is not an actual value, such as the system well known values, it will be set to <see cref="EventSequenceNumber.First"/>.
-    /// We only want to see actual values here.
-    /// </remarks>
-    public EventSequenceNumber NextEventSequenceNumber
+    public ObserverState()
+        : this(
+              Array.Empty<EventType>(),
+              EventSequenceId.Unspecified,
+              ObserverId.Unspecified,
+              ObserverName.NotSpecified,
+              ObserverType.Unknown,
+              EventSequenceNumber.Unavailable,
+              EventSequenceNumber.Unavailable,
+              ObserverRunningState.New)
     {
-        get => _nextEventSequenceNumber;
-        set => _nextEventSequenceNumber = !value.IsActualValue ? EventSequenceNumber.First : value;
     }
 
     /// <summary>
-    /// Gets or sets the next event sequence number for the event types the observer is observing.
+    /// Gets or inits the next <see cref="EventSequenceNumber"/> that the observer is expecting to be handling.
     /// </summary>
-    public EventSequenceNumber NextEventSequenceNumberForEventTypes { get; set; } = EventSequenceNumber.First;
-
-    /// <summary>
-    /// Gets or sets the last handled event in the event log, ever. This value will never reset during a rewind.
-    /// </summary>
-    public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.First;
-
-    /// <summary>
-    /// Gets or sets the running state.
-    /// </summary>
-    public ObserverRunningState RunningState { get; set; } = ObserverRunningState.New;
+    public EventSequenceNumber NextEventSequenceNumber
+    {
+        get => _nextEventSequenceNumber;
+        init => _nextEventSequenceNumber = !value.IsActualValue ? EventSequenceNumber.First : value;
+    }
 }

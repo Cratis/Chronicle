@@ -69,26 +69,25 @@ public class MongoDBObserverStorage : IObserverStorage
     /// <inheritdoc/>
     public async Task<ObserverState> GetState(ObserverId observerId, ObserverKey observerKey)
     {
-        var key = GetKeyFrom(observerKey, observerId);
-        var cursor = await Collection.FindAsync(_ => _.Id == key).ConfigureAwait(false);
-        return await cursor.FirstOrDefaultAsync().ConfigureAwait(false) ?? new ObserverState
-        {
-            Id = key,
-            EventSequenceId = observerKey.EventSequenceId,
-            ObserverId = observerId,
-            NextEventSequenceNumber = EventSequenceNumber.First,
-            LastHandledEventSequenceNumber = EventSequenceNumber.First,
-            RunningState = ObserverRunningState.New
-        };
+        var filter = GetKeyFilter(observerId, observerKey);
+        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
+        return await cursor.FirstOrDefaultAsync().ConfigureAwait(false) ?? new ObserverState(
+            Enumerable.Empty<EventType>(),
+            observerKey.EventSequenceId,
+            observerId,
+            ObserverName.NotSpecified,
+            ObserverType.Unknown,
+            EventSequenceNumber.First,
+            EventSequenceNumber.First,
+            ObserverRunningState.New);
     }
 
     /// <inheritdoc/>
     public async Task SaveState(ObserverId observerId, ObserverKey observerKey, ObserverState state)
     {
-        var key = GetKeyFrom(observerKey, observerId);
-
+        var filter = GetKeyFilter(observerId, observerKey);
         await Collection.ReplaceOneAsync(
-            _ => _.Id == key,
+            filter,
             state!,
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
@@ -122,7 +121,10 @@ public class MongoDBObserverStorage : IObserverStorage
         state.RunningState,
         Enumerable.Empty<FailedPartition>());
 
-    string GetKeyFrom(ObserverKey key, ObserverId observerId) => key.SourceMicroserviceId is not null ?
+    string GetKeyFrom(ObserverId observerId, ObserverKey key) => key.SourceMicroserviceId is not null ?
         $"{key.EventSequenceId} : {observerId} : {key.SourceMicroserviceId}" :
         $"{key.EventSequenceId} : {observerId}";
+
+    FilterDefinition<ObserverState> GetKeyFilter(ObserverId observerId, ObserverKey key) =>
+        Builders<ObserverState>.Filter.Eq(new StringFieldDefinition<ObserverState, string>("_id"), GetKeyFrom(observerId, key));
 }
