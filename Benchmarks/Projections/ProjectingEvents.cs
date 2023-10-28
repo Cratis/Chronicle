@@ -17,9 +17,9 @@ public class ProjectingEvents : ProjectionJob
     [Benchmark]
     public async Task InSequence()
     {
-        foreach (var @event in _eventsToHandle)
+        foreach (var partition in _eventsToHandle.GroupBy(_ => _.Context.EventSourceId))
         {
-            await Observer.Handle(@event, true);
+            await Observer.Handle(partition.Key, partition);
         }
     }
 
