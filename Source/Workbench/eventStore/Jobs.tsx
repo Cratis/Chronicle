@@ -83,7 +83,7 @@ const jobStepColumns: GridColDef[] = [
         headerName: 'Status',
         field: 'status',
         width: 200,
-        valueGetter: (params: GridValueGetterParams<JobState>) => {
+        valueGetter: (params: GridValueGetterParams<JobStepState>) => {
             return getJobStepStatusText(params.row.status);
         }
     },
@@ -124,7 +124,7 @@ export const Jobs = () => {
                         columns={jobStepColumns}
                         filterMode="client"
                         sortingMode="client"
-                        getRowId={(row: JobStepState) => row.grainId}
+                        getRowId={(row: JobStepState) => row.grainId.toString()}
                         onRowSelectionModelChange={() => {}}
                         rows={jobSteps.data}
                     />
