@@ -115,10 +115,6 @@ public class MongoDBJobStepStorage : IJobStepStorage
 
     void HandleChangesForJobSteps(IChangeStreamCursor<ChangeStreamDocument<BsonDocument>> cursor, List<JobStepState> jobs)
     {
-        foreach (var change in cursor.Current)
-        {
-            var state = BsonSerializer.Deserialize<JobStepState>(change.FullDocument);
-        }
     }
 }
 
