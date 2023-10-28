@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Kernel.EventSequences;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Json;
