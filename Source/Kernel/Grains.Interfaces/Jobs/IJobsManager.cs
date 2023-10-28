@@ -45,8 +45,9 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
     /// Report back completion of a job.
     /// </summary>
     /// <param name="jobId">The identifier of the job completed.</param>
+    /// <param name="status">The <see cref="JobStatus"/> on completion.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnCompleted(JobId jobId);
+    Task OnCompleted(JobId jobId, JobStatus status);
 
     /// <summary>
     /// Get a collection of all running jobs of specific type.

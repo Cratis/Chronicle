@@ -84,10 +84,7 @@ public class JobsManager : Grain, IJobsManager
     }
 
     /// <inheritdoc/>
-    public Task OnCompleted(JobId jobId)
-    {
-        return Task.CompletedTask;
-    }
+    public Task OnCompleted(JobId jobId, JobStatus status) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task<IImmutableList<JobState<TRequest>>> GetJobsOfType<TJob, TRequest>()
