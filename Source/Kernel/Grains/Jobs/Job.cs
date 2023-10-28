@@ -129,7 +129,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             var key = (JobKey)keyExtension!;
             await GrainFactory
                     .GetGrain<IJobsManager>(0, new JobsManagerKey(key.MicroserviceId, key.TenantId))
-                    .OnCompleted(id);
+                    .OnCompleted(id, State.Status);
             await OnCompleted();
 
             if (State.Progress.FailedSteps > 0)
@@ -138,7 +138,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             }
             else
             {
-                StatusChanged(JobStatus.Completed);
+                StatusChanged(JobStatus.CompletedSuccessfully);
             }
 
             State.Remove = RemoveAfterCompleted;
@@ -152,6 +152,5 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             Status = status,
             Occurred = DateTimeOffset.UtcNow
         });
-        State.Status = status;
     }
 }

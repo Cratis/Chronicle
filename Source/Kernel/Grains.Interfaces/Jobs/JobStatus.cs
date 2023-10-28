@@ -19,9 +19,9 @@ public enum JobStatus
     Running = 1,
 
     /// <summary>
-    /// The job has been completed.
+    /// The job has been completed successfully.
     /// </summary>
-    Completed = 2,
+    CompletedSuccessfully = 2,
 
     /// <summary>
     /// The job has completed with failures.
