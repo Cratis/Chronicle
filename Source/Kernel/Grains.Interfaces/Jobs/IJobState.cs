@@ -26,7 +26,7 @@ public interface IJobState
     /// <summary>
     /// Gets or sets the <see cref="JobStatus"/>.
     /// </summary>
-    JobStatus Status { get; set; }
+    JobStatus Status { get; }
 
     /// <summary>
     /// Gets or sets collection of status changes that happened to the job.

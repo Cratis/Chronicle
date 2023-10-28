@@ -19,7 +19,7 @@ public class JobState<TRequest> : IJobState
     public JobType Type { get; set; } = JobType.NotSet;
 
     /// <inheritdoc/>
-    public JobStatus Status { get; set; }
+    public JobStatus Status => StatusChanges.Count == 0 ? JobStatus.None : StatusChanges.Last().Status;
 
     /// <inheritdoc/>
     public IList<JobStatusChanged> StatusChanges { get; set; } = new List<JobStatusChanged>();
