@@ -18,7 +18,7 @@ public class and_signature_is_a_valid_asynchronous_method_without_context_for_an
 
     bool result;
 
-    void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something)).IsReducerMethod(typeof(ReadModel));
+    void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something))!.IsReducerMethod(typeof(ReadModel));
 
     [Fact] void should_not_be_considered_a_reducer_method() => result.ShouldBeFalse();
 }
