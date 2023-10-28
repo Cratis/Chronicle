@@ -50,7 +50,8 @@ public class JobsManager : Grain, IJobsManager
         foreach (var runningJob in runningJobs)
         {
             var grainType = (Type)runningJob.Type;
-            GrainFactory.GetGrain(grainType, runningJob.Id, new JobKey(_key.MicroserviceId, _key.TenantId));
+            var job = GrainFactory.GetGrain(grainType, runningJob.Id, new JobKey(_key.MicroserviceId, _key.TenantId)) as IJob;
+            await job!.Resume();
         }
     }
 
