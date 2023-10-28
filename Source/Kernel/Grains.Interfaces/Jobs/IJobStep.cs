@@ -14,8 +14,9 @@ public interface IJobStep : IGrainWithGuidCompoundKey
     /// <summary>
     /// Resume a job step.
     /// </summary>
+    /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>
     /// <returns>Awaitable task.</returns>
-    Task Resume();
+    Task Resume(GrainId jobId);
 
     /// <summary>
     /// Stop the job step.

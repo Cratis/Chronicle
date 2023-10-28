@@ -57,11 +57,11 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         executionContextManager.Establish(_jobKey.TenantId, executionContextManager.Current.CorrelationId, _jobKey.MicroserviceId);
 
         var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
-        var steps = await stepStorage.GetForJob(_jobId);
+        var steps = await stepStorage.GetForJob(_jobId, JobStepStatus.Scheduled, JobStepStatus.Running);
         foreach (var step in steps)
         {
             var jobStep = (GrainFactory.GetGrain(step.GrainId) as IJobStep)!;
-            await jobStep.Resume();
+            await jobStep.Resume(this.GetGrainId());
         }
     }
 

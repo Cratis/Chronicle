@@ -16,6 +16,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     where TState : JobStepState
 {
     readonly IPersistentState<TState> _state;
+    bool _running;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobStep{TRequest, TState}"/> class.
@@ -64,6 +65,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     /// <inheritdoc/>
     public async Task Start(GrainId jobId, TRequest request)
     {
+        _running = true;
         Job = GrainFactory.GetGrain(jobId).AsReference<IJob>();
         ThisJobStep = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJobStep<TRequest>>();
 
@@ -75,7 +77,14 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     }
 
     /// <inheritdoc/>
-    public Task Resume() => Task.CompletedTask;
+    public Task Resume(GrainId grainId)
+    {
+        if (_running)
+        {
+            return Task.CompletedTask;
+        }
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public Task Stop() => Task.CompletedTask;

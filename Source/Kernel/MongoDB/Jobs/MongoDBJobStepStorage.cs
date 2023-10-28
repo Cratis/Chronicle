@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Aksio.DependencyInversion;
+using Aksio.Strings;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
@@ -58,9 +59,14 @@ public class MongoDBJobStepStorage : IJobStepStorage
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<JobStepState>> GetForJob(JobId jobId)
+    public async Task<IImmutableList<JobStepState>> GetForJob(JobId jobId, params JobStepStatus[] statuses)
     {
         var filter = GetJobIdFilter(jobId);
+        if (statuses.Length > 0)
+        {
+            filter &= Builders<BsonDocument>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
+        }
+
         var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
         return cursor.ToList().Select(_ => BsonSerializer.Deserialize<JobStepState>(_)).ToImmutableList();
     }

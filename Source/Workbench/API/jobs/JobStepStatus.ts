@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 export enum JobStepStatus {
-    none = 0,
+    unknown = 0,
     scheduled = 1,
     running = 2,
     succeeded = 3,

@@ -37,8 +37,9 @@ public interface IJobStepStorage
     /// Get all job steps for a specific job.
     /// </summary>
     /// <param name="jobId"><see cref="JobId"/> to get for.</param>
+    /// <param name="statuses">Optional collection of <see cref="JobStepStatus"/> to get for. If not specified, all will be returned.</param>
     /// <returns>A collection of job step state objects.</returns>
-    Task<IImmutableList<JobStepState>> GetForJob(JobId jobId);
+    Task<IImmutableList<JobStepState>> GetForJob(JobId jobId, params JobStepStatus[] statuses);
 
     /// <summary>
     /// Observe job steps for a specific job.

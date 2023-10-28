@@ -11,7 +11,7 @@ public enum JobStepStatus
     /// <summary>
     /// Represents an unset status.
     /// </summary>
-    None = 0,
+    Unknown = 0,
 
     /// <summary>
     /// The job step has been scheduled to start.
