@@ -3,16 +3,18 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.given;
 
-public class an_observer_with_subscription : an_observer
+public class an_observer_with_subscription_for_specific_event_type : an_observer
 {
+    protected static readonly EventType event_type = new("d9a13e10-21a4-4cfc-896e-fda8dfeb79bb", EventGeneration.First);
     protected ObserverSubscription subscription;
     protected ObserverSubscriberKey subscriber_key;
+
 
     protected override void OnBeforeGrainActivate()
     {
         base.OnBeforeGrainActivate();
 
-        subscription = new ObserverSubscription(GrainId, ObserverKey, Enumerable.Empty<EventType>(), typeof(ObserverSubscriber), null);
+        subscription = new ObserverSubscription(GrainId, ObserverKey, new[] { event_type }, typeof(ObserverSubscriber), null);
         observer.SetSubscription(subscription);
     }
 }

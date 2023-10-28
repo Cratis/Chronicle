@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Keys;
-
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
 public class and_subscriber_throws_an_exception : given.an_observer_with_subscription_for_specific_event_type

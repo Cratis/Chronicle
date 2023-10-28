@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Json;
 using Microsoft.Extensions.Logging;
@@ -34,10 +35,13 @@ public class an_observer : GrainSpecification<ObserverState>
         failed_partitions_state = new();
         failed_partitions_persistent_state.SetupGet(_ => _.State).Returns(failed_partitions_state);
 
+        var jsonSerializerOptions = new JsonSerializerOptions(Globals.JsonSerializerOptions);
+        jsonSerializerOptions.Converters.Add(new KeyJsonConverter());
+
         failed_partitions_persistent_state.Setup(_ => _.WriteStateAsync()).Callback(() =>
             {
-                var serialized = JsonSerializer.Serialize(failed_partitions_state, Globals.JsonSerializerOptions);
-                var clone = JsonSerializer.Deserialize<FailedPartitions>(serialized, Globals.JsonSerializerOptions);
+                var serialized = JsonSerializer.Serialize(failed_partitions_state, jsonSerializerOptions);
+                var clone = JsonSerializer.Deserialize<FailedPartitions>(serialized, jsonSerializerOptions);
                 written_failed_partitions_states.Add(clone);
             }).Returns(Task.CompletedTask);
 
