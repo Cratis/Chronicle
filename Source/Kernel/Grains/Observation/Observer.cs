@@ -311,7 +311,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
                     }
 
                     State = State with { NextEventSequenceNumber = result.LastSuccessfulObservation.Next() };
-                    if (State.LastHandledEventSequenceNumber < result.LastSuccessfulObservation)
+                    if (!State.LastHandledEventSequenceNumber.IsActualValue || State.LastHandledEventSequenceNumber < result.LastSuccessfulObservation)
                     {
                         State = State with { LastHandledEventSequenceNumber = result.LastSuccessfulObservation };
                     }
