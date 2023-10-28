@@ -5,7 +5,7 @@
 export enum JobStatus {
     none = 0,
     running = 1,
-    completed = 2,
+    completedSuccessfully = 2,
     completedWithFailures = 3,
     paused = 4,
     stopped = 5,

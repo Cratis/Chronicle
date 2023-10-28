@@ -29,4 +29,3 @@ export class JobStepState {
     @field(Object)
     request!: any;
 }
-
