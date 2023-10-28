@@ -68,6 +68,11 @@ public class JobGrainStorageProvider : IGrainStorage
             {
                 await storage.Save(jobId, grainState.State);
             }
+
+            if (state.Status == JobStatus.CompletedSuccessfully)
+            {
+                await stepStorage.RemoveAllForJob(jobId);
+            }
         }
     }
 }
