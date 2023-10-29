@@ -53,8 +53,6 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
                     key,
                     EventSequenceNumber.First,
                     request.EventTypes));
-
-            break;
         }
 
         await WriteStateAsync();
