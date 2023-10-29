@@ -7,6 +7,7 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
+using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 using Orleans.Streams;
 
@@ -22,6 +23,7 @@ public class Observing : BaseObserverState
     readonly MicroserviceId _microserviceId;
     readonly TenantId _tenantId;
     readonly EventSequenceId _eventSequenceId;
+    readonly ILogger<Observing> _logger;
     StreamSubscriptionHandle<AppendedEvent>? _streamSubscription;
 
     /// <summary>
@@ -32,18 +34,21 @@ public class Observing : BaseObserverState
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the state is for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the state is for.</param>
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> being observed.</param>
+    /// <param name="logger">Logger for logging.</param>
     public Observing(
         IObserver observer,
         IStreamProvider streamProvider,
         MicroserviceId microserviceId,
         TenantId tenantId,
-        EventSequenceId eventSequenceId)
+        EventSequenceId eventSequenceId,
+        ILogger<Observing> logger)
     {
         _observer = observer;
         _streamProvider = streamProvider;
         _microserviceId = microserviceId;
         _tenantId = tenantId;
         _eventSequenceId = eventSequenceId;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -64,9 +69,14 @@ public class Observing : BaseObserverState
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
+        using var scope = _logger.BeginObservingScope(state, _microserviceId, _tenantId, _eventSequenceId);
+        _logger.Entering();
+
         var microserviceAndTenant = new MicroserviceAndTenant(_microserviceId, _tenantId);
         var streamId = StreamId.Create(microserviceAndTenant, _eventSequenceId);
         var stream = _streamProvider.GetStream<AppendedEvent>(streamId);
+
+        _logger.SubscribingToStream(state.NextEventSequenceNumber);
 
         _streamSubscription = await stream.SubscribeAsync(
             async (@event, _) => await _observer.Handle(@event.Context.EventSourceId, new[] { @event }),

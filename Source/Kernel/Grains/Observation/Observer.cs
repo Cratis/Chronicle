@@ -25,6 +25,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<Observer> _logger;
+    readonly ILoggerFactory _loggerFactory;
     readonly IPersistentState<FailedPartitions> _failuresState;
     IStreamProvider _streamProvider = null!;
     ObserverId _observerId = Guid.Empty;
@@ -41,15 +42,18 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Observer(
         IExecutionContextManager executionContextManager,
         [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
         IPersistentState<FailedPartitions> failures,
-        ILogger<Observer> logger)
+        ILogger<Observer> logger,
+        ILoggerFactory loggerFactory)
     {
         _executionContextManager = executionContextManager;
         _failuresState = failures;
         _logger = logger;
+        _loggerFactory = loggerFactory;
         _subscription = ObserverSubscription.Unsubscribed;
     }
 
@@ -117,7 +121,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     public override IImmutableList<IState<ObserverState>> CreateStates() => new IState<ObserverState>[]
     {
         new States.Disconnected(),
-        new States.Routing(this, _eventSequence),
+        new States.Routing(this, _eventSequence, _loggerFactory.CreateLogger<States.Routing>()),
         new States.CatchUp(_observerKey, _jobsManager),
         new States.Replay(_observerKey, _jobsManager),
         new States.Indexing(),
@@ -126,7 +130,8 @@ public class Observer : StateMachine<ObserverState>, IObserver
             _streamProvider,
             _observerKey.MicroserviceId,
             _observerKey.TenantId,
-            _observerKey.EventSequenceId)
+            _observerKey.EventSequenceId,
+            _loggerFactory.CreateLogger<States.Observing>())
     }.ToImmutableList();
 
     /// <inheritdoc/>
