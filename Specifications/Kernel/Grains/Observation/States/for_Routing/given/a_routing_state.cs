@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
+using Microsoft.Extensions.Logging;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Routing.given;
@@ -23,7 +24,7 @@ public class a_routing_state : Specification
     {
         observer = new();
         event_sequence = new();
-        state = new Routing(observer.Object, event_sequence.Object);
+        state = new Routing(observer.Object, event_sequence.Object, Mock.Of<ILogger<Routing>>());
         state_machine = new();
         state.SetStateMachine(state_machine.Object);
         stored_state = new ObserverState
