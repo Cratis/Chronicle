@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 
 internal static partial class ClientObserversLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Registering observers")]
+    [LoggerMessage(0, LogLevel.Information, "Registering client observers")]
     internal static partial void RegisterObservers(this ILogger<ClientObservers> logger);
 
     [LoggerMessage(1, LogLevel.Trace, "Registering observer with id '{ObserverId}' - friendly name {ObserverName}, for event sequence '{EventSequenceId}'")]
