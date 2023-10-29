@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Read.Jobs;
 /// <summary>
 /// Represents the API for working with jobs.
 /// </summary>
-[Route("/api/jobs/{microserviceId}")]
+[Route("/api/jobs/{microserviceId}/{tenantId}")]
 public class Jobs : ControllerBase
 {
     readonly IExecutionContextManager _executionContextManager;
@@ -39,12 +39,14 @@ public class Jobs : ControllerBase
     /// Observes all jobs for a specific microservice.
     /// </summary>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> to observe for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> to observe for. </param>
     /// <returns>A <see cref="ClientObservable{T}"/> for observing a collection of <see cref="JobState{T}"/>.</returns>
     [HttpGet]
     public ClientObservable<IEnumerable<JobState<object>>> AllJobs(
-        [FromRoute] MicroserviceId microserviceId)
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId)
     {
-        _executionContextManager.Establish(microserviceId);
+        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         return _jobStorage().ObserveJobs().ToClientObservable();
     }
 
@@ -52,14 +54,16 @@ public class Jobs : ControllerBase
     /// Observes all job steps for a specific job and microservice.
     /// </summary>
     /// <param name="jobId"><see cref="JobId"/> to observe for.</param>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to observer for.</param>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to observe for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> to observe for. </param>
     /// <returns>A <see cref="ClientObservable{T}"/> for observing a collection of <see cref="JobStepState"/>.</returns>
     [HttpGet("{jobId}/steps")]
     public ClientObservable<IEnumerable<JobStepState>> AllJobSteps(
         [FromRoute] JobId jobId,
-        [FromRoute] MicroserviceId microserviceId)
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId)
     {
-        _executionContextManager.Establish(microserviceId);
+        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         return _jobStepStorage().ObserveForJob(jobId).ToClientObservable();
     }
 }
