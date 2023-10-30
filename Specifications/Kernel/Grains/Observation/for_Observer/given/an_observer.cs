@@ -48,7 +48,8 @@ public class an_observer : GrainSpecification<ObserverState>
         observer = new Observer(
             execution_context_manager.Object,
             failed_partitions_persistent_state.Object,
-            Mock.Of<ILogger<Observer>>());
+            Mock.Of<ILogger<Observer>>(),
+            Mock.Of<ILoggerFactory>());
 
         return observer;
     }

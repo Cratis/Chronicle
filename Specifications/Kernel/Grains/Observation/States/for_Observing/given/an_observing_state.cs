@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
+using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 using Orleans.Streams;
 
@@ -53,7 +54,8 @@ public class an_observing_state : Specification
             stream_provider.Object,
             microservice_id,
             tenant_id,
-            event_sequence_id);
+            event_sequence_id,
+            Mock.Of<ILogger<Observing>>());
         state_machine = new();
         state.SetStateMachine(state_machine.Object);
         stored_state = new ObserverState
