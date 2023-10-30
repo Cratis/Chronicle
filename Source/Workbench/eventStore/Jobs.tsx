@@ -74,7 +74,31 @@ const jobColumns: GridColDef[] = [
         valueGetter: (params: GridValueGetterParams<JobState>) => {
             return params.row.progress.failedSteps;
         }
+    },
+    {
+        headerName: 'Start time',
+        field: 'startTime',
+        width: 200,
+        valueGetter: (params: GridValueGetterParams<JobState>) => {
+            return params.row.statusChanges[0].occurred.toLocaleString();
+        }
+    },
+    {
+        headerName: 'Completed time',
+        field: 'completedTime',
+        width: 200,
+        valueGetter: (params: GridValueGetterParams<JobState>) => {
+            if (params.row.statusChanges.length > 1) {
+                const lastStatusChange = params.row.statusChanges.at(-1)!;
+                if (lastStatusChange.status == JobStatus.completedSuccessfully || lastStatusChange.status == JobStatus.completedWithFailures) {
+                    return lastStatusChange.occurred.toLocaleString();
+                }
+            }
+
+            return '[N/A]';
+        }
     }
+
 ];
 
 const jobStepColumns: GridColDef[] = [
