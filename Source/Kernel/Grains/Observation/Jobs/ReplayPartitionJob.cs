@@ -24,7 +24,7 @@ public class ReplayPartitionJob : Job<ReplayPartitionRequest, JobState<ReplayPar
     }
 
     /// <inheritdoc/>
-    protected override async Task StartJob(ReplayPartitionRequest request)
+    protected override async Task PrepareSteps(ReplayPartitionRequest request)
     {
         _request = request;
 

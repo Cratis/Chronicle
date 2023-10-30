@@ -63,4 +63,15 @@ public interface IJob<TRequest> : IJob
     /// <param name="request">The request object for the job.</param>
     /// <returns>Awaitable task.</returns>
     Task Start(TRequest request);
+
+    /// <summary>
+    /// Add a step to the job.
+    /// </summary>
+    /// <param name="request">Request for the step.</param>
+    /// <typeparam name="TJobStep">Type of job step.</typeparam>
+    /// <typeparam name="TJobStepRequest">Type of request for the step.</typeparam>
+    /// <returns>Awaitable task.</returns>
+    Task AddStep<TJobStep, TJobStepRequest>(TJobStepRequest request)
+            where TJobStep : IJobStep<TJobStepRequest>;
+
 }

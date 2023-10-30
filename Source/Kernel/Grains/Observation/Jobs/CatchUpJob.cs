@@ -33,7 +33,7 @@ public class CatchUpJob : Job<CatchUpRequest, JobState<CatchUpRequest>>, ICatchU
     }
 
     /// <inheritdoc/>
-    protected override async Task StartJob(CatchUpRequest request)
+    protected override async Task PrepareSteps(CatchUpRequest request)
     {
         _request = request;
         var index = await _observerKeyIndexes.GetFor(

@@ -27,7 +27,7 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
     }
 
     /// <inheritdoc/>
-    protected override async Task StartJob(RetryFailedPartitionRequest request)
+    protected override async Task PrepareSteps(RetryFailedPartitionRequest request)
     {
         _request = request;
 

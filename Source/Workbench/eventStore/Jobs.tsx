@@ -44,7 +44,7 @@ const jobColumns: GridColDef[] = [
     {
         headerName: 'Status',
         field: 'status',
-        width: 100,
+        width: 200,
         valueGetter: (params: GridValueGetterParams<JobState>) => {
             return getJobStatusText(params.row.status);
         }

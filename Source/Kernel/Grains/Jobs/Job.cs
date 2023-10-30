@@ -21,9 +21,22 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     JobKey _jobKey = JobKey.NotSet;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Job{TRequest, TJobState}"/> class.
+    /// </summary>
+    protected Job()
+    {
+        ThisJob = null!;
+    }
+
+    /// <summary>
     /// Gets whether or not to clean up data after the job has completed.
     /// </summary>
     protected virtual bool RemoveAfterCompleted => false;
+
+    /// <summary>
+    /// Gets the job as a Grain reference.
+    /// </summary>
+    protected IJob<TRequest> ThisJob { get; private set; }
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -32,6 +45,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         _jobId = this.GetPrimaryKey(out var keyExtension);
         _jobKey = (JobKey)keyExtension;
+
+        ThisJob = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJob<TRequest>>();
 
         var type = GetType();
         var grainType = type.GetInterfaces().SingleOrDefault(_ => _.Name == $"I{type.Name}") ?? throw new InvalidGrainNameForJob(type);
@@ -45,7 +60,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         _isRunning = true;
         State.Request = request!;
-        return StartJob(request);
+        return PrepareSteps(request);
     }
 
     /// <inheritdoc/>
@@ -96,21 +111,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         await WriteStateAsync();
     }
 
-    /// <summary>
-    /// Start the job.
-    /// </summary>
-    /// <param name="request">Request to start with.</param>
-    /// <returns>Awaitable task.</returns>
-    protected abstract Task StartJob(TRequest request);
-
-    /// <summary>
-    /// Add a step to the job.
-    /// </summary>
-    /// <param name="request">Request for the step.</param>
-    /// <typeparam name="TJobStep">Type of job step.</typeparam>
-    /// <typeparam name="TJobStepRequest">Type of request for the step.</typeparam>
-    /// <returns>Awaitable task.</returns>
-    protected async Task AddStep<TJobStep, TJobStepRequest>(TJobStepRequest request)
+    /// <inheritdoc/>
+    public async Task AddStep<TJobStep, TJobStepRequest>(TJobStepRequest request)
         where TJobStep : IJobStep<TJobStepRequest>
     {
         var jobStepId = JobStepId.New();
@@ -120,6 +122,13 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         await jobStep.Start(this.GetGrainId(), request);
         State.Progress.TotalSteps++;
     }
+
+    /// <summary>
+    /// Start the job.
+    /// </summary>
+    /// <param name="request">Request to start with.</param>
+    /// <returns>Awaitable task.</returns>
+    protected abstract Task PrepareSteps(TRequest request);
 
     async Task HandleCompletion()
     {

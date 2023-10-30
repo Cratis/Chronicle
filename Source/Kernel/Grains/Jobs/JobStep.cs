@@ -45,7 +45,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     protected IJob Job { get; private set; }
 
     /// <summary>
-    /// Gets the job step.
+    /// Gets the job step as a Grain reference.
     /// </summary>
     protected IJobStep<TRequest> ThisJobStep { get; private set; }
 
@@ -74,6 +74,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
         await _state.WriteStateAsync();
         await PrepareStep(request);
         await Start(request);
+        await Task.CompletedTask;
     }
 
     /// <inheritdoc/>

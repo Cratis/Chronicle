@@ -34,26 +34,29 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
     }
 
     /// <inheritdoc/>
-    protected override async Task StartJob(ReplayRequest request)
+    protected override async Task PrepareSteps(ReplayRequest request)
     {
         _request = request;
         var index = await _observerKeyIndexes.GetFor(
             request.ObserverId,
             request.ObserverKey);
 
-        var keys = await index.GetKeys(EventSequenceNumber.First);
-
-        await foreach (var key in keys)
+        _ = Task.Run(async () =>
         {
-            await AddStep<IHandleEventsForPartition, HandleEventsForPartitionArguments>(
-                new HandleEventsForPartitionArguments(
-                    request.ObserverId,
-                    request.ObserverKey,
-                    request.ObserverSubscription,
-                    key,
-                    EventSequenceNumber.First,
-                    request.EventTypes));
-        }
+            var keys = await index.GetKeys(EventSequenceNumber.First);
+
+            await foreach (var key in keys)
+            {
+                await ThisJob.AddStep<IHandleEventsForPartition, HandleEventsForPartitionArguments>(
+                    new HandleEventsForPartitionArguments(
+                        request.ObserverId,
+                        request.ObserverKey,
+                        request.ObserverSubscription,
+                        key,
+                        EventSequenceNumber.First,
+                        request.EventTypes));
+            }
+        });
 
         await WriteStateAsync();
     }

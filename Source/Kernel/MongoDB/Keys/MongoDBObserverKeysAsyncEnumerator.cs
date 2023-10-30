@@ -15,6 +15,7 @@ public class MongoDBObserverKeysAsyncEnumerator : IAsyncEnumerator<Key>
 {
     readonly IAsyncCursor<EventSourceId> _cursor;
     Key? _current;
+    Queue<Key>? _queue;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBObserverKeysAsyncEnumerator"/> class.
@@ -39,18 +40,24 @@ public class MongoDBObserverKeysAsyncEnumerator : IAsyncEnumerator<Key>
     /// <inheritdoc/>
     public async ValueTask<bool> MoveNextAsync()
     {
-        var result = await _cursor.MoveNextAsync();
-        if (!result)
+        if (_queue is null)
         {
-            _current = null;
+            var result = await _cursor.MoveNextAsync();
+            if (!result)
+            {
+                _current = null;
+                return false;
+            }
+
+            _queue = new Queue<Key>(_cursor.Current.Select(_ => new Key(_.Value, ArrayIndexers.NoIndexers)));
         }
 
-        if (_cursor.Current?.Any() == true)
+        _current = _queue.Dequeue();
+        if (_queue.Count == 0)
         {
-            _current = new(_cursor.Current.First(), ArrayIndexers.NoIndexers);
-            return true;
+            _queue = null;
         }
 
-        return false;
+        return true;
     }
 }

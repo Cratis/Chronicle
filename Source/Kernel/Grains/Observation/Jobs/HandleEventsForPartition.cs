@@ -103,6 +103,8 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
                 }
 
                 tailEventSequenceNumber = events.Current.First().Metadata.SequenceNumber;
+
+                Console.WriteLine($"OnNext({events.Current.Count()})");
                 var result = await _subscriber!.OnNext(events.Current, subscriberContext);
                 switch (result.State)
                 {
