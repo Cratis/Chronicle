@@ -52,6 +52,12 @@ public class MongoDBObserverKeysAsyncEnumerator : IAsyncEnumerator<Key>
             _queue = new Queue<Key>(_cursor.Current.Select(_ => new Key(_.Value, ArrayIndexers.NoIndexers)));
         }
 
+        if (_queue.Count == 0)
+        {
+            _current = null;
+            return false;
+        }
+
         _current = _queue.Dequeue();
         if (_queue.Count == 0)
         {
