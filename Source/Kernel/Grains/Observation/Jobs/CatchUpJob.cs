@@ -26,6 +26,9 @@ public class CatchUpJob : Job<CatchUpRequest, JobState<CatchUpRequest>>, ICatchU
     }
 
     /// <inheritdoc/>
+    protected override bool RemoveAfterCompleted => true;
+
+    /// <inheritdoc/>
     public override async Task OnCompleted()
     {
         if (_request == null) return;
