@@ -1,4 +1,4 @@
-import { LayoutContext, LayoutProvider } from "./context/LayoutContext";
+import { LayoutContext, LayoutProvider } from './context/LayoutContext';
 import { Sidebar } from './Sidebar/Sidebar';
 import { Topbar } from './Topbar/Topbar';
 import css from './Layout.module.css';
@@ -10,7 +10,6 @@ export interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
-
     return (
         <LayoutProvider>
             <LayoutContext.Consumer>
@@ -19,26 +18,37 @@ export function Layout({ children }: LayoutProps) {
                         <div
                             className={`
                             ${css.layoutContainer}
-                            ${!value.layoutConfig.leftSidebarOpen ? css.sidebarClosed : ''}
-                            ${value.layoutConfig.leftSidebarHidden ? css.sidebarHidden : ''}
-                            `}>
-                            {!value.layoutConfig.leftSidebarHidden && <aside><Sidebar/></aside>}
+                            ${
+                                !value.layoutConfig.leftSidebarOpen
+                                    ? css.sidebarClosed
+                                    : ''
+                            }
+                            ${
+                                value.layoutConfig.leftSidebarHidden
+                                    ? css.sidebarHidden
+                                    : ''
+                            }
+                            `}
+                        >
+                            {!value.layoutConfig.leftSidebarHidden && (
+                                <aside>
+                                    <Sidebar />
+                                </aside>
+                            )}
                             <main>
                                 <header>
-                                    <Topbar/>
+                                    <Topbar />
                                 </header>
 
                                 {children}
                             </main>
                             <footer>
-                                <Footer/>
+                                <Footer />
                             </footer>
                         </div>
                     </>
                 )}
             </LayoutContext.Consumer>
-
         </LayoutProvider>
-    )
-        ;
+    );
 }

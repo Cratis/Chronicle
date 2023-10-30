@@ -612,6 +612,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@remix-run/router@npm:1.10.0":
+  version: 1.10.0
+  resolution: "@remix-run/router@npm:1.10.0"
+  checksum: f8f9fcd5f08465a7e0a05378398ff6df2c5c5ef5766df3490a134d64260b3b16f1bd490bb0c3f5925c2671a0c1d8d1fa01dfbdc7ecc3b2447dc6eafe6b73bcc2
+  languageName: node
+  linkType: hard
+
 "@tootallnate/once@npm:2":
   version: 2.0.0
   resolution: "@tootallnate/once@npm:2.0.0"
@@ -2883,6 +2890,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-router-dom@npm:^6.17.0":
+  version: 6.17.0
+  resolution: "react-router-dom@npm:6.17.0"
+  dependencies:
+    "@remix-run/router": 1.10.0
+    react-router: 6.17.0
+  peerDependencies:
+    react: ">=16.8"
+    react-dom: ">=16.8"
+  checksum: e0ba4f4c507681e2ffdecdf2e67edf7ec0e2bf4be35222e29d013afdb03866a5e6ecacc8b452bd55797b9672785d02f81bd6dbf6b05ac93a59e48e774b0060de
+  languageName: node
+  linkType: hard
+
+"react-router@npm:6.17.0":
+  version: 6.17.0
+  resolution: "react-router@npm:6.17.0"
+  dependencies:
+    "@remix-run/router": 1.10.0
+  peerDependencies:
+    react: ">=16.8"
+  checksum: 99c30d94fbb34657e4c8c3ef1aaae33b143167d3869b442e06c83b4006f35200fde810029180e209654bef2f47f0b27a928f77cc2d859a358a2722cc9d494f03
+  languageName: node
+  linkType: hard
+
 "react-transition-group@npm:^4.4.1":
   version: 4.4.5
   resolution: "react-transition-group@npm:4.4.5"
@@ -3546,6 +3577,7 @@ __metadata:
     react: 18.2.0
     react-dom: 18.2.0
     react-icons: ^4.11.0
+    react-router-dom: ^6.17.0
     tailwindcss: ^3.3.3
     typescript: 5.0.2
     usehooks-ts: ^2.9.1

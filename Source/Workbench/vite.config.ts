@@ -20,6 +20,7 @@ export default defineConfig({
     ],
     server: {
         port: 9000,
+        open: true,
         proxy: {
             '/api': {
                 target: 'http://localhost:8080',
@@ -32,7 +33,11 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            'API': path.resolve('./API')
+            'API': path.resolve('./API'),
+            'assets': path.resolve('./src/assets'),
+            'Components': path.resolve('./src/Components'),
+            'Routing': path.resolve('./src/Routing'),
+            'Styles': path.resolve('./src/Styles'),
         }
     }
 
