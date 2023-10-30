@@ -1,3 +1,10 @@
+# [v9.7.0] - 2023-10-30 [PR: #1000](https://github.com/aksio-insurtech/Cratis/pull/1000)
+
+### Fixed
+
+- Fixing `InMemorySink` to set the `Id` property to the key value. This fixes a problem when using immediate projections and the read model coming back does not have a `null` for the `Id` property.
+
+
 # [v9.7.0-beta.1] - 2023-10-28 [PR: #0]()
 
 No release notes
