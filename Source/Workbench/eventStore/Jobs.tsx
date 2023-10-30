@@ -17,6 +17,8 @@ import { JobStepStatus } from 'API/jobs/JobStepStatus';
 const getJobStatusText = (status: JobStatus) => {
     switch (status) {
         case JobStatus.none: return 'None';
+        case JobStatus.preparing: return 'Preparing job';
+        case JobStatus.preparingSteps: return 'Preparing steps';
         case JobStatus.running: return 'Running';
         case JobStatus.completedSuccessfully: return 'Completed successfully';
         case JobStatus.completedWithFailures: return 'Completed with failures';

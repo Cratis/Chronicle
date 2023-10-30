@@ -49,6 +49,36 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task OnCompleted();
+
+    /// <summary>
+    /// Adds a status change to the job.
+    /// </summary>
+    /// <param name="status"><see cref="JobStatus"/> to add.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// This is called internally. Do not call this from external code.
+    /// Due to the intricacy of how jobs run from different task contexts outside of Orleans, this is needed to be able to
+    /// update state.
+    /// </remarks>
+    Task StatusChanged(JobStatus status);
+
+    /// <summary>
+    /// Set the total number of steps for the job.
+    /// </summary>
+    /// <param name="totalSteps">The total of steps for the job.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// This is called internally. Do not call this from external code.
+    /// Due to the intricacy of how jobs run from different task contexts outside of Orleans, this is needed to be able to
+    /// update state.
+    /// </remarks>
+    Task SetTotalSteps(int totalSteps);
+
+    /// <summary>
+    /// Write state to storage.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task WriteState();
 }
 
 /// <summary>
@@ -63,15 +93,4 @@ public interface IJob<TRequest> : IJob
     /// <param name="request">The request object for the job.</param>
     /// <returns>Awaitable task.</returns>
     Task Start(TRequest request);
-
-    /// <summary>
-    /// Add a step to the job.
-    /// </summary>
-    /// <param name="request">Request for the step.</param>
-    /// <typeparam name="TJobStep">Type of job step.</typeparam>
-    /// <typeparam name="TJobStepRequest">Type of request for the step.</typeparam>
-    /// <returns>Awaitable task.</returns>
-    Task AddStep<TJobStep, TJobStepRequest>(TJobStepRequest request)
-            where TJobStep : IJobStep<TJobStepRequest>;
-
 }

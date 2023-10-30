@@ -16,25 +16,35 @@ public enum JobStatus
     /// <summary>
     /// The job has been started and is running.
     /// </summary>
-    Running = 1,
+    Preparing = 1,
+
+    /// <summary>
+    /// The job has been started and is running.
+    /// </summary>
+    PreparingSteps = 2,
+
+    /// <summary>
+    /// The job has been started and is running.
+    /// </summary>
+    Running = 3,
 
     /// <summary>
     /// The job has been completed successfully.
     /// </summary>
-    CompletedSuccessfully = 2,
+    CompletedSuccessfully = 4,
 
     /// <summary>
     /// The job has completed with failures.
     /// </summary>
-    CompletedWithFailures = 3,
+    CompletedWithFailures = 5,
 
     /// <summary>
     /// The job has been paused.
     /// </summary>
-    Paused = 4,
+    Paused = 6,
 
     /// <summary>
     /// The job has been cancelled.
     /// </summary>
-    Stopped = 5
+    Stopped = 7
 }

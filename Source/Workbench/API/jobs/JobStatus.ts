@@ -4,9 +4,11 @@
 
 export enum JobStatus {
     none = 0,
-    running = 1,
-    completedSuccessfully = 2,
-    completedWithFailures = 3,
-    paused = 4,
-    stopped = 5,
+    preparing = 1,
+    preparingSteps = 2,
+    running = 3,
+    completedSuccessfully = 4,
+    completedWithFailures = 5,
+    paused = 6,
+    stopped = 7,
 }

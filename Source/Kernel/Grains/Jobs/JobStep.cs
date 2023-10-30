@@ -55,11 +55,10 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     protected TState State => _state.State;
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _state.State.Name = GetType().Name;
-
-        return Task.CompletedTask;
+        await _state.WriteStateAsync();
     }
 
     /// <inheritdoc/>
@@ -72,7 +71,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
         StatusChanged(JobStepStatus.Running);
         _state.State.Request = request!;
         await _state.WriteStateAsync();
-        await PrepareStep(request);
+        await Prepare(request);
         await Start(request);
         await Task.CompletedTask;
     }
@@ -115,7 +114,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     /// </summary>
     /// <param name="request">The request object for the step.</param>
     /// <returns>Awaitable task.</returns>
-    protected virtual Task PrepareStep(TRequest request) => Task.CompletedTask;
+    public virtual Task Prepare(TRequest request) => Task.CompletedTask;
 
     /// <summary>
     /// The method that gets called when the step should do its work.

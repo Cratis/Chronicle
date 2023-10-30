@@ -24,5 +24,14 @@ public class NullJob : IJob
     public Task Resume() => Task.CompletedTask;
 
     /// <inheritdoc/>
+    public Task SetTotalSteps(int totalSteps) => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task StatusChanged(JobStatus status) => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task Stop() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task WriteState() => Task.CompletedTask;
 }

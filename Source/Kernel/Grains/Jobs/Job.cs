@@ -1,9 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using System.Reflection;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Providers;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
@@ -41,7 +44,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        StatusChanged(JobStatus.Running);
+        await StatusChanged(JobStatus.Preparing);
 
         _jobId = this.GetPrimaryKey(out var keyExtension);
         _jobKey = (JobKey)keyExtension;
@@ -60,7 +63,54 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         _isRunning = true;
         State.Request = request!;
-        return PrepareSteps(request);
+        var grainId = this.GetGrainId();
+        var tcs = new TaskCompletionSource<IImmutableList<JobStepDetails>>();
+
+        _ = Task.Run(async () =>
+        {
+            var steps = await PrepareSteps(request);
+            await ThisJob.SetTotalSteps(steps.Count);
+            await ThisJob.WriteState();
+            tcs.SetResult(steps);
+        });
+
+        tcs.Task.ContinueWith(async (Task<IImmutableList<JobStepDetails>> jobStepsTask) =>
+        {
+            var jobSteps = await jobStepsTask;
+            var jobStepGrains = jobSteps.Select(_ => new
+            {
+                Grain = (GrainFactory.GetGrain(_.Type, _.Id, keyExtension: _.Key) as IJobStep)!,
+                _.Request
+            }).ToList();
+
+            await StatusChanged(JobStatus.PreparingSteps);
+            await WriteStateAsync();
+
+            _ = Task.Run(async () =>
+            {
+                foreach (var jobStep in jobStepGrains)
+                {
+                    var task = JobStepInvoker.PrepareMethod.GetGenericMethodDefinition()
+                        .MakeGenericMethod(jobStep.Request.GetType())
+                        .Invoke(null, new object[] { jobStep.Grain, jobStep.Request }) as Task;
+
+                    await task!;
+                }
+
+                await ThisJob.StatusChanged(JobStatus.Running);
+                await ThisJob.WriteState();
+
+                foreach (var jobStep in jobStepGrains)
+                {
+                    var task = JobStepInvoker.StartMethod.GetGenericMethodDefinition()
+                        .MakeGenericMethod(jobStep.Request.GetType())
+                        .Invoke(null, new object[] { jobStep.Grain, grainId, jobStep.Request }) as Task;
+                    await task!;
+                }
+            });
+        });
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -83,7 +133,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <inheritdoc/>
     public async Task Stop()
     {
-        StatusChanged(JobStatus.Stopped);
+        await StatusChanged(JobStatus.Stopped);
         await WriteStateAsync();
     }
 
@@ -112,15 +162,44 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     }
 
     /// <inheritdoc/>
-    public async Task AddStep<TJobStep, TJobStepRequest>(TJobStepRequest request)
-        where TJobStep : IJobStep<TJobStepRequest>
+    public Task SetTotalSteps(int totalSteps)
+    {
+        State.Progress.TotalSteps = totalSteps;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task StatusChanged(JobStatus status)
+    {
+        State.StatusChanges.Add(new JobStatusChanged
+        {
+            Status = status,
+            Occurred = DateTimeOffset.UtcNow
+        });
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task WriteState() => WriteStateAsync();
+
+    /// <summary>
+    /// Create a new <see cref="IJobStep"/>.
+    /// </summary>
+    /// <param name="request">The request associated with the step.</param>
+    /// <typeparam name="TJobStep">The type of job step to create.</typeparam>
+    /// <returns>A new instance of the job step.</returns>
+    protected JobStepDetails CreateStep<TJobStep>(object request)
+        where TJobStep : IJobStep
     {
         var jobStepId = JobStepId.New();
         var jobId = this.GetPrimaryKey(out var keyExtension);
         var jobKey = (JobKey)keyExtension!;
-        var jobStep = GrainFactory.GetGrain<TJobStep>(jobStepId, keyExtension: new JobStepKey(jobId, jobKey.MicroserviceId, jobKey.TenantId));
-        await jobStep.Start(this.GetGrainId(), request);
-        State.Progress.TotalSteps++;
+        return new(
+            typeof(TJobStep),
+            jobStepId,
+            new JobStepKey(jobId, jobKey.MicroserviceId, jobKey.TenantId),
+            request);
     }
 
     /// <summary>
@@ -128,7 +207,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// </summary>
     /// <param name="request">Request to start with.</param>
     /// <returns>Awaitable task.</returns>
-    protected abstract Task PrepareSteps(TRequest request);
+    protected abstract Task<IImmutableList<JobStepDetails>> PrepareSteps(TRequest request);
 
     async Task HandleCompletion()
     {
@@ -143,23 +222,22 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
             if (State.Progress.FailedSteps > 0)
             {
-                StatusChanged(JobStatus.CompletedWithFailures);
+                await StatusChanged(JobStatus.CompletedWithFailures);
             }
             else
             {
-                StatusChanged(JobStatus.CompletedSuccessfully);
+                await StatusChanged(JobStatus.CompletedSuccessfully);
             }
 
             State.Remove = RemoveAfterCompleted;
         }
     }
 
-    void StatusChanged(JobStatus status)
+    static class JobStepInvoker
     {
-        State.StatusChanges.Add(new JobStatusChanged
-        {
-            Status = status,
-            Occurred = DateTimeOffset.UtcNow
-        });
+        public static readonly MethodInfo StartMethod = typeof(JobStepInvoker).GetMethod(nameof(Start))!;
+        public static readonly MethodInfo PrepareMethod = typeof(JobStepInvoker).GetMethod(nameof(Prepare))!;
+        public static Task Start<TJobStepRequest>(IJobStep<TJobStepRequest> jobStep, GrainId jobId, TJobStepRequest request) => jobStep.Start(jobId, request);
+        public static Task Prepare<TJobStepRequest>(IJobStep<TJobStepRequest> jobStep, TJobStepRequest request) => jobStep.Prepare(request);
     }
 }

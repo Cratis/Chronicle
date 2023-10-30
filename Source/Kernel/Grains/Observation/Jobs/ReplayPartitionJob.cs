@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
@@ -24,17 +25,22 @@ public class ReplayPartitionJob : Job<ReplayPartitionRequest, JobState<ReplayPar
     }
 
     /// <inheritdoc/>
-    protected override async Task PrepareSteps(ReplayPartitionRequest request)
+    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayPartitionRequest request)
     {
         _request = request;
 
-        await AddStep<IHandleEventsForPartition, HandleEventsForPartitionArguments>(
-            new HandleEventsForPartitionArguments(
-                request.ObserverId,
-                request.ObserverKey,
-                request.ObserverSubscription,
-                request.Key,
-                request.FromSequenceNumber,
-                request.EventTypes));
+        var steps = new[]
+        {
+            CreateStep<IHandleEventsForPartition>(
+                new HandleEventsForPartitionArguments(
+                    request.ObserverId,
+                    request.ObserverKey,
+                    request.ObserverSubscription,
+                    request.Key,
+                    request.FromSequenceNumber,
+                    request.EventTypes))
+        }.ToImmutableList();
+
+        return Task.FromResult<IImmutableList<JobStepDetails>>(steps);
     }
 }

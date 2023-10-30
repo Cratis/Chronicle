@@ -53,4 +53,11 @@ public interface IJobStep<TRequest> : ISyncWorker<TRequest, object>, IJobStep
     /// <param name="request">Request to start it with.</param>
     /// <returns>Awaitable task.</returns>
     Task Start(GrainId jobId, TRequest request);
+
+    /// <summary>
+    /// Prepare the job step.
+    /// </summary>
+    /// <param name="request">Request to prepare it with.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Prepare(TRequest request);
 }

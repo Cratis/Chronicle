@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.States;
@@ -34,30 +35,28 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
     }
 
     /// <inheritdoc/>
-    protected override async Task PrepareSteps(ReplayRequest request)
+    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayRequest request)
     {
         _request = request;
         var index = await _observerKeyIndexes.GetFor(
             request.ObserverId,
             request.ObserverKey);
 
-        _ = Task.Run(async () =>
+        var keys = index.GetKeys(EventSequenceNumber.First);
+        var steps = new List<JobStepDetails>();
+
+        await foreach (var key in keys)
         {
-            var keys = await index.GetKeys(EventSequenceNumber.First);
+            steps.Add(CreateStep<IHandleEventsForPartition>(
+                new HandleEventsForPartitionArguments(
+                    request.ObserverId,
+                    request.ObserverKey,
+                    request.ObserverSubscription,
+                    key,
+                    EventSequenceNumber.First,
+                    request.EventTypes)));
+        }
 
-            await foreach (var key in keys)
-            {
-                await ThisJob.AddStep<IHandleEventsForPartition, HandleEventsForPartitionArguments>(
-                    new HandleEventsForPartitionArguments(
-                        request.ObserverId,
-                        request.ObserverKey,
-                        request.ObserverSubscription,
-                        key,
-                        EventSequenceNumber.First,
-                        request.EventTypes));
-            }
-        });
-
-        await WriteStateAsync();
+        return steps.ToImmutableList();
     }
 }

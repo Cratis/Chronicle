@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.States;
 using Aksio.Cratis.Kernel.Keys;
@@ -33,28 +34,29 @@ public class CatchUpJob : Job<CatchUpRequest, JobState<CatchUpRequest>>, ICatchU
     }
 
     /// <inheritdoc/>
-    protected override async Task PrepareSteps(CatchUpRequest request)
+    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpRequest request)
     {
         _request = request;
         var index = await _observerKeyIndexes.GetFor(
             request.ObserverId,
             request.ObserverKey);
 
-        var keys = await index.GetKeys(request.FromEventSequenceNumber);
+        var keys = index.GetKeys(request.FromEventSequenceNumber);
+
+        var steps = new List<JobStepDetails>();
+
         await foreach (var key in keys)
         {
-            await AddStep<IHandleEventsForPartition, HandleEventsForPartitionArguments>(
+            steps.Add(CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
                     request.ObserverId,
                     request.ObserverKey,
                     request.ObserverSubscription,
                     key,
                     request.FromEventSequenceNumber,
-                    request.EventTypes));
-
-            break;
+                    request.EventTypes)));
         }
 
-        await WriteStateAsync();
+        return steps.ToImmutableList();
     }
 }

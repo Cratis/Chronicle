@@ -31,20 +31,20 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="taskScheduler"><see cref="LimitedConcurrencyLevelTaskScheduler"/> to use for scheduling.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="syncWorkerLogger"><see cref="ILogger"/> for the sync worker.</param>
     public HandleEventsForPartition(
         [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)] IPersistentState<HandleEventsForPartitionState> state,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         IExecutionContextManager executionContextManager,
         LimitedConcurrencyLevelTaskScheduler taskScheduler,
-        ILogger<HandleEventsForPartition> logger) : base(state, taskScheduler, logger)
+        ILogger<SyncWorker<HandleEventsForPartitionArguments, object>> syncWorkerLogger) : base(state, taskScheduler, syncWorkerLogger)
     {
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _executionContextManager = executionContextManager;
     }
 
     /// <inheritdoc/>
-    protected override Task PrepareStep(HandleEventsForPartitionArguments request)
+    public override Task Prepare(HandleEventsForPartitionArguments request)
     {
         var eventSourceId = (EventSourceId)(request.Partition.Value.ToString() ?? string.Empty);
         _observer = GrainFactory.GetGrain<IObserver>(request.ObserverId, request.ObserverKey);
@@ -104,7 +104,6 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
 
                 tailEventSequenceNumber = events.Current.First().Metadata.SequenceNumber;
 
-                Console.WriteLine($"OnNext({events.Current.Count()})");
                 var result = await _subscriber!.OnNext(events.Current, subscriberContext);
                 switch (result.State)
                 {
