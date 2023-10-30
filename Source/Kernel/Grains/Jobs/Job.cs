@@ -66,48 +66,22 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         var grainId = this.GetGrainId();
         var tcs = new TaskCompletionSource<IImmutableList<JobStepDetails>>();
 
-        _ = Task.Run(async () =>
-        {
-            var steps = await PrepareSteps(request);
-            await ThisJob.SetTotalSteps(steps.Count);
-            await ThisJob.WriteState();
-            tcs.SetResult(steps);
-        });
+        PrepareAllSteps(request, tcs);
 
         tcs.Task.ContinueWith(async (Task<IImmutableList<JobStepDetails>> jobStepsTask) =>
         {
             var jobSteps = await jobStepsTask;
-            var jobStepGrains = jobSteps.Select(_ => new
+            if (jobSteps.Count == 0)
             {
-                Grain = (GrainFactory.GetGrain(_.Type, _.Id, keyExtension: _.Key) as IJobStep)!,
-                _.Request
-            }).ToList();
+                await OnCompleted();
+                return;
+            }
+            var jobStepGrains = CreateGrainsFromJobSteps(jobSteps);
 
             await StatusChanged(JobStatus.PreparingSteps);
             await WriteStateAsync();
 
-            _ = Task.Run(async () =>
-            {
-                foreach (var jobStep in jobStepGrains)
-                {
-                    var task = JobStepInvoker.PrepareMethod.GetGenericMethodDefinition()
-                        .MakeGenericMethod(jobStep.Request.GetType())
-                        .Invoke(null, new object[] { jobStep.Grain, jobStep.Request }) as Task;
-
-                    await task!;
-                }
-
-                await ThisJob.StatusChanged(JobStatus.Running);
-                await ThisJob.WriteState();
-
-                foreach (var jobStep in jobStepGrains)
-                {
-                    var task = JobStepInvoker.StartMethod.GetGenericMethodDefinition()
-                        .MakeGenericMethod(jobStep.Request.GetType())
-                        .Invoke(null, new object[] { jobStep.Grain, grainId, jobStep.Request }) as Task;
-                    await task!;
-                }
-            });
+            PrepareAndStartAllJobSteps(grainId, jobStepGrains);
         });
 
         return Task.CompletedTask;
@@ -208,6 +182,52 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <param name="request">Request to start with.</param>
     /// <returns>Awaitable task.</returns>
     protected abstract Task<IImmutableList<JobStepDetails>> PrepareSteps(TRequest request);
+
+    IImmutableList<JobStepGrainAndRequest> CreateGrainsFromJobSteps(IImmutableList<JobStepDetails> jobSteps) =>
+        jobSteps.Select(_ => new JobStepGrainAndRequest(
+            (GrainFactory.GetGrain(_.Type, _.Id, keyExtension: _.Key) as IJobStep)!,
+            _.Request)).ToList().ToImmutableList();
+
+    void PrepareAllSteps(TRequest request, TaskCompletionSource<IImmutableList<JobStepDetails>> tcs) => _ = Task.Run(async () =>
+    {
+        var steps = await PrepareSteps(request);
+        await ThisJob.SetTotalSteps(steps.Count);
+        await ThisJob.WriteState();
+        tcs.SetResult(steps);
+    });
+
+    void PrepareAndStartAllJobSteps(GrainId grainId, IImmutableList<JobStepGrainAndRequest> jobStepGrains) => _ = Task.Run(async () =>
+    {
+        await PrepareJobStepsForRunning(jobStepGrains);
+
+        await ThisJob.StatusChanged(JobStatus.Running);
+        await ThisJob.WriteState();
+
+        await StartAllJobSteps(grainId, jobStepGrains);
+    });
+
+    async Task StartAllJobSteps(GrainId grainId, IImmutableList<JobStepGrainAndRequest> jobStepGrains)
+    {
+        foreach (var jobStep in jobStepGrains)
+        {
+            var task = JobStepInvoker.StartMethod.GetGenericMethodDefinition()
+                .MakeGenericMethod(jobStep.Request.GetType())
+                .Invoke(null, new object[] { jobStep.Grain, grainId, jobStep.Request }) as Task;
+            await task!;
+        }
+    }
+
+    async Task PrepareJobStepsForRunning(IImmutableList<JobStepGrainAndRequest> jobStepGrains)
+    {
+        foreach (var jobStep in jobStepGrains)
+        {
+            var task = JobStepInvoker.PrepareMethod.GetGenericMethodDefinition()
+                .MakeGenericMethod(jobStep.Request.GetType())
+                .Invoke(null, new object[] { jobStep.Grain, jobStep.Request }) as Task;
+
+            await task!;
+        }
+    }
 
     async Task HandleCompletion()
     {
