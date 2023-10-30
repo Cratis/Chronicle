@@ -75,7 +75,9 @@ public class InMemorySink : ISink, IDisposable
         }
 
         var keyValue = GetActualKeyValue(key);
-        collection[keyValue] = ApplyActualChanges(key, changeset.Changes, state);
+        var result = ApplyActualChanges(key, changeset.Changes, state);
+        ((dynamic)result).id = key.Value;
+        collection[keyValue] = result;
 
         return Task.CompletedTask;
     }
