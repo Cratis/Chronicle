@@ -148,7 +148,10 @@ public class MongoDBJobStepStorage<TJobStepState> : MongoDBJobStepStorage, IJobS
     }
 
     /// <inheritdoc/>
-    public async Task Save(JobId jobId, JobStepId jobStepId, TJobStepState state)
+    public async Task Save(
+        JobId jobId,
+        JobStepId jobStepId,
+        TJobStepState state)
     {
         var filter = GetIdFilter(jobId, jobStepId);
         var jobStepState = (state as JobStepState)!;
@@ -157,5 +160,15 @@ public class MongoDBJobStepStorage<TJobStepState> : MongoDBJobStepStorage, IJobS
         var document = state.ToBsonDocument();
         document.RemoveTypeInfo();
         await collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task MoveToFailed(
+        JobId jobId,
+        JobStepId jobStepId,
+        TJobStepState jobStepState)
+    {
+        await Collection.DeleteOneAsync(GetIdFilter(jobId, jobStepId)).ConfigureAwait(false);
+        await Save(jobId, jobStepId, jobStepState);
     }
 }

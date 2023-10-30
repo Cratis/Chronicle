@@ -57,16 +57,31 @@ public class JobStepGrainStorageProvider : IGrainStorage
             _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
             var storage = _serviceProvider.GetRequiredService<IJobStepStorage<T>>();
 
-            await storage.Save(key.JobId, jobStepId, grainState.State);
             var actualState = (grainState.State as JobStepState)!;
             actualState.GrainId = grainId;
 
-            if (actualState.StatusChanges.Count > 1 &&
-                actualState.StatusChanges[^1].Status == JobStepStatus.Failed &&
-                actualState.StatusChanges[^2].Status == JobStepStatus.Running)
+            if (IsSuccessful(actualState))
             {
                 await storage.Remove(key.JobId, jobStepId);
             }
+            else if (IsFailed(actualState))
+            {
+                await storage.MoveToFailed(key.JobId, jobStepId, grainState.State);
+            }
+            else
+            {
+                await storage.Save(key.JobId, jobStepId, grainState.State);
+            }
         }
+
+        static bool IsSuccessful(JobStepState state) =>
+                state.StatusChanges.Count > 1 &&
+                state.StatusChanges[^1].Status == JobStepStatus.Succeeded &&
+                state.StatusChanges[^2].Status == JobStepStatus.Running;
+
+        static bool IsFailed(JobStepState state) =>
+                state.StatusChanges.Count > 1 &&
+                state.StatusChanges[^1].Status == JobStepStatus.Failed &&
+                state.StatusChanges[^2].Status == JobStepStatus.Running;
     }
 }

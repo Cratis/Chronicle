@@ -71,4 +71,13 @@ public interface IJobStepStorage<TJobStepState> : IJobStepStorage
     /// <param name="state">The <see cref="JobStepState"/> to save.</param>
     /// <returns>Awaitable task.</returns>
     Task Save(JobId jobId, JobStepId jobStepId, TJobStepState state);
+
+    /// <summary>
+    /// Move a job step being failed.
+    /// </summary>
+    /// <param name="jobId"><see cref="JobId"/> the step belongs to.</param>
+    /// <param name="jobStepId"><see cref="JobStepId"/> for the step.</param>
+    /// <param name="jobStepState">The <see cref="JobStepState"/> to move.</param>
+    /// <returns>Awaitable task.</returns>
+    Task MoveToFailed(JobId jobId, JobStepId jobStepId, TJobStepState jobStepState);
 }
