@@ -97,6 +97,9 @@ public class Observer : StateMachine<ObserverState>, IObserver
     public Task<ObserverSubscription> GetSubscription() => Task.FromResult(_subscription);
 
     /// <inheritdoc/>
+    public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(State.EventTypes);
+
+    /// <inheritdoc/>
     public async Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes, object? subscriberArgs = null)
         where TObserverSubscriber : IObserverSubscriber
     {

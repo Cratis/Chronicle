@@ -15,7 +15,7 @@ public interface IObserverKeyIndex
     /// </summary>
     /// <param name="fromEventSequenceNumber">The from <see cref="EventSequenceNumber"/> to get keys from.</param>
     /// <returns>All the <see cref="IObserverKeys"/>.</returns>
-    Task<IObserverKeys> GetKeys(EventSequenceNumber fromEventSequenceNumber);
+    IObserverKeys GetKeys(EventSequenceNumber fromEventSequenceNumber);
 
     /// <summary>
     /// Add a key to the index.

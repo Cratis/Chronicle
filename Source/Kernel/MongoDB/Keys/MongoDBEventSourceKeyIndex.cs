@@ -13,24 +13,25 @@ namespace Aksio.Cratis.Kernel.MongoDB.Keys;
 public class MongoDBEventSourceKeyIndex : IObserverKeyIndex
 {
     readonly IMongoCollection<Event> _collection;
+    readonly IEnumerable<EventType> _eventTypes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBEventSourceKeyIndex"/> class.
     /// </summary>
     /// <param name="collection"><see cref="IMongoCollection{T}"/> for the events.</param>
-    public MongoDBEventSourceKeyIndex(IMongoCollection<Event> collection)
+    /// <param name="eventTypes">Collection of <see cref="EventType"/> the index is for.</param>
+    public MongoDBEventSourceKeyIndex(IMongoCollection<Event> collection, IEnumerable<EventType> eventTypes)
     {
         _collection = collection;
+        _eventTypes = eventTypes;
     }
 
     /// <inheritdoc/>
     public Task Add(Key key) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task<IObserverKeys> GetKeys(EventSequenceNumber fromEventSequenceNumber)
-    {
-        return Task.FromResult<IObserverKeys>(new MongoDBObserverKeys(_collection, fromEventSequenceNumber));
-    }
+    public IObserverKeys GetKeys(EventSequenceNumber fromEventSequenceNumber) =>
+       new MongoDBObserverKeys(_collection, fromEventSequenceNumber, _eventTypes);
 
     /// <inheritdoc/>
     public Task Rebuild() => Task.CompletedTask;
