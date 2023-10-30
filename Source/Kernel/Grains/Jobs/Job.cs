@@ -73,7 +73,10 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             var jobSteps = await jobStepsTask;
             if (jobSteps.Count == 0)
             {
+                State.Remove = true;
                 await OnCompleted();
+                await StatusChanged(JobStatus.CompletedSuccessfully);
+                await WriteStateAsync();
                 return;
             }
             var jobStepGrains = CreateGrainsFromJobSteps(jobSteps);
