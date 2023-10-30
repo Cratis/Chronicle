@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom';
 
 const observerRunningStates: { [key: number]: string; } = {
     0: 'Unknown',
-    1: 'Subscribing',
+    1: 'Routing',
     2: 'Replaying',
     3: 'Catching up',
     4: 'Active',
