@@ -52,6 +52,17 @@ public class InMemorySink : ISink, IDisposable
     /// </summary>
     public IDictionary<object, ExpandoObject> Collection => _isReplaying ? _rewindCollection : _collection;
 
+    /// <summary>
+    /// Remove any existing model by the given key.
+    /// </summary>
+    /// <param name="key"><see cref="Key"/> for the model to remove.</param>
+    public void RemoveAnyExisting(Key key)
+    {
+        var collection = Collection;
+        var keyValue = GetActualKeyValue(key);
+        collection.Remove(keyValue);
+    }
+
     /// <inheritdoc/>
     public Task<ExpandoObject?> FindOrDefault(Key key, bool isReplaying)
     {
@@ -67,14 +78,14 @@ public class InMemorySink : ISink, IDisposable
     {
         var state = changeset.InitialState.Clone();
         var collection = Collection;
+        var keyValue = GetActualKeyValue(key);
 
         if (changeset.HasBeenRemoved())
         {
-            collection.Remove(key.Value);
+            collection.Remove(keyValue);
             return Task.CompletedTask;
         }
 
-        var keyValue = GetActualKeyValue(key);
         var result = ApplyActualChanges(key, changeset.Changes, state);
         ((dynamic)result).id = key.Value;
         collection[keyValue] = result;
