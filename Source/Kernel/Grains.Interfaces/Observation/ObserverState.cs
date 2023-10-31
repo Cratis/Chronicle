@@ -17,6 +17,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <param name="Type">The type of observer.</param>
 /// <param name="NextEventSequenceNumberForEventTypes">The next <see cref="EventSequenceNumber"/> for the event types the observer is for.</param>
 /// <param name="LastHandledEventSequenceNumber">The <see cref="EventSequenceNumber"/> of the last event the observer handled.</param>
+/// <param name="Handled">Number of events that has been handled by the observer.</param>
 /// <param name="RunningState">The <see cref="ObserverRunningState"/> of the observer.</param>
 public record ObserverState(
     IEnumerable<EventType> EventTypes,
@@ -26,6 +27,7 @@ public record ObserverState(
     ObserverType Type,
     EventSequenceNumber NextEventSequenceNumberForEventTypes,
     EventSequenceNumber LastHandledEventSequenceNumber,
+    EventCount Handled,
     ObserverRunningState RunningState)
 {
     EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
@@ -42,6 +44,7 @@ public record ObserverState(
               ObserverType.Unknown,
               EventSequenceNumber.Unavailable,
               EventSequenceNumber.Unavailable,
+              EventCount.NotSet,
               ObserverRunningState.New)
     {
     }

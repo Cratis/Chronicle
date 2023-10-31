@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
@@ -16,18 +18,22 @@ public class ObserverGrainStorageProvider : IGrainStorage
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IObserverStorage> _observerStorageProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverGrainStorageProvider"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     public ObserverGrainStorageProvider(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IObserverStorage> observerStorageProvider)
+        ProviderFor<IObserverStorage> observerStorageProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
     {
         _executionContextManager = executionContextManager;
         _observerStorageProvider = observerStorageProvider;
+        _eventSequenceStorageProvider = eventSequenceStorageProvider;
     }
 
     /// <inheritdoc/>
@@ -43,6 +49,16 @@ public class ObserverGrainStorageProvider : IGrainStorage
 
         _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
         actualGrainState.State = await _observerStorageProvider().GetState(observerId, observerKey);
+
+        if (actualGrainState.State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
+        {
+            actualGrainState.State = actualGrainState.State with
+            {
+                LastHandledEventSequenceNumber = await _eventSequenceStorageProvider().GetTailSequenceNumber(
+                    actualGrainState.State.EventSequenceId,
+                    actualGrainState.State.EventTypes)
+            };
+)        }
     }
 
     /// <inheritdoc/>

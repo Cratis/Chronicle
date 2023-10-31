@@ -280,6 +280,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
 
         events = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber).ToArray();
+        var handledCount =
         if (events.Any())
         {
             using (new WriteSuspension(this))
@@ -300,6 +301,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
                     var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, _observerId, key) as IObserverSubscriber)!;
                     tailEventSequenceNumber = firstEvent.Metadata.SequenceNumber;
                     var result = await subscriber.OnNext(events, new(_subscription.Arguments));
+                    events.Where(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation).Count();
                     if (result.State == ObserverSubscriberState.Failed)
                     {
                         failed = true;
@@ -321,7 +323,10 @@ public class Observer : StateMachine<ObserverState>, IObserver
                     State = State with { NextEventSequenceNumber = result.LastSuccessfulObservation.Next() };
                     if (!State.LastHandledEventSequenceNumber.IsActualValue || State.LastHandledEventSequenceNumber < result.LastSuccessfulObservation)
                     {
-                        State = State with { LastHandledEventSequenceNumber = result.LastSuccessfulObservation };
+                        State = State with
+                        {
+                            LastHandledEventSequenceNumber = result.LastSuccessfulObservation
+                        };
                     }
                 }
                 catch (Exception ex)

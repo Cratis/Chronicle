@@ -79,6 +79,7 @@ public class MongoDBObserverStorage : IObserverStorage
             ObserverType.Unknown,
             EventSequenceNumber.First,
             EventSequenceNumber.First,
+            EventCount.NotSet,
             ObserverRunningState.New);
     }
 
