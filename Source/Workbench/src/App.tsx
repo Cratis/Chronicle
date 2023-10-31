@@ -5,9 +5,11 @@ import { Layout } from './Layout/Layout';
 function App() {
     useColorScheme();
     return (
-        <Layout>
+        <>
+            <Layout>
             <Home />
-        </Layout>
+            </Layout>
+        </>
     );
 }
 
