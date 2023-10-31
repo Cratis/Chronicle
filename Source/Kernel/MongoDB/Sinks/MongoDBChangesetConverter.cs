@@ -125,8 +125,17 @@ public class MongoDBChangesetConverter : IMongoDBChangesetConverter
 
     void BuildChildAdded(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, List<BsonDocumentArrayFilterDefinition<BsonDocument>> arrayFiltersForDocument, ChildAdded childAdded)
     {
+        BsonValue bsonValue;
+
         var schema = _model.Schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
-        var document = _expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
+        if (schema is not null)
+        {
+            bsonValue = _expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
+        }
+        else
+        {
+            bsonValue = childAdded.State.ToBsonValue();
+        }
 
         var segments = childAdded.ChildrenProperty.Segments.ToArray();
         var childrenProperty = new PropertyPath(string.Empty);
@@ -142,11 +151,11 @@ public class MongoDBChangesetConverter : IMongoDBChangesetConverter
 
         if (updateBuilder is not null)
         {
-            updateBuilder = updateBuilder.Push(property, document);
+            updateBuilder = updateBuilder.Push(property, bsonValue);
         }
         else
         {
-            updateBuilder = updateDefinitionBuilder.Push(property, document);
+            updateBuilder = updateDefinitionBuilder.Push(property, bsonValue);
         }
     }
 
