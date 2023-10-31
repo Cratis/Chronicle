@@ -8,6 +8,7 @@ using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
+using Aksio.Reflection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
@@ -127,14 +128,14 @@ public class MongoDBChangesetConverter : IMongoDBChangesetConverter
     {
         BsonValue bsonValue;
 
-        var schema = _model.Schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
-        if (schema is not null)
+        if (childAdded.State.GetType().IsAPrimitiveType())
         {
-            bsonValue = _expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
+            bsonValue = childAdded.State.ToBsonValue();
         }
         else
         {
-            bsonValue = childAdded.State.ToBsonValue();
+            var schema = _model.Schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
+            bsonValue = _expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
         }
 
         var segments = childAdded.ChildrenProperty.Segments.ToArray();

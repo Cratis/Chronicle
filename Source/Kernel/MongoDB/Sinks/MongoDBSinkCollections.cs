@@ -13,20 +13,23 @@ namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 /// </summary>
 public class MongoDBSinkCollections : IMongoDBSinkCollections
 {
-    readonly IMongoDatabase _database;
     readonly Model _model;
+    readonly IMongoDBSinkDatabaseProvider _databaseProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBSinkCollections"/> class.
     /// </summary>
-    /// <param name="database"><see cref="IMongoDatabase"/> to use.</param>
     /// <param name="model">The <see cref="Model"/> the context is for.</param>
-    public MongoDBSinkCollections(IMongoDatabase database, Model model)
+    /// <param name="databaseProvider">The <see cref="IMongoDBSinkDatabaseProvider"/>.</param>
+    public MongoDBSinkCollections(
+        Model model,
+        IMongoDBSinkDatabaseProvider databaseProvider)
     {
-        _database = database;
         _model = model;
+        _databaseProvider = databaseProvider;
     }
 
+    IMongoDatabase Database => _databaseProvider.GetDatabase();
     string ReplayCollectionName => $"replay-{_model.Name}";
 
     /// <inheritdoc/>
@@ -37,7 +40,7 @@ public class MongoDBSinkCollections : IMongoDBSinkCollections
     {
         var rewindName = ReplayCollectionName;
         var rewoundCollectionsPrefix = $"{_model.Name}-";
-        var collectionNames = (await _database.ListCollectionNamesAsync()).ToList();
+        var collectionNames = (await Database.ListCollectionNamesAsync()).ToList();
         var nextCollectionSequenceNumber = 1;
         var rewoundCollectionNames = collectionNames.Where(_ => _.StartsWith(rewoundCollectionsPrefix, StringComparison.InvariantCulture)).ToArray();
         if (rewoundCollectionNames.Length > 0)
@@ -60,12 +63,12 @@ public class MongoDBSinkCollections : IMongoDBSinkCollections
 
         if (collectionNames.Contains(_model.Name))
         {
-            await _database.RenameCollectionAsync(_model.Name, oldCollectionName);
+            await Database.RenameCollectionAsync(_model.Name, oldCollectionName);
         }
 
         if (collectionNames.Contains(rewindName))
         {
-            await _database.RenameCollectionAsync(rewindName, _model.Name);
+            await Database.RenameCollectionAsync(rewindName, _model.Name);
         }
     }
 
@@ -77,5 +80,5 @@ public class MongoDBSinkCollections : IMongoDBSinkCollections
     }
 
     /// <inheritdoc/>
-    public IMongoCollection<BsonDocument> GetCollection(bool isReplaying) => isReplaying ? _database.GetCollection<BsonDocument>(ReplayCollectionName) : _database.GetCollection<BsonDocument>(_model.Name);
+    public IMongoCollection<BsonDocument> GetCollection(bool isReplaying) => isReplaying ? Database.GetCollection<BsonDocument>(ReplayCollectionName) : Database.GetCollection<BsonDocument>(_model.Name);
 }
