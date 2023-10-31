@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
 /// </summary>
 public class ReducerPipelineFactory : IReducerPipelineFactory
 {
-    readonly ISinks _projectionSinks;
+    readonly ISinks _sinks;
     readonly IObjectComparer _objectComparer;
 
     /// <summary>
@@ -26,7 +26,7 @@ public class ReducerPipelineFactory : IReducerPipelineFactory
         ISinks projectionSinks,
         IObjectComparer objectComparer)
     {
-        _projectionSinks = projectionSinks;
+        _sinks = projectionSinks;
         _objectComparer = objectComparer;
     }
 
@@ -35,7 +35,7 @@ public class ReducerPipelineFactory : IReducerPipelineFactory
     {
         var readModelSchema = await JsonSchema.FromJsonAsync(definition.ReadModel.Schema);
         var readModel = new Model(definition.ReadModel.Name, readModelSchema);
-        var sink = _projectionSinks.GetForTypeAndModel(definition.SinkTypeId, readModel);
+        var sink = _sinks.GetForTypeAndModel(definition.SinkTypeId, readModel);
         return new ReducerPipeline(readModel, sink, _objectComparer);
     }
 }

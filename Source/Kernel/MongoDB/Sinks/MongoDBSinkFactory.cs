@@ -2,13 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Sinks;
-using Aksio.MongoDB;
-using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 
@@ -19,30 +16,22 @@ public class MongoDBSinkFactory : ISinkFactory
 {
     readonly ITypeFormats _typeFormats;
     readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly IMongoDBClientFactory _clientFactory;
-    readonly Storage _configuration;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IMongoDBSinkDatabaseProvider _databaseProvider;
 
     /// <summary>
     /// /// Initializes a new instance of the <see cref="MongoDBSinkFactory"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
     /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
-    /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for creating MongoDB clients.</param>
-    /// <param name="configuration">The <see cref="Storage"/> configuration.</param>
+    /// <param name="databaseProvider">Provider for <see cref="IMongoDBSinkCollections"/> to use.</param>
     public MongoDBSinkFactory(
-        IExecutionContextManager executionContextManager,
         ITypeFormats typeFormats,
         IExpandoObjectConverter expandoObjectConverter,
-        IMongoDBClientFactory clientFactory,
-        Storage configuration)
+        IMongoDBSinkDatabaseProvider databaseProvider)
     {
-        _executionContextManager = executionContextManager;
         _typeFormats = typeFormats;
         _expandoObjectConverter = expandoObjectConverter;
-        _clientFactory = clientFactory;
-        _configuration = configuration;
+        _databaseProvider = databaseProvider;
     }
 
     /// <inheritdoc/>
@@ -51,25 +40,23 @@ public class MongoDBSinkFactory : ISinkFactory
     /// <inheritdoc/>
     public ISink CreateFor(Model model)
     {
-        var executionContext = _executionContextManager.Current;
-
-        var readModelsConfig = _configuration.Microservices.Get(executionContext.MicroserviceId).Tenants[executionContext.TenantId.ToString()].Get(WellKnownStorageTypes.ReadModels);
-        var url = new MongoUrl(readModelsConfig.ConnectionDetails.ToString());
-        var client = _clientFactory.Create(url);
-        var database = client.GetDatabase(url.DatabaseName);
-
         var mongoDBConverter = new MongoDBConverter(
-                _expandoObjectConverter,
-                _typeFormats,
-                model);
-        var collections = new MongoDBSinkCollections(database, model);
-        var changesetConverter = new MongoDBChangesetConverter(model, mongoDBConverter, collections, _expandoObjectConverter);
+            _expandoObjectConverter,
+            _typeFormats,
+            model);
+
+        var mongoDBSinkCollections = new MongoDBSinkCollections(model, _databaseProvider);
+        var mongoDBChangesetConverter = new MongoDBChangesetConverter(
+            model,
+            mongoDBConverter,
+            mongoDBSinkCollections,
+            _expandoObjectConverter);
 
         return new MongoDBSink(
             model,
             mongoDBConverter,
-            collections,
-            changesetConverter,
+            mongoDBSinkCollections,
+            mongoDBChangesetConverter,
             _expandoObjectConverter);
     }
 }
