@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Read.Jobs;
 /// <summary>
 /// Represents the API for working with jobs.
 /// </summary>
-[Route("/api/jobs/{microserviceId}/{tenantId}")]
+[Route("/api/events/store/{microserviceId}/{tenantId}/jobs")]
 public class Jobs : ControllerBase
 {
     readonly IExecutionContextManager _executionContextManager;
