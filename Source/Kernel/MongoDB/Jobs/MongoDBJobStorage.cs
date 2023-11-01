@@ -35,6 +35,15 @@ public class MongoDBJobStorage : IJobStorage
     protected IMongoCollection<BsonDocument> Collection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.Jobs);
 
     /// <inheritdoc/>
+    public async Task<JobState<object>> GetJob(JobId jobId)
+    {
+        var filter = GetIdFilter(jobId);
+        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
+        var job = cursor.Single();
+        return BsonSerializer.Deserialize<JobState<object>>(job);
+    }
+
+    /// <inheritdoc/>
     public async Task<IImmutableList<JobState<object>>> GetJobs(params JobStatus[] statuses)
     {
         var documents = await GetJobsRaw(statuses).ConfigureAwait(false);

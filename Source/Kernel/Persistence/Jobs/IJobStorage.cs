@@ -12,6 +12,13 @@ namespace Aksio.Cratis.Kernel.Persistence.Jobs;
 public interface IJobStorage
 {
     /// <summary>
+    /// Get a specific job.
+    /// </summary>
+    /// <param name="jobId">The unique <see cref="JobId"/> for the job to get.</param>
+    /// <returns>The job instance.</returns>
+    Task<JobState<object>> GetJob(JobId jobId);
+
+    /// <summary>
     /// Get all jobs of a given type with a given status.
     /// </summary>
     /// <param name="statuses">Optional params of <see cref="JobStatus"/> to filter on.</param>
