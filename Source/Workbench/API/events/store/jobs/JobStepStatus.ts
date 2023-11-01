@@ -8,4 +8,5 @@ export enum JobStepStatus {
     running = 2,
     succeeded = 3,
     failed = 4,
+    stopped = 5,
 }

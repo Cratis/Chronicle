@@ -6,14 +6,14 @@ import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@a
 import { JobState } from './JobState';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/jobs/{{microserviceId}}/{{tenantId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/jobs');
 
 export interface AllJobsArguments {
     microserviceId: string;
     tenantId: string;
 }
 export class AllJobs extends ObservableQueryFor<JobState[], AllJobsArguments> {
-    readonly route: string = '/api/jobs/{{microserviceId}}/{{tenantId}}';
+    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/jobs';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: JobState[] = [];
 

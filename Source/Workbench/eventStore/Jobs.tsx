@@ -2,17 +2,19 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useEffect, useState } from 'react';
-import { Divider, FormControl, Grid, InputLabel, MenuItem, Select, Stack, Toolbar, Typography } from '@mui/material';
+import { Button, Divider, FormControl, Grid, InputLabel, MenuItem, Select, Stack, Toolbar, Typography } from '@mui/material';
 import { DataGrid, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
-import { AllJobs } from 'API/jobs/AllJobs';
-import { JobState } from 'API/jobs/JobState';
+import { AllJobs } from 'API/events/store/jobs/AllJobs';
+import { JobState } from 'API/events/store/jobs/JobState';
 import { useRouteParams } from './RouteParams';
-import { AllJobSteps } from 'API/jobs/AllJobSteps';
-import { JobStatus } from 'API/jobs/JobStatus';
-import { JobStepState } from 'API/jobs/JobStepState';
-import { JobStepStatus } from 'API/jobs/JobStepStatus';
+import { AllJobSteps } from 'API/events/store/jobs/AllJobSteps';
+import { JobStatus } from 'API/events/store/jobs/JobStatus';
+import { JobStepState } from 'API/events/store/jobs/JobStepState';
+import { JobStepStatus } from 'API/events/store/jobs/JobStepStatus';
+import * as icons from '@mui/icons-material';
+import { StopJob } from 'API/events/store/jobs/StopJob';
 
 const getJobStatusText = (status: JobStatus) => {
     switch (status) {
@@ -34,6 +36,7 @@ const getJobStepStatusText = (status: JobStepStatus) => {
         case JobStepStatus.running: return 'Running';
         case JobStepStatus.succeeded: return 'Succeeded';
         case JobStepStatus.failed: return 'Failed';
+        case JobStepStatus.stopped: return 'Stopped';
     }
 }
 
@@ -122,6 +125,7 @@ export const Jobs = () => {
     const { microserviceId } = useRouteParams();
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
+    const [stopJob, setStopJobValues] = StopJob.use()
 
     const [jobs] = AllJobs.use({
         microserviceId,
@@ -169,6 +173,29 @@ export const Jobs = () => {
                         })}
                     </Select>
                 </FormControl>
+
+                {(selectedJob && (selectedJob.status == JobStatus.running || selectedJob.status == JobStatus.preparing)) &&
+                    <Button
+                        startIcon={<icons.Stop />}
+                        onClick={async () => {
+                            setStopJobValues({
+                                microserviceId,
+                                tenantId: selectedTenant?.id || undefined!,
+                                jobId: selectedJob.id
+                            });
+
+                            await stopJob.execute();
+                        }}
+                        >Stop</Button>
+                }
+
+                {selectedJob  &&
+                    <Button
+                        startIcon={<icons.Delete />}
+                        onClick={() => {}}
+                        >Delete</Button>
+                }
+
             </Toolbar>
 
             <Grid container spacing={2} sx={{ height: '100%' }}>
