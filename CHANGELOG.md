@@ -1,3 +1,10 @@
+# [v9.7.2] - 2023-11-1 [PR: #1006](https://github.com/aksio-insurtech/Cratis/pull/1006)
+
+### Fixed
+
+- Children with composite keys are now recognized when creating changesets within projections. Two items with same key will now not result in a `ChildAdded` change. This accidently worked when running it with MongoDB but got highlighted as a problem when running unit tests for projections.
+
+
 # [v9.7.1] - 2023-10-31 [PR: #0]()
 
 No release notes
