@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Objects;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Changes;
@@ -78,6 +79,6 @@ public static class CollectionExtensions
         }
 
         if (items is IEnumerable<ExpandoObject> expandoObjectItems) return ExpandoObjectExtensions.Contains(expandoObjectItems, identityProperty, key);
-        return items.Any(_ => identityProperty.GetValue(_!, ArrayIndexers.NoIndexers)!.Equals(key));
+        return items.Any(_ => identityProperty.GetValue(_!, ArrayIndexers.NoIndexers)!.IsEqualTo(key));
     }
 }
