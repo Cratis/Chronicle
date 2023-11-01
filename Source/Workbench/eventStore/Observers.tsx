@@ -56,7 +56,6 @@ export const Observers = () => {
 
     const [observers] = AllObservers.use(getAllObserversArguments());
 
-
     const columns: GridColDef[] = [
         {
             headerName: 'Id',
@@ -100,6 +99,11 @@ export const Observers = () => {
                 }
                 return sequenceNumber;
             }
+        },
+        {
+            headerName: 'Handled Events',
+            field: 'handled',
+            width: 200,
         },
         {
             headerName: 'Failures',

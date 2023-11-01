@@ -35,6 +35,9 @@ export class ObserverInformation {
     @field(Number)
     runningState!: ObserverRunningState;
 
+    @field(Number)
+    handled!: number;
+
     @field(FailedPartition, true)
     failedPartitions!: FailedPartition[];
 }
