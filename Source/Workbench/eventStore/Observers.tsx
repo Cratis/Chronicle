@@ -37,6 +37,7 @@ const observerTypes: { [key: number]: string; } = {
 };
 
 const UnavailableSequenceNumber = 18446744073709552000;
+const NotSetCount = 18446744073709552002;
 
 export const Observers = () => {
     const { microserviceId } = useRouteParams();
@@ -104,6 +105,14 @@ export const Observers = () => {
             headerName: 'Handled Events',
             field: 'handled',
             width: 200,
+            valueGetter: (params: GridValueGetterParams<ObserverInformation>) => {
+                const count = params.row.handled;
+                if (count == NotSetCount) {
+                    return 'N/A';
+                }
+                return count;
+            }
+
         },
         {
             headerName: 'Failures',

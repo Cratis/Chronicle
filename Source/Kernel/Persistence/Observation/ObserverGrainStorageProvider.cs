@@ -50,18 +50,23 @@ public class ObserverGrainStorageProvider : IGrainStorage
         _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
         actualGrainState.State = await _observerStorageProvider().GetState(observerId, observerKey);
 
-        if (actualGrainState.State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
+        var modified = false;
+
+        if (actualGrainState.State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable &&
+            actualGrainState.State.Handled == EventCount.NotSet)
         {
-            var tail = await _eventSequenceStorageProvider().GetTailSequenceNumber(
+            var lastHandled = await _eventSequenceStorageProvider().GetTailSequenceNumber(
                     actualGrainState.State.EventSequenceId,
                     actualGrainState.State.EventTypes);
 
-            if (tail < actualGrainState.State.NextEventSequenceNumber)
+            if (lastHandled < actualGrainState.State.NextEventSequenceNumber)
             {
                 actualGrainState.State = actualGrainState.State with
                 {
-                    LastHandledEventSequenceNumber = tail
+                    LastHandledEventSequenceNumber = lastHandled
                 };
+
+                modified = true;
             }
         }
 
@@ -72,10 +77,24 @@ public class ObserverGrainStorageProvider : IGrainStorage
                 actualGrainState.State.LastHandledEventSequenceNumber,
                 actualGrainState.State.EventTypes);
 
+            var lastHandled = actualGrainState.State.LastHandledEventSequenceNumber;
+            if (count == EventCount.Zero)
+            {
+                lastHandled = EventSequenceNumber.Unavailable;
+            }
+
             actualGrainState.State = actualGrainState.State with
             {
-                Handled = count
+                Handled = count,
+                LastHandledEventSequenceNumber = lastHandled
             };
+
+            modified = true;
+        }
+
+        if (modified)
+        {
+            await WriteStateAsync(stateName, grainId, grainState);
         }
     }
 
