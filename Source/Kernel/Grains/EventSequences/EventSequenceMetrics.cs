@@ -55,10 +55,10 @@ public class EventSequenceMetrics : IEventSequenceMetrics
     /// <inheritdoc/>
     public void FailedAppending(EventSourceId eventSourceId, string eventName) => _failedAppendedEvents.Add(1, GetTagsFor(eventSourceId, eventName));
 
-    Measurement<ulong> GetTotalAppendedEvents()
+    Measurement<long> GetTotalAppendedEvents()
     {
         var total = _getAppendedEventsCount();
-        return new Measurement<ulong>(total, new TagList(new ReadOnlySpan<KeyValuePair<string, object?>>(new KeyValuePair<string, object?>[]
+        return new Measurement<long>((long)total.Value, new TagList(new ReadOnlySpan<KeyValuePair<string, object?>>(new KeyValuePair<string, object?>[]
         {
             new("event_sequence_id", _eventSequenceId.ToString()),
             new("microservice_id", _microserviceId.ToString()),
