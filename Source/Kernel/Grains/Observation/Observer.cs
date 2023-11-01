@@ -280,7 +280,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
 
         events = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber).ToArray();
-        var handledCount =
+        var handledCount = EventCount.Zero;
         if (events.Any())
         {
             using (new WriteSuspension(this))
@@ -301,7 +301,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
                     var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, _observerId, key) as IObserverSubscriber)!;
                     tailEventSequenceNumber = firstEvent.Metadata.SequenceNumber;
                     var result = await subscriber.OnNext(events, new(_subscription.Arguments));
-                    events.Where(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation).Count();
+                    handledCount = events.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation);
                     if (result.State == ObserverSubscriberState.Failed)
                     {
                         failed = true;
@@ -325,7 +325,8 @@ public class Observer : StateMachine<ObserverState>, IObserver
                     {
                         State = State with
                         {
-                            LastHandledEventSequenceNumber = result.LastSuccessfulObservation
+                            LastHandledEventSequenceNumber = result.LastSuccessfulObservation,
+                            Handled = State.Handled + handledCount
                         };
                     }
                 }
@@ -344,6 +345,13 @@ public class Observer : StateMachine<ObserverState>, IObserver
 
             await WriteStateAsync();
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task ReportHandledEvents(EventCount count)
+    {
+        State = State with { Handled = State.Handled + count };
+        await WriteStateAsync();
     }
 
     /// <summary>

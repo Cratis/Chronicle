@@ -114,4 +114,11 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithGuidCompoun
     /// <param name="events">Collection of <see cref="AppendedEvent"/>.</param>
     /// <returns>Awaitable task.</returns>
     Task Handle(Key partition, IEnumerable<AppendedEvent> events);
+
+    /// <summary>
+    /// Report a count of events that has been handled.
+    /// </summary>
+    /// <param name="count"><see cref="EventCount"/> to increase the handled count with.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReportHandledEvents(EventCount count);
 }

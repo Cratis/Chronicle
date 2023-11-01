@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
@@ -76,7 +77,7 @@ public class Replay : BaseObserverState
                     state.EventTypes));
         }
 
-        return state;
+        return state with { Handled = EventCount.Zero };
     }
 
     /// <inheritdoc/>

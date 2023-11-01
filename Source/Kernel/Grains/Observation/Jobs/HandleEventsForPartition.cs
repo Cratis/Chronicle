@@ -93,6 +93,7 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = EventSequenceNumber.Unavailable;
 
+        var handledCount = EventCount.Zero;
         while (await events.MoveNext())
         {
             try
@@ -105,6 +106,7 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
                 tailEventSequenceNumber = events.Current.First().Metadata.SequenceNumber;
 
                 var result = await _subscriber!.OnNext(events.Current, subscriberContext);
+                handledCount += events.Current.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation);
                 switch (result.State)
                 {
                     case ObserverSubscriberState.Failed:
@@ -128,6 +130,8 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
                 exceptionMessages = ex.GetAllMessages().ToArray();
                 exceptionStackTrace = ex.StackTrace ?? string.Empty;
             }
+
+            await _observer!.ReportHandledEvents(handledCount);
 
             if (failed)
             {
