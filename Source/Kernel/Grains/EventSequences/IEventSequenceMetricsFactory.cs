@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
@@ -18,5 +19,5 @@ public interface IEventSequenceMetricsFactory
     /// <param name="tenantId">Tenant to create for.</param>
     /// <param name="getAppendedEventsCount">Callback for getting the total appended events count.</param>
     /// <returns><see cref="IEventSequenceMetrics"/> instance.</returns>
-    IEventSequenceMetrics CreateFor(EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId, Func<long> getAppendedEventsCount);
+    IEventSequenceMetrics CreateFor(EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId, Func<EventCount> getAppendedEventsCount);
 }

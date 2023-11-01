@@ -16,7 +16,7 @@ public class EventSequenceMetrics : IEventSequenceMetrics
     readonly EventSequenceId _eventSequenceId;
     readonly MicroserviceId _microserviceId;
     readonly TenantId _tenantId;
-    readonly Func<long> _getAppendedEventsCount;
+    readonly Func<EventCount> _getAppendedEventsCount;
     readonly Counter<int> _appendedEvents;
     readonly Counter<int> _duplicateEventSequenceNumbers;
     readonly Counter<int> _failedAppendedEvents;
@@ -34,7 +34,7 @@ public class EventSequenceMetrics : IEventSequenceMetrics
         EventSequenceId eventSequenceId,
         MicroserviceId microserviceId,
         TenantId tenantId,
-        Func<long> getAppendedEventsCount)
+        Func<EventCount> getAppendedEventsCount)
     {
         _eventSequenceId = eventSequenceId;
         _microserviceId = microserviceId;
@@ -55,10 +55,10 @@ public class EventSequenceMetrics : IEventSequenceMetrics
     /// <inheritdoc/>
     public void FailedAppending(EventSourceId eventSourceId, string eventName) => _failedAppendedEvents.Add(1, GetTagsFor(eventSourceId, eventName));
 
-    Measurement<long> GetTotalAppendedEvents()
+    Measurement<ulong> GetTotalAppendedEvents()
     {
         var total = _getAppendedEventsCount();
-        return new Measurement<long>(total, new TagList(new ReadOnlySpan<KeyValuePair<string, object?>>(new KeyValuePair<string, object?>[]
+        return new Measurement<ulong>(total, new TagList(new ReadOnlySpan<KeyValuePair<string, object?>>(new KeyValuePair<string, object?>[]
         {
             new("event_sequence_id", _eventSequenceId.ToString()),
             new("microservice_id", _microserviceId.ToString()),

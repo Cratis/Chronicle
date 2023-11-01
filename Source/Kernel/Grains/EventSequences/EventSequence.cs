@@ -41,7 +41,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
     IAsyncStream<AppendedEvent>? _stream;
     IEventSequenceMetrics? _metrics;
-    long _appendedEventsCount;
+    EventCount _appendedEventsCount = EventCount.NotSet;
 
     /// <summary>
     /// Initializes a new instance of <see cref="EventSequence"/>.

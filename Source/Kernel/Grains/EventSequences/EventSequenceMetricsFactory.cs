@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
@@ -24,7 +25,7 @@ public class EventSequenceMetricsFactory : IEventSequenceMetricsFactory
         EventSequenceId eventSequenceId,
         MicroserviceId microserviceId,
         TenantId tenantId,
-        Func<long> getAppendedEventsCount)
+        Func<EventCount> getAppendedEventsCount)
         => new EventSequenceMetrics(
             _meter,
             eventSequenceId,
