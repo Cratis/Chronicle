@@ -68,6 +68,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         PrepareAllSteps(request, tcs);
 
+#pragma warning disable CA2008 // Do not create tasks without passing a TaskScheduler
         tcs.Task.ContinueWith(async (Task<IImmutableList<JobStepDetails>> jobStepsTask) =>
         {
             var jobSteps = await jobStepsTask;
@@ -86,6 +87,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
             PrepareAndStartAllJobSteps(grainId, jobStepGrains);
         });
+#pragma warning restore CA2008 // Do not create tasks without passing a TaskScheduler
 
         return Task.CompletedTask;
     }
