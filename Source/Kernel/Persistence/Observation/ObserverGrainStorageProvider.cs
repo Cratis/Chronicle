@@ -52,13 +52,30 @@ public class ObserverGrainStorageProvider : IGrainStorage
 
         if (actualGrainState.State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
         {
+            var tail = await _eventSequenceStorageProvider().GetTailSequenceNumber(
+                    actualGrainState.State.EventSequenceId,
+                    actualGrainState.State.EventTypes);
+
+            if (tail < actualGrainState.State.NextEventSequenceNumber)
+            {
+                actualGrainState.State = actualGrainState.State with
+                {
+                    LastHandledEventSequenceNumber = tail
+                };
+            }
+        }
+        if (actualGrainState.State.Handled == EventCount.NotSet)
+        {
+            var count = await _eventSequenceStorageProvider().GetCount(
+                actualGrainState.State.EventSequenceId,
+                actualGrainState.State.LastHandledEventSequenceNumber,
+                actualGrainState.State.EventTypes);
+
             actualGrainState.State = actualGrainState.State with
             {
-                LastHandledEventSequenceNumber = await _eventSequenceStorageProvider().GetTailSequenceNumber(
-                    actualGrainState.State.EventSequenceId,
-                    actualGrainState.State.EventTypes)
+                Handled = count
             };
-)        }
+        }
     }
 
     /// <inheritdoc/>
