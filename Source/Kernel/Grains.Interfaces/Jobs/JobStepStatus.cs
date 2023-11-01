@@ -31,5 +31,10 @@ public enum JobStepStatus
     /// <summary>
     /// The job step failed.
     /// </summary>
-    Failed = 4
+    Failed = 4,
+
+    /// <summary>
+    /// The job step has been stopped.
+    /// </summary>
+    Stopped = 5
 }

@@ -28,11 +28,11 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
         where TJob : IJob<TRequest>;
 
     /// <summary>
-    /// Cancel a job if running.
+    /// Stop a job if running.
     /// </summary>
-    /// <param name="jobId"><see cref="JobId"/> to cancel.</param>
+    /// <param name="jobId"><see cref="JobId"/> to stop.</param>
     /// <returns>Awaitable task.</returns>
-    Task Cancel(JobId jobId);
+    Task Stop(JobId jobId);
 
     /// <summary>
     /// Delete an existing job.

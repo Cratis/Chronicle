@@ -12,10 +12,11 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// </summary>
 /// <typeparam name="TRequest">Type of request for the step.</typeparam>
 /// <typeparam name="TState">Type of state for the step.</typeparam>
-public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, IJobStep<TRequest>
+public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, IJobStep<TRequest>, IDisposable
     where TState : JobStepState
 {
     readonly IPersistentState<TState> _state;
+    readonly CancellationTokenSource _cancellationTokenSource = new();
     bool _running;
 
     /// <summary>
@@ -55,6 +56,9 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     protected TState State => _state.State;
 
     /// <inheritdoc/>
+    public void Dispose() => _cancellationTokenSource.Dispose();
+
+    /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _state.State.Name = GetType().Name;
@@ -87,7 +91,12 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     }
 
     /// <inheritdoc/>
-    public Task Stop() => Task.CompletedTask;
+    public async Task Stop()
+    {
+        _cancellationTokenSource.Cancel();
+        StatusChanged(JobStepStatus.Stopped);
+        await _state.WriteStateAsync();
+    }
 
     /// <inheritdoc/>
     public async Task ReportStatusChange(JobStepStatus status)
@@ -120,8 +129,9 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     /// The method that gets called when the step should do its work.
     /// </summary>
     /// <param name="request">The request object for the step.</param>
+    /// <param name="cancellationToken">Cancellation token that can cancel the step work.</param>
     /// <returns>True if successful, false if not.</returns>
-    protected abstract Task<JobStepResult> PerformStep(TRequest request);
+    protected abstract Task<JobStepResult> PerformStep(TRequest request, CancellationToken cancellationToken);
 
     /// <inheritdoc/>
     protected override async Task<object> PerformWork(TRequest request)
@@ -131,7 +141,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
         JobStepResult result;
         try
         {
-            result = await PerformStep(request);
+            result = await PerformStep(request, _cancellationTokenSource.Token);
         }
         catch (Exception ex)
         {

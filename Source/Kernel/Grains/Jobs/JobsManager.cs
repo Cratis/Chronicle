@@ -70,16 +70,19 @@ public class JobsManager : Grain, IJobsManager
     }
 
     /// <inheritdoc/>
-    public Task Cancel(JobId jobId)
+    public async Task Stop(JobId jobId)
     {
-        // TODO: Actual cancel the job - if it is running
-        return Task.CompletedTask;
+        _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
+        var jobState = await _jobStorageProvider().GetJob(jobId);
+        var job = (GrainFactory.GetGrain(jobState.Type, jobId, new JobKey(_key.MicroserviceId, _key.TenantId)) as IJob)!;
+        await job.Stop();
     }
 
     /// <inheritdoc/>
     public async Task Delete(JobId jobId)
     {
         _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
+        await Stop(jobId);
         await _jobStepStorageProvider().RemoveAllForJob(jobId);
         await _jobStorageProvider().Remove(jobId);
     }

@@ -70,7 +70,7 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
     }
 
     /// <inheritdoc/>
-    protected override async Task<JobStepResult> PerformStep(HandleEventsForPartitionArguments request)
+    protected override async Task<JobStepResult> PerformStep(HandleEventsForPartitionArguments request, CancellationToken cancellationToken)
     {
         if (_subscriber == null || !request.ObserverSubscription.IsSubscribed)
         {
@@ -96,6 +96,11 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
         var handledCount = EventCount.Zero;
         while (await events.MoveNext())
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
             try
             {
                 if (!events.Current.Any())
