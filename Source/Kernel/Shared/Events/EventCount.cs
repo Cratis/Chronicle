@@ -29,13 +29,13 @@ public record EventCount(ulong Value) : ConceptAs<ulong>(Value)
     /// Implicitly convert from <see cref="long"/> to <see cref="EventCount"/>.
     /// </summary>
     /// <param name="value">Value to convert from.</param>
-    public static implicit operator EventCount(long value) => new(value);
+    public static implicit operator EventCount(long value) => new((ulong)value);
 
     /// <summary>
     /// Implicitly convert from <see cref="int"/> to <see cref="EventCount"/>.
     /// </summary>
     /// <param name="value">Value to convert from.</param>
-    public static implicit operator EventCount(int value) => new(value);
+    public static implicit operator EventCount(int value) => new((ulong)value);
 
     /// <summary>
     /// Add a <see cref="ulong"/> to the <see cref="EventCount"/>.
