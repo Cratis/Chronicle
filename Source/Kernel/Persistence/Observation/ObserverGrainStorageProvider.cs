@@ -64,6 +64,7 @@ public class ObserverGrainStorageProvider : IGrainStorage
                 };
             }
         }
+
         if (actualGrainState.State.Handled == EventCount.NotSet)
         {
             var count = await _eventSequenceStorageProvider().GetCount(
