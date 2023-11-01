@@ -123,7 +123,7 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
     public Task<AppendedEvent> GetEventAt(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task<long> GetCount(EventSequenceId eventSequenceId) => throw new NotImplementedException();
+    public Task<EventCount> GetCount(EventSequenceId eventSequenceId, EventSequenceNumber? lastEventSequenceNumber = null, IEnumerable<EventType>? eventTypes = null) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task<TailEventSequenceNumbers> GetTailSequenceNumbers(EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes) => throw new NotImplementedException();
