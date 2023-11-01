@@ -18,8 +18,10 @@ public interface IEventSequenceStorage
     /// Get count of events in an event sequence.
     /// </summary>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to get count for.</param>
+    /// <param name="lastEventSequenceNumber">Optional last sequence number to count.</param>
+    /// <param name="eventTypes">Event types to count for.</param>
     /// <returns>Total number of events.</returns>
-    Task<long> GetCount(EventSequenceId eventSequenceId);
+    Task<EventCount> GetCount(EventSequenceId eventSequenceId, EventSequenceNumber? lastEventSequenceNumber = null, IEnumerable<EventType>? eventTypes = null);
 
     /// <summary>
     /// Append a single event to the event store.

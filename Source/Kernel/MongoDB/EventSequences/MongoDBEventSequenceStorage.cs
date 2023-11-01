@@ -63,10 +63,28 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
     }
 
     /// <inheritdoc/>
-    public async Task<long> GetCount(EventSequenceId eventSequenceId)
+    public async Task<EventCount> GetCount(
+        EventSequenceId eventSequenceId,
+        EventSequenceNumber? lastEventSequenceNumber = null,
+        IEnumerable<EventType>? eventTypes = null)
     {
+        var filters = new List<FilterDefinition<Event>>();
+        if (lastEventSequenceNumber is not null)
+        {
+            filters.Add(Builders<Event>.Filter.Lte(_ => _.SequenceNumber, lastEventSequenceNumber.Value));
+        }
+        if (eventTypes?.Any() ?? false)
+        {
+            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
+        }
+        if (filters.Count == 0)
+        {
+            filters.Add(FilterDefinition<Event>.Empty);
+        }
+
+        var filter = Builders<Event>.Filter.And(filters.ToArray());
         var collection = GetCollectionFor(eventSequenceId);
-        return await collection.CountDocumentsAsync(FilterDefinition<Event>.Empty).ConfigureAwait(false);
+        return await collection.CountDocumentsAsync(filter).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
