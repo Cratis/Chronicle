@@ -93,13 +93,14 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = EventSequenceNumber.Unavailable;
 
-        var handledCount = EventCount.Zero;
         while (await events.MoveNext())
         {
             if (cancellationToken.IsCancellationRequested)
             {
                 break;
             }
+
+            var handledCount = EventCount.Zero;
 
             try
             {
@@ -110,8 +111,11 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
 
                 tailEventSequenceNumber = events.Current.First().Metadata.SequenceNumber;
 
-                var result = await _subscriber!.OnNext(events.Current, subscriberContext);
-                handledCount += events.Current.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation);
+                var eventsToHandle = events.Current;
+
+                eventsToHandle = SetObservationStateIfSpecified(request, events, eventsToHandle);
+                var result = await _subscriber!.OnNext(eventsToHandle, subscriberContext);
+                handledCount = events.Current.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation);
                 switch (result.State)
                 {
                     case ObserverSubscriberState.Failed:
@@ -146,5 +150,22 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
         }
 
         return JobStepResult.Succeeded;
+    }
+
+    IEnumerable<AppendedEvent> SetObservationStateIfSpecified(HandleEventsForPartitionArguments request, IEventCursor events, IEnumerable<AppendedEvent> eventsToHandle)
+    {
+        if (request.EventObservationState != EventObservationState.None)
+        {
+            eventsToHandle = events.Current.Select(@event =>
+                @event with
+                {
+                    Context = @event.Context with
+                    {
+                        ObservationState = request.EventObservationState
+                    }
+                }).ToArray();
+        }
+
+        return eventsToHandle;
     }
 }
