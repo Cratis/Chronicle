@@ -125,7 +125,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
             }
         }
 
-        var result = await _sink.FindOrDefault(new(modelId, ArrayIndexers.NoIndexers), false);
+        var result = await _sink.FindOrDefault(new(modelId, ArrayIndexers.NoIndexers));
         var json = JsonSerializer.Serialize(result, Globals.JsonSerializerOptions);
         return new(JsonSerializer.Deserialize<TModel>(json, Globals.JsonSerializerOptions)!, Array.Empty<PropertyPath>(), projectedEventsCount);
     }

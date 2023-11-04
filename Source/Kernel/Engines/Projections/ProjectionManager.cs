@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Kernel.Engines.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionManager"/>.
 /// </summary>
-[SingletonPerMicroservice]
+[SingletonPerMicroserviceAndTenant]
 public class ProjectionManager : IProjectionManager
 {
     readonly IProjectionFactory _projectionFactory;

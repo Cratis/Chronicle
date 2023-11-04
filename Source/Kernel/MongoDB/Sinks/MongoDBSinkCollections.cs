@@ -15,6 +15,7 @@ public class MongoDBSinkCollections : IMongoDBSinkCollections
 {
     readonly IMongoDatabase _database;
     readonly Model _model;
+    bool _isReplaying;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBSinkCollections"/> class.
@@ -30,7 +31,11 @@ public class MongoDBSinkCollections : IMongoDBSinkCollections
     string ReplayCollectionName => $"replay-{_model.Name}";
 
     /// <inheritdoc/>
-    public Task BeginReplay() => PrepareInitialRun(true);
+    public async Task BeginReplay()
+    {
+        _isReplaying = true;
+        await PrepareInitialRun();
+    }
 
     /// <inheritdoc/>
     public async Task EndReplay()
@@ -67,15 +72,17 @@ public class MongoDBSinkCollections : IMongoDBSinkCollections
         {
             await _database.RenameCollectionAsync(rewindName, _model.Name);
         }
+
+        _isReplaying = false;
     }
 
     /// <inheritdoc/>
-    public async Task PrepareInitialRun(bool isReplaying)
+    public async Task PrepareInitialRun()
     {
-        var collection = GetCollection(isReplaying);
+        var collection = GetCollection();
         await collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
     }
 
     /// <inheritdoc/>
-    public IMongoCollection<BsonDocument> GetCollection(bool isReplaying) => isReplaying ? _database.GetCollection<BsonDocument>(ReplayCollectionName) : _database.GetCollection<BsonDocument>(_model.Name);
+    public IMongoCollection<BsonDocument> GetCollection() => _isReplaying ? _database.GetCollection<BsonDocument>(ReplayCollectionName) : _database.GetCollection<BsonDocument>(_model.Name);
 }

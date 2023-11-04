@@ -54,6 +54,7 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
                     request.ObserverSubscription,
                     key,
                     EventSequenceNumber.First,
+                    EventObservationState.Replay,
                     request.EventTypes)));
         }
 

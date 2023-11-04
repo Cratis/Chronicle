@@ -57,6 +57,7 @@ public class CatchUpJob : Job<CatchUpRequest, JobState<CatchUpRequest>>, ICatchU
                     request.ObserverSubscription,
                     key,
                     request.FromEventSequenceNumber,
+                    Events.EventObservationState.None,
                     request.EventTypes)));
         }
 

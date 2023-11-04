@@ -27,6 +27,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     readonly ILogger<Observer> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IPersistentState<FailedPartitions> _failuresState;
+    readonly IObserverServiceClient _replayStateServiceClient;
     IStreamProvider _streamProvider = null!;
     ObserverId _observerId = Guid.Empty;
     ObserverKey _observerKey = ObserverKey.NotSet;
@@ -41,17 +42,20 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
+    /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Observer(
         IExecutionContextManager executionContextManager,
         [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
         IPersistentState<FailedPartitions> failures,
+        IObserverServiceClient replayStateServiceClient,
         ILogger<Observer> logger,
         ILoggerFactory loggerFactory)
     {
         _executionContextManager = executionContextManager;
         _failuresState = failures;
+        _replayStateServiceClient = replayStateServiceClient;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _subscription = ObserverSubscription.Unsubscribed;
@@ -126,7 +130,10 @@ public class Observer : StateMachine<ObserverState>, IObserver
         new States.Disconnected(),
         new States.Routing(this, _eventSequence, _loggerFactory.CreateLogger<States.Routing>()),
         new States.CatchUp(_observerKey, _jobsManager),
-        new States.Replay(_observerKey, _jobsManager),
+        new States.Replay(
+            _observerKey,
+            _replayStateServiceClient,
+            _jobsManager),
         new States.Indexing(),
         new States.Observing(
             this,

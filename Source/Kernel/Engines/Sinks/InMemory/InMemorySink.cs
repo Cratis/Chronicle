@@ -55,7 +55,7 @@ public class InMemorySink : ISink, IDisposable
     public IDictionary<object, ExpandoObject> Collection => _isReplaying ? _rewindCollection : _collection;
 
     /// <inheritdoc/>
-    public Task<ExpandoObject?> FindOrDefault(Key key, bool isReplaying)
+    public Task<ExpandoObject?> FindOrDefault(Key key)
     {
         var collection = Collection;
         var keyValue = GetActualKeyValue(key);
@@ -71,7 +71,7 @@ public class InMemorySink : ISink, IDisposable
     }
 
     /// <inheritdoc/>
-    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isReplaying)
+    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
     {
         var state = changeset.InitialState.Clone();
         var collection = Collection;
@@ -103,7 +103,7 @@ public class InMemorySink : ISink, IDisposable
     }
 
     /// <inheritdoc/>
-    public Task PrepareInitialRun(bool isReplaying)
+    public Task PrepareInitialRun()
     {
         Collection.Clear();
         return Task.CompletedTask;

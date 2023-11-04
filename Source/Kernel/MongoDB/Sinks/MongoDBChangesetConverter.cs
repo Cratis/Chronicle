@@ -159,7 +159,7 @@ public class MongoDBChangesetConverter : IMongoDBChangesetConverter
 
         var filter = Builders<BsonDocument>.Filter.Eq(property, joined.Key);
 
-        var collection = _collections.GetCollection(isReplaying);
+        var collection = _collections.GetCollection();
 
         var joinArrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
         ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, isReplaying).Wait();

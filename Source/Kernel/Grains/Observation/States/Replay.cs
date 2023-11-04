@@ -16,18 +16,22 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 public class Replay : BaseObserverState
 {
     readonly ObserverKey _observerKey;
+    readonly IObserverServiceClient _replayStateServiceClient;
     readonly IJobsManager _jobsManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CatchUp"/> class.
     /// </summary>
     /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
+    /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
     /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
     public Replay(
         ObserverKey observerKey,
+        IObserverServiceClient replayStateServiceClient,
         IJobsManager jobsManager)
     {
         _observerKey = observerKey;
+        _replayStateServiceClient = replayStateServiceClient;
         _jobsManager = jobsManager;
     }
 
@@ -54,12 +58,12 @@ public class Replay : BaseObserverState
         var jobsForThisObserver = jobs.Where(_ => _.Request.ObserverId == state.ObserverId && _.Request.ObserverKey == _observerKey);
         if (jobsForThisObserver.Any(_ => _.Status == JobStatus.Running))
         {
-            await StateMachine.TransitionTo<Routing>();
             return state;
         }
 
-        var pausedJob = jobs.FirstOrDefault(_ => _.Status == JobStatus.Paused);
+        await _replayStateServiceClient.BeginReplayFor(new(state.ObserverId, _observerKey, state.Type));
 
+        var pausedJob = jobsForThisObserver.FirstOrDefault(_ => _.Status == JobStatus.Paused);
         if (pausedJob is not null)
         {
             await _jobsManager.Start<IReplayJob, ReplayRequest>(
@@ -81,8 +85,9 @@ public class Replay : BaseObserverState
     }
 
     /// <inheritdoc/>
-    public override Task<ObserverState> OnLeave(ObserverState state)
+    public override async Task<ObserverState> OnLeave(ObserverState state)
     {
-        return Task.FromResult(state);
+        await _replayStateServiceClient.EndReplayFor(new(state.ObserverId, _observerKey, state.Type));
+        return state;
     }
 }

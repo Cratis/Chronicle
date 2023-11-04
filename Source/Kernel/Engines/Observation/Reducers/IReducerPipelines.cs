@@ -6,14 +6,14 @@ using Aksio.Cratis.Observation.Reducers;
 namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
 
 /// <summary>
-/// Defines a system that can create <see cref="IReducerPipeline"/> instances.
+/// Defines a system that manages <see cref="IReducerPipeline"/> instances.
 /// </summary>
-public interface IReducerPipelineFactory
+public interface IReducerPipelines
 {
     /// <summary>
     /// Create a <see cref="IReducerPipeline"/> from a <see cref="ReducerDefinition"/>.
     /// </summary>
     /// <param name="definition"><see cref="ReducerDefinition"/> to create from.</param>
     /// <returns><see cref="IReducerPipeline"/> instance.</returns>
-    Task<IReducerPipeline> CreateFrom(ReducerDefinition definition);
+    Task<IReducerPipeline> GetFor(ReducerDefinition definition);
 }

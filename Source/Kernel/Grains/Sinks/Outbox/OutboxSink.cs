@@ -70,7 +70,7 @@ public class OutboxSink : ISink, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isReplaying)
+    public async Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
     {
         var state = changeset.InitialState.Clone();
         foreach (var change in changeset.Changes)
@@ -120,7 +120,7 @@ public class OutboxSink : ISink, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<ExpandoObject?> FindOrDefault(Key key, bool isReplaying)
+    public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
         if (_replaying) return new ExpandoObject();
 
@@ -137,5 +137,5 @@ public class OutboxSink : ISink, IDisposable
     }
 
     /// <inheritdoc/>
-    public Task PrepareInitialRun(bool isReplaying) => Task.CompletedTask;
+    public Task PrepareInitialRun() => Task.CompletedTask;
 }

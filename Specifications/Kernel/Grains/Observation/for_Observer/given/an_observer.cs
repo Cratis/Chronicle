@@ -20,6 +20,7 @@ public class an_observer : GrainSpecification<ObserverState>
     protected Mock<IStreamProvider> sequence_stream_provider;
     protected Mock<IObserverSubscriber> subscriber;
     protected Mock<IPersistentState<FailedPartitions>> failed_partitions_persistent_state;
+    protected Mock<IObserverServiceClient> observer_service_client;
     protected ObserverKey ObserverKey => new(MicroserviceId.Unspecified, TenantId.NotSet, EventSequenceId.Log);
     protected List<FailedPartitions> written_failed_partitions_states = new();
     protected FailedPartitions failed_partitions_state;
@@ -45,9 +46,12 @@ public class an_observer : GrainSpecification<ObserverState>
                 written_failed_partitions_states.Add(clone);
             }).Returns(Task.CompletedTask);
 
+        observer_service_client = new();
+
         observer = new Observer(
             execution_context_manager.Object,
             failed_partitions_persistent_state.Object,
+            observer_service_client.Object,
             Mock.Of<ILogger<Observer>>(),
             Mock.Of<ILoggerFactory>());
 

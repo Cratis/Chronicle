@@ -32,7 +32,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
     readonly IHttpClientFactory _httpClientFactory;
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IReducerPipelineDefinitions> _reducerPipelineDefinitionsProvider;
-    readonly IReducerPipelineFactory _reducerPipelineFactory;
+    readonly ProviderFor<IReducerPipelines> _reducerPipelinesProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
@@ -49,7 +49,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
     /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> for connecting to the client.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="reducerPipelineDefinitionsProvider"><see cref="IReducerPipelineDefinitions"/> to get pipeline definitions from.</param>
-    /// <param name="reducerPipelineFactory"><see cref="IReducerPipelineFactory"/> for creating instances of <see cref="IReducerPipeline"/>.</param>
+    /// <param name="reducerPipelinesProvider"><see cref="IReducerPipelines"/> for getting instances of <see cref="IReducerPipeline"/>.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and <see cref="ExpandoObject"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     public ClientReducerSubscriber(
@@ -57,7 +57,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
         IHttpClientFactory httpClientFactory,
         IExecutionContextManager executionContextManager,
         ProviderFor<IReducerPipelineDefinitions> reducerPipelineDefinitionsProvider,
-        IReducerPipelineFactory reducerPipelineFactory,
+        ProviderFor<IReducerPipelines> reducerPipelinesProvider,
         IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions)
     {
@@ -65,7 +65,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
         _httpClientFactory = httpClientFactory;
         _executionContextManager = executionContextManager;
         _reducerPipelineDefinitionsProvider = reducerPipelineDefinitionsProvider;
-        _reducerPipelineFactory = reducerPipelineFactory;
+        _reducerPipelinesProvider = reducerPipelinesProvider;
         _expandoObjectConverter = expandoObjectConverter;
         _jsonSerializerOptions = jsonSerializerOptions;
     }
@@ -84,7 +84,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
 
         _executionContextManager.Establish(_tenantId, _executionContextManager.Current.CorrelationId, _microserviceId);
         var definition = await _reducerPipelineDefinitionsProvider().GetFor(_reducerId);
-        _pipeline = await _reducerPipelineFactory.CreateFrom(definition);
+        _pipeline = await _reducerPipelinesProvider().GetFor(definition);
     }
 
     /// <inheritdoc/>
@@ -111,20 +111,10 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                 var state = ObserverSubscriberState.Ok;
                 var commandResult = CommandResult.Success;
 
-                var isReplaying = events.Any(_ => _.Context.ObservationState.HasFlag(EventObservationState.Replay));
-                var isHeadOfReplay = events.Any(_ => _.Context.ObservationState.HasFlag(EventObservationState.HeadOfReplay));
-                var isTailOfReplay = events.Any(_ => _.Context.ObservationState.HasFlag(EventObservationState.TailOfReplay));
-
-                var observationState = EventObservationState.None;
-                if (isReplaying) observationState |= EventObservationState.Replay;
-                if (isHeadOfReplay) observationState |= EventObservationState.HeadOfReplay;
-                if (isTailOfReplay) observationState |= EventObservationState.TailOfReplay;
-
                 var firstEvent = events.First();
                 var reducerContext = new ReducerContext(
                     events,
-                    new Key(firstEvent.Context.EventSourceId, ArrayIndexers.NoIndexers),
-                    observationState);
+                    new Key(firstEvent.Context.EventSourceId, ArrayIndexers.NoIndexers));
 
                 var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
 

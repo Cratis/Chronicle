@@ -19,7 +19,7 @@ public record ObserverSubscription(ObserverId ObserverId, ObserverKey ObserverKe
     /// <summary>
     /// Gets a subscription representing no subscription.
     /// </summary>
-    public static readonly ObserverSubscription Unsubscribed = new(ObserverId.Unspecified, ObserverKey.NotSet, Enumerable.Empty<EventType>(), typeof(IObserverSubscriber), null);
+    public static readonly ObserverSubscription Unsubscribed = new(ObserverId.Unspecified, ObserverKey.NotSet, Enumerable.Empty<EventType>(), typeof(NullObserverSubscriber), null);
 
     /// <summary>
     /// Check whether or not the subscription is subscribed.

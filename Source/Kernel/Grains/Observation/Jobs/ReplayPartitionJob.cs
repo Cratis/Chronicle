@@ -38,6 +38,7 @@ public class ReplayPartitionJob : Job<ReplayPartitionRequest, JobState<ReplayPar
                     request.ObserverSubscription,
                     request.Key,
                     request.FromSequenceNumber,
+                    Events.EventObservationState.Replay,
                     request.EventTypes))
         }.ToImmutableList();
 

@@ -41,6 +41,7 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
                     request.ObserverSubscription,
                     request.Key,
                     request.FromSequenceNumber,
+                    Events.EventObservationState.None,
                     request.EventTypes))
         }.ToImmutableList();
 

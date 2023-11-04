@@ -38,6 +38,7 @@ public static class Program
                 .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
                 .ConfigureSyncWorkAbstraction(Environment.ProcessorCount - 2)
                 .ConfigureSerialization()
+                .AddReplayStateManagement()
                 .UseTelemetry()
                 .UseDashboard(options =>
                 {

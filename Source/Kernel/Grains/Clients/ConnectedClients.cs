@@ -130,9 +130,9 @@ public class ConnectedClients : Grain, IConnectedClients
         {
             if (connectedClient.IsRunningWithDebugger) continue;
 
-            if (connectedClient.LastSeen < DateTimeOffset.UtcNow.AddSeconds(-10))
+            if (connectedClient.LastSeen < DateTimeOffset.UtcNow.AddSeconds(-5))
             {
-                await OnClientDisconnected(connectedClient.ConnectionId, "Last seen was more than 10 seconds ago");
+                await OnClientDisconnected(connectedClient.ConnectionId, "Last seen was more than 5 seconds ago");
             }
         }
     }
