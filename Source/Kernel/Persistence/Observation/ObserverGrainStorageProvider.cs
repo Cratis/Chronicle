@@ -47,7 +47,7 @@ public class ObserverGrainStorageProvider : IGrainStorage
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
         var eventSequenceId = observerKey.EventSequenceId;
 
-        _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
+        _executionContextManager.Establish(observerKey.TenantId, _executionContextManager.Current.CorrelationId, observerKey.MicroserviceId);
         actualGrainState.State = await _observerStorageProvider().GetState(observerId, observerKey);
 
         var modified = false;
