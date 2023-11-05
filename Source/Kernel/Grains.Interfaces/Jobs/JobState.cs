@@ -16,6 +16,9 @@ public class JobState<TRequest> : IJobState
     public JobName Name { get; set; } = JobName.NotSet;
 
     /// <inheritdoc/>
+    public JobDetails Details { get; set; } = JobDetails.NotSet;
+
+    /// <inheritdoc/>
     public JobType Type { get; set; } = JobType.NotSet;
 
     /// <inheritdoc/>

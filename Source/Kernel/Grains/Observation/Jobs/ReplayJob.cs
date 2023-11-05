@@ -35,6 +35,9 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
     }
 
     /// <inheritdoc/>
+    protected override JobDetails GetJobDetails(ReplayRequest request) => $"{request.ObserverId}";
+
+    /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayRequest request)
     {
         _request = request;

@@ -19,6 +19,11 @@ public interface IJobState
     JobName Name { get; set; }
 
     /// <summary>
+    /// Gets or sets the details for a job.
+    /// </summary>
+    JobDetails Details { get; set; }
+
+    /// <summary>
     /// Gets or sets the <see cref="JobType"/>.
     /// </summary>
     JobType Type { get; set; }

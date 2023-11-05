@@ -17,6 +17,9 @@ export class JobState {
     name!: string;
 
     @field(String)
+    details!: string;
+
+    @field(String)
     type!: string;
 
     @field(Number)

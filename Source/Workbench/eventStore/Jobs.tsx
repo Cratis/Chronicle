@@ -47,6 +47,11 @@ const jobColumns: GridColDef[] = [
         width: 300,
     },
     {
+        headerName: 'Details',
+        field: 'details',
+        width: 300,
+    },
+    {
         headerName: 'Status',
         field: 'status',
         width: 200,

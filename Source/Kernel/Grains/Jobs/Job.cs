@@ -62,6 +62,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     public Task Start(TRequest request)
     {
         _isRunning = true;
+        State.Details = GetJobDetails(request);
         State.Request = request!;
         var grainId = this.GetGrainId();
         var tcs = new TaskCompletionSource<IImmutableList<JobStepDetails>>();
@@ -198,6 +199,13 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <param name="request">Request to start with.</param>
     /// <returns>Awaitable task.</returns>
     protected abstract Task<IImmutableList<JobStepDetails>> PrepareSteps(TRequest request);
+
+    /// <summary>
+    /// Get the details for the job. This is for display purposes.
+    /// </summary>
+    /// <param name="request">The job request.</param>
+    /// <returns>The <see cref="JobDetails"/>.</returns>
+    protected virtual JobDetails GetJobDetails(TRequest request) => JobDetails.NotSet;
 
     IImmutableList<JobStepGrainAndRequest> CreateGrainsFromJobSteps(IImmutableList<JobStepDetails> jobSteps) =>
         jobSteps.Select(_ => new JobStepGrainAndRequest(
