@@ -11,9 +11,10 @@ using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Grains.Projections;
+using Aksio.Cratis.Observation;
 using NJsonSchema;
+using IObservers = Aksio.Cratis.Kernel.Grains.Observation.IObservers;
 
 namespace Aksio.Cratis.Kernel.Server;
 
@@ -82,17 +83,6 @@ public class BootProcedure : IPerformBootProcedure
                 var identityStore = _serviceProvider.GetRequiredService<IIdentityStore>()!;
                 await identityStore.Populate();
 
-                _logger.RehydrateProjections();
-                var projections = _grainFactory.GetGrain<IProjections>(0);
-                await projections.Rehydrate();
-
-                _logger.RehydrateObservers();
-                var observersStopWatch = Stopwatch.StartNew();
-                var observers = _grainFactory.GetGrain<IObservers>(0);
-                await observers.Rehydrate();
-                observersStopWatch.Stop();
-                _logger.RehydratedObservers(observersStopWatch.Elapsed);
-
                 foreach (var (tenantId, _) in _configuration.Tenants)
                 {
                     foreach (var outbox in microservice.Inbox.FromOutboxes)
@@ -108,10 +98,17 @@ public class BootProcedure : IPerformBootProcedure
                     stopwatch.Stop();
                     _logger.RehydratedEventSequences(microserviceId, tenantId, stopwatch.Elapsed);
 
+                    _logger.RehydrateObservers(microserviceId, tenantId);
+                    await _grainFactory.GetGrain<IObservers>(0, new ObserversKey(microserviceId, tenantId)).Rehydrate();
+
                     _logger.RehydrateJobs(microserviceId, tenantId);
                     await _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(microserviceId, tenantId)).Rehydrate();
                 }
             }
+
+            _logger.RehydrateProjections();
+            var projections = _grainFactory.GetGrain<IProjections>(0);
+            await projections.Rehydrate();
 
             _logger.PrimingEventSequenceCaches();
             var eventSequenceCaches = _serviceProvider.GetRequiredService<IEventSequenceCaches>()!;
