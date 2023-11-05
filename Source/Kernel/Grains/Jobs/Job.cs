@@ -120,9 +120,13 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <inheritdoc/>
     public async Task Stop()
     {
+        if (State.Status == JobStatus.Stopped || State.Status == JobStatus.CompletedSuccessfully || State.Status == JobStatus.CompletedWithFailures)
+        {
+            return;
+        }
+
         var executionContextManager = ServiceProvider.GetRequiredService<IExecutionContextManager>();
         executionContextManager.Establish(_jobKey.TenantId, executionContextManager.Current.CorrelationId, _jobKey.MicroserviceId);
-
         var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
         var steps = await stepStorage.GetForJob(_jobId, JobStepStatus.Scheduled, JobStepStatus.Running);
         foreach (var step in steps)
