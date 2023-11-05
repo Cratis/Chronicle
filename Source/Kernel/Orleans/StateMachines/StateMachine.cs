@@ -81,7 +81,7 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
     public abstract IImmutableList<IState<TStoredState>> CreateStates();
 
     /// <summary>
-    /// Called when the state machine is activated.
+    /// Called when the state machine is activating.
     /// </summary>
     /// <param name="cancellationToken"><see cref="CancellationToken"/> for any cancellations.</param>
     /// <returns>Awaitable task.</returns>
