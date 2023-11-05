@@ -62,14 +62,50 @@ public class MongoDBJobStepStorage : IJobStepStorage
     /// <inheritdoc/>
     public async Task<IImmutableList<JobStepState>> GetForJob(JobId jobId, params JobStepStatus[] statuses)
     {
+        var failedJobSteps = new List<JobStepState>();
+
         var filter = GetJobIdFilter<BsonDocument>(jobId);
+        if (statuses.Any(_ => _ == JobStepStatus.Failed) || statuses.Length == 0)
+        {
+            var failedCursor = await FailedCollection.FindAsync(filter).ConfigureAwait(false);
+            failedJobSteps = failedCursor.ToList().ConvertAll(_ => BsonSerializer.Deserialize<JobStepState>(_));
+
+            if (statuses.Any(_ => _ != JobStepStatus.Failed))
+            {
+                return failedJobSteps.ToImmutableList();
+            }
+        }
+
         if (statuses.Length > 0)
         {
             filter &= Builders<BsonDocument>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
         }
 
         var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        return cursor.ToList().Select(_ => BsonSerializer.Deserialize<JobStepState>(_)).ToImmutableList();
+        var jobsSteps = cursor.ToList().ConvertAll(_ => BsonSerializer.Deserialize<JobStepState>(_));
+        return jobsSteps.Concat(failedJobSteps).ToImmutableList();
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> CountForJob(JobId jobId, params JobStepStatus[] statuses)
+    {
+        var filter = GetJobIdFilter<BsonDocument>(jobId);
+        var count = 0L;
+        if (statuses.Any(_ => _ == JobStepStatus.Failed) || statuses.Length == 0)
+        {
+            count = await FailedCollection.CountDocumentsAsync(filter).ConfigureAwait(false);
+            if (statuses.Any(_ => _ != JobStepStatus.Failed))
+            {
+                return (int)count;
+            }
+        }
+
+        if (statuses.Length > 0)
+        {
+            filter &= Builders<BsonDocument>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
+        }
+        count += await Collection.CountDocumentsAsync(filter).ConfigureAwait(false);
+        return (int)count;
     }
 
     /// <inheritdoc/>

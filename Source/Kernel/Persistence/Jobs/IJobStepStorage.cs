@@ -42,6 +42,14 @@ public interface IJobStepStorage
     Task<IImmutableList<JobStepState>> GetForJob(JobId jobId, params JobStepStatus[] statuses);
 
     /// <summary>
+    /// Count the number of job steps for a specific job for a specific status.
+    /// </summary>
+    /// <param name="jobId"><see cref="JobId"/> to count for.</param>
+    /// <param name="statuses">Optional collection of <see cref="JobStepStatus"/> to count for. If not specified, all will be counted.</param>
+    /// <returns>The number of job steps for the job that holds the specified status.</returns>
+    Task<int> CountForJob(JobId jobId, params JobStepStatus[] statuses);
+
+    /// <summary>
     /// Observe job steps for a specific job.
     /// </summary>
     /// <param name="jobId"><see cref="JobId"/> to observe for.</param>
