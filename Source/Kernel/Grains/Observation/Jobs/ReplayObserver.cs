@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.States;
 using Aksio.Cratis.Kernel.Keys;
@@ -9,24 +10,21 @@ using Aksio.Cratis.Kernel.Keys;
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
 /// <summary>
-/// Represents a job for catching up an observer.
+/// Represents a job for replaying an observer.
 /// </summary>
-public class CatchUpJob : Job<CatchUpRequest, JobState<CatchUpRequest>>, ICatchUpJob
+public class ReplayObserver : Job<ReplayObserverRequest, JobState<ReplayObserverRequest>>, IReplayObserver
 {
     readonly IObserverKeyIndexes _observerKeyIndexes;
-    CatchUpRequest? _request;
+    ReplayObserverRequest? _request;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ReplayJob"/> class.
+    /// Initializes a new instance of the <see cref="ReplayObserver"/> class.
     /// </summary>
     /// <param name="observerKeyIndexes"><see cref="IObserverKeyIndexes"/> for getting index for observer to replay.</param>
-    public CatchUpJob(IObserverKeyIndexes observerKeyIndexes)
+    public ReplayObserver(IObserverKeyIndexes observerKeyIndexes)
     {
         _observerKeyIndexes = observerKeyIndexes;
     }
-
-    /// <inheritdoc/>
-    protected override bool RemoveAfterCompleted => true;
 
     /// <inheritdoc/>
     public override async Task OnCompleted()
@@ -37,7 +35,7 @@ public class CatchUpJob : Job<CatchUpRequest, JobState<CatchUpRequest>>, ICatchU
     }
 
     /// <inheritdoc/>
-    protected override JobDetails GetJobDetails(CatchUpRequest request) => $"{request.ObserverId}";
+    protected override JobDetails GetJobDetails(ReplayObserverRequest request) => $"{request.ObserverId}";
 
     /// <inheritdoc/>
     protected override Task<bool> CanResume()
@@ -47,15 +45,14 @@ public class CatchUpJob : Job<CatchUpRequest, JobState<CatchUpRequest>>, ICatchU
     }
 
     /// <inheritdoc/>
-    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpRequest request)
+    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverRequest request)
     {
         _request = request;
         var index = await _observerKeyIndexes.GetFor(
             request.ObserverId,
             request.ObserverKey);
 
-        var keys = index.GetKeys(request.FromEventSequenceNumber);
-
+        var keys = index.GetKeys(EventSequenceNumber.First);
         var steps = new List<JobStepDetails>();
 
         await foreach (var key in keys)
@@ -66,8 +63,8 @@ public class CatchUpJob : Job<CatchUpRequest, JobState<CatchUpRequest>>, ICatchU
                     request.ObserverKey,
                     request.ObserverSubscription,
                     key,
-                    request.FromEventSequenceNumber,
-                    Events.EventObservationState.None,
+                    EventSequenceNumber.First,
+                    EventObservationState.Replay,
                     request.EventTypes)));
         }
 

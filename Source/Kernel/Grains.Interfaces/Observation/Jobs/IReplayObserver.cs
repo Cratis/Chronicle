@@ -6,8 +6,8 @@ using Aksio.Cratis.Kernel.Grains.Jobs;
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
 /// <summary>
-/// Defines the job for retrying a failed partition for an observer.
+/// Defines the job for replaying an observer.
 /// </summary>
-public interface IReplayPartitionJob : IJob<ReplayPartitionRequest>
+public interface IReplayObserver : IJob<ReplayObserverRequest>
 {
 }

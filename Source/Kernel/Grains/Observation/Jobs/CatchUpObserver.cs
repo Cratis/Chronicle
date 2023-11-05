@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.States;
 using Aksio.Cratis.Kernel.Keys;
@@ -10,21 +9,24 @@ using Aksio.Cratis.Kernel.Keys;
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
 /// <summary>
-/// Represents a job for replaying an observer.
+/// Represents a job for catching up an observer.
 /// </summary>
-public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
+public class CatchUpObserver : Job<CatchUpObserverRequest, JobState<CatchUpObserverRequest>>, ICatchUpObserver
 {
     readonly IObserverKeyIndexes _observerKeyIndexes;
-    ReplayRequest? _request;
+    CatchUpObserverRequest? _request;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ReplayJob"/> class.
+    /// Initializes a new instance of the <see cref="ReplayObserver"/> class.
     /// </summary>
     /// <param name="observerKeyIndexes"><see cref="IObserverKeyIndexes"/> for getting index for observer to replay.</param>
-    public ReplayJob(IObserverKeyIndexes observerKeyIndexes)
+    public CatchUpObserver(IObserverKeyIndexes observerKeyIndexes)
     {
         _observerKeyIndexes = observerKeyIndexes;
     }
+
+    /// <inheritdoc/>
+    protected override bool RemoveAfterCompleted => true;
 
     /// <inheritdoc/>
     public override async Task OnCompleted()
@@ -35,7 +37,7 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
     }
 
     /// <inheritdoc/>
-    protected override JobDetails GetJobDetails(ReplayRequest request) => $"{request.ObserverId}";
+    protected override JobDetails GetJobDetails(CatchUpObserverRequest request) => $"{request.ObserverId}";
 
     /// <inheritdoc/>
     protected override Task<bool> CanResume()
@@ -45,14 +47,15 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
     }
 
     /// <inheritdoc/>
-    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayRequest request)
+    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
         _request = request;
         var index = await _observerKeyIndexes.GetFor(
             request.ObserverId,
             request.ObserverKey);
 
-        var keys = index.GetKeys(EventSequenceNumber.First);
+        var keys = index.GetKeys(request.FromEventSequenceNumber);
+
         var steps = new List<JobStepDetails>();
 
         await foreach (var key in keys)
@@ -63,8 +66,8 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
                     request.ObserverKey,
                     request.ObserverSubscription,
                     key,
-                    EventSequenceNumber.First,
-                    EventObservationState.Replay,
+                    request.FromEventSequenceNumber,
+                    Events.EventObservationState.None,
                     request.EventTypes)));
         }
 

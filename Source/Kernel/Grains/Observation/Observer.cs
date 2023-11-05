@@ -188,7 +188,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     {
         // Todo: Add state saying the partition is being replayed
         // Honor the state in the Handle method, as we do with failed partitions
-        await _jobsManager.Start<IReplayPartitionJob, ReplayPartitionRequest>(
+        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(
             JobId.New(),
             new(
                 _observerId,
@@ -205,7 +205,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     {
         // Todo: Add state saying the partition is being replayed
         // Honor the state in the Handle method, as we do with failed partitions
-        await _jobsManager.Start<IReplayPartitionJob, ReplayPartitionRequest>(
+        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(
             JobId.New(),
             new(
                 _observerId,

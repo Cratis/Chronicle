@@ -8,6 +8,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Defines the job for replaying an observer.
 /// </summary>
-public interface IReplayJob : IJob<ReplayRequest>
+public interface ICatchUpObserver : IJob<CatchUpObserverRequest>
 {
 }

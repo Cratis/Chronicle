@@ -9,9 +9,9 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a job for retrying a failed partition.
 /// </summary>
-public class ReplayPartitionJob : Job<ReplayPartitionRequest, JobState<ReplayPartitionRequest>>, IReplayPartitionJob
+public class ReplayObserverPartition : Job<ReplayObserverPartitionRequest, JobState<ReplayObserverPartitionRequest>>, IReplayObserverPartition
 {
-    ReplayPartitionRequest? _request;
+    ReplayObserverPartitionRequest? _request;
 
     /// <inheritdoc/>
     public override async Task OnCompleted()
@@ -25,7 +25,7 @@ public class ReplayPartitionJob : Job<ReplayPartitionRequest, JobState<ReplayPar
     }
 
     /// <inheritdoc/>
-    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayPartitionRequest request)
+    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverPartitionRequest request)
     {
         _request = request;
 

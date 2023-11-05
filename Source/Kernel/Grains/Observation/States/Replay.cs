@@ -54,7 +54,7 @@ public class Replay : BaseObserverState
     {
         var subscription = await Observer.GetSubscription();
 
-        var jobs = await _jobsManager.GetJobsOfType<IReplayJob, ReplayRequest>();
+        var jobs = await _jobsManager.GetJobsOfType<IReplayObserver, ReplayObserverRequest>();
         var jobsForThisObserver = jobs.Where(_ => _.Request.ObserverId == state.ObserverId && _.Request.ObserverKey == _observerKey);
         if (jobsForThisObserver.Any(_ => _.Status == JobStatus.Running))
         {
@@ -70,9 +70,9 @@ public class Replay : BaseObserverState
         }
         else
         {
-            await _jobsManager.Start<IReplayJob, ReplayRequest>(
+            await _jobsManager.Start<IReplayObserver, ReplayObserverRequest>(
                 JobId.New(),
-                new ReplayRequest(
+                new ReplayObserverRequest(
                     state.ObserverId,
                     _observerKey,
                     subscription,
