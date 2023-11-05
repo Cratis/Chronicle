@@ -39,11 +39,26 @@ public class JobGrainStorageProvider : IGrainStorage
         {
             var key = (JobKey)keyExtension!;
             _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-            var storage = _serviceProvider.GetRequiredService<IJobStorage<T>>();
-            var state = await storage.Read(jobId);
+            var jobStorage = _serviceProvider.GetRequiredService<IJobStorage<T>>();
+            var state = await jobStorage.Read(jobId);
             if (state is not null)
             {
+                var jobState = (state as IJobState)!;
+                var jobStepStorage = _serviceProvider.GetRequiredService<IJobStepStorage>();
+                var successfulCount = await jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Succeeded);
+                var failedCount = await jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Failed);
+
+                var hasChanges = jobState.Progress.SuccessfulSteps != successfulCount ||
+                                 jobState.Progress.FailedSteps != failedCount;
+
+                jobState.Progress.SuccessfulSteps = successfulCount;
+                jobState.Progress.FailedSteps = failedCount;
                 grainState.State = state;
+
+                if (hasChanges)
+                {
+                    await jobStorage.Save(jobId, state);
+                }
             }
         }
     }
@@ -67,11 +82,6 @@ public class JobGrainStorageProvider : IGrainStorage
             else
             {
                 await storage.Save(jobId, grainState.State);
-            }
-
-            if (state.Status == JobStatus.CompletedSuccessfully)
-            {
-                // await stepStorage.RemoveAllForJob(jobId);
             }
         }
     }
