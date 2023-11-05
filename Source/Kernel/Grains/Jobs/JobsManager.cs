@@ -46,7 +46,7 @@ public class JobsManager : Grain, IJobsManager
     public async Task Rehydrate()
     {
         _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
-        var runningJobs = await _jobStorageProvider().GetJobs(JobStatus.Running);
+        var runningJobs = await _jobStorageProvider().GetJobs(JobStatus.Running, JobStatus.Preparing, JobStatus.PreparingSteps);
         foreach (var runningJob in runningJobs)
         {
             var grainType = (Type)runningJob.Type;
