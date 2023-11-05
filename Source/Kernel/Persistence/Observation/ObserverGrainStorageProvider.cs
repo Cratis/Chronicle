@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
@@ -18,22 +16,18 @@ public class ObserverGrainStorageProvider : IGrainStorage
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IObserverStorage> _observerStorageProvider;
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverGrainStorageProvider"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     public ObserverGrainStorageProvider(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IObserverStorage> observerStorageProvider,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
+        ProviderFor<IObserverStorage> observerStorageProvider)
     {
         _executionContextManager = executionContextManager;
         _observerStorageProvider = observerStorageProvider;
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
     }
 
     /// <inheritdoc/>
