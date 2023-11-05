@@ -80,12 +80,32 @@ public class MongoDBJobStorage : IJobStorage
     async Task<List<BsonDocument>> GetJobsRaw(params JobStatus[] statuses)
     {
         var statusFilters = statuses.Select(status => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState<object>.Status).ToCamelCase()), status));
-        var filter = statuses.Length == 0 ?
-                                Builders<BsonDocument>.Filter.Empty :
-                                Builders<BsonDocument>.Filter.Or(statusFilters);
 
-        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        return await cursor.ToListAsync().ConfigureAwait(false);
+        if (statuses.Length == 0)
+        {
+            var cursor = await Collection.FindAsync(Builders<BsonDocument>.Filter.Empty).ConfigureAwait(false);
+            return await cursor.ToListAsync().ConfigureAwait(false);
+        }
+
+        var filter = new BsonDocument
+        {
+            {
+                "$expr", new BsonDocument("$in", new BsonArray
+                {
+                    new BsonDocument(
+                        "$arrayElemAt",
+                        new BsonArray
+                        {
+                                "$statusChanges.status",
+                                -1
+                        }),
+                    new BsonArray(statuses)
+                })
+            }
+        };
+
+        var aggregation = Collection.Aggregate().Match(filter);
+        return await aggregation.ToListAsync().ConfigureAwait(false);
     }
 
     void HandleChangesForJobs(IChangeStreamCursor<ChangeStreamDocument<BsonDocument>> cursor, List<JobState<object>> jobs)
