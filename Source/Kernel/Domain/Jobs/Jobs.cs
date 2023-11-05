@@ -30,6 +30,23 @@ public class Jobs : ControllerBase
     /// <param name="tenantId">The <see cref="TenantId"/> the job is for.</param>
     /// <param name="jobId"><see cref="JobId"/> to stop.</param>
     /// <returns>Awaitable task.</returns>
+    [HttpPost("{jobId}/resume/")]
+    public async Task ResumeJob(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId,
+        [FromRoute] JobId jobId)
+    {
+        var jobsManager = _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(microserviceId, tenantId));
+        await jobsManager.Resume(jobId);
+    }
+
+    /// <summary>
+    /// Stop a specific job.
+    /// </summary>
+    /// <param name="microserviceId">The <see cref="MicroserviceId"/> the job is for.</param>
+    /// <param name="tenantId">The <see cref="TenantId"/> the job is for.</param>
+    /// <param name="jobId"><see cref="JobId"/> to stop.</param>
+    /// <returns>Awaitable task.</returns>
     [HttpPost("{jobId}/stop/")]
     public async Task StopJob(
         [FromRoute] MicroserviceId microserviceId,
