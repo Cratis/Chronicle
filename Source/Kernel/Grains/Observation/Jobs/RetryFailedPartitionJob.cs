@@ -28,6 +28,9 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
     }
 
     /// <inheritdoc/>
+    protected override JobDetails GetJobDetails(RetryFailedPartitionRequest request) => $"{request.ObserverId}-{request.Key}";
+
+    /// <inheritdoc/>
     protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(RetryFailedPartitionRequest request)
     {
         _request = request;

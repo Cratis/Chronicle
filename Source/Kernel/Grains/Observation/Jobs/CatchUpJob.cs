@@ -37,6 +37,9 @@ public class CatchUpJob : Job<CatchUpRequest, JobState<CatchUpRequest>>, ICatchU
     }
 
     /// <inheritdoc/>
+    protected override JobDetails GetJobDetails(CatchUpRequest request) => $"{request.ObserverId}";
+
+    /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpRequest request)
     {
         _request = request;
