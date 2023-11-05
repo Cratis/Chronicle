@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Defines a system for managing <see cref="IObserver">observers</see>.
 /// </summary>
-public interface IObservers : IGrainWithIntegerKey
+public interface IObservers : IGrainWithIntegerCompoundKey
 {
     /// <summary>
     /// Rehydrate all observers.
