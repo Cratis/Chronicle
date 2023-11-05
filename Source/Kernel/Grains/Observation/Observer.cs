@@ -151,13 +151,22 @@ public class Observer : StateMachine<ObserverState>, IObserver
     public override IImmutableList<IState<ObserverState>> CreateStates() => new IState<ObserverState>[]
     {
         new States.Disconnected(),
-        new States.Routing(this, _eventSequence, _loggerFactory.CreateLogger<States.Routing>()),
+
+        new States.Routing(
+            _observerKey,
+            this,
+            _eventSequence,
+            _loggerFactory.CreateLogger<States.Routing>()),
+
         new States.CatchUp(_observerKey, _jobsManager),
+
         new States.Replay(
             _observerKey,
             _replayStateServiceClient,
             _jobsManager),
+
         new States.Indexing(),
+
         new States.Observing(
             this,
             _streamProvider,
@@ -405,10 +414,10 @@ public class Observer : StateMachine<ObserverState>, IObserver
     }
 
     /// <inheritdoc/>
-    protected override Task WriteStateAsync()
+    protected override async Task WriteStateAsync()
     {
-        if (_stateWritingSuspended) return Task.CompletedTask;
-        return base.WriteStateAsync();
+        if (_stateWritingSuspended) return;
+        await base.WriteStateAsync();
     }
 
     class WriteSuspension : IDisposable

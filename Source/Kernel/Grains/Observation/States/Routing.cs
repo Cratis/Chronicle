@@ -16,6 +16,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 /// </summary>
 public class Routing : BaseObserverState
 {
+    readonly ObserverKey _observerKey;
     readonly IObserver _observer;
     readonly IEventSequence _eventSequence;
     readonly ILogger<Routing> _logger;
@@ -26,14 +27,17 @@ public class Routing : BaseObserverState
     /// <summary>
     /// Initializes a new instance of the <see cref="Routing"/> class.
     /// </summary>
+    /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
     /// <param name="observer"><see cref="IObserver"/> the state belongs to.</param>
     /// <param name="eventSequence"><see cref="IEventSequenceStorage"/> provider.</param>
     /// <param name="logger">Logger for logging.</param>
     public Routing(
+        ObserverKey observerKey,
         IObserver observer,
         IEventSequence eventSequence,
         ILogger<Routing> logger)
     {
+        _observerKey = observerKey;
         _observer = observer;
         _eventSequence = eventSequence;
         _logger = logger;
@@ -60,7 +64,7 @@ public class Routing : BaseObserverState
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
         _subscription = await _observer.GetSubscription();
-        using var logScope = _logger.BeginRoutingScope(_subscription);
+        using var logScope = _logger.BeginRoutingScope(state.ObserverId, _observerKey);
 
         _logger.Entering();
 
@@ -95,7 +99,7 @@ public class Routing : BaseObserverState
         if (!_subscription.IsSubscribed)
         {
             _logger.NotSubscribed();
-            await _observer.TransitionTo<Disconnected>();
+            await StateMachine.TransitionTo<Disconnected>();
             return state;
         }
 

@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 
@@ -18,6 +20,7 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
     bool _isTransitioning;
     bool _isLeaving;
     Type? _scheduledTransition;
+    ILogger<StateMachine<object>>? _logger;
 
     /// <summary>
     /// Gets the initial state of the state machine.
@@ -28,6 +31,8 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        _logger = ServiceProvider.GetRequiredService<ILogger<StateMachine<object>>>();
+
         await OnActivation(cancellationToken);
         _states = CreateStates().ToDictionary(_ => _.GetType());
         _states[typeof(NoOpState<TStoredState>)] = new NoOpState<TStoredState>();
@@ -42,8 +47,13 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
         InvalidTypeForState.ThrowIfInvalid(InitialState);
         ThrowIfUnknownStateType(InitialState);
         _currentState = _states[InitialState];
-        State = await _currentState.OnEnter(State);
-        await WriteStateAsync();
+
+        dynamic dynamicState = State!;
+        string observerId = dynamicState.ObserverId.ToString();
+        string runningState = dynamicState.RunningState.ToString();
+        var tenantId = ServiceProvider.GetRequiredService<IExecutionContextManager>().Current.TenantId;
+
+        await TransitionTo(InitialState);
     }
 
     /// <inheritdoc/>
@@ -117,6 +127,7 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
 
     async Task TransitionTo(Type stateType)
     {
+        _logger?.TransitioningTo(stateType);
         if (_isTransitioning)
         {
             if (_isLeaving)

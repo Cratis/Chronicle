@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States;
@@ -38,12 +39,12 @@ internal static partial class RoutingLogMessages
 
 internal static class RoutingScopes
 {
-    internal static IDisposable? BeginRoutingScope(this ILogger<Routing> logger, ObserverSubscription subscription) =>
+    internal static IDisposable? BeginRoutingScope(this ILogger<Routing> logger, ObserverId observerId, ObserverKey observerKey) =>
         logger.BeginScope(new Dictionary<string, object>
         {
-            ["ObserverId"] = subscription.ObserverId,
-            ["MicroserviceId"] = subscription.ObserverKey.MicroserviceId,
-            ["TenantId"] = subscription.ObserverKey.TenantId,
-            ["EventSequenceId"] = subscription.ObserverKey.EventSequenceId
+            ["ObserverId"] = observerId,
+            ["MicroserviceId"] = observerKey.MicroserviceId,
+            ["TenantId"] = observerKey.TenantId,
+            ["EventSequenceId"] = observerKey.EventSequenceId
         });
 }

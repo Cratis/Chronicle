@@ -49,8 +49,9 @@ public class ObserverGrainStorageProvider : IGrainStorage
     public virtual async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var actualGrainState = (grainState as IGrainState<ObserverState>)!;
-        var observerId = grainId.GetGuidKey(out var observerKeyAsString);
+        var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
+
         var eventSequenceId = observerKey.EventSequenceId;
         _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
