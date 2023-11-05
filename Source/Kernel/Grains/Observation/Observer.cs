@@ -64,7 +64,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     FailedPartitions Failures => _failuresState.State;
 
     /// <inheritdoc/>
-    public override Task OnActivation(CancellationToken cancellationToken)
+    public override async Task OnActivation(CancellationToken cancellationToken)
     {
         // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
         DelayDeactivation(TimeSpan.MaxValue);
@@ -79,19 +79,18 @@ public class Observer : StateMachine<ObserverState>, IObserver
             _observerKey.EventSequenceId,
             new EventSequenceKey(_observerKey.MicroserviceId, _observerKey.TenantId));
 
-        return Task.CompletedTask;
+        await TransitionTo<States.Routing>();
     }
 
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        State = State with { RunningState = ObserverRunningState.Disconnected };
-        await WriteStateAsync();
+        await TransitionTo<States.Disconnected>();
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task Ensure() => TransitionTo<States.Routing>();
+    public Task Ensure() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task SetNameAndType(ObserverName name, ObserverType type)
