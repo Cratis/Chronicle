@@ -101,6 +101,13 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         var executionContextManager = ServiceProvider.GetRequiredService<IExecutionContextManager>();
         executionContextManager.Establish(_jobKey.TenantId, executionContextManager.Current.CorrelationId, _jobKey.MicroserviceId);
 
+        if (!await CanResume())
+        {
+            await StatusChanged(JobStatus.Paused);
+            await WriteStateAsync();
+            return;
+        }
+
         var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
         var steps = await stepStorage.GetForJob(_jobId, JobStepStatus.Scheduled, JobStepStatus.Running);
         foreach (var step in steps)
@@ -199,6 +206,12 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <param name="request">Request to start with.</param>
     /// <returns>Awaitable task.</returns>
     protected abstract Task<IImmutableList<JobStepDetails>> PrepareSteps(TRequest request);
+
+    /// <summary>
+    /// Check if the job can be resumed.
+    /// </summary>
+    /// <returns>True if it can, false if not.</returns>
+    protected virtual Task<bool> CanResume() => Task.FromResult(true);
 
     /// <summary>
     /// Get the details for the job. This is for display purposes.

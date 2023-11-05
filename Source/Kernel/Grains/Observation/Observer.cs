@@ -101,6 +101,9 @@ public class Observer : StateMachine<ObserverState>, IObserver
     public Task<ObserverSubscription> GetSubscription() => Task.FromResult(_subscription);
 
     /// <inheritdoc/>
+    public Task<bool> IsSubscribed() => Task.FromResult(_subscription.IsSubscribed);
+
+    /// <inheritdoc/>
     public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(State.EventTypes);
 
     /// <inheritdoc/>

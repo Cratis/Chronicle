@@ -38,6 +38,13 @@ public class ReplayJob : Job<ReplayRequest, JobState<ReplayRequest>>, IReplayJob
     protected override JobDetails GetJobDetails(ReplayRequest request) => $"{request.ObserverId}";
 
     /// <inheritdoc/>
+    protected override Task<bool> CanResume()
+    {
+        var observer = GrainFactory.GetGrain<IObserver>(State.Request.ObserverId, State.Request.ObserverKey);
+        return observer.IsSubscribed();
+    }
+
+    /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayRequest request)
     {
         _request = request;

@@ -28,6 +28,12 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithGuidCompoun
     Task<ObserverSubscription> GetSubscription();
 
     /// <summary>
+    /// Check if the observer has a subscription subscribed.
+    /// </summary>
+    /// <returns>True if it has, false if not.</returns>
+    Task<bool> IsSubscribed();
+
+    /// <summary>
     /// Get the event types that the observer is observing.
     /// </summary>
     /// <returns>Collection of <see cref="EventType"/>.</returns>

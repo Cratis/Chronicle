@@ -66,9 +66,7 @@ public class Replay : BaseObserverState
         var pausedJob = jobsForThisObserver.FirstOrDefault(_ => _.Status == JobStatus.Paused);
         if (pausedJob is not null)
         {
-            await _jobsManager.Start<IReplayJob, ReplayRequest>(
-                pausedJob.Id,
-                pausedJob.Request);
+            await _jobsManager.Resume(pausedJob.Id);
         }
         else
         {

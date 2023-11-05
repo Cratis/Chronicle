@@ -28,6 +28,13 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
         where TJob : IJob<TRequest>;
 
     /// <summary>
+    /// Resume a job.
+    /// </summary>
+    /// <param name="jobId"><see cref="JobId"/> to resume.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Resume(JobId jobId);
+
+    /// <summary>
     /// Stop a job if running.
     /// </summary>
     /// <param name="jobId"><see cref="JobId"/> to stop.</param>

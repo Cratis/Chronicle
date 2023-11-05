@@ -40,6 +40,13 @@ public class CatchUpJob : Job<CatchUpRequest, JobState<CatchUpRequest>>, ICatchU
     protected override JobDetails GetJobDetails(CatchUpRequest request) => $"{request.ObserverId}";
 
     /// <inheritdoc/>
+    protected override Task<bool> CanResume()
+    {
+        var observer = GrainFactory.GetGrain<IObserver>(State.Request.ObserverId, State.Request.ObserverKey);
+        return observer.IsSubscribed();
+    }
+
+    /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpRequest request)
     {
         _request = request;
