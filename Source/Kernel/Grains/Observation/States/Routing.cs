@@ -77,7 +77,7 @@ public class Routing : BaseObserverState
     {
         return Task.FromResult(state with
         {
-            EventTypes = _subscription.EventTypes,
+            EventTypes = _subscription.IsSubscribed ? _subscription.EventTypes : state.EventTypes,
             NextEventSequenceNumber = _tailEventSequenceNumber.Next(),
             NextEventSequenceNumberForEventTypes = _tailEventSequenceNumberForEventTypes.Next()
         });
