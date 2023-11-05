@@ -91,6 +91,9 @@ public class Observer : StateMachine<ObserverState>, IObserver
     }
 
     /// <inheritdoc/>
+    public Task Ensure() => TransitionTo<States.Routing>();
+
+    /// <inheritdoc/>
     public async Task SetNameAndType(ObserverName name, ObserverType type)
     {
         State = State with { Name = name, Type = type };

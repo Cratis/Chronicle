@@ -11,6 +11,7 @@ using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Grains.Projections;
 using NJsonSchema;
 
@@ -84,6 +85,10 @@ public class BootProcedure : IPerformBootProcedure
                 _logger.RehydrateProjections();
                 var projections = _grainFactory.GetGrain<IProjections>(0);
                 await projections.Rehydrate();
+
+                _logger.RehydrateObservers();
+                var observers = _grainFactory.GetGrain<IObservers>(0);
+                await observers.Rehydrate();
 
                 foreach (var (tenantId, _) in _configuration.Tenants)
                 {

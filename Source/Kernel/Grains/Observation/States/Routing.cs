@@ -49,6 +49,7 @@ public class Routing : BaseObserverState
     /// <inheritdoc/>
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
+        typeof(Disconnected),
         typeof(Indexing),
         typeof(CatchUp),
         typeof(Replay),
@@ -64,7 +65,7 @@ public class Routing : BaseObserverState
         _logger.Entering();
 
         _tailEventSequenceNumber = await _eventSequence.GetTailSequenceNumber();
-        _tailEventSequenceNumberForEventTypes = await _eventSequence.GetTailSequenceNumberForEventTypes(_subscription.EventTypes);
+        _tailEventSequenceNumberForEventTypes = await _eventSequence.GetTailSequenceNumberForEventTypes(_subscription.EventTypes.ToList());
 
         _logger.TailEventSequenceNumbers(_tailEventSequenceNumber, _tailEventSequenceNumberForEventTypes);
 
@@ -84,17 +85,21 @@ public class Routing : BaseObserverState
 
     async Task<ObserverState> EvaluateState(ObserverState state)
     {
-        if (!_subscription.IsSubscribed)
-        {
-            _logger.NotSubscribed();
-            await _observer.TransitionTo<Disconnected>();
-        }
         if (IsIndexing(state))
         {
             _logger.Indexing();
             await StateMachine.TransitionTo<Indexing>();
+            return state;
         }
-        else if (NeedsToCatchup(state))
+
+        if (!_subscription.IsSubscribed)
+        {
+            _logger.NotSubscribed();
+            await _observer.TransitionTo<Disconnected>();
+            return state;
+        }
+
+        if (NeedsToCatchup(state))
         {
             if (CanFastForward(state))
             {
