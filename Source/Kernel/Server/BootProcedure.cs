@@ -87,8 +87,11 @@ public class BootProcedure : IPerformBootProcedure
                 await projections.Rehydrate();
 
                 _logger.RehydrateObservers();
+                var observersStopWatch = Stopwatch.StartNew();
                 var observers = _grainFactory.GetGrain<IObservers>(0);
                 await observers.Rehydrate();
+                observersStopWatch.Stop();
+                _logger.RehydratedObservers(observersStopWatch.Elapsed);
 
                 foreach (var (tenantId, _) in _configuration.Tenants)
                 {

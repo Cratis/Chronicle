@@ -28,4 +28,7 @@ internal static partial class BootProcedureLogMessages
 
     [LoggerMessage(7, LogLevel.Information, "Rehydrating observers")]
     internal static partial void RehydrateObservers(this ILogger logger);
+
+    [LoggerMessage(8, LogLevel.Information, "Rehydrated observers in {Elapsed}")]
+    internal static partial void RehydratedObservers(this ILogger logger, TimeSpan elapsed);
 }
