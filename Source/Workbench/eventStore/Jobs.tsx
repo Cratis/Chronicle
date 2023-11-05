@@ -15,6 +15,8 @@ import { JobStepState } from 'API/events/store/jobs/JobStepState';
 import { JobStepStatus } from 'API/events/store/jobs/JobStepStatus';
 import * as icons from '@mui/icons-material';
 import { StopJob } from 'API/events/store/jobs/StopJob';
+import { DeleteJob } from 'API/events/store/jobs/DeleteJob';
+import { ResumeJob } from 'API/events/store/jobs/ResumeJob';
 
 const getJobStatusText = (status: JobStatus) => {
     switch (status) {
@@ -130,7 +132,9 @@ export const Jobs = () => {
     const { microserviceId } = useRouteParams();
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
+    const [resumeJob, setResumeJobValues] = ResumeJob.use()
     const [stopJob, setStopJobValues] = StopJob.use()
+    const [deleteJob, setDeleteJobValues] = DeleteJob.use()
 
     const [jobs] = AllJobs.use({
         microserviceId,
@@ -179,6 +183,21 @@ export const Jobs = () => {
                     </Select>
                 </FormControl>
 
+                {(selectedJob && (selectedJob.status == JobStatus.paused)) &&
+                    <Button
+                        startIcon={<icons.PlayArrow />}
+                        onClick={async () => {
+                            setResumeJobValues({
+                                microserviceId,
+                                tenantId: selectedTenant?.id || undefined!,
+                                jobId: selectedJob.id
+                            });
+
+                            await resumeJob.execute();
+                        }}
+                        >Resume</Button>
+                }
+
                 {(selectedJob && (selectedJob.status == JobStatus.running || selectedJob.status == JobStatus.preparing)) &&
                     <Button
                         startIcon={<icons.Stop />}
@@ -197,7 +216,15 @@ export const Jobs = () => {
                 {selectedJob  &&
                     <Button
                         startIcon={<icons.Delete />}
-                        onClick={() => {}}
+                        onClick={async () => {
+                            setDeleteJobValues({
+                                microserviceId,
+                                tenantId: selectedTenant?.id || undefined!,
+                                jobId: selectedJob.id
+                            });
+
+                            await deleteJob.execute();
+                        }}
                         >Delete</Button>
                 }
 
