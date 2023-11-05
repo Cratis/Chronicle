@@ -20,6 +20,20 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithGuidCompoun
     Task Ensure();
 
     /// <summary>
+    /// Get the state from the observer.
+    /// </summary>
+    /// <returns>The <see cref="ObserverState"/>.</returns>
+    Task<ObserverState> GetState();
+
+    /// <summary>
+    /// Set the handled stats for the observer.
+    /// </summary>
+    /// <param name="handled">Number of handled events.</param>
+    /// <param name="lastHandledEventSequenceNumber">The last handled event sequence number.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SetHandledStats(EventCount handled, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
     /// Set metadata associated with the observer.
     /// </summary>
     /// <param name="name">Friendly name of the observer.</param>

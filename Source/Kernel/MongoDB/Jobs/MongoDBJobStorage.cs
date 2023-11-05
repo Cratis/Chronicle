@@ -110,8 +110,19 @@ public class MongoDBJobStorage : IJobStorage
 
     void HandleChangesForJobs(IChangeStreamCursor<ChangeStreamDocument<BsonDocument>> cursor, List<JobState<object>> jobs)
     {
-        foreach (var changedJob in cursor.Current.Select(_ => _.FullDocument))
+        foreach (var change in cursor.Current)
         {
+            var changedJob = change.FullDocument;
+            if (change.OperationType == ChangeStreamOperationType.Delete)
+            {
+                var job = jobs.Find(_ => _.Id == (JobId)change.DocumentKey["_id"].AsGuid);
+                if (job is not null)
+                {
+                    jobs.Remove(job);
+                }
+                continue;
+            }
+
             var jobTypeString = changedJob["type"].AsString;
             var jobType = Type.GetType(jobTypeString);
             if (jobType is not null)

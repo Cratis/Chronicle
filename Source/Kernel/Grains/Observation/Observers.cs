@@ -1,6 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 using Aksio.Cratis.Kernel.Persistence.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
@@ -41,11 +44,25 @@ public class Observers : Grain, IObservers
         _executionContextManager.Establish(key.TenantId, _executionContextManager.Current.CorrelationId, key.MicroserviceId);
         var observers = await _observerStorageProvider().GetAllObservers();
 
+        var observersForConsolidation = new List<ObserverIdAndKey>();
+
         foreach (var observerInfo in observers)
         {
             var observerKey = new ObserverKey(key.MicroserviceId, key.TenantId, observerInfo.EventSequenceId);
             var observer = _grainFactory.GetGrain<IObserver>(observerInfo.ObserverId, keyExtension: observerKey);
             await observer.Ensure();
+
+            if ((observerInfo.Handled == EventCount.NotSet ||
+                observerInfo.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable) &&
+                observerInfo.EventTypes.Any())
+            {
+                observersForConsolidation.Add(new ObserverIdAndKey(observerInfo.ObserverId, observerKey));
+            }
         }
+
+        var jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(key.MicroserviceId, key.TenantId));
+        await jobsManager.Start<IConsolidateStateForObservers, ConsolidateStateForObserveRequest>(
+            JobId.New(),
+            new ConsolidateStateForObserveRequest(observersForConsolidation));
     }
 }

@@ -33,11 +33,13 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
     /// <param name="taskScheduler"><see cref="LimitedConcurrencyLevelTaskScheduler"/> to use for scheduling.</param>
     /// <param name="syncWorkerLogger"><see cref="ILogger"/> for the sync worker.</param>
     public HandleEventsForPartition(
-        [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)] IPersistentState<HandleEventsForPartitionState> state,
+        [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
+        IPersistentState<HandleEventsForPartitionState> state,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         IExecutionContextManager executionContextManager,
         LimitedConcurrencyLevelTaskScheduler taskScheduler,
-        ILogger<SyncWorker<HandleEventsForPartitionArguments, object>> syncWorkerLogger) : base(state, taskScheduler, syncWorkerLogger)
+        ILogger<SyncWorker<HandleEventsForPartitionArguments, object>> syncWorkerLogger)
+        : base(state, taskScheduler, syncWorkerLogger)
     {
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _executionContextManager = executionContextManager;

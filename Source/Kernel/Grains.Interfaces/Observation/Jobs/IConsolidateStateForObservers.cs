@@ -6,8 +6,8 @@ using Aksio.Cratis.Kernel.Grains.Jobs;
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
 /// <summary>
-/// Defines a step in the replay job that handles events for a partition.
+/// Defines the job for consolidating observer state.
 /// </summary>
-public interface IHandleEventsForPartition : IJobStep<HandleEventsForPartitionArguments>
+public interface IConsolidateStateForObservers : IJob<ConsolidateStateForObserveRequest>
 {
 }

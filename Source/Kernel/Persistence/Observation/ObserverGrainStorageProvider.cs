@@ -49,53 +49,6 @@ public class ObserverGrainStorageProvider : IGrainStorage
 
         _executionContextManager.Establish(observerKey.TenantId, _executionContextManager.Current.CorrelationId, observerKey.MicroserviceId);
         actualGrainState.State = await _observerStorageProvider().GetState(observerId, observerKey);
-
-        var modified = false;
-
-        if (actualGrainState.State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable &&
-            actualGrainState.State.Handled == EventCount.NotSet)
-        {
-            var lastHandled = await _eventSequenceStorageProvider().GetTailSequenceNumber(
-                    actualGrainState.State.EventSequenceId,
-                    actualGrainState.State.EventTypes);
-
-            if (lastHandled < actualGrainState.State.NextEventSequenceNumber)
-            {
-                actualGrainState.State = actualGrainState.State with
-                {
-                    LastHandledEventSequenceNumber = lastHandled
-                };
-
-                modified = true;
-            }
-        }
-
-        if (actualGrainState.State.Handled == EventCount.NotSet)
-        {
-            var count = await _eventSequenceStorageProvider().GetCount(
-                actualGrainState.State.EventSequenceId,
-                actualGrainState.State.LastHandledEventSequenceNumber,
-                actualGrainState.State.EventTypes);
-
-            var lastHandled = actualGrainState.State.LastHandledEventSequenceNumber;
-            if (count == EventCount.Zero)
-            {
-                lastHandled = EventSequenceNumber.Unavailable;
-            }
-
-            actualGrainState.State = actualGrainState.State with
-            {
-                Handled = count,
-                LastHandledEventSequenceNumber = lastHandled
-            };
-
-            modified = true;
-        }
-
-        if (modified)
-        {
-            await WriteStateAsync(stateName, grainId, grainState);
-        }
     }
 
     /// <inheritdoc/>

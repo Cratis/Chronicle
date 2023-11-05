@@ -31,7 +31,7 @@ public static class MongoCollectionExtensions
         var observable = new BehaviorSubject<IEnumerable<TResult>>(initialItems);
         var operationTypeFilter = Builders<ChangeStreamDocument<TDocument>>.Filter.In(
             new StringFieldDefinition<ChangeStreamDocument<TDocument>, string>("operationType"),
-            new[] { "insert", "replace", "update" });
+            new[] { "insert", "replace", "update", "delete" });
 
         var actualFilter = filter is not null ?
                             Builders<ChangeStreamDocument<TDocument>>.Filter.And(operationTypeFilter, filter) :
