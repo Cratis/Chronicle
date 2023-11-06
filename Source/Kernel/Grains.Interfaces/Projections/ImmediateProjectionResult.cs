@@ -12,4 +12,10 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 /// <param name="Model">The Json representation of the model.</param>
 /// <param name="AffectedProperties">Collection of properties that was set.</param>
 /// <param name="ProjectedEventsCount">Number of events that caused projection.</param>
-public record ImmediateProjectionResult(JsonObject Model, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount);
+public record ImmediateProjectionResult(JsonObject Model, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount)
+{
+    /// <summary>
+    /// Represents an empty <see cref="ImmediateProjectionResult"/>.
+    /// </summary>
+    public static readonly ImmediateProjectionResult Empty = new(new JsonObject(), Array.Empty<PropertyPath>(), 0);
+}

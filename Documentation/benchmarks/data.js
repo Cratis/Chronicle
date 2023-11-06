@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1697970605432,
+  "lastUpdate": 1698742303875,
   "repoUrl": "https://github.com/aksio-insurtech/Cratis",
   "entries": {
     "Cratis Benchmarks": [
@@ -596,6 +596,246 @@ window.BENCHMARK_DATA = {
             "value": 4036241996.428571,
             "unit": "ns",
             "range": "± 32411769.54228108"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "einari@me.com",
+            "name": "Einar Ingebrigtsen",
+            "username": "einari"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d4d9bf1225528f670d00a8d95d5de5dcb25151c2",
+          "message": "Merge pull request #998 from aksio-insurtech:fix/immediate-projections\n\nFixing so that if there are no event types for an immediate projection, we return empty result",
+          "timestamp": "2023-10-26T18:11:23+02:00",
+          "tree_id": "ce904291c54253985df83a81c598303a1ca10673",
+          "url": "https://github.com/aksio-insurtech/Cratis/commit/d4d9bf1225528f670d00a8d95d5de5dcb25151c2"
+        },
+        "date": 1698337231834,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvent.Single",
+            "value": 23454829.5,
+            "unit": "ns",
+            "range": "± 3223385.3037437466"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.InSequence(NumberOfEvents: 10)",
+            "value": 75876408.75,
+            "unit": "ns",
+            "range": "± 6228959.84063248"
+          },
+          {
+            "name": "Benchmarks.Observation.HandlingEvents.InSequence(NumberOfEvents: 10)",
+            "value": 79612367.77777778,
+            "unit": "ns",
+            "range": "± 8595077.009284744"
+          },
+          {
+            "name": "Benchmarks.Projections.ProjectingEvents.InSequence(NumberOfEvents: 10)",
+            "value": 51052235.9,
+            "unit": "ns",
+            "range": "± 1543532.6793328098"
+          },
+          {
+            "name": "Benchmarks.Reducers.ReducingEvents.InSequence(NumberOfEvents: 10)",
+            "value": 61812271.4,
+            "unit": "ns",
+            "range": "± 2930439.5505405064"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.WithAppendMany(NumberOfEvents: 10)",
+            "value": 70587902,
+            "unit": "ns",
+            "range": "± 9798207.680950748"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.InSequence(NumberOfEvents: 100)",
+            "value": 461294706.8,
+            "unit": "ns",
+            "range": "± 21051705.852176536"
+          },
+          {
+            "name": "Benchmarks.Observation.HandlingEvents.InSequence(NumberOfEvents: 100)",
+            "value": 736262138.5,
+            "unit": "ns",
+            "range": "± 38192775.59416006"
+          },
+          {
+            "name": "Benchmarks.Projections.ProjectingEvents.InSequence(NumberOfEvents: 100)",
+            "value": 384195461.7,
+            "unit": "ns",
+            "range": "± 23438353.74506103"
+          },
+          {
+            "name": "Benchmarks.Reducers.ReducingEvents.InSequence(NumberOfEvents: 100)",
+            "value": 492044920.2,
+            "unit": "ns",
+            "range": "± 20904893.05936239"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.WithAppendMany(NumberOfEvents: 100)",
+            "value": 418511945.2,
+            "unit": "ns",
+            "range": "± 8650369.760834707"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.InSequence(NumberOfEvents: 1000)",
+            "value": 4422430275.2,
+            "unit": "ns",
+            "range": "± 66123517.90011242"
+          },
+          {
+            "name": "Benchmarks.Observation.HandlingEvents.InSequence(NumberOfEvents: 1000)",
+            "value": 5996664620,
+            "unit": "ns",
+            "range": "± 753738335.2267319"
+          },
+          {
+            "name": "Benchmarks.Projections.ProjectingEvents.InSequence(NumberOfEvents: 1000)",
+            "value": 3438710771.2,
+            "unit": "ns",
+            "range": "± 80942366.03869988"
+          },
+          {
+            "name": "Benchmarks.Reducers.ReducingEvents.InSequence(NumberOfEvents: 1000)",
+            "value": 4387770719.125,
+            "unit": "ns",
+            "range": "± 31447320.529051814"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.WithAppendMany(NumberOfEvents: 1000)",
+            "value": 4445717286.333333,
+            "unit": "ns",
+            "range": "± 25766576.25681164"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "einari@me.com",
+            "name": "Einar Ingebrigtsen",
+            "username": "einari"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0156cab3c20ecd0d191e3a9093dc2ad0343d665a",
+          "message": "Merge pull request #1003 from aksio-insurtech:fix/projection-specs\n\nFixing GetById() to start with a fresh model - so you can call it multiple times safely",
+          "timestamp": "2023-10-31T09:42:32+01:00",
+          "tree_id": "893456e64105e54b52d916b1d27d3b6ae63bb202",
+          "url": "https://github.com/aksio-insurtech/Cratis/commit/0156cab3c20ecd0d191e3a9093dc2ad0343d665a"
+        },
+        "date": 1698742303763,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvent.Single",
+            "value": 27171644.9,
+            "unit": "ns",
+            "range": "± 3394546.6183324573"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.InSequence(NumberOfEvents: 10)",
+            "value": 85406082,
+            "unit": "ns",
+            "range": "± 9781122.583561823"
+          },
+          {
+            "name": "Benchmarks.Observation.HandlingEvents.InSequence(NumberOfEvents: 10)",
+            "value": 84002839.9,
+            "unit": "ns",
+            "range": "± 17508708.979771044"
+          },
+          {
+            "name": "Benchmarks.Projections.ProjectingEvents.InSequence(NumberOfEvents: 10)",
+            "value": 53537321,
+            "unit": "ns",
+            "range": "± 1815863.9082359057"
+          },
+          {
+            "name": "Benchmarks.Reducers.ReducingEvents.InSequence(NumberOfEvents: 10)",
+            "value": 65863213.3,
+            "unit": "ns",
+            "range": "± 5794028.498417278"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.WithAppendMany(NumberOfEvents: 10)",
+            "value": 80256887.1111111,
+            "unit": "ns",
+            "range": "± 8782162.846217629"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.InSequence(NumberOfEvents: 100)",
+            "value": 593150100.1,
+            "unit": "ns",
+            "range": "± 41241634.82535376"
+          },
+          {
+            "name": "Benchmarks.Observation.HandlingEvents.InSequence(NumberOfEvents: 100)",
+            "value": 612925613.9,
+            "unit": "ns",
+            "range": "± 13715989.65084915"
+          },
+          {
+            "name": "Benchmarks.Projections.ProjectingEvents.InSequence(NumberOfEvents: 100)",
+            "value": 442480434.1,
+            "unit": "ns",
+            "range": "± 13616802.793751806"
+          },
+          {
+            "name": "Benchmarks.Reducers.ReducingEvents.InSequence(NumberOfEvents: 100)",
+            "value": 545962221,
+            "unit": "ns",
+            "range": "± 12687203.338017356"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.WithAppendMany(NumberOfEvents: 100)",
+            "value": 531639614.9,
+            "unit": "ns",
+            "range": "± 36568056.524039336"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.InSequence(NumberOfEvents: 1000)",
+            "value": 5271358980.6,
+            "unit": "ns",
+            "range": "± 99820054.2600547"
+          },
+          {
+            "name": "Benchmarks.Observation.HandlingEvents.InSequence(NumberOfEvents: 1000)",
+            "value": 5926744740.2,
+            "unit": "ns",
+            "range": "± 93580365.59967558"
+          },
+          {
+            "name": "Benchmarks.Projections.ProjectingEvents.InSequence(NumberOfEvents: 1000)",
+            "value": 4287558567.875,
+            "unit": "ns",
+            "range": "± 38104333.886566676"
+          },
+          {
+            "name": "Benchmarks.Reducers.ReducingEvents.InSequence(NumberOfEvents: 1000)",
+            "value": 5253768203.857142,
+            "unit": "ns",
+            "range": "± 43331348.296424404"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.WithAppendMany(NumberOfEvents: 1000)",
+            "value": 4903866936.1,
+            "unit": "ns",
+            "range": "± 381699805.09411836"
           }
         ]
       }

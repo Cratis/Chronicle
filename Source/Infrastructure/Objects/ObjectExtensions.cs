@@ -8,6 +8,7 @@ using System.Text.Json;
 using Aksio.Concepts;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Reflection;
 using Aksio.Json;
 using Aksio.Strings;
 
@@ -118,6 +119,38 @@ public static class ObjectExtensions
         }
 
         return currentInstance!;
+    }
+
+    /// <summary>
+    /// Check for equality between two objects.
+    /// </summary>
+    /// <param name="left">Left object to compare with.</param>
+    /// <param name="right">Right object to compare with.</param>
+    /// <returns>True if the two are equal, false if not.</returns>
+    /// <remarks>
+    /// This method recognizes <see cref="ExpandoObject"/> and will compare the key/value pairs.
+    /// If its not an <see cref="ExpandoObject"/>, it will use the <see cref="object.Equals(object)"/> method.
+    /// </remarks>
+    public static bool IsEqualTo(this object left, object right)
+    {
+        if (left is null && right is null) return true;
+        if (left is null || right is null) return false;
+
+        if (left is ExpandoObject leftAsExpandoObject && right is ExpandoObject rightAsExpandoObject)
+        {
+            var leftKeyValuePairs = leftAsExpandoObject.GetKeyValuePairs().ToDictionary(_ => _.Key, _ => _.Value);
+            var rightKeyValuePairs = rightAsExpandoObject.GetKeyValuePairs().ToDictionary(_ => _.Key, _ => _.Value);
+
+            foreach (var (key, value) in leftKeyValuePairs)
+            {
+                if (!rightKeyValuePairs.ContainsKey(key)) return false;
+                if (!IsEqualTo(value, rightKeyValuePairs[key])) return false;
+            }
+
+            return true;
+        }
+
+        return left.Equals(right);
     }
 
     static object CreateInstanceOf(Type type)

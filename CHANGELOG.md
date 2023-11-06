@@ -1,3 +1,40 @@
+# [v9.7.1] - 2023-10-31 [PR: #0]()
+
+No release notes
+
+# [v9.7.0] - 2023-10-30 [PR: #1000](https://github.com/aksio-insurtech/Cratis/pull/1000)
+
+### Fixed
+
+- Fixing `InMemorySink` to set the `Id` property to the key value. This fixes a problem when using immediate projections and the read model coming back does not have a `null` for the `Id` property.
+
+
+# [v9.7.0-beta.1] - 2023-10-28 [PR: #0]()
+
+No release notes
+
+# [v9.6.0] - 2023-10-26 [PR: #999](https://github.com/aksio-insurtech/Cratis/pull/999)
+
+### Added
+
+- Adding a way to simply add a child based on the content of a property on an event for projections. This is super useful when wanting to have a collection of primitive types based on a property on the event. Important to remember, the type of the event property and the element type has to match - this is handled at compile time.
+
+```csharp
+public record AccountTransactions(string Account, IEnumerable<DateTimeOffset> TransactionDates);
+
+public class LatestTransactions : IProjectionFor<AccountTransactions>
+{
+    public ProjectionId Identifier => "d661904f-15e0-4a96-a0cc-c7389635e4cd";
+
+    public void Define(IProjectionBuilderFor<DebitAccountLatestTransactions> builder) => builder
+         .From<DepositPerformed>(_ => _
+             .Set(m => m.Account).To(e => e.Account)
+             .AddChild(m => m.TransactionDates, e => e.TransactionDate);
+}
+```
+
+
+
 # [v9.5.13] - 2023-10-25 [PR: #996](https://github.com/aksio-insurtech/Cratis/pull/996)
 
 ### Added

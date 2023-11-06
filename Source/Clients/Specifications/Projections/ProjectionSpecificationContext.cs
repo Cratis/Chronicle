@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
@@ -14,12 +15,14 @@ using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.Keys;
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
 using Aksio.Cratis.Kernel.Engines.Sinks.InMemory;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Json;
+using Aksio.Reflection;
 using Aksio.Types;
 
 namespace Aksio.Cratis.Specifications.Integration;
@@ -69,6 +72,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
 
         var factory = new ProjectionFactory(
             new ModelPropertyExpressionResolvers(eventValueProviderExpressionResolvers, typeFormats),
+            new EventValueProviderExpressionResolvers(typeFormats),
             new KeyExpressionResolvers(eventValueProviderExpressionResolvers),
             new ExpandoObjectConverter(typeFormats),
             new EventSequenceStorageProviderForSpecifications(_eventLog));
@@ -77,7 +81,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var objectComparer = new ObjectComparer();
 
         _eventSequenceStorage = new EventSequenceStorageProviderForSpecifications(_eventLog);
-        _sink = new InMemorySink(_projection.Model, typeFormats, objectComparer);
+        _sink = new InMemorySink(_projection.Model, typeFormats);
         _pipeline = new ProjectionPipeline(
             _projection,
             _eventSequenceStorage,
@@ -114,7 +118,16 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
     public async Task<ProjectionResult<TModel>> GetById(EventSourceId eventSourceId, object? modelId = null)
     {
         var projectedEventsCount = 0;
-        modelId ??= eventSourceId;
+        modelId ??= eventSourceId.Value;
+
+        if (modelId?.GetType().IsAPrimitiveType() == false)
+        {
+            modelId = modelId.AsExpandoObject();
+        }
+
+        var key = new Key(modelId!, ArrayIndexers.NoIndexers);
+        _sink.RemoveAnyExisting(key);
+
         var cursor = await _eventSequenceStorage.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
         while (await cursor.MoveNext())
         {
@@ -125,7 +138,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
             }
         }
 
-        var result = await _sink.FindOrDefault(new(modelId, ArrayIndexers.NoIndexers));
+        var result = await _sink.FindOrDefault(key);
         var json = JsonSerializer.Serialize(result, Globals.JsonSerializerOptions);
         return new(JsonSerializer.Deserialize<TModel>(json, Globals.JsonSerializerOptions)!, Array.Empty<PropertyPath>(), projectedEventsCount);
     }

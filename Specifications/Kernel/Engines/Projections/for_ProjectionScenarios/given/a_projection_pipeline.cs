@@ -35,10 +35,10 @@ public abstract class a_projection_pipeline_for<TModel> : Specification
         var eventValueProviderExpressionResolvers = new EventValueProviderExpressionResolvers(type_formats);
         expression_resolvers = new ModelPropertyExpressionResolvers(eventValueProviderExpressionResolvers, type_formats);
         var expandoObjectConverter = new ExpandoObjectConverter(type_formats);
-        var objectComparer = new ObjectComparer();
 
         var projectionFactory = new ProjectionFactory(
             expression_resolvers,
+            eventValueProviderExpressionResolvers,
             new KeyExpressionResolvers(eventValueProviderExpressionResolvers),
             expandoObjectConverter,
             event_sequence_storage.Object);
@@ -59,7 +59,7 @@ public abstract class a_projection_pipeline_for<TModel> : Specification
 
         var projectionDefinition = builder.Build();
         var projection = await projectionFactory.CreateFrom(projectionDefinition);
-        sink = new InMemorySink(Model, type_formats, objectComparer);
+        sink = new InMemorySink(Model, type_formats);
 
         pipeline = new ProjectionPipeline(
             projection,

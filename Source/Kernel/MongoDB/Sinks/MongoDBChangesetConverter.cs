@@ -8,6 +8,7 @@ using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
+using Aksio.Reflection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
@@ -125,8 +126,17 @@ public class MongoDBChangesetConverter : IMongoDBChangesetConverter
 
     void BuildChildAdded(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, List<BsonDocumentArrayFilterDefinition<BsonDocument>> arrayFiltersForDocument, ChildAdded childAdded)
     {
-        var schema = _model.Schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
-        var document = _expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
+        BsonValue bsonValue;
+
+        if (childAdded.State.GetType().IsAPrimitiveType())
+        {
+            bsonValue = childAdded.State.ToBsonValue();
+        }
+        else
+        {
+            var schema = _model.Schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
+            bsonValue = _expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
+        }
 
         var segments = childAdded.ChildrenProperty.Segments.ToArray();
         var childrenProperty = new PropertyPath(string.Empty);
@@ -142,11 +152,11 @@ public class MongoDBChangesetConverter : IMongoDBChangesetConverter
 
         if (updateBuilder is not null)
         {
-            updateBuilder = updateBuilder.Push(property, document);
+            updateBuilder = updateBuilder.Push(property, bsonValue);
         }
         else
         {
-            updateBuilder = updateDefinitionBuilder.Push(property, document);
+            updateBuilder = updateDefinitionBuilder.Push(property, bsonValue);
         }
     }
 

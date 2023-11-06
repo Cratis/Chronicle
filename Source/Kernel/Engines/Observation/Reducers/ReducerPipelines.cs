@@ -16,7 +16,7 @@ namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
 [SingletonPerMicroserviceAndTenant]
 public class ReducerPipelines : IReducerPipelines
 {
-    readonly ISinks _projectionSinks;
+    readonly ISinks _sinks;
     readonly IObjectComparer _objectComparer;
     readonly ConcurrentDictionary<ReducerId, IReducerPipeline> _pipelines = new();
 
@@ -29,7 +29,7 @@ public class ReducerPipelines : IReducerPipelines
         ISinks projectionSinks,
         IObjectComparer objectComparer)
     {
-        _projectionSinks = projectionSinks;
+        _sinks = projectionSinks;
         _objectComparer = objectComparer;
     }
 
@@ -48,7 +48,7 @@ public class ReducerPipelines : IReducerPipelines
     {
         var readModelSchema = await JsonSchema.FromJsonAsync(definition.ReadModel.Schema);
         var readModel = new Model(definition.ReadModel.Name, readModelSchema);
-        var sink = _projectionSinks.GetForTypeAndModel(definition.SinkTypeId, readModel);
+        var sink = _sinks.GetForTypeAndModel(definition.SinkTypeId, readModel);
         return new ReducerPipeline(readModel, sink, _objectComparer);
     }
 }

@@ -32,20 +32,20 @@ public class MongoDBSink : ISink
     /// Initializes a new instance of the <see cref="MongoDBSink"/> class.
     /// </summary>
     /// <param name="model">The <see cref="Model"/> the sink is for.</param>
-    /// <param name="converter"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
-    /// <param name="collections"><see cref="IMongoDBSinkCollections"/> to use.</param>
-    /// <param name="changesetConverter"><see cref="IMongoDBChangesetConverter"/> for converting changesets.</param>
+    /// <param name="converterProvider"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
+    /// <param name="collections">Provider for <see cref="IMongoDBSinkCollections"/> to use.</param>
+    /// <param name="changesetConverter">Provider for <see cref="IMongoDBChangesetConverter"/> for converting changesets.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
     public MongoDBSink(
         Model model,
-        IMongoDBConverter converter,
+        IMongoDBConverter converterProvider,
         IMongoDBSinkCollections collections,
         IMongoDBChangesetConverter changesetConverter,
         IExpandoObjectConverter expandoObjectConverter)
     {
         _expandoObjectConverter = expandoObjectConverter;
         _model = model;
-        _converter = converter;
+        _converter = converterProvider;
         _collections = collections;
         _changesetConverter = changesetConverter;
     }

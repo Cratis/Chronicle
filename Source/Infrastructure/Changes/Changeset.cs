@@ -86,6 +86,12 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     }
 
     /// <inheritdoc/>
+    public void AddChild(PropertyPath childrenProperty, object child)
+    {
+        Add(new ChildAdded(child, childrenProperty, PropertyPath.Root, null!));
+    }
+
+    /// <inheritdoc/>
     public void AddChild<TChild>(
         PropertyPath childrenProperty,
         PropertyPath identifiedByProperty,
