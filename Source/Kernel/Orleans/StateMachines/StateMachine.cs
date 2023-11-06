@@ -47,7 +47,6 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
 
         InvalidTypeForState.ThrowIfInvalid(InitialState);
         ThrowIfUnknownStateType(InitialState);
-        _currentState = _states[InitialState];
         await TransitionTo(InitialState);
     }
 
