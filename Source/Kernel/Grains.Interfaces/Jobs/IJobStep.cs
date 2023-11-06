@@ -12,6 +12,12 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public interface IJobStep : IGrainWithGuidCompoundKey
 {
     /// <summary>
+    /// Pause the job step.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Pause();
+
+    /// <summary>
     /// Resume a job step.
     /// </summary>
     /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>

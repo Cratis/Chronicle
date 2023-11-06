@@ -81,6 +81,14 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     }
 
     /// <inheritdoc/>
+    public Task Pause()
+    {
+        _cancellationTokenSource.Cancel();
+        StatusChanged(JobStepStatus.Paused);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task Resume(GrainId grainId)
     {
         if (_running)

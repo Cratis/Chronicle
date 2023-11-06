@@ -36,5 +36,10 @@ public enum JobStepStatus
     /// <summary>
     /// The job step has been stopped.
     /// </summary>
-    Stopped = 5
+    Paused = 5,
+
+    /// <summary>
+    /// The job step has been stopped.
+    /// </summary>
+    Stopped = 6
 }

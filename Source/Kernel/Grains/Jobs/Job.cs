@@ -109,12 +109,34 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         }
 
         var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
-        var steps = await stepStorage.GetForJob(_jobId, JobStepStatus.Scheduled, JobStepStatus.Running);
+        var steps = await stepStorage.GetForJob(_jobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused);
         foreach (var step in steps)
         {
             var jobStep = (GrainFactory.GetGrain(step.GrainId) as IJobStep)!;
             await jobStep.Resume(this.GetGrainId());
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task Pause()
+    {
+        if (State.Status == JobStatus.Stopped || State.Status == JobStatus.CompletedSuccessfully || State.Status == JobStatus.CompletedWithFailures)
+        {
+            return;
+        }
+
+        var executionContextManager = ServiceProvider.GetRequiredService<IExecutionContextManager>();
+        executionContextManager.Establish(_jobKey.TenantId, executionContextManager.Current.CorrelationId, _jobKey.MicroserviceId);
+        var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
+        var steps = await stepStorage.GetForJob(_jobId, JobStepStatus.Scheduled, JobStepStatus.Running);
+        foreach (var step in steps)
+        {
+            var jobStep = GrainFactory.GetGrain<IJobStep>(step.GrainId);
+            await jobStep.Pause();
+        }
+
+        await StatusChanged(JobStatus.Paused);
+        await WriteStateAsync();
     }
 
     /// <inheritdoc/>
@@ -134,6 +156,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             var jobStep = GrainFactory.GetGrain<IJobStep>(step.GrainId);
             await jobStep.Stop();
         }
+
+        await stepStorage.RemoveAllForJob(_jobId);
 
         await StatusChanged(JobStatus.Stopped);
         await WriteStateAsync();

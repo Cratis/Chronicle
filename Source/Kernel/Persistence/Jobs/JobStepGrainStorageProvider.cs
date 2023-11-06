@@ -60,19 +60,41 @@ public class JobStepGrainStorageProvider : IGrainStorage
             var actualState = (grainState.State as JobStepState)!;
             actualState.GrainId = grainId;
 
-            if (IsSuccessful(actualState))
+            switch (GetStatus(actualState))
             {
-                await storage.Remove(key.JobId, jobStepId);
-            }
-            else if (IsFailed(actualState))
-            {
-                await storage.MoveToFailed(key.JobId, jobStepId, grainState.State);
-            }
-            else
-            {
-                await storage.Save(key.JobId, jobStepId, grainState.State);
+                case JobStepStatus.Failed:
+                    await storage.MoveToFailed(key.JobId, jobStepId, grainState.State);
+                    break;
+
+                case JobStepStatus.Stopped:
+                case JobStepStatus.Succeeded:
+                    await storage.Remove(key.JobId, jobStepId);
+                    break;
+
+                case JobStepStatus.Paused:
+                case JobStepStatus.Running:
+                case JobStepStatus.Scheduled:
+                    await storage.Save(key.JobId, jobStepId, grainState.State);
+                    break;
             }
         }
+
+        static JobStepStatus GetStatus(JobStepState state)
+        {
+            if (IsStopped(state)) return JobStepStatus.Stopped;
+            if (IsSuccessful(state)) return JobStepStatus.Succeeded;
+            if (IsFailed(state)) return JobStepStatus.Failed;
+            if (IsPaused(state)) return JobStepStatus.Paused;
+            return JobStepStatus.Running;
+        }
+
+        static bool IsPaused(JobStepState state) =>
+            state.StatusChanges.Count > 0 &&
+            state.StatusChanges[^1].Status == JobStepStatus.Paused;
+
+        static bool IsStopped(JobStepState state) =>
+            state.StatusChanges.Count > 0 &&
+            state.StatusChanges[^1].Status == JobStepStatus.Stopped;
 
         static bool IsSuccessful(JobStepState state) =>
                 state.StatusChanges.Count > 1 &&
