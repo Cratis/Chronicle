@@ -19,12 +19,14 @@ public class a_routing_state : Specification
     protected ObserverState resulting_stored_state;
     protected TailEventSequenceNumbers tail_event_sequence_numbers;
     protected ObserverSubscription subscription;
+    protected ObserverKey observer_key;
 
     void Establish()
     {
         observer = new();
         event_sequence = new();
-        state = new Routing(observer.Object, event_sequence.Object, Mock.Of<ILogger<Routing>>());
+        observer_key = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        state = new Routing(observer_key, observer.Object, event_sequence.Object, Mock.Of<ILogger<Routing>>());
         state_machine = new();
         state.SetStateMachine(state_machine.Object);
         stored_state = new ObserverState
