@@ -95,8 +95,10 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
 
+#pragma warning disable CA1721 // Property names should not match get methods
     /// <inheritdoc/>
     public Task<ObserverState> GetState() => Task.FromResult(State);
+#pragma warning restore CA1721 // Property names should not match get methods
 
     /// <inheritdoc/>
     public Task SetHandledStats(EventCount handled, EventSequenceNumber lastHandledEventSequenceNumber)
