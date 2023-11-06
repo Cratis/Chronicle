@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 
@@ -31,7 +32,7 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _logger = ServiceProvider.GetRequiredService<ILogger<StateMachine<object>>>();
+        _logger = ServiceProvider.GetService<ILogger<StateMachine<object>>>() ?? NullLogger<StateMachine<object>>.Instance;
 
         await OnActivation(cancellationToken);
         _states = CreateStates().ToDictionary(_ => _.GetType());
