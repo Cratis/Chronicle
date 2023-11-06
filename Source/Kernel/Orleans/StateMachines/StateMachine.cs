@@ -47,12 +47,6 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
         InvalidTypeForState.ThrowIfInvalid(InitialState);
         ThrowIfUnknownStateType(InitialState);
         _currentState = _states[InitialState];
-
-        dynamic dynamicState = State!;
-        string observerId = dynamicState.ObserverId.ToString();
-        string runningState = dynamicState.RunningState.ToString();
-        var tenantId = ServiceProvider.GetRequiredService<IExecutionContextManager>().Current.TenantId;
-
         await TransitionTo(InitialState);
     }
 
