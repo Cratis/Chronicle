@@ -26,21 +26,22 @@ public class MongoDBFailedPartitionStorage : IFailedPartitionsStorage
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
 
-    /// <inheritdoc/>
-    public IObservable<IEnumerable<FailedPartition>> All
-    {
-        get
-        {
-            var observers = Collection.Find(_ => true).ToList();
-            return Collection.Observe(observers, (cursor, items) =>
-            {
-                items.Clear();
-                items.AddRange(Collection.Find(_ => true).ToList());
-            });
-        }
-    }
-
     IMongoCollection<FailedPartition> Collection => _eventStoreDatabaseProvider().GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<FailedPartition>> ObserveAllFor(ObserverId? observerId = default)
+    {
+        var filter = observerId == default || observerId == ObserverId.Unspecified ?
+            Builders<FailedPartition>.Filter.Empty :
+            Builders<FailedPartition>.Filter.Eq(_ => _.ObserverId, observerId);
+
+        var observers = Collection.Find(filter).ToList();
+        return Collection.Observe(observers, (cursor, items) =>
+        {
+            items.Clear();
+            items.AddRange(Collection.Find(filter).ToList());
+        });
+    }
 
     /// <inheritdoc/>
     public async Task Save(ObserverId observerId, FailedPartitions failedPartitions)

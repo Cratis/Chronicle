@@ -14,7 +14,9 @@ public interface IFailedPartitionsStorage
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> for all instances of <see cref="FailedPartition"/>.
     /// </summary>
-    IObservable<IEnumerable<FailedPartition>> All { get; }
+    /// <param name="observerId">Optional <see cref="ObserverId"/> it is for.</param>
+    /// <returns>An observable of a collection of <see cref="FailedPartition"/>.</returns>
+    IObservable<IEnumerable<FailedPartition>> ObserveAllFor(ObserverId? observerId = default);
 
     /// <summary>
     /// Save all the failed partitions.

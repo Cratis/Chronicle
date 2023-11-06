@@ -11,6 +11,7 @@ const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{
 export interface AllFailedPartitionsArguments {
     microserviceId: string;
     tenantId: string;
+    observerId?: string;
 }
 export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], AllFailedPartitionsArguments> {
     readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/failed-partitions';
@@ -25,6 +26,7 @@ export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], A
         return [
             'microserviceId',
             'tenantId',
+            'observerId',
         ];
     }
 

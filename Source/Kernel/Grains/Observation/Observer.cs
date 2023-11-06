@@ -197,8 +197,6 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <inheritdoc/>
     public async Task ReplayPartition(Key partition)
     {
-        // Todo: Add state saying the partition is being replayed
-        // Honor the state in the Handle method, as we do with failed partitions
         await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(
             JobId.New(),
             new(
@@ -214,8 +212,6 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <inheritdoc/>
     public async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber)
     {
-        // Todo: Add state saying the partition is being replayed
-        // Honor the state in the Handle method, as we do with failed partitions
         await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(
             JobId.New(),
             new(
@@ -224,7 +220,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
                 _subscription,
                 partition,
                 EventSequenceNumber.First,
-                EventSequenceNumber.Max,
+                sequenceNumber,
                 State.EventTypes));
     }
 

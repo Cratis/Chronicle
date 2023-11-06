@@ -4,9 +4,8 @@
 import { FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { FailedPartition } from 'API/events/store/failed-partitions/FailedPartition';
 import { FailedPartitionAttempt } from 'API/events/store/failed-partitions/FailedPartitionAttempt';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ObserverInformation } from 'API/events/store/observers/ObserverInformation';
-import { Label } from '@mui/icons-material';
 
 export interface FailedPartitionAttemptsProps {
     failedPartition: FailedPartition;
@@ -15,6 +14,11 @@ export interface FailedPartitionAttemptsProps {
 
 export const FailedPartitionAttempts = (props: FailedPartitionAttemptsProps) => {
     const [selectedAttempt, setSelectedAttempt] = useState<FailedPartitionAttempt>(props.failedPartition.attempts[0])
+    const [selectedAttemptIndex, setSelectedAttemptIndex] = useState<number>(0);
+
+    useEffect(() => {
+        setSelectedAttempt(props.failedPartition.attempts[selectedAttemptIndex]);
+    }, [selectedAttemptIndex]);
 
     return (
         <>
@@ -24,12 +28,15 @@ export const FailedPartitionAttempts = (props: FailedPartitionAttemptsProps) => 
                     <Select
                         label="Attempt"
                         autoWidth
-                        value={selectedAttempt?.occurred || ''}
-                        onChange={e => setSelectedAttempt(props.failedPartition.attempts.find(_ => _.occurred == e.target.value)!)}>
+                        value={selectedAttemptIndex}
+                        onChange={e => {
+                            const selected = Number.parseInt(e.target.value as string);
+                            setSelectedAttemptIndex(selected);
+                        }}>
 
-                        {props.failedPartition.attempts.map(attempt => {
+                        {props.failedPartition.attempts.map((attempt, index) => {
                             return (
-                                <MenuItem key={attempt.occurred.toString()} value={attempt.occurred.toString()}>{attempt.occurred.toLocaleString()}</MenuItem>
+                                <MenuItem key={index} value={index.toString()}>{attempt.occurred.toLocaleString()}</MenuItem>
                             );
                         })}
                     </Select>
@@ -37,6 +44,8 @@ export const FailedPartitionAttempts = (props: FailedPartitionAttemptsProps) => 
             </div>
             {selectedAttempt &&
                 <>
+                    <Typography variant='h6'>SequenceNumber</Typography>
+                    <TextField disabled defaultValue={selectedAttempt.sequenceNumber} title={selectedAttempt.sequenceNumber.toString()} style={{ width: '100%' }} />
                     <Typography variant='h6'>Messages</Typography>
                     {
                         (selectedAttempt.messages) && selectedAttempt.messages.map((value, index) =>

@@ -20,16 +20,18 @@ import { useParams } from 'react-router-dom';
 
 let eventSequences: QueryResultWithState<EventSequenceInformation[]>;
 
+const UnspecifiedObserverId = '00000000-0000-0000-0000-000000000000';
+
 const columns: GridColDef[] = [
     {
         headerName: 'Observer Id',
         field: 'observerId',
-        width: 250
+        width: 300
     },
     {
         headerName: 'Observer Name',
         field: 'observerName',
-        width: 250
+        width: 350
     },
     {
         headerName: 'Attempts',
@@ -63,6 +65,14 @@ const columns: GridColDef[] = [
         valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
             return params.row.attempts[0].occurred.toLocaleString();
         }
+    },
+    {
+        headerName: 'Last Attempt',
+        field: 'lastAttempt',
+        width: 250,
+        valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
+            return params.row.attempts[params.row.attempts.length - 1].occurred.toLocaleString();
+        }
     }
 ];
 
@@ -88,8 +98,11 @@ export const FailedPartitions = () => {
 
     const [failedPartitions] = AllFailedPartitions.use({
         microserviceId: microserviceId,
-        tenantId: selectedTenant?.id ?? undefined!
+        tenantId: selectedTenant?.id ?? undefined!,
+        observerId: observerId ?? UnspecifiedObserverId
     });
+
+    const [augmentedFailedPartitions, setAugmentedFailedPartitions] = useState<FailedPartition[]>([]);
 
     useEffect(() => {
         if (tenants.data.length > 0) {
@@ -97,12 +110,17 @@ export const FailedPartitions = () => {
         }
     }, [tenants.data]);
 
+    useEffect(() => {
+        if (selectedTenant) {
+            setObserversQuery({
+                microserviceId: microserviceId,
+                tenantId: selectedTenant!.id
+            });
+        }
+    }, [selectedTenant]);
+
     const tenantChanged = (tenant: TenantInfo) => {
         setSelectedTenant(tenant);
-        setObserversQuery({
-            microserviceId: microserviceId,
-            tenantId: tenant.id
-        });
     }
 
     const closePanel = () => {
@@ -116,12 +134,15 @@ export const FailedPartitions = () => {
         }
     };
 
-    for (const partition of failedPartitions.data) {
-        const observer = observers.data.find(_ => _.observerId == partition.observerId);
-        if (observer) {
-            (partition as any).observerName = observer.name;
-        }
-    }
+    useEffect(() => {
+        setAugmentedFailedPartitions(failedPartitions.data.map(partition => {
+            const observer = observers.data.find(_ => _.observerId == partition.observerId);
+            if (observer) {
+                (partition as any).observerName = observer.name;
+            }
+            return partition;
+        }));
+    }, [failedPartitions.data, observers.data]);
 
     const observerForSelectedPartition = observers.data.find(_ => _.observerId == selectedFailedPartition?.observerId)!
 
@@ -168,7 +189,7 @@ export const FailedPartitions = () => {
                         filterMode="client"
                         sortingMode="client"
                         getRowId={row => row.id}
-                        rows={failedPartitions.data}
+                        rows={augmentedFailedPartitions}
                         onRowSelectionModelChange={failedPartitionSelected}
                     />
                     <Drawer
