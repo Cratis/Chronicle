@@ -38,6 +38,7 @@ const getJobStepStatusText = (status: JobStepStatus) => {
         case JobStepStatus.running: return 'Running';
         case JobStepStatus.succeeded: return 'Succeeded';
         case JobStepStatus.failed: return 'Failed';
+        case JobStepStatus.paused: return 'Paused';
         case JobStepStatus.stopped: return 'Stopped';
     }
 }
