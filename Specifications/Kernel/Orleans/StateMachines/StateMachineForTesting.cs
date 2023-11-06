@@ -27,24 +27,44 @@ public class StateMachineForTesting : StateMachine<StateMachineState>
 
     protected override Task OnBeforeEnteringState(IState<StateMachineState> state)
     {
+        if (state is NoOpState<StateMachineState>)
+        {
+            return Task.CompletedTask;
+        }
+
         OnBeforeEnteringStates.Add(state);
         return Task.CompletedTask;
     }
 
     protected override Task OnAfterEnteringState(IState<StateMachineState> state)
     {
+        if (state is NoOpState<StateMachineState>)
+        {
+            return Task.CompletedTask;
+        }
+
         OnAfterEnteringStates.Add(state);
         return Task.CompletedTask;
     }
 
     protected override Task OnBeforeLeavingState(IState<StateMachineState> state)
     {
+        if (state is NoOpState<StateMachineState>)
+        {
+            return Task.CompletedTask;
+        }
+
         OnBeforeLeavingStates.Add(state);
         return Task.CompletedTask;
     }
 
     protected override Task OnAfterLeavingState(IState<StateMachineState> state)
     {
+        if (state is NoOpState<StateMachineState>)
+        {
+            return Task.CompletedTask;
+        }
+
         OnAfterLeavingStates.Add(state);
         return Task.CompletedTask;
     }
