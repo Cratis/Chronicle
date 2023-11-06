@@ -12,6 +12,9 @@ public class and_state_can_be_transitioned_to : given.a_state_machine_with_well_
         // We clear this, because we don't care about the initial state transitions and state written to storage in this spec
         written_states.Clear();
         on_calls.Clear();
+
+        state_machine.OnBeforeEnteringStates.Clear();
+        state_machine.OnAfterEnteringStates.Clear();
     }
 
     async Task Because() => await state_machine.TransitionTo<StateThatDoesNotSupportTransitioningFrom>();
