@@ -6,7 +6,7 @@ import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@a
 import { FailedPartition } from './FailedPartition';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/failed-partitions');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/failed-partitions/{{observerId}}');
 
 export interface AllFailedPartitionsArguments {
     microserviceId: string;
@@ -14,7 +14,7 @@ export interface AllFailedPartitionsArguments {
     observerId?: string;
 }
 export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], AllFailedPartitionsArguments> {
-    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/failed-partitions';
+    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/failed-partitions/{{observerId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: FailedPartition[] = [];
 

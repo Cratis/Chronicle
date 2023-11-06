@@ -10,77 +10,30 @@ import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences'
 import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
 import { QueryResultWithState } from '@aksio/applications/queries';
 import { RouteParams } from './RouteParams';
-import { Box, Button, Divider, Drawer, FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
+import { Box, Button, Divider, Drawer, FormControl, Grid, InputLabel, Link, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
 import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';
 import * as icons from '@mui/icons-material';
 import { RetryPartition } from 'API/events/store/observers/RetryPartition';
 import { GetObservers } from 'API/events/store/observers/GetObservers';
 import { FailedPartitionAttempts } from './FailedPartitionAttempts';
-import { useParams } from 'react-router-dom';
+import { Route, Routes, useParams } from 'react-router-dom';
 
 let eventSequences: QueryResultWithState<EventSequenceInformation[]>;
 
 const UnspecifiedObserverId = '00000000-0000-0000-0000-000000000000';
 
-const columns: GridColDef[] = [
-    {
-        headerName: 'Observer Id',
-        field: 'observerId',
-        width: 300
-    },
-    {
-        headerName: 'Observer Name',
-        field: 'observerName',
-        width: 350
-    },
-    {
-        headerName: 'Attempts',
-        field: 'attempts',
-        width: 100,
-        valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
-            return params.row.attempts.length;
-        }
-    },
-    {
-        headerName: 'Partition',
-        field: 'partition',
-        width: 250,
-        valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
-            return Object.values(params.row.partition.value).join('');
-        }
-    },
-    {
-        headerName: 'Sequence Number',
-        field: 'sequenceNumber',
-        width: 120,
-        valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
-            return params.row.attempts[params.row.attempts.length - 1].sequenceNumber;
-        }
-
-    },
-    {
-        headerName: 'Occurred',
-        field: 'initialPartitionFailedOn',
-        width: 250,
-        valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
-            return params.row.attempts[0].occurred.toLocaleString();
-        }
-    },
-    {
-        headerName: 'Last Attempt',
-        field: 'lastAttempt',
-        width: 250,
-        valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
-            return params.row.attempts[params.row.attempts.length - 1].occurred.toLocaleString();
-        }
-    }
-];
-
 interface FailedPartitionsRouteParams extends RouteParams {
     observerId: string;
 }
 
-
+export const FailedPartitionsNavigator = () => {
+    return (
+        <Routes>
+            <Route path=":observerId" element={<FailedPartitions />} />
+            <Route path="*" element={<FailedPartitions />} />
+        </Routes>
+    )
+}
 
 export const FailedPartitions = () => {
     const { microserviceId, observerId } = useParams() as unknown as FailedPartitionsRouteParams;
@@ -91,6 +44,7 @@ export const FailedPartitions = () => {
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
     const [selectedFailedPartition, setSelectedFailedPartition] = useState<FailedPartition>();
+    const [selectedFailedPartitionForAttempts, setSelectedFailedPartitionForAttempts] = useState<FailedPartition>();
     const [observers, setObserversQuery] = GetObservers.use({
         microserviceId: microserviceId,
         tenantId: selectedTenant?.id ?? undefined!
@@ -103,6 +57,66 @@ export const FailedPartitions = () => {
     });
 
     const [augmentedFailedPartitions, setAugmentedFailedPartitions] = useState<FailedPartition[]>([]);
+
+    const columns: GridColDef[] = [
+        {
+            headerName: 'Observer Id',
+            field: 'observerId',
+            width: 300
+        },
+        {
+            headerName: 'Observer Name',
+            field: 'observerName',
+            width: 350
+        },
+        {
+            headerName: 'Attempts',
+            field: 'attempts',
+            width: 100,
+            renderCell: (params) => {
+                return (
+                    <>
+                        <Link style={{ cursor: 'pointer' }} onClick={() => {
+                            setSelectedFailedPartitionForAttempts(params.row as FailedPartition);
+                        }}>{params.row.attempts.length}</Link>
+                    </>
+                );
+            }
+        },
+        {
+            headerName: 'Partition',
+            field: 'partition',
+            width: 250,
+            valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
+                return Object.values(params.row.partition.value).join('');
+            }
+        },
+        {
+            headerName: 'Sequence Number',
+            field: 'sequenceNumber',
+            width: 120,
+            valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
+                return params.row.attempts[params.row.attempts.length - 1].sequenceNumber;
+            }
+
+        },
+        {
+            headerName: 'Occurred',
+            field: 'initialPartitionFailedOn',
+            width: 250,
+            valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
+                return params.row.attempts[0].occurred.toLocaleString();
+            }
+        },
+        {
+            headerName: 'Last Attempt',
+            field: 'lastAttempt',
+            width: 250,
+            valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
+                return params.row.attempts[params.row.attempts.length - 1].occurred.toLocaleString();
+            }
+        }
+    ];
 
     useEffect(() => {
         if (tenants.data.length > 0) {
@@ -124,7 +138,7 @@ export const FailedPartitions = () => {
     }
 
     const closePanel = () => {
-        setSelectedFailedPartition(undefined);
+        setSelectedFailedPartitionForAttempts(undefined);
     };
 
     const failedPartitionSelected = (selectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
@@ -194,13 +208,13 @@ export const FailedPartitions = () => {
                     />
                     <Drawer
                         anchor="right"
-                        open={selectedFailedPartition != undefined} onClose={closePanel}
+                        open={selectedFailedPartitionForAttempts != undefined} onClose={closePanel}
                         sx={{
                             '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 500 },
                         }}>
                         <div style={{ padding: '24px' }}>
                             <Typography variant='h5'>Details</Typography>
-                            {selectedFailedPartition && <FailedPartitionAttempts failedPartition={selectedFailedPartition} observer={observerForSelectedPartition} />}
+                            {selectedFailedPartitionForAttempts && <FailedPartitionAttempts failedPartition={selectedFailedPartitionForAttempts} observer={observerForSelectedPartition} />}
                         </div>
                     </Drawer>
                 </Box>

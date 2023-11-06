@@ -6,7 +6,7 @@ import { NavigationPage } from '../Components/Navigation/NavigationPage';
 import * as icons from '@mui/icons-material';
 import { NavigationItem, NavigationButton } from '../Components/Navigation';
 import { EventTypes } from './EventTypes';
-import { FailedPartitions } from './FailedPartitions';
+import { FailedPartitionsNavigator } from './FailedPartitions';
 import { Observers } from './Observers';
 import { Projections } from './Projections';
 import { EventSequences } from './EventSequences';
@@ -45,8 +45,8 @@ export const EventStore = () => {
                 title: 'Failed partitions',
                 icon: <icons.ErrorOutline />,
                 targetPath: 'failed-partitions',
-                routePath: 'failed-partitions/:observerId',
-                content: <FailedPartitions />
+                routePath: 'failed-partitions/*',
+                content: <FailedPartitionsNavigator />
             }, {
                 title: 'Jobs',
                 icon: <icons.GroupWork />,

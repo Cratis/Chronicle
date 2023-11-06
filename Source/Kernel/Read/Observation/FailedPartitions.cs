@@ -39,7 +39,7 @@ public class FailedPartitions : ControllerBase
     /// <param name="tenantId"><see cref="TenantId"/> the failed partitions are for.</param>
     /// <param name="observerId">Optional <see cref="ObserverId"/> to filter down which observer it is for.</param>
     /// <returns>Client observable of a collection of <see cref="FailedPartitions"/>.</returns>
-    [HttpGet]
+    [HttpGet("{observerId}")]
     public Task<ClientObservable<IEnumerable<FailedPartition>>> AllFailedPartitions(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId,
