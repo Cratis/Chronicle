@@ -11,6 +11,7 @@ import { Observers } from './Observers';
 import { Projections } from './Projections';
 import { EventSequences } from './EventSequences';
 import { Jobs } from './Jobs';
+import { ReplayCandidates } from './ReplayCandidates';
 
 export const EventStore = () => {
     const [microservices] = AllMicroservices.use();
@@ -53,6 +54,12 @@ export const EventStore = () => {
                 targetPath: 'jobs',
                 routePath: 'jobs',
                 content: <Jobs />
+            }, {
+                title: 'Observer replay candidates',
+                icon: <icons.Replay />,
+                targetPath: 'replay-candidates',
+                routePath: 'replay-candidates',
+                content: <ReplayCandidates />
             }]
         } as NavigationItem;
     });

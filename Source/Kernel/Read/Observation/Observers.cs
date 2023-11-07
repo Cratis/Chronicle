@@ -3,7 +3,9 @@
 
 using Aksio.Applications.Queries;
 using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Kernel.Observation.Replaying;
 using Aksio.Cratis.Kernel.Persistence.Observation;
+using Aksio.Cratis.Kernel.Persistence.Observation.Replaying;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,18 +18,22 @@ namespace Aksio.Cratis.Kernel.Read.Observation;
 public class Observers : ControllerBase
 {
     readonly ProviderFor<IObserverStorage> _observerStorageProvider;
+    readonly ProviderFor<IReplayCandidatesStorage> _replayCandidatesStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
     /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
+    /// <param name="replayCandidatesStorageProvider">Provider for <see cref="IReplayCandidatesStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public Observers(
         ProviderFor<IObserverStorage> observerStorageProvider,
+        ProviderFor<IReplayCandidatesStorage> replayCandidatesStorageProvider,
         IExecutionContextManager executionContextManager)
     {
         _observerStorageProvider = observerStorageProvider;
+        _replayCandidatesStorageProvider = replayCandidatesStorageProvider;
         _executionContextManager = executionContextManager;
     }
 
@@ -73,5 +79,20 @@ public class Observers : ControllerBase
         };
 
         return Task.FromResult(clientObservable);
+    }
+
+    /// <summary>
+    /// Get all replay candidates.
+    /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> the observers are for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> the observers are for.</param>
+    /// <returns>Collection of <see cref="ReplayCandidate"/>.</returns>
+    [HttpGet("replay-candidates")]
+    public async Task<IEnumerable<ReplayCandidate>> AllReplayCandidates(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId)
+    {
+        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
+        return await _replayCandidatesStorageProvider().GetAll();
     }
 }

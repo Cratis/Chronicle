@@ -16,4 +16,10 @@ public record ReplayCandidate(
     ReplayCandidateId Id,
     ObserverId ObserverId,
     ObserverKey ObserverKey,
-    IEnumerable<ReplayCandidateReason> Reasons);
+    IEnumerable<ReplayCandidateReason> Reasons)
+{
+    /// <summary>
+    /// Gets the <see cref="DateTimeOffset"/> when the candidate was created.
+    /// </summary>
+    public DateTimeOffset Occurred { get; init; } = DateTimeOffset.UtcNow;
+}

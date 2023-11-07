@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Observation.Replaying;
 
 namespace Aksio.Cratis.Kernel.Persistence.Observation.Replaying;
@@ -16,4 +17,10 @@ public interface IReplayCandidatesStorage
     /// <param name="replayCandidate"><see cref="ReplayCandidate"/> to add.</param>
     /// <returns>Awaitable task.</returns>
     Task Add(ReplayCandidate replayCandidate);
+
+    /// <summary>
+    /// Gets all replay candidates.
+    /// </summary>
+    /// <returns>Collection of <see cref="ReplayCandidate"/>.</returns>
+    Task<IImmutableList<ReplayCandidate>> GetAll();
 }

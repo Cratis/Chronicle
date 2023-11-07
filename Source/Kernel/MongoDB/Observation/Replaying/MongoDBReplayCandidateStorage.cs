@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Observation.Replaying;
 using Aksio.Cratis.Kernel.Persistence.Observation.Replaying;
 using Aksio.DependencyInversion;
@@ -40,5 +41,12 @@ public class MongoDBReplayCandidateStorage : IReplayCandidatesStorage
             replayCandidate.ObserverKey.MicroserviceId);
 
         await Collection.InsertOneAsync(replayCandidate).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IImmutableList<ReplayCandidate>> GetAll()
+    {
+        var cursor = await Collection.FindAsync(_ => true).ConfigureAwait(false);
+        return cursor.ToList().ToImmutableList();
     }
 }
