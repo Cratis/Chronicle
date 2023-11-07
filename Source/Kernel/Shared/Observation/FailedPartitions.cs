@@ -11,6 +11,7 @@ namespace Aksio.Cratis.Kernel.Observation;
 /// </summary>
 public class FailedPartitions
 {
+    readonly List<FailedPartition> _resolvedPartitions = new();
     List<FailedPartition> _partitions = new();
 
     /// <summary>
@@ -21,6 +22,11 @@ public class FailedPartitions
         get => _partitions;
         set => _partitions = new(value);
     }
+
+    /// <summary>
+    /// Gets or sets the resolved partitions for the observer.
+    /// </summary>
+    public IEnumerable<FailedPartition> ResolvedPartitions => _resolvedPartitions;
 
     /// <summary>
     /// Gets whether or not there are any failed partitions.
@@ -92,5 +98,13 @@ public class FailedPartitions
     /// Remove a failed partition.
     /// </summary>
     /// <param name="partition"><see cref="Key"/> to remove.</param>
-    public void Remove(Key partition) => _partitions.RemoveAll(_ => _.Partition == partition);
+    public void Remove(Key partition)
+    {
+        var failedPartition = Get(partition);
+        if (failedPartition != null)
+        {
+            _resolvedPartitions.Add(failedPartition);
+        }
+        _partitions.RemoveAll(_ => _.Partition == partition);
+    }
 }

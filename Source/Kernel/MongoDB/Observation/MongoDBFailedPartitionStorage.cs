@@ -46,19 +46,17 @@ public class MongoDBFailedPartitionStorage : IFailedPartitionsStorage
     /// <inheritdoc/>
     public async Task Save(ObserverId observerId, FailedPartitions failedPartitions)
     {
+        foreach (var failedPartition in failedPartitions.ResolvedPartitions)
+        {
+            await Collection.DeleteOneAsync(_ => _.Id == failedPartition.Id).ConfigureAwait(false);
+        }
+
         foreach (var failedPartition in failedPartitions.Partitions)
         {
-            if (failedPartition.IsResolved)
-            {
-                await Collection.DeleteOneAsync(_ => _.Id == failedPartition.Id).ConfigureAwait(false);
-            }
-            else
-            {
-                await Collection.ReplaceOneAsync(
-                    _ => _.Id == failedPartition.Id,
-                    failedPartition!,
-                    new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
-            }
+            await Collection.ReplaceOneAsync(
+                _ => _.Id == failedPartition.Id,
+                failedPartition!,
+                new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
         }
     }
 
