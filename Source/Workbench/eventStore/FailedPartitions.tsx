@@ -86,13 +86,13 @@ export const FailedPartitions = () => {
         {
             headerName: 'Partition',
             field: 'partition',
-            width: 250,
+            width: 300,
             valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
                 return Object.values(params.row.partition.value).join('');
             }
         },
         {
-            headerName: 'Sequence Number',
+            headerName: 'Sequence #',
             field: 'sequenceNumber',
             width: 120,
             valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
@@ -186,11 +186,12 @@ export const FailedPartitions = () => {
                         <Button
                             startIcon={<icons.RestartAlt />}
                             onClick={() => {
+                                var partition = Object.values(selectedFailedPartition.partition.value).join('')
                                 setRetryCommandValues({
                                     observerId: selectedFailedPartition.observerId,
                                     microserviceId: microserviceId,
                                     tenantId: selectedTenant?.id,
-                                    partition: selectedFailedPartition.partition.value.toString(),
+                                    partition: partition.toString(),
                                 });
                                 retryCommand.execute();
                             }}>Retry</Button>
