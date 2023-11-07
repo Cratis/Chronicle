@@ -17,9 +17,6 @@ public abstract class State<TStoredState> : IState<TStoredState>
     internal IStateMachine<TStoredState> _stateMachine = default!;
 
     /// <inheritdoc/>
-    public abstract StateName Name { get; }
-
-    /// <inheritdoc/>
     public IStateMachine<TStoredState> StateMachine => _stateMachine;
 
     /// <summary>

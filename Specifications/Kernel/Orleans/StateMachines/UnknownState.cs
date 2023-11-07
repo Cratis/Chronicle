@@ -5,7 +5,5 @@ namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 
 public class UnknownState : BaseState
 {
-    public override StateName Name => "Unknown state";
-
     public override Task<bool> CanTransitionTo<TState>(StateMachineState state) => Task.FromResult(true);
 }

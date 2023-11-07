@@ -162,6 +162,11 @@ public class Observer : StateMachine<ObserverState>, IObserver
 
         new States.CatchUp(_observerKey, _jobsManager),
 
+        new States.ResumeReplay(
+            _observerKey,
+            _replayStateServiceClient,
+            _jobsManager),
+
         new States.Replay(
             _observerKey,
             _replayStateServiceClient,

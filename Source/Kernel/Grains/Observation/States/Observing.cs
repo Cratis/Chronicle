@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
-using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
@@ -50,9 +49,6 @@ public class Observing : BaseObserverState
         _eventSequenceId = eventSequenceId;
         _logger = logger;
     }
-
-    /// <inheritdoc/>
-    public override StateName Name => "Observing";
 
     /// <inheritdoc/>
     public override ObserverRunningState RunningState => ObserverRunningState.Active;

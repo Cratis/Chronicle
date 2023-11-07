@@ -10,9 +10,6 @@ namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 public class NoOpState<TStoredState> : State<TStoredState>
 {
     /// <inheritdoc/>
-    public override StateName Name => "No Operation State";
-
-    /// <inheritdoc/>
     public override Task<bool> CanTransitionTo<TTargetState>(TStoredState state) => Task.FromResult(true);
 
     /// <inheritdoc/>

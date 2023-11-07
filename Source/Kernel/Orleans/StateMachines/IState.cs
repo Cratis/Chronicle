@@ -10,11 +10,6 @@ namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 public interface IState<TStoredState>
 {
     /// <summary>
-    /// Gets the name of the state.
-    /// </summary>
-    StateName Name { get; }
-
-    /// <summary>
     /// Gets the state machine.
     /// </summary>
     IStateMachine<TStoredState> StateMachine { get; }

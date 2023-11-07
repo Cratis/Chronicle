@@ -5,8 +5,6 @@ namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 
 public class StateThatTransitionsOnEnter : BaseState
 {
-    public override StateName Name => "State that transitions on enter";
-
     public override Task<bool> CanTransitionTo<TState>(StateMachineState state) => Task.FromResult(true);
 
     public override async Task<StateMachineState> OnEnter(StateMachineState state)

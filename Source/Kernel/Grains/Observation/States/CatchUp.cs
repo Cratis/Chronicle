@@ -4,7 +4,6 @@
 using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
-using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States;
@@ -29,9 +28,6 @@ public class CatchUp : BaseObserverState
         _observerKey = observerKey;
         _jobsManager = jobsManager;
     }
-
-    /// <inheritdoc/>
-    public override StateName Name => "CatchUp";
 
     /// <inheritdoc/>
     public override ObserverRunningState RunningState => ObserverRunningState.CatchingUp;
