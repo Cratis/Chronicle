@@ -35,6 +35,9 @@ internal static partial class RoutingLogMessages
 
     [LoggerMessage(7, LogLevel.Trace, "Observer will fast forward to tail of event sequence.")]
     internal static partial void FastForwarding(this ILogger<Routing> logger);
+
+    [LoggerMessage(8, LogLevel.Trace, "Observer needs to replay. Transitioning to replay state.")]
+    internal static partial void NeedsToReplay(this ILogger<Routing> logger);
 }
 
 internal static class RoutingScopes

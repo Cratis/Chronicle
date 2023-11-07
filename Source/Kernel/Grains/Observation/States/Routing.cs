@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
@@ -48,14 +47,12 @@ public class Routing : BaseObserverState
     public override ObserverRunningState RunningState => ObserverRunningState.Routing;
 
     /// <inheritdoc/>
-    public override StateName Name => "Routing";
-
-    /// <inheritdoc/>
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Disconnected),
         typeof(Indexing),
         typeof(CatchUp),
+        typeof(ResumeReplay),
         typeof(Replay),
         typeof(Observing)
     }.ToImmutableList();
@@ -115,9 +112,14 @@ public class Routing : BaseObserverState
             _logger.CatchingUp();
             await StateMachine.TransitionTo<CatchUp>();
         }
-        else if (NeedsToReplay(state))
+        else if (state.RunningState == ObserverRunningState.Replaying)
         {
             _logger.Replaying();
+            await StateMachine.TransitionTo<ResumeReplay>();
+        }
+        else if (NeedsToReplay(state))
+        {
+            _logger.NeedsToReplay();
             await StateMachine.TransitionTo<Replay>();
         }
         else
@@ -147,8 +149,7 @@ public class Routing : BaseObserverState
         state.NextEventSequenceNumber < _tailEventSequenceNumber;
 
     bool NeedsToReplay(ObserverState state) =>
-        state.RunningState == ObserverRunningState.Replaying ||
-        (HasDefinitionChanged(state) && HasEventsInSequence());
+        HasDefinitionChanged(state) && HasEventsInSequence();
 
     bool HasEventsInSequence() =>
         _tailEventSequenceNumber.IsActualValue && _tailEventSequenceNumberForEventTypes.IsActualValue;

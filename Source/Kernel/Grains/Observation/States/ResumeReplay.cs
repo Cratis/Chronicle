@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 using Aksio.Cratis.Observation;
@@ -10,9 +9,9 @@ using Aksio.Cratis.Observation;
 namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 
 /// <summary>
-/// Represents the replay state of an observer.
+/// Represents the state for resuming replay of an observer.
 /// </summary>
-public class Replay : BaseObserverState
+public class ResumeReplay : BaseObserverState
 {
     readonly ObserverKey _observerKey;
     readonly IObserverServiceClient _replayStateServiceClient;
@@ -25,7 +24,7 @@ public class Replay : BaseObserverState
     /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
     /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
     /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
-    public Replay(
+    public ResumeReplay(
         ObserverKey observerKey,
         IObserverServiceClient replayStateServiceClient,
         IJobsManager jobsManager)
@@ -65,17 +64,9 @@ public class Replay : BaseObserverState
         if (pausedJob is not null)
         {
             await _jobsManager.Resume(pausedJob.Id);
-            return state;
         }
 
-        await _jobsManager.Start<IReplayObserver, ReplayObserverRequest>(
-            JobId.New(),
-            new ReplayObserverRequest(
-                state.ObserverId,
-                _observerKey,
-                subscription,
-                state.EventTypes));
-        return state with { Handled = EventCount.Zero };
+        return state;
     }
 
     /// <inheritdoc/>
