@@ -6,6 +6,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
+using Aksio.Cratis.Kernel.Grains.Observation.States;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
@@ -28,6 +29,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     readonly ILoggerFactory _loggerFactory;
     readonly IPersistentState<FailedPartitions> _failuresState;
     readonly IObserverServiceClient _replayStateServiceClient;
+    readonly IReplayEvaluator _replayEvaluator;
     IStreamProvider _streamProvider = null!;
     ObserverId _observerId = Guid.Empty;
     ObserverKey _observerKey = ObserverKey.NotSet;
@@ -43,6 +45,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
     /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
+    /// <param name="replayEvaluator">The <see cref="IReplayEvaluator"/> to use.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Observer(
@@ -50,19 +53,21 @@ public class Observer : StateMachine<ObserverState>, IObserver
         [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
         IPersistentState<FailedPartitions> failures,
         IObserverServiceClient replayStateServiceClient,
+        IReplayEvaluator replayEvaluator,
         ILogger<Observer> logger,
         ILoggerFactory loggerFactory)
     {
         _executionContextManager = executionContextManager;
         _failuresState = failures;
         _replayStateServiceClient = replayStateServiceClient;
+        _replayEvaluator = replayEvaluator;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _subscription = ObserverSubscription.Unsubscribed;
     }
 
     /// <inheritdoc/>
-    protected override Type InitialState => typeof(States.Routing);
+    protected override Type InitialState => typeof(Routing);
 
     FailedPartitions Failures => _failuresState.State;
 
@@ -88,7 +93,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        await TransitionTo<States.Disconnected>();
+        await TransitionTo<Disconnected>();
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
@@ -145,49 +150,50 @@ public class Observer : StateMachine<ObserverState>, IObserver
             typeof(TObserverSubscriber),
             subscriberArgs);
 
-        await TransitionTo<States.Routing>();
+        await TransitionTo<Routing>();
         await TryRecoverAllFailedPartitions();
     }
 
     /// <inheritdoc/>
     public override IImmutableList<IState<ObserverState>> CreateStates() => new IState<ObserverState>[]
     {
-        new States.Disconnected(),
+        new Disconnected(),
 
-        new States.Routing(
+        new Routing(
             _observerKey,
             this,
+            _replayEvaluator,
             _eventSequence,
-            _loggerFactory.CreateLogger<States.Routing>()),
+            _loggerFactory.CreateLogger<Routing>()),
 
-        new States.CatchUp(_observerKey, _jobsManager),
+        new CatchUp(_observerKey, _jobsManager),
 
-        new States.ResumeReplay(
+        new ResumeReplay(
             _observerKey,
             _replayStateServiceClient,
             _jobsManager),
 
-        new States.Replay(
+        new Replay(
             _observerKey,
             _replayStateServiceClient,
             _jobsManager),
 
-        new States.Indexing(),
+        new Indexing(),
 
-        new States.Observing(
+        new Observing(
             this,
             _streamProvider,
             _observerKey.MicroserviceId,
             _observerKey.TenantId,
             _observerKey.EventSequenceId,
-            _loggerFactory.CreateLogger<States.Observing>())
+            _loggerFactory.CreateLogger<Observing>())
     }.ToImmutableList();
 
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
         _subscription = ObserverSubscription.Unsubscribed;
-        await TransitionTo<States.Disconnected>();
+        await TransitionTo<Disconnected>();
     }
 
     /// <inheritdoc/>
@@ -195,7 +201,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     {
         if (State.RunningState == ObserverRunningState.Active)
         {
-            await TransitionTo<States.Replay>();
+            await TransitionTo<Replay>();
         }
     }
 
@@ -415,7 +421,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <inheritdoc/>
     protected override Task OnBeforeEnteringState(IState<ObserverState> state)
     {
-        if (state is States.BaseObserverState observerState)
+        if (state is BaseObserverState observerState)
         {
             State = State with { RunningState = observerState.RunningState };
         }

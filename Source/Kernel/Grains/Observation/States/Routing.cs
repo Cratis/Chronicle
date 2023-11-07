@@ -17,6 +17,7 @@ public class Routing : BaseObserverState
 {
     readonly ObserverKey _observerKey;
     readonly IObserver _observer;
+    readonly IReplayEvaluator _replayEvaluator;
     readonly IEventSequence _eventSequence;
     readonly ILogger<Routing> _logger;
     ObserverSubscription _subscription;
@@ -28,16 +29,19 @@ public class Routing : BaseObserverState
     /// </summary>
     /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
     /// <param name="observer"><see cref="IObserver"/> the state belongs to.</param>
+    /// <param name="replayEvaluator"><see cref="IReplayEvaluator"/> for evaluating replays.</param>
     /// <param name="eventSequence"><see cref="IEventSequenceStorage"/> provider.</param>
     /// <param name="logger">Logger for logging.</param>
     public Routing(
         ObserverKey observerKey,
         IObserver observer,
+        IReplayEvaluator replayEvaluator,
         IEventSequence eventSequence,
         ILogger<Routing> logger)
     {
         _observerKey = observerKey;
         _observer = observer;
+        _replayEvaluator = replayEvaluator;
         _eventSequence = eventSequence;
         _logger = logger;
         _subscription = ObserverSubscription.Unsubscribed;
@@ -117,7 +121,13 @@ public class Routing : BaseObserverState
             _logger.Replaying();
             await StateMachine.TransitionTo<ResumeReplay>();
         }
-        else if (NeedsToReplay(state))
+        else if (await _replayEvaluator.Evaluate(new(
+            state.ObserverId,
+            _observerKey,
+            state,
+            _subscription,
+            _tailEventSequenceNumber,
+            _tailEventSequenceNumberForEventTypes)))
         {
             _logger.NeedsToReplay();
             await StateMachine.TransitionTo<Replay>();
@@ -147,14 +157,4 @@ public class Routing : BaseObserverState
         state.NextEventSequenceNumber.IsActualValue &&
         _tailEventSequenceNumber.IsActualValue &&
         state.NextEventSequenceNumber < _tailEventSequenceNumber;
-
-    bool NeedsToReplay(ObserverState state) =>
-        HasDefinitionChanged(state) && HasEventsInSequence();
-
-    bool HasEventsInSequence() =>
-        _tailEventSequenceNumber.IsActualValue && _tailEventSequenceNumberForEventTypes.IsActualValue;
-
-    bool HasDefinitionChanged(ObserverState state) =>
-        state.EventTypes.Count() != _subscription.EventTypes.Count() ||
-        !_subscription.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(state.EventTypes.OrderBy(_ => _.Id.Value));
 }
