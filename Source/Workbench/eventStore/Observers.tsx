@@ -36,6 +36,25 @@ const observerTypes: { [key: number]: string; } = {
     4: 'Reducer'
 };
 
+const getEventSequenceText = (sequence: string) => {
+    switch (sequence) {
+        case '00000000-0000-0000-0000-000000000000':
+            return 'Log';
+
+        case '2b608a79-77d2-4ccf-af43-4c37dee46592':
+            return 'Inbox';
+
+        case 'ae99de1e-b19f-4a33-a5c4-3908508ce59f':
+            return 'Outbox';
+
+        case 'cf3612a4-48fe-462a-af3e-2bd9ad6f6825':
+            return 'System';
+
+        default:
+            return sequence;
+    }
+}
+
 const UnavailableSequenceNumber = 18446744073709552000;
 const NotSetCount = 18446744073709552002;
 
@@ -61,12 +80,20 @@ export const Observers = () => {
         {
             headerName: 'Id',
             field: 'observerId',
-            width: 250
+            width: 300
         },
         {
             headerName: 'Name',
             field: 'name',
-            width: 300,
+            width: 350,
+        },
+        {
+            headerName: 'Sequence',
+            field: 'eventSequenceId',
+            width: 150,
+            valueGetter: (params: GridValueGetterParams<ObserverInformation>) => {
+                return getEventSequenceText(params.row.eventSequenceId);
+            }
         },
         {
             headerName: 'Type',
