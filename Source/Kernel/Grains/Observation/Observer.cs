@@ -258,15 +258,18 @@ public class Observer : StateMachine<ObserverState>, IObserver
             time = TimeSpan.FromMilliseconds(100);
         }
 
-        _retryFailureTimer = RegisterTimer(
-            async (_) =>
-            {
-                _retryFailureTimer?.Dispose();
-                await TryRecoverFailedPartition(partition);
-            },
-            null,
-            time,
-            TimeSpan.FromDays(30));
+        if (failure.Attempts.Count() < 10)
+        {
+            _retryFailureTimer = RegisterTimer(
+                async (_) =>
+                {
+                    _retryFailureTimer?.Dispose();
+                    await TryRecoverFailedPartition(partition);
+                },
+                null,
+                time,
+                TimeSpan.FromDays(30));
+        }
 
         await _failuresState.WriteStateAsync();
     }
