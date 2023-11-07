@@ -28,6 +28,7 @@ public class ReplayEvaluator : IReplayEvaluator
         if (NeedsToReplay(context))
         {
             await _replayCandidatesStorage.Add(new(
+                ReplayCandidateId.New(),
                 context.Id,
                 context.Key,
                 new[]

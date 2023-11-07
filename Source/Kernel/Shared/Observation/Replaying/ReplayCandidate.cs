@@ -8,10 +8,12 @@ namespace Aksio.Cratis.Kernel.Observation.Replaying;
 /// <summary>
 /// Represents a candidate for replaying.
 /// </summary>
+/// <param name="Id">The <see cref="ReplayCandidateId"/>.</param>
 /// <param name="ObserverId">The <see cref="ObserverId"/> the candidate is for.</param>
 /// <param name="ObserverKey">The <see cref="ObserverKey"/> the candidate is for. </param>
 /// <param name="Reasons">Collection of <see cref="ReplayCandidateReason"/>.</param>
 public record ReplayCandidate(
+    ReplayCandidateId Id,
     ObserverId ObserverId,
     ObserverKey ObserverKey,
     IEnumerable<ReplayCandidateReason> Reasons);
