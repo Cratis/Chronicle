@@ -62,9 +62,14 @@ public static class WellKnownCollectionNames
     public const string Schemas = "schemas";
 
     /// <summary>
-    /// The collection that holds schemas.
+    /// The collection that holds failed partitions.
     /// </summary>
     public const string FailedPartitions = "failed-partitions";
+
+    /// <summary>
+    /// The collection that holds replay candidates.
+    /// </summary>
+    public const string ReplayCandidates = "replay-candidates";
 
     /// <summary>
     /// The collection that holds identities.

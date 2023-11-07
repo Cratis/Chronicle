@@ -18,6 +18,7 @@ using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.MongoDB.Projections;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Aksio.Cratis.Kernel.Persistence.Observation;
+using Aksio.Cratis.Kernel.Persistence.Observation.Replaying;
 using Autofac;
 
 namespace Aksio.Cratis.Kernel.Server;
@@ -46,5 +47,6 @@ public class ServiceRegistrations : Module
         builder.RegisterType(typeof(MongoDBJobStepStorage)).As(typeof(IJobStepStorage)).InstancePerMicroservice();
         builder.RegisterGeneric(typeof(MongoDBJobStorage<>)).As(typeof(IJobStorage<>)).InstancePerMicroservice();
         builder.RegisterGeneric(typeof(MongoDBJobStepStorage<>)).As(typeof(IJobStepStorage<>)).InstancePerMicroservice();
+        builder.RegisterType(typeof(MongoDBReplayCandidateStorage)).As(typeof(IReplayCandidatesStorage)).InstancePerMicroserviceAndTenant();
     }
 }
