@@ -30,7 +30,7 @@ public static class Program
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
             .UseMongoDB()
-            .UseAksio()
+            .UseAksio(mvcOptions => mvcOptions.Filters.Add<KernelReadyResourceFilter>(0))
             .UseCratis(_ => _.InKernel())
             .UseOrleans(_ => _
                 .UseCluster()

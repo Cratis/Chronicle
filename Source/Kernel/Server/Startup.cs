@@ -31,6 +31,8 @@ public class Startup
         {
             logger.PerformingBootProcedures();
             app.PerformBootProcedures();
+
+            KernelReadyResourceFilter.KernelReady = true;
         });
         app.UseAksio();
     }
