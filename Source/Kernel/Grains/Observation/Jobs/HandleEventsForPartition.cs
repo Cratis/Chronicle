@@ -117,7 +117,14 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
 
                 eventsToHandle = SetObservationStateIfSpecified(request, events, eventsToHandle);
                 var result = await _subscriber!.OnNext(eventsToHandle, subscriberContext);
-                handledCount = events.Current.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation);
+                if (result.LastSuccessfulObservation != EventSequenceNumber.Unavailable)
+                {
+                    handledCount = events.Current.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation);
+                }
+                else
+                {
+                    handledCount = EventCount.Zero;
+                }
                 switch (result.State)
                 {
                     case ObserverSubscriberState.Failed:
@@ -142,7 +149,10 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
                 exceptionStackTrace = ex.StackTrace ?? string.Empty;
             }
 
-            await _observer!.ReportHandledEvents(handledCount);
+            if (handledCount > EventCount.Zero)
+            {
+                await _observer!.ReportHandledEvents(handledCount);
+            }
 
             if (failed)
             {
