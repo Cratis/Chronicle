@@ -12,6 +12,9 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 public class ConsolidateStateForObservers : Job<ConsolidateStateForObserveRequest, JobState<ConsolidateStateForObserveRequest>>, IConsolidateStateForObservers
 {
     /// <inheritdoc/>
+    protected override bool RemoveAfterCompleted => true;
+
+    /// <inheritdoc/>
     protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ConsolidateStateForObserveRequest request) =>
         Task.FromResult<IImmutableList<JobStepDetails>>(request.Observers.Select(_ => CreateStep<IConsolidateStateForObserver>(_)).ToImmutableList());
 }
