@@ -67,7 +67,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     FailedPartitions Failures => _failuresState.State;
 
     /// <inheritdoc/>
-    public override Task OnActivation(CancellationToken cancellationToken)
+    public override async Task OnActivation(CancellationToken cancellationToken)
     {
         // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
         DelayDeactivation(TimeSpan.MaxValue);
@@ -78,11 +78,11 @@ public class Observer : StateMachine<ObserverState>, IObserver
         _streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_observerKey.MicroserviceId, _observerKey.TenantId));
 
+        await _failuresState.ReadStateAsync();
+
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
             _observerKey.EventSequenceId,
             new EventSequenceKey(_observerKey.MicroserviceId, _observerKey.TenantId));
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -338,7 +338,14 @@ public class Observer : StateMachine<ObserverState>, IObserver
                     var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, _observerId, key) as IObserverSubscriber)!;
                     tailEventSequenceNumber = firstEvent.Metadata.SequenceNumber;
                     var result = await subscriber.OnNext(events, new(_subscription.Arguments));
-                    handledCount = events.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation);
+                    if (result.LastSuccessfulObservation != EventSequenceNumber.Unavailable)
+                    {
+                        handledCount = events.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation);
+                    }
+                    else
+                    {
+                        handledCount = EventCount.Zero;
+                    }
                     if (result.State == ObserverSubscriberState.Failed)
                     {
                         failed = true;
