@@ -82,7 +82,7 @@ public class ConnectedClients : ControllerBase
             connectionId,
             uri,
             clientInformation.ClientVersion,
-            true,
+            clientInformation.IsRunningWithDebugger,
             clientInformation.isMultiTenanted);
     }
 
