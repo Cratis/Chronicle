@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Kernel.Orleans.Observers;
 using Microsoft.Extensions.Logging;
@@ -126,6 +127,8 @@ public class ConnectedClients : Grain, IConnectedClients
 
     async Task ReviseConnectedClients(object state)
     {
+        if (Debugger.IsAttached) return;
+
         foreach (var connectedClient in _clients.ToArray())
         {
             if (connectedClient.IsRunningWithDebugger) continue;
