@@ -7,9 +7,7 @@ using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Persistence.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
-using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
-using Orleans.SyncWork;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
@@ -28,16 +26,12 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, JobStepStat
     /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
     /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="taskScheduler"><see cref="LimitedConcurrencyLevelTaskScheduler"/> to use for scheduling.</param>
-    /// <param name="syncWorkerLogger"><see cref="ILogger"/> for the sync worker.</param>
     public ConsolidateStateForObserver(
         [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
         IPersistentState<JobStepState> state,
         ProviderFor<IObserverStorage> observerStorageProvider,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        LimitedConcurrencyLevelTaskScheduler taskScheduler,
-        ILogger<SyncWorker<HandleEventsForPartitionArguments, object>> syncWorkerLogger)
-        : base(state, taskScheduler, syncWorkerLogger)
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
+        : base(state)
     {
         _observerStorageProvider = observerStorageProvider;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;

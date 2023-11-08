@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Grains.Workers;
 using Orleans.Concurrency;
 using Orleans.Runtime;
-using Orleans.SyncWork;
 
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
@@ -53,7 +53,7 @@ public interface IJobStep : IGrainWithGuidCompoundKey
 /// Represents a step in a job.
 /// </summary>
 /// <typeparam name="TRequest">Type of the request for the job.</typeparam>
-public interface IJobStep<TRequest> : ISyncWorker<TRequest, object>, IJobStep
+public interface IJobStep<TRequest> : ICpuBoundWorker<TRequest, object>, IJobStep
 {
     /// <summary>
     /// Start the job step.

@@ -62,9 +62,9 @@ public class Observers : Grain, IObservers
 
         if (observersForConsolidation.Count == 0) return;
 
-        var jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(key.MicroserviceId, key.TenantId));
-        await jobsManager.Start<IConsolidateStateForObservers, ConsolidateStateForObserveRequest>(
-            JobId.New(),
-            new ConsolidateStateForObserveRequest(observersForConsolidation));
+        // var jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(key.MicroserviceId, key.TenantId));
+        // await jobsManager.Start<IConsolidateStateForObservers, ConsolidateStateForObserveRequest>(
+        //     JobId.New(),
+        //     new ConsolidateStateForObserveRequest(observersForConsolidation));
     }
 }

@@ -6,9 +6,7 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
-using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
-using Orleans.SyncWork;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
@@ -30,16 +28,11 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
     /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="taskScheduler"><see cref="LimitedConcurrencyLevelTaskScheduler"/> to use for scheduling.</param>
-    /// <param name="syncWorkerLogger"><see cref="ILogger"/> for the sync worker.</param>
     public HandleEventsForPartition(
         [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
         IPersistentState<HandleEventsForPartitionState> state,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        IExecutionContextManager executionContextManager,
-        LimitedConcurrencyLevelTaskScheduler taskScheduler,
-        ILogger<SyncWorker<HandleEventsForPartitionArguments, object>> syncWorkerLogger)
-        : base(state, taskScheduler, syncWorkerLogger)
+        IExecutionContextManager executionContextManager) : base(state)
     {
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _executionContextManager = executionContextManager;

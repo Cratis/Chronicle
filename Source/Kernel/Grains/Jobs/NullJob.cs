@@ -36,5 +36,11 @@ public class NullJob : IJob
     public Task Stop() => Task.CompletedTask;
 
     /// <inheritdoc/>
+    public Task Subscribe(IJobObserver observer) => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task Unsubscribe(IJobObserver observer) => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task WriteState() => Task.CompletedTask;
 }

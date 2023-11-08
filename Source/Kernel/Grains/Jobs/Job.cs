@@ -3,8 +3,11 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
+using Aksio.Cratis.Kernel.Orleans.Observers;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.Providers;
 using Orleans.Runtime;
 
@@ -19,9 +22,12 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest>
     where TJobState : JobState<TRequest>
 {
+    IDictionary<JobStepId, JobStepGrainAndRequest> _jobStepGrains = new Dictionary<JobStepId, JobStepGrainAndRequest>();
+    ObserverManager<IJobObserver>? _observers;
     bool _isRunning;
     JobId _jobId = JobId.NotSet;
     JobKey _jobKey = JobKey.NotSet;
+    IDisposable? _subscriptionTimer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Job{TRequest, TJobState}"/> class.
@@ -44,6 +50,11 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        _observers = new(
+            TimeSpan.FromMinutes(1),
+            ServiceProvider.GetService<ILogger<ObserverManager<IJobObserver>>>() ?? new NullLogger<ObserverManager<IJobObserver>>(),
+            "JobObservers");
+
         await StatusChanged(JobStatus.Preparing);
 
         _jobId = this.GetPrimaryKey(out var keyExtension);
@@ -81,12 +92,12 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                 await WriteStateAsync();
                 return;
             }
-            var jobStepGrains = CreateGrainsFromJobSteps(jobSteps);
-
+            _jobStepGrains = CreateGrainsFromJobSteps(jobSteps);
             await StatusChanged(JobStatus.PreparingSteps);
             await WriteStateAsync();
 
-            PrepareAndStartAllJobSteps(grainId, jobStepGrains);
+            await SubscribeJobEventsForAllJobSteps();
+            PrepareAndStartAllJobSteps(grainId);
         });
 #pragma warning restore CA2008 // Do not create tasks without passing a TaskScheduler
 
@@ -97,6 +108,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     public async Task Resume()
     {
         if (_isRunning) return;
+
+        await Task.CompletedTask;
+        return;
 
         var executionContextManager = ServiceProvider.GetRequiredService<IExecutionContextManager>();
         executionContextManager.Establish(_jobKey.TenantId, executionContextManager.Current.CorrelationId, _jobKey.MicroserviceId);
@@ -125,20 +139,14 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             return;
         }
 
-        var executionContextManager = ServiceProvider.GetRequiredService<IExecutionContextManager>();
-        executionContextManager.Establish(_jobKey.TenantId, executionContextManager.Current.CorrelationId, _jobKey.MicroserviceId);
-        var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
-        var steps = await stepStorage.GetForJob(_jobId, JobStepStatus.Scheduled, JobStepStatus.Running);
-        foreach (var step in steps)
-        {
-            var jobStep = GrainFactory.GetGrain<IJobStep>(step.GrainId);
-            await jobStep.Pause();
-        }
+        _observers?.Notify(_ => _.OnJobPaused());
 
         await OnCompleted();
 
         await StatusChanged(JobStatus.Paused);
         await WriteStateAsync();
+
+        _subscriptionTimer?.Dispose();
     }
 
     /// <inheritdoc/>
@@ -149,21 +157,16 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             return;
         }
 
-        var executionContextManager = ServiceProvider.GetRequiredService<IExecutionContextManager>();
-        executionContextManager.Establish(_jobKey.TenantId, executionContextManager.Current.CorrelationId, _jobKey.MicroserviceId);
-        var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
-        var steps = await stepStorage.GetForJob(_jobId, JobStepStatus.Scheduled, JobStepStatus.Running);
-        foreach (var step in steps)
-        {
-            var jobStep = GrainFactory.GetGrain<IJobStep>(step.GrainId);
-            await jobStep.Stop();
-        }
+        _observers?.Notify(_ => _.OnJobStopped());
 
+        var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
         await stepStorage.RemoveAllForJob(_jobId);
         await OnCompleted();
 
         await StatusChanged(JobStatus.Stopped);
         await WriteStateAsync();
+
+        _subscriptionTimer?.Dispose();
     }
 
     /// <inheritdoc/>
@@ -176,6 +179,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         await HandleCompletion();
         await WriteStateAsync();
+
+        _jobStepGrains.Remove(stepId);
     }
 
     /// <inheritdoc/>
@@ -188,6 +193,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         await HandleCompletion();
         await WriteStateAsync();
+
+        _jobStepGrains.Remove(stepId);
     }
 
     /// <inheritdoc/>
@@ -211,6 +218,20 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
     /// <inheritdoc/>
     public Task WriteState() => WriteStateAsync();
+
+    /// <inheritdoc/>
+    public Task Subscribe(IJobObserver observer)
+    {
+        _observers?.Subscribe(observer, observer);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task Unsubscribe(IJobObserver observer)
+    {
+        _observers?.Unsubscribe(observer);
+        return Task.CompletedTask;
+    }
 
     /// <summary>
     /// Create a new <see cref="IJobStep"/>.
@@ -251,11 +272,12 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <returns>The <see cref="JobDetails"/>.</returns>
     protected virtual JobDetails GetJobDetails(TRequest request) => JobDetails.NotSet;
 
-    IImmutableList<JobStepGrainAndRequest> CreateGrainsFromJobSteps(IImmutableList<JobStepDetails> jobSteps) =>
-        jobSteps.Select(_ => new JobStepGrainAndRequest(
-            (GrainFactory.GetGrain(_.Type, _.Id, keyExtension: _.Key) as IJobStep)!,
-            _.Request)).ToList().ToImmutableList();
-
+    IDictionary<JobStepId, JobStepGrainAndRequest> CreateGrainsFromJobSteps(IImmutableList<JobStepDetails> jobSteps) =>
+        jobSteps.ToDictionary(
+            _ => _.Id,
+            _ => new JobStepGrainAndRequest(
+                (GrainFactory.GetGrain(_.Type, _.Id, keyExtension: _.Key) as IJobStep)!,
+                _.Request));
     void PrepareAllSteps(TRequest request, TaskCompletionSource<IImmutableList<JobStepDetails>> tcs) => _ = Task.Run(async () =>
     {
         var steps = await PrepareSteps(request);
@@ -264,19 +286,19 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         tcs.SetResult(steps);
     });
 
-    void PrepareAndStartAllJobSteps(GrainId grainId, IImmutableList<JobStepGrainAndRequest> jobStepGrains) => _ = Task.Run(async () =>
+    void PrepareAndStartAllJobSteps(GrainId grainId) => _ = Task.Run(async () =>
     {
-        await PrepareJobStepsForRunning(jobStepGrains);
+        await PrepareJobStepsForRunning();
 
         await ThisJob.StatusChanged(JobStatus.Running);
         await ThisJob.WriteState();
 
-        await StartAllJobSteps(grainId, jobStepGrains);
+        await StartAllJobSteps(grainId);
     });
 
-    async Task StartAllJobSteps(GrainId grainId, IImmutableList<JobStepGrainAndRequest> jobStepGrains)
+    async Task StartAllJobSteps(GrainId grainId)
     {
-        foreach (var jobStep in jobStepGrains)
+        foreach (var jobStep in _jobStepGrains.Values)
         {
             var task = JobStepInvoker.StartMethod.GetGenericMethodDefinition()
                 .MakeGenericMethod(jobStep.Request.GetType())
@@ -285,9 +307,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         }
     }
 
-    async Task PrepareJobStepsForRunning(IImmutableList<JobStepGrainAndRequest> jobStepGrains)
+    async Task PrepareJobStepsForRunning()
     {
-        foreach (var jobStep in jobStepGrains)
+        foreach (var jobStep in _jobStepGrains.Values)
         {
             var task = JobStepInvoker.PrepareMethod.GetGenericMethodDefinition()
                 .MakeGenericMethod(jobStep.Request.GetType())
@@ -295,6 +317,23 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
             await task!;
         }
+    }
+
+    Task SubscribeJobEventsForAllJobSteps()
+    {
+        _subscriptionTimer = RegisterTimer(
+            async (_) =>
+            {
+                foreach (var jobStep in _jobStepGrains.Values)
+                {
+                    await ThisJob.Subscribe(jobStep.Grain.AsReference<IJobObserver>());
+                }
+            },
+            null!,
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(10));
+
+        return Task.CompletedTask;
     }
 
     async Task HandleCompletion()
@@ -318,6 +357,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             }
 
             State.Remove = RemoveAfterCompleted;
+
+            DeactivateOnIdle();
         }
     }
 

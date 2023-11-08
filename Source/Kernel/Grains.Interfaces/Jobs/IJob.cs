@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Orleans.Concurrency;
+
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
@@ -34,6 +36,7 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// </summary>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was completed.</param>
     /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
     Task OnStepSuccessful(JobStepId stepId);
 
     /// <summary>
@@ -48,6 +51,7 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// </summary>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that failed.</param>
     /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
     Task OnStepFailed(JobStepId stepId);
 
     /// <summary>
@@ -85,6 +89,20 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task WriteState();
+
+    /// <summary>
+    /// Subscribe to job events.
+    /// </summary>
+    /// <param name="observer"><see cref="IJobObserver"/> that will be notified.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Subscribe(IJobObserver observer);
+
+    /// <summary>
+    /// Unsubscribe to job events.
+    /// </summary>
+    /// <param name="observer"><see cref="IJobObserver"/> that will be notified.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Unsubscribe(IJobObserver observer);
 }
 
 /// <summary>

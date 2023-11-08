@@ -1,9 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Microsoft.Extensions.Logging;
+using Aksio.Cratis.Kernel.Grains.Workers;
 using Orleans.Runtime;
-using Orleans.SyncWork;
 
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
@@ -12,7 +11,7 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// </summary>
 /// <typeparam name="TRequest">Type of request for the step.</typeparam>
 /// <typeparam name="TState">Type of state for the step.</typeparam>
-public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, IJobStep<TRequest>, IDisposable
+public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, object>, IJobStep<TRequest>, IJobObserver, IDisposable
     where TState : JobStepState
 {
     readonly IPersistentState<TState> _state;
@@ -23,12 +22,9 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     /// Initializes a new instance of the <see cref="JobStep{TRequest, TState}"/> class.
     /// </summary>
     /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
-    /// <param name="taskScheduler"><see cref="LimitedConcurrencyLevelTaskScheduler"/> to use for scheduling.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     protected JobStep(
-        [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)] IPersistentState<TState> state,
-        LimitedConcurrencyLevelTaskScheduler taskScheduler,
-        ILogger logger) : base(logger, taskScheduler)
+        [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
+        IPersistentState<TState> state)
     {
         Job = new NullJob();
         ThisJobStep = null!;
@@ -61,6 +57,8 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        await base.OnActivateAsync(cancellationToken);
+
         _state.State.Name = GetType().Name;
         await _state.WriteStateAsync();
     }
@@ -76,16 +74,16 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
         _state.State.Request = request!;
         await _state.WriteStateAsync();
         await Prepare(request);
-        await Start(request);
+        await Start(request, _cancellationTokenSource.Token);
         await Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task Pause()
+    public async Task Pause()
     {
         _cancellationTokenSource.Cancel();
+        await Job.Unsubscribe(this.AsReference<IJobObserver>());
         StatusChanged(JobStepStatus.Paused);
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -102,6 +100,7 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     public async Task Stop()
     {
         _cancellationTokenSource.Cancel();
+        await Job.Unsubscribe(this.AsReference<IJobObserver>());
         StatusChanged(JobStepStatus.Stopped);
         await _state.WriteStateAsync();
     }
@@ -132,6 +131,12 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     /// <param name="request">The request object for the step.</param>
     /// <returns>Awaitable task.</returns>
     public virtual Task Prepare(TRequest request) => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public void OnJobStopped() => _cancellationTokenSource.Cancel();
+
+    /// <inheritdoc/>
+    public void OnJobPaused() => _cancellationTokenSource.Cancel();
 
     /// <summary>
     /// The method that gets called when the step should do its work.
@@ -167,6 +172,9 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
         {
             await ThisJobStep.ReportFailure(result.Messages.ToList(), result.ExceptionStackTrace);
         }
+
+        await Job.Unsubscribe(this.AsReference<IJobObserver>());
+        DeactivateOnIdle();
 
         return string.Empty;
     }
