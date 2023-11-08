@@ -475,7 +475,8 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         EventSequenceId eventSequenceId,
         EventSequenceNumber sequenceNumber,
         EventSourceId? eventSourceId = null,
-        IEnumerable<EventType>? eventTypes = null)
+        IEnumerable<EventType>? eventTypes = null,
+        CancellationToken cancellationToken = default)
     {
         _logger.GettingFromSequenceNumber(eventSequenceId, sequenceNumber);
 
@@ -498,7 +499,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var filter = Builders<Event>.Filter.And(filters.ToArray());
         var cursor = await collection.Find(filter)
                                      .SortBy(_ => _.SequenceNumber)
-                                     .ToCursorAsync()
+                                     .ToCursorAsync(cancellationToken)
                                      .ConfigureAwait(false);
         return new EventCursor(_converterProvider(), cursor);
     }
@@ -509,7 +510,8 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         EventSequenceNumber start,
         EventSequenceNumber end,
         EventSourceId? eventSourceId = default,
-        IEnumerable<EventType>? eventTypes = default)
+        IEnumerable<EventType>? eventTypes = default,
+        CancellationToken cancellationToken = default)
     {
         _logger.GettingRange(eventSequenceId, start, end);
         var collection = GetCollectionFor(eventSequenceId);
@@ -533,7 +535,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 
         var cursor = await collection.Find(filter)
                                      .SortBy(_ => _.SequenceNumber)
-                                     .ToCursorAsync()
+                                     .ToCursorAsync(cancellationToken)
                                      .ConfigureAwait(false);
         return new EventCursor(_converterProvider(), cursor);
     }
