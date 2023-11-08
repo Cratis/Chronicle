@@ -135,6 +135,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             await jobStep.Pause();
         }
 
+        await OnCompleted();
+
         await StatusChanged(JobStatus.Paused);
         await WriteStateAsync();
     }
