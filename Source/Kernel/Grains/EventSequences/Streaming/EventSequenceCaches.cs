@@ -16,18 +16,22 @@ public class EventSequenceCaches : IEventSequenceCaches
     readonly ConcurrentDictionary<(MicroserviceId, TenantId, EventSequenceId), IEventSequenceCache> _caches = new();
     readonly IEventSequenceCacheFactory _eventSequenceCacheFactory;
     readonly KernelConfiguration _configuration;
+    readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceCaches"/> class.
     /// </summary>
     /// <param name="eventSequenceCacheFactory"><see cref="IEventSequenceCacheFactory"/> for creating <see cref="IEventSequenceCache"/> instances.</param>
-    /// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>///
+    /// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
+    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public EventSequenceCaches(
         IEventSequenceCacheFactory eventSequenceCacheFactory,
-        KernelConfiguration configuration)
+        KernelConfiguration configuration,
+        IExecutionContextManager executionContextManager)
     {
         _eventSequenceCacheFactory = eventSequenceCacheFactory;
         _configuration = configuration;
+        _executionContextManager = executionContextManager;
     }
 
     /// <inheritdoc/>
@@ -47,10 +51,8 @@ public class EventSequenceCaches : IEventSequenceCaches
     public bool IsUnderPressure() => _caches.Values.Any(_ => _.IsUnderPressure());
 
     /// <inheritdoc/>
-    public Task PrimeAll()
+    public async Task PrimeAll()
     {
-        var tasks = new List<Task>();
-
         foreach (var (microserviceId, microservice) in _configuration.Microservices)
         {
             foreach (var (tenantId, _) in _configuration.Tenants)
@@ -61,11 +63,10 @@ public class EventSequenceCaches : IEventSequenceCaches
                     continue;
                 }
 
-                tasks.Add(GetFor(microserviceId, tenantId, EventSequenceId.Log).PrimeWithTailWindow());
+                _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
+                await GetFor(microserviceId, tenantId, EventSequenceId.Log).PrimeWithTailWindow();
             }
         }
-
-        return Task.WhenAll(tasks.ToArray());
     }
 
     /// <inheritdoc/>
