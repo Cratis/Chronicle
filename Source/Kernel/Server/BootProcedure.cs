@@ -98,11 +98,11 @@ public class BootProcedure : IPerformBootProcedure
                     stopwatch.Stop();
                     _logger.RehydratedEventSequences(microserviceId, tenantId, stopwatch.Elapsed);
 
-                    _logger.RehydrateObservers(microserviceId, tenantId);
-                    await _grainFactory.GetGrain<IObservers>(0, new ObserversKey(microserviceId, tenantId)).Rehydrate();
-
                     _logger.RehydrateJobs(microserviceId, tenantId);
                     await _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(microserviceId, tenantId)).Rehydrate();
+
+                    _logger.RehydrateObservers(microserviceId, tenantId);
+                    await _grainFactory.GetGrain<IObservers>(0, new ObserversKey(microserviceId, tenantId)).Rehydrate();
                 }
             }
 

@@ -60,6 +60,8 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
         await base.OnActivateAsync(cancellationToken);
 
         _state.State.Name = GetType().Name;
+        _state.State.Id = JobStepId;
+        _state.State.Type = GetType();
         await _state.WriteStateAsync();
     }
 
@@ -108,13 +110,12 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
     /// <inheritdoc/>
     public async Task ReportStatusChange(JobStepStatus status)
     {
-        StatusChanged(status);
-        await _state.WriteStateAsync();
-
         if (status == JobStepStatus.Succeeded)
         {
             await Job.OnStepSuccessful(JobStepId);
         }
+        StatusChanged(status);
+        await _state.WriteStateAsync();
     }
 
     /// <inheritdoc/>
@@ -173,7 +174,6 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
             await ThisJobStep.ReportFailure(result.Messages.ToList(), result.ExceptionStackTrace);
         }
 
-        await Job.Unsubscribe(this.AsReference<IJobObserver>());
         DeactivateOnIdle();
 
         return string.Empty;

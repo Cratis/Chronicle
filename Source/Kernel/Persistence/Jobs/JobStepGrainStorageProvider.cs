@@ -58,7 +58,6 @@ public class JobStepGrainStorageProvider : IGrainStorage
             var storage = _serviceProvider.GetRequiredService<IJobStepStorage<T>>();
 
             var actualState = (grainState.State as JobStepState)!;
-            actualState.GrainId = grainId;
 
             switch (GetStatus(actualState))
             {

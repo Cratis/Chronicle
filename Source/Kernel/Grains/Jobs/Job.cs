@@ -109,9 +109,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         if (_isRunning) return;
 
-        await Task.CompletedTask;
-        return;
-
         var executionContextManager = ServiceProvider.GetRequiredService<IExecutionContextManager>();
         executionContextManager.Establish(_jobKey.TenantId, executionContextManager.Current.CorrelationId, _jobKey.MicroserviceId);
 
@@ -126,7 +123,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         var steps = await stepStorage.GetForJob(_jobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused);
         foreach (var step in steps)
         {
-            var jobStep = (GrainFactory.GetGrain(step.GrainId) as IJobStep)!;
+            var jobStep = (GrainFactory.GetGrain((Type)step.Type, step.Id, keyExtension: new JobStepKey(_jobId, _jobKey.MicroserviceId, _jobKey.TenantId)) as IJobStep)!;
             await jobStep.Resume(this.GetGrainId());
         }
     }
@@ -180,6 +177,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         await HandleCompletion();
         await WriteStateAsync();
 
+        await Unsubscribe(_jobStepGrains[stepId].Grain.AsReference<IJobObserver>());
         _jobStepGrains.Remove(stepId);
     }
 
@@ -194,6 +192,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         await HandleCompletion();
         await WriteStateAsync();
 
+        await Unsubscribe(_jobStepGrains[stepId].Grain.AsReference<IJobObserver>());
         _jobStepGrains.Remove(stepId);
     }
 

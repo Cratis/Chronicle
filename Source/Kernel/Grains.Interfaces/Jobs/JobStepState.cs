@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Orleans.Runtime;
-
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
@@ -11,9 +9,14 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public class JobStepState
 {
     /// <summary>
-    /// Gets or sets the <see cref="GrainId"/>.
+    /// Gets or sets the <see cref="JobStepId"/>.
     /// </summary>
-    public GrainId GrainId { get; set; }
+    public JobStepId Id { get; set; } = JobStepId.Unknown;
+
+    /// <summary>
+    /// Gets or sets the <see cref="JobStepType"/> .
+    /// </summary>
+    public JobStepType Type { get; set; } = JobStepType.NotSet;
 
     /// <summary>
     /// Gets or sets the name of the job step.

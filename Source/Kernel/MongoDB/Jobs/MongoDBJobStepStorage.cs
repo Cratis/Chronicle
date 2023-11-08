@@ -194,6 +194,7 @@ public class MongoDBJobStepStorage<TJobStepState> : MongoDBJobStepStorage, IJobS
         var collection = jobStepState.Status == JobStepStatus.Failed ? FailedCollection : Collection;
 
         var document = state.ToBsonDocument();
+        document.Remove("_id");
         document.RemoveTypeInfo();
         await collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }

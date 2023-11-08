@@ -196,7 +196,7 @@ export const Jobs = () => {
 
                             await resumeJob.execute();
                         }}
-                        >Resume</Button>
+                    >Resume</Button>
                 }
 
                 {(selectedJob && (selectedJob.status == JobStatus.running || selectedJob.status == JobStatus.preparing)) &&
@@ -211,10 +211,10 @@ export const Jobs = () => {
 
                             await stopJob.execute();
                         }}
-                        >Stop</Button>
+                    >Stop</Button>
                 }
 
-                {selectedJob  &&
+                {selectedJob &&
                     <Button
                         startIcon={<icons.Delete />}
                         onClick={async () => {
@@ -226,7 +226,7 @@ export const Jobs = () => {
 
                             await deleteJob.execute();
                         }}
-                        >Delete</Button>
+                    >Delete</Button>
                 }
 
             </Toolbar>
@@ -248,7 +248,7 @@ export const Jobs = () => {
                         columns={jobStepColumns}
                         filterMode="client"
                         sortingMode="client"
-                        getRowId={(row: JobStepState) => row.grainId.toString()}
+                        getRowId={(row: JobStepState) => row.id}
                         onRowSelectionModelChange={() => { }}
                         rows={jobSteps.data}
                     />
