@@ -27,7 +27,7 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
     }
 
     /// <inheritdoc/>
-    public Task<IEventCursor> GetFromSequenceNumber(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = null, IEnumerable<EventType>? eventTypes = null)
+    public Task<IEventCursor> GetFromSequenceNumber(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = null, IEnumerable<EventType>? eventTypes = null, CancellationToken cancellationToken = default)
     {
         var query = _eventLog.AppendedEvents.Where(_ => _.Metadata.SequenceNumber >= sequenceNumber);
         if (eventSourceId is not null)
@@ -44,7 +44,7 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
     }
 
     /// <inheritdoc/>
-    public Task<IEventCursor> GetRange(EventSequenceId eventSequenceId, EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = null, IEnumerable<EventType>? eventTypes = null)
+    public Task<IEventCursor> GetRange(EventSequenceId eventSequenceId, EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = null, IEnumerable<EventType>? eventTypes = null, CancellationToken cancellationToken = default)
     {
         var query = _eventLog.AppendedEvents.Where(_ => _.Metadata.SequenceNumber >= start && _.Metadata.SequenceNumber <= end);
         if (eventSourceId is not null)

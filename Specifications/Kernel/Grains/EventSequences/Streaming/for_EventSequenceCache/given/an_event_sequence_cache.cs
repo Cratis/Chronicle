@@ -31,7 +31,7 @@ public class an_event_sequence_cache : Specification
         cursor.Setup(_ => _.MoveNext()).Returns(Task.FromResult(false));
 
         event_sequence_storage_provider.Setup(_ =>
-            _.GetRange(event_sequence_id, 0, EventSequenceCache.NumberOfEventsToFetch, null, null))
+            _.GetRange(event_sequence_id, 0, EventSequenceCache.NumberOfEventsToFetch, null, null, default))
             .Returns(Task.FromResult(cursor.Object));
 
         cache = new(

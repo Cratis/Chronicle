@@ -20,6 +20,6 @@ public class an_event_sequence_caches : Specification
         event_sequence_storage_provider = new();
         event_sequence_cache_factory = new();
         configuration = new();
-        caches = new(event_sequence_cache_factory.Object, configuration);
+        caches = new(event_sequence_cache_factory.Object, configuration, execution_context_manager.Object);
     }
 }
