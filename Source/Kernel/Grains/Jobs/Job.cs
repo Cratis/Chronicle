@@ -158,6 +158,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         }
 
         await stepStorage.RemoveAllForJob(_jobId);
+        await OnCompleted();
 
         await StatusChanged(JobStatus.Stopped);
         await WriteStateAsync();
