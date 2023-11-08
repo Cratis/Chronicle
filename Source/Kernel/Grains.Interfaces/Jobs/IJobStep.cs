@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Orleans.Concurrency;
 using Orleans.Runtime;
 using Orleans.SyncWork;
 
@@ -15,6 +16,7 @@ public interface IJobStep : IGrainWithGuidCompoundKey
     /// Pause the job step.
     /// </summary>
     /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
     Task Pause();
 
     /// <summary>
@@ -28,6 +30,7 @@ public interface IJobStep : IGrainWithGuidCompoundKey
     /// Stop the job step.
     /// </summary>
     /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
     Task Stop();
 
     /// <summary>
