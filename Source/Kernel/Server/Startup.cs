@@ -3,6 +3,7 @@
 
 #pragma warning disable SA1600
 
+using Aksio.Cratis.Client;
 using Aksio.Cratis.Kernel.Grains.Clients;
 
 namespace Aksio.Cratis.Kernel.Server;
@@ -25,7 +26,7 @@ public class Startup
 
         app.UseRouting();
         app.UseWebSockets();
-        app.UseCratis();
+        app.UseCratis(false);
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
         appLifetime.ApplicationStarted.Register(() =>
         {
@@ -33,6 +34,7 @@ public class Startup
             app.PerformBootProcedures();
 
             KernelReadyResourceFilter.KernelReady = true;
+            app.ApplicationServices.GetRequiredService<IClient>().Connect().Wait();
         });
         app.UseAksio();
     }
