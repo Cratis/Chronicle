@@ -36,8 +36,9 @@ public static class WebApplicationBuilderExtensions
     /// Configures the usage of Cratis for the app.
     /// </summary>
     /// <param name="app"><see cref="IApplicationBuilder"/> to extend.</param>
+    /// <param name="automaticallyConnect">Whether or not to automatically connect to Cratis or not.</param>
     /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
-    public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
+    public static IApplicationBuilder UseCratis(this IApplicationBuilder app, bool automaticallyConnect = true)
     {
         app.UseCausation();
         app.UseExecutionContext();
@@ -47,12 +48,15 @@ public static class WebApplicationBuilderExtensions
             .MapClientObservers()
             .MapClientReducers());
 
-        var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
-        appLifetime.ApplicationStarted.Register(() =>
+        if (automaticallyConnect)
         {
-            GlobalInstances.ServiceProvider = app.ApplicationServices;
-            app.ApplicationServices.GetRequiredService<IClient>().Connect().Wait();
-        });
+            var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
+            appLifetime.ApplicationStarted.Register(() =>
+            {
+                GlobalInstances.ServiceProvider = app.ApplicationServices;
+                app.ApplicationServices.GetRequiredService<IClient>().Connect().Wait();
+            });
+        }
 
         return app;
     }
