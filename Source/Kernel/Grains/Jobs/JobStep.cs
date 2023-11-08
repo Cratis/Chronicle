@@ -146,10 +146,13 @@ public abstract class JobStep<TRequest, TState> : SyncWorker<TRequest, object>, 
     {
         await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
 
-        JobStepResult result;
+        var result = JobStepResult.Succeeded;
         try
         {
-            result = await PerformStep(request, _cancellationTokenSource.Token);
+            if (!_cancellationTokenSource.IsCancellationRequested)
+            {
+                result = await PerformStep(request, _cancellationTokenSource.Token);
+            }
         }
         catch (Exception ex)
         {
