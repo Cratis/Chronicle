@@ -41,6 +41,7 @@ public class EventCursor : IEventCursor
     public async Task<bool> MoveNext()
     {
         if (_innerCursor is null) return false;
+        if (_cancellationToken.IsCancellationRequested) return false;
 
         var result = _innerCursor.MoveNext(_cancellationToken);
         if (_innerCursor.Current is not null)
