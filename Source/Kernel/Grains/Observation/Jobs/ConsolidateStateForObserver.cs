@@ -18,6 +18,7 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, JobStepStat
 {
     readonly ProviderFor<IObserverStorage> _observerStorageProvider;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
+    readonly IExecutionContextManager _executionContextManager;
     IObserver? _observer;
 
     /// <summary>
@@ -26,15 +27,18 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, JobStepStat
     /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
     /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public ConsolidateStateForObserver(
         [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
         IPersistentState<JobStepState> state,
         ProviderFor<IObserverStorage> observerStorageProvider,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
+        IExecutionContextManager executionContextManager)
         : base(state)
     {
         _observerStorageProvider = observerStorageProvider;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
+        _executionContextManager = executionContextManager;
     }
 
     /// <inheritdoc/>
@@ -52,6 +56,8 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, JobStepStat
         var handled = state.Handled;
 
         var modified = false;
+
+        _executionContextManager.Establish(request.ObserverKey.TenantId, _executionContextManager.Current.CorrelationId, request.ObserverKey.MicroserviceId);
 
         if (state.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable &&
             state.Handled == EventCount.NotSet)
