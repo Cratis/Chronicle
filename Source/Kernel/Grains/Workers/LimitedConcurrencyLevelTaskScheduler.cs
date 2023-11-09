@@ -16,7 +16,7 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
     static bool _currentThreadIsProcessingItems;
 
     readonly int _maxDegreeOfParallelism;
-    Queue<Task> _tasks = new();
+    readonly LinkedList<Task> _tasks = new();
     int _threadsQueuedOrRunning;
 
     /// <summary>
@@ -35,25 +35,20 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
     /// </summary>
     public sealed override int MaximumConcurrencyLevel => _maxDegreeOfParallelism;
 
-    /// <summary>
-    /// Check whether or not a specific task is scheduled or running..
-    /// </summary>
-    /// <param name="task">Task to check.</param>
-    /// <returns>True if the task is scheduled or running, false if not.</returns>
-    public bool HasTask(Task task)
-    {
-        lock (_tasks)
-        {
-            return _tasks.Any(_ => _ == task);
-        }
-    }
-
     /// <inheritdoc/>
     protected sealed override IEnumerable<Task> GetScheduledTasks()
     {
-        lock (_tasks)
+        var lockTaken = false;
+        try
         {
-            return _tasks.ToArray();
+            Monitor.TryEnter(_tasks, ref lockTaken);
+            if (lockTaken) return _tasks.ToArray();
+
+            throw new NotSupportedException();
+        }
+        finally
+        {
+            if (lockTaken) Monitor.Exit(_tasks);
         }
     }
 
@@ -62,7 +57,7 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
     {
         lock (_tasks)
         {
-            _tasks.Enqueue(task);
+            _tasks.AddLast(task);
             if (_threadsQueuedOrRunning < _maxDegreeOfParallelism)
             {
                 NotifyThreadPoolOfPendingWork();
@@ -94,10 +89,7 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
     {
         lock (_tasks)
         {
-            var newTasks = _tasks.Where(t => t != task);
-            var success = newTasks.Count() < _tasks.Count;
-            _tasks = new(newTasks);
-            return success;
+            return _tasks.Remove(task);
         }
     }
 
@@ -127,7 +119,11 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
                             }
 
                             // Get the next item from the queue
-                            _tasks.TryDequeue(out item);
+                            item = _tasks.First?.Value;
+                            if (item is not null)
+                            {
+                                _tasks.RemoveFirst();
+                            }
                         }
 
                         // Execute the task we pulled out of the queue
