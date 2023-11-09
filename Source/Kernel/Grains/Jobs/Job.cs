@@ -63,7 +63,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         ThisJob = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJob<TRequest>>();
 
         var type = GetType();
-        var grainType = type.GetInterfaces().SingleOrDefault(_ => _.Name == $"I{type.Name}") ?? throw new InvalidGrainNameForJob(type);
+        var grainType = type.GetInterfaces().SingleOrDefault(_ => _.Name == $"I{type.Name}") ?? throw new InvalidGrainName(type);
         State.Name = GetType().Name;
         State.Type = grainType;
         await WriteStateAsync();
@@ -123,7 +123,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         var steps = await stepStorage.GetForJob(_jobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused);
         foreach (var step in steps)
         {
-            var jobStep = (GrainFactory.GetGrain((Type)step.Type, step.Id, keyExtension: new JobStepKey(_jobId, _jobKey.MicroserviceId, _jobKey.TenantId)) as IJobStep)!;
+            var jobStep = (GrainFactory.GetGrain((Type)step.Type, step.Id.JobStepId, keyExtension: new JobStepKey(_jobId, _jobKey.MicroserviceId, _jobKey.TenantId)) as IJobStep)!;
             await jobStep.Resume(this.GetGrainId());
         }
     }

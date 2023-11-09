@@ -57,11 +57,19 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
+        DelayDeactivation(TimeSpan.MaxValue);
+
         await base.OnActivateAsync(cancellationToken);
 
-        _state.State.Name = GetType().Name;
-        _state.State.Id = JobStepId;
-        _state.State.Type = GetType();
+        _ = this.GetPrimaryKey(out var key);
+        var jobStepKey = (JobStepKey)key;
+
+        var type = GetType();
+        var grainType = type.GetInterfaces().SingleOrDefault(_ => _.Name == $"I{type.Name}") ?? throw new InvalidGrainName(type);
+        _state.State.Name = type.Name;
+        _state.State.Id = new(jobStepKey.JobId, JobStepId);
+        _state.State.Type = grainType;
         await _state.WriteStateAsync();
     }
 
