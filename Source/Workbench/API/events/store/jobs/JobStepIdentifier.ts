@@ -5,20 +5,11 @@
 import { field } from '@aksio/fundamentals';
 
 
-export class ObserverKey {
+export class JobStepIdentifier {
 
     @field(String)
-    sourceMicroserviceId?: string;
+    jobId!: string;
 
     @field(String)
-    sourceTenantId?: string;
-
-    @field(String)
-    microserviceId!: string;
-
-    @field(String)
-    tenantId!: string;
-
-    @field(String)
-    eventSequenceId!: string;
+    jobStepId!: string;
 }
