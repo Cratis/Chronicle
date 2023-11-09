@@ -40,7 +40,13 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
     /// </summary>
     /// <param name="task">Task to check.</param>
     /// <returns>True if the task is scheduled or running, false if not.</returns>
-    public bool HasTask(Task task) => _tasks.Any(_ => _ == task);
+    public bool HasTask(Task task)
+    {
+        lock (_tasks)
+        {
+            return _tasks.Any(_ => _ == task);
+        }
+    }
 
     /// <inheritdoc/>
     protected sealed override IEnumerable<Task> GetScheduledTasks()
