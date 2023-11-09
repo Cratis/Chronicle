@@ -248,7 +248,7 @@ export const Jobs = () => {
                         columns={jobStepColumns}
                         filterMode="client"
                         sortingMode="client"
-                        getRowId={(row: JobStepState) => row.id}
+                        getRowId={(row: JobStepState) => row.id.jobStepId}
                         onRowSelectionModelChange={() => { }}
                         rows={jobSteps.data}
                     />
