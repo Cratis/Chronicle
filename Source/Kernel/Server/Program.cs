@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using Aksio.Applications.Autofac;
-using Orleans.SyncWork.ExtensionMethods;
 using Serilog;
 
 #pragma warning disable SA1600
@@ -36,7 +35,7 @@ public static class Program
                 .UseCluster()
                 .UseStreamCaching()
                 .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
-                .ConfigureSyncWorkAbstraction(Environment.ProcessorCount - 2)
+                .ConfigureCpuBoundWorkers()
                 .ConfigureSerialization()
                 .AddReplayStateManagement()
                 .UseTelemetry()
