@@ -70,17 +70,19 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     }
 
     /// <inheritdoc/>
-    public Task Start(TRequest request)
+    public async Task Start(TRequest request)
     {
         _isRunning = true;
         State.Details = GetJobDetails(request);
         State.Request = request!;
+        await WriteStateAsync();
+
         var grainId = this.GetGrainId();
         var tcs = new TaskCompletionSource<IImmutableList<JobStepDetails>>();
 
         PrepareAllSteps(request, tcs);
 
-#pragma warning disable CA2008 // Do not create tasks without passing a TaskScheduler
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         tcs.Task.ContinueWith(async (Task<IImmutableList<JobStepDetails>> jobStepsTask) =>
         {
             var jobSteps = await jobStepsTask;
@@ -99,9 +101,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             await SubscribeJobEventsForAllJobSteps();
             PrepareAndStartAllJobSteps(grainId);
         });
-#pragma warning restore CA2008 // Do not create tasks without passing a TaskScheduler
-
-        return Task.CompletedTask;
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
     }
 
     /// <inheritdoc/>
