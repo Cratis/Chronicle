@@ -76,32 +76,7 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
         _status = CpuBoundWorkerStatus.Running;
         _task = CreateTask(request, cancellationToken);
 
-        RegisterTimer(
-            UpdateStatus,
-            null!,
-            TimeSpan.FromSeconds(1),
-            TimeSpan.FromSeconds(10));
-
         return Task.FromResult(true);
-    }
-
-    async Task UpdateStatus(object state)
-    {
-        if (_task is null)
-        {
-            return;
-        }
-
-        if (_taskScheduler is LimitedConcurrencyLevelTaskScheduler limitedConcurrencyScheduler)
-        {
-            var hasTask = limitedConcurrencyScheduler?.HasTask(_task) ?? false;
-            if (!hasTask && (_status == CpuBoundWorkerStatus.Running || _status == CpuBoundWorkerStatus.Failed))
-            {
-                _logger?.TaskIsNoLongerInTheScheduler();
-                _status = CpuBoundWorkerStatus.Stopped;
-                await OnStopped();
-            }
-        }
     }
 
     /// <summary>

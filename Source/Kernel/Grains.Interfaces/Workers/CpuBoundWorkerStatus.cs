@@ -26,10 +26,5 @@ public enum CpuBoundWorkerStatus
     /// <summary>
     /// The worker has been completed with failure.
     /// </summary>
-    Failed = 3,
-
-    /// <summary>
-    /// The worker has been stopped for an unknown reason.
-    /// </summary>
-    Stopped = 4
+    Failed = 3
 }
