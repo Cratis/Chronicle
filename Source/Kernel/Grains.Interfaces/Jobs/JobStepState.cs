@@ -11,7 +11,7 @@ public class JobStepState
     /// <summary>
     /// Gets or sets the <see cref="JobStepId"/>.
     /// </summary>
-    public JobStepId Id { get; set; } = JobStepId.Unknown;
+    public JobStepIdentifier Id { get; set; } = JobStepIdentifier.NotSet;
 
     /// <summary>
     /// Gets or sets the <see cref="JobStepType"/> .
