@@ -26,4 +26,7 @@ internal static partial class CpuBoundWorkerLogMessages
 
     [LoggerMessage(5, LogLevel.Trace, "Starting task")]
     internal static partial void StartingTask(this ILogger<ICpuBoundWorker> logger);
+
+    [LoggerMessage(6, LogLevel.Trace, "Task is no longer in the scheduler")]
+    internal static partial void TaskIsNoLongerInTheScheduler(this ILogger<ICpuBoundWorker> logger);
 }

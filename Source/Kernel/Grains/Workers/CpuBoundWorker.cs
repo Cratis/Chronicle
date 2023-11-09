@@ -22,7 +22,7 @@ namespace Aksio.Cratis.Kernel.Grains.Workers;
 public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker<TRequest, TResult>
 {
     ILogger<ICpuBoundWorker>? _logger;
-    TaskScheduler? _limitedConcurrencyScheduler;
+    TaskScheduler? _taskScheduler;
     CpuBoundWorkerStatus _status = CpuBoundWorkerStatus.NotStarted;
     TResult? _result;
     Exception? _exception;
@@ -32,7 +32,7 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _logger = ServiceProvider.GetService<ILogger<CpuBoundWorker<TRequest, TResult>>>() ?? new NullLogger<CpuBoundWorker<TRequest, TResult>>();
-        _limitedConcurrencyScheduler = ServiceProvider.GetService<LimitedConcurrencyLevelTaskScheduler>() ?? TaskScheduler.Default;
+        _taskScheduler = ServiceProvider.GetService<LimitedConcurrencyLevelTaskScheduler>() ?? TaskScheduler.Default;
         return Task.CompletedTask;
     }
 
@@ -40,34 +40,10 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     public Task<CpuBoundWorkerStatus> GetWorkStatus() => Task.FromResult(_status);
 
     /// <inheritdoc />
-    public Task<Exception?> GetException()
-    {
-        if (_status != CpuBoundWorkerStatus.Faulted)
-        {
-            DeactivateOnIdle();
-            throw new InvalidExpectedStatus(_status, CpuBoundWorkerStatus.Faulted);
-        }
-
-        _task = null;
-        DeactivateOnIdle();
-
-        return Task.FromResult(_exception);
-    }
+    public Task<Exception?> GetException() => Task.FromResult(_exception);
 
     /// <inheritdoc />
-    public Task<TResult?> GetResult()
-    {
-        if (_status != CpuBoundWorkerStatus.Completed)
-        {
-            DeactivateOnIdle();
-            throw new InvalidExpectedStatus(_status, CpuBoundWorkerStatus.Completed);
-        }
-
-        _task = null;
-        DeactivateOnIdle();
-
-        return Task.FromResult(_result);
-    }
+    public Task<TResult?> GetResult() => Task.FromResult(_result);
 
     /// <summary>
     /// The method that actually performs the long running work.
@@ -75,6 +51,12 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     /// <param name="request">The request/parameters used for the execution of the method.</param>
     /// <returns>The result of the work.</returns>
     protected abstract Task<TResult> PerformWork(TRequest request);
+
+    /// <summary>
+    /// Method that gets called when the work has succeeded.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected virtual Task OnStopped() => Task.CompletedTask;
 
     /// <summary>
     /// Start long running work with the provided parameter.
@@ -94,7 +76,32 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
         _status = CpuBoundWorkerStatus.Running;
         _task = CreateTask(request, cancellationToken);
 
+        RegisterTimer(
+            UpdateStatus,
+            null!,
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(10));
+
         return Task.FromResult(true);
+    }
+
+    async Task UpdateStatus(object state)
+    {
+        if (_task is null)
+        {
+            return;
+        }
+
+        if (_taskScheduler is LimitedConcurrencyLevelTaskScheduler limitedConcurrencyScheduler)
+        {
+            var hasTask = limitedConcurrencyScheduler?.HasTask(_task) ?? false;
+            if (!hasTask && (_status == CpuBoundWorkerStatus.Running || _status == CpuBoundWorkerStatus.Failed))
+            {
+                _logger?.TaskIsNoLongerInTheScheduler();
+                _status = CpuBoundWorkerStatus.Stopped;
+                await OnStopped();
+            }
+        }
     }
 
     /// <summary>
@@ -127,11 +134,11 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
                     _logger?.TaskHasFailed(e);
                     _result = default;
                     _exception = e;
-                    _status = CpuBoundWorkerStatus.Faulted;
+                    _status = CpuBoundWorkerStatus.Failed;
                 }
             },
             cancellationToken,
             TaskCreationOptions.LongRunning,
-            _limitedConcurrencyScheduler!);
+            _taskScheduler!);
     }
 }

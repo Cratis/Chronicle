@@ -8,17 +8,15 @@ namespace Aksio.Cratis.Kernel.Grains.Workers;
 /// running on top of the ThreadPool.
 /// </summary>
 /// <remarks>
-/// Taken from https://msdn.microsoft.com/en-us/library/ee789351(v=vs.100).aspx
+/// Taken from https://msdn.microsoft.com/en-us/library/ee789351(v=vs.100).aspx.
 /// </remarks>
 public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
 {
     [ThreadStatic]
     static bool _currentThreadIsProcessingItems;
 
-    readonly LinkedList<Task> _tasks = new();
-
     readonly int _maxDegreeOfParallelism;
-
+    Queue<Task> _tasks = new();
     int _threadsQueuedOrRunning;
 
     /// <summary>
@@ -37,6 +35,13 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
     /// </summary>
     public sealed override int MaximumConcurrencyLevel => _maxDegreeOfParallelism;
 
+    /// <summary>
+    /// Check whether or not a specific task is scheduled or running..
+    /// </summary>
+    /// <param name="task">Task to check.</param>
+    /// <returns>True if the task is scheduled or running, false if not.</returns>
+    public bool HasTask(Task task) => _tasks.Any(_ => _ == task);
+
     /// <inheritdoc/>
     protected sealed override IEnumerable<Task> GetScheduledTasks()
     {
@@ -51,7 +56,7 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
     {
         lock (_tasks)
         {
-            _tasks.AddLast(task);
+            _tasks.Enqueue(task);
             if (_threadsQueuedOrRunning < _maxDegreeOfParallelism)
             {
                 NotifyThreadPoolOfPendingWork();
@@ -81,7 +86,13 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
     /// <inheritdoc/>
     protected sealed override bool TryDequeue(Task task)
     {
-        lock (_tasks) return _tasks.Remove(task);
+        lock (_tasks)
+        {
+            var newTasks = _tasks.Where(t => t != task);
+            var success = newTasks.Count() < _tasks.Count;
+            _tasks = new(newTasks);
+            return success;
+        }
     }
 
     void NotifyThreadPoolOfPendingWork()
@@ -110,11 +121,7 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
                             }
 
                             // Get the next item from the queue
-                            item = _tasks.First?.Value;
-                            if (item is not null)
-                            {
-                                _tasks.RemoveFirst();
-                            }
+                            _tasks.TryDequeue(out item);
                         }
 
                         // Execute the task we pulled out of the queue
@@ -124,9 +131,10 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
                         }
                     }
                 }
-
-                // We're done processing items on the current thread
-                finally { _currentThreadIsProcessingItems = false; }
+                finally
+                {
+                    _currentThreadIsProcessingItems = false;
+                }
             },
             null);
     }
