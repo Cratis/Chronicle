@@ -1,4 +1,5 @@
-import { createContext, useState, ReactNode, useContext } from 'react';
+import { createContext, useState, ReactNode, useContext, useEffect } from 'react';
+import { useLocalStorage } from "usehooks-ts";
 
 export interface ILayoutConfig {
     leftSidebarOpen: boolean;
@@ -31,9 +32,17 @@ export const LayoutContext = createContext<ILayoutContext>(defaultLayoutContext)
 
 export const useLayoutContext = () => useContext(LayoutContext);
 export const LayoutProvider = (props: { children: ReactNode }) => {
+    const [storedLayoutConfig, setStoredLayoutConfig] = useLocalStorage('layoutConfig', JSON.stringify(defaultLayoutContext.layoutConfig));
+
     const [layoutConfig, setLayoutConfig] = useState<ILayoutConfig>(
-        defaultLayoutContext.layoutConfig
+        storedLayoutConfig
+            ? JSON.parse(storedLayoutConfig)
+            : defaultLayoutContext.layoutConfig
     );
+    useEffect(() => {
+        setStoredLayoutConfig(JSON.stringify(layoutConfig));
+    }, [layoutConfig]);
+
 
     const toggleLeftSidebarOpen = () => {
         setLayoutConfig({

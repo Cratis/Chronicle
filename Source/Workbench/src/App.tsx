@@ -1,15 +1,22 @@
 import { useColorScheme } from './Utils/useColorScheme';
-import { Home } from './Components/Pages/Home';
-import { Layout } from './Layout/Layout';
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BlankLayout } from "./Layout/Blank/BlankLayout";
+import { Home } from "./Components/Pages/Home";
+import { EventStore } from "./Components/Pages/EventStore/EventStore";
 
 function App() {
     useColorScheme();
     return (
-        <>
-            <Layout>
-            <Home />
-            </Layout>
-        </>
+        <BrowserRouter>
+            <Routes>
+                <Route path='/' element={<Navigate to={'/home'}/>}/>
+                <Route path='/home' element={<BlankLayout/>}>
+                    <Route path={''} element={<Home/>}/>
+                </Route>
+                <Route path='/event-store/*' element={<EventStore/>}>
+                </Route>
+            </Routes>
+        </BrowserRouter>
     );
 }
 

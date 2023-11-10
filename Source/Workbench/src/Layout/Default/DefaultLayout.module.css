@@ -1,36 +1,36 @@
-header {
+.appHeader {
     height: var(--topbar-height);
     top: 0;
-    left: var(--sidebar-width);
+    left: 0;
     position: fixed;
     background-color: var(--cratis-topbar-bg);
     border-bottom: 1px solid var(--cratis-layout-border-color);
     right: 0;
-    transition: left 0.3s;
 }
 
-.sidebarClosed header,
-.sidebarHidden header {
-    left: 0;
-}
-
-aside {
+.appLeftSidebar {
     width: var(--sidebar-width);
-    height: 100vh;
+    bottom: 0;
     position: fixed;
-    top: 0;
+    top: var(--topbar-height);
     left: 0;
     background-color: var(--cratis-sidebar-bg);
     color: var(--cratis-sidebar-textColor);
-    transition: left 0.3s;
+    transition: width 0.3s;
     box-shadow: var(--cratis-layout-border-color) -1px 0 0 0 inset;
+    overflow:hidden;
+}
+.sidebarContainer {
+    height: calc(100vh - var(--topbar-height));
+    width: var(--sidebar-width);
+    overflow: auto;
+}
+.sidebarClosed .appLeftSidebar {
+    /*left: calc(-1 * var(--sidebar-width));*/
+    width: calc(4.5rem + 2px);
 }
 
-.sidebarClosed aside {
-    left: calc(-1 * var(--sidebar-width));
-}
-
-main {
+.appOutlet {
     height: calc(100vh - var(--topbar-height) - var(--footer-height));
     margin-top: var(--topbar-height);
     padding-left: var(--sidebar-width);
@@ -40,16 +40,16 @@ main {
     color: var(--surface-900);
 }
 
-.sidebarClosed main,
-.sidebarHidden main {
-    padding-left: 0;
+.sidebarClosed .appOutlet,
+.sidebarHidden .appOutlet {
+    padding-left: calc(4.5rem + 3px);
 }
 
-footer {
+.appFooter {
     display: none;
     position: fixed;
     bottom: 0;
     width: 100%;
     height: var(--footer-height);
-    background-color: var(--cratis-surface-a);
+    background-color: var(--surface-a);
 }

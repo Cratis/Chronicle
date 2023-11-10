@@ -8,7 +8,9 @@ export const useColorScheme = () => {
     useLayoutEffect(() => {
         document.body.classList.toggle('dark', isDarkMode);
         document.body.classList.toggle('light', !isDarkMode);
-        switchThemeCss(isDarkMode ? 'dark' : 'light', isDarkMode ? 'light' : 'dark', 'theme');
+        const newTheme = isDarkMode ? 'dark' : 'light';
+        const oldTheme = isDarkMode ? 'light' : 'dark';
+        switchThemeCss(newTheme, oldTheme, 'theme');
     }, [isDarkMode]);
     return { isDarkMode, toggle, enable, disable }
 }
