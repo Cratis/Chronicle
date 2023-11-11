@@ -41,7 +41,7 @@ export const ReplayCandidates = () => {
     const { microserviceId } = useRouteParams();
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
-    const [replayCandidates] = AllReplayCandidates.use({
+    const [replayCandidates, performReplayCandidates] = AllReplayCandidates.use({
         microserviceId: microserviceId,
         tenantId: selectedTenant?.id ?? undefined!
     });
@@ -51,6 +51,13 @@ export const ReplayCandidates = () => {
             setSelectedTenant(tenants.data[0]);
         }
     }, [tenants.data]);
+
+    useEffect(() => {
+        performReplayCandidates({
+            microserviceId: microserviceId,
+            tenantId: selectedTenant?.id ?? undefined!
+        });
+    }, [selectedTenant])
 
 
     return (
