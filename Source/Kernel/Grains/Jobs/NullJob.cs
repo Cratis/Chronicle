@@ -18,7 +18,7 @@ public class NullJob : IJob
     public Task OnStepStopped(JobStepId stepId) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task OnStepSuccessful(JobStepId stepId) => Task.CompletedTask;
+    public Task OnStepSucceeded(JobStepId stepId) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task Pause() => Task.CompletedTask;

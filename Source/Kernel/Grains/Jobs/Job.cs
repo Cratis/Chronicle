@@ -170,7 +170,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     public virtual Task OnCompleted() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public async Task OnStepSuccessful(JobStepId stepId)
+    public async Task OnStepSucceeded(JobStepId stepId)
     {
         State.Progress.SuccessfulSteps++;
 

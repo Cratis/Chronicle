@@ -37,7 +37,7 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was completed.</param>
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
-    Task OnStepSuccessful(JobStepId stepId);
+    Task OnStepSucceeded(JobStepId stepId);
 
     /// <summary>
     /// Report that a job step has been stopped.

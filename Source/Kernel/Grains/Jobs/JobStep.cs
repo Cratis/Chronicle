@@ -120,7 +120,7 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
     {
         if (status == JobStepStatus.Succeeded)
         {
-            await Job.OnStepSuccessful(JobStepId);
+            await Job.OnStepSucceeded(JobStepId);
         }
         StatusChanged(status);
         await _state.WriteStateAsync();
