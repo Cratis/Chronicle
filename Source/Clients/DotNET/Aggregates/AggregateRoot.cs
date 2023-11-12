@@ -68,7 +68,7 @@ public class AggregateRoot : IAggregateRoot
     {
         typeof(T).ValidateEventType();
         _uncommittedEvents.Add(@event);
-        await EventHandlers.Handle(this, new[] { new EventAndContext(@event, EventContext.Empty) });
+        await EventHandlers.Handle(this, new[] { new EventAndContext(@event, EventContext.From(EventSourceId, EventSequenceNumber.Unavailable)) });
     }
 
     /// <inheritdoc/>

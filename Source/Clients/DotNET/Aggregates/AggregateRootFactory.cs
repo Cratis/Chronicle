@@ -17,6 +17,7 @@ public class AggregateRootFactory : IAggregateRootFactory
     readonly IDictionary<Type, AggregateRootEventHandlers> _eventHandlersByAggregateRootType = new Dictionary<Type, AggregateRootEventHandlers>();
     readonly IAggregateRootStateManager _aggregateRootStateManager;
     readonly ICausationManager _causationManager;
+    readonly IEventTypes _eventTypes;
     readonly IEventSequences _eventSequences;
     readonly IEventSerializer _eventSerializer;
     readonly IServiceProvider _serviceProvider;
@@ -26,18 +27,21 @@ public class AggregateRootFactory : IAggregateRootFactory
     /// </summary>
     /// <param name="aggregateRootStateManager"><see cref="IAggregateRootStateManager"/> for managing state for an aggregate root.</param>
     /// <param name="causationManager">The <see cref="ICausationManager"/> for handling causation.</param>
+    /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
     /// <param name="eventSequences"><see cref="IEventSequences"/> to get event sequence to work with.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances.</param>
     public AggregateRootFactory(
         IAggregateRootStateManager aggregateRootStateManager,
         ICausationManager causationManager,
+        IEventTypes eventTypes,
         IEventSequences eventSequences,
         IEventSerializer eventSerializer,
         IServiceProvider serviceProvider)
     {
         _aggregateRootStateManager = aggregateRootStateManager;
         _causationManager = causationManager;
+        _eventTypes = eventTypes;
         _eventSequences = eventSequences;
         _eventSerializer = eventSerializer;
         _serviceProvider = serviceProvider;
@@ -51,7 +55,7 @@ public class AggregateRootFactory : IAggregateRootFactory
 
         if (!_eventHandlersByAggregateRootType.TryGetValue(typeof(T), out var eventHandlers))
         {
-            eventHandlers = new AggregateRootEventHandlers(typeof(T));
+            eventHandlers = new AggregateRootEventHandlers(typeof(T), _eventTypes);
             _eventHandlersByAggregateRootType[typeof(T)] = eventHandlers;
         }
 

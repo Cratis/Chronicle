@@ -8,79 +8,36 @@ using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Aggregates;
 
-#pragma warning disable MA0048 // File name must match type name
-
-/// <summary>
-/// Represents a method signature that handles an event asynchronous for an <see cref="AggregateRoot"/>.
-/// </summary>
-/// <param name="event">Event to handle.</param>
-/// <typeparam name="T">Type of event.</typeparam>
-/// <returns>Awaitable task.</returns>
-public delegate Task AsyncAggregateRootEventHandler<T>(T @event);
-
-/// <summary>
-/// Represents a method signature that handles an event asynchronous for an <see cref="AggregateRoot"/>.
-/// </summary>
-/// <param name="event">Event to handle.</param>
-/// <param name="context"><see cref="EventContext"/>.</param>
-/// <typeparam name="T">Type of event.</typeparam>
-/// <returns>Awaitable task.</returns>
-public delegate Task AsyncAggregateRootEventHandlerWithContext<T>(T @event, EventContext context);
-
-/// <summary>
-/// Represents a method signature that handles an event synchronous for an <see cref="AggregateRoot"/>.
-/// </summary>
-/// <param name="event">Event to handle.</param>
-/// <typeparam name="T">Type of event.</typeparam>
-public delegate void SyncAggregateRootEventHandler<T>(T @event);
-
-/// <summary>
-/// Represents a method signature that handles an event synchronous for an <see cref="AggregateRoot"/>.
-/// </summary>
-/// <param name="event">Event to handle.</param>
-/// <param name="context"><see cref="EventContext"/>.</param>
-/// <typeparam name="T">Type of event.</typeparam>
-public delegate void SyncAggregateRootEventHandlerWithContext<T>(T @event, EventContext context);
-#pragma warning restore MA0048 // File name must match type name
-
 /// <summary>
 /// Represents the event handlers for an <see cref="AggregateRoot"/>.
 /// </summary>
 public class AggregateRootEventHandlers
 {
-    static readonly IEnumerable<ConventionSignature> _conventionMethods = new[]
-    {
-        new ConventionSignature(typeof(AsyncAggregateRootEventHandler<>)),
-        new ConventionSignature(typeof(AsyncAggregateRootEventHandlerWithContext<>)),
-        new ConventionSignature(typeof(SyncAggregateRootEventHandler<>)),
-        new ConventionSignature(typeof(SyncAggregateRootEventHandlerWithContext<>))
-    };
-
-    readonly TypeWithConventionSignatures _typeWithConventionSignatures;
+    readonly Dictionary<Type, MethodInfo> _handleMethodsByEventType;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AggregateRootEventHandlers"/> class.
     /// </summary>
     /// <param name="aggregateRootType">Type of <see cref="IAggregateRoot"/>.</param>
-    public AggregateRootEventHandlers(Type aggregateRootType)
+    /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
+    public AggregateRootEventHandlers(Type aggregateRootType, IEventTypes eventTypes)
     {
-        _typeWithConventionSignatures = new TypeWithConventionSignatures(
-            aggregateRootType,
-            _conventionMethods,
-            HasEventAsFirstParameter);
+        _handleMethodsByEventType = aggregateRootType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                                        .Where(_ => _.IsEventHandlerMethod())
+                                        .ToDictionary(_ => _.GetParameters()[0].ParameterType, _ => _);
 
-        EventTypes = _typeWithConventionSignatures.Methods.Select(_ => _.Method.GetParameters()[0].ParameterType).Select(_ => _.GetEventType()).ToImmutableList();
+        EventTypes = _handleMethodsByEventType.Keys.Select(_ => eventTypes.GetEventTypeFor(_)!).ToImmutableList();
     }
 
     /// <summary>
     /// Gets whether or not it has any handle methods.
     /// </summary>
-    public bool HasHandleMethods => _typeWithConventionSignatures.Methods.Count > 0;
+    public bool HasHandleMethods => _handleMethodsByEventType.Count > 0;
 
     /// <summary>
     /// Gets a collection of <see cref="EventType">event types</see> that can be handled.
     /// </summary>
-    public IImmutableList<EventType> EventTypes { get; }
+    public IImmutableList<EventType> EventTypes { get; }
 
     /// <summary>
     /// Handle a collection of events.
@@ -92,13 +49,23 @@ public class AggregateRootEventHandlers
     {
         foreach (var eventAndContext in events)
         {
-            if (_typeWithConventionSignatures.CanInvoke(eventAndContext.Event, eventAndContext.Context))
+            var eventType = eventAndContext.Event.GetType();
+            if (_handleMethodsByEventType.TryGetValue(eventType, out var method))
             {
-                await _typeWithConventionSignatures.Invoke(target, eventAndContext.Event, eventAndContext.Context);
+                Task returnValue;
+                var parameters = method.GetParameters();
+
+                if (parameters.Length == 2)
+                {
+                    returnValue = (Task)method.Invoke(target, new object[] { eventAndContext.Event, eventAndContext.Context })!;
+                }
+                else
+                {
+                    returnValue = (Task)method.Invoke(target, new object[] { eventAndContext.Event })!;
+                }
+
+                if (returnValue is not null) await returnValue;
             }
         }
     }
-
-    bool HasEventAsFirstParameter(MethodInfo methodInfo) =>
-        methodInfo.GetParameters().FirstOrDefault()?.ParameterType.IsEventType() ?? false;
 }

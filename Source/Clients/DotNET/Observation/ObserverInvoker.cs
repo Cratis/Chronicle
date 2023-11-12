@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Aksio.Cratis.Conventions;
 using Aksio.Cratis.Events;
 using Microsoft.Extensions.Logging;
 
@@ -40,7 +41,7 @@ public class ObserverInvoker : IObserverInvoker
         _targetType = targetType;
         _logger = logger;
         _methodsByEventTypeId = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                                        .Where(_ => IsObservingMethod(_))
+                                        .Where(_ => _.IsEventHandlerMethod())
                                         .ToDictionary(_ => _eventTypes.GetEventTypeFor(_.GetParameters()[0].ParameterType), _ => _);
     }
 
@@ -81,29 +82,5 @@ public class ObserverInvoker : IObserverInvoker
             _logger.ObserverFailed(_targetType.FullName ?? _targetType.Name, content.GetType().Name, ex);
             throw;
         }
-    }
-
-    bool IsObservingMethod(MethodInfo methodInfo)
-    {
-        var isObservingMethod = (methodInfo.ReturnType.IsAssignableTo(typeof(Task)) && !methodInfo.ReturnType.IsGenericType) ||
-                                methodInfo.ReturnType == typeof(void);
-
-        if (!isObservingMethod) return false;
-        var parameters = methodInfo.GetParameters();
-        if (parameters.Length >= 1)
-        {
-            isObservingMethod = _eventTypes.HasFor(parameters[0].ParameterType);
-            if (parameters.Length == 2)
-            {
-                isObservingMethod &= parameters[1].ParameterType == typeof(EventContext);
-            }
-            else if (parameters.Length > 2)
-            {
-                isObservingMethod = false;
-            }
-            return isObservingMethod;
-        }
-
-        return false;
     }
 }
