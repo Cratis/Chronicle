@@ -11,6 +11,19 @@ namespace Aksio.Cratis.Events;
 public static class EventTypeExtensions
 {
     /// <summary>
+    /// Validate if a type is an event type.
+    /// </summary>
+    /// <param name="type">Type to validate.</param>
+    /// <exception cref="MissingEventTypeAttribute">Thrown if type does not have the <see cref="EventTypeAttribute"/>.</exception>
+    public static void ValidateEventType(this Type type)
+    {
+        if (type.GetCustomAttribute<EventTypeAttribute>() == null)
+        {
+            throw new MissingEventTypeAttribute(type);
+        }
+    }
+
+    /// <summary>
     /// Get the <see cref="EventType"/> for a CLR type.
     /// </summary>
     /// <param name="type"><see cref="Type"/> to get for. </param>
