@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using Aksio.Cratis.Conventions;
 using Aksio.Cratis.Events;
 
@@ -62,6 +63,7 @@ public class AggregateRootEventHandlers
     /// <param name="aggregateRootType">Type of <see cref="IAggregateRoot"/>.</param>
     public AggregateRootEventHandlers(Type aggregateRootType)
     {
+        DiscoverMethods(aggregateRootType);
     }
 
     /// <summary>
@@ -80,6 +82,21 @@ public class AggregateRootEventHandlers
         foreach (var eventAndContext in events)
         {
             await _eventHandleMethods[eventAndContext.Event.GetType()].Invoke(target, eventAndContext.Context, eventAndContext.Context);
+        }
+    }
+
+    void DiscoverMethods(Type aggregateRootType)
+    {
+        foreach (var method in aggregateRootType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        {
+            foreach (var conventionMethod in _conventionMethods)
+            {
+                if (conventionMethod.Matches(method))
+                {
+                    var eventType = method.GetParameters()[0].ParameterType;
+                    _eventHandleMethods[eventType] = conventionMethod;
+                }
+            }
         }
     }
 }
