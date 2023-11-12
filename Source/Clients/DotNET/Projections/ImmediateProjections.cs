@@ -80,12 +80,14 @@ public class ImmediateProjections : IImmediateProjections
     public IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <inheritdoc/>
-    public Task<ImmediateProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey)
+    public async Task<ImmediateProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey)
     {
         var projectionDefinition = (typeof(ImmediateProjectionsCache<>).MakeGenericType(modelType)
             .GetField(nameof(ImmediateProjectionsCache<object>.Definition))!
             .GetValue(null) as ProjectionDefinition)!;
-        return GetInstanceById(projectionDefinition.Identifier, modelKey);
+        var result = await GetInstanceById(projectionDefinition.Identifier, modelKey);
+        var model = result.Model.Deserialize(modelType, _jsonSerializerOptions)!;
+        return new(model, result.AffectedProperties, result.ProjectedEventsCount);
     }
 
     /// <inheritdoc/>
@@ -100,7 +102,7 @@ public class ImmediateProjections : IImmediateProjections
     }
 
     /// <inheritdoc/>
-    public async Task<ImmediateProjectionResult> GetInstanceById(ProjectionId identifier, ModelKey modelKey)
+    public async Task<ImmediateProjectionResultRaw> GetInstanceById(ProjectionId identifier, ModelKey modelKey)
     {
         var immediateProjection = new ImmediateProjection(
             identifier,
@@ -111,7 +113,7 @@ public class ImmediateProjections : IImmediateProjections
 
         var result = await _connection.PerformCommand(route, immediateProjection);
         var element = (JsonElement)result.Response!;
-        return element.Deserialize<ImmediateProjectionResult>(_jsonSerializerOptions)!;
+        return element.Deserialize<ImmediateProjectionResultRaw>(_jsonSerializerOptions)!;
     }
 
     void HandleProjectionTypeCache<TModel>()

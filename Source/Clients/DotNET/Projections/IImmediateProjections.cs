@@ -38,6 +38,6 @@ public interface IImmediateProjections
     /// </summary>
     /// <param name="identifier"><see cref="ProjectionId"/> to get for.</param>
     /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
-    /// <returns>An instance for the id.</returns>
-    Task<ImmediateProjectionResult> GetInstanceById(ProjectionId identifier, ModelKey modelKey);
+    /// <returns>A raw JSON instance for the id.</returns>
+    Task<ImmediateProjectionResultRaw> GetInstanceById(ProjectionId identifier, ModelKey modelKey);
 }
