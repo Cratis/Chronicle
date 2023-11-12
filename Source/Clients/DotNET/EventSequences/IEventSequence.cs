@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.EventSequences;
@@ -10,6 +11,13 @@ namespace Aksio.Cratis.EventSequences;
 /// </summary>
 public interface IEventSequence
 {
+    /// <summary>
+    /// Get all events for a specific <see cref="EventSourceId"/>.
+    /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
+    /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
+    Task<IImmutableList<AppendedEvent>> GetForEventSourceId(EventSourceId eventSourceId);
+
     /// <summary>
     /// Get the next sequence number.
     /// </summary>
