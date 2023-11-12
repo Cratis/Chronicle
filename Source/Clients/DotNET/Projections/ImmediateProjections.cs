@@ -31,6 +31,7 @@ public class ImmediateProjections : IImmediateProjections
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly IConnection _connection;
     readonly List<ProjectionDefinition> _definitions = new();
+    readonly IDictionary<Type, ProjectionDefinition> _definitionsByModelType = new Dictionary<Type, ProjectionDefinition>();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmediateProjections"/> class.
@@ -82,9 +83,7 @@ public class ImmediateProjections : IImmediateProjections
     /// <inheritdoc/>
     public async Task<ImmediateProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey)
     {
-        var projectionDefinition = (typeof(ImmediateProjectionsCache<>).MakeGenericType(modelType)
-            .GetField(nameof(ImmediateProjectionsCache<object>.Definition))!
-            .GetValue(null) as ProjectionDefinition)!;
+        var projectionDefinition = _definitionsByModelType[modelType];
         var result = await GetInstanceById(projectionDefinition.Identifier, modelKey);
         var model = result.Model.Deserialize(modelType, _jsonSerializerOptions)!;
         return new(model, result.AffectedProperties, result.ProjectedEventsCount);
@@ -93,8 +92,9 @@ public class ImmediateProjections : IImmediateProjections
     /// <inheritdoc/>
     public async Task<ImmediateProjectionResult<TModel>> GetInstanceById<TModel>(ModelKey modelKey)
     {
+        var projectionDefinition = _definitionsByModelType[typeof(TModel)];
         var result = await GetInstanceById(
-            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance!.Identifier,
+            projectionDefinition.Identifier,
             modelKey);
 
         var model = result.Model.Deserialize<TModel>(_jsonSerializerOptions)!;
@@ -118,30 +118,25 @@ public class ImmediateProjections : IImmediateProjections
 
     void HandleProjectionTypeCache<TModel>()
     {
-        if (ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance is null)
+        var modelType = typeof(TModel);
+        if (!_definitionsByModelType.ContainsKey(modelType))
         {
             var projectionType = _clientArtifacts.ImmediateProjections.Single(_ => _.HasInterface<IImmediateProjectionFor<TModel>>())
-                ?? throw new MissingImmediateProjectionForModel(typeof(TModel));
+                ?? throw new MissingImmediateProjectionForModel(modelType);
 
-            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance = (_serviceProvider.GetService(projectionType) as IImmediateProjectionFor<TModel>)!;
+            var instance = (_serviceProvider.GetService(projectionType) as IImmediateProjectionFor<TModel>)!;
             var builder = new ProjectionBuilderFor<TModel>(
-                ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance.Identifier,
+                instance.Identifier,
                 _modelNameResolver,
                 _eventTypes,
                 _schemaGenerator,
                 _jsonSerializerOptions);
 
-            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance.Define(builder);
+            instance.Define(builder);
 
             var projectionDefinition = builder.Build() with { IsActive = false };
             _definitions.Add(projectionDefinition);
-            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition = projectionDefinition;
+            _definitionsByModelType[typeof(TModel)] = projectionDefinition;
         }
-    }
-
-    static class ImmediateProjectionsCache<TProjection>
-    {
-        public static TProjection? Instance;
-        public static ProjectionDefinition? Definition;
     }
 }
