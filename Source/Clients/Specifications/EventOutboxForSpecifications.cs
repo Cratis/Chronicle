@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
@@ -36,6 +37,10 @@ public class EventOutboxForSpecifications : IEventOutbox
     /// Gets the appended events.
     /// </summary>
     public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _sequence.AppendedEvents;
+
+    /// <inheritdoc/>
+    public Task<IImmutableList<AppendedEvent>> GetForEventSourceId(EventSourceId eventSourceId) =>
+        Task.FromResult<IImmutableList<AppendedEvent>>(ImmutableList<AppendedEvent>.Empty);
 
     /// <inheritdoc/>
     public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default) => _sequence.Append(eventSourceId, @event);

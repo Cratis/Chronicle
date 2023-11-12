@@ -63,7 +63,7 @@ public class EventSequence : IEventSequence
     /// <inheritdoc/>
     public async Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes)
     {
-        var routeBuilder = new StringBuilder($"{GetBaseRoute()}?page=0&size=1000000&eventSourceId={eventSourceId}");
+        var routeBuilder = new StringBuilder($"{GetBaseRoute()}/all?eventSourceId={eventSourceId}");
         foreach (var eventType in eventTypes)
         {
             routeBuilder.Append("&eventTypes[]=").Append(eventType.Id);

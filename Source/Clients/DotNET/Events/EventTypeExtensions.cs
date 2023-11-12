@@ -11,6 +11,13 @@ namespace Aksio.Cratis.Events;
 public static class EventTypeExtensions
 {
     /// <summary>
+    /// Check if a type is an event type.
+    /// </summary>
+    /// <param name="type">Type to check.</param>
+    /// <returns>True if it is an event type, false if not.</returns>
+    public static bool IsEventType(this Type type) => type.GetCustomAttribute<EventTypeAttribute>() != null;
+
+    /// <summary>
     /// Validate if a type is an event type.
     /// </summary>
     /// <param name="type">Type to validate.</param>

@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 
@@ -12,6 +13,21 @@ namespace Aksio.Cratis.Aggregates;
 public class AggregateRoot : IAggregateRoot
 {
     /// <summary>
+    /// The causation aggregate root type property.
+    /// </summary>
+    public const string CausationAggregateRootTypeProperty = "aggregateRootType";
+
+    /// <summary>
+    /// The event sequence id causation property.
+    /// </summary>
+    public const string CausationEventSequenceIdProperty = "eventSequenceId";
+
+    /// <summary>
+    /// The causation type for the aggregate root.
+    /// </summary>
+    public static readonly CausationType CausationType = "AggregateRoot";
+
+    /// <summary>
     /// Cratis Internal: The event handlers for the aggregate root.
     /// </summary>
     internal AggregateRootEventHandlers EventHandlers = default!;
@@ -20,6 +36,11 @@ public class AggregateRoot : IAggregateRoot
     /// Cratis Internal: The event sequence for the aggregate root.
     /// </summary>
     internal IEventSequence EventSequence = default!;
+
+    /// <summary>
+    /// Cratis Internal: The <see cref="ICausationManager"/> to use with the aggregate root when committing.
+    /// </summary>
+    internal ICausationManager CausationManager = default!;
 
     /// <summary>
     /// Cratis Internal: The <see cref="EventSourceId"/> for the aggregate root.
@@ -51,7 +72,16 @@ public class AggregateRoot : IAggregateRoot
     }
 
     /// <inheritdoc/>
-    public Task Commit() => EventSequence.AppendMany(EventSourceId, _uncommittedEvents);
+    public async Task Commit()
+    {
+        CausationManager.Add(CausationType, new Dictionary<string, string>
+        {
+            { CausationAggregateRootTypeProperty, GetType().AssemblyQualifiedName! },
+            { CausationEventSequenceIdProperty, EventSequenceId.ToString() }
+        });
+
+        await EventSequence.AppendMany(EventSourceId, _uncommittedEvents);
+    }
 
     /// <summary>
     /// Cratis Internal: Set the state for the aggregate root.

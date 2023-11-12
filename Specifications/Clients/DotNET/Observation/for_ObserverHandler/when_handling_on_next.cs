@@ -29,7 +29,6 @@ public class when_handling_on_next : given.an_observer_handler
             new(Guid.NewGuid(), 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, Guid.NewGuid(), Guid.NewGuid().ToString(), Enumerable.Empty<Causation>(), Identity.NotSet),
             new ExpandoObject());
 
-        event_types.Setup(_ => _.GetClrTypeFor(appended_event.Metadata.Type.Id)).Returns(typeof(SomeEvent));
         event_serializer.Setup(_ => _.Deserialize(typeof(SomeEvent), IsAny<JsonObject>())).Returns(Task.FromResult<object>(event_content));
         causation_manager
             .Setup(_ => _.Add(ObserverHandler.CausationType, IsAny<IDictionary<string, string>>()))

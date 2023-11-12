@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Reflection;
 using Aksio.Cratis.Conventions;
 using Aksio.Cratis.Events;
@@ -47,15 +48,15 @@ public delegate void SyncAggregateRootEventHandlerWithContext<T>(T @event, Event
 /// </summary>
 public class AggregateRootEventHandlers
 {
-    static readonly IEnumerable<ConventionMethod> _conventionMethods = new[]
+    static readonly IEnumerable<ConventionSignature> _conventionMethods = new[]
     {
-        new ConventionMethod(typeof(AsyncAggregateRootEventHandler<>)),
-        new ConventionMethod(typeof(AsyncAggregateRootEventHandlerWithContext<>)),
-        new ConventionMethod(typeof(SyncAggregateRootEventHandler<>)),
-        new ConventionMethod(typeof(SyncAggregateRootEventHandlerWithContext<>))
+        new ConventionSignature(typeof(AsyncAggregateRootEventHandler<>)),
+        new ConventionSignature(typeof(AsyncAggregateRootEventHandlerWithContext<>)),
+        new ConventionSignature(typeof(SyncAggregateRootEventHandler<>)),
+        new ConventionSignature(typeof(SyncAggregateRootEventHandlerWithContext<>))
     };
 
-    readonly IDictionary<Type, ConventionMethod> _eventHandleMethods = new Dictionary<Type, ConventionMethod>();
+    readonly TypeWithConventionSignatures _typeWithConventionSignatures;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AggregateRootEventHandlers"/> class.
@@ -63,13 +64,23 @@ public class AggregateRootEventHandlers
     /// <param name="aggregateRootType">Type of <see cref="IAggregateRoot"/>.</param>
     public AggregateRootEventHandlers(Type aggregateRootType)
     {
-        DiscoverMethods(aggregateRootType);
+        _typeWithConventionSignatures = new TypeWithConventionSignatures(
+            aggregateRootType,
+            _conventionMethods,
+            HasEventAsFirstParameter);
+
+        EventTypes = _typeWithConventionSignatures.Methods.Select(_ => _.Method.GetParameters()[0].ParameterType).Select(_ => _.GetEventType()).ToImmutableList();
     }
 
     /// <summary>
     /// Gets whether or not it has any handle methods.
     /// </summary>
-    public bool HasHandleMethods => _eventHandleMethods.Count > 0;
+    public bool HasHandleMethods => _typeWithConventionSignatures.Methods.Count > 0;
+
+    /// <summary>
+    /// Gets a collection of <see cref="EventType">event types</see> that can be handled.
+    /// </summary>
+    public IImmutableList<EventType> EventTypes { get; }
 
     /// <summary>
     /// Handle a collection of events.
@@ -81,22 +92,13 @@ public class AggregateRootEventHandlers
     {
         foreach (var eventAndContext in events)
         {
-            await _eventHandleMethods[eventAndContext.Event.GetType()].Invoke(target, eventAndContext.Context, eventAndContext.Context);
-        }
-    }
-
-    void DiscoverMethods(Type aggregateRootType)
-    {
-        foreach (var method in aggregateRootType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-        {
-            foreach (var conventionMethod in _conventionMethods)
+            if (_typeWithConventionSignatures.CanInvoke(eventAndContext.Event, eventAndContext.Context))
             {
-                if (conventionMethod.Matches(method))
-                {
-                    var eventType = method.GetParameters()[0].ParameterType;
-                    _eventHandleMethods[eventType] = conventionMethod;
-                }
+                await _typeWithConventionSignatures.Invoke(target, eventAndContext.Event, eventAndContext.Context);
             }
         }
     }
+
+    bool HasEventAsFirstParameter(MethodInfo methodInfo) =>
+        methodInfo.GetParameters().FirstOrDefault()?.ParameterType.IsEventType() ?? false;
 }

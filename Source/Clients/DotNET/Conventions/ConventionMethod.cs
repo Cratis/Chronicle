@@ -10,30 +10,78 @@ namespace Aksio.Cratis.Conventions;
 /// </summary>
 public class ConventionMethod
 {
+    readonly ConventionSignature _signature;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ConventionMethod"/> class.
     /// </summary>
-    /// <param name="signature">The signature for the method. Must be a delegate type.</param>
-    public ConventionMethod(Type signature)
+    /// <param name="method">The underlying method.</param>
+    /// <param name="signature">The signature it matches.</param>
+    public ConventionMethod(MethodInfo method, ConventionSignature signature)
     {
+        Method = method;
+        _signature = signature;
     }
 
     /// <summary>
-    /// Check if a method matches the signature of the convention method.
+    /// Gets the method.
     /// </summary>
-    /// <param name="method"><see cref="MethodInfo"/> to check.</param>
-    /// <returns>True if it matches, false if not.</returns>
-    public bool Matches(MethodInfo method) => throw new NotImplementedException();
+    public MethodInfo Method { get; }
 
     /// <summary>
-    /// Invoke the method, matching parameters to the best matching signature.
+    /// Check if a method can be invoked with the given parameters.
+    /// </summary>
+    /// <param name="parameters">Parameters to check with.</param>
+    /// <returns>True if it can invoke, false if not.</returns>
+    public bool CanInvoke(params object[] parameters)
+    {
+        var parameterTypes = parameters.Select(_ => _.GetType()).ToArray();
+        var methodParameterTypes = Method.GetParameters().Select(_ => _.ParameterType).ToArray();
+        var invokeMethod = _signature.Signature.GetMethod("Invoke")!;
+        if (methodParameterTypes.Length != parameterTypes.Length)
+        {
+            return false;
+        }
+
+        if (Method.ReturnType != invokeMethod.ReturnType)
+        {
+            return false;
+        }
+
+        return methodParameterTypes.SequenceEqual(parameterTypes);
+    }
+
+    /// <summary>
+    /// Invoke the method matching the given parameters.
     /// </summary>
     /// <param name="target">Target to invoke on.</param>
-    /// <param name="parameters">Params of parameters to pass. Parameters are optional.</param>
-    /// <returns>Awaitable task.</returns>
-    /// <remarks>
-    /// If no matching signature is found, an exception will be thrown.
-    /// If the method by the matching signature does not return anything, null will be returned.
-    /// </remarks>
-    public Task<object> Invoke(object target, params object[] parameters) => throw new NotImplementedException();
+    /// <param name="parameters">Parameters to invoke with.</param>
+    /// <returns>Result, if any. This can be null if the method does not return anything.</returns>
+    public async Task<object> Invoke(object target, params object[] parameters)
+    {
+        var result = Method.Invoke(target, parameters);
+        if (result is Task taskResult)
+        {
+            var tcs = new TaskCompletionSource<object>();
+            if (taskResult.GetType().IsGenericType)
+            {
+                var taskResultType = taskResult.GetType().GetGenericArguments()[0];
+                var awaiter = taskResult.GetAwaiter();
+                awaiter.OnCompleted(() =>
+                {
+                    var resultProperty = taskResult.GetType().GetProperty("Result");
+                    result = resultProperty?.GetValue(taskResult)!;
+                    tcs.SetResult(result);
+                });
+                return tcs.Task;
+            }
+
+            await taskResult;
+            tcs.SetResult(null!);
+
+            return tcs.Task;
+        }
+
+        return Task.FromResult(result);
+    }
 }

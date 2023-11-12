@@ -20,6 +20,6 @@ public interface IAggregateRootFactory
     /// If the aggregate has event handler methods, the events for the specified <see cref="EventSourceId"/>
     /// will be retrieved and the event handler methods will be invoked.
     /// </remarks>
-    Task<T> GetFor<T>(EventSourceId id)
+    Task<T> Get<T>(EventSourceId id)
         where T : IAggregateRoot;
 }
