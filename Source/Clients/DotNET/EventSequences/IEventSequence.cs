@@ -15,8 +15,9 @@ public interface IEventSequence
     /// Get all events for a specific <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
+    /// <param name="eventTypes">Collection of <see cref="EventType"/> to get for.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
-    Task<IImmutableList<AppendedEvent>> GetForEventSourceId(EventSourceId eventSourceId);
+    Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
 
     /// <summary>
     /// Get the next sequence number.

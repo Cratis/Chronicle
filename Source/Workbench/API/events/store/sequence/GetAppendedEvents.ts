@@ -6,7 +6,7 @@ import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/a
 import { PagedQueryResult } from './PagedQueryResult';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}?pageSize={{pageSize}}&pageNumber={{pageNumber}}&eventSourceId={{eventSourceId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}?pageSize={{pageSize}}&pageNumber={{pageNumber}}&eventSourceId={{eventSourceId}}&eventTypes={{eventTypes}}');
 
 export interface GetAppendedEventsArguments {
     eventSequenceId: string;
@@ -15,9 +15,10 @@ export interface GetAppendedEventsArguments {
     pageSize: number;
     pageNumber: number;
     eventSourceId: string;
+    eventTypes: any;
 }
 export class GetAppendedEvents extends QueryFor<PagedQueryResult, GetAppendedEventsArguments> {
-    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}?pageSize={{pageSize}}&pageNumber={{pageNumber}}&eventSourceId={{eventSourceId}}';
+    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}?pageSize={{pageSize}}&pageNumber={{pageNumber}}&eventSourceId={{eventSourceId}}&eventTypes={{eventTypes}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: PagedQueryResult = {} as any;
 
@@ -33,6 +34,7 @@ export class GetAppendedEvents extends QueryFor<PagedQueryResult, GetAppendedEve
             'pageSize',
             'pageNumber',
             'eventSourceId',
+            'eventTypes',
         ];
     }
 

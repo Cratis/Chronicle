@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Text;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
@@ -60,10 +61,14 @@ public class EventSequence : IEventSequence
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<AppendedEvent>> GetForEventSourceId(EventSourceId eventSourceId)
+    public async Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes)
     {
-        var route = $"{GetBaseRoute()}?page=0&size=1000000&eventSourceId={eventSourceId}";
-        var result = await _connection.PerformQuery<IEnumerable<AppendedEvent>>(route, metadata: new { EventSequenceId = _eventSequenceId });
+        var routeBuilder = new StringBuilder($"{GetBaseRoute()}?page=0&size=1000000&eventSourceId={eventSourceId}");
+        foreach (var eventType in eventTypes)
+        {
+            routeBuilder.Append("&eventTypes[]=").Append(eventType.Id);
+        }
+        var result = await _connection.PerformQuery<IEnumerable<AppendedEvent>>(routeBuilder.ToString(), metadata: new { EventSequenceId = _eventSequenceId });
         return result.Data.ToImmutableList();
     }
 
