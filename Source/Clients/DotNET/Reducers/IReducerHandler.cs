@@ -36,7 +36,7 @@ public interface IReducerHandler
     /// <summary>
     /// Gets the type of the read model.
     /// </summary>
-    Type ReadModelType { get; }
+    Type ReadModelType { get; }
 
     /// <summary>
     /// Handle next events as bulk.
