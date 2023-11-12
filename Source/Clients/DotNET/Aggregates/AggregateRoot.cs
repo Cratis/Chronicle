@@ -104,6 +104,12 @@ public class AggregateRoot<TState> : AggregateRoot
     /// </summary>
     internal TState _state = default!;
 
+    /// <inheritdoc/>
+    internal override bool IsStateful => true;
+
+    /// <inheritdoc/>
+    internal override Type StateType => typeof(TState);
+
     /// <summary>
     /// Gets the current state of the aggregate root.
     /// </summary>
