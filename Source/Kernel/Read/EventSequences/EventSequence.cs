@@ -108,6 +108,7 @@ public class EventSequence : Controller
     /// <param name="tenantId">Tenant to get for.</param>
     /// <param name="pageSize">Size of page to return.</param>
     /// <param name="pageNumber">Page number to return.</param>
+    /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet]
     public async Task<PagedQueryResult<AppendedEventWithJsonAsContent>> GetAppendedEvents(
@@ -115,7 +116,8 @@ public class EventSequence : Controller
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId,
         [FromQuery] int pageSize = 100,
-        [FromQuery] int pageNumber = 0)
+        [FromQuery] int pageNumber = 0,
+        [FromQuery] EventSourceId eventSourceId = null!)
     {
         var result = new List<AppendedEventWithJsonAsContent>();
 
@@ -123,12 +125,12 @@ public class EventSequence : Controller
         _executionContextManager.Establish(tenantId, correlationId, microserviceId);
 
         var from = EventSequenceNumber.First + (pageNumber * pageSize);
-        var tail = await _eventSequenceStorageProviderProvider().GetTailSequenceNumber(eventSequenceId);
+        var tail = await _eventSequenceStorageProviderProvider().GetTailSequenceNumber(eventSequenceId, eventSourceId: eventSourceId);
         if (tail == EventSequenceNumber.Unavailable)
         {
             return new(Enumerable.Empty<AppendedEventWithJsonAsContent>(), 0);
         }
-        var cursor = await _eventSequenceStorageProviderProvider().GetRange(eventSequenceId, from, from + (pageSize - 1));
+        var cursor = await _eventSequenceStorageProviderProvider().GetRange(eventSequenceId, from, from + (pageSize - 1), eventSourceId: eventSourceId);
         while (await cursor.MoveNext())
         {
             result.AddRange(cursor.Current.Select(_ => new AppendedEventWithJsonAsContent(
