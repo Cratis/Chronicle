@@ -62,7 +62,6 @@ public class ReducersRegistrar : IReducersRegistrar
                                         reducer.ReducerId,
                                         reducerType.FullName ?? $"{reducerType.Namespace}.{reducerType.Name}",
                                         reducer.EventSequenceId,
-                                        eventTypes,
                                         new ReducerInvoker(
                                             serviceProvider,
                                             eventTypes,
