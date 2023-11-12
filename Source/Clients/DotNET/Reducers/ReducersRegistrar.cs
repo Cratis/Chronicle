@@ -67,7 +67,8 @@ public class ReducersRegistrar : IReducersRegistrar
                                             eventTypes,
                                             reducerType,
                                             reducerType.GetReadModelType()),
-                                        eventSerializer) as IReducerHandler;
+                                        eventSerializer,
+                                        reducer.IsActive) as IReducerHandler;
                                 });
         _executionContextManager = executionContextManager;
         _modelNameResolver = modelNameResolver;
@@ -118,15 +119,17 @@ public class ReducersRegistrar : IReducersRegistrar
         var microserviceId = _executionContextManager.Current.MicroserviceId;
         var route = $"/api/events/store/{microserviceId}/reducers/register/{_connection.ConnectionId}";
 
-        var registrations = _handlers.Values.Select(_ => new ReducerDefinition(
-            _.ReducerId,
-            _.Name,
-            _.EventSequenceId,
-            _.EventTypes.Select(et => new EventTypeWithKeyExpression(et, "$eventSourceId")).ToArray(),
-            new ModelDefinition(
-                _modelNameResolver.GetNameFor(_.ReadModelType),
-                _jsonSchemaGenerator.Generate(_.ReadModelType).ToJson()),
-            WellKnownSinkTypes.MongoDB)).ToArray();
+        var registrations = _handlers.Values
+            .Where(_ => _.IsActive)
+            .Select(_ => new ReducerDefinition(
+                _.ReducerId,
+                _.Name,
+                _.EventSequenceId,
+                _.EventTypes.Select(et => new EventTypeWithKeyExpression(et, "$eventSourceId")).ToArray(),
+                new ModelDefinition(
+                    _modelNameResolver.GetNameFor(_.ReadModelType),
+                    _jsonSchemaGenerator.Generate(_.ReadModelType).ToJson()),
+                WellKnownSinkTypes.MongoDB)).ToArray();
 
         await _connection.PerformCommand(route, registrations);
     }

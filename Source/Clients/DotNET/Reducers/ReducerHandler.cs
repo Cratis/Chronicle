@@ -24,18 +24,21 @@ public class ReducerHandler : IReducerHandler
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the reducer is for.</param>
     /// <param name="reducerInvoker">The actual invoker.</param>
     /// <param name="eventSerializer">The event serializer to use.</param>
+    /// <param name="isActive">Whether or not reducer should be actively running on the Kernel.</param>
     public ReducerHandler(
         ReducerId reducerId,
         ObserverName name,
         EventSequenceId eventSequenceId,
         IReducerInvoker reducerInvoker,
-        IEventSerializer eventSerializer)
+        IEventSerializer eventSerializer,
+        bool isActive)
     {
         ReducerId = reducerId;
         Name = name;
         EventSequenceId = eventSequenceId;
         _reducerInvoker = reducerInvoker;
         _eventSerializer = eventSerializer;
+        IsActive = isActive;
     }
 
     /// <inheritdoc/>
@@ -52,6 +55,9 @@ public class ReducerHandler : IReducerHandler
 
     /// <inheritdoc/>
     public Type ReadModelType => _reducerInvoker.ReadModelType;
+
+    /// <inheritdoc/>
+    public bool IsActive { get; }
 
     /// <inheritdoc/>
     public async Task<InternalReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial)

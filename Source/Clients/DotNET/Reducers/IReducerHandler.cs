@@ -39,6 +39,11 @@ public interface IReducerHandler
     Type ReadModelType { get; }
 
     /// <summary>
+    /// Gets whether or not the reducer should be actively running on the Kernel.
+    /// </summary>
+    bool IsActive { get; }
+
+    /// <summary>
     /// Handle next events as bulk.
     /// </summary>
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to handle.</param>
