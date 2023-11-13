@@ -215,7 +215,8 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton(typeof(IIdentityProvider), _identityProviderType)
             .AddSingleton<IRules, Rules.Rules>()
             .AddSingleton<IAggregateRootFactory, AggregateRootFactory>()
-            .AddSingleton<IAggregateRootStateManager, AggregateRootStateManager>()
+            .AddSingleton<IAggregateRootStateProvider, AggregateRootStateProvider>()
+            .AddSingleton<IAggregateRootEventHandlersFactory, AggregateRootEventHandlersFactory>()
             .AddTransient<ClientObservers>()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>));
 
