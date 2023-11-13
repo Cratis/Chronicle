@@ -40,4 +40,5 @@ public class when_committing : given.an_aggregate_root
     [Fact] void should_append_events_to_event_sequence() => events_to_commit.ShouldContainOnly(first_event, second_event);
     [Fact] void should_return_successful_result() => result.Success.ShouldBeTrue();
     [Fact] void should_contain_events_in_result() => result.Events.ShouldContainOnly(first_event, second_event);
+    [Fact] void should_add_causation() => causation_manager.Verify(_ => _.Add(AggregateRoot.CausationType, IsAny<IDictionary<string, string>>()));
 }
