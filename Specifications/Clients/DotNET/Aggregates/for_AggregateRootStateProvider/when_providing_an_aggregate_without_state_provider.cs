@@ -13,7 +13,7 @@ public class when_providing_an_aggregate_without_state_provider : given.an_aggre
         immediate_projections.Setup(_ => _.HasProjectionFor(typeof(StateForAggregateRoot))).Returns(false);
     }
 
-    async Task Because() => result = await Catch.Exception(() => manager.Provide(aggregate_root, Enumerable.Empty<AppendedEvent>()));
+    async Task Because() => result = await Catch.Exception(() => manager.Provide(aggregate_root, event_sequence.Object));
 
     [Fact] void should_throw_missing_state_provider_exception() => result.ShouldBeOfExactType<MissingAggregateRootStateProvider>();
 }

@@ -56,7 +56,7 @@ public class AggregateRootFactory : IAggregateRootFactory
         var eventHandlers = GetEventHandlers<T>();
 
         var eventSequence = _eventSequences.GetEventSequence(aggregateRoot.EventSequenceId);
-        var events = await GetEvents(id, aggregateRoot, eventHandlers, eventSequence);
+        var events = Enumerable.Empty<AppendedEvent>();
 
         if (aggregateRoot is AggregateRoot knownAggregateRoot)
         {
@@ -64,11 +64,11 @@ public class AggregateRootFactory : IAggregateRootFactory
 
             if (aggregateRoot.IsStateful)
             {
-                await _aggregateRootStateManager.Provide(knownAggregateRoot, events);
+                events = await _aggregateRootStateManager.Provide(knownAggregateRoot, eventSequence);
             }
         }
 
-        await HandleAnyEventHandlers(aggregateRoot, eventHandlers, events);
+        await HandleAnyEventHandlers(aggregateRoot, id, eventHandlers, eventSequence, events);
 
         return aggregateRoot;
     }
@@ -105,11 +105,16 @@ public class AggregateRootFactory : IAggregateRootFactory
         return eventHandlers;
     }
 
-    async Task HandleAnyEventHandlers<T>(T aggregateRoot, IAggregateRootEventHandlers eventHandlers, IImmutableList<AppendedEvent> events)
+    async Task HandleAnyEventHandlers<T>(T aggregateRoot, EventSourceId id, IAggregateRootEventHandlers eventHandlers, IEventSequence eventSequence, IEnumerable<AppendedEvent> events)
         where T : IAggregateRoot
     {
         if (eventHandlers.HasHandleMethods)
         {
+            if (!events.Any())
+            {
+                events = await GetEvents(id, aggregateRoot, eventHandlers, eventSequence);
+            }
+
             var deserializedEventsTasks = events.Select(async _ =>
             {
                 var @event = await _eventSerializer.Deserialize(_);

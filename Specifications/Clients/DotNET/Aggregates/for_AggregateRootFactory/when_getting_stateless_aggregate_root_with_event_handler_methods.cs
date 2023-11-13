@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Aggregates.for_AggregateRootStateFactory;
 
-public class when_getting_stateless_aggregate_root_with_on_methods : given.an_aggregate_root_factory
+public class when_getting_stateless_aggregate_root_with_event_handler_methods : given.an_aggregate_root_factory
 {
     StatelessAggregateRoot result;
     EventSourceId event_source_id;
@@ -33,5 +33,5 @@ public class when_getting_stateless_aggregate_root_with_on_methods : given.an_ag
     [Fact] void should_get_events() => event_sequence.Verify(_ => _.GetForEventSourceIdAndEventTypes(event_source_id, event_types), Once());
     [Fact] void should_handle_events() => event_handlers.Verify(_ => _.Handle(result, IsAny<IEnumerable<EventAndContext>>()), Once());
     [Fact] void should_handle_correct_events() => events_handled.ShouldContainOnly(first_event, second_event);
-    [Fact] void should_not_get_state_from_state_provider() => state_provider.Verify(_ => _.Provide(IsAny<AggregateRoot>(), IsAny<IEnumerable<AppendedEvent>>()), Never());
+    [Fact] void should_not_get_state_from_state_provider() => state_provider.Verify(_ => _.Provide(IsAny<AggregateRoot>(), event_sequence.Object), Never());
 }

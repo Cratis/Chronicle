@@ -23,6 +23,7 @@ public class an_aggregate_root_factory : Specification
     protected IEnumerable<EventType> event_types;
     protected FirstEventType first_event;
     protected SecondEventType second_event;
+    protected IEnumerable<AppendedEvent> appended_events;
 
     void Establish()
     {
@@ -43,7 +44,7 @@ public class an_aggregate_root_factory : Specification
         causation_manager = new();
         event_sequence = new();
 
-        var appended_events = new AppendedEvent[]
+        appended_events = new AppendedEvent[]
         {
             AppendedEvent.EmptyWithEventType(FirstEventType.EventTypeId),
             AppendedEvent.EmptyWithEventType(SecondEventType.EventTypeId)
