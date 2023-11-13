@@ -67,4 +67,9 @@ public interface IClientArtifactsProvider
     /// Gets all the available event information provider types.
     /// </summary>
     IEnumerable<Type> AdditionalEventInformationProviders { get; }
+
+    /// <summary>
+    /// Gets all the available aggregate root types.
+    /// </summary>
+    IEnumerable<Type> AggregateRoots { get; }
 }
