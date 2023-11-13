@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Aggregates;
 /// <summary>
 /// Defines a system that can manage state for an <see cref="AggregateRoot"/>.
 /// </summary>
-public interface IAggregateRootStateManager
+public interface IAggregateRootStateProvider
 {
     /// <summary>
     /// Handle state for an <see cref="AggregateRoot"/>.
@@ -16,5 +16,5 @@ public interface IAggregateRootStateManager
     /// <param name="aggregateRoot">The <see cref="AggregateRoot"/> to handle state for.</param>
     /// <param name="events">The events to handle state for.</param>
     /// <returns>Awaitable task.</returns>
-    Task Handle(AggregateRoot aggregateRoot, IEnumerable<AppendedEvent> events);
+    Task Provide(AggregateRoot aggregateRoot, IEnumerable<AppendedEvent> events);
 }

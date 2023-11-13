@@ -3,9 +3,9 @@
 
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Aggregates.for_AggregateRootStateManager;
+namespace Aksio.Cratis.Aggregates.for_AggregateRootStateProvider;
 
-public class when_handling_an_aggregate_with_projection_state_provider : given.an_aggregate_root_state_manager_and_two_events
+public class when_providing_an_aggregate_with_projection_state_provider : given.an_aggregate_root_state_manager_and_two_events
 {
     StateForAggregateRoot state;
 
@@ -17,7 +17,7 @@ public class when_handling_an_aggregate_with_projection_state_provider : given.a
         immediate_projections.Setup(_ => _.GetInstanceById(aggregate_root.StateType, aggregate_root._eventSourceId)).Returns(Task.FromResult(new ImmediateProjectionResult(state, Enumerable.Empty<PropertyPath>(), 0)));
     }
 
-    Task Because() => manager.Handle(aggregate_root, events);
+    Task Because() => manager.Provide(aggregate_root, events);
 
     [Fact] void should_set_state() => aggregate_root._state.ShouldEqual(state);
 }

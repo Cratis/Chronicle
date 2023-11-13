@@ -3,11 +3,11 @@
 
 using Aksio.Cratis.Reducers;
 
-namespace Aksio.Cratis.Aggregates.for_AggregateRootStateManager.given;
+namespace Aksio.Cratis.Aggregates.for_AggregateRootStateProvider.given;
 
 public class an_aggregate_root_state_manager : Specification
 {
-    protected AggregateRootStateManager manager;
+    protected AggregateRootStateProvider manager;
     protected Mock<IReducersRegistrar> reducers_registrar;
     protected Mock<IImmediateProjections> immediate_projections;
 
@@ -18,7 +18,7 @@ public class an_aggregate_root_state_manager : Specification
         reducers_registrar = new();
         immediate_projections = new();
 
-        manager = new AggregateRootStateManager(reducers_registrar.Object, immediate_projections.Object);
+        manager = new AggregateRootStateProvider(reducers_registrar.Object, immediate_projections.Object);
 
         aggregate_root = new()
         {

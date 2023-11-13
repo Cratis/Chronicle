@@ -3,9 +3,9 @@
 
 using Aksio.Cratis.Reducers;
 
-namespace Aksio.Cratis.Aggregates.for_AggregateRootStateManager;
+namespace Aksio.Cratis.Aggregates.for_AggregateRootStateProvider;
 
-public class when_handling_an_aggregate_with_reducer_state_provider : given.an_aggregate_root_state_manager_and_two_events
+public class when_providing_an_aggregate_with_reducer_state_provider : given.an_aggregate_root_state_manager_and_two_events
 {
     Mock<IReducerHandler> reducer_handler;
     StateForAggregateRoot state;
@@ -21,7 +21,7 @@ public class when_handling_an_aggregate_with_reducer_state_provider : given.an_a
         reducer_handler.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), null)).Returns(Task.FromResult(new InternalReduceResult(state, EventSequenceNumber.Unavailable)));
     }
 
-    Task Because() => manager.Handle(aggregate_root, events);
+    Task Because() => manager.Provide(aggregate_root, events);
 
     [Fact] void should_forward_to_reducer_handler() => reducer_handler.Verify(_ => _.OnNext(events, null));
     [Fact] void should_set_state() => aggregate_root._state.ShouldEqual(state);

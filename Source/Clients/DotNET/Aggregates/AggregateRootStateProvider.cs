@@ -8,19 +8,19 @@ using Aksio.Cratis.Reducers;
 namespace Aksio.Cratis.Aggregates;
 
 /// <summary>
-/// Represents an implementation of <see cref="IAggregateRootStateManager"/>.
+/// Represents an implementation of <see cref="IAggregateRootStateProvider"/>.
 /// </summary>
-public class AggregateRootStateManager : IAggregateRootStateManager
+public class AggregateRootStateProvider : IAggregateRootStateProvider
 {
     readonly IReducersRegistrar _reducersRegistrar;
     readonly IImmediateProjections _immediateProjections;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AggregateRootStateManager"/> class.
+    /// Initializes a new instance of the <see cref="AggregateRootStateProvider"/> class.
     /// </summary>
     /// <param name="reducersRegistrar">All the reducers in the system.</param>
     /// <param name="immediateProjections"><see cref="IImmediateProjections"/> to possibly get state from.</param>
-    public AggregateRootStateManager(
+    public AggregateRootStateProvider(
         IReducersRegistrar reducersRegistrar,
         IImmediateProjections immediateProjections)
     {
@@ -29,7 +29,7 @@ public class AggregateRootStateManager : IAggregateRootStateManager
     }
 
     /// <inheritdoc/>
-    public async Task Handle(AggregateRoot aggregateRoot, IEnumerable<AppendedEvent> events)
+    public async Task Provide(AggregateRoot aggregateRoot, IEnumerable<AppendedEvent> events)
     {
         var hasReducer = _reducersRegistrar.HasReducerFor(aggregateRoot.StateType);
         var hasProjection = _immediateProjections.HasProjectionFor(aggregateRoot.StateType);
