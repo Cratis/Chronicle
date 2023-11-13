@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Text.Json.Nodes;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Identities;
 
@@ -29,7 +28,7 @@ public class when_handling_on_next : given.an_observer_handler
             new(Guid.NewGuid(), 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, Guid.NewGuid(), Guid.NewGuid().ToString(), Enumerable.Empty<Causation>(), Identity.NotSet),
             new ExpandoObject());
 
-        event_serializer.Setup(_ => _.Deserialize(typeof(SomeEvent), IsAny<JsonObject>())).Returns(Task.FromResult<object>(event_content));
+        event_serializer.Setup(_ => _.Deserialize(appended_event)).Returns(Task.FromResult<object>(event_content));
         causation_manager
             .Setup(_ => _.Add(ObserverHandler.CausationType, IsAny<IDictionary<string, string>>()))
             .Callback((CausationType _, IDictionary<string, string> properties) => causation_properties = properties);
