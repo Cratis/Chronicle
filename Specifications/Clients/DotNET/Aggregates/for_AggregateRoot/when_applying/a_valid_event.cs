@@ -5,10 +5,7 @@ namespace Aksio.Cratis.Aggregates.for_AggregateRoot.when_applying;
 
 public class a_valid_event : given.an_aggregate_root
 {
-    [EventType("d1faeb5d-2951-484a-89d5-bff35a357514")]
-    record MyEvent(string Something);
-
-    MyEvent event_to_apply;
+    FirstEventType event_to_apply;
     object event_applied;
 
     void Establish()

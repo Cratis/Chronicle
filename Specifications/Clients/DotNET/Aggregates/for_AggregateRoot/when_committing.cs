@@ -5,14 +5,8 @@ namespace Aksio.Cratis.Aggregates.for_AggregateRoot;
 
 public class when_committing : given.an_aggregate_root
 {
-    [EventType("d1faeb5d-2951-484a-89d5-bff35a357514")]
-    record FirstEvent(string Something);
-
-    [EventType("be1c9989-7bae-4947-af10-07f90581b63c")]
-    record SecondEvent(string Something);
-
-    FirstEvent first_event;
-    SecondEvent second_event;
+    FirstEventType first_event;
+    SecondEventType second_event;
 
     EventSourceId event_source_id_to_commit;
     IEnumerable<object> events_to_commit;
