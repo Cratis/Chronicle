@@ -16,8 +16,8 @@ builder.UseCratis();
 //     .MultiTenanted());
 
 builder.Services.AddTransient<CartReducer>();
-//builder.Services.AddTransient<OrderStateReducer>();
-builder.Services.AddTransient<OrderStateProjection>();
+builder.Services.AddTransient<OrderStateReducer>();
+//builder.Services.AddTransient<OrderStateProjection>();
 var app = builder.Build();
 
 app.MapGet("/add", () =>
