@@ -114,8 +114,10 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         return value.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
     }
 
-    object? ConvertFromBsonValue(BsonValue bsonValue, JsonSchemaProperty schemaProperty)
+    object? ConvertFromBsonValue(BsonValue bsonValue, JsonSchema schemaProperty)
     {
+        schemaProperty = schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema;
+
         if (bsonValue is BsonDocument childDocument)
         {
             if (schemaProperty.IsDictionary)
@@ -125,7 +127,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
             return ToExpandoObject(
                 childDocument,
-                schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
+                schemaProperty);
         }
 
         if (bsonValue is BsonArray array)
@@ -206,7 +208,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
         if (value is BsonArray array)
         {
-            return array.Select(_ => ConvertUnknownSchemaTypeToClrType(value)).ToArray();
+            return array.Select(_ => ConvertUnknownSchemaTypeToClrType(_)).ToArray();
         }
 
         switch (value.BsonType)
@@ -236,7 +238,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         return null;
     }
 
-    object? ConvertBsonValueFromUnknownFormat(BsonValue value, JsonSchemaProperty schemaProperty)
+    object? ConvertBsonValueFromUnknownFormat(BsonValue value, JsonSchema schemaProperty)
     {
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
                 schemaProperty.Reference.Type :
