@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Aggregates;
 
-public class MyAggregateRoot : AggregateRoot
+public class StatelessAggregateRoot : AggregateRoot
 {
     public FirstEventType FirstEventTypeInstance;
     public SecondEventType SecondEventTypeInstance;
