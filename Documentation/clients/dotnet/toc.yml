@@ -2,6 +2,8 @@
   href: ./model-names.md
 - name: Events
   href: events/events.md
+- name: Aggregate Root
+  href: aggregates/aggregate-root.md
 - name: Observers
   href: events/observers.md
 - name: Integration
