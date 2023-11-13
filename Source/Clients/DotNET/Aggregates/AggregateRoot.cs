@@ -51,12 +51,10 @@ public class AggregateRoot : IAggregateRoot
     readonly List<object> _uncommittedEvents = new();
 
     /// <inheritdoc/>
-    public virtual EventSequenceId EventSequenceId => EventSequenceId.Log;
+    public virtual bool IsStateful => false;
 
-    /// <summary>
-    /// Cratis Internal: Whether or not the aggregate root is stateful.
-    /// </summary>
-    internal virtual bool IsStateful => false;
+    /// <inheritdoc/>
+    public virtual EventSequenceId EventSequenceId => EventSequenceId.Log;
 
     /// <summary>
     /// Cratis Internal: The type of state for the aggregate root.
@@ -115,7 +113,7 @@ public class AggregateRoot<TState> : AggregateRoot
     internal TState _state = default!;
 
     /// <inheritdoc/>
-    internal override bool IsStateful => true;
+    public override bool IsStateful => true;
 
     /// <inheritdoc/>
     internal override Type StateType => typeof(TState);

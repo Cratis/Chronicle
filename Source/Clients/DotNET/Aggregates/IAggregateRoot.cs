@@ -11,6 +11,11 @@ namespace Aksio.Cratis.Aggregates;
 public interface IAggregateRoot
 {
     /// <summary>
+    /// Gets whether or not the aggregate root is stateful.
+    /// </summary>
+    public bool IsStateful { get; }
+
+    /// <summary>
     /// Gets the <see cref="EventSequenceId"/> for the aggregate root.
     /// </summary>
     EventSequenceId EventSequenceId { get; }
