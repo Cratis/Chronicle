@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Aksio.Cratis.Aggregates;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Models;
@@ -10,6 +11,7 @@ using Aksio.Cratis.Observation.Reducers;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Sinks;
+using Aksio.Reflection;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Reducers;
@@ -19,6 +21,7 @@ namespace Aksio.Cratis.Reducers;
 /// </summary>
 public class ReducersRegistrar : IReducersRegistrar
 {
+    readonly IEnumerable<Type> _aggregateRootStateTypes;
     readonly IDictionary<Type, IReducerHandler> _handlers;
     readonly IExecutionContextManager _executionContextManager;
     readonly IModelNameResolver _modelNameResolver;
@@ -51,11 +54,19 @@ public class ReducersRegistrar : IReducersRegistrar
         IConnection connection,
         ILogger<ReducersRegistrar> logger)
     {
+        _aggregateRootStateTypes = clientArtifacts
+                                            .AggregateRoots
+                                            .SelectMany(_ => _.AllBaseAndImplementingTypes())
+                                            .Where(_ => _.IsDerivedFromOpenGeneric(typeof(AggregateRoot<>)))
+                                            .Select(_ => _.GetGenericArguments()[0])
+                                            .ToArray();
+
         _handlers = clientArtifacts.Reducers
                             .ToDictionary(
                                 _ => _,
                                 reducerType =>
                                 {
+                                    var readModelType = reducerType.GetReadModelType();
                                     reducerValidator.Validate(reducerType);
                                     var reducer = reducerType.GetCustomAttribute<ReducerAttribute>()!;
                                     return new ReducerHandler(
@@ -66,9 +77,9 @@ public class ReducersRegistrar : IReducersRegistrar
                                             serviceProvider,
                                             eventTypes,
                                             reducerType,
-                                            reducerType.GetReadModelType()),
+                                            readModelType),
                                         eventSerializer,
-                                        reducer.IsActive) as IReducerHandler;
+                                        ShouldReducerBeActive(readModelType, reducer)) as IReducerHandler;
                                 });
         _executionContextManager = executionContextManager;
         _modelNameResolver = modelNameResolver;
@@ -132,6 +143,16 @@ public class ReducersRegistrar : IReducersRegistrar
                 WellKnownSinkTypes.MongoDB)).ToArray();
 
         await _connection.PerformCommand(route, registrations);
+    }
+
+    bool ShouldReducerBeActive(Type readModelType, ReducerAttribute reducerAttribute)
+    {
+        if (!reducerAttribute.IsActive || _aggregateRootStateTypes.Contains(readModelType))
+        {
+            return false;
+        }
+
+        return reducerAttribute.IsActive;
     }
 
     void ThrowIfTypeIsNotAnObserver(Type reducerType)
