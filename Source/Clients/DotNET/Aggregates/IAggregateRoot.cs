@@ -28,5 +28,5 @@ public interface IAggregateRoot
     /// Commits the aggregate root.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task Commit();
+    Task<AggregateRootCommitResult> Commit();
 }

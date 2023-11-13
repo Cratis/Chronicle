@@ -39,7 +39,7 @@ public class AggregateRootStateManager : IAggregateRootStateManager
             return;
         }
 
-        var result = await _immediateProjections.GetInstanceById(aggregateRoot.StateType, aggregateRoot.EventSourceId);
+        var result = await _immediateProjections.GetInstanceById(aggregateRoot.StateType, aggregateRoot._eventSourceId);
         aggregateRoot.SetState(result.Model);
     }
 }

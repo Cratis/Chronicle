@@ -66,7 +66,7 @@ public class AggregateRootFactory : IAggregateRootFactory
             knownAggregateRoot.EventSequence = eventSequence;
             knownAggregateRoot.CausationManager = _causationManager;
             knownAggregateRoot.EventHandlers = eventHandlers;
-            knownAggregateRoot.EventSourceId = id;
+            knownAggregateRoot._eventSourceId = id;
 
             if (knownAggregateRoot.IsStateful)
             {

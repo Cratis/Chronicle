@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
@@ -30,7 +31,7 @@ public class AggregateRoot : IAggregateRoot
     /// <summary>
     /// Cratis Internal: The event handlers for the aggregate root.
     /// </summary>
-    internal AggregateRootEventHandlers EventHandlers = default!;
+    internal IAggregateRootEventHandlers EventHandlers = default!;
 
     /// <summary>
     /// Cratis Internal: The event sequence for the aggregate root.
@@ -43,9 +44,9 @@ public class AggregateRoot : IAggregateRoot
     internal ICausationManager CausationManager = default!;
 
     /// <summary>
-    /// Cratis Internal: The <see cref="EventSourceId"/> for the aggregate root.
+    /// Cratis Internal: The <see cref="_eventSourceId"/> for the aggregate root.
     /// </summary>
-    internal EventSourceId EventSourceId = EventSourceId.Unspecified;
+    internal EventSourceId _eventSourceId = EventSourceId.Unspecified;
 
     readonly List<object> _uncommittedEvents = new();
 
@@ -62,6 +63,11 @@ public class AggregateRoot : IAggregateRoot
     /// </summary>
     internal virtual Type StateType => typeof(object);
 
+    /// <summary>
+    /// Gets the <see cref="EventSourceId"/> for the aggregate root.
+    /// </summary>
+    protected EventSourceId EventSourceId => _eventSourceId;
+
     /// <inheritdoc/>
     public async Task Apply<T>(T @event)
         where T : class
@@ -72,7 +78,7 @@ public class AggregateRoot : IAggregateRoot
     }
 
     /// <inheritdoc/>
-    public async Task Commit()
+    public async Task<AggregateRootCommitResult> Commit()
     {
         CausationManager.Add(CausationType, new Dictionary<string, string>
         {
@@ -80,7 +86,11 @@ public class AggregateRoot : IAggregateRoot
             { CausationEventSequenceIdProperty, EventSequenceId.ToString() }
         });
 
-        await EventSequence.AppendMany(EventSourceId, _uncommittedEvents);
+        await EventSequence.AppendMany(_eventSourceId, _uncommittedEvents.ToArray());
+
+        var result = new AggregateRootCommitResult(true, _uncommittedEvents.ToImmutableList());
+        _uncommittedEvents.Clear();
+        return result;
     }
 
     /// <summary>
