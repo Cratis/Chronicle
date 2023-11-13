@@ -34,7 +34,7 @@ public class EventLogForSpecifications : IEventLog
     public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _sequence.AppendedEvents;
 
     /// <inheritdoc/>
-    public Task<IImmutableList<AppendedEvent>> GetForEventSourceId(EventSourceId eventSourceId) =>
+    public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes) =>
         Task.FromResult<IImmutableList<AppendedEvent>>(ImmutableList<AppendedEvent>.Empty);
 
     /// <inheritdoc/>
