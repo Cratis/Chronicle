@@ -1,3 +1,10 @@
+# [v9.8.0] - 2023-11-13 [PR: #1013](https://github.com/aksio-insurtech/Cratis/pull/1013)
+
+### Fixed
+
+- Fixing BSON to `ExpandoObject` converter to support collections of primitives such as `int` and `string`. It made the items `null` before.
+
+
 # [v9.8.0-beta.1] - 2023-11-2 [PR: #0]()
 
 No release notes
