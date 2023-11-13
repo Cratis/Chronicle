@@ -81,6 +81,9 @@ public class ImmediateProjections : IImmediateProjections
     public IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <inheritdoc/>
+    public bool HasProjectionFor(Type modelType) => _definitionsByModelType.ContainsKey(modelType);
+
+    /// <inheritdoc/>
     public async Task<ImmediateProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey)
     {
         var projectionDefinition = _definitionsByModelType[modelType];

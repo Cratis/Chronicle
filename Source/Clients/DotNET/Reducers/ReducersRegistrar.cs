@@ -115,6 +115,12 @@ public class ReducersRegistrar : IReducersRegistrar
     }
 
     /// <inheritdoc/>
+    public IReducerHandler GetForModelType(Type modelType) => _handlers[modelType];
+
+    /// <inheritdoc/>
+    public bool HasReducerFor(Type modelType) => _handlers.ContainsKey(modelType);
+
+    /// <inheritdoc/>
     public async Task Initialize()
     {
         _logger.RegisterReducers();

@@ -31,9 +31,22 @@ public class AggregateRootStateManager : IAggregateRootStateManager
     /// <inheritdoc/>
     public async Task Handle(AggregateRoot aggregateRoot, IEnumerable<AppendedEvent> events)
     {
-        var reducer = _reducersRegistrar.GetAll().SingleOrDefault(_ => _.ReadModelType == aggregateRoot.StateType);
-        if (reducer is not null)
+        var hasReducer = _reducersRegistrar.HasReducerFor(aggregateRoot.StateType);
+        var hasProjection = _immediateProjections.HasProjectionFor(aggregateRoot.StateType);
+
+        if (!hasReducer && !hasProjection)
         {
+            throw new MissingAggregateRootStateProvider(aggregateRoot.GetType());
+        }
+
+        if (hasReducer && hasProjection)
+        {
+            throw new AmbiguousAggregateRootStateProvider(aggregateRoot.GetType());
+        }
+
+        if (hasReducer)
+        {
+            var reducer = _reducersRegistrar.GetForModelType(aggregateRoot.StateType);
             var reducerResult = await reducer.OnNext(events, null);
             aggregateRoot.SetState(reducerResult.State!);
             return;

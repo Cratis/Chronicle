@@ -18,6 +18,13 @@ public interface IImmediateProjections
     IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
+    /// Check if there is a definition for a specific type.
+    /// </summary>
+    /// <param name="modelType">Type of model to check for.</param>
+    /// <returns>True if it exists, false if not.</returns>
+    bool HasProjectionFor(Type modelType);
+
+    /// <summary>
     /// Get an instance by a specific <see cref="ModelKey"/> and type.
     /// </summary>
     /// <param name="modelType">Type of model the projection is for.</param>
