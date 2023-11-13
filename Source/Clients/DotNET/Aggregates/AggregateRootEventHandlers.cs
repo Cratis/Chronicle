@@ -9,9 +9,9 @@ using Aksio.Cratis.Events;
 namespace Aksio.Cratis.Aggregates;
 
 /// <summary>
-/// Represents the event handlers for an <see cref="AggregateRoot"/>.
+/// Represents an implementation of <see cref="IAggregateRootEventHandlers"/>.
 /// </summary>
-public class AggregateRootEventHandlers
+public class AggregateRootEventHandlers : IAggregateRootEventHandlers
 {
     readonly Dictionary<Type, MethodInfo> _handleMethodsByEventType;
 
@@ -29,22 +29,13 @@ public class AggregateRootEventHandlers
         EventTypes = _handleMethodsByEventType.Keys.Select(_ => eventTypes.GetEventTypeFor(_)!).ToImmutableList();
     }
 
-    /// <summary>
-    /// Gets whether or not it has any handle methods.
-    /// </summary>
+    /// <inheritdoc/>
     public bool HasHandleMethods => _handleMethodsByEventType.Count > 0;
 
-    /// <summary>
-    /// Gets a collection of <see cref="EventType">event types</see> that can be handled.
-    /// </summary>
+    /// <inheritdoc/>
     public IImmutableList<EventType> EventTypes { get; }
 
-    /// <summary>
-    /// Handle a collection of events.
-    /// </summary>
-    /// <param name="target">The target <see cref="IAggregateRoot"/> to handle for.</param>
-    /// <param name="events">Collection of <see cref="AppendedEvent"/> to handle.</param>
-    /// <returns>Awaitable task.</returns>
+    /// <inheritdoc/>
     public async Task Handle(IAggregateRoot target, IEnumerable<EventAndContext> events)
     {
         foreach (var eventAndContext in events)
