@@ -9,7 +9,6 @@ namespace Aksio.Cratis.Aggregates.for_AggregateRootStateProvider;
 public class when_providing_an_aggregate_with_projection_state_provider : given.an_aggregate_root_state_manager_and_two_events
 {
     StateForAggregateRoot state;
-    IEnumerable<AppendedEvent> result;
 
     void Establish()
     {
@@ -22,9 +21,8 @@ public class when_providing_an_aggregate_with_projection_state_provider : given.
             .ReturnsAsync(ImmutableList<AppendedEvent>.Empty);
     }
 
-    async Task Because() => result = await manager.Provide(aggregate_root, event_sequence.Object);
+    async Task Because() => await manager.Provide(aggregate_root);
 
     [Fact] void should_set_state() => aggregate_root._state.ShouldEqual(state);
-    [Fact] void should_not_get_events() => event_sequence.Verify(_ => _.GetForEventSourceIdAndEventTypes(aggregate_root._eventSourceId, event_types), Never());
-    [Fact] void should_return_no_events() => result.ShouldBeEmpty();
+    [Fact] void should_not_get_events() => event_sequence.Verify(_ => _.GetForEventSourceIdAndEventTypes(aggregate_root._eventSourceId, event_types), Never);
 }

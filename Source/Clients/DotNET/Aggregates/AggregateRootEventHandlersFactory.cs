@@ -9,5 +9,12 @@ namespace Aksio.Cratis.Aggregates;
 public class AggregateRootEventHandlersFactory : IAggregateRootEventHandlersFactory
 {
     /// <inheritdoc/>
-    public IAggregateRootEventHandlers Create(Type type) => new AggregateRootEventHandlers(type);
+    public IAggregateRootEventHandlers CreateFor(IAggregateRoot aggregateRoot)
+    {
+        if (aggregateRoot.IsStateful)
+        {
+            return NullAggregateRootEventHandlers.Instance;
+        }
+        return new AggregateRootEventHandlers(aggregateRoot.GetType());
+    }
 }

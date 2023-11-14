@@ -1,9 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Reducers;
 
@@ -31,7 +28,7 @@ public class AggregateRootStateProvider : IAggregateRootStateProvider
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<AppendedEvent>> Provide(AggregateRoot aggregateRoot, IEventSequence eventSequence)
+    public async Task Provide(AggregateRoot aggregateRoot)
     {
         var hasReducer = _reducersRegistrar.HasReducerFor(aggregateRoot.StateType);
         var hasProjection = _immediateProjections.HasProjectionFor(aggregateRoot.StateType);
@@ -48,17 +45,15 @@ public class AggregateRootStateProvider : IAggregateRootStateProvider
 
         if (hasReducer)
         {
-            var events = await eventSequence.GetForEventSourceIdAndEventTypes(aggregateRoot._eventSourceId, aggregateRoot.EventHandlers.EventTypes);
+            var events = await aggregateRoot.EventSequence.GetForEventSourceIdAndEventTypes(aggregateRoot._eventSourceId, aggregateRoot.EventHandlers.EventTypes);
 
             var reducer = _reducersRegistrar.GetForModelType(aggregateRoot.StateType);
             var reducerResult = await reducer.OnNext(events, null);
             aggregateRoot.MutateState(reducerResult.State!);
-            return events;
+            return;
         }
 
         var result = await _immediateProjections.GetInstanceById(aggregateRoot.StateType, aggregateRoot._eventSourceId);
         aggregateRoot.MutateState(result.Model);
-
-        return ImmutableList<AppendedEvent>.Empty;
     }
 }

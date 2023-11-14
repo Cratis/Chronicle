@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Aggregates.for_AggregateRoot;
 
-public class when_committing : given.an_aggregate_root
+public class when_committing : given.a_stateless_aggregate_root
 {
     FirstEventType first_event;
     SecondEventType second_event;

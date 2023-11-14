@@ -53,10 +53,9 @@ public class AggregateRootFactory : IAggregateRootFactory
         where T : IAggregateRoot
     {
         var aggregateRoot = ActivatorUtilities.CreateInstance<T>(_serviceProvider);
-        var eventHandlers = GetEventHandlers<T>();
+        var eventHandlers = GetEventHandlers(aggregateRoot);
 
         var eventSequence = _eventSequences.GetEventSequence(aggregateRoot.EventSequenceId);
-        var events = Enumerable.Empty<AppendedEvent>();
 
         if (aggregateRoot is AggregateRoot knownAggregateRoot)
         {
@@ -64,13 +63,13 @@ public class AggregateRootFactory : IAggregateRootFactory
 
             if (aggregateRoot.IsStateful)
             {
-                events = await _aggregateRootStateManager.Provide(knownAggregateRoot, eventSequence);
+                await _aggregateRootStateManager.Provide(knownAggregateRoot);
             }
         }
 
         if (!aggregateRoot.IsStateful)
         {
-            await HandleAnyEventHandlers(aggregateRoot, id, eventHandlers, eventSequence, events);
+            await HandleAnyEventHandlers(aggregateRoot, id, eventHandlers, eventSequence);
         }
 
         if (aggregateRoot is AggregateRoot aggregateRootToActivate)
@@ -101,28 +100,24 @@ public class AggregateRootFactory : IAggregateRootFactory
         return events;
     }
 
-    IAggregateRootEventHandlers GetEventHandlers<T>()
+    IAggregateRootEventHandlers GetEventHandlers<T>(T aggregateRoot)
         where T : IAggregateRoot
     {
         if (!_eventHandlersByAggregateRootType.TryGetValue(typeof(T), out var eventHandlers))
         {
-            eventHandlers = _aggregateRootEventHandlersFactory.Create(typeof(T));
+            eventHandlers = _aggregateRootEventHandlersFactory.CreateFor(aggregateRoot);
             _eventHandlersByAggregateRootType[typeof(T)] = eventHandlers;
         }
 
         return eventHandlers;
     }
 
-    async Task HandleAnyEventHandlers<T>(T aggregateRoot, EventSourceId id, IAggregateRootEventHandlers eventHandlers, IEventSequence eventSequence, IEnumerable<AppendedEvent> events)
+    async Task HandleAnyEventHandlers<T>(T aggregateRoot, EventSourceId id, IAggregateRootEventHandlers eventHandlers, IEventSequence eventSequence)
         where T : IAggregateRoot
     {
         if (eventHandlers.HasHandleMethods)
         {
-            if (!events.Any())
-            {
-                events = await GetEvents(id, aggregateRoot, eventHandlers, eventSequence);
-            }
-
+            var events = await GetEvents(id, aggregateRoot, eventHandlers, eventSequence);
             var deserializedEventsTasks = events.Select(async _ =>
             {
                 var @event = await _eventSerializer.Deserialize(_);

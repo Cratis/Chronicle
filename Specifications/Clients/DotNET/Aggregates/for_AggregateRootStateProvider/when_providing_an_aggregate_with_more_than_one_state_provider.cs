@@ -13,7 +13,7 @@ public class when_providing_an_aggregate_with_more_than_one_state_provider : giv
         immediate_projections.Setup(_ => _.HasProjectionFor(typeof(StateForAggregateRoot))).Returns(true);
     }
 
-    async Task Because() => result = await Catch.Exception(() => manager.Provide(aggregate_root, event_sequence.Object));
+    async Task Because() => result = await Catch.Exception(() => manager.Provide(aggregate_root));
 
     [Fact] void should_throw_ambiguous_state_provider_exception() => result.ShouldBeOfExactType<AmbiguousAggregateRootStateProvider>();
 }

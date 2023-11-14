@@ -1,16 +1,15 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Aggregates.for_AggregateRoot.when_applying;
+namespace Aksio.Cratis.Aggregates.for_AggregateRoot.when_applying_to_stateless_aggregate_root;
 
-public class a_valid_event : given.an_aggregate_root
+public class a_valid_event : given.a_stateless_aggregate_root
 {
     FirstEventType event_to_apply;
     object event_applied;
 
     void Establish()
     {
-        aggregate_root.EventHandlers = event_handlers.Object;
         event_handlers.Setup(_ => _.Handle(aggregate_root, IsAny<IEnumerable<EventAndContext>>())).Returns((IAggregateRoot _, IEnumerable<EventAndContext> events) =>
         {
             event_applied = events.First().Event;

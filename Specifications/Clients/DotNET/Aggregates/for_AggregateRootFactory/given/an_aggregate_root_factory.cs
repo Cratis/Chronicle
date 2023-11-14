@@ -38,7 +38,7 @@ public class an_aggregate_root_factory : Specification
         event_handlers_factory = new();
         event_handlers = new();
         event_handlers.Setup(_ => _.EventTypes).Returns(event_types.ToImmutableList());
-        event_handlers_factory.Setup(_ => _.Create(IsAny<Type>())).Returns(event_handlers.Object);
+        event_handlers_factory.Setup(_ => _.CreateFor(IsAny<IAggregateRoot>())).Returns(event_handlers.Object);
 
         state_provider = new();
         causation_manager = new();

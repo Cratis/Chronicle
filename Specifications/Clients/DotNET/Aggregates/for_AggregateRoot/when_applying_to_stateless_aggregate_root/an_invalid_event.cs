@@ -3,12 +3,9 @@
 
 namespace Aksio.Cratis.Aggregates.for_AggregateRoot.when_applying;
 
-public class an_invalid_event : Specification
+public class an_invalid_event : given.a_stateless_aggregate_root
 {
-    AggregateRoot aggregate_root;
     Exception result;
-
-    void Establish() => aggregate_root = new();
 
     async void Because() => result = await Catch.Exception(() => aggregate_root.Apply(new object()));
 

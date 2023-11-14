@@ -11,7 +11,7 @@ public interface IAggregateRootEventHandlersFactory
     /// <summary>
     /// Create an instance of <see cref="IAggregateRootEventHandlers"/> for a specific aggregate root type.
     /// </summary>
-    /// <param name="type">Aggregate root type to create for.</param>
+    /// <param name="aggregateRoot">The <see cref="IAggregateRoot"/> to create for.</param>
     /// <returns>A new <see cref="IAggregateRootEventHandlers"/> instance.</returns>
-    IAggregateRootEventHandlers Create(Type type);
+    IAggregateRootEventHandlers CreateFor(IAggregateRoot aggregateRoot);
 }

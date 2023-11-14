@@ -25,9 +25,9 @@ public class when_providing_an_aggregate_with_reducer_state_provider : given.an_
             .ReturnsAsync(events.ToImmutableList());
     }
 
-    Task Because() => manager.Provide(aggregate_root, event_sequence.Object);
+    Task Because() => manager.Provide(aggregate_root);
 
     [Fact] void should_forward_to_reducer_handler() => reducer_handler.Verify(_ => _.OnNext(events, null));
-    [Fact] void should_not_get_events() => event_sequence.Verify(_ => _.GetForEventSourceIdAndEventTypes(aggregate_root._eventSourceId, event_types), Once());
+    [Fact] void should_not_get_events() => event_sequence.Verify(_ => _.GetForEventSourceIdAndEventTypes(aggregate_root._eventSourceId, event_types), Once);
     [Fact] void should_set_state() => aggregate_root._state.ShouldEqual(state);
 }
