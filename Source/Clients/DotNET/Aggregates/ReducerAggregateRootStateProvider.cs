@@ -29,15 +29,15 @@ public class ReducerAggregateRootStateProvider : IAggregateRootStateProvider
     public async Task<object?> Provide()
     {
         var events = await _aggregateRoot.EventSequence.GetForEventSourceIdAndEventTypes(_aggregateRoot._eventSourceId, _aggregateRoot.EventHandlers.EventTypes);
-        var reducerResult = await _reducer.OnNext(events, null);
-        return reducerResult.State;
+        var result = await _reducer.OnNext(events, null);
+        return result.State;
     }
 
     /// <inheritdoc/>
     public async Task<object?> Update(IEnumerable<object> events)
     {
         var eventsWithContext = events.Select(_ => new EventAndContext(_, EventContext.EmptyWithEventSourceId(_aggregateRoot._eventSourceId)));
-        await _reducer.Invoker.Invoke(eventsWithContext, _aggregateRoot.GetState());
-        return Task.FromResult(_aggregateRoot.GetState());
+        var result = await _reducer.Invoker.Invoke(eventsWithContext, _aggregateRoot.GetState());
+        return result.State;
     }
 }
