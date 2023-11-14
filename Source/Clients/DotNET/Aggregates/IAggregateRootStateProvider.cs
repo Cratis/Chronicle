@@ -17,7 +17,8 @@ public interface IAggregateRootStateProvider
     /// <summary>
     /// Update the state of an <see cref="AggregateRoot"/> with events.
     /// </summary>
+    /// <param name="initialState">The initial state to update from.</param>
     /// <param name="events">The events to update with.</param>
     /// <returns>Updated state.</returns>
-    Task<object?> Update(IEnumerable<object> events);
+    Task<object?> Update(object? initialState, IEnumerable<object> events);
 }

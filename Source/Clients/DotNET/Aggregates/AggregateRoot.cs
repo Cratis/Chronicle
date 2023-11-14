@@ -81,6 +81,8 @@ public class AggregateRoot : IAggregateRoot
         typeof(T).ValidateEventType();
         _uncommittedEvents.Add(@event);
 
+        MutateState(await StateProvider.Update(GetState(), new[] { @event }));
+
         if (!IsStateful)
         {
             await EventHandlers.Handle(this, new[] { new EventAndContext(@event, EventContext.From(EventSourceId, EventSequenceNumber.Unavailable)) });

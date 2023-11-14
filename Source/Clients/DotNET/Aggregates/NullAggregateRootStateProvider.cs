@@ -17,5 +17,5 @@ public class NullAggregateRootStateProvider : IAggregateRootStateProvider
     public Task<object?> Provide() => Task.FromResult<object?>(null);
 
     /// <inheritdoc/>
-    public Task<object?> Update(IEnumerable<object> events) => Task.FromResult<object?>(null);
+    public Task<object?> Update(object? initialState, IEnumerable<object> events) => Task.FromResult<object?>(null);
 }

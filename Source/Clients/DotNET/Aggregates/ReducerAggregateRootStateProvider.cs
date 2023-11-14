@@ -34,10 +34,10 @@ public class ReducerAggregateRootStateProvider : IAggregateRootStateProvider
     }
 
     /// <inheritdoc/>
-    public async Task<object?> Update(IEnumerable<object> events)
+    public async Task<object?> Update(object? initialState, IEnumerable<object> events)
     {
         var eventsWithContext = events.Select(_ => new EventAndContext(_, EventContext.EmptyWithEventSourceId(_aggregateRoot._eventSourceId)));
-        var result = await _reducer.Invoker.Invoke(eventsWithContext, _aggregateRoot.GetState());
+        var result = await _reducer.Invoker.Invoke(eventsWithContext, initialState);
         return result.State;
     }
 }

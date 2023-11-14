@@ -34,5 +34,5 @@ public class ProjectionAggregateRootStateProvider : IAggregateRootStateProvider
     }
 
     /// <inheritdoc/>
-    public Task<object?> Update(IEnumerable<object> events) => Task.FromResult(_aggregateRoot.GetState());
+    public Task<object?> Update(object? initialState, IEnumerable<object> events) => Task.FromResult(_aggregateRoot.GetState());
 }
