@@ -29,6 +29,11 @@ public class AggregateRoot : IAggregateRoot
     public static readonly CausationType CausationType = "AggregateRoot";
 
     /// <summary>
+    /// Cratis Internal: The uncommitted events for the aggregate root.
+    /// </summary>
+    internal readonly List<object> _uncommittedEvents = new();
+
+    /// <summary>
     /// Cratis Internal: The event handlers for the aggregate root.
     /// </summary>
     internal IAggregateRootEventHandlers EventHandlers = default!;
@@ -47,8 +52,6 @@ public class AggregateRoot : IAggregateRoot
     /// Cratis Internal: The <see cref="_eventSourceId"/> for the aggregate root.
     /// </summary>
     internal EventSourceId _eventSourceId = EventSourceId.Unspecified;
-
-    readonly List<object> _uncommittedEvents = new();
 
     /// <inheritdoc/>
     public virtual bool IsStateful => false;
