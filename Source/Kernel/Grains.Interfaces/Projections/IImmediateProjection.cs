@@ -18,7 +18,19 @@ public interface IImmediateProjection : IGrainWithGuidCompoundKey
     /// <summary>
     /// Get the model instance.
     /// </summary>
-    /// <param name="projectionId"><see cref="ProjectionId"/> to get for.</param>
     /// <returns>The <see cref="ImmediateProjectionResult"/>.</returns>
-    Task<ImmediateProjectionResult> GetModelInstance(ProjectionId projectionId);
+    Task<ImmediateProjectionResult> GetModelInstance();
+
+    /// <summary>
+    /// Get the current model instance with additional events applied. Ignoring any new events from the event store.
+    /// </summary>
+    /// <param name="events">Collection of events to apply.</param>
+    /// <returns>The <see cref="ImmediateProjectionResult"/>.</returns>
+    Task<ImmediateProjectionResult> GetCurrentModelInstanceWithAdditionalEventsApplied(IEnumerable<EventToApply> events);
+
+    /// <summary>
+    /// Dehydrate the immediate projection instance.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Dehydrate();
 }
