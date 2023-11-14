@@ -17,4 +17,12 @@ public class StatelessAggregateRoot : AggregateRoot
     {
         SecondEventTypeInstance = @event;
     }
+
+    public int OnActivateCount;
+
+    protected override Task OnActivate()
+    {
+        OnActivateCount++;
+        return Task.CompletedTask;
+    }
 }
