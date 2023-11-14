@@ -52,12 +52,12 @@ public class AggregateRootStateProvider : IAggregateRootStateProvider
 
             var reducer = _reducersRegistrar.GetForModelType(aggregateRoot.StateType);
             var reducerResult = await reducer.OnNext(events, null);
-            aggregateRoot.SetState(reducerResult.State!);
+            aggregateRoot.MutateState(reducerResult.State!);
             return events;
         }
 
         var result = await _immediateProjections.GetInstanceById(aggregateRoot.StateType, aggregateRoot._eventSourceId);
-        aggregateRoot.SetState(result.Model);
+        aggregateRoot.MutateState(result.Model);
 
         return ImmutableList<AppendedEvent>.Empty;
     }

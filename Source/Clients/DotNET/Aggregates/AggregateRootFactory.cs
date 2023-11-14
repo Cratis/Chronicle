@@ -68,7 +68,15 @@ public class AggregateRootFactory : IAggregateRootFactory
             }
         }
 
-        await HandleAnyEventHandlers(aggregateRoot, id, eventHandlers, eventSequence, events);
+        if (!aggregateRoot.IsStateful)
+        {
+            await HandleAnyEventHandlers(aggregateRoot, id, eventHandlers, eventSequence, events);
+        }
+
+        if (aggregateRoot is AggregateRoot aggregateRootToActivate)
+        {
+            await aggregateRootToActivate.OnActivate();
+        }
 
         return aggregateRoot;
     }

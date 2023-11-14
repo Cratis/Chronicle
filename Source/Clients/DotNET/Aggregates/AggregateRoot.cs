@@ -75,7 +75,11 @@ public class AggregateRoot : IAggregateRoot
     {
         typeof(T).ValidateEventType();
         _uncommittedEvents.Add(@event);
-        await EventHandlers.Handle(this, new[] { new EventAndContext(@event, EventContext.From(EventSourceId, EventSequenceNumber.Unavailable)) });
+
+        if (!IsStateful)
+        {
+            await EventHandlers.Handle(this, new[] { new EventAndContext(@event, EventContext.From(EventSourceId, EventSequenceNumber.Unavailable)) });
+        }
     }
 
     /// <inheritdoc/>
@@ -98,9 +102,15 @@ public class AggregateRoot : IAggregateRoot
     /// Cratis Internal: Set the state for the aggregate root.
     /// </summary>
     /// <param name="state">State to set.</param>
-    internal virtual void SetState(object state)
+    internal virtual void MutateState(object state)
     {
     }
+
+    /// <summary>
+    /// Called when the aggregate root is ready to be activated.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected internal virtual Task OnActivate() => Task.CompletedTask;
 }
 
 /// <summary>
@@ -127,5 +137,5 @@ public class AggregateRoot<TState> : AggregateRoot
     protected TState State => _state;
 
     /// <inheritdoc/>
-    internal override void SetState(object state) => _state = (state as TState)!;
+    internal override void MutateState(object state) => _state = (state as TState)!;
 }
