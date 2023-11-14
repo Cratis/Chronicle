@@ -25,6 +25,7 @@ public class ImmediateProjections : IImmediateProjections
     readonly IClientArtifactsProvider _clientArtifacts;
     readonly IServiceProvider _serviceProvider;
     readonly IEventTypes _eventTypes;
+    readonly IEventSerializer _eventSerializer;
     readonly IJsonSchemaGenerator _schemaGenerator;
     readonly IExecutionContextManager _executionContextManager;
     readonly JsonSerializerOptions _jsonSerializerOptions;
@@ -40,6 +41,7 @@ public class ImmediateProjections : IImmediateProjections
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for providing projections.</param>
     /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
+    /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating model schema.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="projectionSerializer">The <see cref="IJsonProjectionSerializer"/> for serializing projection definitions.</param>
@@ -50,6 +52,7 @@ public class ImmediateProjections : IImmediateProjections
         IClientArtifactsProvider clientArtifacts,
         IServiceProvider serviceProvider,
         IEventTypes eventTypes,
+        IEventSerializer eventSerializer,
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions,
         IJsonProjectionSerializer projectionSerializer,
@@ -60,6 +63,7 @@ public class ImmediateProjections : IImmediateProjections
         _clientArtifacts = clientArtifacts;
         _serviceProvider = serviceProvider;
         _eventTypes = eventTypes;
+        _eventSerializer = eventSerializer;
         _schemaGenerator = schemaGenerator;
         _jsonSerializerOptions = jsonSerializerOptions;
         _projectionSerializer = projectionSerializer;
@@ -105,7 +109,66 @@ public class ImmediateProjections : IImmediateProjections
     }
 
     /// <inheritdoc/>
-    public async Task<ImmediateProjectionResultRaw> GetInstanceById(ProjectionId identifier, ModelKey modelKey)
+    public Task<ImmediateProjectionResultRaw> GetInstanceById(ProjectionId identifier, ModelKey modelKey) =>
+            GetInstanceByIdImplementation(identifier, modelKey);
+
+    /// <inheritdoc/>
+    public async Task<ImmediateProjectionResult> GetInstanceByIdForSession(
+        CorrelationId correlationId,
+        Type modelType,
+        ModelKey modelKey)
+    {
+        var projectionDefinition = _definitionsByModelType[modelType];
+        var result = await GetInstanceByIdImplementation(projectionDefinition.Identifier, modelKey, correlationId);
+        var model = result.Model.Deserialize(modelType, _jsonSerializerOptions)!;
+        return new(model, result.AffectedProperties, result.ProjectedEventsCount);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ImmediateProjectionResult> GetInstanceByIdForSessionWithEventsApplied(
+        CorrelationId correlationId,
+        Type modelType,
+        ModelKey modelKey,
+        IEnumerable<object> events)
+    {
+        var projectionDefinition = _definitionsByModelType[modelType];
+        var eventsToApplyTasks = events.Select(async _ =>
+            new EventToApply(
+                _eventTypes.GetEventTypeFor(_.GetType()),
+                await _eventSerializer.Serialize(_))).ToArray();
+
+        var eventsToApply = await Task.WhenAll(eventsToApplyTasks);
+
+        var immediateProjection = new ImmediateProjectionWithEventsToApply(
+            projectionDefinition.Identifier,
+            EventSequenceId.Log,
+            modelKey,
+            eventsToApply);
+
+        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}/session/{correlationId}/with-events";
+
+        var response = await _connection.PerformCommand(route, immediateProjection);
+        var element = (JsonElement)response.Response!;
+        var result = element.Deserialize<ImmediateProjectionResultRaw>(_jsonSerializerOptions)!;
+
+        var model = result.Model.Deserialize(modelType, _jsonSerializerOptions)!;
+        return new(model, result.AffectedProperties, result.ProjectedEventsCount);
+    }
+
+    /// <inheritdoc/>
+    public async Task DehydrateSession(CorrelationId correlationId, Type modelType, ModelKey modelKey)
+    {
+        var projectionDefinition = _definitionsByModelType[modelType];
+        var immediateProjection = new ImmediateProjection(
+            projectionDefinition.Identifier,
+            EventSequenceId.Log,
+            modelKey);
+
+        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}/session/{correlationId}/dehydrate";
+        await _connection.PerformCommand(route, immediateProjection);
+    }
+
+    async Task<ImmediateProjectionResultRaw> GetInstanceByIdImplementation(ProjectionId identifier, ModelKey modelKey, CorrelationId? correlationId = default)
     {
         var immediateProjection = new ImmediateProjection(
             identifier,
@@ -113,6 +176,10 @@ public class ImmediateProjections : IImmediateProjections
             modelKey);
 
         var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}";
+        if (correlationId is not null)
+        {
+            route = $"{route}/session/{correlationId}";
+        }
 
         var result = await _connection.PerformCommand(route, immediateProjection);
         var element = (JsonElement)result.Response!;

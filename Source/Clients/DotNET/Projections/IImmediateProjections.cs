@@ -47,4 +47,32 @@ public interface IImmediateProjections
     /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
     /// <returns>A raw JSON instance for the id.</returns>
     Task<ImmediateProjectionResultRaw> GetInstanceById(ProjectionId identifier, ModelKey modelKey);
+
+    /// <summary>
+    /// Get an instance by a specific <see cref="ModelKey"/> and type for the current session.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier for the session.</param>
+    /// <param name="modelType">Type of model the projection is for.</param>
+    /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
+    /// <returns>An instance for the id as a <see cref="JsonNode"/>..</returns>
+    Task<ImmediateProjectionResult> GetInstanceByIdForSession(CorrelationId correlationId, Type modelType, ModelKey modelKey);
+
+    /// <summary>
+    /// Get the current instance for a specific <see cref="ModelKey"/> and type for the current session and apply events to it.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier for the session.</param>
+    /// <param name="modelType">Type of model the projection is for.</param>
+    /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
+    /// <param name="events">Collection of events to apply.</param>
+    /// <returns>An instance for the id as a <see cref="JsonNode"/>..</returns>
+    Task<ImmediateProjectionResult> GetInstanceByIdForSessionWithEventsApplied(CorrelationId correlationId, Type modelType, ModelKey modelKey, IEnumerable<object> events);
+
+    /// <summary>
+    /// Dehydrate a session.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier for the session.</param>
+    /// <param name="modelType">Type of model the projection is for.</param>
+    /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
+    /// <returns>Awaitable task.</returns>
+    Task DehydrateSession(CorrelationId correlationId, Type modelType, ModelKey modelKey);
 }
