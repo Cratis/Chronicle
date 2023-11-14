@@ -17,28 +17,58 @@ public static class AggregateRootExtensions
     /// <summary>
     /// Prepare an <see cref="AggregateRoot"/> for testing.
     /// </summary>
-    /// <param name="aggregateRoot"><see cref="AggregateRoot"/> to prepare.</param>
+    /// <param name="aggregateRoot"><see cref="AggregateRoot"/> to initialize.</param>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> for the aggregate root.</param>
-    public static void Prepare(this AggregateRoot aggregateRoot, EventSourceId eventSourceId)
+    /// <param name="events">Optional events to initialize the aggregate root with.</param>
+    /// <returns>The aggregate root for continuation.</returns>
+    public static AggregateRoot Initialize(this AggregateRoot aggregateRoot, EventSourceId eventSourceId, IEnumerable<object>? events = default)
     {
         aggregateRoot.EventHandlers = new AggregateRootEventHandlers(aggregateRoot.GetType());
         aggregateRoot.EventSequence = new NullEventSequence();
         aggregateRoot.CausationManager = new NullCausationManager();
         aggregateRoot._eventSourceId = eventSourceId;
+
+        if (events?.Count() > 0)
+        {
+            aggregateRoot.EventHandlers.Handle(aggregateRoot, events.Select(_ => new EventAndContext(_, EventContext.EmptyWithEventSourceId(eventSourceId))));
+        }
+
+        aggregateRoot.OnActivate().GetAwaiter().GetResult();
+
+        return aggregateRoot;
     }
 
     /// <summary>
     /// Prepare an <see cref="AggregateRoot"/> for testing.
     /// </summary>
-    /// <param name="aggregateRoot"><see cref="AggregateRoot"/> to prepare.</param>
+    /// <param name="aggregateRoot"><see cref="AggregateRoot"/> to initialize.</param>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> for the aggregate root.</param>
-    /// <param name="state">State to set for the aggregate root.</param>
+    /// <param name="state">Optional state to set for the aggregate root. If not set, this will default to null.</param>
     /// <typeparam name="TState">Type of state to set.</typeparam>
-    public static void Prepare<TState>(this AggregateRoot aggregateRoot, EventSourceId eventSourceId, TState state)
-        where TState : class, new()
+    /// <returns>The aggregate root for continuation.</returns>
+    public static AggregateRoot<TState> Initialize<TState>(this AggregateRoot<TState> aggregateRoot, EventSourceId eventSourceId, TState? state = null)
+        where TState : class
     {
-        aggregateRoot.Prepare(eventSourceId);
-        aggregateRoot.SetState(state);
+        aggregateRoot.Initialize(eventSourceId);
+        aggregateRoot.MutateState(state!);
+
+        aggregateRoot.OnActivate().GetAwaiter().GetResult();
+
+        return aggregateRoot;
+    }
+
+    /// <summary>
+    /// Mutate the state of an <see cref="AggregateRoot{TState}"/>.
+    /// </summary>
+    /// <param name="aggregateRoot"><see cref="AggregateRoot"/> to set state for.</param>
+    /// <param name="state">State to set.</param>
+    /// <typeparam name="TState">Type of state to set.</typeparam>
+    /// <returns>The aggregate root for continuation.</returns>
+    public static AggregateRoot<TState> SetState<TState>(this AggregateRoot<TState> aggregateRoot, TState state)
+        where TState : class
+    {
+        aggregateRoot.MutateState(state);
+        return aggregateRoot;
     }
 
     /// <summary>
