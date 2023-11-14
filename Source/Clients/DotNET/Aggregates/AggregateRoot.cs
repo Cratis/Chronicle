@@ -107,10 +107,16 @@ public class AggregateRoot : IAggregateRoot
     }
 
     /// <summary>
+    /// Cratis Internal: Invoke the OnActivate method.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal Task InternalOnActivate() => OnActivate();
+
+    /// <summary>
     /// Called when the aggregate root is ready to be activated.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    protected internal virtual Task OnActivate() => Task.CompletedTask;
+    protected virtual Task OnActivate() => Task.CompletedTask;
 }
 
 /// <summary>

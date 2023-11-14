@@ -33,7 +33,7 @@ public static class AggregateRootExtensions
             aggregateRoot.EventHandlers.Handle(aggregateRoot, events.Select(_ => new EventAndContext(_, EventContext.EmptyWithEventSourceId(eventSourceId))));
         }
 
-        aggregateRoot.OnActivate().GetAwaiter().GetResult();
+        aggregateRoot.InternalOnActivate().GetAwaiter().GetResult();
 
         return aggregateRoot;
     }
@@ -52,7 +52,7 @@ public static class AggregateRootExtensions
         aggregateRoot.Initialize(eventSourceId);
         aggregateRoot.MutateState(state!);
 
-        aggregateRoot.OnActivate().GetAwaiter().GetResult();
+        aggregateRoot.InternalOnActivate().GetAwaiter().GetResult();
 
         return aggregateRoot;
     }

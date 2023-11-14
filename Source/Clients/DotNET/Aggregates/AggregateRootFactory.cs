@@ -74,7 +74,7 @@ public class AggregateRootFactory : IAggregateRootFactory
 
         if (aggregateRoot is AggregateRoot aggregateRootToActivate)
         {
-            await aggregateRootToActivate.OnActivate();
+            await aggregateRootToActivate.InternalOnActivate();
         }
 
         return aggregateRoot;
