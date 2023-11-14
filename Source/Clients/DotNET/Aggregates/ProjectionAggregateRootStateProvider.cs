@@ -29,10 +29,28 @@ public class ProjectionAggregateRootStateProvider : IAggregateRootStateProvider
     /// <inheritdoc/>
     public async Task<object?> Provide()
     {
-        var result = await _immediateProjections.GetInstanceById(_aggregateRoot.StateType, _aggregateRoot._eventSourceId);
+        var result = await _immediateProjections.GetInstanceByIdForSession(
+            _aggregateRoot.CorrelationId,
+            _aggregateRoot.StateType,
+            _aggregateRoot._eventSourceId);
         return result.Model;
     }
 
     /// <inheritdoc/>
-    public Task<object?> Update(object? initialState, IEnumerable<object> events) => Task.FromResult(_aggregateRoot.GetState());
+    public async Task<object?> Update(object? initialState, IEnumerable<object> events)
+    {
+        var result = await _immediateProjections.GetInstanceByIdForSessionWithEventsApplied(
+            _aggregateRoot.CorrelationId,
+            _aggregateRoot.StateType,
+            _aggregateRoot._eventSourceId,
+            events);
+        return result.Model;
+    }
+
+    /// <inheritdoc/>
+    public Task Dehydrate() =>
+        _immediateProjections.DehydrateSession(
+            _aggregateRoot.CorrelationId,
+            _aggregateRoot.StateType,
+            _aggregateRoot._eventSourceId);
 }

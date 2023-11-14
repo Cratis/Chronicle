@@ -21,4 +21,10 @@ public interface IAggregateRootStateProvider
     /// <param name="events">The events to update with.</param>
     /// <returns>Updated state.</returns>
     Task<object?> Update(object? initialState, IEnumerable<object> events);
+
+    /// <summary>
+    /// Dehydrate any state.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Dehydrate();
 }

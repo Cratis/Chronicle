@@ -40,4 +40,7 @@ public class ReducerAggregateRootStateProvider : IAggregateRootStateProvider
         var result = await _reducer.Invoker.Invoke(eventsWithContext, initialState);
         return result.State;
     }
+
+    /// <inheritdoc/>
+    public Task Dehydrate() => Task.CompletedTask;
 }
