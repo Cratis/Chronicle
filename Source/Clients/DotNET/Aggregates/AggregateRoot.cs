@@ -58,6 +58,11 @@ public class AggregateRoot : IAggregateRoot
     /// </summary>
     internal EventSourceId _eventSourceId = EventSourceId.Unspecified;
 
+    /// <summary>
+    /// Cratis Internal: The <see cref="CorrelationId"/> for the aggregate root.
+    /// </summary>
+    internal CorrelationId CorrelationId = CorrelationId.New();
+
     /// <inheritdoc/>
     public virtual bool IsStateful => false;
 
@@ -102,6 +107,8 @@ public class AggregateRoot : IAggregateRoot
 
         var result = new AggregateRootCommitResult(true, _uncommittedEvents.ToImmutableList());
         _uncommittedEvents.Clear();
+
+        await StateProvider.Dehydrate();
         return result;
     }
 
