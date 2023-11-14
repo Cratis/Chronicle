@@ -35,4 +35,5 @@ public class when_committing : given.a_stateless_aggregate_root
     [Fact] void should_return_successful_result() => result.Success.ShouldBeTrue();
     [Fact] void should_contain_events_in_result() => result.Events.ShouldContainOnly(first_event, second_event);
     [Fact] void should_add_causation() => causation_manager.Verify(_ => _.Add(AggregateRoot.CausationType, IsAny<IDictionary<string, string>>()));
+    [Fact] void should_dehydrate_state() => state_provider.Verify(_ => _.Dehydrate(), Once);
 }
