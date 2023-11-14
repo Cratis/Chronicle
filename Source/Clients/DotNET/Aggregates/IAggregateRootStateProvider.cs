@@ -11,7 +11,13 @@ public interface IAggregateRootStateProvider
     /// <summary>
     /// Handle state for an <see cref="AggregateRoot"/>.
     /// </summary>
-    /// <param name="aggregateRoot">The <see cref="AggregateRoot"/> to handle state for.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Provide(AggregateRoot aggregateRoot);
+    /// <returns>State provided.</returns>
+    Task<object?> Provide();
+
+    /// <summary>
+    /// Update the state of an <see cref="AggregateRoot"/> with events.
+    /// </summary>
+    /// <param name="events">The events to update with.</param>
+    /// <returns>Updated state.</returns>
+    Task<object?> Update(IEnumerable<object> events);
 }

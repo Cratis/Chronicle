@@ -33,6 +33,6 @@ public class when_getting_stateless_aggregate_root_with_event_handler_methods : 
     [Fact] void should_get_events() => event_sequence.Verify(_ => _.GetForEventSourceIdAndEventTypes(event_source_id, event_types), Once);
     [Fact] void should_handle_events() => event_handlers.Verify(_ => _.Handle(result, IsAny<IEnumerable<EventAndContext>>()), Once);
     [Fact] void should_handle_correct_events() => events_handled.ShouldContainOnly(first_event, second_event);
-    [Fact] void should_not_get_state_from_state_provider() => state_provider.Verify(_ => _.Provide(IsAny<AggregateRoot>()), Never);
+    [Fact] void should_not_get_state_from_state_provider() => state_provider.Verify(_ => _.Provide(), Never);
     [Fact] void should_call_on_activate() => result.OnActivateCount.ShouldEqual(1);
 }

@@ -39,6 +39,11 @@ public class AggregateRoot : IAggregateRoot
     internal IAggregateRootEventHandlers EventHandlers = default!;
 
     /// <summary>
+    /// Cratis Internal: The state provider for the aggregate root.
+    /// </summary>
+    internal IAggregateRootStateProvider StateProvider = default!;
+
+    /// <summary>
     /// Cratis Internal: The event sequence for the aggregate root.
     /// </summary>
     internal IEventSequence EventSequence = default!;
@@ -102,9 +107,15 @@ public class AggregateRoot : IAggregateRoot
     /// Cratis Internal: Set the state for the aggregate root.
     /// </summary>
     /// <param name="state">State to set.</param>
-    internal virtual void MutateState(object state)
+    internal virtual void MutateState(object? state)
     {
     }
+
+    /// <summary>
+    /// Cratis Internal: Get the state for the aggregate root.
+    /// </summary>
+    /// <returns>The current state.</returns>
+    internal virtual object? GetState() => null;
 
     /// <summary>
     /// Cratis Internal: Invoke the OnActivate method.
@@ -140,8 +151,11 @@ public class AggregateRoot<TState> : AggregateRoot
     /// <summary>
     /// Gets the current state of the aggregate root.
     /// </summary>
-    protected TState State => _state;
+    protected TState? State => _state;
 
     /// <inheritdoc/>
-    internal override void MutateState(object state) => _state = (state as TState)!;
+    internal override void MutateState(object? state) => _state = (state as TState)!;
+
+    /// <inheritdoc/>
+    internal override object? GetState() => _state;
 }

@@ -44,6 +44,11 @@ public interface IReducerHandler
     bool IsActive { get; }
 
     /// <summary>
+    /// Gets the <see cref="IReducerInvoker"/> that will perform the invocations.
+    /// </summary>
+    IReducerInvoker Invoker { get; }
+
+    /// <summary>
     /// Handle next events as bulk.
     /// </summary>
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to handle.</param>

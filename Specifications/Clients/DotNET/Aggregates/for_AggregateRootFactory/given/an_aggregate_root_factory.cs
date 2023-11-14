@@ -12,6 +12,7 @@ public class an_aggregate_root_factory : Specification
 {
     protected Mock<IAggregateRootEventHandlersFactory> event_handlers_factory;
     protected Mock<IAggregateRootEventHandlers> event_handlers;
+    protected Mock<IAggregateRootStateProviders> state_providers;
     protected Mock<IAggregateRootStateProvider> state_provider;
     protected Mock<ICausationManager> causation_manager;
     protected Mock<IEventSequence> event_sequence;
@@ -40,6 +41,8 @@ public class an_aggregate_root_factory : Specification
         event_handlers.Setup(_ => _.EventTypes).Returns(event_types.ToImmutableList());
         event_handlers_factory.Setup(_ => _.CreateFor(IsAny<IAggregateRoot>())).Returns(event_handlers.Object);
 
+        state_providers = new();
+        state_providers.Setup(_ => _.CreateFor(IsAny<AggregateRoot>())).ReturnsAsync(NullAggregateRootStateProvider.Instance);
         state_provider = new();
         causation_manager = new();
         event_sequence = new();
@@ -65,7 +68,7 @@ public class an_aggregate_root_factory : Specification
         service_provider = new();
 
         factory = new(
-            state_provider.Object,
+            state_providers.Object,
             event_handlers_factory.Object,
             causation_manager.Object,
             event_sequences.Object,

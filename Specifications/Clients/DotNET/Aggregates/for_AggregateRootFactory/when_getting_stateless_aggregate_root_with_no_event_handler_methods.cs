@@ -24,6 +24,6 @@ public class when_getting_stateless_aggregate_root_with_no_event_handler_methods
     [Fact] void should_set_event_source_id() => result._eventSourceId.ShouldEqual(event_source_id);
     [Fact] void should_get_events() => event_sequence.Verify(_ => _.GetForEventSourceIdAndEventTypes(event_source_id, event_types), Never);
     [Fact] void should_handle_events() => event_handlers.Verify(_ => _.Handle(result, IsAny<IEnumerable<EventAndContext>>()), Never);
-    [Fact] void should_not_get_state_from_state_provider() => state_provider.Verify(_ => _.Provide(IsAny<AggregateRoot>()), Never);
+    [Fact] void should_not_get_state_from_state_provider() => state_provider.Verify(_ => _.Provide(), Never);
     [Fact] void should_call_on_activate() => result.OnActivateCount.ShouldEqual(1);
 }

@@ -50,7 +50,7 @@ public static class AggregateRootExtensions
         where TState : class
     {
         aggregateRoot.Initialize(eventSourceId);
-        aggregateRoot.MutateState(state!);
+        aggregateRoot.MutateState(state);
 
         aggregateRoot.InternalOnActivate().GetAwaiter().GetResult();
 

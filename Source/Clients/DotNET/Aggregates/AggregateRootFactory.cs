@@ -16,7 +16,7 @@ namespace Aksio.Cratis.Aggregates;
 public class AggregateRootFactory : IAggregateRootFactory
 {
     readonly IDictionary<Type, IAggregateRootEventHandlers> _eventHandlersByAggregateRootType = new Dictionary<Type, IAggregateRootEventHandlers>();
-    readonly IAggregateRootStateProvider _aggregateRootStateManager;
+    readonly IAggregateRootStateProviders _aggregateRootStateProviders;
     readonly IAggregateRootEventHandlersFactory _aggregateRootEventHandlersFactory;
     readonly ICausationManager _causationManager;
     readonly IEventSequences _eventSequences;
@@ -26,21 +26,21 @@ public class AggregateRootFactory : IAggregateRootFactory
     /// <summary>
     /// Initializes a new instance of the <see cref="AggregateRootFactory"/> class.
     /// </summary>
-    /// <param name="aggregateRootStateManager"><see cref="IAggregateRootStateProvider"/> for managing state for an aggregate root.</param>
+    /// <param name="aggregateRootStateProviders"><see cref="IAggregateRootStateProvider"/> for managing state for an aggregate root.</param>
     /// <param name="aggregateRootEventHandlersFactory"><see cref="IAggregateRootEventHandlersFactory"/> for creating <see cref="IAggregateRootEventHandlers"/>.</param>
     /// <param name="causationManager">The <see cref="ICausationManager"/> for handling causation.</param>
     /// <param name="eventSequences"><see cref="IEventSequences"/> to get event sequence to work with.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances.</param>
     public AggregateRootFactory(
-        IAggregateRootStateProvider aggregateRootStateManager,
+        IAggregateRootStateProviders aggregateRootStateProviders,
         IAggregateRootEventHandlersFactory aggregateRootEventHandlersFactory,
         ICausationManager causationManager,
         IEventSequences eventSequences,
         IEventSerializer eventSerializer,
         IServiceProvider serviceProvider)
     {
-        _aggregateRootStateManager = aggregateRootStateManager;
+        _aggregateRootStateProviders = aggregateRootStateProviders;
         _aggregateRootEventHandlersFactory = aggregateRootEventHandlersFactory;
         _causationManager = causationManager;
         _eventSequences = eventSequences;
@@ -59,12 +59,16 @@ public class AggregateRootFactory : IAggregateRootFactory
 
         if (aggregateRoot is AggregateRoot knownAggregateRoot)
         {
-            SetAggregateRootInternals(id, eventHandlers, eventSequence, knownAggregateRoot);
+            var stateProvider = await _aggregateRootStateProviders.CreateFor(knownAggregateRoot);
+            SetAggregateRootInternals(
+                id,
+                eventHandlers,
+                stateProvider,
+                eventSequence,
+                knownAggregateRoot);
 
-            if (aggregateRoot.IsStateful)
-            {
-                await _aggregateRootStateManager.Provide(knownAggregateRoot);
-            }
+            var state = await stateProvider.Provide();
+            knownAggregateRoot.MutateState(state);
         }
 
         if (!aggregateRoot.IsStateful)
@@ -80,11 +84,17 @@ public class AggregateRootFactory : IAggregateRootFactory
         return aggregateRoot;
     }
 
-    void SetAggregateRootInternals(EventSourceId id, IAggregateRootEventHandlers eventHandlers, IEventSequence eventSequence, AggregateRoot aggregateRoot)
+    void SetAggregateRootInternals(
+        EventSourceId id,
+        IAggregateRootEventHandlers eventHandlers,
+        IAggregateRootStateProvider stateProvider,
+        IEventSequence eventSequence,
+        AggregateRoot aggregateRoot)
     {
+        aggregateRoot.EventHandlers = eventHandlers;
+        aggregateRoot.StateProvider = stateProvider;
         aggregateRoot.EventSequence = eventSequence;
         aggregateRoot.CausationManager = _causationManager;
-        aggregateRoot.EventHandlers = eventHandlers;
         aggregateRoot._eventSourceId = id;
     }
 

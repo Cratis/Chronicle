@@ -7,19 +7,19 @@ using Aksio.Cratis.Reducers;
 namespace Aksio.Cratis.Aggregates;
 
 /// <summary>
-/// Represents an implementation of <see cref="IAggregateRootStateProvider"/>.
+/// Represents an implementation of <see cref="IAggregateRootStateProviders"/>.
 /// </summary>
-public class AggregateRootStateProvider : IAggregateRootStateProvider
+public class AggregateRootStateProviders : IAggregateRootStateProviders
 {
     readonly IReducersRegistrar _reducersRegistrar;
     readonly IImmediateProjections _immediateProjections;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AggregateRootStateProvider"/> class.
+    /// Initializes a new instance of the <see cref="AggregateRootStateProviders"/> class.
     /// </summary>
     /// <param name="reducersRegistrar">All the reducers in the system.</param>
     /// <param name="immediateProjections"><see cref="IImmediateProjections"/> to possibly get state from.</param>
-    public AggregateRootStateProvider(
+    public AggregateRootStateProviders(
         IReducersRegistrar reducersRegistrar,
         IImmediateProjections immediateProjections)
     {
@@ -28,8 +28,13 @@ public class AggregateRootStateProvider : IAggregateRootStateProvider
     }
 
     /// <inheritdoc/>
-    public async Task Provide(AggregateRoot aggregateRoot)
+    public Task<IAggregateRootStateProvider> CreateFor(AggregateRoot aggregateRoot)
     {
+        if (!aggregateRoot.IsStateful)
+        {
+            return Task.FromResult<IAggregateRootStateProvider>(NullAggregateRootStateProvider.Instance);
+        }
+
         var hasReducer = _reducersRegistrar.HasReducerFor(aggregateRoot.StateType);
         var hasProjection = _immediateProjections.HasProjectionFor(aggregateRoot.StateType);
 
@@ -45,15 +50,10 @@ public class AggregateRootStateProvider : IAggregateRootStateProvider
 
         if (hasReducer)
         {
-            var events = await aggregateRoot.EventSequence.GetForEventSourceIdAndEventTypes(aggregateRoot._eventSourceId, aggregateRoot.EventHandlers.EventTypes);
-
             var reducer = _reducersRegistrar.GetForModelType(aggregateRoot.StateType);
-            var reducerResult = await reducer.OnNext(events, null);
-            aggregateRoot.MutateState(reducerResult.State!);
-            return;
+            return Task.FromResult<IAggregateRootStateProvider>(new ReducerAggregateRootStateProvider(aggregateRoot, reducer));
         }
 
-        var result = await _immediateProjections.GetInstanceById(aggregateRoot.StateType, aggregateRoot._eventSourceId);
-        aggregateRoot.MutateState(result.Model);
+        return Task.FromResult<IAggregateRootStateProvider>(new ProjectionAggregateRootStateProvider(aggregateRoot, _immediateProjections));
     }
 }
