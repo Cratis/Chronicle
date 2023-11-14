@@ -12,19 +12,21 @@ namespace Basic;
 
 public class Order : AggregateRoot<OrderState>
 {
-    public void DoStuff()
+    public async Task DoStuff()
     {
-        Console.WriteLine(State.CartItems.Count());
+        Console.WriteLine($"Before : {State.CartItems.Count()}");
 
-        Apply(new ItemAddedToCart(
+        await Apply(new ItemAddedToCart(
             new(Guid.NewGuid()),
             new(Guid.NewGuid()),
             1));
+
+        Console.WriteLine($"After : {State.CartItems.Count()}");
     }
 
-    public void DoOtherStuff()
+    public async Task DoOtherStuff()
     {
-        Apply(new ItemRemovedFromCart(
+        await Apply(new ItemRemovedFromCart(
             new(Guid.NewGuid()),
             new(Guid.NewGuid())));
     }
@@ -43,30 +45,30 @@ public class Order : AggregateRoot<OrderState>
 
 public record OrderState(int Items, IEnumerable<CartItem> CartItems);
 
-[Reducer("5027a520-6d25-47c7-9d52-b1e9f82905d2")]
-public class OrderStateReducer : IReducerFor<OrderState>
-{
-    public Task<OrderState> ItemAdded(ItemAddedToCart @event, OrderState? initial, EventContext context)
-    {
-        initial ??= new OrderState(0, Enumerable.Empty<CartItem>());
-        initial = initial with { Items = initial.Items + 1 };
-        return Task.FromResult(initial);
-    }
-}
-
-
-// public class OrderStateProjection : IImmediateProjectionFor<OrderState>
+// [Reducer("5027a520-6d25-47c7-9d52-b1e9f82905d2")]
+// public class OrderStateReducer : IReducerFor<OrderState>
 // {
-//     public ProjectionId Identifier => "4c6f7eac-d74d-425b-b2fd-e32e8e365b32";
-
-//     public void Define(IProjectionBuilderFor<OrderState> builder) => builder
-//         .Children(_ => _.CartItems, cb => cb
-//             .IdentifiedBy(m => m.MaterialId)
-//             .From<ItemAddedToCart>(_ => _
-//                 .UsingKey(e => e.MaterialId)
-//                 .Set(m => m.Quantity).To(e => e.Quantity))
-//             .RemovedWith<ItemRemovedFromCart>()
-//             .From<QuantityAdjustedForItemInCart>(_ => _
-//                 .UsingKey(e => e.MaterialId)
-//                 .Set(m => m.Quantity).To(e => e.Quantity)));
+//     public Task<OrderState> ItemAdded(ItemAddedToCart @event, OrderState? initial, EventContext context)
+//     {
+//         initial ??= new OrderState(0, Enumerable.Empty<CartItem>());
+//         initial = initial with { Items = initial.Items + 1 };
+//         return Task.FromResult(initial);
+//     }
 // }
+
+
+public class OrderStateProjection : IImmediateProjectionFor<OrderState>
+{
+    public ProjectionId Identifier => "4c6f7eac-d74d-425b-b2fd-e32e8e365b32";
+
+    public void Define(IProjectionBuilderFor<OrderState> builder) => builder
+        .Children(_ => _.CartItems, cb => cb
+            .IdentifiedBy(m => m.MaterialId)
+            .From<ItemAddedToCart>(_ => _
+                .UsingKey(e => e.MaterialId)
+                .Set(m => m.Quantity).To(e => e.Quantity))
+            .RemovedWith<ItemRemovedFromCart>()
+            .From<QuantityAdjustedForItemInCart>(_ => _
+                .UsingKey(e => e.MaterialId)
+                .Set(m => m.Quantity).To(e => e.Quantity)));
+}

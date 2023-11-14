@@ -16,8 +16,8 @@ builder.UseCratis();
 //     .MultiTenanted());
 
 builder.Services.AddTransient<CartReducer>();
-builder.Services.AddTransient<OrderStateReducer>();
-//builder.Services.AddTransient<OrderStateProjection>();
+//builder.Services.AddTransient<OrderStateReducer>();
+builder.Services.AddTransient<OrderStateProjection>();
 var app = builder.Build();
 
 app.MapGet("/add", () =>
@@ -34,8 +34,8 @@ app.MapGet("/agg", async () =>
     var aggregateRootFactory = app.Services.GetRequiredService<IAggregateRootFactory>();
     var eventSourceId = (EventSourceId)"299681c4-f100-4dea-bfea-633115349ed1";
     var order = await aggregateRootFactory.Get<Order>(eventSourceId);
-    order.DoStuff();
-    order.DoOtherStuff();
+    await order.DoStuff();
+    await order.DoOtherStuff();
     await order.Commit();
 });
 
