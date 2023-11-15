@@ -15,7 +15,6 @@ public class ReducerHandler : IReducerHandler
 {
     readonly IReducerInvoker _reducerInvoker;
     readonly IEventSerializer _eventSerializer;
-    readonly IEventTypes _eventTypes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerHandler"/> class.
@@ -23,23 +22,24 @@ public class ReducerHandler : IReducerHandler
     /// <param name="reducerId">The identifier of the reducer.</param>
     /// <param name="name">The name of the reducer.</param>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the reducer is for.</param>
-    /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
-    /// <param name="reducerInvoker">The actual invoker.</param>
+    /// <param name="invoker">The actual invoker.</param>
     /// <param name="eventSerializer">The event serializer to use.</param>
+    /// <param name="isActive">Whether or not reducer should be actively running on the Kernel.</param>
     public ReducerHandler(
         ReducerId reducerId,
         ObserverName name,
         EventSequenceId eventSequenceId,
-        IEventTypes eventTypes,
-        IReducerInvoker reducerInvoker,
-        IEventSerializer eventSerializer)
+        IReducerInvoker invoker,
+        IEventSerializer eventSerializer,
+        bool isActive)
     {
         ReducerId = reducerId;
         Name = name;
         EventSequenceId = eventSequenceId;
-        _eventTypes = eventTypes;
-        _reducerInvoker = reducerInvoker;
+        _reducerInvoker = invoker;
         _eventSerializer = eventSerializer;
+        IsActive = isActive;
+        Invoker = invoker;
     }
 
     /// <inheritdoc/>
@@ -58,12 +58,17 @@ public class ReducerHandler : IReducerHandler
     public Type ReadModelType => _reducerInvoker.ReadModelType;
 
     /// <inheritdoc/>
+    public bool IsActive { get; }
+
+    /// <inheritdoc/>
+    public IReducerInvoker Invoker { get; }
+
+    /// <inheritdoc/>
     public async Task<InternalReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial)
     {
         var tasks = events.Select(async @event =>
         {
-            var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.Type.Id);
-            var content = await _eventSerializer.Deserialize(eventType, @event.Content);
+            var content = await _eventSerializer.Deserialize(@event);
             return new EventAndContext(content, @event.Context);
         });
         var eventAndContexts = await Task.WhenAll(tasks.ToArray()!);

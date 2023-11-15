@@ -33,4 +33,11 @@ public interface IEventSerializer
     /// <param name="expandoObject">Object to deserialize.</param>
     /// <returns>Deserialized instance.</returns>
     Task<object> Deserialize(Type type, ExpandoObject expandoObject);
+
+    /// <summary>
+    /// Deserialize an <see cref="AppendedEvent"/> to its actual type.
+    /// </summary>
+    /// <param name="event"><see cref="AppendedEvent"/> to deserialize.</param>
+    /// <returns>The deserialized event in the target CLR type.</returns>
+    Task<object> Deserialize(AppendedEvent @event);
 }

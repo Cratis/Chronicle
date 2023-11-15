@@ -16,6 +16,7 @@ public class EventSerializer : IEventSerializer
 {
     readonly IClientArtifactsProvider _clientArtifacts;
     readonly IServiceProvider _serviceProvider;
+    readonly IEventTypes _eventTypes;
     readonly JsonSerializerOptions _serializerOptions;
 
     /// <summary>
@@ -33,6 +34,7 @@ public class EventSerializer : IEventSerializer
     {
         _clientArtifacts = clientArtifacts;
         _serviceProvider = serviceProvider;
+        _eventTypes = eventTypes;
         _serializerOptions = new JsonSerializerOptions(serializerOptions)
         {
             Converters =
@@ -65,5 +67,15 @@ public class EventSerializer : IEventSerializer
         // TODO: Optimize this. It shouldn't be necessary to go from Expando to Json and back to the actual type.
         var json = await Serialize(expandoObject);
         return await Deserialize(type, json);
+    }
+
+    /// <inheritdoc/>
+    public async Task<object> Deserialize(AppendedEvent @event)
+    {
+        var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.Type.Id);
+
+        // TODO: Optimize this. It shouldn't be necessary to go from Expando to Json and back to the actual type.
+        var json = await Serialize(@event.Content);
+        return await Deserialize(eventType, json);
     }
 }
