@@ -80,17 +80,17 @@ public class AggregateRoot : IAggregateRoot
     protected EventSourceId EventSourceId => _eventSourceId;
 
     /// <inheritdoc/>
-    public async Task Apply<T>(T @event)
+    public void Apply<T>(T @event)
         where T : class
     {
         typeof(T).ValidateEventType();
         _uncommittedEvents.Add(@event);
 
-        MutateState(await StateProvider.Update(GetState(), new[] { @event }));
+        MutateState(StateProvider.Update(GetState(), new[] { @event }).GetAwaiter().GetResult());
 
         if (!IsStateful)
         {
-            await EventHandlers.Handle(this, new[] { new EventAndContext(@event, EventContext.From(EventSourceId, EventSequenceNumber.Unavailable)) });
+            EventHandlers.Handle(this, new[] { new EventAndContext(@event, EventContext.From(EventSourceId, EventSequenceNumber.Unavailable)) }).GetAwaiter().GetResult();
         }
     }
 

@@ -12,7 +12,7 @@ public class when_committing : given.a_stateless_aggregate_root
     IEnumerable<object> events_to_commit;
     AggregateRootCommitResult result;
 
-    async Task Establish()
+    void Establish()
     {
         first_event = new("First");
         second_event = new("Second");
@@ -24,8 +24,8 @@ public class when_committing : given.a_stateless_aggregate_root
             return Task.CompletedTask;
         });
 
-        await aggregate_root.Apply(first_event);
-        await aggregate_root.Apply(second_event);
+        aggregate_root.Apply(first_event);
+        aggregate_root.Apply(second_event);
     }
 
     async Task Because() => result = await aggregate_root.Commit();

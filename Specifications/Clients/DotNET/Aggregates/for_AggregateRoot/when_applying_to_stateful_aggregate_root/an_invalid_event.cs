@@ -7,7 +7,7 @@ public class an_invalid_event : given.a_stateful_aggregate_root
 {
     Exception result;
 
-    async void Because() => result = await Catch.Exception(() => aggregate_root.Apply(new object()));
+    void Because() => result = Catch.Exception(() => aggregate_root.Apply(new object()));
 
     [Fact] void should_throw_missing_event_type_attribute() => result.ShouldBeOfExactType<MissingEventTypeAttribute>();
 }

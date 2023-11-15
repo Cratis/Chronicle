@@ -18,7 +18,7 @@ public class a_valid_event : given.a_stateless_aggregate_root
         event_to_apply = new(Guid.NewGuid().ToString());
     }
 
-    async Task Because() => await aggregate_root.Apply(event_to_apply);
+    void Because() => aggregate_root.Apply(event_to_apply);
 
     [Fact] void should_forward_to_event_handlers() => event_applied.ShouldEqual(event_to_apply);
 }

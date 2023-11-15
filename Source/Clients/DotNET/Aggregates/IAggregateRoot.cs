@@ -25,8 +25,7 @@ public interface IAggregateRoot
     /// </summary>
     /// <typeparam name="T">Type of event to apply.</typeparam>
     /// <param name="event">Event to apply.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Apply<T>(T @event)
+    void Apply<T>(T @event)
         where T : class;
 
     /// <summary>

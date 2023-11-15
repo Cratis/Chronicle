@@ -17,7 +17,7 @@ public class a_valid_event : given.a_stateful_aggregate_root
         state_provider.Setup(_ => _.Update(aggregate_root._state, new[] { event_to_apply })).Returns(Task.FromResult<object?>(state));
     }
 
-    async Task Because() => await aggregate_root.Apply(event_to_apply);
+    void Because() => aggregate_root.Apply(event_to_apply);
 
     [Fact] void should_not_forward_to_event_handlers() => event_handlers.Verify(_ => _.Handle(aggregate_root, IsAny<IEnumerable<EventAndContext>>()), Never);
     [Fact] void should_update_the_state() => aggregate_root._state.ShouldEqual(state);
