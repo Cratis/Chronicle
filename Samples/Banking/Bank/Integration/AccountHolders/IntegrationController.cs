@@ -27,9 +27,9 @@ public class IntegrationController : Controller
     [HttpGet]
     public async Task Trigger()
     {
-        foreach (var tenant in await _tenants.All())
+        // foreach (var tenant in await _tenants.All())
         {
-            using var scope = _executionContextManager.ForTenant(tenant.Id);
+            using var scope = _executionContextManager.ForTenant(TenantId.Development);
             await _connector.ImportOne("03050712345");
         }
     }
