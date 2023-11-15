@@ -148,7 +148,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
 
         foreach (var @event in events)
         {
-            var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, @event, initialState);
+            var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, @event, state);
             var keyResolver = projection.GetKeyResolverFor(@event.Metadata.Type);
             var key = await keyResolver(_eventProvider!, @event);
             var context = new ProjectionEventContext(key, @event, changeset);
