@@ -8,6 +8,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Projections;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Schemas;
 using Aksio.Cratis.Projections;
@@ -76,6 +77,15 @@ public class ImmediateProjection : Grain, IImmediateProjection
 
         var projection = _projectionManagerProvider().Get(_projectionId);
 
+        var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
+        var eventSequence = GrainFactory.GetGrain<IEventSequence>(_projectionKey.EventSequenceId, new MicroserviceAndTenant(_projectionKey.MicroserviceId, _projectionKey.TenantId));
+        var tail = await eventSequence.GetTailSequenceNumberForEventTypes(projection.EventTypes);
+        if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null)
+        {
+            var initialStateAsJson = _expandoObjectConverter.ToJsonObject(_initialState, projection.Model.Schema);
+            return new(initialStateAsJson, Enumerable.Empty<PropertyPath>(), 0);
+        }
+
         if (!projection.EventTypes.Any())
         {
             return ImmediateProjectionResult.Empty;
@@ -84,8 +94,6 @@ public class ImmediateProjection : Grain, IImmediateProjection
         var affectedProperties = new HashSet<PropertyPath>();
 
         var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
-
-        var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
         var cursor = await _eventProvider.GetFromSequenceNumber(EventSequenceId.Log, fromSequenceNumber, modelKey, projection.EventTypes);
         var projectedEventsCount = 0;
         var state = _initialState ?? new ExpandoObject();
