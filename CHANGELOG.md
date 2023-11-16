@@ -1,6 +1,9 @@
 # [v9.9.0] - 2023-11-15 [PR: #0]()
 
-No release notes
+### Added
+
+- Adding support for `AggregateRoot`. Aggregates can either be stateless, meaning you can implement handle methods for the events you want it to possibly create state from when rehydrating an aggregate, or they can be stateful in the sense that state can be produced during rehydration based on a `IReducerFor<>` or an `IImmediateProjectionFor<>`. These 3 options are mutually exclusive. Documentation of all this will follow. There are also an early approach to writing tests for this, which will be improved upon in the future.
+
 
 # [v9.8.0] - 2023-11-13 [PR: #1013](https://github.com/aksio-insurtech/Cratis/pull/1013)
 
