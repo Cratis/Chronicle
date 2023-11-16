@@ -11,7 +11,17 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 
 internal static partial class ImmediateProjectionsLogMessages
 {
+    [LoggerMessage(0, LogLevel.Trace, "Getting model instance for projection.")]
     internal static partial void GettingModelInstance(this ILogger<ImmediateProjection> logger);
+
+    [LoggerMessage(1, LogLevel.Trace, "Using cached model instance for projection.")]
+    internal static partial void UsingCachedModelInstance(this ILogger<ImmediateProjection> logger);
+
+    [LoggerMessage(2, LogLevel.Trace, "No event types for projections, returning empty.")]
+    internal static partial void NoEventTypes(this ILogger<ImmediateProjection> logger);
+
+    [LoggerMessage(4, LogLevel.Error, "Failed getting model instance for projection.")]
+    internal static partial void FailedGettingModelInstance(this ILogger<ImmediateProjection> logger, Exception exception);
 }
 
 internal static class ImmediateProjectionScopes
@@ -22,6 +32,7 @@ internal static class ImmediateProjectionScopes
             ["ProjectionId"] = projectionId,
             ["MicroserviceId"] = projectionKey.MicroserviceId,
             ["TenantId"] = projectionKey.TenantId,
-            ["EventSequenceId"] = projectionKey.EventSequenceId
+            ["EventSequenceId"] = projectionKey.EventSequenceId,
+            ["SessionId"] = projectionKey.CorrelationId ?? string.Empty
         });
 }
