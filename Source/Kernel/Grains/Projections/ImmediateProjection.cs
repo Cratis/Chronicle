@@ -91,13 +91,15 @@ public class ImmediateProjection : Grain, IImmediateProjection
 
         var projection = _projectionManagerProvider().Get(_projectionId);
         var (foundProjection, definition) = await _projectionDefinitions().TryGetFor(_projectionId);
+
+        var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
         if (foundProjection && definition is not null)
         {
             projectionChanged = definition.LastUpdated > _lastUpdated;
             _lastUpdated = definition.LastUpdated ?? DateTimeOffset.UtcNow;
+            fromSequenceNumber = EventSequenceNumber.First;
         }
 
-        var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
         var eventSequence = GrainFactory.GetGrain<IEventSequence>(_projectionKey.EventSequenceId, new MicroserviceAndTenant(_projectionKey.MicroserviceId, _projectionKey.TenantId));
         var tail = await eventSequence.GetTailSequenceNumberForEventTypes(projection.EventTypes);
         if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null && !projectionChanged)
