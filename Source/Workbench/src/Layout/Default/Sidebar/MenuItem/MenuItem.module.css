@@ -18,7 +18,7 @@
     flex: 1;
     color: var(--text-color-secondary);
     opacity: 1;
-    transition: all 0.3s;
+    transition: opacity 0.3s;
 }
 .menuItem .label.hidden{
     opacity: 0;
