@@ -1,3 +1,12 @@
+# [v9.9.1] - 2023-11-16 [PR: #1016](https://github.com/aksio-insurtech/Cratis/pull/1016)
+
+### Fixed
+
+- Added logging to `GetModelInstance()` for immediate projections.
+- Added last updated to projection definitions.
+- Immediate projection now uses the `LastUpdated` property of a projection to decide if ti should rewind the sequence number if it is newer than what the "cached" state is based on.
+
+
 # [v9.9.0] - 2023-11-15 [PR: #0]()
 
 ### Added
