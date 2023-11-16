@@ -84,6 +84,8 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// <inheritdoc/>
     public async Task<ImmediateProjectionResult> GetModelInstance()
     {
+        using (_logger.BeginImmediateProjectionScope(_projectionId, _projectionKey!))
+
         // TODO: This is a temporary work-around till we fix #264 & #265
         _executionContextManager.Establish(_projectionKey!.TenantId, _executionContextManager.Current.CorrelationId, _projectionKey.MicroserviceId);
 
