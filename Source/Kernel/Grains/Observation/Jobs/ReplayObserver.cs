@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a job for replaying an observer.
 /// </summary>
-public class ReplayObserver : Job<ReplayObserverRequest, JobState<ReplayObserverRequest>>, IReplayObserver
+public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, IReplayObserver
 {
     readonly IObserverKeyIndexes _observerKeyIndexes;
     ReplayObserverRequest? _request;
@@ -31,7 +31,16 @@ public class ReplayObserver : Job<ReplayObserverRequest, JobState<ReplayObserver
     {
         if (_request == null) return;
         var observer = GrainFactory.GetGrain<IObserver>(_request.ObserverId, _request.ObserverKey);
+        await observer.ReportHandledEvents(State.HandledCount);
         await observer.TransitionTo<Routing>();
+    }
+
+    /// <inheritdoc/>
+    protected override async Task OnStepCompleted(JobStepId jobStepId, JobStepStatus status)
+    {
+        var step = GrainFactory.GetGrain<IHandleEventsForPartition>(jobStepId, keyExtension: new JobStepKey(JobId, JobKey.MicroserviceId, JobKey.TenantId));
+        var handledCount = await step.GetHandledCount();
+        State.HandledCount += handledCount;
     }
 
     /// <inheritdoc/>

@@ -65,6 +65,9 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
     }
 
     /// <inheritdoc/>
+    public Task<EventCount> GetHandledCount() => Task.FromResult(State.HandledCount);
+
+    /// <inheritdoc/>
     protected override async Task<JobStepResult> PerformStep(HandleEventsForPartitionArguments request, CancellationToken cancellationToken)
     {
         if (_subscriber == null || !request.ObserverSubscription.IsSubscribed)
@@ -142,10 +145,7 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
                 exceptionStackTrace = ex.StackTrace ?? string.Empty;
             }
 
-            if (handledCount > EventCount.Zero)
-            {
-                await _observer!.ReportHandledEvents(handledCount);
-            }
+            State.HandledCount = handledCount;
 
             if (failed)
             {

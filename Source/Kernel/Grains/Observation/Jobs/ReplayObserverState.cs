@@ -7,13 +7,12 @@ using Aksio.Cratis.Kernel.Grains.Jobs;
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
 /// <summary>
-/// Defines a step in the replay job that handles events for a partition.
+/// Represents the state for a <see cref="ReplayObserver"/> job step.
 /// </summary>
-public interface IHandleEventsForPartition : IJobStep<HandleEventsForPartitionArguments>
+public class ReplayObserverState : JobState<ReplayObserverRequest>
 {
     /// <summary>
-    /// Get the number of events handled by this step.
+    /// Gets or sets the number of handled events by the job.
     /// </summary>
-    /// <returns><see cref="EventCount"/> with the number of events handled.</returns>
-    Task<EventCount> GetHandledCount();
+    public EventCount HandledCount { get; set; } = EventCount.Zero;
 }

@@ -25,8 +25,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     IDictionary<JobStepId, JobStepGrainAndRequest> _jobStepGrains = new Dictionary<JobStepId, JobStepGrainAndRequest>();
     ObserverManager<IJobObserver>? _observers;
     bool _isRunning;
-    JobId _jobId = JobId.NotSet;
-    JobKey _jobKey = JobKey.NotSet;
     IDisposable? _subscriptionTimer;
 
     /// <summary>
@@ -36,6 +34,16 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         ThisJob = null!;
     }
+
+    /// <summary>
+    /// Gets the <see cref="JobId"/> for this job.
+    /// </summary>
+    protected JobId JobId { get; private set; } = JobId.NotSet;
+
+    /// <summary>
+    /// Gets the <see cref="JobKey"/> for this job.
+    /// </summary>
+    protected JobKey JobKey { get; private set; } = JobKey.NotSet;
 
     /// <summary>
     /// Gets whether or not to clean up data after the job has completed.
@@ -57,8 +65,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         await StatusChanged(JobStatus.Preparing);
 
-        _jobId = this.GetPrimaryKey(out var keyExtension);
-        _jobKey = (JobKey)keyExtension;
+        JobId = this.GetPrimaryKey(out var keyExtension);
+        JobKey = (JobKey)keyExtension;
 
         ThisJob = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJob<TRequest>>();
 
@@ -110,7 +118,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         if (_isRunning) return;
 
         var executionContextManager = ServiceProvider.GetRequiredService<IExecutionContextManager>();
-        executionContextManager.Establish(_jobKey.TenantId, executionContextManager.Current.CorrelationId, _jobKey.MicroserviceId);
+        executionContextManager.Establish(JobKey.TenantId, executionContextManager.Current.CorrelationId, JobKey.MicroserviceId);
 
         if (!await CanResume())
         {
@@ -120,10 +128,10 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         }
 
         var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
-        var steps = await stepStorage.GetForJob(_jobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused);
+        var steps = await stepStorage.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused);
         foreach (var step in steps)
         {
-            var jobStep = (GrainFactory.GetGrain((Type)step.Type, step.Id.JobStepId, keyExtension: new JobStepKey(_jobId, _jobKey.MicroserviceId, _jobKey.TenantId)) as IJobStep)!;
+            var jobStep = (GrainFactory.GetGrain((Type)step.Type, step.Id.JobStepId, keyExtension: new JobStepKey(JobId, JobKey.MicroserviceId, JobKey.TenantId)) as IJobStep)!;
             await jobStep.Resume(this.GetGrainId());
         }
     }
@@ -157,7 +165,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         _observers?.Notify(_ => _.OnJobStopped());
 
         var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
-        await stepStorage.RemoveAllForJob(_jobId);
+        await stepStorage.RemoveAllForJob(JobId);
         await OnCompleted();
 
         await StatusChanged(JobStatus.Stopped);
@@ -174,6 +182,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         State.Progress.SuccessfulSteps++;
 
+        await OnStepCompleted(stepId, JobStepStatus.Succeeded);
         await HandleCompletion();
         await WriteStateAsync();
 
@@ -189,6 +198,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         State.Progress.FailedSteps++;
 
+        await OnStepCompleted(stepId, JobStepStatus.Failed);
         await HandleCompletion();
         await WriteStateAsync();
 
@@ -231,6 +241,14 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         _observers?.Unsubscribe(observer);
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Called when a step has completed.
+    /// </summary>
+    /// <param name="jobStepId"><see cref="JobStepId"/> for the completed step.</param>
+    /// <param name="status"><see cref="JobStepStatus"/> of the completed step.</param>
+    /// <returns>Awaitable task.</returns>
+    protected virtual Task OnStepCompleted(JobStepId jobStepId, JobStepStatus status) => Task.CompletedTask;
 
     /// <summary>
     /// Create a new <see cref="IJobStep"/>.

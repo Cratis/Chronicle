@@ -20,4 +20,9 @@ public class HandleEventsForPartitionState : JobStepState
     /// Gets or sets the last handled event sequence number.
     /// </summary>
     public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
+    /// Gets or sets the number of handled events by the step.
+    /// </summary>
+    public EventCount HandledCount { get; set; } = EventCount.Zero;
 }
