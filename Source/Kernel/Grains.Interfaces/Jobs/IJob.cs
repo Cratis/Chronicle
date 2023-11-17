@@ -6,7 +6,7 @@ using Orleans.Concurrency;
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
-/// Represents a job that typically runs as long running with <see cref="IJobStep{TRequest}"/>.
+/// Represents a job that typically runs as long running with <see cref="IJobStep{TRequest, TResult}"/>.
 /// </summary>
 public interface IJob : IGrainWithGuidCompoundKey
 {
@@ -35,24 +35,27 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// Report a successful completion of a job step.
     /// </summary>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was completed.</param>
+    /// <param name="result">The <see cref="JobStepResult"/> for the succeeded step.</param>
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
-    Task OnStepSucceeded(JobStepId stepId);
+    Task OnStepSucceeded(JobStepId stepId, JobStepResult result);
 
     /// <summary>
     /// Report that a job step has been stopped.
     /// </summary>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was stopped.</param>
+    /// <param name="result">The <see cref="JobStepResult"/> for the stopped step.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnStepStopped(JobStepId stepId);
+    Task OnStepStopped(JobStepId stepId, JobStepResult result);
 
     /// <summary>
     /// Report failure of a job step.
     /// </summary>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that failed.</param>
+    /// <param name="result">The <see cref="JobStepResult"/> for the failed step.</param>
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
-    Task OnStepFailed(JobStepId stepId);
+    Task OnStepFailed(JobStepId stepId, JobStepResult result);
 
     /// <summary>
     /// Called when the job has completed.
@@ -106,7 +109,7 @@ public interface IJob : IGrainWithGuidCompoundKey
 }
 
 /// <summary>
-/// Represents a job that typically runs as long running with <see cref="IJobStep{TRequest}"/>.
+/// Represents a job that typically runs as long running with <see cref="IJobStep{TRequest, TResult}"/>.
 /// </summary>
 /// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
 public interface IJob<TRequest> : IJob

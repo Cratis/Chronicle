@@ -3,8 +3,11 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Kernel.Orleans.Observers;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
+using Aksio.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -26,6 +29,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     ObserverManager<IJobObserver>? _observers;
     bool _isRunning;
     IDisposable? _subscriptionTimer;
+    JsonSerializerOptions? _jsonSerializerOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Job{TRequest, TJobState}"/> class.
@@ -62,6 +66,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             TimeSpan.FromMinutes(1),
             ServiceProvider.GetService<ILogger<ObserverManager<IJobObserver>>>() ?? new NullLogger<ObserverManager<IJobObserver>>(),
             "JobObservers");
+
+        _jsonSerializerOptions = ServiceProvider.GetService<JsonSerializerOptions>() ?? new JsonSerializerOptions();
 
         await StatusChanged(JobStatus.Preparing);
 
@@ -178,11 +184,16 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     public virtual Task OnCompleted() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public async Task OnStepSucceeded(JobStepId stepId)
+    public async Task OnStepSucceeded(JobStepId stepId, JobStepResult result)
     {
         State.Progress.SuccessfulSteps++;
 
-        await OnStepCompleted(stepId, JobStepStatus.Succeeded);
+        if (result.Result is JsonElement jsonResult)
+        {
+            result = result with { Result = jsonResult.Deserialize(_jobStepGrains[stepId].ResultType, _jsonSerializerOptions) };
+        }
+
+        await OnStepCompleted(stepId, result);
         await HandleCompletion();
         await WriteStateAsync();
 
@@ -191,14 +202,14 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     }
 
     /// <inheritdoc/>
-    public Task OnStepStopped(JobStepId stepId) => Task.CompletedTask;
+    public Task OnStepStopped(JobStepId stepId, JobStepResult result) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public async Task OnStepFailed(JobStepId stepId)
+    public async Task OnStepFailed(JobStepId stepId, JobStepResult result)
     {
         State.Progress.FailedSteps++;
 
-        await OnStepCompleted(stepId, JobStepStatus.Failed);
+        await OnStepCompleted(stepId, result);
         await HandleCompletion();
         await WriteStateAsync();
 
@@ -246,9 +257,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// Called when a step has completed.
     /// </summary>
     /// <param name="jobStepId"><see cref="JobStepId"/> for the completed step.</param>
-    /// <param name="status"><see cref="JobStepStatus"/> of the completed step.</param>
+    /// <param name="result"><see cref="JobStepResult"/> for the completed step.</param>
     /// <returns>Awaitable task.</returns>
-    protected virtual Task OnStepCompleted(JobStepId jobStepId, JobStepStatus status) => Task.CompletedTask;
+    protected virtual Task OnStepCompleted(JobStepId jobStepId, JobStepResult result) => Task.CompletedTask;
 
     /// <summary>
     /// Create a new <see cref="IJobStep"/>.
@@ -262,11 +273,17 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         var jobStepId = JobStepId.New();
         var jobId = this.GetPrimaryKey(out var keyExtension);
         var jobKey = (JobKey)keyExtension!;
+        var jobStepType = typeof(TJobStep)
+                            .AllBaseAndImplementingTypes()
+                            .First(
+                                _ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IJobStep<,>));
+        var resultType = jobStepType.GetGenericArguments()[1];
         return new(
             typeof(TJobStep),
             jobStepId,
             new JobStepKey(jobId, jobKey.MicroserviceId, jobKey.TenantId),
-            request);
+            request,
+            resultType);
     }
 
     /// <summary>
@@ -294,7 +311,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             _ => _.Id,
             _ => new JobStepGrainAndRequest(
                 (GrainFactory.GetGrain(_.Type, _.Id, keyExtension: _.Key) as IJobStep)!,
-                _.Request));
+                _.Request,
+                _.ResultType));
     void PrepareAllSteps(TRequest request, TaskCompletionSource<IImmutableList<JobStepDetails>> tcs) => _ = Task.Run(async () =>
     {
         var steps = await PrepareSteps(request);
@@ -317,10 +335,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         foreach (var jobStep in _jobStepGrains.Values)
         {
-            var task = JobStepInvoker.StartMethod.GetGenericMethodDefinition()
-                .MakeGenericMethod(jobStep.Request.GetType())
-                .Invoke(null, new object[] { jobStep.Grain, grainId, jobStep.Request }) as Task;
-            await task!;
+            await InvokeJobStepMethod(jobStep, JobStepInvoker.StartMethod, grainId, jobStep.Request);
         }
     }
 
@@ -328,12 +343,21 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         foreach (var jobStep in _jobStepGrains.Values)
         {
-            var task = JobStepInvoker.PrepareMethod.GetGenericMethodDefinition()
-                .MakeGenericMethod(jobStep.Request.GetType())
-                .Invoke(null, new object[] { jobStep.Grain, jobStep.Request }) as Task;
-
-            await task!;
+            await InvokeJobStepMethod(jobStep, JobStepInvoker.PrepareMethod, jobStep.Request);
         }
+    }
+
+    async Task InvokeJobStepMethod(JobStepGrainAndRequest jobStep, MethodInfo method, params object[] parameters)
+    {
+        var requestType = jobStep.Request.GetType();
+        var jobStepType = typeof(IJobStep<,>).MakeGenericType(requestType, jobStep.ResultType);
+        var jobStepReference = jobStep.Grain.AsReference(jobStepType);
+
+        var task = method.GetGenericMethodDefinition()
+            .MakeGenericMethod(requestType, jobStep.ResultType)
+            .Invoke(null, new object[] { jobStepReference }.Concat(parameters).ToArray()) as Task;
+
+        await task!;
     }
 
     Task SubscribeJobEventsForAllJobSteps()
@@ -383,7 +407,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         public static readonly MethodInfo StartMethod = typeof(JobStepInvoker).GetMethod(nameof(Start))!;
         public static readonly MethodInfo PrepareMethod = typeof(JobStepInvoker).GetMethod(nameof(Prepare))!;
-        public static Task Start<TJobStepRequest>(IJobStep<TJobStepRequest> jobStep, GrainId jobId, TJobStepRequest request) => jobStep.Start(jobId, request);
-        public static Task Prepare<TJobStepRequest>(IJobStep<TJobStepRequest> jobStep, TJobStepRequest request) => jobStep.Prepare(request);
+        public static Task Start<TJobStepRequest, TResult>(IJobStep<TJobStepRequest, TResult> jobStep, GrainId jobId, TJobStepRequest request) => jobStep.Start(jobId, request);
+        public static Task Prepare<TJobStepRequest, TResult>(IJobStep<TJobStepRequest, TResult> jobStep, TJobStepRequest request) => jobStep.Prepare(request);
     }
 }

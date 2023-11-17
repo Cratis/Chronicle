@@ -12,13 +12,13 @@ public class NullJob : IJob
     public Task OnCompleted() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task OnStepFailed(JobStepId stepId) => Task.CompletedTask;
+    public Task OnStepFailed(JobStepId stepId, JobStepResult result) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task OnStepStopped(JobStepId stepId) => Task.CompletedTask;
+    public Task OnStepStopped(JobStepId stepId, JobStepResult result) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task OnStepSucceeded(JobStepId stepId) => Task.CompletedTask;
+    public Task OnStepSucceeded(JobStepId stepId, JobStepResult result) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task Pause() => Task.CompletedTask;

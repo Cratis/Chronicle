@@ -7,11 +7,12 @@ using Orleans.Runtime;
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
-/// Represents an implementation of <see cref="IJobStep{TRequest}"/>.
+/// Represents an implementation of <see cref="IJobStep{TRequest, TResult}"/>.
 /// </summary>
 /// <typeparam name="TRequest">Type of request for the step.</typeparam>
+/// <typeparam name="TResult">Type of result for the step.</typeparam>
 /// <typeparam name="TState">Type of state for the step.</typeparam>
-public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, object>, IJobStep<TRequest>, IJobObserver, IDisposable
+public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TRequest, JobStepResult>, IJobStep<TRequest, TResult>, IJobObserver, IDisposable
     where TState : JobStepState
 {
     readonly IPersistentState<TState> _state;
@@ -19,7 +20,7 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
     bool _running;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="JobStep{TRequest, TState}"/> class.
+    /// Initializes a new instance of the <see cref="JobStep{TRequest, TResult, TState}"/> class.
     /// </summary>
     /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
     protected JobStep(
@@ -44,7 +45,7 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
     /// <summary>
     /// Gets the job step as a Grain reference.
     /// </summary>
-    protected IJobStep<TRequest> ThisJobStep { get; private set; }
+    protected IJobStep<TRequest, TResult> ThisJobStep { get; private set; }
 
     /// <summary>
     /// Gets the state for the job step.
@@ -78,7 +79,7 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
     {
         _running = true;
         Job = GrainFactory.GetGrain(jobId).AsReference<IJob>();
-        ThisJobStep = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJobStep<TRequest>>();
+        ThisJobStep = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJobStep<TRequest, TResult>>();
 
         StatusChanged(JobStepStatus.Running);
         _state.State.Request = request!;
@@ -118,10 +119,6 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
     /// <inheritdoc/>
     public async Task ReportStatusChange(JobStepStatus status)
     {
-        if (status == JobStepStatus.Succeeded)
-        {
-            await Job.OnStepSucceeded(JobStepId);
-        }
         StatusChanged(status);
         await _state.WriteStateAsync();
     }
@@ -129,9 +126,10 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
     /// <inheritdoc/>
     public async Task ReportFailure(IList<string> exceptionMessages, string exceptionStackTrace)
     {
+        var result = await GetResult();
         StatusChanged(JobStepStatus.Failed, exceptionMessages, exceptionStackTrace);
         await _state.WriteStateAsync();
-        await Job.OnStepFailed(JobStepId);
+        await Job.OnStepFailed(JobStepId, result!);
     }
 
     /// <summary>
@@ -156,11 +154,11 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
     protected abstract Task<JobStepResult> PerformStep(TRequest request, CancellationToken cancellationToken);
 
     /// <inheritdoc/>
-    protected override async Task<object> PerformWork(TRequest request)
+    protected override async Task<JobStepResult> PerformWork(TRequest request)
     {
         await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
 
-        var result = JobStepResult.Succeeded;
+        var result = JobStepResult.Succeeded();
         try
         {
             if (!_cancellationTokenSource.IsCancellationRequested)
@@ -175,6 +173,7 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
 
         if (result.IsSuccess)
         {
+            await Job.OnStepSucceeded(JobStepId, result);
             await ThisJobStep.ReportStatusChange(JobStepStatus.Succeeded);
         }
         else
@@ -184,7 +183,7 @@ public abstract class JobStep<TRequest, TState> : CpuBoundWorker<TRequest, objec
 
         DeactivateOnIdle();
 
-        return string.Empty;
+        return result;
     }
 
     void StatusChanged(JobStepStatus status, IEnumerable<string>? exceptionMessages = null!, string? exceptionStackTrace = null!)

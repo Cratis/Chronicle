@@ -24,9 +24,9 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     ILogger<ICpuBoundWorker>? _logger;
     TaskScheduler? _taskScheduler;
     CpuBoundWorkerStatus _status = CpuBoundWorkerStatus.NotStarted;
-    TResult? _result;
     Exception? _exception;
     Task? _task;
+    TResult? _result;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)

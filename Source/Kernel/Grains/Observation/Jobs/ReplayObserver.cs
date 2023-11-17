@@ -36,11 +36,14 @@ public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, I
     }
 
     /// <inheritdoc/>
-    protected override async Task OnStepCompleted(JobStepId jobStepId, JobStepStatus status)
+    protected override Task OnStepCompleted(JobStepId jobStepId, JobStepResult result)
     {
-        var step = GrainFactory.GetGrain<IHandleEventsForPartition>(jobStepId, keyExtension: new JobStepKey(JobId, JobKey.MicroserviceId, JobKey.TenantId));
-        var handledCount = await step.GetHandledCount();
-        State.HandledCount += handledCount;
+        if (result.Result is HandleEventsForPartitionResult handleEventsForPartitionResult)
+        {
+            State.HandledCount += handleEventsForPartitionResult.HandledEvents;
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

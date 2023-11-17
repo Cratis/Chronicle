@@ -10,8 +10,10 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// <param name="Id">The unique identifier of the job step.</param>
 /// <param name="Key">The key extension for the job step.</param>
 /// <param name="Request">The request associated with the job step.</param>
+/// <param name="ResultType">The result type for the job step.</param>
 public record JobStepDetails(
     Type Type,
     JobStepId Id,
     JobStepKey Key,
-    object Request);
+    object Request,
+    Type ResultType);

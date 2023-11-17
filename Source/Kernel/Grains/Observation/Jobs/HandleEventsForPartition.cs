@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a step in a replay job.
 /// </summary>
-public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionState>, IHandleEventsForPartition
+public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>, IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
@@ -65,9 +65,6 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
     }
 
     /// <inheritdoc/>
-    public Task<EventCount> GetHandledCount() => Task.FromResult(State.HandledCount);
-
-    /// <inheritdoc/>
     protected override async Task<JobStepResult> PerformStep(HandleEventsForPartitionArguments request, CancellationToken cancellationToken)
     {
         if (_subscriber == null || !request.ObserverSubscription.IsSubscribed)
@@ -90,6 +87,7 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = EventSequenceNumber.Unavailable;
+        var handledCount = EventCount.Zero;
 
         while (await events.MoveNext())
         {
@@ -97,8 +95,6 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
             {
                 break;
             }
-
-            var handledCount = EventCount.Zero;
 
             try
             {
@@ -145,8 +141,6 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
                 exceptionStackTrace = ex.StackTrace ?? string.Empty;
             }
 
-            State.HandledCount = handledCount;
-
             if (failed)
             {
                 await _observer!.PartitionFailed(eventSourceId, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
@@ -154,7 +148,7 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
             }
         }
 
-        return JobStepResult.Succeeded;
+        return JobStepResult.Succeeded(new HandleEventsForPartitionResult(handledCount));
     }
 
     IEnumerable<AppendedEvent> SetObservationStateIfSpecified(HandleEventsForPartitionArguments request, IEventCursor events, IEnumerable<AppendedEvent> eventsToHandle)

@@ -9,17 +9,20 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// <param name="Status">The <see cref="JobStepStatus"/> for the job step.</param>
 /// <param name="Messages">Messages associated.</param>
 /// <param name="ExceptionStackTrace">Associated exception stack trace, if any.</param>
-public record JobStepResult(JobStepStatus Status, IEnumerable<string> Messages, string ExceptionStackTrace)
+/// <param name="Result">Result of the job step.</param>
+public record JobStepResult(JobStepStatus Status, IEnumerable<string> Messages, string ExceptionStackTrace, object? Result = null)
 {
-    /// <summary>
-    /// Represents a succeeded job step.
-    /// </summary>
-    public static readonly JobStepResult Succeeded = new(JobStepStatus.Succeeded, Enumerable.Empty<string>(), string.Empty);
-
     /// <summary>
     /// Gets whether or not the job step was successful.
     /// </summary>
     public bool IsSuccess => Status == JobStepStatus.Succeeded;
+
+    /// <summary>
+    /// Create a succeeded job step with optional result object.
+    /// </summary>
+    /// <param name="result">Optional result object.</param>
+    /// <returns>A new <see cref="JobStepResult"/> instance.</returns>
+    public static JobStepResult Succeeded(object? result = null) => new(JobStepStatus.Succeeded, Enumerable.Empty<string>(), string.Empty, result);
 
     /// <summary>
     /// Creates a failed job step.

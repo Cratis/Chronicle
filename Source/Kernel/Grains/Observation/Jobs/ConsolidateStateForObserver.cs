@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents an implementation of <see cref="IConsolidateStateForObserver"/>.
 /// </summary>
-public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, JobStepState>, IConsolidateStateForObserver
+public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, JobStepState>, IConsolidateStateForObserver
 {
     readonly ProviderFor<IObserverStorage> _observerStorageProvider;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
@@ -96,6 +96,6 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, JobStepStat
             await _observer!.SetHandledStats(handled, lastHandledEventSequenceNumber);
         }
 
-        return JobStepResult.Succeeded;
+        return JobStepResult.Succeeded();
     }
 }
