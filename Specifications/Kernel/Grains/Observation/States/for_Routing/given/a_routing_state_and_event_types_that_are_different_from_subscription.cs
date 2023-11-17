@@ -1,11 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Orleans.StateMachines;
+namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Routing.given;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Routing.when_entering;
-
-public class and_subscribers_event_types_are_different : given.a_routing_state
+public class a_routing_state_and_event_types_that_are_different_from_subscription : a_routing_state
 {
     void Establish()
     {
@@ -23,10 +21,11 @@ public class and_subscribers_event_types_are_different : given.a_routing_state
                 new EventType("e433be87-2d05-49b1-b093-f0cec977429b", EventGeneration.First)
             }
         };
+
+        tail_event_sequence_numbers = tail_event_sequence_numbers with
+        {
+            Tail = EventSequenceNumber.Unavailable,
+            TailForEventTypes = EventSequenceNumber.Unavailable
+        };
     }
-
-    async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
-
-    [Fact] void should_only_perform_one_transition() => state_machine.Verify(_ => _.TransitionTo<IState<ObserverState>>(), Once());
-    [Fact] void should_transition_to_replay() => state_machine.Verify(_ => _.TransitionTo<Replay>(), Once());
 }
