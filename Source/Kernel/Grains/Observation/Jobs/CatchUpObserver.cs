@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a job for catching up an observer.
 /// </summary>
-public class CatchUpObserver : Job<CatchUpObserverRequest, JobState<CatchUpObserverRequest>>, ICatchUpObserver
+public class CatchUpObserver : Job<CatchUpObserverRequest, CatchUpObserverState>, ICatchUpObserver
 {
     readonly IObserverKeyIndexes _observerKeyIndexes;
     CatchUpObserverRequest? _request;
@@ -33,7 +33,19 @@ public class CatchUpObserver : Job<CatchUpObserverRequest, JobState<CatchUpObser
     {
         if (_request == null) return;
         var observer = GrainFactory.GetGrain<IObserver>(_request.ObserverId, _request.ObserverKey);
+        await observer.ReportHandledEvents(State.HandledCount);
         await observer.TransitionTo<Routing>();
+    }
+
+    /// <inheritdoc/>
+    protected override Task OnStepCompleted(JobStepId jobStepId, JobStepResult result)
+    {
+        if (result.Result is HandleEventsForPartitionResult handleEventsForPartitionResult)
+        {
+            State.HandledCount += handleEventsForPartitionResult.HandledEvents;
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
