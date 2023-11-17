@@ -28,11 +28,12 @@ public class a_catch_up_state : Specification
 
         stored_state = new ObserverState
         {
+            ObserverId = Guid.NewGuid(),
             RunningState = ObserverRunningState.CatchingUp,
         };
 
         subscription = new ObserverSubscription(
-            Guid.NewGuid(),
+            stored_state.ObserverId,
             new(MicroserviceId.Unspecified, TenantId.Development, EventSequenceId.Log),
             Enumerable.Empty<EventType>(),
             typeof(object),
