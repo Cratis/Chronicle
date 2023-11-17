@@ -15,7 +15,6 @@ public class an_observing_state : Specification
 {
     protected Mock<IObserver> observer;
     protected Mock<IStreamProvider> stream_provider;
-    protected Mock<IStateMachine<ObserverState>> state_machine;
     protected Mock<IAsyncStream<AppendedEvent>> stream;
     protected Mock<StreamSubscriptionHandle<AppendedEvent>> stream_subscription;
     protected Observing state;
@@ -50,14 +49,12 @@ public class an_observing_state : Specification
         event_sequence_id = EventSequenceId.Log;
 
         state = new Observing(
-            observer.Object,
             stream_provider.Object,
             microservice_id,
             tenant_id,
             event_sequence_id,
             Mock.Of<ILogger<Observing>>());
-        state_machine = new();
-        state.SetStateMachine(state_machine.Object);
+        state.SetStateMachine(observer.Object);
         stored_state = new ObserverState
         {
             RunningState = ObserverRunningState.Active,
