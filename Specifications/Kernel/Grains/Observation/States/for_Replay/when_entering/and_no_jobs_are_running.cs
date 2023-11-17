@@ -1,20 +1,22 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_CatchUp.when_entering;
+namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Replay.when_entering;
 
-public class and_no_jobs_are_running : given.a_catch_up_state
+public class and_no_jobs_are_running : given.a_replay_state
 {
-    CatchUpObserverRequest request;
+    ReplayObserverRequest request;
+    ObserverDetails observer_details;
 
     void Establish()
     {
         stored_state = stored_state with
         {
+            Type = ObserverType.Client,
+            Handled = 41,
             NextEventSequenceNumber = 42,
             EventTypes = new[]
             {
@@ -32,21 +34,22 @@ public class and_no_jobs_are_running : given.a_catch_up_state
         };
 
         jobs_manager
-            .Setup(_ => _.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>())
-            .ReturnsAsync(Enumerable.Empty<JobState<CatchUpObserverRequest>>().ToImmutableList());
+            .Setup(_ => _.Start<IReplayObserver, ReplayObserverRequest>(IsAny<JobId>(), IsAny<ReplayObserverRequest>()))
+            .Callback<JobId, ReplayObserverRequest>((_, requestAtStart) => request = requestAtStart);
 
-        jobs_manager
-            .Setup(_ => _.Start<ICatchUpObserver, CatchUpObserverRequest>(IsAny<JobId>(), IsAny<CatchUpObserverRequest>()))
-            .Callback<JobId, CatchUpObserverRequest>((_, requestAtStart) => request = requestAtStart);
+        observer_service_client
+            .Setup(_ => _.BeginReplayFor(IsAny<ObserverDetails>()))
+            .Callback((ObserverDetails observer) => observer_details = observer);
     }
 
     async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
 
-    [Fact] void should_return_same_state() => resulting_stored_state.ShouldBeSame(stored_state);
-    [Fact] void should_start_catch_up_job() => jobs_manager.Verify(_ => _.Start<ICatchUpObserver, CatchUpObserverRequest>(IsAny<JobId>(), IsAny<CatchUpObserverRequest>()), Once);
+    [Fact] void should_reset_handled_count() => resulting_stored_state.ShouldEqual(stored_state with { Handled = EventCount.Zero });
+    [Fact] void should_start_catch_up_job() => jobs_manager.Verify(_ => _.Start<IReplayObserver, ReplayObserverRequest>(IsAny<JobId>(), IsAny<ReplayObserverRequest>()), Once);
     [Fact] void should_start_catch_up_job_with_correct_observer_id() => request.ObserverId.ShouldEqual(stored_state.ObserverId);
     [Fact] void should_start_catch_up_job_with_correct_observer_key() => request.ObserverKey.ShouldEqual(observer_key);
     [Fact] void should_start_catch_up_job_with_correct_subscription() => request.ObserverSubscription.ShouldEqual(subscription);
-    [Fact] void should_start_catch_up_job_with_correct_event_sequence_number() => request.FromEventSequenceNumber.ShouldEqual(stored_state.NextEventSequenceNumber);
     [Fact] void should_start_catch_up_job_with_correct_event_types() => request.EventTypes.ShouldEqual(stored_state.EventTypes);
+    [Fact] void should_begin_replay_only_one() => observer_service_client.Verify(_ => _.BeginReplayFor(IsAny<ObserverDetails>()), Once);
+    [Fact] void should_begin_replay_for_correct_observer() => observer_details.ShouldEqual(new ObserverDetails(stored_state.ObserverId, observer_key, ObserverType.Client));
 }
