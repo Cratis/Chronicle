@@ -165,7 +165,10 @@ public class Observer : StateMachine<ObserverState>, IObserver
             _eventSequence,
             _loggerFactory.CreateLogger<Routing>()),
 
-        new CatchUp(_observerKey, _jobsManager),
+        new CatchUp(
+            _observerKey,
+            _jobsManager,
+            _loggerFactory.CreateLogger<CatchUp>()),
 
         new ResumeReplay(
             _observerKey,
