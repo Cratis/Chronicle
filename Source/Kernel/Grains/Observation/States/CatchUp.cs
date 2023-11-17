@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 using Aksio.Cratis.Observation;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 
@@ -15,18 +16,22 @@ public class CatchUp : BaseObserverState
 {
     readonly ObserverKey _observerKey;
     readonly IJobsManager _jobsManager;
+    readonly ILogger<CatchUp> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CatchUp"/> class.
     /// </summary>
     /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
     /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
+    /// <param name="logger">Logger for logging.</param>
     public CatchUp(
         ObserverKey observerKey,
-        IJobsManager jobsManager)
+        IJobsManager jobsManager,
+        ILogger<CatchUp> logger)
     {
         _observerKey = observerKey;
         _jobsManager = jobsManager;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -44,12 +49,15 @@ public class CatchUp : BaseObserverState
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
+        using var scope = _logger.BeginCatchUpScope(state.ObserverId, _observerKey);
+
         var subscription = await Observer.GetSubscription();
 
         var jobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
         var jobsForThisObserver = jobs.Where(_ => _.Request.ObserverId == state.ObserverId && _.Request.ObserverKey == _observerKey);
         if (jobs.Any(_ => _.Status == JobStatus.Running))
         {
+            _logger.FinishingExistingCatchUpJob();
             return state;
         }
 
@@ -57,12 +65,12 @@ public class CatchUp : BaseObserverState
 
         if (pausedJob is not null)
         {
-            await _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(
-                pausedJob.Id,
-                pausedJob.Request);
+            _logger.ResumingCatchUpJob();
+            await _jobsManager.Resume(pausedJob.Id);
         }
         else
         {
+            _logger.StartCatchUpJob(state.NextEventSequenceNumber);
             await _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(
                 JobId.New(),
                 new CatchUpObserverRequest(
