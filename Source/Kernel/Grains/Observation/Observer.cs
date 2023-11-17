@@ -178,7 +178,8 @@ public class Observer : StateMachine<ObserverState>, IObserver
         new Replay(
             _observerKey,
             _replayStateServiceClient,
-            _jobsManager),
+            _jobsManager,
+            _loggerFactory.CreateLogger<Replay>()),
 
         new Indexing(),
 

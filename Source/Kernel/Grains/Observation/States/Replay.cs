@@ -6,6 +6,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 using Aksio.Cratis.Observation;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 
@@ -17,6 +18,7 @@ public class Replay : BaseObserverState
     readonly ObserverKey _observerKey;
     readonly IObserverServiceClient _replayStateServiceClient;
     readonly IJobsManager _jobsManager;
+    readonly ILogger<Replay> _logger;
     bool _replayStarted;
 
     /// <summary>
@@ -25,14 +27,17 @@ public class Replay : BaseObserverState
     /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
     /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
     /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
+    /// <param name="logger">Logger for logging.</param>
     public Replay(
         ObserverKey observerKey,
         IObserverServiceClient replayStateServiceClient,
-        IJobsManager jobsManager)
+        IJobsManager jobsManager,
+        ILogger<Replay> logger)
     {
         _observerKey = observerKey;
         _replayStateServiceClient = replayStateServiceClient;
         _jobsManager = jobsManager;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -49,12 +54,17 @@ public class Replay : BaseObserverState
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
+        using var scope = _logger.BeginReplayScope(state.ObserverId, _observerKey);
+
+        _logger.Entering();
+
         var subscription = await Observer.GetSubscription();
 
         var jobs = await _jobsManager.GetJobsOfType<IReplayObserver, ReplayObserverRequest>();
         var jobsForThisObserver = jobs.Where(_ => _.Request.ObserverId == state.ObserverId && _.Request.ObserverKey == _observerKey);
         if (jobsForThisObserver.Any(_ => _.Status == JobStatus.Running))
         {
+            _logger.FinishingExistingReplayJob();
             return state;
         }
 
@@ -64,10 +74,12 @@ public class Replay : BaseObserverState
         var pausedJob = jobsForThisObserver.FirstOrDefault(_ => _.Status == JobStatus.Paused);
         if (pausedJob is not null)
         {
+            _logger.ResumingReplayJob();
             await _jobsManager.Resume(pausedJob.Id);
             return state;
         }
 
+        _logger.StartReplayJob();
         await _jobsManager.Start<IReplayObserver, ReplayObserverRequest>(
             JobId.New(),
             new ReplayObserverRequest(
