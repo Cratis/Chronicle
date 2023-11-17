@@ -8,12 +8,6 @@ import { field } from '@aksio/fundamentals';
 export class ObserverKey {
 
     @field(String)
-    sourceMicroserviceId?: string;
-
-    @field(String)
-    sourceTenantId?: string;
-
-    @field(String)
     microserviceId!: string;
 
     @field(String)
@@ -21,4 +15,10 @@ export class ObserverKey {
 
     @field(String)
     eventSequenceId!: string;
+
+    @field(String)
+    sourceMicroserviceId?: string;
+
+    @field(String)
+    sourceTenantId?: string;
 }
