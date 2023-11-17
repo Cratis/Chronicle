@@ -14,6 +14,6 @@ public class and_subscribers_event_types_are_different_and_replay_evaluator_retu
 
     async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
 
-    [Fact] void should_only_perform_one_transition() => state_machine.Verify(_ => _.TransitionTo<IState<ObserverState>>(), Once());
-    [Fact] void should_transition_to_replay() => state_machine.Verify(_ => _.TransitionTo<Replay>(), Once());
+    [Fact] void should_only_perform_one_transition() => observer.Verify(_ => _.TransitionTo<IState<ObserverState>>(), Once());
+    [Fact] void should_transition_to_replay() => observer.Verify(_ => _.TransitionTo<Replay>(), Once());
 }

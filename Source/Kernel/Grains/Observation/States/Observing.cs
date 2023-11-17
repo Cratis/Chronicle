@@ -17,7 +17,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 /// </summary>
 public class Observing : BaseObserverState
 {
-    readonly IObserver _observer;
     readonly IStreamProvider _streamProvider;
     readonly MicroserviceId _microserviceId;
     readonly TenantId _tenantId;
@@ -28,21 +27,18 @@ public class Observing : BaseObserverState
     /// <summary>
     /// Initializes a new instance of the <see cref="Observing"/> class.
     /// </summary>
-    /// <param name="observer"><see cref="IObserver"/> for handling events.</param>
     /// <param name="streamProvider"><see cref="IStreamProvider"/> to use to work with streams.</param>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the state is for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the state is for.</param>
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> being observed.</param>
     /// <param name="logger">Logger for logging.</param>
     public Observing(
-        IObserver observer,
         IStreamProvider streamProvider,
         MicroserviceId microserviceId,
         TenantId tenantId,
         EventSequenceId eventSequenceId,
         ILogger<Observing> logger)
     {
-        _observer = observer;
         _streamProvider = streamProvider;
         _microserviceId = microserviceId;
         _tenantId = tenantId;
@@ -75,7 +71,7 @@ public class Observing : BaseObserverState
         _logger.SubscribingToStream(state.NextEventSequenceNumber);
 
         _streamSubscription = await stream.SubscribeAsync(
-            async (@event, _) => await _observer.Handle(@event.Context.EventSourceId, new[] { @event }),
+            async (@event, _) => await Observer.Handle(@event.Context.EventSourceId, new[] { @event }),
             new EventSequenceNumberToken(state.NextEventSequenceNumber));
 
         await stream.WarmUp();

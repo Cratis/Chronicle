@@ -16,7 +16,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 public class Routing : BaseObserverState
 {
     readonly ObserverKey _observerKey;
-    readonly IObserver _observer;
     readonly IReplayEvaluator _replayEvaluator;
     readonly IEventSequence _eventSequence;
     readonly ILogger<Routing> _logger;
@@ -28,19 +27,16 @@ public class Routing : BaseObserverState
     /// Initializes a new instance of the <see cref="Routing"/> class.
     /// </summary>
     /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
-    /// <param name="observer"><see cref="IObserver"/> the state belongs to.</param>
     /// <param name="replayEvaluator"><see cref="IReplayEvaluator"/> for evaluating replays.</param>
     /// <param name="eventSequence"><see cref="IEventSequenceStorage"/> provider.</param>
     /// <param name="logger">Logger for logging.</param>
     public Routing(
         ObserverKey observerKey,
-        IObserver observer,
         IReplayEvaluator replayEvaluator,
         IEventSequence eventSequence,
         ILogger<Routing> logger)
     {
         _observerKey = observerKey;
-        _observer = observer;
         _replayEvaluator = replayEvaluator;
         _eventSequence = eventSequence;
         _logger = logger;
@@ -64,8 +60,8 @@ public class Routing : BaseObserverState
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        _subscription = await _observer.GetSubscription();
         using var logScope = _logger.BeginRoutingScope(state.ObserverId, _observerKey);
+        _subscription = await Observer.GetSubscription();
 
         _logger.Entering();
 

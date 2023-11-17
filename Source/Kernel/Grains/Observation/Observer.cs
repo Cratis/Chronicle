@@ -161,7 +161,6 @@ public class Observer : StateMachine<ObserverState>, IObserver
 
         new Routing(
             _observerKey,
-            this,
             _replayEvaluator,
             _eventSequence,
             _loggerFactory.CreateLogger<Routing>()),
@@ -181,7 +180,6 @@ public class Observer : StateMachine<ObserverState>, IObserver
         new Indexing(),
 
         new Observing(
-            this,
             _streamProvider,
             _observerKey.MicroserviceId,
             _observerKey.TenantId,

@@ -13,7 +13,6 @@ public class a_routing_state : Specification
 {
     protected Mock<IObserver> observer;
     protected Mock<IEventSequence> event_sequence;
-    protected Mock<IStateMachine<ObserverState>> state_machine;
     protected Mock<IReplayEvaluator> replay_evaluator;
     protected Routing state;
     protected ObserverState stored_state;
@@ -30,12 +29,10 @@ public class a_routing_state : Specification
         replay_evaluator = new();
         state = new Routing(
             observer_key,
-            observer.Object,
             replay_evaluator.Object,
             event_sequence.Object,
             Mock.Of<ILogger<Routing>>());
-        state_machine = new();
-        state.SetStateMachine(state_machine.Object);
+        state.SetStateMachine(observer.Object);
         stored_state = new ObserverState
         {
             RunningState = ObserverRunningState.Routing,

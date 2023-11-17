@@ -18,6 +18,6 @@ public class and_it_is_falling_behind : given.a_routing_state
 
     async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
 
-    [Fact] void should_only_perform_one_transition() => state_machine.Verify(_ => _.TransitionTo<IState<ObserverState>>(), Once());
-    [Fact] void should_transition_to_catch_up() => state_machine.Verify(_ => _.TransitionTo<CatchUp>(), Once());
+    [Fact] void should_only_perform_one_transition() => observer.Verify(_ => _.TransitionTo<IState<ObserverState>>(), Once());
+    [Fact] void should_transition_to_catch_up() => observer.Verify(_ => _.TransitionTo<CatchUp>(), Once());
 }
