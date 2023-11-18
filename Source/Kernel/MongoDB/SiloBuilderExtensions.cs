@@ -7,6 +7,7 @@ using Aksio.Cratis.Kernel.MongoDB.Reminders;
 using Aksio.Cratis.Kernel.MongoDB.Tenants;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Aksio.Cratis.Kernel.Persistence.Observation;
+using Aksio.Cratis.Kernel.Persistence.Operations;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Runtime;
 using Orleans.Storage;
@@ -35,6 +36,7 @@ public static class SiloBuilderExtensions
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.TenantConfiguration, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.Jobs, (serviceProvider, _) => serviceProvider.GetRequiredService<JobGrainStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.JobSteps, (serviceProvider, _) => serviceProvider.GetRequiredService<JobStepGrainStorageProvider>());
+            services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.Operations, (serviceProvider, _) => serviceProvider.GetRequiredService<OperationGrainStorageProvider>());
         });
         builder.ConfigureServices(services => services.AddSingleton<IReminderTable, MongoDBReminderTable>());
         return builder;

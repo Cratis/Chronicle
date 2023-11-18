@@ -4,7 +4,7 @@
 namespace Aksio.Cratis.Kernel.Observation.Replaying;
 
 /// <summary>
-/// Represents a reason type for a <see cref="ReplayCandidate"/>.
+/// Represents a reason type for a replay candidate.
 /// </summary>
 /// <param name="Value">The inner value.</param>
 public record ReplayCandidateReasonType(string Value) : ConceptAs<string>(Value)

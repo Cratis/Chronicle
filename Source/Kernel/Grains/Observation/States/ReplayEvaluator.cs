@@ -1,8 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Grains.Operations;
 using Aksio.Cratis.Kernel.Observation.Replaying;
-using Aksio.Cratis.Kernel.Persistence.Observation.Replaying;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 
@@ -11,15 +11,15 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 /// </summary>
 public class ReplayEvaluator : IReplayEvaluator
 {
-    readonly IReplayCandidatesStorage _replayCandidatesStorage;
+    readonly IGrainFactory _grainFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReplayEvaluator"/> class.
     /// </summary>
-    /// <param name="replayCandidatesStorage"><see cref="IReplayCandidatesStorage"/> for storing candidates for replaying.</param>
-    public ReplayEvaluator(IReplayCandidatesStorage replayCandidatesStorage)
+    /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
+    public ReplayEvaluator(IGrainFactory grainFactory)
     {
-        _replayCandidatesStorage = replayCandidatesStorage;
+        _grainFactory = grainFactory;
     }
 
     /// <inheritdoc/>
@@ -27,16 +27,17 @@ public class ReplayEvaluator : IReplayEvaluator
     {
         if (NeedsToReplay(context))
         {
-            await _replayCandidatesStorage.Add(new(
-                ReplayCandidateId.New(),
-                context.Id,
-                context.Key,
-                new[]
+            var operationsManager = _grainFactory.GetGrain<IOperationsManager>(0);
+            await operationsManager.Add<IReplayCandidateOperation, ReplayCandidateRequest>(new ReplayCandidateRequest
+            {
+                ObserverId = context.Id,
+                Reasons = new[]
                 {
                     new EventTypesChangedReplayCandidateReason(
                         context.State.EventTypes,
                         context.Subscription.EventTypes)
-                }));
+                }
+            });
         }
 
         return false;

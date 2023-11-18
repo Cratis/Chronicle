@@ -2,32 +2,33 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Applications.Queries;
-using Aksio.Cratis.Kernel.Observation;
-using Aksio.Cratis.Kernel.Persistence.Observation;
+using Aksio.Cratis.Kernel.Grains.Operations;
+using Aksio.Cratis.Kernel.Operations;
+using Aksio.Cratis.Kernel.Persistence.Operations;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Aksio.Cratis.Kernel.Read.Observation;
+namespace Aksio.Cratis.Kernel.Read.Operations;
 
 /// <summary>
-/// Represents the API for working with observers.
+/// Represents the API for working with operations.
 /// </summary>
-[Route("/api/events/store/{microserviceId}/{tenantId}/observers")]
-public class Observers : ControllerBase
+[Route("/api/events/store/{microserviceId}/{tenantId}/operations")]
+public class Operations : ControllerBase
 {
-    readonly ProviderFor<IObserverStorage> _observerStorageProvider;
+    readonly ProviderFor<IOperationStorage> _operationStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Observers"/> class.
+    /// Initializes a new instance of the <see cref="Operations"/> class.
     /// </summary>
-    /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
+    /// <param name="operationStorageProvider">Provider for <see cref="IOperationStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public Observers(
-        ProviderFor<IObserverStorage> observerStorageProvider,
+    public Operations(
+        ProviderFor<IOperationStorage> operationStorageProvider,
         IExecutionContextManager executionContextManager)
     {
-        _observerStorageProvider = observerStorageProvider;
+        _operationStorageProvider = operationStorageProvider;
         _executionContextManager = executionContextManager;
     }
 
@@ -36,15 +37,15 @@ public class Observers : ControllerBase
     /// </summary>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the observers are for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the observers are for.</param>
-    /// <returns>Collection of <see cref="ObserverInformation"/>.</returns>
+    /// <returns>Collection of <see cref="OperationInformation"/>.</returns>
     [HttpGet]
-    public Task<IEnumerable<ObserverInformation>> GetObservers(
+    public async Task<IEnumerable<OperationInformation>> GetOperations(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
-
-        return _observerStorageProvider().GetAllObservers();
+        var operations = await _operationStorageProvider().GetOperations();
+        return Convert(operations);
     }
 
     /// <summary>
@@ -52,17 +53,17 @@ public class Observers : ControllerBase
     /// </summary>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the observers are for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the observers are for.</param>
-    /// <returns>Client observable of a collection of <see cref="ObserverInformation"/>.</returns>
+    /// <returns>Client observable of a collection of <see cref="OperationInformation"/>.</returns>
     [HttpGet("observe")]
-    public Task<ClientObservable<IEnumerable<ObserverInformation>>> AllObservers(
+    public Task<ClientObservable<IEnumerable<OperationInformation>>> AllOperations(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
 
-        var clientObservable = new ClientObservable<IEnumerable<ObserverInformation>>();
-        var observable = _observerStorageProvider().ObserveAll();
-        var subscription = observable.Subscribe(_ => clientObservable.OnNext(_));
+        var clientObservable = new ClientObservable<IEnumerable<OperationInformation>>();
+        var observable = _operationStorageProvider().ObserveOperations();
+        var subscription = observable.Subscribe(operations => clientObservable.OnNext(Convert(operations)));
         clientObservable.ClientDisconnected = () =>
         {
             subscription.Dispose();
@@ -74,4 +75,7 @@ public class Observers : ControllerBase
 
         return Task.FromResult(clientObservable);
     }
+
+    IEnumerable<OperationInformation> Convert(IEnumerable<OperationState> operations) =>
+         operations.Select(_ => new OperationInformation(_.Id, _.Name, _.Details, _.Type)).ToArray();
 }

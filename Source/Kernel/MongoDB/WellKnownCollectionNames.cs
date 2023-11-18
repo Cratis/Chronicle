@@ -67,11 +67,6 @@ public static class WellKnownCollectionNames
     public const string FailedPartitions = "failed-partitions";
 
     /// <summary>
-    /// The collection that holds replay candidates.
-    /// </summary>
-    public const string ReplayCandidates = "replay-candidates";
-
-    /// <summary>
     /// The collection that holds identities.
     /// </summary>
     public const string Identities = "identities";
@@ -90,4 +85,9 @@ public static class WellKnownCollectionNames
     /// The collection that holds failed job steps.
     /// </summary>
     public const string FailedJobSteps = "failed-job-steps";
+
+    /// <summary>
+    /// The collection that holds operations.
+    /// </summary>
+    public const string Operations = "operations";
 }

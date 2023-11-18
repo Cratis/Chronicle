@@ -127,7 +127,6 @@ public class MongoDBJobStorage : IJobStorage
             var jobType = Type.GetType(jobTypeString);
             if (jobType is not null)
             {
-                var interfaces = jobType.GetInterfaces();
                 var observer = jobs.Find(_ => _.Id == (JobId)changedJob["_id"].AsGuid);
 
                 var jobState = BsonSerializer.Deserialize<JobState<object>>(changedJob);

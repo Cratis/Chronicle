@@ -11,12 +11,12 @@ public static class WellKnownGrainStorageProviders
     /// <summary>
     /// The name of the storage provider used for event sequences.
     /// </summary>
-    public const string EventSequences = "event-sequence-state";
+    public const string EventSequences = "event-sequence";
 
     /// <summary>
     /// The name of the storage provider used for observers.
     /// </summary>
-    public const string Observers = "observer-state";
+    public const string Observers = "observer";
 
     /// <summary>
     /// The name of the storage provider used for failed partitions on an observer.
@@ -26,15 +26,20 @@ public static class WellKnownGrainStorageProviders
     /// <summary>
     /// The name of the storage provider used for tenant configuration.
     /// </summary>
-    public const string TenantConfiguration = "tenant-configuration-state";
+    public const string TenantConfiguration = "tenant-configuration";
 
     /// <summary>
     /// THe name of the storage provider used for jobs.
     /// </summary>
-    public const string Jobs = "job-state";
+    public const string Jobs = "jobs";
 
     /// <summary>
     /// THe name of the storage provider used for jobs.
     /// </summary>
-    public const string JobSteps = "job-step-state";
+    public const string JobSteps = "job-steps";
+
+    /// <summary>
+    /// The name of the storage provider used for operations.
+    /// </summary>
+    public const string Operations = "operations";
 }

@@ -15,10 +15,11 @@ using Aksio.Cratis.Kernel.MongoDB.Identities;
 using Aksio.Cratis.Kernel.MongoDB.Jobs;
 using Aksio.Cratis.Kernel.MongoDB.Keys;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
+using Aksio.Cratis.Kernel.MongoDB.Operations;
 using Aksio.Cratis.Kernel.MongoDB.Projections;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Aksio.Cratis.Kernel.Persistence.Observation;
-using Aksio.Cratis.Kernel.Persistence.Observation.Replaying;
+using Aksio.Cratis.Kernel.Persistence.Operations;
 using Autofac;
 
 namespace Aksio.Cratis.Kernel.Server;
@@ -47,7 +48,7 @@ public class ServiceRegistrations : Module
         builder.RegisterType(typeof(MongoDBJobStepStorage)).As(typeof(IJobStepStorage)).InstancePerMicroserviceAndTenant();
         builder.RegisterGeneric(typeof(MongoDBJobStorage<>)).As(typeof(IJobStorage<>)).InstancePerMicroserviceAndTenant();
         builder.RegisterGeneric(typeof(MongoDBJobStepStorage<>)).As(typeof(IJobStepStorage<>)).InstancePerMicroserviceAndTenant();
-        builder.RegisterType(typeof(MongoDBReplayCandidateStorage)).As(typeof(IReplayCandidatesStorage)).InstancePerMicroserviceAndTenant();
+        builder.RegisterType(typeof(MongoDBOperationStorage)).As(typeof(IOperationStorage)).InstancePerMicroserviceAndTenant();
 
         builder.RegisterType<MongoDBIdentityStore>().As<IIdentityStore>().InstancePerTenant();
     }
