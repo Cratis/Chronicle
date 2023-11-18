@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.Operations;
+using Aksio.Cratis.Kernel.Grains.Suggestions;
 using Aksio.Cratis.Kernel.Observation.Replaying;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States;
@@ -27,8 +27,8 @@ public class ReplayEvaluator : IReplayEvaluator
     {
         if (NeedsToReplay(context))
         {
-            var operationsManager = _grainFactory.GetGrain<IOperationsManager>(0);
-            await operationsManager.Add<IReplayCandidateOperation, ReplayCandidateRequest>(new ReplayCandidateRequest
+            var suggestionsManager = _grainFactory.GetGrain<ISuggestionsManager>(0);
+            await suggestionsManager.Add<IReplayCandidateSuggestion, ReplayCandidateRequest>(new ReplayCandidateRequest
             {
                 ObserverId = context.Id,
                 Reasons = new[]

@@ -5,20 +5,20 @@
 import { field } from '@aksio/fundamentals';
 
 
-export class ObserverKey {
+export class SuggestionInformation {
 
     @field(String)
-    microserviceId!: string;
+    id!: string;
 
     @field(String)
-    tenantId!: string;
+    name!: string;
 
     @field(String)
-    eventSequenceId!: string;
+    description!: string;
 
     @field(String)
-    sourceMicroserviceId?: string;
+    type!: string;
 
-    @field(String)
-    sourceTenantId?: string;
+    @field(Date)
+    occurred!: Date;
 }

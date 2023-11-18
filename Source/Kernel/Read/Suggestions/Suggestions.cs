@@ -2,33 +2,33 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Applications.Queries;
-using Aksio.Cratis.Kernel.Grains.Operations;
-using Aksio.Cratis.Kernel.Operations;
-using Aksio.Cratis.Kernel.Persistence.Operations;
+using Aksio.Cratis.Kernel.Grains.Suggestions;
+using Aksio.Cratis.Kernel.Persistence.Suggestions;
+using Aksio.Cratis.Kernel.Suggestions;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Aksio.Cratis.Kernel.Read.Operations;
+namespace Aksio.Cratis.Kernel.Read.Suggestions;
 
 /// <summary>
-/// Represents the API for working with operations.
+/// Represents the API for working with suggestions.
 /// </summary>
-[Route("/api/events/store/{microserviceId}/{tenantId}/operations")]
-public class Operations : ControllerBase
+[Route("/api/events/store/{microserviceId}/{tenantId}/suggestions")]
+public class Suggestions : ControllerBase
 {
-    readonly ProviderFor<IOperationStorage> _operationStorageProvider;
+    readonly ProviderFor<ISuggestionStorage> _suggestionStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Operations"/> class.
+    /// Initializes a new instance of the <see cref="Suggestions"/> class.
     /// </summary>
-    /// <param name="operationStorageProvider">Provider for <see cref="IOperationStorage"/>.</param>
+    /// <param name="suggestionStorageProvider">Provider for <see cref="ISuggestionStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public Operations(
-        ProviderFor<IOperationStorage> operationStorageProvider,
+    public Suggestions(
+        ProviderFor<ISuggestionStorage> suggestionStorageProvider,
         IExecutionContextManager executionContextManager)
     {
-        _operationStorageProvider = operationStorageProvider;
+        _suggestionStorageProvider = suggestionStorageProvider;
         _executionContextManager = executionContextManager;
     }
 
@@ -37,15 +37,15 @@ public class Operations : ControllerBase
     /// </summary>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the observers are for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the observers are for.</param>
-    /// <returns>Collection of <see cref="OperationInformation"/>.</returns>
+    /// <returns>Collection of <see cref="SuggestionInformation"/>.</returns>
     [HttpGet]
-    public async Task<IEnumerable<OperationInformation>> GetOperations(
+    public async Task<IEnumerable<SuggestionInformation>> GetSuggestions(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
-        var operations = await _operationStorageProvider().GetOperations();
-        return Convert(operations);
+        var suggestions = await _suggestionStorageProvider().GetSuggestions();
+        return Convert(suggestions);
     }
 
     /// <summary>
@@ -53,17 +53,17 @@ public class Operations : ControllerBase
     /// </summary>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the observers are for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the observers are for.</param>
-    /// <returns>Client observable of a collection of <see cref="OperationInformation"/>.</returns>
+    /// <returns>Client observable of a collection of <see cref="SuggestionInformation"/>.</returns>
     [HttpGet("observe")]
-    public Task<ClientObservable<IEnumerable<OperationInformation>>> AllOperations(
+    public Task<ClientObservable<IEnumerable<SuggestionInformation>>> AllSuggestions(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
 
-        var clientObservable = new ClientObservable<IEnumerable<OperationInformation>>();
-        var observable = _operationStorageProvider().ObserveOperations();
-        var subscription = observable.Subscribe(operations => clientObservable.OnNext(Convert(operations)));
+        var clientObservable = new ClientObservable<IEnumerable<SuggestionInformation>>();
+        var observable = _suggestionStorageProvider().ObserveSuggestions();
+        var subscription = observable.Subscribe(suggestions => clientObservable.OnNext(Convert(suggestions)));
         clientObservable.ClientDisconnected = () =>
         {
             subscription.Dispose();
@@ -76,6 +76,6 @@ public class Operations : ControllerBase
         return Task.FromResult(clientObservable);
     }
 
-    IEnumerable<OperationInformation> Convert(IEnumerable<OperationState> operations) =>
-         operations.Select(_ => new OperationInformation(_.Id, _.Name, _.Details, _.Type, _.Occurred)).ToArray();
+    IEnumerable<SuggestionInformation> Convert(IEnumerable<SuggestionState> suggestions) =>
+         suggestions.Select(_ => new SuggestionInformation(_.Id, _.Name, _.Description, _.Type, _.Occurred)).ToArray();
 }

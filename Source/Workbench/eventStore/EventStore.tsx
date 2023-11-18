@@ -11,7 +11,7 @@ import { Observers } from './Observers';
 import { Projections } from './Projections';
 import { EventSequences } from './EventSequences';
 import { Jobs } from './Jobs';
-import { Operations } from './Operations';
+import { Suggestions } from './Suggestions';
 
 export const EventStore = () => {
     const [microservices] = AllMicroservices.use();
@@ -23,11 +23,11 @@ export const EventStore = () => {
             targetPath: microservice.id,
             routePath: ':microserviceId',
             children: [{
-                title: 'Operations',
+                title: 'Suggestions',
                 icon: <icons.Work />,
-                targetPath: 'operations',
-                routePath: 'operations',
-                content: <Operations />
+                targetPath: 'suggestions',
+                routePath: 'suggestions',
+                content: <Suggestions />
             }, {
                 title: 'Jobs',
                 icon: <icons.GroupWork />,

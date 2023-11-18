@@ -1,13 +1,13 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.Operations;
+using Aksio.Cratis.Kernel.Grains.Suggestions;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 
 /// <summary>
-/// Represents an implementation of <see cref="IReplayCandidateOperation"/>.
+/// Defines the Grain that represents a replay candidate for an observer.
 /// </summary>
-public class ReplayCandidateOperation : Operation<ReplayCandidateRequest>, IReplayCandidateOperation
+public interface IReplayCandidateSuggestion : ISuggestion<ReplayCandidateRequest>
 {
 }

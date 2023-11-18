@@ -7,15 +7,15 @@ import { useRouteParams } from './RouteParams';
 import { useEffect, useState } from 'react';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
-import { AllOperations } from 'API/events/store/operations/AllOperations';
-import { OperationInformation } from 'API/events/store/operations/OperationInformation';
+import { AllSuggestions } from 'API/events/store/suggestions/AllSuggestions';
+import { SuggestionInformation } from 'API/events/store/suggestions/SuggestionInformation';
 
 const columns: GridColDef[] = [
     {
         headerName: 'Occurred',
         field: 'occurred',
         width: 200,
-        valueGetter: (params: GridValueGetterParams<OperationInformation>) => {
+        valueGetter: (params: GridValueGetterParams<SuggestionInformation>) => {
             return params.row.occurred.toLocaleString();
         }
     },
@@ -32,11 +32,11 @@ const columns: GridColDef[] = [
 ]
 
 
-export const Operations = () => {
+export const Suggestions = () => {
     const { microserviceId } = useRouteParams();
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
-    const [operations] = AllOperations.use({
+    const [suggestions] = AllSuggestions.use({
         microserviceId: microserviceId,
         tenantId: selectedTenant?.id ?? undefined!
     });
@@ -50,7 +50,7 @@ export const Operations = () => {
     return (
         <>
             <Stack direction="column" style={{ height: '100%' }}>
-                <Typography variant='h4'>Operations</Typography>
+                <Typography variant='h4'>Suggestions</Typography>
                 <Divider sx={{ mt: 1, mb: 3 }} />
 
                 <Toolbar>
@@ -76,8 +76,8 @@ export const Operations = () => {
                         columns={columns}
                         filterMode="client"
                         sortingMode="client"
-                        getRowId={(row: OperationInformation) => row.id}
-                        rows={operations.data}
+                        getRowId={(row: SuggestionInformation) => row.id}
+                        rows={suggestions.data}
                     />
                 </Box>
             </Stack>

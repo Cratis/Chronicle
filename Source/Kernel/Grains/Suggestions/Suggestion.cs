@@ -1,13 +1,13 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Kernel.Grains.Operations;
+namespace Aksio.Cratis.Kernel.Grains.Suggestions;
 
 /// <summary>
-/// Represents an implementation of <see cref="IOperation{TRequest}"/>.
+/// Represents an implementation of <see cref="ISuggestion{TRequest}"/>.
 /// </summary>
-/// <typeparam name="TRequest">Type of request for the operation.</typeparam>
-public class Operation<TRequest> : Grain<OperationState>, IOperation<TRequest>
+/// <typeparam name="TRequest">Type of request for the suggestion.</typeparam>
+public class Suggestion<TRequest> : Grain<SuggestionState>, ISuggestion<TRequest>
     where TRequest : class
 {
     /// <inheritdoc/>
@@ -19,9 +19,9 @@ public class Operation<TRequest> : Grain<OperationState>, IOperation<TRequest>
     }
 
     /// <summary>
-    /// THe method that gets called when the operation is performed.
+    /// THe method that gets called when the suggestion is performed.
     /// </summary>
-    /// <param name="request">The request for the operation.</param>
+    /// <param name="request">The request for the suggestion.</param>
     /// <returns>Awaitable task.</returns>
     protected virtual Task OnPerform(TRequest request) => Task.CompletedTask;
 }
