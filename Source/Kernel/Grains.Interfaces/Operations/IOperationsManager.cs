@@ -18,5 +18,6 @@ public interface IOperationsManager : IGrainWithIntegerKey
     /// <typeparam name="TRequest">Type of request for the operation.</typeparam>
     /// <returns>The <see cref="OperationId"/> for the added operation.</returns>
     Task<OperationId> Add<TOperation, TRequest>(TRequest request)
-        where TOperation : IOperation<TRequest>;
+        where TOperation : IOperation<TRequest>
+        where TRequest : class;
 }
