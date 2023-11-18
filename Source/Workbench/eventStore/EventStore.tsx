@@ -11,7 +11,7 @@ import { Observers } from './Observers';
 import { Projections } from './Projections';
 import { EventSequences } from './EventSequences';
 import { Jobs } from './Jobs';
-import { ReplayCandidates } from './ReplayCandidates';
+import { Operations } from './Operations';
 
 export const EventStore = () => {
     const [microservices] = AllMicroservices.use();
@@ -23,6 +23,12 @@ export const EventStore = () => {
             targetPath: microservice.id,
             routePath: ':microserviceId',
             children: [{
+                title: 'Operations',
+                icon: <icons.Work />,
+                targetPath: 'operations',
+                routePath: 'operations',
+                content: <Operations />
+            }, {
                 title: 'Types',
                 icon: <icons.DataObject />,
                 targetPath: 'types',
@@ -54,17 +60,11 @@ export const EventStore = () => {
                 targetPath: 'jobs',
                 routePath: 'jobs',
                 content: <Jobs />
-            }, {
-                title: 'Observer replay candidates',
-                icon: <icons.Replay />,
-                targetPath: 'replay-candidates',
-                routePath: 'replay-candidates',
-                content: <ReplayCandidates />
             }]
         } as NavigationItem;
     });
 
     return (
-        <NavigationPage navigationItems={navigationItems}/>
+        <NavigationPage navigationItems={navigationItems} />
     );
 };

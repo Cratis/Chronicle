@@ -8,7 +8,7 @@ import { field } from '@aksio/fundamentals';
 export class OperationInformation {
 
     @field(String)
-    operationId!: string;
+    id!: string;
 
     @field(String)
     name!: string;
@@ -18,4 +18,7 @@ export class OperationInformation {
 
     @field(String)
     type!: string;
+
+    @field(Date)
+    occurred!: Date;
 }

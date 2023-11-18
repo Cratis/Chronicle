@@ -7,41 +7,36 @@ import { useRouteParams } from './RouteParams';
 import { useEffect, useState } from 'react';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
-import { AllReplayCandidates } from 'API/events/store/observers/AllReplayCandidates';
-import { ReplayCandidate } from 'API/events/store/observers/ReplayCandidate';
+import { AllOperations } from 'API/events/store/operations/AllOperations';
+import { OperationInformation } from 'API/events/store/operations/OperationInformation';
 
 const columns: GridColDef[] = [
     {
         headerName: 'Occurred',
         field: 'occurred',
         width: 200,
-        valueGetter: (params: GridValueGetterParams<ReplayCandidate>) => {
+        valueGetter: (params: GridValueGetterParams<OperationInformation>) => {
             return params.row.occurred.toLocaleString();
         }
     },
     {
-        headerName: 'ObserverId',
-        field: 'observerId',
+        headerName: 'Name',
+        field: 'name',
         width: 300,
     },
     {
-        headerName: 'Reasons',
-        field: 'reasons',
+        headerName: 'Details',
+        field: 'details',
         width: 300,
-        valueGetter: (params: GridValueGetterParams<ReplayCandidate>) => {
-            return params.row.reasons.map(_ => _.type).join(', ');
-
-        }
     }
-
 ]
 
 
-export const ReplayCandidates = () => {
+export const Operations = () => {
     const { microserviceId } = useRouteParams();
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
-    const [replayCandidates, performReplayCandidates] = AllReplayCandidates.use({
+    const [operations] = AllOperations.use({
         microserviceId: microserviceId,
         tenantId: selectedTenant?.id ?? undefined!
     });
@@ -52,18 +47,10 @@ export const ReplayCandidates = () => {
         }
     }, [tenants.data]);
 
-    useEffect(() => {
-        performReplayCandidates({
-            microserviceId: microserviceId,
-            tenantId: selectedTenant?.id ?? undefined!
-        });
-    }, [selectedTenant])
-
-
     return (
         <>
             <Stack direction="column" style={{ height: '100%' }}>
-                <Typography variant='h4'>Replay candidates</Typography>
+                <Typography variant='h4'>Operations</Typography>
                 <Divider sx={{ mt: 1, mb: 3 }} />
 
                 <Toolbar>
@@ -89,14 +76,11 @@ export const ReplayCandidates = () => {
                         columns={columns}
                         filterMode="client"
                         sortingMode="client"
-                        getRowId={(row: ReplayCandidate) => row.id}
-                        rows={replayCandidates.data}
+                        getRowId={(row: OperationInformation) => row.id}
+                        rows={operations.data}
                     />
                 </Box>
-
             </Stack>
-
-
         </>
     )
 };
