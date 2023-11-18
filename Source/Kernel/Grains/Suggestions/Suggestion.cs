@@ -14,10 +14,13 @@ public class Suggestion<TRequest> : Grain<SuggestionState>, ISuggestion<TRequest
     where TRequest : class
 {
     /// <inheritdoc/>
-    public async Task Initialize(TRequest request)
+    public async Task Initialize(
+        SuggestionDescription description,
+        TRequest request)
     {
         var requestType = request.GetType();
         State.Name = requestType.Name;
+        State.Description = description;
         State.Type = requestType;
         State.Request = request;
         await WriteStateAsync();

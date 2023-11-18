@@ -37,16 +37,18 @@ public class ReplayEvaluator : IReplayEvaluator
         if (NeedsToReplay(context))
         {
             var suggestionsManager = _grainFactory.GetGrain<ISuggestionsManager>(0, new SuggestionsManagerKey(_microserviceId, _tenantId));
-            await suggestionsManager.Add<IReplayCandidateSuggestion, ReplayCandidateRequest>(new ReplayCandidateRequest
-            {
-                ObserverId = context.Id,
-                Reasons = new[]
+            await suggestionsManager.Add<IReplayCandidateSuggestion, ReplayCandidateRequest>(
+                "Event types has changed.",
+                new ReplayCandidateRequest
                 {
-                    new EventTypesChangedReplayCandidateReason(
-                        context.State.EventTypes,
-                        context.Subscription.EventTypes)
-                }
-            });
+                    ObserverId = context.Id,
+                    Reasons = new[]
+                    {
+                        new EventTypesChangedReplayCandidateReason(
+                            context.State.EventTypes,
+                            context.Subscription.EventTypes)
+                    }
+                });
         }
 
         return false;

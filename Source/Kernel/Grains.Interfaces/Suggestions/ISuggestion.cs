@@ -13,9 +13,10 @@ public interface ISuggestion<TRequest> : IGrainWithGuidCompoundKey
     /// <summary>
     /// Initialize the suggestion.
     /// </summary>
+    /// <param name="description">The description of the suggestion.</param>
     /// <param name="request">Request to set.</param>
     /// <returns>Awaitable task.</returns>
-    Task Initialize(TRequest request);
+    Task Initialize(SuggestionDescription description, TRequest request);
 
     /// <summary>
     /// Perform the suggestion.

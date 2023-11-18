@@ -13,11 +13,12 @@ public interface ISuggestionsManager : IGrainWithIntegerCompoundKey
     /// <summary>
     /// Add a suggestion.
     /// </summary>
+    /// <param name="description">The description of the suggestion.</param>
     /// <param name="request">The request for the suggestion.</param>
     /// <typeparam name="TSuggestion">Type of suggestion to add.</typeparam>
     /// <typeparam name="TRequest">Type of request for the suggestion.</typeparam>
     /// <returns>The <see cref="SuggestionId"/> for the added suggestion.</returns>
-    Task<SuggestionId> Add<TSuggestion, TRequest>(TRequest request)
+    Task<SuggestionId> Add<TSuggestion, TRequest>(SuggestionDescription description, TRequest request)
         where TSuggestion : ISuggestion<TRequest>
         where TRequest : class;
 }

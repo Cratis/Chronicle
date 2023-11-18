@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Kernel.Grains.Suggestions;
 public class SuggestionsManager : Grain, ISuggestionsManager
 {
     /// <inheritdoc/>
-    public async Task<SuggestionId> Add<TSuggestion, TRequest>(TRequest request)
+    public async Task<SuggestionId> Add<TSuggestion, TRequest>(SuggestionDescription description, TRequest request)
         where TSuggestion : ISuggestion<TRequest>
         where TRequest : class
     {
@@ -19,7 +19,7 @@ public class SuggestionsManager : Grain, ISuggestionsManager
         var key = (SuggestionsManagerKey)keyAsString;
         var id = SuggestionId.New();
         var suggestion = GrainFactory.GetGrain<TSuggestion>(id, keyExtension: new SuggestionKey(key.MicroserviceId, key.TenantId));
-        await suggestion.Initialize(request);
+        await suggestion.Initialize(description, request);
         return id;
     }
 }
