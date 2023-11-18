@@ -8,6 +8,7 @@ namespace Aksio.Cratis.Kernel.Grains.Operations;
 /// </summary>
 /// <typeparam name="TRequest">Type of request for the task.</typeparam>
 public interface IOperation<TRequest> : IGrainWithGuidCompoundKey
+    where TRequest : class
 {
     /// <summary>
     /// Execute the task.
