@@ -77,5 +77,5 @@ public class Operations : ControllerBase
     }
 
     IEnumerable<OperationInformation> Convert(IEnumerable<OperationState> operations) =>
-         operations.Select(_ => new OperationInformation(_.Id, _.Name, _.Details, _.Type)).ToArray();
+         operations.Select(_ => new OperationInformation(_.Id, _.Name, _.Details, _.Type, _.Occurred)).ToArray();
 }

@@ -8,12 +8,14 @@ namespace Aksio.Cratis.Kernel.Operations;
 /// <summary>
 /// Represents information about an operation.
 /// </summary>
-/// <param name="OperationId">The unique identifier of the operation.</param>
+/// <param name="Id">The unique identifier of the operation.</param>
 /// <param name="Name">The name of the operation.</param>
 /// <param name="Details">The details of the operation.</param>
 /// <param name="Type">The type of the operation.</param>
+/// <param name="Occurred">When the operation occurred.</param>
 public record OperationInformation(
-    OperationId OperationId,
+    OperationId Id,
     OperationName Name,
     OperationDetails Details,
-    OperationType Type);
+    OperationType Type,
+    DateTimeOffset Occurred);
