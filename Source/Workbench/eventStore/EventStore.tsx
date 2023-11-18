@@ -29,6 +29,13 @@ export const EventStore = () => {
                 routePath: 'operations',
                 content: <Operations />
             }, {
+                title: 'Jobs',
+                icon: <icons.GroupWork />,
+                targetPath: 'jobs',
+                routePath: 'jobs',
+                content: <Jobs />
+            },
+            {
                 title: 'Types',
                 icon: <icons.DataObject />,
                 targetPath: 'types',
@@ -54,12 +61,6 @@ export const EventStore = () => {
                 targetPath: 'failed-partitions',
                 routePath: 'failed-partitions/*',
                 content: <FailedPartitionsNavigator />
-            }, {
-                title: 'Jobs',
-                icon: <icons.GroupWork />,
-                targetPath: 'jobs',
-                routePath: 'jobs',
-                content: <Jobs />
             }]
         } as NavigationItem;
     });
