@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Text.Json;
 using Aksio.Cratis.Kernel.Grains.Suggestions;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.Persistence.Suggestions;
@@ -20,14 +21,19 @@ namespace Aksio.Cratis.Kernel.MongoDB.Suggestions;
 public class MongoDBSuggestionStorage : ISuggestionStorage
 {
     readonly ProviderFor<IEventStoreDatabase> _databaseProvider;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBSuggestionStorage"/> class.
     /// </summary>
     /// <param name="databaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
-    public MongoDBSuggestionStorage(ProviderFor<IEventStoreDatabase> databaseProvider)
+    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
+    public MongoDBSuggestionStorage(
+        ProviderFor<IEventStoreDatabase> databaseProvider,
+        JsonSerializerOptions jsonSerializerOptions)
     {
         _databaseProvider = databaseProvider;
+        _jsonSerializerOptions = jsonSerializerOptions;
     }
 
     IMongoCollection<BsonDocument> Collection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.Suggestions);
@@ -54,8 +60,10 @@ public class MongoDBSuggestionStorage : ISuggestionStorage
     {
         var filter = GetIdFilter(suggestionId);
         var document = suggestionState.ToBsonDocument();
+        var requestProperty = nameof(SuggestionState.Request).ToCamelCase();
         document.Remove("_id");
-        document[nameof(SuggestionState.Request).ToCamelCase()] = suggestionState.Request.ToBsonDocument();
+        var json = JsonSerializer.Serialize(suggestionState.Request, _jsonSerializerOptions);
+        document[requestProperty] = BsonDocument.Parse(json);
         return Collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true });
     }
 
@@ -78,7 +86,7 @@ public class MongoDBSuggestionStorage : ISuggestionStorage
     {
         var requestProperty = nameof(SuggestionState.Request).ToCamelCase();
         var requestAsDocument = document.GetValue(requestProperty).AsBsonDocument;
-        var requestType = Type.GetType(requestAsDocument["type"].AsString);
+        var requestType = Type.GetType(document["type"].AsString);
         var request = BsonSerializer.Deserialize(requestAsDocument, requestType);
         document.Remove(requestProperty);
         var state = BsonSerializer.Deserialize<SuggestionState>(document);

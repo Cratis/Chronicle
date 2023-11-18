@@ -12,14 +12,23 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 public class ReplayEvaluator : IReplayEvaluator
 {
     readonly IGrainFactory _grainFactory;
+    readonly MicroserviceId _microserviceId;
+    readonly TenantId _tenantId;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReplayEvaluator"/> class.
     /// </summary>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    public ReplayEvaluator(IGrainFactory grainFactory)
+    /// <param name="microserviceId">The <see cref="MicroserviceId"/> the evaluator is for.</param>
+    /// <param name="tenantId">The <see cref="TenantId"/> the evaluator is for.</param>
+    public ReplayEvaluator(
+        IGrainFactory grainFactory,
+        MicroserviceId microserviceId,
+        TenantId tenantId)
     {
         _grainFactory = grainFactory;
+        _microserviceId = microserviceId;
+        _tenantId = tenantId;
     }
 
     /// <inheritdoc/>
@@ -27,7 +36,7 @@ public class ReplayEvaluator : IReplayEvaluator
     {
         if (NeedsToReplay(context))
         {
-            var suggestionsManager = _grainFactory.GetGrain<ISuggestionsManager>(0);
+            var suggestionsManager = _grainFactory.GetGrain<ISuggestionsManager>(0, new SuggestionsManagerKey(_microserviceId, _tenantId));
             await suggestionsManager.Add<IReplayCandidateSuggestion, ReplayCandidateRequest>(new ReplayCandidateRequest
             {
                 ObserverId = context.Id,

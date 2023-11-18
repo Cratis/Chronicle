@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Kernel.Grains.Suggestions;
 /// <summary>
 /// Defines a system that manages suggestions.
 /// </summary>
-public interface ISuggestionsManager : IGrainWithIntegerKey
+public interface ISuggestionsManager : IGrainWithIntegerCompoundKey
 {
     /// <summary>
     /// Add a suggestion.

@@ -29,7 +29,6 @@ public class Observer : StateMachine<ObserverState>, IObserver
     readonly ILoggerFactory _loggerFactory;
     readonly IPersistentState<FailedPartitions> _failuresState;
     readonly IObserverServiceClient _replayStateServiceClient;
-    readonly IReplayEvaluator _replayEvaluator;
     IStreamProvider _streamProvider = null!;
     ObserverId _observerId = Guid.Empty;
     ObserverKey _observerKey = ObserverKey.NotSet;
@@ -45,7 +44,6 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
     /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
-    /// <param name="replayEvaluator">The <see cref="IReplayEvaluator"/> to use.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Observer(
@@ -53,14 +51,12 @@ public class Observer : StateMachine<ObserverState>, IObserver
         [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
         IPersistentState<FailedPartitions> failures,
         IObserverServiceClient replayStateServiceClient,
-        IReplayEvaluator replayEvaluator,
         ILogger<Observer> logger,
         ILoggerFactory loggerFactory)
     {
         _executionContextManager = executionContextManager;
         _failuresState = failures;
         _replayStateServiceClient = replayStateServiceClient;
-        _replayEvaluator = replayEvaluator;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _subscription = ObserverSubscription.Unsubscribed;
@@ -161,7 +157,10 @@ public class Observer : StateMachine<ObserverState>, IObserver
 
         new Routing(
             _observerKey,
-            _replayEvaluator,
+            new ReplayEvaluator(
+                GrainFactory,
+                _observerKey.MicroserviceId,
+                _observerKey.TenantId),
             _eventSequence,
             _loggerFactory.CreateLogger<Routing>()),
 
