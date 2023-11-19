@@ -37,7 +37,7 @@ public record ObserverState(
     /// </summary>
     public ObserverState()
         : this(
-              Array.Empty<EventType>(),
+              Enumerable.Empty<EventType>(),
               EventSequenceId.Unspecified,
               ObserverId.Unspecified,
               ObserverName.NotSpecified,

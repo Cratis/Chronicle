@@ -42,6 +42,7 @@ public class ReplayEvaluator : IReplayEvaluator
                 new ReplayCandidateRequest
                 {
                     ObserverId = context.Id,
+                    ObserverKey = context.Key,
                     Reasons = new[]
                     {
                         new EventTypesChangedReplayCandidateReason(

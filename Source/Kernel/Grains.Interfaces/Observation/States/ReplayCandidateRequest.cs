@@ -17,6 +17,11 @@ public class ReplayCandidateRequest
     public ObserverId ObserverId { get; set; } = ObserverId.Unspecified;
 
     /// <summary>
+    /// Gets or sets the <see cref="ObserverKey"/> for the observer.
+    /// </summary>
+    public ObserverKey ObserverKey { get; set; } = ObserverKey.NotSet;
+
+    /// <summary>
     /// Gets or sets the reasons for why this is a replay candidate.
     /// </summary>
     public IEnumerable<ReplayCandidateReason> Reasons { get; set; } = Enumerable.Empty<ReplayCandidateReason>();
