@@ -35,8 +35,8 @@ public class Suggestions : ControllerBase
     /// <summary>
     /// Get all observers.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> the observers are for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the observers are for.</param>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> the suggestions are for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> the suggestions are for.</param>
     /// <returns>Collection of <see cref="SuggestionInformation"/>.</returns>
     [HttpGet]
     public async Task<IEnumerable<SuggestionInformation>> GetSuggestions(
@@ -51,8 +51,8 @@ public class Suggestions : ControllerBase
     /// <summary>
     /// Get and observe all observers.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> the observers are for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the observers are for.</param>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> the suggestions are for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> the suggestions are for.</param>
     /// <returns>Client observable of a collection of <see cref="SuggestionInformation"/>.</returns>
     [HttpGet("observe")]
     public Task<ClientObservable<IEnumerable<SuggestionInformation>>> AllSuggestions(

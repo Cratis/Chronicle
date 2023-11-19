@@ -20,6 +20,7 @@ namespace Aksio.Cratis.Kernel.MongoDB.Suggestions;
 /// </summary>
 public class MongoDBSuggestionStorage : ISuggestionStorage
 {
+    const string SuggestionRequestType = "requestType";
     readonly ProviderFor<IEventStoreDatabase> _databaseProvider;
     readonly JsonSerializerOptions _jsonSerializerOptions;
 
@@ -62,6 +63,7 @@ public class MongoDBSuggestionStorage : ISuggestionStorage
         var document = suggestionState.ToBsonDocument();
         var requestProperty = nameof(SuggestionState.Request).ToCamelCase();
         document.Remove("_id");
+        document[SuggestionRequestType] = suggestionState.Request.GetType().AssemblyQualifiedName;
         var json = JsonSerializer.Serialize(suggestionState.Request, _jsonSerializerOptions);
         document[requestProperty] = BsonDocument.Parse(json);
         return Collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true });
@@ -86,7 +88,7 @@ public class MongoDBSuggestionStorage : ISuggestionStorage
     {
         var requestProperty = nameof(SuggestionState.Request).ToCamelCase();
         var requestAsDocument = document.GetValue(requestProperty).AsBsonDocument;
-        var requestType = Type.GetType(document["type"].AsString);
+        var requestType = Type.GetType(document[SuggestionRequestType].AsString);
         var request = BsonSerializer.Deserialize(requestAsDocument, requestType);
         document.Remove(requestProperty);
         var state = BsonSerializer.Deserialize<SuggestionState>(document);
@@ -109,22 +111,17 @@ public class MongoDBSuggestionStorage : ISuggestionStorage
                 continue;
             }
 
-            var suggestionTypeString = changedSuggestion["type"].AsString;
-            var suggestionType = Type.GetType(suggestionTypeString);
-            if (suggestionType is not null)
-            {
-                var observer = suggestions.Find(_ => _.Id == (SuggestionId)changedSuggestion["_id"].AsGuid);
+            var observer = suggestions.Find(_ => _.Id == (SuggestionId)changedSuggestion["_id"].AsGuid);
 
-                var suggestionState = BsonSerializer.Deserialize<SuggestionState>(changedSuggestion);
-                if (observer is not null)
-                {
-                    var index = suggestions.IndexOf(observer);
-                    suggestions[index] = suggestionState;
-                }
-                else
-                {
-                    suggestions.Add(suggestionState);
-                }
+            var suggestionState = DeserializeState(changedSuggestion);
+            if (observer is not null)
+            {
+                var index = suggestions.IndexOf(observer);
+                suggestions[index] = suggestionState;
+            }
+            else
+            {
+                suggestions.Add(suggestionState);
             }
         }
     }

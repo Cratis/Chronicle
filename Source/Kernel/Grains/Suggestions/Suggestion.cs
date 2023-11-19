@@ -21,7 +21,7 @@ public class Suggestion<TRequest> : Grain<SuggestionState>, ISuggestion<TRequest
         var requestType = request.GetType();
         State.Name = requestType.Name;
         State.Description = description;
-        State.Type = requestType;
+        State.Type = this.GetGrainType();
         State.Request = request;
         await WriteStateAsync();
     }
@@ -32,6 +32,14 @@ public class Suggestion<TRequest> : Grain<SuggestionState>, ISuggestion<TRequest
         var request = (State.Request as TRequest)!;
         await OnPerform(request);
         await ClearStateAsync();
+        DeactivateOnIdle();
+    }
+
+    /// <inheritdoc/>
+    public async Task Ignore()
+    {
+        await ClearStateAsync();
+        DeactivateOnIdle();
     }
 
     /// <summary>

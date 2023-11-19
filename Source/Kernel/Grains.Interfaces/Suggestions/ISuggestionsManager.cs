@@ -21,4 +21,18 @@ public interface ISuggestionsManager : IGrainWithIntegerCompoundKey
     Task<SuggestionId> Add<TSuggestion, TRequest>(SuggestionDescription description, TRequest request)
         where TSuggestion : ISuggestion<TRequest>
         where TRequest : class;
+
+    /// <summary>
+    /// Perform a suggestion.
+    /// </summary>
+    /// <param name="suggestionId">The <see cref="SuggestionId"/> to perform.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Perform(SuggestionId suggestionId);
+
+    /// <summary>
+    /// Ignore a suggestion.
+    /// </summary>
+    /// <param name="suggestionId">The <see cref="SuggestionId"/> to ignore.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Ignore(SuggestionId suggestionId);
 }

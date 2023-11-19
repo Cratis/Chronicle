@@ -75,8 +75,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         ThisJob = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJob<TRequest>>();
 
-        var type = GetType();
-        var grainType = type.GetInterfaces().SingleOrDefault(_ => _.Name == $"I{type.Name}") ?? throw new InvalidGrainName(type);
+        var grainType = this.GetGrainType();
         State.Name = GetType().Name;
         State.Type = grainType;
         await WriteStateAsync();

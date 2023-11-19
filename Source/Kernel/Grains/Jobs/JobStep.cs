@@ -66,9 +66,8 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
         _ = this.GetPrimaryKey(out var key);
         var jobStepKey = (JobStepKey)key;
 
-        var type = GetType();
-        var grainType = type.GetInterfaces().SingleOrDefault(_ => _.Name == $"I{type.Name}") ?? throw new InvalidGrainName(type);
-        _state.State.Name = type.Name;
+        var grainType = this.GetGrainType();
+        _state.State.Name = GetType().Name;
         _state.State.Id = new(jobStepKey.JobId, JobStepId);
         _state.State.Type = grainType;
         await _state.WriteStateAsync();

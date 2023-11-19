@@ -4,10 +4,28 @@
 namespace Aksio.Cratis.Kernel.Grains.Suggestions;
 
 /// <summary>
-/// Defines a system for a task in the system.
+/// Defines a system for a suggestion in the system.
+/// </summary>
+public interface ISuggestion : IGrainWithGuidCompoundKey
+{
+    /// <summary>
+    /// Perform the suggestion.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Perform();
+
+    /// <summary>
+    /// Ignore the suggestion.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Ignore();
+}
+
+/// <summary>
+/// Defines a system for a suggestion in the system.
 /// </summary>
 /// <typeparam name="TRequest">Type of request for the task.</typeparam>
-public interface ISuggestion<TRequest> : IGrainWithGuidCompoundKey
+public interface ISuggestion<TRequest> : ISuggestion
     where TRequest : class
 {
     /// <summary>
@@ -17,10 +35,4 @@ public interface ISuggestion<TRequest> : IGrainWithGuidCompoundKey
     /// <param name="request">Request to set.</param>
     /// <returns>Awaitable task.</returns>
     Task Initialize(SuggestionDescription description, TRequest request);
-
-    /// <summary>
-    /// Perform the suggestion.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    Task Perform();
 }
