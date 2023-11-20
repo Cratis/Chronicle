@@ -12,8 +12,7 @@ export const Sequences = observer((props: SequencesProps) => {
 
     return <div>
         <h1>
-            Sequences {viewModel.counter}
-            <button onClick={() => viewModel.doStuff()}>Do stuff</button>
+            Sequences
         </h1>
         <NavLink to={'en'}>
             <Button color="primary">

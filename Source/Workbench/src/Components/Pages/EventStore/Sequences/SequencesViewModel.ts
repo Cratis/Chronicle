@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { observable, makeAutoObservable } from 'mobx';
+import { AppendedEventWithJsonAsContent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 
 export class SequencesViewModel {
 
@@ -9,5 +10,5 @@ export class SequencesViewModel {
         makeAutoObservable(this);
     }
 
-    @observable stuff: number[] = [];
+    @observable events: AppendedEventWithJsonAsContent[] = [];
 }
