@@ -1,10 +1,17 @@
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+import 'reflect-metadata';
 import { PrimeReactProvider } from 'primereact/api';
 import ReactDOM from 'react-dom/client';
+import React from 'react';
 import './Styles/tailwind.css';
 import './Styles/theme.css';
-import React from 'react';
 import App from "./App";
 
+import { Module } from './MVVM';
+
+Module.initialize();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>

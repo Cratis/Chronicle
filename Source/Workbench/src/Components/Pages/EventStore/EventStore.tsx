@@ -15,6 +15,8 @@ import { Observers } from "./Observers/Observers";
 import { Projections } from "./Projections/Projections";
 import { FailedPartitions } from "./FailedPartitions/FailedPartitions";
 import { ObserverReplayCandidates } from "./ObserverReplayCandidates/ObserverReplayCandidates";
+import { SequencesViewModel } from './Sequences/SequencesViewModel';
+import { container } from 'tsyringe';
 
 export const EventStore = () => {
     const menuItems: IMenuItem[] = [
@@ -60,7 +62,7 @@ export const EventStore = () => {
                                            leftMenuBasePath={'/event-store/:eventStoreId'}/>}>
                 <Route path='' element={<Navigate to={'types'}/>}/>
                 <Route path={'types'} element={<Types/>}/>
-                <Route path={'sequences/*'} element={<Sequences/>}/>
+                <Route path={'sequences/*'} element={<Sequences viewModel={container.resolve(SequencesViewModel)}/>}/>
                 <Route path={'observers'} element={<Observers/>}/>
                 <Route path={'projections'} element={<Projections/>}/>
                 <Route path={'failed-partitions'} element={<FailedPartitions/>}/>
