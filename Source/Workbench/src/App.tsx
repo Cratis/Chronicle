@@ -13,8 +13,7 @@ function App() {
                 <Route path='/home' element={<BlankLayout/>}>
                     <Route path={''} element={<Home/>}/>
                 </Route>
-                <Route path='/event-store/*' element={<EventStore/>}>
-                </Route>
+                <Route path='/event-store/*' element={<EventStore/>} />
             </Routes>
         </BrowserRouter>
     );
