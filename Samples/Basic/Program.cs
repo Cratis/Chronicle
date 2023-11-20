@@ -34,8 +34,8 @@ app.MapGet("/agg", async () =>
     var aggregateRootFactory = app.Services.GetRequiredService<IAggregateRootFactory>();
     var eventSourceId = (EventSourceId)"299681c4-f100-4dea-bfea-633115349ed1";
     var order = await aggregateRootFactory.Get<Order>(eventSourceId);
-    await order.DoStuff();
-    await order.DoOtherStuff();
+    order.DoStuff();
+    order.DoOtherStuff();
     await order.Commit();
 });
 

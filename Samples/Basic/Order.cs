@@ -12,11 +12,11 @@ namespace Basic;
 
 public class Order : AggregateRoot<OrderState>
 {
-    public async Task DoStuff()
+    public void DoStuff()
     {
         Console.WriteLine($"Before : {State.CartItems.Count()}");
 
-        await Apply(new ItemAddedToCart(
+        Apply(new ItemAddedToCart(
             new(Guid.NewGuid()),
             new(Guid.NewGuid()),
             1));
@@ -24,9 +24,9 @@ public class Order : AggregateRoot<OrderState>
         Console.WriteLine($"After : {State.CartItems.Count()}");
     }
 
-    public async Task DoOtherStuff()
+    public void DoOtherStuff()
     {
-        await Apply(new ItemRemovedFromCart(
+        Apply(new ItemRemovedFromCart(
             new(Guid.NewGuid()),
             new(Guid.NewGuid())));
     }
