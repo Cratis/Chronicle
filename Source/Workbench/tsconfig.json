@@ -21,12 +21,18 @@
         "noUnusedParameters": true,
         "noFallthroughCasesInSwitch": true,
         "experimentalDecorators": true,
-        "emitDecoratorMetadata": true
+        "emitDecoratorMetadata": true,
+        "paths": {
+            "API/*": [
+                "./API/*"
+            ]
+        }
     },
     "include": [
         "src",
-        "global.d.ts"
-, "API"    ],
+        "global.d.ts",
+        "API"
+    ],
     "exclude": [
         "./backup/**/*",
     ],

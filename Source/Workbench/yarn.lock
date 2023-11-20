@@ -12,7 +12,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aksio/fundamentals@npm:^1.5.2":
+"@aksio/fundamentals@npm:1.5.2":
   version: 1.5.2
   resolution: "@aksio/fundamentals@npm:1.5.2"
   dependencies:
@@ -2478,7 +2478,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mobx-react@npm:^9.1.0":
+"mobx-react@npm:9.1.0":
   version: 9.1.0
   resolution: "mobx-react@npm:9.1.0"
   dependencies:
@@ -2495,7 +2495,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mobx@npm:^6.11.0":
+"mobx@npm:6.11.0":
   version: 6.11.0
   resolution: "mobx@npm:6.11.0"
   checksum: d6decf113449bb02000e443dc61538cab992fda5aa56582bbd6178b8d85150550cc6c656dcf582fe756be7d88e025e16f19e3dd98df55fef1288ec4d4998da45
@@ -2856,14 +2856,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"primeicons@npm:^6.0.1":
+"primeicons@npm:6.0.1":
   version: 6.0.1
   resolution: "primeicons@npm:6.0.1"
   checksum: a1412fee16ddbd24e06052a7e94b973cf6f68fadb5349192101388f2681f822b3bde077948e6d53e9949f87148b495e4bf2b149ad07242de068d2e7233f4446c
   languageName: node
   linkType: hard
 
-"primereact@npm:^10.0.3":
+"primereact@npm:10.0.3":
   version: 10.0.3
   resolution: "primereact@npm:10.0.3"
   dependencies:
@@ -2927,7 +2927,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-icons@npm:^4.11.0":
+"react-icons@npm:4.11.0":
   version: 4.11.0
   resolution: "react-icons@npm:4.11.0"
   peerDependencies:
@@ -2950,7 +2950,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-router-dom@npm:^6.17.0":
+"react-router-dom@npm:6.17.0":
   version: 6.17.0
   resolution: "react-router-dom@npm:6.17.0"
   dependencies:
@@ -3027,7 +3027,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"reflect-metadata@npm:0.1.13, reflect-metadata@npm:^0.1.13":
+"reflect-metadata@npm:0.1.13":
   version: 0.1.13
   resolution: "reflect-metadata@npm:0.1.13"
   checksum: 798d379a7b6f6455501145419505c97dd11cbc23857a386add2b9ef15963ccf15a48d9d15507afe01d4cd74116df8a213247200bac00320bd7c11ddeaa5e8fb4
@@ -3359,7 +3359,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tailwindcss@npm:^3.3.3":
+"tailwindcss@npm:3.3.3":
   version: 3.3.3
   resolution: "tailwindcss@npm:3.3.3"
   dependencies:
@@ -3470,7 +3470,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tsyringe@npm:^4.8.0":
+"tsyringe@npm:4.8.0":
   version: 4.8.0
   resolution: "tsyringe@npm:4.8.0"
   dependencies:
@@ -3653,7 +3653,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workbench@workspace:."
   dependencies:
-    "@aksio/fundamentals": ^1.5.2
+    "@aksio/fundamentals": 1.5.2
     "@types/node": 20.8.4
     "@types/react": 18.2.28
     "@types/react-dom": 18.2.7
@@ -3664,18 +3664,18 @@ __metadata:
     eslint: 8.45.0
     eslint-plugin-react-hooks: 4.6.0
     eslint-plugin-react-refresh: 0.4.3
-    mobx: ^6.11.0
-    mobx-react: ^9.1.0
+    mobx: 6.11.0
+    mobx-react: 9.1.0
     postcss: ^8.4.31
-    primeicons: ^6.0.1
-    primereact: ^10.0.3
+    primeicons: 6.0.1
+    primereact: 10.0.3
     react: 18.2.0
     react-dom: 18.2.0
-    react-icons: ^4.11.0
-    react-router-dom: ^6.17.0
-    reflect-metadata: ^0.1.13
-    tailwindcss: ^3.3.3
-    tsyringe: ^4.8.0
+    react-icons: 4.11.0
+    react-router-dom: 6.17.0
+    reflect-metadata: 0.1.13
+    tailwindcss: 3.3.3
+    tsyringe: 4.8.0
     typescript: 5.2.2
     usehooks-ts: ^2.9.1
     vite: 4.4.5

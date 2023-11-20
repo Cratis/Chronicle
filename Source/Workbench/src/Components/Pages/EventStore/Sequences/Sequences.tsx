@@ -2,6 +2,8 @@ import { Button } from "primereact/button"
 import { NavLink, Navigate, Route, Routes } from "react-router-dom"
 import { SequencesViewModel } from './SequencesViewModel'
 import { observer } from 'mobx-react';
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
 
 export interface SequencesProps {
     viewModel: SequencesViewModel;
@@ -14,6 +16,13 @@ export const Sequences = observer((props: SequencesProps) => {
         <h1>
             Sequences
         </h1>
+
+        <DataTable value={viewModel.events} >
+            <Column field="metadata.sequenceNumber" header="#"/>
+            <Column field="metadata.type.id" header="Type"/>
+        </DataTable>
+
+        {/*
         <NavLink to={'en'}>
             <Button color="primary">
                 Side en
@@ -31,6 +40,6 @@ export const Sequences = observer((props: SequencesProps) => {
                 <Route path={'en'} element={<div>Side 1</div>} />
                 <Route path={'to'} element={<div>Side 2</div>} />
             </Routes>
-        </div>
+        </div> */}
     </div>
 })
