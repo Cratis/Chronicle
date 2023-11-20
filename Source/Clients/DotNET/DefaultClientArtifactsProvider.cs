@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Aggregates;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences.Outbox;
@@ -41,6 +42,7 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
         ObserverMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IObserverMiddleware))).ToArray();
         Reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
         AdditionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(ICanProvideAdditionalEventInformation))).ToArray();
+        AggregateRoots = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAggregateRoot))).ToArray();
     }
 
     /// <inheritdoc/>
@@ -78,4 +80,7 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
 
     /// <inheritdoc/>
     public IEnumerable<Type> AdditionalEventInformationProviders { get; }
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> AggregateRoots { get; }
 }

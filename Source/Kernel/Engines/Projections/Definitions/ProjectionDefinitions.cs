@@ -52,7 +52,9 @@ public class ProjectionDefinitions : IProjectionDefinitions
     /// <inheritdoc/>
     public async Task Register(ProjectionDefinition definition)
     {
+        definition = definition with { LastUpdated = DateTimeOffset.UtcNow };
         _definitions[definition.Identifier] = definition;
+
         await _storage.Save(definition);
     }
 

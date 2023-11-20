@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Aggregates;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Basic;
 using Microsoft.AspNetCore.Builder;
@@ -14,6 +16,8 @@ builder.UseCratis();
 //     .MultiTenanted());
 
 builder.Services.AddTransient<CartReducer>();
+//builder.Services.AddTransient<OrderStateReducer>();
+builder.Services.AddTransient<OrderStateProjection>();
 var app = builder.Build();
 
 app.MapGet("/add", () =>
@@ -23,6 +27,16 @@ app.MapGet("/add", () =>
         new(Guid.NewGuid()),
         new(Guid.NewGuid()),
         1));
+});
+
+app.MapGet("/agg", async () =>
+{
+    var aggregateRootFactory = app.Services.GetRequiredService<IAggregateRootFactory>();
+    var eventSourceId = (EventSourceId)"299681c4-f100-4dea-bfea-633115349ed1";
+    var order = await aggregateRootFactory.Get<Order>(eventSourceId);
+    await order.DoStuff();
+    await order.DoOtherStuff();
+    await order.Commit();
 });
 
 app.UseCratis();

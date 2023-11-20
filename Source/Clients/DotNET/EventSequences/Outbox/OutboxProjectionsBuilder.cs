@@ -50,10 +50,7 @@ public class OutboxProjectionsBuilder : IOutboxProjectionsBuilder
     public IOutboxProjectionsBuilder For<TTargetEvent>(Action<IProjectionBuilderFor<TTargetEvent>> projectionBuilderCallback)
     {
         var eventClrType = typeof(TTargetEvent);
-        if (!_eventTypes.HasFor(eventClrType))
-        {
-            throw new MissingEventTypeAttribute(eventClrType);
-        }
+        eventClrType.ValidateEventType();
 
         var eventType = _eventTypes.GetEventTypeFor(eventClrType);
         if (!eventType.IsPublic)

@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using System.Text;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
@@ -56,6 +58,18 @@ public class EventSequence : IEventSequence
         _causationManager = causationManager;
         _identityProvider = identityProvider;
         _executionContextManager = executionContextManager;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes)
+    {
+        var routeBuilder = new StringBuilder($"{GetBaseRoute()}/all?eventSourceId={eventSourceId}");
+        foreach (var eventType in eventTypes)
+        {
+            routeBuilder.Append("&eventTypes[]=").Append(eventType.Id);
+        }
+        var result = await _connection.PerformQuery<IEnumerable<AppendedEvent>>(routeBuilder.ToString(), metadata: new { EventSequenceId = _eventSequenceId });
+        return result.Data.ToImmutableList();
     }
 
     /// <inheritdoc/>

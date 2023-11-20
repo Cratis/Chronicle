@@ -42,6 +42,18 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
             new BsonElement("dateOnlyValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
             new BsonElement("timeOnlyValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
             new BsonElement("reference", reference),
+            new BsonElement("intChildren", new BsonArray(new BsonValue[]
+            {
+                new BsonInt32(1),
+                new BsonInt32(2),
+                new BsonInt32(3)
+            }.AsEnumerable())),
+            new BsonElement("stringChildren", new BsonArray(new BsonValue[]
+            {
+                new BsonString("first"),
+                new BsonString("second"),
+                new BsonString("third")
+            }.AsEnumerable())),
             new BsonElement("children", new BsonArray(new BsonDocument[]
             {
                 child
@@ -98,7 +110,6 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
     [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_double_value() => ((double)result.complexTypeDictionary["first"].doubleValue).ShouldEqual(source.GetElement("complexTypeDictionary").Value.AsBsonDocument.GetElement("first").Value.AsBsonDocument.GetElement("doubleValue").Value.AsDouble);
     [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_guid_value() => ((Guid)result.complexTypeDictionary["first"].guidValue).ShouldEqual(Guid.Parse(source.GetElement("complexTypeDictionary").Value.AsBsonDocument.GetElement("first").Value.AsBsonDocument.GetElement("guidValue").Value.AsString));
 
-
     [Fact] void should_reference_level_int_value_to_be_of_int_type() => ((object)result.reference.intValue).ShouldBeOfExactType<int>();
     [Fact] void should_reference_level_int_value_to_hold_correct_value() => ((int)result.reference.intValue).ShouldEqual(reference.GetElement("intValue").Value.AsInt32);
     [Fact] void should_reference_level_float_value_to_be_of_float_type() => ((object)result.reference.floatValue).ShouldBeOfExactType<float>();
@@ -116,4 +127,12 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
     [Fact] void should_child_double_value_to_hold_correct_value() => ((double)result.children[0].doubleValue).ShouldEqual(child.GetElement("doubleValue").Value.AsDouble);
     [Fact] void should_child_guid_value_to_be_of_guid_type() => ((object)result.children[0].guidValue).ShouldBeOfExactType<Guid>();
     [Fact] void should_child_guid_value_to_hold_correct_value() => ((Guid)result.children[0].guidValue).ShouldEqual(Guid.Parse(child.GetElement("guidValue").Value.AsString));
+
+    [Fact] void should_have_first_integer_child_with_correct_value() => ((int)result.intChildren[0]).ShouldEqual(1);
+    [Fact] void should_have_second_integer_child_with_correct_value() => ((int)result.intChildren[1]).ShouldEqual(2);
+    [Fact] void should_have_third_integer_child_with_correct_value() => ((int)result.intChildren[2]).ShouldEqual(3);
+
+    [Fact] void should_have_first_string_child_with_correct_value() => ((string)result.stringChildren[0]).ShouldEqual("first");
+    [Fact] void should_have_second_string_child_with_correct_value() => ((string)result.stringChildren[1]).ShouldEqual("second");
+    [Fact] void should_have_third_string_child_with_correct_value() => ((string)result.stringChildren[2]).ShouldEqual("third");
 }

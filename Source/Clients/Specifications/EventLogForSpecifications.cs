@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
@@ -31,6 +32,10 @@ public class EventLogForSpecifications : IEventLog
     /// Gets the appended events.
     /// </summary>
     public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _sequence.AppendedEvents;
+
+    /// <inheritdoc/>
+    public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes) =>
+        Task.FromResult<IImmutableList<AppendedEvent>>(ImmutableList<AppendedEvent>.Empty);
 
     /// <inheritdoc/>
     public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null) => _sequence.Append(eventSourceId, @event, validFrom);

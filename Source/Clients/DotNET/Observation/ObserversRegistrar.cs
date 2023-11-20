@@ -55,7 +55,6 @@ public class ObserversRegistrar : IObserversRegistrar
                                         observer.ObserverId,
                                         observerType.FullName ?? $"{observerType.Namespace}.{observerType.Name}",
                                         observer.EventSequenceId,
-                                        eventTypes,
                                         new ObserverInvoker(serviceProvider, eventTypes, middlewares, observerType, invokerLogger),
                                         causationManager,
                                         eventSerializer);

@@ -22,6 +22,7 @@ namespace Aksio.Cratis.Projections.Definitions;
 /// <param name="All">The full <see cref="AllDefinition"/>.</param>
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
 /// <param name="RemovedWith">The definition of what removes a child, if any.</param>
+/// <param name="LastUpdated">The last time the projection definition was updated.</param>
 public record ProjectionDefinition(
     ProjectionId Identifier,
     ProjectionName Name,
@@ -34,7 +35,8 @@ public record ProjectionDefinition(
     IDictionary<PropertyPath, ChildrenDefinition> Children,
     AllDefinition All,
     FromEventPropertyDefinition? FromEventProperty = default,
-    RemovedWithDefinition? RemovedWith = default)
+    RemovedWithDefinition? RemovedWith = default,
+    DateTimeOffset? LastUpdated = default)
 {
     /// <summary>
     /// Checks if the definition is empty or not. Empty meaning that there is no definition.

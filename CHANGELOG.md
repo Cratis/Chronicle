@@ -1,3 +1,28 @@
+# [v9.9.0] - 2023-11-15 [PR: #0]()
+
+### Added
+
+- Adding support for `AggregateRoot`. Aggregates can either be stateless, meaning you can implement handle methods for the events you want it to possibly create state from when rehydrating an aggregate, or they can be stateful in the sense that state can be produced during rehydration based on a `IReducerFor<>` or an `IImmediateProjectionFor<>`. These 3 options are mutually exclusive. Documentation of all this will follow. There are also an early approach to writing tests for this, which will be improved upon in the future.
+
+
+# [v9.8.0] - 2023-11-13 [PR: #1013](https://github.com/aksio-insurtech/Cratis/pull/1013)
+
+### Fixed
+
+- Fixing BSON to `ExpandoObject` converter to support collections of primitives such as `int` and `string`. It made the items `null` before.
+
+
+# [v9.8.0-beta.1] - 2023-11-2 [PR: #0]()
+
+No release notes
+
+# [v9.7.2] - 2023-11-1 [PR: #1006](https://github.com/aksio-insurtech/Cratis/pull/1006)
+
+### Fixed
+
+- Children with composite keys are now recognized when creating changesets within projections. Two items with same key will now not result in a `ChildAdded` change. This accidently worked when running it with MongoDB but got highlighted as a problem when running unit tests for projections.
+
+
 # [v9.7.1] - 2023-10-31 [PR: #0]()
 
 No release notes

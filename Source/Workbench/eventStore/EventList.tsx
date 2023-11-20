@@ -55,7 +55,8 @@ export const EventList = (props: EventListProps) => {
             microserviceId: props.microserviceId,
             tenantId: props.tenantId,
             pageNumber: pageState.pageNumber,
-            pageSize: pageState.pageSize
+            pageSize: pageState.pageSize,
+            eventSourceId: ''
         } as GetAppendedEventsArguments;
     };
 

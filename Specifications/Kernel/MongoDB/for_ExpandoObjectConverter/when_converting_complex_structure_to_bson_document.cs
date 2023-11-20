@@ -44,6 +44,9 @@ public class when_converting_complex_structure_to_bson_document : given.an_expan
             { "second", 43 }
         };
 
+        expando.intChildren = new int[] { 1, 2, 3 };
+        expando.stringChildren = new string[] { "first", "second", "third" };
+
         dynamic child_expando = new ExpandoObject();
         child_expando.intValue = 44;
         child_expando.floatValue = 44.44f;
@@ -116,4 +119,12 @@ public class when_converting_complex_structure_to_bson_document : given.an_expan
     [Fact] void should_child_object_double_value_to_hold_correct_value() => result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("doubleValue").Value.AsDouble.ShouldEqual((double)child_dynamic.doubleValue);
     [Fact] void should_child_object_guid_value_to_be_of_binary_type() => result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("guidValue").Value.ShouldBeOfExactType<BsonBinaryData>();
     [Fact] void should_child_object_guid_value_to_hold_correct_value() => result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("guidValue").Value.AsGuid.ShouldEqual(Guid.Parse((string)child_dynamic.guidValue));
+
+    [Fact] void should_have_first_integer_child_with_correct_value() => result.GetElement("intChildren").Value.AsBsonArray[0].AsInt32.ShouldEqual((int)source_dynamic.intChildren[0]);
+    [Fact] void should_have_second_integer_child_with_correct_value() => result.GetElement("intChildren").Value.AsBsonArray[1].AsInt32.ShouldEqual((int)source_dynamic.intChildren[1]);
+    [Fact] void should_have_third_integer_child_with_correct_value() => result.GetElement("intChildren").Value.AsBsonArray[2].AsInt32.ShouldEqual((int)source_dynamic.intChildren[2]);
+
+    [Fact] void should_have_first_string_child_with_correct_value() => result.GetElement("stringChildren").Value.AsBsonArray[0].AsString.ShouldEqual((string)source_dynamic.stringChildren[0]);
+    [Fact] void should_have_second_string_child_with_correct_value() => result.GetElement("stringChildren").Value.AsBsonArray[1].AsString.ShouldEqual((string)source_dynamic.stringChildren[1]);
+    [Fact] void should_have_third_string_child_with_correct_value() => result.GetElement("stringChildren").Value.AsBsonArray[2].AsString.ShouldEqual((string)source_dynamic.stringChildren[2]);
 }

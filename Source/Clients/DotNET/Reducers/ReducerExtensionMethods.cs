@@ -4,7 +4,6 @@
 using System.Reflection;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Reducers.Validators;
-using Aksio.Reflection;
 
 namespace Aksio.Cratis.Reducers;
 
@@ -39,7 +38,7 @@ public static class ReducerExtensionMethods
         if (parameters.Length > 3) return false;
 
         if (parameters.Length >= 2 &&
-            parameters[0].ParameterType.HasAttribute<EventTypeAttribute>() &&
+            parameters[0].ParameterType.IsEventType() &&
             parameters[1].ParameterType.Equals(readModelType))
         {
             if ((methodInfo.DeclaringType?.IsNullableContext() ?? false) && !parameters[1].IsNullableReferenceType())

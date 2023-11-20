@@ -12,7 +12,13 @@ namespace Aksio.Cratis.Projections;
 /// <param name="TenantId">The Tenant identifier.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
 /// <param name="ModelKey">The event source identifier.</param>
-public record ImmediateProjectionKey(MicroserviceId MicroserviceId, TenantId TenantId, EventSequenceId EventSequenceId, ModelKey ModelKey)
+/// <param name="CorrelationId">The optional correlation identifier.</param>
+public record ImmediateProjectionKey(
+    MicroserviceId MicroserviceId,
+    TenantId TenantId,
+    EventSequenceId EventSequenceId,
+    ModelKey ModelKey,
+    CorrelationId? CorrelationId = default)
 {
     /// <summary>
     /// Implicitly convert from <see cref="ProjectionKey"/> to string.
@@ -21,7 +27,15 @@ public record ImmediateProjectionKey(MicroserviceId MicroserviceId, TenantId Ten
     public static implicit operator string(ImmediateProjectionKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{MicroserviceId}+{TenantId}+{EventSequenceId}+{ModelKey}";
+    public override string ToString()
+    {
+        if (CorrelationId != default)
+        {
+            return $"{MicroserviceId}+{TenantId}+{EventSequenceId}+{ModelKey}+{CorrelationId}";
+        }
+
+        return $"{MicroserviceId}+{TenantId}+{EventSequenceId}+{ModelKey}";
+    }
 
     /// <summary>
     /// Parse a key into its components.
@@ -35,6 +49,11 @@ public record ImmediateProjectionKey(MicroserviceId MicroserviceId, TenantId Ten
         var tenantId = (TenantId)elements[1];
         var eventSequenceId = (EventSequenceId)elements[2];
         var modelKey = (ModelKey)elements[3];
+        if (elements.Length == 5)
+        {
+            var correlationId = (CorrelationId)elements[4];
+            return new(microserviceId, tenantId, eventSequenceId, modelKey, correlationId);
+        }
         return new(microserviceId, tenantId, eventSequenceId, modelKey);
     }
 }
