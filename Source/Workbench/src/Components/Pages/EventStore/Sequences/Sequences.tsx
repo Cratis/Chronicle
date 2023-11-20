@@ -12,10 +12,17 @@ export interface SequencesProps {
 export const Sequences = observer((props: SequencesProps) => {
     const { viewModel } = props;
 
+
+
     return <div>
         <h1>
             Sequences
         </h1>
+
+        <Filters filters={viewModel.filters}
+                 onAdded={viewModel.addFilter}
+                 onChanged={viewModel.modifyFilter}
+                 onRemoved={viewModel.removeFilter}/>
 
         <DataTable value={viewModel.events} >
             <Column field="metadata.sequenceNumber" header="#"/>
