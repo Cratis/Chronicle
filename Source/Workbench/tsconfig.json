@@ -22,10 +22,23 @@
         "noFallthroughCasesInSwitch": true,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
+        "baseUrl": "./",
         "paths": {
             "API/*": [
                 "./API/*"
-            ]
+            ],
+            "Components/*": [
+                "./src/Components/*"
+            ],
+            "Routing/*": [
+                "./src/Routing/*"
+            ],
+            "Styles/*": [
+                "./src/Styles/*"
+            ],
+            "Layout/*": [
+                "./src/Layout/*"
+            ],
         }
     },
     "include": [

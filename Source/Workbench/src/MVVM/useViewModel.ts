@@ -16,7 +16,7 @@ export function withViewModel<TViewModel, TProps = {}>(viewModelType: Constructo
     return observer(() => {
         const viewModel = container.resolve<TViewModel>(viewModelType);
         return view({ viewModel, props: undefined! });
-    }
+    })
 }
 
 

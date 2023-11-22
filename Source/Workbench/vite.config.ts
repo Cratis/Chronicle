@@ -38,6 +38,7 @@ export default defineConfig({
             'Components': path.resolve('./src/Components'),
             'Routing': path.resolve('./src/Routing'),
             'Styles': path.resolve('./src/Styles'),
+            'Layout': path.resolve('./src/Layout'),
         }
     }
 

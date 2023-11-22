@@ -1,73 +1,83 @@
-import { DefaultLayout } from "../../../Layout/Default/DefaultLayout";
-import { Navigate, Route, Routes } from "react-router-dom";
-import { Sequences } from "./Sequences/Sequences";
-import { IMenuItem } from "../../../Layout/Default/Sidebar/MenuItem/MenuItem";
+import { ObserverReplayCandidates } from './ObserverReplayCandidates/ObserverReplayCandidates';
+import { FailedPartitions } from './FailedPartitions/FailedPartitions';
+import { IMenuItem } from 'Layout/Default/Sidebar/MenuItem/MenuItem';
+import { SequencesViewModel } from './Sequences/SequencesViewModel';
+import { DefaultLayout } from 'Layout/Default/DefaultLayout';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { Projections } from './Projections/Projections';
+import { Observers } from './Observers/Observers';
+import { Sequences } from './Sequences/Sequences';
+import { Types } from './Types/Types';
+import { container } from 'tsyringe';
 import {
     MdDataObject,
     MdErrorOutline,
     MdMediation,
     MdOutlineLoupe,
     MdOutlinePlayArrow,
-    MdStream
-} from "react-icons/md";
-import { Types } from "./Types/Types";
-import { Observers } from "./Observers/Observers";
-import { Projections } from "./Projections/Projections";
-import { FailedPartitions } from "./FailedPartitions/FailedPartitions";
-import { ObserverReplayCandidates } from "./ObserverReplayCandidates/ObserverReplayCandidates";
-import { SequencesViewModel } from './Sequences/SequencesViewModel';
-import { container } from 'tsyringe';
+    MdStream,
+} from 'react-icons/md';
 
 export const EventStore = () => {
     const menuItems: IMenuItem[] = [
         {
             label: 'Types',
             url: 'types',
-            icon: MdDataObject
-
+            icon: MdDataObject,
         },
         {
             label: 'Sequences',
             url: 'sequences',
-            icon: MdStream
-
+            icon: MdStream,
         },
         {
             label: 'Observers',
             url: 'observers',
-            icon: MdErrorOutline
-
-
+            icon: MdErrorOutline,
         },
         {
             label: 'Projections',
             url: 'projections',
-            icon: MdOutlineLoupe
+            icon: MdOutlineLoupe,
         },
         {
             label: 'Failed Partitions',
             url: 'failed-partitions',
-            icon: MdMediation
+            icon: MdMediation,
         },
         {
             label: 'Observer replay candidates',
             url: 'observer-replay-candidates',
-            icon: MdOutlinePlayArrow
+            icon: MdOutlinePlayArrow,
         },
     ];
-    return (<>
+    return (
         <Routes>
-            <Route path=':eventStoreId'
-                   element={<DefaultLayout leftMenuItems={menuItems}
-                                           leftMenuBasePath={'/event-store/:eventStoreId'}/>}>
-                <Route path='' element={<Navigate to={'types'}/>}/>
-                <Route path={'types'} element={<Types/>}/>
-                <Route path={'sequences/*'} element={<Sequences viewModel={container.resolve(SequencesViewModel)}/>}/>
-                <Route path={'observers'} element={<Observers/>}/>
-                <Route path={'projections'} element={<Projections/>}/>
-                <Route path={'failed-partitions'} element={<FailedPartitions/>}/>
-                <Route path={'observer-replay-candidates'} element={<ObserverReplayCandidates/>}/>
+            <Route
+                path=':eventStoreId'
+                element={
+                    <DefaultLayout
+                        leftMenuItems={menuItems}
+                        leftMenuBasePath={'/event-store/:eventStoreId'}
+                    />
+                }
+            >
+                <Route path='' element={<Navigate to={'types'} />} />
+                <Route path={'types'} element={<Types />} />
+                <Route
+                    path={'sequences/*'}
+                    element={
+                        <Sequences viewModel={container.resolve(SequencesViewModel)} />
+                    }
+                />
+                <Route path={'observers'} element={<Observers />} />
+                <Route path={'projections'} element={<Projections />} />
+                <Route path={'failed-partitions'} element={<FailedPartitions />} />
+                <Route
+                    path={'observer-replay-candidates'}
+                    element={<ObserverReplayCandidates />}
+                />
             </Route>
         </Routes>
-    </>)
-}
+    );
+};
