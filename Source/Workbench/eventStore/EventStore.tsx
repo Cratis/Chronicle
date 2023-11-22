@@ -23,10 +23,10 @@ export const EventStore = () => {
             targetPath: microservice.id,
             routePath: ':microserviceId',
             children: [{
-                title: 'Suggestions',
+                title: 'Recommendations',
                 icon: <icons.Info />,
-                targetPath: 'suggestions',
-                routePath: 'suggestions',
+                targetPath: 'recommendations',
+                routePath: 'recommendations',
                 content: <Suggestions />
             }, {
                 title: 'Jobs',

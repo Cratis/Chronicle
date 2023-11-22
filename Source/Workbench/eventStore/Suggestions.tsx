@@ -63,7 +63,7 @@ export const Suggestions = () => {
     return (
         <>
             <Stack direction="column" style={{ height: '100%' }}>
-                <Typography variant='h4'>Suggestions</Typography>
+                <Typography variant='h4'>Recommendations</Typography>
                 <Divider sx={{ mt: 1, mb: 3 }} />
 
                 <Toolbar>
