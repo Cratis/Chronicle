@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver.when_asking_if_can_resume;
 
-public class and_it_is_not_subscribed : given.a_catchup_observer_and_an_unsubscribed_request
+public class and_it_is_not_subscribed : given.a_catchup_observer_and_a_request
 {
     Mock<IObserver> observer;
     bool result;

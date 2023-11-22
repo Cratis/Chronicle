@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver.given;
 
-public class a_catchup_observer_and_an_unsubscribed_request : a_catchup_observer
+public class a_catchup_observer_and_a_request : a_catchup_observer
 {
     void Establish()
     {

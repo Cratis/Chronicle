@@ -11,35 +11,30 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// </summary>
 public class ReplayObserverPartition : Job<ReplayObserverPartitionRequest, JobState<ReplayObserverPartitionRequest>>, IReplayObserverPartition
 {
-    ReplayObserverPartitionRequest? _request;
-
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
-        if (_request == null) return;
         if (State.Progress.SuccessfulSteps == 1)
         {
-            var observer = GrainFactory.GetGrain<IObserver>(_request.ObserverId, _request.ObserverKey);
-            await observer.PartitionReplayed(_request.Key);
+            var observer = GrainFactory.GetGrain<IObserver>(State.Request.ObserverId, State.Request.ObserverKey);
+            await observer.PartitionReplayed(State.Request.Key);
         }
     }
 
     /// <inheritdoc/>
-    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverPartitionRequest request)
+    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps()
     {
-        _request = request;
-
         var steps = new[]
         {
             CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
-                    request.ObserverId,
-                    request.ObserverKey,
-                    request.ObserverSubscription,
-                    request.Key,
-                    request.FromSequenceNumber,
+                    State.Request.ObserverId,
+                    State.Request.ObserverKey,
+                    State.Request.ObserverSubscription,
+                    State.Request.Key,
+                    State.Request.FromSequenceNumber,
                     Events.EventObservationState.Replay,
-                    request.EventTypes))
+                    State.Request.EventTypes))
         }.ToImmutableList();
 
         return Task.FromResult<IImmutableList<JobStepDetails>>(steps);

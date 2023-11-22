@@ -11,24 +11,21 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// </summary>
 public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState<RetryFailedPartitionRequest>>, IRetryFailedPartitionJob
 {
-    RetryFailedPartitionRequest? _request;
-
     /// <inheritdoc/>
     protected override bool RemoveAfterCompleted => true;
 
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
-        if (_request == null) return;
         if (State.Progress.SuccessfulSteps == 1)
         {
-            var observer = GrainFactory.GetGrain<IObserver>(_request.ObserverId, _request.ObserverKey);
-            await observer.FailedPartitionRecovered(_request.Key);
+            var observer = GrainFactory.GetGrain<IObserver>(State.Request.ObserverId, State.Request.ObserverKey);
+            await observer.FailedPartitionRecovered(State.Request.Key);
         }
     }
 
     /// <inheritdoc/>
-    protected override JobDetails GetJobDetails(RetryFailedPartitionRequest request) => $"{request.ObserverId}-{request.Key}";
+    protected override JobDetails GetJobDetails() => $"{State.Request.ObserverId}-{State.Request.Key}";
 
     /// <inheritdoc/>
     protected override Task<bool> CanResume()
@@ -38,21 +35,19 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
     }
 
     /// <inheritdoc/>
-    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(RetryFailedPartitionRequest request)
+    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps()
     {
-        _request = request;
-
         var steps = new[]
         {
             CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
-                    request.ObserverId,
-                    request.ObserverKey,
-                    request.ObserverSubscription,
-                    request.Key,
-                    request.FromSequenceNumber,
+                    State.Request.ObserverId,
+                    State.Request.ObserverKey,
+                    State.Request.ObserverSubscription,
+                    State.Request.Key,
+                    State.Request.FromSequenceNumber,
                     Events.EventObservationState.None,
-                    request.EventTypes))
+                    State.Request.EventTypes))
         }.ToImmutableList();
 
         return Task.FromResult<IImmutableList<JobStepDetails>>(steps);

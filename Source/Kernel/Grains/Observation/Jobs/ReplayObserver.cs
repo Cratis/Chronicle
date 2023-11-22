@@ -15,7 +15,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, IReplayObserver
 {
     readonly IObserverKeyIndexes _observerKeyIndexes;
-    ReplayObserverRequest? _request;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReplayObserver"/> class.
@@ -29,8 +28,7 @@ public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, I
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
-        if (_request == null) return;
-        var observer = GrainFactory.GetGrain<IObserver>(_request.ObserverId, _request.ObserverKey);
+        var observer = GrainFactory.GetGrain<IObserver>(State.Request.ObserverId, State.Request.ObserverKey);
         await observer.ReportHandledEvents(State.HandledCount);
         await observer.TransitionTo<Routing>();
     }
@@ -47,7 +45,7 @@ public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, I
     }
 
     /// <inheritdoc/>
-    protected override JobDetails GetJobDetails(ReplayObserverRequest request) => $"{request.ObserverId}";
+    protected override JobDetails GetJobDetails() => $"{State.Request.ObserverId}";
 
     /// <inheritdoc/>
     protected override Task<bool> CanResume()
@@ -57,12 +55,11 @@ public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, I
     }
 
     /// <inheritdoc/>
-    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverRequest request)
+    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps()
     {
-        _request = request;
         var index = await _observerKeyIndexes.GetFor(
-            request.ObserverId,
-            request.ObserverKey);
+            State.Request.ObserverId,
+            State.Request.ObserverKey);
 
         var keys = index.GetKeys(EventSequenceNumber.First);
         var steps = new List<JobStepDetails>();
@@ -71,13 +68,13 @@ public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, I
         {
             steps.Add(CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
-                    request.ObserverId,
-                    request.ObserverKey,
-                    request.ObserverSubscription,
+                    State.Request.ObserverId,
+                    State.Request.ObserverKey,
+                    State.Request.ObserverSubscription,
                     key,
                     EventSequenceNumber.First,
                     EventObservationState.Replay,
-                    request.EventTypes)));
+                    State.Request.EventTypes)));
         }
 
         return steps.ToImmutableList();
