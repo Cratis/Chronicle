@@ -87,7 +87,7 @@ public static class WellKnownCollectionNames
     public const string FailedJobSteps = "failed-job-steps";
 
     /// <summary>
-    /// The collection that holds suggestions.
+    /// The collection that holds recommendations.
     /// </summary>
-    public const string Suggestions = "suggestions";
+    public const string Recommendations = "recommendations";
 }

@@ -11,7 +11,7 @@ import { Observers } from './Observers';
 import { Projections } from './Projections';
 import { EventSequences } from './EventSequences';
 import { Jobs } from './Jobs';
-import { Suggestions } from './Suggestions';
+import { Recommendations } from './Recommendations';
 
 export const EventStore = () => {
     const [microservices] = AllMicroservices.use();
@@ -27,7 +27,7 @@ export const EventStore = () => {
                 icon: <icons.Info />,
                 targetPath: 'recommendations',
                 routePath: 'recommendations',
-                content: <Suggestions />
+                content: <Recommendations />
             }, {
                 title: 'Jobs',
                 icon: <icons.GroupWork />,

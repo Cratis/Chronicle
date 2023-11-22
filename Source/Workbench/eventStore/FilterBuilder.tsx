@@ -15,7 +15,7 @@ export const FilterBuilder = () => {
         monaco.languages.registerCompletionItemProvider('json', {
 
             provideCompletionItems: function (model, position) {
-                const suggestions:any[] = [];
+                const recommendations:any[] = [];
                 const word = model.getWordUntilPosition(position);
                 const range = {
                     startLineNumber: position.lineNumber,
@@ -25,17 +25,17 @@ export const FilterBuilder = () => {
                 };
                 const enclosingBrackets = model.findEnclosingBrackets(position);
                 if (enclosingBrackets != null) {
-                    suggestions.push({
+                    recommendations.push({
                         label: 'Equals',
                         insertText: '"$eq": {}',
                         range
                     });
-                    suggestions.push({
+                    recommendations.push({
                         label: 'And',
                         insertText: '"$and": {}',
                         range
                     });
-                    suggestions.push({
+                    recommendations.push({
                         label: 'Or',
                         insertText: '"$or": {}',
                         range
@@ -43,7 +43,7 @@ export const FilterBuilder = () => {
                 }
 
                 return {
-                    suggestions
+                    recommendations
                 };
             }
         });

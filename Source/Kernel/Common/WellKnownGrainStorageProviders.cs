@@ -39,7 +39,7 @@ public static class WellKnownGrainStorageProviders
     public const string JobSteps = "job-steps";
 
     /// <summary>
-    /// The name of the storage provider used for suggestions.
+    /// The name of the storage provider used for recommendations.
     /// </summary>
-    public const string Suggestions = "suggestions";
+    public const string Recommendations = "recommendations";
 }

@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.Suggestions;
+using Aksio.Cratis.Kernel.Grains.Recommendations;
 using Aksio.Cratis.Kernel.Observation.Replaying;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States;
@@ -36,8 +36,8 @@ public class ReplayEvaluator : IReplayEvaluator
     {
         if (NeedsToReplay(context))
         {
-            var suggestionsManager = _grainFactory.GetGrain<ISuggestionsManager>(0, new SuggestionsManagerKey(_microserviceId, _tenantId));
-            await suggestionsManager.Add<IReplayCandidateSuggestion, ReplayCandidateRequest>(
+            var recommendationsManager = _grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(_microserviceId, _tenantId));
+            await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
                 "Event types has changed.",
                 new ReplayCandidateRequest
                 {
