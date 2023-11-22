@@ -95,24 +95,26 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         PrepareAllSteps(request, tcs);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-        tcs.Task.ContinueWith(async (Task<IImmutableList<JobStepDetails>> jobStepsTask) =>
-        {
-            var jobSteps = await jobStepsTask;
-            if (jobSteps.Count == 0)
+        tcs.Task.ContinueWith(
+            async (Task<IImmutableList<JobStepDetails>> jobStepsTask) =>
             {
-                State.Remove = true;
-                await OnCompleted();
-                await StatusChanged(JobStatus.CompletedSuccessfully);
+                var jobSteps = await jobStepsTask;
+                if (jobSteps.Count == 0)
+                {
+                    State.Remove = true;
+                    await OnCompleted();
+                    await StatusChanged(JobStatus.CompletedSuccessfully);
+                    await WriteStateAsync();
+                    return;
+                }
+                _jobStepGrains = CreateGrainsFromJobSteps(jobSteps);
+                await StatusChanged(JobStatus.PreparingSteps);
                 await WriteStateAsync();
-                return;
-            }
-            _jobStepGrains = CreateGrainsFromJobSteps(jobSteps);
-            await StatusChanged(JobStatus.PreparingSteps);
-            await WriteStateAsync();
 
-            await SubscribeJobEventsForAllJobSteps();
-            PrepareAndStartAllJobSteps(grainId);
-        });
+                await SubscribeJobEventsForAllJobSteps();
+                PrepareAndStartAllJobSteps(grainId);
+            },
+            TaskScheduler.Default);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
     }
 
