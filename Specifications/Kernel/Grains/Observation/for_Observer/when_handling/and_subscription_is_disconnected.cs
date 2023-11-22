@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
-public class and_subsciption_is_disconnected : given.an_observer_with_subscription_for_specific_event_type
+public class and_subscription_is_disconnected : given.an_observer_with_subscription_for_specific_event_type
 {
     void Establish()
     {

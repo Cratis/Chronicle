@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Grains.Observation.States;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Json;
@@ -22,7 +21,6 @@ public class an_observer : GrainSpecification<ObserverState>
     protected Mock<IObserverSubscriber> subscriber;
     protected Mock<IPersistentState<FailedPartitions>> failed_partitions_persistent_state;
     protected Mock<IObserverServiceClient> observer_service_client;
-    protected Mock<IReplayEvaluator> replay_evaluator;
     protected ObserverKey ObserverKey => new(MicroserviceId.Unspecified, TenantId.NotSet, EventSequenceId.Log);
     protected List<FailedPartitions> written_failed_partitions_states = new();
     protected FailedPartitions failed_partitions_state;
@@ -50,13 +48,10 @@ public class an_observer : GrainSpecification<ObserverState>
 
         observer_service_client = new();
 
-        replay_evaluator = new();
-
         observer = new Observer(
             execution_context_manager.Object,
             failed_partitions_persistent_state.Object,
             observer_service_client.Object,
-            replay_evaluator.Object,
             Mock.Of<ILogger<Observer>>(),
             Mock.Of<ILoggerFactory>());
 
