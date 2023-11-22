@@ -18,8 +18,7 @@ public class Suggestion<TRequest> : Grain<SuggestionState>, ISuggestion<TRequest
         SuggestionDescription description,
         TRequest request)
     {
-        var requestType = request.GetType();
-        State.Name = requestType.Name;
+        State.Name = GetType().Name;
         State.Description = description;
         State.Type = this.GetGrainType();
         State.Request = request;
