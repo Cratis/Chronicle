@@ -52,6 +52,7 @@ public class Observing : BaseObserverState
     /// <inheritdoc/>
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
+        typeof(Routing),
         typeof(CatchUp),
         typeof(Replay),
         typeof(Indexing),
