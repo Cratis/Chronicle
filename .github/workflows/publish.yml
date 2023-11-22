@@ -112,7 +112,7 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/package.json') }}
 
       - name: Yarn install
-        run: yarn
+        run: yarn install
 
       - name: Build JS/TS
         run: |
