@@ -12,4 +12,6 @@ public class CatchUpObserverWrapper : CatchUpObserver
     public CatchUpObserverWrapper(IObserverKeyIndexes observerKeyIndexes) : base(observerKeyIndexes) { }
 
     public Task<IImmutableList<JobStepDetails>> WrappedPrepareSteps(CatchUpObserverRequest request) => PrepareSteps(request);
+    public Task<bool> WrappedCanResume() => CanResume();
+    public Task WrappedOnStepCompleted(JobStepId jobStepId, JobStepResult result) => OnStepCompleted(jobStepId, result);
 }
