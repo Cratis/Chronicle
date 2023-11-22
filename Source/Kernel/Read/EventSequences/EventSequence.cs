@@ -123,7 +123,7 @@ public class EventSequence : ControllerBase
         [FromQuery(Name = "eventTypes[]")] IEnumerable<string> eventTypes = null!)
     {
         var result = new List<AppendedEventWithJsonAsContent>();
-        var parsedEventTypes = eventTypes.Select(EventType.Parse).ToArray();
+        var parsedEventTypes = eventTypes?.Select(EventType.Parse).ToArray();
 
         var correlationId = _executionContextManager.Current.CorrelationId;
         _executionContextManager.Establish(tenantId, correlationId, microserviceId);
