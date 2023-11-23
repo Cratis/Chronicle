@@ -80,11 +80,14 @@ public static class ClientObserversEndpoints
         try
         {
             var observers = context.RequestServices.GetRequiredService<IClientObservers>();
-            lastSuccessfullyObservedEvent = await observers.OnNext(observerId, events);
+            var invocationResult = await observers.OnNext(observerId, events);
+            lastSuccessfullyObservedEvent = invocationResult.LastSuccessfullyObservedEvent;
             context.Response.StatusCode = (int)HttpStatusCode.OK;
             result = new CommandResult
             {
-                Response = lastSuccessfullyObservedEvent
+                Response = lastSuccessfullyObservedEvent,
+                ExceptionMessages = invocationResult.Exception?.GetAllMessages() ?? Array.Empty<string>(),
+                ExceptionStackTrace = invocationResult.Exception?.StackTrace ?? string.Empty
             };
         }
         catch (Exception ex)

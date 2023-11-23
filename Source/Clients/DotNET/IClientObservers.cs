@@ -16,5 +16,5 @@ public interface IClientObservers
     /// <param name="observerId">The <see cref="ObserverId"/> of the observer it is for.</param>
     /// <param name="events">The collection of <see cref="AppendedEvent"/>.</param>
     /// <returns>Sequence number of last successfully processed event.</returns>
-    public Task<EventSequenceNumber> OnNext(ObserverId observerId, IEnumerable<AppendedEvent> events);
+    public Task<ObserverInvocationResult> OnNext(ObserverId observerId, IEnumerable<AppendedEvent> events);
 }

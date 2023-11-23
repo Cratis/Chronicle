@@ -32,7 +32,6 @@ public class ObserversRegistrar : IObserversRegistrar
     /// <param name="connection"><see cref="IConnection"/> for working with kernel.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    /// <param name="invokerLogger">Logger for invoker.</param>
     public ObserversRegistrar(
         IExecutionContextManager executionContextManager,
         IServiceProvider serviceProvider,
@@ -42,8 +41,7 @@ public class ObserversRegistrar : IObserversRegistrar
         IClientArtifactsProvider clientArtifacts,
         IConnection connection,
         ICausationManager causationManager,
-        ILogger<ObserversRegistrar> logger,
-        ILogger<ObserverInvoker> invokerLogger)
+        ILogger<ObserversRegistrar> logger)
     {
         _handlers = clientArtifacts.Observers
                             .ToDictionary(
@@ -55,7 +53,7 @@ public class ObserversRegistrar : IObserversRegistrar
                                         observer.ObserverId,
                                         observerType.FullName ?? $"{observerType.Namespace}.{observerType.Name}",
                                         observer.EventSequenceId,
-                                        new ObserverInvoker(serviceProvider, eventTypes, middlewares, observerType, invokerLogger),
+                                        new ObserverInvoker(serviceProvider, eventTypes, middlewares, observerType),
                                         causationManager,
                                         eventSerializer);
                                 });

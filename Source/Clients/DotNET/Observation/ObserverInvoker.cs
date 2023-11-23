@@ -4,7 +4,6 @@
 using System.Reflection;
 using Aksio.Cratis.Conventions;
 using Aksio.Cratis.Events;
-using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Observation;
 
@@ -18,7 +17,6 @@ public class ObserverInvoker : IObserverInvoker
     readonly IEventTypes _eventTypes;
     readonly IObserverMiddlewares _middlewares;
     readonly Type _targetType;
-    readonly ILogger<ObserverInvoker> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverInvoker"/> class.
@@ -27,19 +25,16 @@ public class ObserverInvoker : IObserverInvoker
     /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
     /// <param name="middlewares"><see cref="IObserverMiddlewares"/> to call.</param>
     /// <param name="targetType">Type of observer.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ObserverInvoker(
         IServiceProvider serviceProvider,
         IEventTypes eventTypes,
         IObserverMiddlewares middlewares,
-        Type targetType,
-        ILogger<ObserverInvoker> logger)
+        Type targetType)
     {
         _serviceProvider = serviceProvider;
         _eventTypes = eventTypes;
         _middlewares = middlewares;
         _targetType = targetType;
-        _logger = logger;
         _methodsByEventTypeId = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
                                         .Where(_ => _.IsEventHandlerMethod())
                                         .ToDictionary(_ => _eventTypes.GetEventTypeFor(_.GetParameters()[0].ParameterType), _ => _);
@@ -51,36 +46,28 @@ public class ObserverInvoker : IObserverInvoker
     /// <inheritdoc/>
     public async Task Invoke(object content, EventContext eventContext)
     {
-        try
-        {
-            var actualObserver = _serviceProvider.GetService(_targetType);
-            var eventType = _eventTypes.GetEventTypeFor(content.GetType());
+        var actualObserver = _serviceProvider.GetService(_targetType);
+        var eventType = _eventTypes.GetEventTypeFor(content.GetType());
 
-            if (_methodsByEventTypeId.ContainsKey(eventType))
+        if (_methodsByEventTypeId.ContainsKey(eventType))
+        {
+            Task returnValue;
+            var method = _methodsByEventTypeId[eventType];
+            var parameters = method.GetParameters();
+
+            await _middlewares.BeforeInvoke(eventContext, content);
+
+            if (parameters.Length == 2)
             {
-                Task returnValue;
-                var method = _methodsByEventTypeId[eventType];
-                var parameters = method.GetParameters();
-
-                await _middlewares.BeforeInvoke(eventContext, content);
-
-                if (parameters.Length == 2)
-                {
-                    returnValue = (Task)method.Invoke(actualObserver, new object[] { content, eventContext })!;
-                }
-                else
-                {
-                    returnValue = (Task)method.Invoke(actualObserver, new object[] { content })!;
-                }
-
-                if (returnValue is not null) await returnValue;
-                await _middlewares.AfterInvoke(eventContext, content);
+                returnValue = (Task)method.Invoke(actualObserver, new object[] { content, eventContext })!;
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.ObserverFailed(_targetType.FullName ?? _targetType.Name, content.GetType().Name, ex);
-            throw;
+            else
+            {
+                returnValue = (Task)method.Invoke(actualObserver, new object[] { content })!;
+            }
+
+            if (returnValue is not null) await returnValue;
+            await _middlewares.AfterInvoke(eventContext, content);
         }
     }
 }
