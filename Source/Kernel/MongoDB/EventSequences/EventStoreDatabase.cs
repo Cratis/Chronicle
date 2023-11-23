@@ -37,7 +37,7 @@ public class EventStoreDatabase : IEventStoreDatabase
         var url = new MongoUrl(eventStoreForTenant.ConnectionDetails.ToString());
         var settings = MongoClientSettings.FromUrl(url);
 
-        settings.ReadPreference = ReadPreference.SecondaryPreferred;
+        // settings.ReadPreference = ReadPreference.SecondaryPreferred;
 
         var client = mongoDBClientFactory.Create(settings);
         _database = client.GetDatabase(url.DatabaseName);
@@ -69,12 +69,12 @@ public class EventStoreDatabase : IEventStoreDatabase
     {
         if (!_indexedEventSequences.Contains(eventSequenceId))
         {
-            var result = collection.Indexes.CreateOne(
+            collection.Indexes.CreateOne(
                 new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                    Builders<Event>.IndexKeys.Text(_ => _.EventSourceId),
                     new CreateIndexOptions
                     {
-                        Name = "EventSourceId",
+                        Name = "eventSourceId",
                         Background = true
                     }));
 
@@ -83,7 +83,7 @@ public class EventStoreDatabase : IEventStoreDatabase
                     Builders<Event>.IndexKeys.Ascending(_ => _.Type),
                     new CreateIndexOptions
                     {
-                        Name = "EventTypeId",
+                        Name = "eventTypeId",
                         Background = true
                     }));
 
@@ -92,7 +92,18 @@ public class EventStoreDatabase : IEventStoreDatabase
                     Builders<Event>.IndexKeys.Ascending(_ => _.Occurred),
                     new CreateIndexOptions
                     {
-                        Name = "Occurred",
+                        Name = "occurred",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Combine(
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.Type)),
+                    new CreateIndexOptions
+                    {
+                        Name = "eventSourceId_eventTypeId",
                         Background = true
                     }));
 
