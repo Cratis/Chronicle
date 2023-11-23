@@ -85,8 +85,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     public async Task Start(TRequest request)
     {
         _isRunning = true;
-        State.Details = GetJobDetails();
         State.Request = request!;
+        State.Details = GetJobDetails();
         await WriteStateAsync();
 
         var grainId = this.GetGrainId();
