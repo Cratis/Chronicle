@@ -8,6 +8,7 @@
     -webkit-text-size-adjust: 100%;
     --topbar-height: 4rem;
     --sidebar-width: 280px;
+    --sidebar-closed-width: calc(4.5rem + 2px);
     --footer-height: 50px;
 }
 
@@ -22,5 +23,5 @@ body.dark {
 body {
     background-color: var(--surface-ground);
     color: var(--text-color);
-    margin:0;
+    margin: 0;
 }

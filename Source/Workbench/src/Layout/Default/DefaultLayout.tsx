@@ -1,20 +1,24 @@
 import { LayoutContext, LayoutProvider } from './context/LayoutContext';
-import { Sidebar } from './Sidebar/Sidebar';
 import { Topbar } from './Topbar/Topbar';
 import css from './DefaultLayout.module.css';
 import { Footer } from './Footer';
 import { generatePath, Outlet, useParams } from "react-router-dom";
 import { SidebarMenu } from "./Sidebar/SidebarMenu";
-import { IMenuItem } from "./Sidebar/MenuItem/MenuItem";
+import { IMenuItemGroup } from "./Sidebar/MenuItem/MenuItem";
+import { TenantSelector } from "./TenantSelector/TenantSelector";
+import { useState } from "react";
+import { MenuProvider } from "./context/MenuContext";
 
 interface IDefaultLayoutProps {
-    leftMenuItems?: IMenuItem[];
+    leftMenuItems?: IMenuItemGroup[];
     leftMenuBasePath?: string;
 }
 
 export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayoutProps) {
     const params = useParams();
     const lmBasePath = generatePath(leftMenuBasePath ?? '', params);
+    const [tenantId, setTenantId] = useState<string>('default');
+
     return (
         <LayoutProvider>
             <LayoutContext.Consumer>
@@ -38,10 +42,11 @@ export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayou
                             {!value.layoutConfig.leftSidebarHidden && (
                                 <aside className={css.appLeftSidebar}>
                                     <div className={css.sidebarContainer}>
-                                        <Sidebar>
-                                            {leftMenuItems &&
-                                                <SidebarMenu items={leftMenuItems} basePath={lmBasePath}/>}
-                                        </Sidebar>
+                                        <TenantSelector className="mb-4 mt-1" onTenantSelected={(tenant) => setTenantId(tenant.id)}/>
+                                        {leftMenuItems &&
+                                            <MenuProvider params={{ tenantId: tenantId }}>
+                                                <SidebarMenu items={leftMenuItems} basePath={lmBasePath}/>
+                                            </MenuProvider>}
                                     </div>
                                 </aside>
                             )}

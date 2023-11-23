@@ -1,13 +1,14 @@
-@import url(./lara-dark-indigo/theme.css) layer(theme);
+@import url(./lara-dark-blue/theme.css) layer(theme);
 
 @layer theme {
     :root {
-        --surface-a: rgb(22, 29, 47);
-        --surface-b: rgba(255, 255, 255, 100);
-        --border-color: rgba(241, 245, 249, 0.12);
-        --cratis-sidebar-bg: var(--surface-a);
-        --cratis-sidebar-textColor: var(--surface-b);
+        --cratis-sidebar-tenant-bg: var(--shade500);
+        --cratis-sidebar-tenant-textColor: var(--shade000);
+        --cratis-sidebar-bg: var(--shade800);
+        --cratis-sidebar-textColor: var(--shade000);
+        --cratis-sidebar-menuitem-active-bg: var(--surface-c);
+        --cratis-sidebar-menuitem-active-textColor: var(--text-color-secondary);
         --cratis-topbar-bg: var(--surface-a);
-        --cratis-layout-border-color: var(--border-color);
+        --cratis-layout-border-color: var(--surface-border);
     }
 }

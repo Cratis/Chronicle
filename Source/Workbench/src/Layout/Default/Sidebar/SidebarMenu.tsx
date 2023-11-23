@@ -1,14 +1,15 @@
-import { IMenuItem, MenuItem } from "./MenuItem/MenuItem";
+import { IMenuItemGroup } from "./MenuItem/MenuItem";
+import { MenuItemGroup } from "./MenuItemGroup/MenuItemGroup";
 
 interface ILeftMenuProps {
-    items: IMenuItem[];
+    items: IMenuItemGroup[];
     basePath?: string;
 }
 
+
 export const SidebarMenu = ({ items, basePath }: ILeftMenuProps) => {
-    return <div>
-        {items.map((item, index) => {
-            return <MenuItem item={item} key={index} basePath={basePath}/>
-        })}
-    </div>;
+    return items.map((group, index) => {
+            return <MenuItemGroup key={index} group={group} basePath={basePath}/>
+        }
+    )
 }

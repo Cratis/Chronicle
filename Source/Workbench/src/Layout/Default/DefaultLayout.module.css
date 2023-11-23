@@ -18,16 +18,17 @@
     color: var(--cratis-sidebar-textColor);
     transition: width 0.3s;
     box-shadow: var(--cratis-layout-border-color) -1px 0 0 0 inset;
-    overflow:hidden;
+    overflow: hidden;
 }
+
 .sidebarContainer {
     height: calc(100vh - var(--topbar-height));
     width: var(--sidebar-width);
     overflow: auto;
 }
+
 .sidebarClosed .appLeftSidebar {
-    /*left: calc(-1 * var(--sidebar-width));*/
-    width: calc(4.5rem + 2px);
+    width: var(--sidebar-closed-width);
 }
 
 .appOutlet {
