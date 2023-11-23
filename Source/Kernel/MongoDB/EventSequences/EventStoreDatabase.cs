@@ -38,7 +38,6 @@ public class EventStoreDatabase : IEventStoreDatabase
         var settings = MongoClientSettings.FromUrl(url);
 
         // settings.ReadPreference = ReadPreference.SecondaryPreferred;
-
         var client = mongoDBClientFactory.Create(settings);
         _database = client.GetDatabase(url.DatabaseName);
     }
