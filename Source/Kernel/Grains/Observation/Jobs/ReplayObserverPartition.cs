@@ -22,19 +22,19 @@ public class ReplayObserverPartition : Job<ReplayObserverPartitionRequest, JobSt
     }
 
     /// <inheritdoc/>
-    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps()
+    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverPartitionRequest request)
     {
         var steps = new[]
         {
             CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
-                    State.Request.ObserverId,
-                    State.Request.ObserverKey,
-                    State.Request.ObserverSubscription,
-                    State.Request.Key,
-                    State.Request.FromSequenceNumber,
+                    request.ObserverId,
+                    request.ObserverKey,
+                    request.ObserverSubscription,
+                    request.Key,
+                    request.FromSequenceNumber,
                     Events.EventObservationState.Replay,
-                    State.Request.EventTypes))
+                    request.EventTypes))
         }.ToImmutableList();
 
         return Task.FromResult<IImmutableList<JobStepDetails>>(steps);

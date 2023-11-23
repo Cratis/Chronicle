@@ -35,19 +35,19 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
     }
 
     /// <inheritdoc/>
-    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps()
+    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(RetryFailedPartitionRequest request)
     {
         var steps = new[]
         {
             CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
-                    State.Request.ObserverId,
-                    State.Request.ObserverKey,
-                    State.Request.ObserverSubscription,
-                    State.Request.Key,
-                    State.Request.FromSequenceNumber,
+                    request.ObserverId,
+                    request.ObserverKey,
+                    request.ObserverSubscription,
+                    request.Key,
+                    request.FromSequenceNumber,
                     Events.EventObservationState.None,
-                    State.Request.EventTypes))
+                    request.EventTypes))
         }.ToImmutableList();
 
         return Task.FromResult<IImmutableList<JobStepDetails>>(steps);

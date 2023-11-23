@@ -15,6 +15,6 @@ public class ConsolidateStateForObservers : Job<ConsolidateStateForObserveReques
     protected override bool RemoveAfterCompleted => true;
 
     /// <inheritdoc/>
-    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps() =>
-        Task.FromResult<IImmutableList<JobStepDetails>>(State.Request.Observers.Select(_ => CreateStep<IConsolidateStateForObserver>(_)).ToImmutableList());
+    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ConsolidateStateForObserveRequest request) =>
+        Task.FromResult<IImmutableList<JobStepDetails>>(request.Observers.Select(_ => CreateStep<IConsolidateStateForObserver>(_)).ToImmutableList());
 }

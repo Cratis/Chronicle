@@ -55,11 +55,11 @@ public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, I
     }
 
     /// <inheritdoc/>
-    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps()
+    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverRequest request)
     {
         var index = await _observerKeyIndexes.GetFor(
-            State.Request.ObserverId,
-            State.Request.ObserverKey);
+            request.ObserverId,
+            request.ObserverKey);
 
         var keys = index.GetKeys(EventSequenceNumber.First);
         var steps = new List<JobStepDetails>();
@@ -68,13 +68,13 @@ public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, I
         {
             steps.Add(CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
-                    State.Request.ObserverId,
-                    State.Request.ObserverKey,
-                    State.Request.ObserverSubscription,
+                    request.ObserverId,
+                    request.ObserverKey,
+                    request.ObserverSubscription,
                     key,
                     EventSequenceNumber.First,
                     EventObservationState.Replay,
-                    State.Request.EventTypes)));
+                    request.EventTypes)));
         }
 
         return steps.ToImmutableList();

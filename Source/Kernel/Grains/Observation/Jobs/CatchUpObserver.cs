@@ -57,13 +57,13 @@ public class CatchUpObserver : Job<CatchUpObserverRequest, CatchUpObserverState>
     }
 
     /// <inheritdoc/>
-    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps()
+    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
         var index = await _observerKeyIndexes.GetFor(
-            State.Request.ObserverId,
-            State.Request.ObserverKey);
+            request.ObserverId,
+            request.ObserverKey);
 
-        var keys = index.GetKeys(State.Request.FromEventSequenceNumber);
+        var keys = index.GetKeys(request.FromEventSequenceNumber);
 
         var steps = new List<JobStepDetails>();
 
@@ -71,13 +71,13 @@ public class CatchUpObserver : Job<CatchUpObserverRequest, CatchUpObserverState>
         {
             steps.Add(CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
-                    State.Request.ObserverId,
-                    State.Request.ObserverKey,
-                    State.Request.ObserverSubscription,
+                    request.ObserverId,
+                    request.ObserverKey,
+                    request.ObserverSubscription,
                     key,
-                    State.Request.FromEventSequenceNumber,
+                    request.FromEventSequenceNumber,
                     Events.EventObservationState.None,
-                    State.Request.EventTypes)));
+                    request.EventTypes)));
         }
 
         return steps.ToImmutableList();

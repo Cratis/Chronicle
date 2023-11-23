@@ -92,7 +92,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         var grainId = this.GetGrainId();
         var tcs = new TaskCompletionSource<IImmutableList<JobStepDetails>>();
 
-        PrepareAllSteps(tcs);
+        PrepareAllSteps(request, tcs);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         tcs.Task.ContinueWith(
@@ -114,7 +114,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                 await SubscribeJobEventsForAllJobSteps();
                 PrepareAndStartAllJobSteps(grainId);
             },
-            TaskScheduler.Default);
+            TaskScheduler.Current);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
     }
 
@@ -289,8 +289,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <summary>
     /// Start the job.
     /// </summary>
+    /// <param name="request">The request associated with the job.</param>
     /// <returns>Awaitable task.</returns>
-    protected abstract Task<IImmutableList<JobStepDetails>> PrepareSteps();
+    protected abstract Task<IImmutableList<JobStepDetails>> PrepareSteps(TRequest request);
 
     /// <summary>
     /// Check if the job can be resumed.
@@ -311,9 +312,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                 (GrainFactory.GetGrain(_.Type, _.Id, keyExtension: _.Key) as IJobStep)!,
                 _.Request,
                 _.ResultType));
-    void PrepareAllSteps(TaskCompletionSource<IImmutableList<JobStepDetails>> tcs) => _ = Task.Run(async () =>
+    void PrepareAllSteps(TRequest request, TaskCompletionSource<IImmutableList<JobStepDetails>> tcs) => _ = Task.Run(async () =>
     {
-        var steps = await PrepareSteps();
+        var steps = await PrepareSteps(request);
         await ThisJob.SetTotalSteps(steps.Count);
         await ThisJob.WriteState();
         tcs.SetResult(steps);
