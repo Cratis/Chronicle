@@ -17,6 +17,7 @@ namespace Aksio.Cratis.Kernel.MongoDB;
 public class EventStoreDatabase : IEventStoreDatabase
 {
     readonly IMongoDatabase _database;
+    readonly HashSet<EventSequenceId> _indexedEventSequences = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
@@ -34,7 +35,11 @@ public class EventStoreDatabase : IEventStoreDatabase
                                 .Get(executionContext.TenantId);
         var eventStoreForTenant = storageTypes.Get(WellKnownStorageTypes.EventStore);
         var url = new MongoUrl(eventStoreForTenant.ConnectionDetails.ToString());
-        var client = mongoDBClientFactory.Create(url);
+        var settings = MongoClientSettings.FromUrl(url);
+
+        settings.ReadPreference = ReadPreference.SecondaryPreferred;
+
+        var client = mongoDBClientFactory.Create(settings);
         _database = client.GetDatabase(url.DatabaseName);
     }
 
@@ -45,7 +50,9 @@ public class EventStoreDatabase : IEventStoreDatabase
     public IMongoCollection<Event> GetEventSequenceCollectionFor(EventSequenceId eventSequenceId)
     {
         var collectionName = GetCollectionNameFor(eventSequenceId);
-        return _database.GetCollection<Event>(collectionName);
+        var collection = _database.GetCollection<Event>(collectionName);
+        CreateIndexesForEventSequenceIfNotCreated(collection, eventSequenceId);
+        return collection;
     }
 
     /// <inheritdoc/>
@@ -57,6 +64,41 @@ public class EventStoreDatabase : IEventStoreDatabase
 
     /// <inheritdoc/>
     public IMongoCollection<ObserverState> GetObserverStateCollection() => GetCollection<ObserverState>(WellKnownCollectionNames.Observers);
+
+    void CreateIndexesForEventSequenceIfNotCreated(IMongoCollection<Event> collection, EventSequenceId eventSequenceId)
+    {
+        if (!_indexedEventSequences.Contains(eventSequenceId))
+        {
+            var result = collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                    new CreateIndexOptions
+                    {
+                        Name = "EventSourceId",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Ascending(_ => _.Type),
+                    new CreateIndexOptions
+                    {
+                        Name = "EventTypeId",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Ascending(_ => _.Occurred),
+                    new CreateIndexOptions
+                    {
+                        Name = "Occurred",
+                        Background = true
+                    }));
+
+            _indexedEventSequences.Add(eventSequenceId);
+        }
+    }
 
     string GetCollectionNameFor(EventSequenceId eventSequenceId)
     {
