@@ -22,7 +22,7 @@ public class and_body_contains_two_valid_events : given.an_http_context_and_clie
         request.SetupGet(_ => _.ContentType).Returns("application/json");
         var payload = JsonSerializer.SerializeToUtf8Bytes(new[] { first, second }, Globals.JsonSerializerOptions);
         request.SetupGet(_ => _.Body).Returns(new MemoryStream(payload));
-        client_observers.Setup(_ => _.OnNext(IsAny<ObserverId>(), IsAny<IEnumerable<AppendedEvent>>())).Returns(Task.FromResult(new EventSequenceNumber(2)));
+        client_observers.Setup(_ => _.OnNext(IsAny<ObserverId>(), IsAny<IEnumerable<AppendedEvent>>())).Returns(Task.FromResult(ObserverInvocationResult.Success(new EventSequenceNumber(2))));
     }
 
     async Task Because()
