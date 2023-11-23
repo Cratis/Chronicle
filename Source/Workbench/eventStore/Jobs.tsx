@@ -101,7 +101,9 @@ const jobColumns: GridColDef[] = [
         valueGetter: (params: GridValueGetterParams<JobState>) => {
             if (params.row.statusChanges.length > 1) {
                 const lastStatusChange = params.row.statusChanges.at(-1)!;
-                if (lastStatusChange.status == JobStatus.completedSuccessfully || lastStatusChange.status == JobStatus.completedWithFailures) {
+                if (lastStatusChange.status == JobStatus.completedSuccessfully ||
+                    lastStatusChange.status == JobStatus.stopped ||
+                    lastStatusChange.status == JobStatus.completedWithFailures) {
                     return lastStatusChange.occurred.toLocaleString();
                 }
             }
@@ -199,7 +201,9 @@ export const Jobs = () => {
                     >Resume</Button>
                 }
 
-                {(selectedJob && (selectedJob.status == JobStatus.running || selectedJob.status == JobStatus.preparing)) &&
+                {(selectedJob && (selectedJob.status == JobStatus.running ||
+                        selectedJob.status == JobStatus.preparing ||
+                        selectedJob.status == JobStatus.preparingSteps)) &&
                     <Button
                         startIcon={<icons.Stop />}
                         onClick={async () => {
