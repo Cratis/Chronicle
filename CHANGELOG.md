@@ -1,3 +1,10 @@
+# [v9.10.0] - 2023-11-24 [PR: #1020](https://github.com/aksio-insurtech/Cratis/pull/1020)
+
+### Fixed
+
+- Converter from JSON to ExpandoObject and back now honors null values. If a property if missing from the JSON or the ExpandoObject but is in the schema, we set it to default value for primitives and null for non primitives.
+
+
 # [v9.9.1] - 2023-11-16 [PR: #1016](https://github.com/aksio-insurtech/Cratis/pull/1016)
 
 ### Fixed
