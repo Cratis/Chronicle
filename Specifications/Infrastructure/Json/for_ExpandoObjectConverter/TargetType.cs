@@ -59,4 +59,6 @@ public record TargetType(
     IEnumerable<int> IntArray,
     IDictionary<string, string> StringDictionary,
     IDictionary<string, int> IntDictionary,
-    IDictionary<string, OtherType> ComplexTypeDictionary);
+    IDictionary<string, OtherType> ComplexTypeDictionary,
+    string MissingStringFromSource,
+    int MissingIntFromSource);

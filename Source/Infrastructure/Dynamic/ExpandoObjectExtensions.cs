@@ -223,7 +223,7 @@ public static class ExpandoObjectExtensions
     public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, IArrayIndexers arrayIndexers)
     {
         var inner = target.EnsurePath(childrenProperty, arrayIndexers) as IDictionary<string, object>;
-        if (!inner.ContainsKey(childrenProperty.LastSegment.Value))
+        if (!inner.ContainsKey(childrenProperty.LastSegment.Value) || inner[childrenProperty.LastSegment.Value] is null)
         {
             inner[childrenProperty.LastSegment.Value] = new List<TChild>();
         }
