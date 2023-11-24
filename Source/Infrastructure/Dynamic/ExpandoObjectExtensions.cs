@@ -265,6 +265,26 @@ public static class ExpandoObjectExtensions
         return item is not null ? item as ExpandoObject : null;
     }
 
+    /// <summary>
+    /// Remove any null values from an <see cref="ExpandoObject"/>.
+    /// </summary>
+    /// <param name="target">The <see cref="ExpandoObject"/> to remove from.</param>
+    public static void RemoveNulls(this ExpandoObject target)
+    {
+        var targetAsDictionary = target as IDictionary<string, object>;
+        foreach (var (key, value) in targetAsDictionary.ToArray())
+        {
+            if (value is null)
+            {
+                targetAsDictionary.Remove(key);
+            }
+            else if (value is ExpandoObject nested)
+            {
+                nested.RemoveNulls();
+            }
+        }
+    }
+
     static object GetActualValueFrom(object value)
     {
         var valueType = value.GetType();
