@@ -32,11 +32,13 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
     {
         var jsonObject = new JsonObject();
         var schemaProperties = schema.GetFlattenedProperties();
-        foreach (var keyValue in expandoObject as IDictionary<string, object?>)
+        foreach (var property in schemaProperties)
         {
             JsonNode? value = null;
 
-            var name = keyValue.Key;
+            var keyValue = expandoObject!.SingleOrDefault(_ => _.Key == property.Name);
+
+            var name = property.Name;
             var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
             if (schemaProperty is null)
             {
@@ -45,6 +47,15 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             else
             {
                 value = ConvertToJsonNode(keyValue.Value, schemaProperty);
+            }
+
+            if (value is null)
+            {
+                var defaultValue = property.GetDefaultValue(_typeFormats);
+                if (defaultValue is not null)
+                {
+                    value = defaultValue.ToJsonValue();
+                }
             }
 
             if (value is not null)
@@ -63,8 +74,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
 
         var schemaProperties = schema.GetFlattenedProperties();
-        foreach (var (name, sourceValue) in document)
+        foreach (var property in schemaProperties)
         {
+            var name = property.Name;
+            var sourceValue = document[name];
+
             object? value = null;
             if (sourceValue is not null)
             {
@@ -79,10 +93,8 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 }
             }
 
-            if (value is not null)
-            {
-                expandoObjectAsDictionary[name] = value;
-            }
+            value ??= property.GetDefaultValue(_typeFormats);
+            expandoObjectAsDictionary[name] = value;
         }
 
         return expandoObject;

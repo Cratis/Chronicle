@@ -247,6 +247,30 @@ public static class JsonSchemaExtensions
         };
     }
 
+    /// <summary>
+    /// Get the default value for a <see cref="JsonSchemaProperty"/>.
+    /// </summary>
+    /// <param name="schemaProperty"><see cref="JsonSchemaProperty"/> to get default value for.</param>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> holding known JSON schema type formats.</param>
+    /// <returns>The default value.</returns>
+    public static object? GetDefaultValue(this JsonSchemaProperty schemaProperty, ITypeFormats typeFormats)
+    {
+        var type = schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats);
+        if (type?.IsPrimitive ?? false)
+        {
+            try
+            {
+                return Activator.CreateInstance(type);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        return null;
+    }
+
     static void CollectPropertiesFrom(JsonSchema schema, List<JsonSchemaProperty> properties)
     {
         properties.AddRange(schema.ActualProperties.Select(_ => _.Value));

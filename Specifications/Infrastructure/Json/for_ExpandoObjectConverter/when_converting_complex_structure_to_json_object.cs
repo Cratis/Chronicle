@@ -105,4 +105,7 @@ public class when_converting_complex_structure_to_json_object : given.an_expando
     [Fact] void should_set_child_object_float_value_to_hold_correct_value() => result["children"].AsArray()[0]["floatValue"].GetValue<float>().ShouldEqual((float)child_dynamic.floatValue);
     [Fact] void should_set_child_object_double_value_to_hold_correct_value() => result["children"].AsArray()[0]["doubleValue"].GetValue<double>().ShouldEqual((double)child_dynamic.doubleValue);
     [Fact] void should_set_child_object_guid_value_to_hold_correct_value() => result["children"].AsArray()[0]["guidValue"].GetValue<Guid>().ShouldEqual(Guid.Parse((string)child_dynamic.guidValue));
+
+    [Fact] void should_set_top_level_missing_string_from_source_to_null() => result["missingStringFromSource"].ShouldBeNull();
+    [Fact] void should_set_top_level_missing_int_from_source_to_default_value() => result["missingIntFromSource"].GetValue<int>().ShouldEqual(0);
 }
