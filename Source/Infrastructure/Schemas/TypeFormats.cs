@@ -29,11 +29,29 @@ public class TypeFormats : ITypeFormats
     public bool IsKnown(Type type) => _typesFormatInfo.ContainsKey(type);
 
     /// <inheritdoc/>
-    public bool IsKnown(string format) => _typesFormatInfo.ContainsValue(format);
+    public bool IsKnown(string format)
+    {
+        format = StripNullable(format);
+        return _typesFormatInfo.ContainsValue(format);
+    }
 
     /// <inheritdoc/>
     public string GetFormatForType(Type type) => _typesFormatInfo[type];
 
     /// <inheritdoc/>
-    public Type GetTypeForFormat(string format) => _typesFormatInfo.First(_ => _.Value == format).Key;
+    public Type GetTypeForFormat(string format)
+    {
+        format = StripNullable(format);
+        return _typesFormatInfo.First(_ => _.Value == format).Key;
+    }
+
+    string StripNullable(string? format)
+    {
+        if (format?.EndsWith("?") ?? false)
+        {
+            format = format[..^1];
+        }
+
+        return format!;
+    }
 }
