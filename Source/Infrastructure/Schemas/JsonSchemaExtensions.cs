@@ -256,7 +256,9 @@ public static class JsonSchemaExtensions
     public static object? GetDefaultValue(this JsonSchemaProperty schemaProperty, ITypeFormats typeFormats)
     {
         var type = schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats);
-        if (type?.IsPrimitive ?? false)
+        if (type is not null && (type.IsPrimitive || !type.IsByRef) &&
+                type != typeof(string) &&
+                type != typeof(object))
         {
             try
             {
