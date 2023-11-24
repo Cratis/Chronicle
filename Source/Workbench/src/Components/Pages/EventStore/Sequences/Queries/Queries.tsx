@@ -1,40 +1,50 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { AddFilter } from 'Components/Filters/AddFilter/AddFilter';
 import { QueriesViewModel } from './QueriesViewModel';
+import { TabView, TabPanel } from 'primereact/tabview';
 import { Button } from 'primereact/button';
-import { QueryInput } from './QueryInput';
+import css from './Queries.module.css';
 import { observer } from 'mobx-react';
-import 'primeicons/primeicons.css';
-import { Fragment } from 'react';
-
+import { container } from 'tsyringe';
+import { AddFilterViewModel } from '../../../../Filters/AddFilter/AddFilterViewModel';
 export interface QueriesProps {
-    viewModal: QueriesViewModel;
+    viewModel: QueriesViewModel;
 }
 
 export const Queries = observer((props: QueriesProps) => {
-    const { viewModal } = props;
+    const { viewModel } = props;
+
     return (
-        <>
-            <h1 className='text-3xl mb-3'>Queries</h1>
-            <Button
-                label='Add Query'
-                icon='pi pi-plus'
-                onClick={() => viewModal.addQuery()}
-            />
-            {viewModal?.queries?.map((query) => (
-                <Fragment key={query.id}>
-                    <QueryInput
-                        query={query}
-                        onRemove={() => viewModal.removeQuery(query.id)}
-                        onUpdate={(newText: string) =>
-                            viewModal.updateQuery(query.id, newText)
-                        }
-                        onFetchData={() => {}}
-                    />
-                    <h1>Data goes here</h1>
-                </Fragment>
-            ))}
-        </>
+        <div className={css}>
+            <div className={css.tabContainer}>
+                <Button
+                    icon='pi pi-plus'
+                    label='Add new Tab'
+                    className={css.addButton}
+                    onClick={() => viewModel.addTab()}
+                />
+                <TabView
+                    className={css.tabView}
+                    activeIndex={viewModel.activeIdx}
+                    onTabChange={(e) => viewModel.setActiveIdx(e.index)}
+                >
+                    {viewModel.queries.map((query, idx) => (
+                        <TabPanel
+                            key={idx}
+                            closable={idx !== 0}
+                            header={query.title}
+                            className={viewModel.panelClassName(idx)}
+                        >
+                            <>another component goes here {query.id}</>
+                            <AddFilter
+                                viewModel={container.resolve(AddFilterViewModel)}
+                            />
+                        </TabPanel>
+                    ))}
+                </TabView>
+            </div>
+        </div>
     );
 });

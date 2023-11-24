@@ -12,3 +12,4 @@ export class Filter {
         readonly value: string) {
     }
 }
+

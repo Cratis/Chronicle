@@ -1,6 +1,6 @@
-import { QueryTabViewModel } from './Query/QueryTabViewModel';
+import { QueriesViewModel } from './Queries/QueriesViewModel';
 import { SequencesViewModel } from './SequencesViewModel';
-import { QueryTabs } from './Query/QueryTabs';
+import { Queries } from './Queries/Queries';
 import { observer } from 'mobx-react';
 import { container } from 'tsyringe';
 export interface SequencesProps {
@@ -11,7 +11,7 @@ export const Sequences = observer(() => {
     return (
         <div className='p-4'>
             <h1 className='text-3xl m-3'> Queries</h1>
-            <QueryTabs viewModel={container.resolve(QueryTabViewModel)} />
+            <Queries viewModel={container.resolve(QueriesViewModel)} />
         </div>
     );
 });

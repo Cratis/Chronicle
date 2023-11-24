@@ -1,0 +1,35 @@
+.overlaypanel {
+    width: 500px;
+}
+
+.header {
+    font-size: 22px;
+}
+
+.labelAndDropdown {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.dropdown {
+    width: 350px;
+}
+
+.cta {
+    display: flex;
+    justify-content: end;
+    gap: 5px;
+    margin-top: 15px;
+}
+
+.ctaContainer {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.tagChips {
+    display: flex;
+    gap: 5px;
+}

@@ -4,6 +4,7 @@ import { BlankLayout } from "./Layout/Blank/BlankLayout";
 import { Home } from "./Components/Pages/Home";
 import { EventStore } from "./Components/Pages/EventStore/EventStore";
 
+
 function App() {
     useColorScheme();
     return (

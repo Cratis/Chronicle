@@ -1,34 +1,34 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-
-import { makeAutoObservable, } from 'mobx';
+import { makeAutoObservable } from 'mobx';
 
 export class QueriesViewModel {
 
-    id = 1
-    queries = [{ id: 0, queryText: '', data: [] }];
+    queries = [
+        { title: 'Query 1', id: '1' },
+        { title: 'Query 2', id: '2' },
+        { title: 'Query 3', id: '3' }
+    ];
+
+
+    activeIdx = 0;
 
     constructor() {
         makeAutoObservable(this);
-
     }
 
-    addQuery() {
-        const newQuery = { id: this.id++, queryText: '', data: [] };
-        if (Array.isArray(this.queries)) {
-            this.queries = [...this.queries, newQuery];
-        }
+    setActiveIdx(idx: number) {
+        this.activeIdx = idx;
     }
 
-    updateQuery(id: number, newText: string) {
-        this.queries = this.queries.map(query =>
-            query.id === id ? { ...query, queryText: newText } : query
-        );
+    addTab() {
+        const newQueryIdx = this.queries.length + 1;
+        const newQuery = {
+            title: `Query ${newQueryIdx}`,
+            id: ` ${newQueryIdx} Content id`
+        };
+        this.queries.push(newQuery);
     }
 
-    removeQuery(id: number) {
-        if (this.queries.length === 1) return;
-        this.queries = this.queries.filter(query => query.id !== id);
+    panelClassName(idx: number) {
+        return this.activeIdx === idx ? 'bg-primary' : '';
     }
 }

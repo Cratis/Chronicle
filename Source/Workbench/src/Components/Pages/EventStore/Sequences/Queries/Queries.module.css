@@ -1,0 +1,19 @@
+
+.container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tabContainer {
+    position: relative;
+}
+.tabView {
+    flex-grow: 1;
+}
+.addButton {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    z-index: 10;
+}

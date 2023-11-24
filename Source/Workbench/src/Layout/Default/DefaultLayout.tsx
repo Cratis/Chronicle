@@ -1,11 +1,11 @@
 import { LayoutContext, LayoutProvider } from './context/LayoutContext';
+import { generatePath, Outlet, useParams } from "react-router-dom";
+import { IMenuItem } from "./Sidebar/MenuItem/MenuItem";
+import { SidebarMenu } from "./Sidebar/SidebarMenu";
+import css from './DefaultLayout.module.css';
 import { Sidebar } from './Sidebar/Sidebar';
 import { Topbar } from './Topbar/Topbar';
-import css from './DefaultLayout.module.css';
 import { Footer } from './Footer';
-import { generatePath, Outlet, useParams } from "react-router-dom";
-import { SidebarMenu } from "./Sidebar/SidebarMenu";
-import { IMenuItem } from "./Sidebar/MenuItem/MenuItem";
 
 interface IDefaultLayoutProps {
     leftMenuItems?: IMenuItem[];
