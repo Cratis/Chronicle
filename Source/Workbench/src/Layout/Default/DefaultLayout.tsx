@@ -1,12 +1,13 @@
 import { LayoutContext, LayoutProvider } from './context/LayoutContext';
+import { generatePath, Outlet, useParams } from 'react-router-dom';
+import { TenantSelector } from './TenantSelector/TenantSelector';
+import { IMenuItemGroup } from './Sidebar/MenuItem/MenuItem';
+import { MenuProvider } from './context/MenuContext';
+import { SidebarMenu } from './Sidebar/SidebarMenu';
+import css from './DefaultLayout.module.css';
 import { Topbar } from './Topbar/Topbar';
 import { Footer } from './Footer';
-import { generatePath, Outlet, useParams } from "react-router-dom";
-import { SidebarMenu } from "./Sidebar/SidebarMenu";
-import { IMenuItemGroup } from "./Sidebar/MenuItem/MenuItem";
-import { TenantSelector } from "./TenantSelector/TenantSelector";
-import { useState } from "react";
-import { MenuProvider } from "./context/MenuContext";
+import { useState } from 'react';
 
 interface IDefaultLayoutProps {
     leftMenuItems?: IMenuItemGroup[];
@@ -35,25 +36,34 @@ export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayou
                             }`}
                         >
                             <header className={css.appHeader}>
-                                <Topbar/>
+                                <Topbar />
                             </header>
 
                             {!value.layoutConfig.leftSidebarHidden && (
                                 <aside className={css.appLeftSidebar}>
                                     <div className={css.sidebarContainer}>
-                                        <TenantSelector className="mb-4 mt-1" onTenantSelected={(tenant) => setTenantId(tenant.id)}/>
-                                        {leftMenuItems &&
+                                        <TenantSelector
+                                            className='mb-4 mt-1'
+                                            onTenantSelected={(tenant) =>
+                                                setTenantId(tenant.id)
+                                            }
+                                        />
+                                        {leftMenuItems && (
                                             <MenuProvider params={{ tenantId: tenantId }}>
-                                                <SidebarMenu items={leftMenuItems} basePath={lmBasePath}/>
-                                            </MenuProvider>}
+                                                <SidebarMenu
+                                                    items={leftMenuItems}
+                                                    basePath={lmBasePath}
+                                                />
+                                            </MenuProvider>
+                                        )}
                                     </div>
                                 </aside>
                             )}
                             <main className={css.appOutlet}>
-                                <Outlet/>
+                                <Outlet />
                             </main>
                             <footer className={css.appFooter}>
-                                <Footer/>
+                                <Footer />
                             </footer>
                         </div>
                     </>
