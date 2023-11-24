@@ -16,7 +16,7 @@
 
 .menuItem .label {
     flex: 1;
-    color: var(--text-color-secondary);
+    color: var(--cratis-sidebar-textColor);
     opacity: 1;
     transition: opacity 0.3s;
 }
@@ -25,12 +25,15 @@
 }
 
 .menuItem.active {
-    background-color: var(--surface-c);
+    background-color: var(--cratis-sidebar-menuitem-active-bg);
     border-color: var(--primary-color);
-    color: var(--text-color-secondary);
+    color: var(--cratis-sidebar-menuitem-active-textColor);
     font-weight: 600;
 }
-
+.menuItem.active .label {
+    color: var(--cratis-sidebar-menuitem-active-textColor);
+;
+}
 .menuItem.pending {
     background-color: var(--surface-d);
     border-color: #faad14;

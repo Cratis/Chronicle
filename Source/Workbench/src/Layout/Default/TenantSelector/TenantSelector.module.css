@@ -1,0 +1,86 @@
+.currentTenant {
+    min-height: 4rem;
+    background: var(--cratis-sidebar-tenant-bg);
+    color: var(--cratis-sidebar-tenant-textColor);
+    border-left: 3px solid transparent;
+    padding: .5rem 2rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.smallCurrentTenant {
+    background: var(--cratis-sidebar-tenant-bg);
+    color: var(--cratis-sidebar-tenant-textColor);
+    height: 4rem;
+    cursor: pointer;
+    width: var(--sidebar-closed-width);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.smallCurrentTenant .tenantName {
+    height: 3rem;
+    width: 3rem;
+    border-radius: 50%;
+    background-color: var(--shade700);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.overlayPanel {
+    /*background: var(--surface-d);*/
+    border-radius: 4px;
+    /*box-shadow: 0 2px 4px 0 rgba(0, 0, 0, .1);*/
+    margin-bottom: 20px;
+    padding: 20px;
+    z-index: 1;
+}
+
+.overlayPanel:before, .overlayPanel:after {
+    /*border-bottom-color: var(--surface-d);*/
+}
+
+.openOverlayPanel {
+    transform: translateX(calc(var(--sidebar-width) - 60px));
+}
+
+.closedOverlayPanel {
+    transform: translateX(calc(var(--sidebar-closed-width) - 50px));
+}
+
+.tenantPanel.open {
+    display: block;
+}
+
+.tenantPanel.closed {
+    display: none;
+}
+
+.tenantList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 400px;
+
+    overflow: auto;
+}
+
+.tenantListItem {
+    display: flex;
+    align-items: center;
+    padding:1rem 1rem;
+    cursor: pointer;
+    border-radius: 4px;
+    border-bottom: 1px solid var(--surface-border);
+    transition: background-color 0.2s ease-in-out;
+}
+
+.tenantListItem:hover {
+    background: var(--shade700);
+    color: var(--shade000);
+}

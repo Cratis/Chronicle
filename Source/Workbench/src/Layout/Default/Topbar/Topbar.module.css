@@ -4,3 +4,15 @@
     align-items: center;
     height: var(--topbar-height);
 }
+
+.leftSide {
+    flex: 0 0  var(--sidebar-width);
+}
+
+.sidebarToggle {
+    width: var(--sidebar-closed-width);
+    position:absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

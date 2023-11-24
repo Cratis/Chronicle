@@ -1,14 +1,20 @@
-import { NavLink } from "react-router-dom";
+import { generatePath, NavLink, useParams } from "react-router-dom";
 import css from "./MenuItem.module.css";
 import { Ripple } from "primereact/ripple";
 import { IconType } from "react-icons/lib";
 import { useLayoutContext } from "../../context/LayoutContext";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { MenuContext } from "../../context/MenuContext";
 
 export interface IMenuItem {
     label: string;
     url: string;
     icon?: IconType;
+}
+
+export interface IMenuItemGroup {
+    label?: string;
+    items: IMenuItem[];
 }
 
 export interface IMenuItemProps {
@@ -18,12 +24,19 @@ export interface IMenuItemProps {
 
 export const MenuItem = ({ item, basePath, ...rest }: IMenuItemProps) => {
     const layoutContext = useLayoutContext();
+    const params = useParams();
+    const ctx = useContext(MenuContext);
+    const itemPath = cleanupPath(basePath) + item.url;
+    const resolvedPath = generatePath(itemPath ?? '', Object.assign({}, ctx.paramsFallback, params));
+
+
     const [labelClass, setLabelClass] = useState(css.label);
     useEffect(() => {
         setLabelClass(css.label + ' ' + (!layoutContext.layoutConfig.leftSidebarOpen ? css.hidden : ''))
     }, [layoutContext.layoutConfig.leftSidebarOpen]);
+
     return (
-        <NavLink to={(cleanupPath(basePath) ?? '') + item.url}
+        <NavLink to={resolvedPath}
                  {...rest}
                  className={({ isActive, isPending }) =>
                      css.menuItem + ' ' + (isPending ? css.pending : isActive ? css.active : "") + " p-ripple "

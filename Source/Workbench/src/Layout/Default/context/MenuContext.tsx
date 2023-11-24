@@ -1,22 +1,27 @@
-import { useState, createContext, Dispatch, SetStateAction, ReactNode } from 'react';
+import { useState, createContext, Dispatch, SetStateAction, ReactNode, useEffect } from 'react';
 
 export interface MenuContextProps {
-    activeMenu: string;
-    setActiveMenu: Dispatch<SetStateAction<string>>;
+    paramsFallback: {};
+    setParamsFallback: Dispatch<SetStateAction<string>>;
 }
 
 export interface MenuProviderProps {
     children: ReactNode;
+    params?: {};
 }
 
 export const MenuContext = createContext({} as MenuContextProps);
 
-export const MenuProvider = ({ children }: MenuProviderProps) => {
-    const [activeMenu, setActiveMenu] = useState('');
+export const MenuProvider = ({ children, params }: MenuProviderProps) => {
+    const [paramsFallback, setParamsFallback] = useState(params ?? {});
+
+    useEffect(() => {
+        setParamsFallback(params ?? {});
+    }, [params]);
 
     const value = {
-        activeMenu,
-        setActiveMenu,
+        paramsFallback,
+        setParamsFallback
     };
 
     return <MenuContext.Provider value={value}>{children}</MenuContext.Provider>;

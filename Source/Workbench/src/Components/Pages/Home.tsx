@@ -6,7 +6,7 @@ import uPlus from 'assets/icons/uPlus.png';
 
 export const Home = () => {
     return (
-        <div className=''>
+        <div>
             <h1 className='text-4xl m-3'>Select Event Store</h1>
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 '>
                 <StoreCard
