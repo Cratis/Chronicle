@@ -1,24 +1,27 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import 'reflect-metadata';
 import { PrimeReactProvider } from 'primereact/api';
 import ReactDOM from 'react-dom/client';
 import 'primeicons/primeicons.css';
 import './Styles/tailwind.css';
 import './Styles/theme.css';
-import 'reflect-metadata';
 import React from 'react';
 import App from "./App";
+import { configure as configureMobx } from 'mobx';
+import { Bindings, IMessenger } from './MVVM';
 
+Bindings.initialize();
 
-import { Module } from './MVVM';
-
-Module.initialize();
+configureMobx({
+    enforceActions: 'never'
+});
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
         <PrimeReactProvider value={{ ripple: true }}>
-            <App/>
+            <App />
         </PrimeReactProvider>
     </React.StrictMode>
 );
