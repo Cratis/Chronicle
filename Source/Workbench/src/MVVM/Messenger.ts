@@ -4,16 +4,17 @@
 import { IMessenger } from './IMessenger';
 
 export class Messenger extends IMessenger {
+    private _subscribers: any[] = [];
 
     publish<T>(message: T): void {
-        console.log('Publishing message', message);
+        this._subscribers.forEach(subscriber => subscriber(message));
     }
 
     subscribe<T>(callback: (message: T) => void): void {
-        throw new Error('Method not implemented.');
+        this._subscribers.push(callback);
     }
 
     unsubscribe<T>(callback: (message: T) => void): void {
-        throw new Error('Method not implemented.');
+
     }
 }

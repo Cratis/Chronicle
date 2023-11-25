@@ -6,7 +6,7 @@ import { Messenger } from './Messenger';
 import { Constructor } from '@aksio/fundamentals';
 import { IMessenger } from './IMessenger';
 
-export class Module {
+export class Bindings {
     static initialize() {
         container.registerSingleton(IMessenger as Constructor<IMessenger>, Messenger);
     }
