@@ -10,7 +10,7 @@ export interface SequencesProps {
 export const Sequences = observer(() => {
     return (
         <div className='p-4'>
-            <h1 className='text-3xl m-3'> Queries</h1>
+            <h1 className='text-3xl m-3'>Queries</h1>
             <Queries viewModel={container.resolve(QueriesViewModel)} />
         </div>
     );
