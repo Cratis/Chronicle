@@ -5,7 +5,8 @@ import { DefaultLayout } from "../../../Layout/Default/DefaultLayout";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Sequences } from "./Tenant/Sequences/Sequences";
 import { IMenuItemGroup } from "../../../Layout/Default/Sidebar/MenuItem/MenuItem";
-import * as icons from 'react-icons/md';
+import * as mdIcons from 'react-icons/md';
+import * as devIcons from 'react-icons/di';
 import { Types } from "./General/Types/Types";
 import { Observers } from "./Tenant/Observers/Observers";
 import { Projections } from "./General/Projections/Projections";
@@ -20,21 +21,21 @@ export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
-                { label: 'Recommendations', url: 'tenant/:tenantId/recommendations', icon: icons.MdOutlineLoupe },
-                { label: 'Jobs', url: 'tenant/:tenantId/jobs', icon: icons.MdOutlineLoupe },
-                { label: 'Sequences', url: 'tenant/:tenantId/sequences', icon: icons.MdStream },
-                { label: 'Observers', url: 'tenant/:tenantId/observers', icon: icons.MdMediation },
-                { label: 'Failed Partitions', url: 'tenant/:tenantId/failed-partitions', icon: icons.MdErrorOutline },
-                { label: 'Identities', url: 'tenant/:tenantId/identities', icon: icons.MdErrorOutline },
+                { label: 'Recommendations', url: 'tenant/:tenantId/recommendations', icon: mdIcons.MdOutlineLoupe },
+                { label: 'Jobs', url: 'tenant/:tenantId/jobs', icon: mdIcons.MdOutlineLoupe },
+                { label: 'Sequences', url: 'tenant/:tenantId/sequences', icon: mdIcons.MdDataArray },
+                { label: 'Observers', url: 'tenant/:tenantId/observers', icon: mdIcons.MdMediation },
+                { label: 'Failed Partitions', url: 'tenant/:tenantId/failed-partitions', icon: mdIcons.MdErrorOutline },
+                { label: 'Identities', url: 'tenant/:tenantId/identities', icon: mdIcons.MdPeople },
             ]
         },
         {
             label: 'General',
             items: [
-                { label: 'Types', url: 'types', icon: icons.MdDataObject },
-                { label: 'Projections', url: 'projections', icon: icons.MdOutlinePlayArrow },
-                { label: 'Sequences', url: 'sequences', icon: icons.MdStream },
-                { label: 'Sinks', url: 'sinks', icon: icons.MdStream }
+                { label: 'Types', url: 'types', icon: mdIcons.MdDataObject },
+                { label: 'Projections', url: 'projections', icon: mdIcons.MdMediation },
+                { label: 'Sequences', url: 'sequences', icon: mdIcons.MdDataArray },
+                { label: 'Sinks', url: 'sinks', icon: devIcons.DiDatabase }
             ]
         }
     ];
