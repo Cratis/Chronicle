@@ -16,7 +16,7 @@ const observerType = (observer: ObserverInformation) => {
         case ObserverType.projection: return 'Projection';
         case ObserverType.inbox: return 'Inbox';
         case ObserverType.reducer: return 'Reducer';
-        }
+    }
     return '[N/A]';
 }
 
