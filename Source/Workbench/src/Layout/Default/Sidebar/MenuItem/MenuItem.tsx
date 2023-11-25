@@ -1,3 +1,6 @@
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 import { generatePath, NavLink, useParams } from "react-router-dom";
 import css from "./MenuItem.module.css";
 import { Ripple } from "primereact/ripple";

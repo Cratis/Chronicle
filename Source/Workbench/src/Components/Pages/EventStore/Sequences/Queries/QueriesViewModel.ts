@@ -1,4 +1,5 @@
-import { makeAutoObservable } from 'mobx';
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 export class QueriesViewModel {
 
@@ -8,18 +9,13 @@ export class QueriesViewModel {
         { title: 'Query 3', id: '3' }
     ];
 
+    currentQuery = 0;
 
-    activeIdx = 0;
-
-    constructor() {
-        makeAutoObservable(this);
+    setCurrentQuery(idx: number) {
+        this.currentQuery = idx;
     }
 
-    setActiveIdx(idx: number) {
-        this.activeIdx = idx;
-    }
-
-    addTab() {
+    addQuery() {
         const newQueryIdx = this.queries.length + 1;
         const newQuery = {
             title: `Query ${newQueryIdx}`,
@@ -29,6 +25,6 @@ export class QueriesViewModel {
     }
 
     panelClassName(idx: number) {
-        return this.activeIdx === idx ? 'bg-primary' : '';
+        return this.currentQuery === idx ? 'bg-primary' : '';
     }
 }

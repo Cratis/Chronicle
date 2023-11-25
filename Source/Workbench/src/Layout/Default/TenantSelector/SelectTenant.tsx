@@ -1,3 +1,6 @@
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 import { ITenant } from "./TenantSelector";
 import { InputText } from "primereact/inputtext";
 import { useState } from "react";

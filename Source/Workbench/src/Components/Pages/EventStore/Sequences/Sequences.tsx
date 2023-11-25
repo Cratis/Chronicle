@@ -1,17 +1,15 @@
-import { QueriesViewModel } from './Queries/QueriesViewModel';
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 import { SequencesViewModel } from './SequencesViewModel';
 import { Queries } from './Queries/Queries';
-import { observer } from 'mobx-react';
-import { container } from 'tsyringe';
-export interface SequencesProps {
-    viewModel: SequencesViewModel;
-}
+import { withViewModel } from 'MVVM/withViewModel';
 
-export const Sequences = observer(() => {
+export const Sequences = withViewModel(SequencesViewModel, ({viewModel}) => {
     return (
         <div className='p-4'>
             <h1 className='text-3xl m-3'>Queries</h1>
-            <Queries viewModel={container.resolve(QueriesViewModel)} />
+            <Queries />
         </div>
     );
 });

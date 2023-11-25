@@ -1,3 +1,6 @@
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 import { Image } from 'primereact/image';
 import { Card } from 'primereact/card';
 import { useNavigate } from 'react-router-dom';

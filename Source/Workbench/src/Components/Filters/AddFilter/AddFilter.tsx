@@ -1,3 +1,6 @@
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 import { DropdownFilter } from '../Dropdown/DropdownFilter';
 import { DropdownChangeEvent } from 'primereact/dropdown';
 import { AddFilterViewModel } from './AddFilterViewModel';
@@ -6,14 +9,10 @@ import { testOptions } from '../../Common/TestOptions';
 import { Button } from 'primereact/button';
 import css from '../Filter.module.css';
 import { Chip } from 'primereact/chip';
-import { observer } from 'mobx-react';
 import { useRef } from 'react';
-export interface AddFilterProps {
-    viewModel: AddFilterViewModel;
-}
+import { withViewModel } from 'MVVM';
 
-export const AddFilter = observer((props: AddFilterProps) => {
-    const { viewModel } = props;
+export const AddFilter = withViewModel(AddFilterViewModel, ({ viewModel }) => {
     const op = useRef<OverlayPanel>(null);
 
     const disabled =

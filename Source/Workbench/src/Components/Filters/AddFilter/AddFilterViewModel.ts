@@ -1,5 +1,5 @@
-import { makeAutoObservable } from 'mobx';
-
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 type FilterObject = {
     filter: string;
@@ -13,7 +13,6 @@ export class AddFilterViewModel {
     appliedFilters: FilterObject[] = [];
 
     constructor() {
-        makeAutoObservable(this);
     }
 
     setCurrent(key: 'currentFilter' | 'currentOperator' | 'currentValue', value: string) {

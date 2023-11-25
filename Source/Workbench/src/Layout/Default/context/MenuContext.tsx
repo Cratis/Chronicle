@@ -1,3 +1,6 @@
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 import { useState, createContext, Dispatch, SetStateAction, ReactNode, useEffect } from 'react';
 
 export interface MenuContextProps {

@@ -6,29 +6,22 @@ import { QueriesViewModel } from './QueriesViewModel';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Button } from 'primereact/button';
 import css from './Queries.module.css';
-import { observer } from 'mobx-react';
-import { container } from 'tsyringe';
-import { AddFilterViewModel } from '../../../../Filters/AddFilter/AddFilterViewModel';
-export interface QueriesProps {
-    viewModel: QueriesViewModel;
-}
+import { withViewModel } from 'MVVM/withViewModel';
 
-export const Queries = observer((props: QueriesProps) => {
-    const { viewModel } = props;
-
+export const Queries = withViewModel(QueriesViewModel, ({ viewModel }) => {
     return (
         <div className={css}>
             <div className={css.tabContainer}>
                 <Button
                     icon='pi pi-plus'
-                    label='Add new Tab'
+                    label='Add new query'
                     className={css.addButton}
-                    onClick={() => viewModel.addTab()}
+                    onClick={() => viewModel.addQuery()}
                 />
                 <TabView
                     className={css.tabView}
-                    activeIndex={viewModel.activeIdx}
-                    onTabChange={(e) => viewModel.setActiveIdx(e.index)}
+                    activeIndex={viewModel.currentQuery}
+                    onTabChange={(e) => viewModel.setCurrentQuery(e.index)}
                 >
                     {viewModel.queries.map((query, idx) => (
                         <TabPanel
@@ -38,9 +31,7 @@ export const Queries = observer((props: QueriesProps) => {
                             className={viewModel.panelClassName(idx)}
                         >
                             <>another component goes here {query.id}</>
-                            <AddFilter
-                                viewModel={container.resolve(AddFilterViewModel)}
-                            />
+                            <AddFilter />
                         </TabPanel>
                     ))}
                 </TabView>
