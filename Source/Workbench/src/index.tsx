@@ -10,9 +10,12 @@ import './Styles/theme.css';
 import React from 'react';
 import App from "./App";
 import { configure as configureMobx } from 'mobx';
-import { Bindings, IMessenger } from './MVVM';
+import { Bindings } from './MVVM';
+
+import { FakeData } from './FakeData';
 
 Bindings.initialize();
+FakeData.initialize();
 
 configureMobx({
     enforceActions: 'never'
