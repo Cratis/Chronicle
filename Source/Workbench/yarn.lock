@@ -48,6 +48,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@anatine/esbuild-decorators@npm:^0.2.19":
+  version: 0.2.19
+  resolution: "@anatine/esbuild-decorators@npm:0.2.19"
+  peerDependencies:
+    esbuild: ~0.14.29
+  checksum: c9480485973215341aabb37f569307cdb45a7def27af70c314260ea91a3bdbddce3ae3e102e7dcf6186d3a0be939bc52cf787342409cf0ae4111aea40dd962c2
+  languageName: node
+  linkType: hard
+
 "@babel/code-frame@npm:^7.22.13":
   version: 7.22.13
   resolution: "@babel/code-frame@npm:7.22.13"
@@ -3654,6 +3663,7 @@ __metadata:
   resolution: "workbench@workspace:."
   dependencies:
     "@aksio/fundamentals": 1.5.2
+    "@anatine/esbuild-decorators": ^0.2.19
     "@types/node": 20.8.4
     "@types/react": 18.2.28
     "@types/react-dom": 18.2.7

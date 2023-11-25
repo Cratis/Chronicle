@@ -4,6 +4,7 @@
 import { defineConfig } from 'vite';
 import react from "@vitejs/plugin-react";
 import path from 'path';
+import { VitePluginEmitMetadata } from './ViteEmitMetadataPlugin';
 
 export default defineConfig({
     build: {
@@ -16,7 +17,8 @@ export default defineConfig({
         },
     },
     plugins: [
-        react()
+        react(),
+        VitePluginEmitMetadata() as any
     ],
     server: {
         port: 9001,
@@ -34,6 +36,7 @@ export default defineConfig({
     resolve: {
         alias: {
             'API': path.resolve('./API'),
+            'MVVM': path.resolve('./src/MVVM'),
             'assets': path.resolve('./src/assets'),
             'Components': path.resolve('./src/Components'),
             'Routing': path.resolve('./src/Routing'),
@@ -41,5 +44,4 @@ export default defineConfig({
             'Layout': path.resolve('./src/Layout'),
         }
     }
-
 });
