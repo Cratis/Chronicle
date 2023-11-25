@@ -1,4 +1,7 @@
-// From: https://github.com/arjendeblok/vite-plugin-emit-metadata
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// Based on: https://github.com/arjendeblok/vite-plugin-emit-metadata
 
 import path from 'path';
 import ts from 'typescript';
