@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { LayoutContext, LayoutProvider } from './context/LayoutContext';
-import { generatePath, Outlet, useLocation, useParams } from 'react-router-dom';
+import { generatePath, Outlet, useParams } from 'react-router-dom';
 import { TenantSelector } from './TenantSelector/TenantSelector';
 import { IMenuItemGroup } from './Sidebar/MenuItem/MenuItem';
 import { MenuProvider } from './context/MenuContext';
@@ -22,8 +22,6 @@ export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayou
     const params = useParams();
     const lmBasePath = generatePath(leftMenuBasePath ?? '', params);
     const [tenantId, setTenantId] = useState<string>('default');
-    const location = useLocation();
-    console.log(location);
 
     return (
         <LayoutProvider>
