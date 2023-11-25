@@ -8,6 +8,7 @@ import { Column } from 'primereact/column';
 import { ObserverInformation } from 'API/events/store/observers/ObserverInformation';
 import { ObserverRunningState } from 'API/events/store/observers/ObserverRunningState';
 import { ObserverType } from 'API/events/store/observers/ObserverType';
+import { Filters } from '../../../../Filters/Filters/Filters';
 
 const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {
@@ -42,6 +43,8 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     return (
         <div className='p-4'>
             <h1 className='text-3xl m-3'> Observers</h1>
+
+            <Filters />
 
             <DataTable value={viewModel.observers} paginator rows={100}>
                 <Column field="observerId" header="Id" sortable />
