@@ -1,38 +1,32 @@
 import { DefaultLayout } from "../../../Layout/Default/DefaultLayout";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Sequences } from "./Sequences/Sequences";
-import {  IMenuItemGroup } from "../../../Layout/Default/Sidebar/MenuItem/MenuItem";
-import {
-    MdDataObject,
-    MdErrorOutline,
-    MdMediation,
-    MdOutlineLoupe,
-    MdOutlinePlayArrow,
-    MdStream
-} from "react-icons/md";
+import { IMenuItemGroup } from "../../../Layout/Default/Sidebar/MenuItem/MenuItem";
+import * as icons from 'react-icons/md';
 import { Types } from "./Types/Types";
 import { Observers } from "./Observers/Observers";
 import { Projections } from "./Projections/Projections";
 import { FailedPartitions } from "./FailedPartitions/FailedPartitions";
 import { ObserverReplayCandidates } from "./ObserverReplayCandidates/ObserverReplayCandidates";
+
 export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
-                {label: 'Types', url: 'tenant/:tenantId/types', icon: MdDataObject},
-                {label: 'Sequences', url: 'tenant/:tenantId/sequences', icon: MdStream},
-                {label: 'Observers', url: 'tenant/:tenantId/observers', icon: MdMediation},
-                {label: 'Projections', url: 'tenant/:tenantId/projections', icon: MdOutlinePlayArrow},
-                {label: 'Failed Partitions', url: 'tenant/:tenantId/failed-partitions', icon: MdErrorOutline},
-                {label: 'Observer Replay Candidates', url: 'tenant/:tenantId/observer-replay-candidates', icon: MdOutlineLoupe},
+                {label: 'Recommendations', url: 'tenant/:tenantId/recommendations', icon: icons.MdOutlineLoupe},
+                {label: 'Types', url: 'tenant/:tenantId/types', icon: icons.MdDataObject},
+                {label: 'Sequences', url: 'tenant/:tenantId/sequences', icon: icons.MdStream},
+                {label: 'Observers', url: 'tenant/:tenantId/observers', icon: icons.MdMediation},
+                {label: 'Projections', url: 'tenant/:tenantId/projections', icon: icons.MdOutlinePlayArrow},
+                {label: 'Failed Partitions', url: 'tenant/:tenantId/failed-partitions', icon: icons.MdErrorOutline},
             ]
         },
         {
             label: 'Global stuff',
             items: [
-                {label: 'Other things', url: 'test', icon: MdDataObject},
-                {label: 'Foo', url: 'foo', icon: MdDataObject},
-                {label: 'Bar', url: 'bar', icon: MdDataObject},
+                {label: 'Other things', url: 'test', icon: icons.MdDataObject},
+                {label: 'Foo', url: 'foo', icon: icons.MdDataObject},
+                {label: 'Bar', url: 'bar', icon: icons.MdDataObject},
             ]
         }
 
@@ -47,7 +41,7 @@ export const EventStore = () => {
                     <Route path={''} element={<Navigate to={'types'}/>}/>
                     <Route path={'types'} element={<Types/>}/>
                     <Route path={'sequences/*'} element={<Sequences/>}/>
-                    <Route path={'observers'} element={<Observers/>}/>
+                    <Route path={'observers'} element={<Observers something="hello"/>}/>
                     <Route path={'projections'} element={<Projections/>}/>
                     <Route path={'failed-partitions'} element={<FailedPartitions/>}/>
                     <Route path={'observer-replay-candidates'} element={<ObserverReplayCandidates/>}/>
