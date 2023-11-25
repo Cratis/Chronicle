@@ -9,13 +9,11 @@
         ],
         "module": "ESNext",
         "skipLibCheck": true,
-        /* Bundler mode */
         "moduleResolution": "bundler",
         "resolveJsonModule": true,
         "isolatedModules": true,
         "noEmit": true,
         "jsx": "react-jsx",
-        /* Linting */
         "strict": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
@@ -26,6 +24,12 @@
         "paths": {
             "API/*": [
                 "./API/*"
+            ],
+            "MVVM": [
+                "./src/MVVM/index.ts"
+            ],
+            "MVVM/*": [
+                "./src/MVVM/*"
             ],
             "Components/*": [
                 "./src/Components/*"
@@ -38,7 +42,7 @@
             ],
             "Layout/*": [
                 "./src/Layout/*"
-            ],
+            ]
         }
     },
     "include": [
@@ -47,7 +51,7 @@
         "API"
     ],
     "exclude": [
-        "./backup/**/*",
+        "./backup/**/*"
     ],
     "references": [
         {
