@@ -12,6 +12,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aksio/applications@npm:1.5.1":
+  version: 1.5.1
+  resolution: "@aksio/applications@npm:1.5.1"
+  dependencies:
+    "@aksio/fundamentals": 1.5.0
+    "@aksio/typescript": 1.5.0
+    handlebars: 4.7.7
+  checksum: fe25fac83dc815cd62263895797394ea27ab0bee171e25fef6d790685ee5c6d91b91bbf26b8dace4c6ae8a0fe04df3aac2ece9b6bda29231e235f963dae3fb69
+  languageName: node
+  linkType: hard
+
+"@aksio/fundamentals@npm:1.5.0":
+  version: 1.5.0
+  resolution: "@aksio/fundamentals@npm:1.5.0"
+  dependencies:
+    "@aksio/typescript": 1.5.0
+    reflect-metadata: 0.1.13
+  checksum: 1512562157ff32c4281e3d81cf2bf5a00e6345504e70f2f73a10d190aac74c5ef364a22a72586c9f57aa15089206218bbaad6532b93da93a2d539c23cee1c989
+  languageName: node
+  linkType: hard
+
 "@aksio/fundamentals@npm:1.5.2":
   version: 1.5.2
   resolution: "@aksio/fundamentals@npm:1.5.2"
@@ -19,6 +40,15 @@ __metadata:
     "@aksio/typescript": 1.5.2
     reflect-metadata: 0.1.13
   checksum: 09dfedc50a4cdb4d2a07d691c0179655412f2407cac5ac4c829ab274f0cb8356c765322e911dea3b2d6c20f0fa62218d8cd39913005d429df89da0e56981502c
+  languageName: node
+  linkType: hard
+
+"@aksio/typescript@npm:1.5.0":
+  version: 1.5.0
+  resolution: "@aksio/typescript@npm:1.5.0"
+  dependencies:
+    reflect-metadata: 0.1.13
+  checksum: fc8981d4dfc0982cdc513f825255dc3131755725340d0af7e858cfd719afddf03830a62747dceb743134793eaedb834cafd16934582f03afece19f40c22328ae
   languageName: node
   linkType: hard
 
@@ -45,15 +75,6 @@ __metadata:
     "@jridgewell/gen-mapping": ^0.3.0
     "@jridgewell/trace-mapping": ^0.3.9
   checksum: 03c04fd526acc64a1f4df22651186f3e5ef0a9d6d6530ce4482ec9841269cf7a11dbb8af79237c282d721c5312024ff17529cd72cc4768c11e999b58e2302079
-  languageName: node
-  linkType: hard
-
-"@anatine/esbuild-decorators@npm:^0.2.19":
-  version: 0.2.19
-  resolution: "@anatine/esbuild-decorators@npm:0.2.19"
-  peerDependencies:
-    esbuild: ~0.14.29
-  checksum: c9480485973215341aabb37f569307cdb45a7def27af70c314260ea91a3bdbddce3ae3e102e7dcf6186d3a0be939bc52cf787342409cf0ae4111aea40dd962c2
   languageName: node
   linkType: hard
 
@@ -1948,6 +1969,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"handlebars@npm:4.7.7":
+  version: 4.7.7
+  resolution: "handlebars@npm:4.7.7"
+  dependencies:
+    minimist: ^1.2.5
+    neo-async: ^2.6.0
+    source-map: ^0.6.1
+    uglify-js: ^3.1.4
+    wordwrap: ^1.0.0
+  dependenciesMeta:
+    uglify-js:
+      optional: true
+  bin:
+    handlebars: bin/handlebars
+  checksum: 1e79a43f5e18d15742977cb987923eab3e2a8f44f2d9d340982bcb69e1735ed049226e534d7c1074eaddaf37e4fb4f471a8adb71cddd5bc8cf3f894241df5cee
+  languageName: node
+  linkType: hard
+
 "has-flag@npm:^3.0.0":
   version: 3.0.0
   resolution: "has-flag@npm:3.0.0"
@@ -2377,6 +2416,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"minimist@npm:^1.2.5":
+  version: 1.2.8
+  resolution: "minimist@npm:1.2.8"
+  checksum: 75a6d645fb122dad29c06a7597bddea977258957ed88d7a6df59b5cd3fe4a527e253e9bbf2e783e4b73657f9098b96a5fe96ab8a113655d4109108577ecf85b0
+  languageName: node
+  linkType: hard
+
 "minipass-collect@npm:^1.0.2":
   version: 1.0.2
   resolution: "minipass-collect@npm:1.0.2"
@@ -2563,6 +2609,13 @@ __metadata:
   version: 0.6.3
   resolution: "negotiator@npm:0.6.3"
   checksum: b8ffeb1e262eff7968fc90a2b6767b04cfd9842582a9d0ece0af7049537266e7b2506dfb1d107a32f06dd849ab2aea834d5830f7f4d0e5cb7d36e1ae55d021d9
+  languageName: node
+  linkType: hard
+
+"neo-async@npm:^2.6.0":
+  version: 2.6.2
+  resolution: "neo-async@npm:2.6.2"
+  checksum: deac9f8d00eda7b2e5cd1b2549e26e10a0faa70adaa6fdadca701cc55f49ee9018e427f424bac0c790b7c7e2d3068db97f3093f1093975f2acb8f8818b936ed9
   languageName: node
   linkType: hard
 
@@ -3253,6 +3306,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"source-map@npm:^0.6.1":
+  version: 0.6.1
+  resolution: "source-map@npm:0.6.1"
+  checksum: 59ce8640cf3f3124f64ac289012c2b8bd377c238e316fb323ea22fbfe83da07d81e000071d7242cad7a23cd91c7de98e4df8830ec3f133cb6133a5f6e9f67bc2
+  languageName: node
+  linkType: hard
+
 "ssri@npm:^10.0.0":
   version: 10.0.5
   resolution: "ssri@npm:10.0.5"
@@ -3524,6 +3584,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"uglify-js@npm:^3.1.4":
+  version: 3.17.4
+  resolution: "uglify-js@npm:3.17.4"
+  bin:
+    uglifyjs: bin/uglifyjs
+  checksum: 7b3897df38b6fc7d7d9f4dcd658599d81aa2b1fb0d074829dd4e5290f7318dbca1f4af2f45acb833b95b1fe0ed4698662ab61b87e94328eb4c0a0d3435baf924
+  languageName: node
+  linkType: hard
+
 "undici-types@npm:~5.25.1":
   version: 5.25.3
   resolution: "undici-types@npm:5.25.3"
@@ -3658,12 +3727,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"wordwrap@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "wordwrap@npm:1.0.0"
+  checksum: 2a44b2788165d0a3de71fd517d4880a8e20ea3a82c080ce46e294f0b68b69a2e49cff5f99c600e275c698a90d12c5ea32aff06c311f0db2eb3f1201f3e7b2a04
+  languageName: node
+  linkType: hard
+
 "workbench@workspace:.":
   version: 0.0.0-use.local
   resolution: "workbench@workspace:."
   dependencies:
+    "@aksio/applications": 1.5.1
     "@aksio/fundamentals": 1.5.2
-    "@anatine/esbuild-decorators": ^0.2.19
     "@types/node": 20.8.4
     "@types/react": 18.2.28
     "@types/react-dom": 18.2.7
