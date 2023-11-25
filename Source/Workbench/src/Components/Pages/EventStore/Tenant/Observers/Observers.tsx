@@ -43,7 +43,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
         <div className='p-4'>
             <h1 className='text-3xl m-3'> Observers</h1>
 
-            <DataTable value={viewModel.observers}>
+            <DataTable value={viewModel.observers} paginator rows={100}>
                 <Column field="observerId" header="Id" sortable />
                 <Column field="name" header="Name" sortable />
                 <Column field="type" header="ObserverType" sortable body={observerType} />

@@ -3,7 +3,7 @@
 
 import { DropdownFilter } from '../Dropdown/DropdownFilter';
 import { DropdownChangeEvent } from 'primereact/dropdown';
-import { AddFilterViewModel } from './AddFilterViewModel';
+import { FiltersViewModel } from './FiltersViewModel';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { testOptions } from '../../Common/TestOptions';
 import { Button } from 'primereact/button';
@@ -12,7 +12,7 @@ import { Chip } from 'primereact/chip';
 import { useRef } from 'react';
 import { withViewModel } from 'MVVM';
 
-export const AddFilter = withViewModel(AddFilterViewModel, ({ viewModel }) => {
+export const Filters = withViewModel(FiltersViewModel, ({ viewModel }) => {
     const op = useRef<OverlayPanel>(null);
 
     const disabled =

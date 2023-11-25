@@ -6,7 +6,7 @@ type FilterObject = {
     operator: string;
     value: string;
 };
-export class AddFilterViewModel {
+export class FiltersViewModel {
     currentFilter = '';
     currentOperator = '';
     currentValue = '';
@@ -18,7 +18,6 @@ export class AddFilterViewModel {
     setCurrent(key: 'currentFilter' | 'currentOperator' | 'currentValue', value: string) {
         this[key] = value;
     }
-
 
     applyCurrentSelection() {
         this.appliedFilters.push({

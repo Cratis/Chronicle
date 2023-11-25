@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AddFilter } from 'Components/Filters/AddFilter/AddFilter';
+import { Filters } from 'Components/Filters/Filters/Filters';
 import { QueriesViewModel } from './QueriesViewModel';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Button } from 'primereact/button';
@@ -31,7 +31,7 @@ export const Queries = withViewModel(QueriesViewModel, ({ viewModel }) => {
                             className={viewModel.panelClassName(idx)}
                         >
                             <>another component goes here {query.id}</>
-                            <AddFilter />
+                            <Filters />
                         </TabPanel>
                     ))}
                 </TabView>
