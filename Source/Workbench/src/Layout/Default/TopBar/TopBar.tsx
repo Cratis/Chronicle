@@ -2,13 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useLayoutContext } from '../context/LayoutContext';
-import { ThemeSwitch } from './ThemeSwitch';
 import { Button } from 'primereact/button';
 import css from './Topbar.module.css';
 import { FaBars } from 'react-icons/fa6';
 import { forwardRef } from 'react';
 import { Logo } from "./Logo";
 import { Profile } from "./Profile";
+import { Notifications } from './Notifications';
+import { Connection } from './Connection';
 
 export interface AppTopBarRef {
     menubutton?: HTMLButtonElement | null;
@@ -34,12 +35,15 @@ export const TopBar = forwardRef<AppTopBarRef>(() => {
                     <Logo/>
                 </div>
             </div>
-            <div className="flex-1 flex items-center  justify-between px-5">
+            <div className="flex-1 flex items-center justify-end px-5">
                 <div>
-                    <Profile/>
+                    <Connection/>
                 </div>
                 <div>
-                    <ThemeSwitch/>
+                    <Notifications/>
+                </div>
+                <div>
+                    <Profile/>
                 </div>
             </div>
         </div>

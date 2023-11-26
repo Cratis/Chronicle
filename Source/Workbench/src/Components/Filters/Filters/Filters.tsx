@@ -7,7 +7,7 @@ import { FiltersViewModel } from './FiltersViewModel';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { testOptions } from '../../Common/TestOptions';
 import { Button } from 'primereact/button';
-import css from '../Filter.module.css';
+import css from './Filters.module.css';
 import { Chip } from 'primereact/chip';
 import { useRef } from 'react';
 import { withViewModel } from 'MVVM';
