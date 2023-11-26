@@ -8,13 +8,13 @@ import { Column } from 'primereact/column';
 import { ObserverType } from 'API/events/store/observers/ObserverType';
 import { Page } from '../../../Page';
 import { ObserverState } from 'API/events/store/observers/ObserverState';
-import { Toolbar } from 'primereact/toolbar';
-import { Button } from 'primereact/button';
 import * as mdIcons from 'react-icons/md';
 import { FilterMatchMode } from 'primereact/api';
 import { useState } from 'react';
 import { ColumnFilterProps } from 'Components/ColumnFilter/ColumnFilter';
 import { ObserverRunningStateFilterTemplate, getObserverRunningStateAsText } from './ObserverRunningStateHelpers';
+import { Menubar } from 'primereact/menubar';
+import { MenuItem } from 'primereact/menuitem';
 
 const observerType = (observer: ObserverState) => {
     switch (observer.type) {
@@ -34,17 +34,16 @@ const defaultFilters: DataTableFilterMeta = {
 export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(defaultFilters);
 
-    const toolbar = () => {
-        return (
-            <>
-                <Button label="Replay" icon={mdIcons.MdReplay} className="mr-2" disabled={viewModel.selectedObserver == undefined} />
-            </>
-        )
-    };
+    const menuItems: MenuItem[] = [
+        {
+            label: 'Replay',
+            icon: mdIcons.MdReplay,
+        }
+    ];
 
     return (
         <Page title='Observers'>
-            <Toolbar aria-label='Actions' start={toolbar} />
+            <Menubar aria-label='Actions' model={menuItems} />
 
             <DataTable
                 value={viewModel.observers}
