@@ -8,7 +8,7 @@ import { IMenuItemGroup } from './Sidebar/MenuItem/MenuItem';
 import { MenuProvider } from './context/MenuContext';
 import { SidebarMenu } from './Sidebar/SidebarMenu';
 import css from './DefaultLayout.module.css';
-import { TopBar } from './_Topbar/Topbar';
+import { TopBar } from './TopBar/TopBar';
 import { Footer } from './Footer';
 import { useState } from 'react';
 import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
