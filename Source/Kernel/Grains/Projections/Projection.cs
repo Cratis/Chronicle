@@ -90,11 +90,4 @@ public class Projection : Grain, IProjection
 
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
-
-    /// <inheritdoc/>
-    public Task Rewind()
-    {
-        _observer?.Replay();
-        return Task.CompletedTask;
-    }
 }

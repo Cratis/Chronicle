@@ -5,6 +5,10 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
+using Aksio.Cratis.Kernel.Grains.Observation.States;
+using Aksio.Cratis.Kernel.Grains.Recommendations;
+using Aksio.Cratis.Kernel.Observation.Replaying;
+using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.DependencyInversion;
@@ -176,7 +180,22 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             else
             {
                 _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
-                await projection.Rewind();
+
+                foreach (var tenantId in _configuration.Tenants.GetTenantIds())
+                {
+                    var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(microserviceId, tenantId));
+                    await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
+                        "Projection definition has changed.",
+                        new ReplayCandidateRequest
+                        {
+                            ObserverId = (Guid)projectionDefinition.Identifier,
+                            ObserverKey = new ObserverKey(microserviceId, tenantId, EventSequenceId.Log),
+                            Reasons = new[]
+                            {
+                                new ProjectionDefinitionChangedReplayCandidateReason()
+                            }
+                        });
+                }
             }
         }
     }
