@@ -37,7 +37,6 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was completed.</param>
     /// <param name="result">The <see cref="JobStepResult"/> for the succeeded step.</param>
     /// <returns>Awaitable task.</returns>
-    [AlwaysInterleave]
     Task OnStepSucceeded(JobStepId stepId, JobStepResult result);
 
     /// <summary>
@@ -54,7 +53,6 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that failed.</param>
     /// <param name="result">The <see cref="JobStepResult"/> for the failed step.</param>
     /// <returns>Awaitable task.</returns>
-    [AlwaysInterleave]
     Task OnStepFailed(JobStepId stepId, JobStepResult result);
 
     /// <summary>
