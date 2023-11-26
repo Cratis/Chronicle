@@ -4,12 +4,11 @@
 import { SequencesViewModel } from './SequencesViewModel';
 import { Queries } from './Queries/Queries';
 import { withViewModel } from 'MVVM/withViewModel';
+import { Page } from '../../../Page';
 
-export const Sequences = withViewModel(SequencesViewModel, ({viewModel}) => {
+export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
     return (
-        <div className='p-4'>
-            <h1 className='text-3xl m-3'>Queries</h1>
+        <Page title='Event Sequences'>
             <Queries />
-        </div>
-    );
+        </Page>);
 });

@@ -9,6 +9,7 @@ import { ObserverInformation } from 'API/events/store/observers/ObserverInformat
 import { ObserverRunningState } from 'API/events/store/observers/ObserverRunningState';
 import { ObserverType } from 'API/events/store/observers/ObserverType';
 import { Filters } from '../../../../Filters/Filters/Filters';
+import { Page } from '../../../Page';
 
 const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {
@@ -41,9 +42,7 @@ const observerRunningState = (observer: ObserverInformation) => {
 
 export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     return (
-        <div className='p-4'>
-            <h1 className='text-3xl m-3'> Observers</h1>
-
+        <Page title='Observers'>
             <Filters />
 
             <DataTable value={viewModel.observers} paginator rows={100}>
@@ -53,6 +52,6 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                 <Column field="nextEventSequenceNumber" header="Next event sequence number" sortable />
                 <Column field="runningState" header="State" sortable body={observerRunningState} />
             </DataTable>
-        </div>
+        </Page>
     )
 });
