@@ -45,7 +45,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
         <Page title='Observers'>
             <Filters />
 
-            <DataTable value={viewModel.observers} paginator rows={100}>
+            <DataTable value={viewModel.observers} paginator alwaysShowPaginator={false} scrollable rows={100}>
                 <Column field="observerId" header="Id" sortable />
                 <Column field="name" header="Name" sortable />
                 <Column field="type" header="ObserverType" sortable body={observerType} />
