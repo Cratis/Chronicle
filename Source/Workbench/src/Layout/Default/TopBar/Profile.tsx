@@ -4,7 +4,7 @@
 import { useRef } from 'react';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import * as icons from "react-icons/fa";
-import * as css from './Profile.module.css';
+import css from './Profile.module.css';
 import { Button } from 'primereact/button';
 import { useDarkMode } from 'usehooks-ts';
 
@@ -29,7 +29,7 @@ export const Profile = () => {
             <div className={'flex justify-end gap-3 '}>
 
                 <Button
-                    icon={icons.FaUser}
+                    icon={<icons.FaUser/>}
                     rounded
                     severity="info"
                     onClick={(e) => overlayPanelRef.current?.toggle(e)}
