@@ -3,13 +3,25 @@
 
 import { useRef } from 'react';
 import { OverlayPanel } from 'primereact/overlaypanel';
-import { FaUser } from "react-icons/fa";
+import * as icons from "react-icons/fa";
 import * as css from './Profile.module.css';
 import { Button } from 'primereact/button';
-import { ThemeSwitch } from './ThemeSwitch';
+import { useDarkMode } from 'usehooks-ts';
 
+
+const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onClick: () => void }) => {
+    return (
+        <li className={css.profileItem}>
+            <span onClick={onClick}>
+                {icon}
+                <span>{label}</span>
+            </span>
+        </li>
+    )
+}
 
 export const Profile = () => {
+    const { isDarkMode, toggle: toggleDarkMode } = useDarkMode()
     const overlayPanelRef = useRef<OverlayPanel>(null);
 
     return (
@@ -17,7 +29,7 @@ export const Profile = () => {
             <div className={'flex justify-end gap-3 '}>
 
                 <Button
-                    icon={FaUser}
+                    icon={icons.FaUser}
                     rounded
                     severity="info"
                     onClick={(e) => overlayPanelRef.current?.toggle(e)}
@@ -25,7 +37,12 @@ export const Profile = () => {
 
 
                 <OverlayPanel ref={overlayPanelRef} className={css.overlayPanel}>
-                    <ThemeSwitch />
+                    <ul className={css.profileItems}>
+                        <ProfileItem icon={<icons.FaUser />} label="Profile" onClick={() => { }} />
+                        {isDarkMode ?
+                            <ProfileItem icon={<icons.FaSun />} label="Light mode" onClick={toggleDarkMode} /> :
+                            <ProfileItem icon={<icons.FaMoon />} label="Dark mode" onClick={toggleDarkMode} />}
+                    </ul>
                 </OverlayPanel>
             </div>
         </div>)
