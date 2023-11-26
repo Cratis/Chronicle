@@ -4,13 +4,7 @@
 import { withViewModel } from 'MVVM';
 import { ObserversViewModel } from './ObserversViewModel';
 import { DataTable, DataTableFilterMeta } from 'primereact/datatable';
-import {
-    Column,
-    ColumnFilterApplyTemplateOptions,
-    ColumnFilterClearTemplateOptions,
-    ColumnFilterElementTemplateOptions
-} from 'primereact/column';
-import { ObserverRunningState } from 'API/events/store/observers/ObserverRunningState';
+import { Column } from 'primereact/column';
 import { ObserverType } from 'API/events/store/observers/ObserverType';
 import { Page } from '../../../Page';
 import { ObserverState } from 'API/events/store/observers/ObserverState';
@@ -18,8 +12,9 @@ import { Toolbar } from 'primereact/toolbar';
 import { Button } from 'primereact/button';
 import * as mdIcons from 'react-icons/md';
 import { FilterMatchMode } from 'primereact/api';
-import { MultiSelect, MultiSelectChangeEvent } from 'primereact/multiselect';
 import { useState } from 'react';
+import { ColumnFilterProps } from 'Components/ColumnFilter/ColumnFilter';
+import { ObserverRunningStateFilterTemplate, getObserverRunningStateAsText } from './ObserverRunningStateHelpers';
 
 const observerType = (observer: ObserverState) => {
     switch (observer.type) {
@@ -32,58 +27,9 @@ const observerType = (observer: ObserverState) => {
     return '[N/A]';
 }
 
-const getObserverRunningStateAsText = (runningState: ObserverRunningState) => {
-    switch (runningState) {
-        case ObserverRunningState.new: return 'New';
-        case ObserverRunningState.subscribing: return 'Subscribing';
-        case ObserverRunningState.rewinding: return 'Rewinding';
-        case ObserverRunningState.replaying: return 'Replaying';
-        case ObserverRunningState.catchingUp: return 'CatchingUp';
-        case ObserverRunningState.active: return 'Active';
-        case ObserverRunningState.paused: return 'Paused';
-        case ObserverRunningState.stopped: return 'Stopped';
-        case ObserverRunningState.suspended: return 'Suspended';
-        case ObserverRunningState.failed: return 'Failed';
-        case ObserverRunningState.tailOfReplay: return 'TailOfReplay';
-        case ObserverRunningState.disconnected: return 'Disconnected';
-    }
-    return '[N/A]';
-}
-
 const defaultFilters: DataTableFilterMeta = {
     runningState: { value: null, matchMode: FilterMatchMode.IN }
 };
-
-interface ObserverRunningStateOption {
-    name: string;
-    value: ObserverRunningState | string;
-}
-
-const observerRunningStates = Object.values(ObserverRunningState).filter(_ => typeof _ === 'number').map<ObserverRunningStateOption>(_ => ({ name: getObserverRunningStateAsText(_), value: _ }));
-const observerRunningStateFilterTemplate = (options: ColumnFilterElementTemplateOptions) => {
-    return (
-        <MultiSelect
-            value={options.value}
-            options={observerRunningStates}
-            itemTemplate={(option) => option.name}
-            onChange={(e: MultiSelectChangeEvent) => {
-                options.filterCallback(e.value);
-            }}
-            placeholder="Any"
-            optionLabel="name"
-        />
-    )
-};
-
-const filterClearTemplate = (options: ColumnFilterClearTemplateOptions) => {
-    return <Button type="button" icon="pi pi-times" onClick={options.filterClearCallback} severity="secondary"></Button>;
-};
-
-const filterApplyTemplate = (options: ColumnFilterApplyTemplateOptions) => {
-    return <Button type="button" icon="pi pi-check" onClick={options.filterApplyCallback} severity="success"></Button>;
-};
-
-
 
 export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(defaultFilters);
@@ -129,15 +75,12 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                     sortable
                 />
                 <Column
+                    {...ColumnFilterProps}
                     field="runningState"
                     header="State"
                     sortable
                     body={(data: ObserverState) => getObserverRunningStateAsText(data.runningState)}
-                    filter
-                    filterApply={filterApplyTemplate}
-                    filterClear={filterClearTemplate}
-                    filterField="runningState"
-                    filterElement={observerRunningStateFilterTemplate}
+                    filterElement={ObserverRunningStateFilterTemplate}
                     showFilterMatchModes={false}
                 />
             </DataTable>
