@@ -37,9 +37,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const toolbar = () => {
         return (
             <>
-                {viewModel.selectedObserver &&
-                    <Button label="Replay" icon={mdIcons.MdReplay} className="mr-2" />
-                }
+                <Button label="Replay" icon={mdIcons.MdReplay} className="mr-2" disabled={viewModel.selectedObserver == undefined} />
             </>
         )
     };
