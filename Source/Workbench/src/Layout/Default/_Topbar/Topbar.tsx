@@ -10,13 +10,13 @@ import { forwardRef } from 'react';
 import { Logo } from "./Logo";
 import { Profile } from "./Profile";
 
-export interface AppTopbarRef {
+export interface AppTopBarRef {
     menubutton?: HTMLButtonElement | null;
     topbarmenu?: HTMLDivElement | null;
     topbarmenubutton?: HTMLButtonElement | null;
 }
 
-export const Topbar = forwardRef<AppTopbarRef>(() => {
+export const TopBar = forwardRef<AppTopBarRef>(() => {
     const { toggleLeftSidebarOpen } = useLayoutContext();
 
     return (

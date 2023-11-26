@@ -8,7 +8,7 @@ import { IMenuItemGroup } from './Sidebar/MenuItem/MenuItem';
 import { MenuProvider } from './context/MenuContext';
 import { SidebarMenu } from './Sidebar/SidebarMenu';
 import css from './DefaultLayout.module.css';
-import { Topbar } from './Topbar/Topbar';
+import { TopBar } from './_Topbar/Topbar';
 import { Footer } from './Footer';
 import { useState } from 'react';
 import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
@@ -38,7 +38,7 @@ export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayou
                                 }`}
                         >
                             <header className={css.appHeader}>
-                                <Topbar />
+                                <TopBar />
                             </header>
 
                             {!value.layoutConfig.leftSidebarHidden && (
