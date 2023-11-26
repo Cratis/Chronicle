@@ -21,8 +21,8 @@ export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
-                { label: 'Recommendations', url: 'tenant/:tenantId/recommendations', icon: mdIcons.MdOutlineLoupe },
-                { label: 'Jobs', url: 'tenant/:tenantId/jobs', icon: mdIcons.MdOutlineLoupe },
+                { label: 'Recommendations', url: 'tenant/:tenantId/recommendations', icon: mdIcons.MdInfo },
+                { label: 'Jobs', url: 'tenant/:tenantId/jobs', icon: mdIcons.MdGroupWork },
                 { label: 'Sequences', url: 'tenant/:tenantId/sequences', icon: mdIcons.MdDataArray },
                 { label: 'Observers', url: 'tenant/:tenantId/observers', icon: mdIcons.MdMediation },
                 { label: 'Failed Partitions', url: 'tenant/:tenantId/failed-partitions', icon: mdIcons.MdErrorOutline },
