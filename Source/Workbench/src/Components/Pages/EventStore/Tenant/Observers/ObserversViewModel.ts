@@ -3,15 +3,13 @@
 
 import { injectable } from 'tsyringe';
 import { AllObservers } from 'API/events/store/observers/AllObservers';
-import { ObserverInformation } from 'API/events/store/observers/ObserverInformation';
-import { QueryResult } from '@aksio/applications/queries';
+import { ObserverState } from 'API/events/store/observers/ObserverState';
 
 @injectable()
 export class ObserversViewModel {
 
     constructor(private readonly _allObservers: AllObservers) {
-        this._allObservers.subscribe(_ => {
-            const result = _ as unknown as QueryResult<ObserverInformation[]>;
+        this._allObservers.subscribe(result => {
             this.observers = result.data;
         }, {
             microserviceId: '00000000-0000-0000-0000-000000000000',
@@ -19,5 +17,7 @@ export class ObserversViewModel {
         });
     }
 
-    observers: ObserverInformation[] = [];
+    observers: ObserverState[] = [];
+
+    selectedObserver: ObserverState | undefined;
 }

@@ -10,6 +10,10 @@ import { ObserverRunningState } from 'API/events/store/observers/ObserverRunning
 import { ObserverType } from 'API/events/store/observers/ObserverType';
 import { Filters } from '../../../../Filters/Filters/Filters';
 import { Page } from '../../../Page';
+import { ObserverState } from 'API/events/store/observers/ObserverState';
+import { Toolbar } from 'primereact/toolbar';
+import { Button } from 'primereact/button';
+import * as mdIcons from 'react-icons/md';
 
 const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {
@@ -41,11 +45,34 @@ const observerRunningState = (observer: ObserverInformation) => {
 }
 
 export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
+
+    const toolbar = () => {
+        return (
+            <>
+                {viewModel.selectedObserver &&
+                    <Button label="Replay" icon={mdIcons.MdReplay} className="mr-2" />
+                }
+            </>
+        )
+    }
+
     return (
         <Page title='Observers'>
+            <Toolbar aria-label='Actions' start={toolbar} />
+
             <Filters />
 
-            <DataTable value={viewModel.observers} paginator alwaysShowPaginator={false} scrollable rows={100}>
+            <DataTable
+                value={viewModel.observers}
+                rows={100}
+                paginator
+                alwaysShowPaginator={false}
+                scrollable
+                selectionMode="single"
+                selection={viewModel.selectedObserver}
+                onSelectionChange={(e) => viewModel.selectedObserver = e.value as ObserverState}
+                dataKey="id"
+            >
                 <Column field="observerId" header="Id" sortable />
                 <Column field="name" header="Name" sortable />
                 <Column field="type" header="ObserverType" sortable body={observerType} />
