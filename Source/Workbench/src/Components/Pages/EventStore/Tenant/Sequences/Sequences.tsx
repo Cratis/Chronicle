@@ -2,13 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { SequencesViewModel } from './SequencesViewModel';
-import { Queries } from './Queries/Queries';
 import { withViewModel } from 'MVVM/withViewModel';
-import { Page } from '../../../../Common/Page';
+import { Page } from 'Components/Common/Page';
+import { Queries } from './Queries/Queries';
 
 export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
     return (
         <Page title='Event Sequences'>
             <Queries />
-        </Page>);
+        </Page>
+    );
 });

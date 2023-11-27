@@ -7,8 +7,13 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { Button } from 'primereact/button';
 import css from './Queries.module.css';
 import { withViewModel } from 'MVVM/withViewModel';
+import { Inplace, InplaceDisplay, InplaceContent } from 'primereact/inplace';
+import { InputText } from 'primereact/inputtext';
+import { useState } from 'react';
+import { Filter } from '../../../../../Filters/Filter';
 
 export const Queries = withViewModel(QueriesViewModel, ({ viewModel }) => {
+    const [text, setText] = useState('');
     return (
         <div className={css}>
             <div className={css.tabContainer}>
@@ -30,7 +35,7 @@ export const Queries = withViewModel(QueriesViewModel, ({ viewModel }) => {
                             header={query.title}
                             className={viewModel.panelClassName(idx)}
                         >
-                            <>another component goes here {query.id}</>
+                            something
                             <Filters />
                         </TabPanel>
                     ))}
