@@ -42,6 +42,9 @@
             ],
             "Layout/*": [
                 "./src/Layout/*"
+            ],
+            "Pages/*": [
+                "./src/Pages/*"
             ]
         }
     },

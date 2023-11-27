@@ -5,7 +5,7 @@ import { ReactNode } from 'react';
 
 export interface PageProps {
     title: string;
-    children: ReactNode;
+    children?: ReactNode;
 }
 
 export const Page = (props: PageProps) => {
@@ -14,5 +14,5 @@ export const Page = (props: PageProps) => {
             <h1 className='text-3xl m-3'>{props.title}</h1>
             {props.children}
         </div>
-    )
-}
+    );
+};

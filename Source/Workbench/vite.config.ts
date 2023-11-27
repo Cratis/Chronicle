@@ -42,6 +42,7 @@ export default defineConfig({
             'Routing': path.resolve('./src/Routing'),
             'Styles': path.resolve('./src/Styles'),
             'Layout': path.resolve('./src/Layout'),
+            'Pages': path.resolve('./src/Pages'),
         }
     }
 });

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useState, useEffect } from 'react';
-import { Page } from '../../../Page';
+import { Page } from 'Components/Common/Page';
 
 export const Sequences = () => {
     const [data, setData] = useState(null);

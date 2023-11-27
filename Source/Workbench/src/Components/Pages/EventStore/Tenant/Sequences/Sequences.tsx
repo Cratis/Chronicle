@@ -4,7 +4,7 @@
 import { SequencesViewModel } from './SequencesViewModel';
 import { Queries } from './Queries/Queries';
 import { withViewModel } from 'MVVM/withViewModel';
-import { Page } from '../../../Page';
+import { Page } from '../../../../Common/Page';
 
 export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
     return (

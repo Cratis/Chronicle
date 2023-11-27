@@ -1,10 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Page } from '../../../Page'
+import { Page } from 'Components/Common/Page';
 
 export const Recommendations = () => {
-    return (
-        <Page title='Recommendations'>
-        </Page>);
-}
+    return <Page title='Recommendations' />;
+};
