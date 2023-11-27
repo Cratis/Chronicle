@@ -45,7 +45,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const menuItems: MenuItem[] = [
         {
             label: 'Replay',
-            icon: mdIcons.MdReplay,
+            icon: <mdIcons.MdReplay />,
         },
     ];
 
