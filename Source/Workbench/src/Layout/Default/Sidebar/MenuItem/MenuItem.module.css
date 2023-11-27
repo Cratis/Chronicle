@@ -23,7 +23,7 @@
     opacity: 1;
     transition: opacity 0.3s;
 }
-.menuItem .label.hidden{
+.menuItem .label.hidden {
     opacity: 0;
 }
 
@@ -35,7 +35,6 @@
 }
 .menuItem.active .label {
     color: var(--cratis-sidebar-menuitem-active-textColor);
-;
 }
 .menuItem.pending {
     background-color: var(--surface-d);
@@ -43,4 +42,3 @@
     color: #faad14;
     font-weight: 600;
 }
-

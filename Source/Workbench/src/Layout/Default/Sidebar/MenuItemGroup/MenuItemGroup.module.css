@@ -1,11 +1,10 @@
 /* Copyright (c) Aksio Insurtech. All rights reserved.
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
-.label{
+.label {
     flex: 1;
-    color: var(--text-color);
     opacity: 1;
-    font-size: .8rem;
+    font-size: 0.8rem;
     font-weight: 600;
     padding: 2rem 2rem 0 1.6rem;
     text-transform: uppercase;

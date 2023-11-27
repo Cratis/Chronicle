@@ -52,7 +52,6 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     return (
         <Page title='Observers'>
             <Menubar aria-label='Actions' model={menuItems} />
-
             <DataTable
                 value={viewModel.observers}
                 rows={100}
