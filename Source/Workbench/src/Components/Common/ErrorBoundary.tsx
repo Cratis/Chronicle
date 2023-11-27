@@ -1,40 +1,65 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Component, ErrorInfo, ReactNode } from "react";
+import { useState, useEffect, ReactElement } from 'react';
 
-interface Props {
-    children: ReactNode;
+interface ErrorBoundaryProps {
+    children: ReactElement;
 }
-interface State {
+
+interface ErrorState {
     hasError: boolean;
     error: Error;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-    public state: State = {
+interface ErrorBoundaryWrapperProps {
+    children: ReactElement;
+    onError: (error: Error) => void;
+}
+
+const ErrorBoundaryWrapper = ({ children, onError }: ErrorBoundaryWrapperProps) => {
+    useEffect(() => {
+        const errorHandler = (event: CustomEvent) => {
+            onError(new Error(event.detail.message));
+        };
+
+        window.addEventListener('customErrorEvent', errorHandler as EventListener);
+
+        return () => {
+            window.removeEventListener('customErrorEvent', errorHandler as EventListener);
+        };
+    }, [onError]);
+
+    return children;
+};
+
+export const ErrorBoundary = ({ children }: ErrorBoundaryProps) => {
+    const [errorState, setErrorState] = useState<ErrorState>({
         hasError: false,
         error: new Error(),
+    });
+
+    const getDerivedStateFromError = (error: Error): ErrorState => {
+        return { hasError: true, error: error };
+    };
+    useEffect(() => {
+        if (errorState.hasError) {
+            console.error('Uncaught error:', errorState.error);
+        }
+    }, [errorState]);
+
+    const handleError = (error: Error) => {
+        setErrorState(getDerivedStateFromError(error));
     };
 
-    public static getDerivedStateFromError(error: Error): State {
-        return { hasError: true, error: error };
+    if (errorState.hasError) {
+        return (
+            <div className='p-4'>
+                <h1 className='text-3xl m-3'>Error</h1>
+                <p>{errorState.error.message}</p>
+                <p>{errorState.error.stack}</p>
+            </div>
+        );
     }
-
-    public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        console.error("Uncaught error:", error, errorInfo);
-    }
-
-    public render() {
-        if (this.state.hasError) {
-            return (
-                <div className='p-4'>
-                    <h1 className='text-3xl m-3'>Error</h1>
-                    <p>{this.state.error.message}</p>
-                    <p>{this.state.error.stack}</p>
-                </div>)
-        }
-
-        return this.props.children;
-    }
-}
+    return <ErrorBoundaryWrapper onError={handleError}>{children}</ErrorBoundaryWrapper>;
+};
