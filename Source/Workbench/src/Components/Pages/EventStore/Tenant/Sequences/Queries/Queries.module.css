@@ -1,26 +1,22 @@
 /* Copyright (c) Aksio Insurtech. All rights reserved.
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
-
 .container {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    align-items: baseline;
 }
 
-.tabContainer {
-    position: relative;
-}
 .tabView {
     flex-grow: 1;
-}
-.addButton {
-    position: absolute;
-    right: 5px;
-    top: 5px;
-    z-index: 10;
+    overflow: hidden;
 }
 
-.test {
-    background-color: aqua;
+.panelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tabButton {
+    margin-right: 2px;
 }
