@@ -8,7 +8,6 @@ import { Column } from 'primereact/column';
 import { ObserverType } from 'API/events/store/observers/ObserverType';
 import { Page } from 'Components/Common/Page';
 import { ObserverState } from 'API/events/store/observers/ObserverState';
-import * as mdIcons from 'react-icons/md';
 import { FilterMatchMode } from 'primereact/api';
 import { useState } from 'react';
 import { ColumnFilterProps } from 'Components/ColumnFilter/ColumnFilter';

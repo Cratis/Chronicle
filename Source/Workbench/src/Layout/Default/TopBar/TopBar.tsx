@@ -35,7 +35,7 @@ export const TopBar = forwardRef<AppTopBarRef>(() => {
                     <Logo/>
                 </div>
             </div>
-            <div className="flex-1 flex items-center justify-end px-5">
+            <div className="flex-1 flex items-center justify-end px-5 gap-6">
                 <div>
                     <Connection/>
                 </div>

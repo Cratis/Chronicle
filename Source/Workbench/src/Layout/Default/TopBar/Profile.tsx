@@ -11,11 +11,9 @@ import { useDarkMode } from 'usehooks-ts';
 
 const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onClick: () => void }) => {
     return (
-        <li className={css.profileItem}>
-            <span onClick={onClick}>
-                {icon}
-                <span>{label}</span>
-            </span>
+        <li className={css.profileItem} onClick={onClick}>
+            <span className='mr-4'>{icon}</span>
+            <span>{label}</span>
         </li>
     )
 }
@@ -32,16 +30,19 @@ export const Profile = () => {
                     icon={<icons.FaUser/>}
                     rounded
                     severity="info"
+                    className='p-button-rounded p-2'
+
                     onClick={(e) => overlayPanelRef.current?.toggle(e)}
-                    aria-label="User" />
+                    aria-label="User"/>
 
 
                 <OverlayPanel ref={overlayPanelRef} className={css.overlayPanel}>
                     <ul className={css.profileItems}>
-                        <ProfileItem icon={<icons.FaUser />} label="Profile" onClick={() => { }} />
+                        <ProfileItem icon={<icons.FaUser/>} label="Profile" onClick={() => {
+                        }}/>
                         {isDarkMode ?
-                            <ProfileItem icon={<icons.FaSun />} label="Light mode" onClick={toggleDarkMode} /> :
-                            <ProfileItem icon={<icons.FaMoon />} label="Dark mode" onClick={toggleDarkMode} />}
+                            <ProfileItem icon={<icons.FaSun/>} label="Light mode" onClick={toggleDarkMode}/> :
+                            <ProfileItem icon={<icons.FaMoon/>} label="Dark mode" onClick={toggleDarkMode}/>}
                     </ul>
                 </OverlayPanel>
             </div>
