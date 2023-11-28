@@ -2,7 +2,7 @@
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
 .currentTenant {
-    min-height: 4rem;
+    height: 4rem;
     background: var(--cratis-sidebar-tenant-bg);
     color: var(--cratis-sidebar-tenant-textColor);
     border-left: 3px solid transparent;
@@ -13,14 +13,19 @@
     align-items: center;
 }
 
+.currentTenant .tenantName {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .smallCurrentTenant {
     background: var(--cratis-sidebar-tenant-bg);
     color: var(--cratis-sidebar-tenant-textColor);
     height: 4rem;
     cursor: pointer;
-    width: var(--sidebar-closed-width);
     display: flex;
-    justify-content: center;
+    justify-content: left;
     align-items: center;
 }
 
@@ -34,6 +39,12 @@
     justify-content: center;
 }
 
+.smallTenantWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sidebar-closed-width);
+}
 
 .overlayPanel {
     /*background: var(--surface-d);*/
@@ -76,7 +87,7 @@
 .tenantListItem {
     display: flex;
     align-items: center;
-    padding:1rem 1rem;
+    padding: 1rem 1rem;
     cursor: pointer;
     border-radius: 4px;
     border-bottom: 1px solid var(--surface-border);

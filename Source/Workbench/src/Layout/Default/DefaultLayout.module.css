@@ -9,6 +9,7 @@
     background-color: var(--cratis-topbar-bg);
     border-bottom: 1px solid var(--cratis-layout-border-color);
     right: 0;
+    z-index:100;
 }
 
 .appLeftSidebar {

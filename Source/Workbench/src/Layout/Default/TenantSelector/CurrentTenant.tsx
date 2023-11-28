@@ -4,7 +4,7 @@
 import css from "./TenantSelector.module.css";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { ITenant } from "./TenantSelector";
-import { HTMLAttributes } from "react";
+import { HTMLAttributes, useEffect, useRef, useState } from "react";
 import { Tooltip } from "primereact/tooltip";
 
 export interface ICurrentTenantProps extends HTMLAttributes<HTMLDivElement> {
@@ -13,6 +13,15 @@ export interface ICurrentTenantProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export const CurrentTenant = ({ tenant, compact, ...rest }: ICurrentTenantProps) => {
+    const tenantNameRef = useRef<HTMLSpanElement>(null);
+    const [isEllipsisActive, setIsEllipsisActive] = useState(false);
+
+    useEffect(() => {
+        if (tenantNameRef.current) {
+            setIsEllipsisActive(tenantNameRef.current.offsetWidth < tenantNameRef.current.scrollWidth);
+        }
+    }, [tenant.name]);
+
     const getInitials = (name: string) => {
         const names = name.split(' ');
         let initials = names[0].substring(0, 1).toUpperCase();
@@ -23,14 +32,19 @@ export const CurrentTenant = ({ tenant, compact, ...rest }: ICurrentTenantProps)
     }
     if (compact) {
         return <>
-            <Tooltip target={`.${css.smallCurrentTenant}`}/>
-            <div className={css.smallCurrentTenant} {...rest} data-pr-tooltip={tenant.name}>
-                <span className={css.tenantName}>{getInitials(tenant.name)}</span>
+            <Tooltip target={`.${css.smallTenantWrapper}`}/>
+            <div className={css.smallCurrentTenant} {...rest} >
+                <div className={css.smallTenantWrapper} data-pr-tooltip={tenant.name}>
+                    <span className={css.tenantName}>{getInitials(tenant.name)}</span>
+                </div>
             </div>
         </>
     }
-    return <div className={`${css.currentTenant}`} {...rest}>
-        <span className={css.tenantName}>{tenant.name}</span>
-        <span><MdKeyboardArrowDown size={25}/></span>
-    </div>;
+    return <>
+        {isEllipsisActive && <Tooltip target={`.${css.currentTenant}`}/>}
+        <div className={`${css.currentTenant}`} {...rest} data-pr-tooltip={tenant.name}>
+            <span className={css.tenantName} ref={tenantNameRef}>{tenant.name}</span>
+            <span><MdKeyboardArrowDown size={25}/></span>
+        </div>
+    </>;
 }
