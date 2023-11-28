@@ -18,6 +18,7 @@ import {
 } from './ObserverRunningStateHelpers';
 import { Menubar } from 'primereact/menubar';
 import { MenuItem } from 'primereact/menuitem';
+import { FaArrowsRotate } from "react-icons/fa6";
 
 const observerType = (observer: ObserverState) => {
     switch (observer.type) {
@@ -45,52 +46,52 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const menuItems: MenuItem[] = [
         {
             label: 'Replay',
-            icon: <mdIcons.MdReplay />,
-        },
+            icon: <FaArrowsRotate className={'mr-2'}/>,
+
+        }
     ];
 
     return (
-        <Page title='Observers'>
-            <Menubar aria-label='Actions' model={menuItems} />
-            <DataTable
-                value={viewModel.observers}
-                rows={100}
-                paginator
-                alwaysShowPaginator={false}
-                scrollable
-                selectionMode='single'
-                selection={viewModel.selectedObserver}
-                onSelectionChange={(e) =>
-                    (viewModel.selectedObserver = e.value as ObserverState)
-                }
-                dataKey='id'
-                filters={filters}
-                filterDisplay='menu'
-                onFilter={(e) => setFilters(e.filters)}
-                globalFilterFields={['name', 'type', 'runningState']}
-                emptyMessage='No observers found'
+        <Page title='Observers' mainClassName={'overflow-hidden flex flex-col h-full'}>
+            <Menubar aria-label='Actions' model={menuItems} className={'my-4'}/>
+            <div className={'flex-1 overflow-hidden mt-4'}>
+                <DataTable
+                    value={viewModel.observers}
+                    rows={100}
+                    paginator
+                    alwaysShowPaginator={false}
+                    scrollable
+                    scrollHeight={'flex'}
+                    selectionMode='single'
+                    selection={viewModel.selectedObserver}
+                    onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverState)}
+                    dataKey='id'
+                    filters={filters}
+                    filterDisplay='menu'
+                    onFilter={(e) => setFilters(e.filters)}
+                    globalFilterFields={['name', 'type', 'runningState']}
+                    emptyMessage='No observers found'
             >
-                <Column field='observerId' header='Id' sortable />
-                <Column field='name' header='Name' sortable />
-                <Column field='type' header='ObserverType' sortable body={observerType} />
-                <Column
-                    field='nextEventSequenceNumber'
-                    dataType='numeric'
-                    header='Next event sequence number'
-                    sortable
-                />
-                <Column
-                    {...ColumnFilterProps}
-                    field='runningState'
-                    header='State'
-                    sortable
-                    body={(data: ObserverState) =>
-                        getObserverRunningStateAsText(data.runningState)
-                    }
-                    filterElement={ObserverRunningStateFilterTemplate}
-                    showFilterMatchModes={false}
-                />
-            </DataTable>
+                    <Column field='observerId' header='Id' sortable/>
+                    <Column field='name' header='Name' sortable/>
+                    <Column field='type' header='ObserverType' sortable body={observerType}/>
+                    <Column
+                        field='nextEventSequenceNumber'
+                        dataType='numeric'
+                        header='Next event sequence number'
+                        sortable
+                    />
+                    <Column
+                        {...ColumnFilterProps}
+                        field='runningState'
+                        header='State'
+                        sortable
+                        body={(data: ObserverState) => getObserverRunningStateAsText(data.runningState)}
+                        filterElement={ObserverRunningStateFilterTemplate}
+                        showFilterMatchModes={false}
+                    />
+                </DataTable>
+            </div>
         </Page>
     );
 });

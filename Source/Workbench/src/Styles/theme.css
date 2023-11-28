@@ -12,7 +12,7 @@
     --topbar-height: 4rem;
     --sidebar-width: 280px;
     --sidebar-closed-width: calc(4.5rem + 2px);
-    --footer-height: 50px;
+    --footer-height: 0px;
 }
 
 body.light {
