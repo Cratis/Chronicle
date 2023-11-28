@@ -1,0 +1,28 @@
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
+using Fundamentals.Metrics;
+
+namespace {{Namespace}};
+
+#nullable enable
+
+public static partial class {{ClassName}}
+{
+    {{#Counters}}
+    static readonly Counter<{{Type}}> {{MethodName}}Metric = GlobalMetrics.Meter.CreateCounter<{{Type}}>("{{Name}}", "{{Description}}");
+    {{/Counters}}
+
+    {{#Counters}}
+    public static partial void {{MethodName}}({{#Tags}}{{Type}} {{Name}}{{#unless @last}}, {{/unless}}{{/Tags}})
+    {
+        var tags = new TagList(new ReadOnlySpan<KeyValuePair<string, object?>>(new KeyValuePair<string, object?>[]
+        {
+            {{#Tags}}
+            new("{{Name}}", {{name}}){{#unless @last}},{{/unless}}
+            {{/Tags}}
+        }));        
+
+        {{MethodName}}Metric.Add(1, tags);
+    }
+    {{/Counters}}
+}

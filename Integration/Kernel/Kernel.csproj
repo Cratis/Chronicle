@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Integration</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
+    </ItemGroup>
+
+</Project>
