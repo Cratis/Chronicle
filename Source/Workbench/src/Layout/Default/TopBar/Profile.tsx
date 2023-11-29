@@ -7,6 +7,7 @@ import * as icons from "react-icons/fa";
 import css from './Profile.module.css';
 import { Button } from 'primereact/button';
 import { useDarkMode } from 'usehooks-ts';
+import { useTranslation } from "react-i18next";
 
 
 const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onClick: () => void }) => {
@@ -21,6 +22,7 @@ const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onCli
 export const Profile = () => {
     const { isDarkMode, toggle: toggleDarkMode } = useDarkMode()
     const overlayPanelRef = useRef<OverlayPanel>(null);
+    const { t } = useTranslation();
 
     return (
         <div className='flex-1'>
@@ -38,11 +40,11 @@ export const Profile = () => {
 
                 <OverlayPanel ref={overlayPanelRef} className={css.overlayPanel}>
                     <ul className={css.profileItems}>
-                        <ProfileItem icon={<icons.FaUser/>} label="Profile" onClick={() => {
+                        <ProfileItem icon={<icons.FaUser/>} label={t('Layout.TopBar.Profile.MyAccount')} onClick={() => {
                         }}/>
                         {isDarkMode ?
-                            <ProfileItem icon={<icons.FaSun/>} label="Light mode" onClick={toggleDarkMode}/> :
-                            <ProfileItem icon={<icons.FaMoon/>} label="Dark mode" onClick={toggleDarkMode}/>}
+                            <ProfileItem icon={<icons.FaSun/>} label={t('Layout.TopBar.Profile.LightMode')} onClick={toggleDarkMode}/> :
+                            <ProfileItem icon={<icons.FaMoon/>} label={t('Layout.TopBar.Profile.DarkMode')} onClick={toggleDarkMode}/>}
                     </ul>
                 </OverlayPanel>
             </div>

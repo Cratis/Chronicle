@@ -16,47 +16,53 @@ import { Jobs } from './Tenant/Jobs/Jobs';
 import { Identities } from './Tenant/Identities/Identities';
 import { Sequences as GeneralSequences } from './General/Sequences/Sequences';
 import { Sinks } from './General/Sinks/Sinks';
+import { useTranslation } from "react-i18next";
 
 export const EventStore = () => {
+    const { t } = useTranslation();
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
-                { label: 'Recommendations', url: 'tenant/:tenantId/recommendations', icon: mdIcons.MdInfo },
-                { label: 'Jobs', url: 'tenant/:tenantId/jobs', icon: mdIcons.MdGroupWork },
-                { label: 'Sequences', url: 'tenant/:tenantId/sequences', icon: mdIcons.MdDataArray },
-                { label: 'Observers', url: 'tenant/:tenantId/observers', icon: mdIcons.MdMediation },
-                { label: 'Failed Partitions', url: 'tenant/:tenantId/failed-partitions', icon: mdIcons.MdErrorOutline },
-                { label: 'Identities', url: 'tenant/:tenantId/identities', icon: mdIcons.MdPeople },
+                { label: t('MainMenu.Recommendations'), url: 'tenant/:tenantId/recommendations', icon: mdIcons.MdInfo },
+                { label: t('MainMenu.Jobs'), url: 'tenant/:tenantId/jobs', icon: mdIcons.MdGroupWork },
+                { label: t('MainMenu.Sequences'), url: 'tenant/:tenantId/sequences', icon: mdIcons.MdDataArray },
+                { label: t('MainMenu.Observers'), url: 'tenant/:tenantId/observers', icon: mdIcons.MdMediation },
+                {
+                    label: t('MainMenu.FailedPartitions'),
+                    url: 'tenant/:tenantId/failed-partitions',
+                    icon: mdIcons.MdErrorOutline
+                },
+                { label: t('MainMenu.Identities'), url: 'tenant/:tenantId/identities', icon: mdIcons.MdPeople },
             ]
         },
         {
-            label: 'General',
+            label: t('MainMenu.General.GroupLabel'),
             items: [
-                { label: 'Types', url: 'types', icon: mdIcons.MdDataObject },
-                { label: 'Projections', url: 'projections', icon: mdIcons.MdMediation },
-                { label: 'Sequences', url: 'sequences', icon: mdIcons.MdDataArray },
-                { label: 'Sinks', url: 'sinks', icon: devIcons.DiDatabase }
+                { label: t('MainMenu.General.Types'), url: 'types', icon: mdIcons.MdDataObject },
+                { label: t('MainMenu.General.Projections'), url: 'projections', icon: mdIcons.MdMediation },
+                { label: t('MainMenu.General.Sequences'), url: 'sequences', icon: mdIcons.MdDataArray },
+                { label: t('MainMenu.General.Sinks'), url: 'sinks', icon: devIcons.DiDatabase }
             ]
         }
     ];
     return (<>
         <Routes>
             <Route path=':eventStoreId'
-                element={<DefaultLayout leftMenuItems={menuItems} leftMenuBasePath={'/event-store/:eventStoreId'}/>}>
+                   element={<DefaultLayout leftMenuItems={menuItems} leftMenuBasePath={'/event-store/:eventStoreId'}/>}>
 
                 <Route path={'tenant/:tenantId'}>
-                    <Route path={''} element={<Navigate to={'recommendations'} />} />
-                    <Route path={'recommendations'} element={<Recommendations />} />
-                    <Route path={'jobs'} element={<Jobs />} />
-                    <Route path={'sequences/*'} element={<Sequences />} />
-                    <Route path={'observers'} element={<Observers />} />
-                    <Route path={'failed-partitions'} element={<FailedPartitions />} />
-                    <Route path={'identities'} element={<Identities />} />
+                    <Route path={''} element={<Navigate to={'recommendations'}/>}/>
+                    <Route path={'recommendations'} element={<Recommendations/>}/>
+                    <Route path={'jobs'} element={<Jobs/>}/>
+                    <Route path={'sequences/*'} element={<Sequences/>}/>
+                    <Route path={'observers'} element={<Observers/>}/>
+                    <Route path={'failed-partitions'} element={<FailedPartitions/>}/>
+                    <Route path={'identities'} element={<Identities/>}/>
                 </Route>
-                <Route path={'types'} element={<Types />} errorElement={<Projections/>}/>
-                <Route path={'projections'} element={<Projections />} />
-                <Route path={'sequences'} element={<GeneralSequences />} />
-                <Route path={'sinks'} element={<Sinks />} />
+                <Route path={'types'} element={<Types/>} errorElement={<Projections/>}/>
+                <Route path={'projections'} element={<Projections/>}/>
+                <Route path={'sequences'} element={<GeneralSequences/>}/>
+                <Route path={'sinks'} element={<Sinks/>}/>
             </Route>
         </Routes>
     </>)

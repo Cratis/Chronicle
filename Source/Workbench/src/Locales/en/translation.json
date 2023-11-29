@@ -1,0 +1,36 @@
+{
+    "General": {
+    },
+    "Layout": {
+        "TopBar": {
+            "Profile": {
+                "MyAccount": "My account",
+                "Logout": "Logout",
+                "LightMode": "Light mode",
+                "DarkMode": "Dark mode"
+            }
+        }
+    },
+    "MainMenu": {
+        "Recommendations": "Recommendations",
+        "Jobs": "Jobs",
+        "Sequences": "Sequences",
+        "Observers": "Observers",
+        "FailedPartitions": "Failed partitions",
+        "Identities": "Identities",
+        "General": {
+            "GroupLabel": "General",
+            "Types": "Types",
+            "Projections": "Projections",
+            "Sequences": "Sequences",
+            "Sinks": "Sinks"
+        }
+    },
+    "EventStore": {
+        "Tenant": {
+            "Recommendations": {
+                "Title": "Recommendations"
+            }
+        }
+    }
+}

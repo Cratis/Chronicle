@@ -55,10 +55,11 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             <Menubar aria-label='Actions' model={menuItems} className={'my-4'}/>
             <div className={'flex-1 overflow-hidden mt-4'}>
                 <DataTable
+
                     value={viewModel.observers}
                     rows={100}
                     paginator
-                    alwaysShowPaginator={false}
+                    // alwaysShowPaginator={false}
                     scrollable
                     scrollHeight={'flex'}
                     selectionMode='single'
