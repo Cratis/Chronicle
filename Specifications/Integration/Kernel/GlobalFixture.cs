@@ -38,8 +38,16 @@ public class GlobalFixture : IDisposable
 
         MongoDBContainer.StartAsync().GetAwaiter().GetResult();
 
-        StartChangeStreamReplication();
+        Cluster = new MongoDBDatabase(MongoDBContainer, "cratis-shared");
+        SharedEventStore = new MongoDBDatabase(MongoDBContainer, "event-store-shared");
+        EventStore = new MongoDBDatabase(MongoDBContainer, "dev-event-store");
+        ReadModels = new MongoDBDatabase(MongoDBContainer, "dev-read-models");
     }
+
+    public MongoDBDatabase Cluster { get; }
+    public MongoDBDatabase SharedEventStore { get; }
+    public MongoDBDatabase EventStore { get; }
+    public MongoDBDatabase ReadModels { get; }
 
     public void Dispose()
     {
@@ -58,46 +66,5 @@ public class GlobalFixture : IDisposable
             disposeTask.GetAwaiter().GetResult();
         }
 #pragma warning restore CA2012 // Use ValueTasks correctly
-    }
-
-    void StartChangeStreamReplication()
-    {
-        var mongoClient = new MongoClient($"mongodb://{MongoDBContainer.Hostname}:{MongoDBContainer.GetMappedPublicPort(27017)}");
-        var database = mongoClient.GetDatabase("cratis-shared");
-        var changes = mongoClient.GetDatabase("test-changes");
-        var changesCollection = changes.GetCollection<BsonDocument>("changes");
-
-        _ = Task.Run(async () =>
-        {
-            var filter = Builders<ChangeStreamDocument<BsonDocument>>.Filter.In(
-                new StringFieldDefinition<ChangeStreamDocument<BsonDocument>, string>("operationType"),
-                new[] { "insert", "replace", "update", "delete" });
-
-            var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<BsonDocument>>().Match(filter);
-
-            var cursor = await database.WatchAsync(
-                pipeline,
-                new ChangeStreamOptions { FullDocument = ChangeStreamFullDocumentOption.UpdateLookup });
-
-
-            while (await cursor.MoveNextAsync())
-            {
-                if (!cursor.Current.Any()) continue;
-
-                foreach (var document in cursor.Current)
-                {
-                    Changes.OnNext(document);
-                    var changeDocument = new BsonDocument
-                    {
-                        { "_id", ObjectId.GenerateNewId() },
-                        { "collectionNamespace", document.CollectionNamespace.ToString() },
-                        { "documentKey", document.DocumentKey },
-                        { "operationType", document.OperationType.ToString() },
-                        { "fullDocument", document.FullDocument }
-                    };
-                    await changesCollection.InsertOneAsync(changeDocument);
-                }
-            }
-        });
     }
 }

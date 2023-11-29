@@ -256,6 +256,11 @@ public class ClientBuilder : IClientBuilder
             Services.AddTransient(sp =>
             {
                 var tenantId = ExecutionContextManager.GetCurrent().TenantId;
+                return sp.GetRequiredService<IMultiTenantEventSequences>().ForTenant(tenantId);
+            });
+            Services.AddTransient(sp =>
+            {
+                var tenantId = ExecutionContextManager.GetCurrent().TenantId;
                 return sp.GetRequiredService<IMultiTenantEventSequences>().ForTenant(tenantId).EventLog;
             });
             Services.AddTransient(sp =>

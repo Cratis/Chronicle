@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Aksio.Cratis.AspNetCore" Version="9.11.0-beta.2" />
+  </ItemGroup>
+</Project>
