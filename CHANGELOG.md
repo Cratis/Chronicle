@@ -1,3 +1,10 @@
+# [v9.11.0] - 2023-11-29 [PR: #1022](https://github.com/aksio-insurtech/Cratis/pull/1022)
+
+### Fixed
+
+- Equality check for projection definitions is now ignoring the `LastUpdated` property, which caused it to always be changed.
+- Fixing reducer pipeline to look at the flag `Replay` rather than comparing the entire value `Replay`. This caused the first event not to be considered part of replay and ended up in the sink being saved to the regular collection rather than the temporary replay collection.
+
 # [v9.10.0] - 2023-11-24 [PR: #1020](https://github.com/aksio-insurtech/Cratis/pull/1020)
 
 ### Fixed
