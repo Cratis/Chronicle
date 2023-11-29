@@ -8,7 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aksio.Cratis.AspNetCore" />
+    <ProjectReference Include="..\..\..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
+    <ProjectReference Include="..\..\..\..\Source\Clients\MongoDB\MongoDB.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aksio.Applications" />
+    <PackageReference Include="Aksio.MongoDB" />
   </ItemGroup>
 
 </Project>

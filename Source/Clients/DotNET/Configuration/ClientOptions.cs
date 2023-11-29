@@ -16,12 +16,12 @@ public class ClientOptions
     /// <summary>
     /// Gets or sets the <see cref="MicroserviceName"/> for the client.
     /// </summary>
-    public MicroserviceName MicroserviceName { get; set; } = MicroserviceName.Unspecified;
+    public MicroserviceName MicroserviceName { get; set; } = MicroserviceName.Unspecified;
 
     /// <summary>
     /// Gets or sets whether or not the client is multi-tenanted.
     /// </summary>
-    public bool IsMultiTenanted { get; set; }
+    public bool IsMultiTenanted { get; set; }
 
     /// <summary>
     /// Gets the Kernel connectivity configuration.

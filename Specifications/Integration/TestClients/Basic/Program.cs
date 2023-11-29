@@ -1,16 +1,35 @@
 ﻿// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
+using Aksio.Cratis;
 using Aksio.Cratis.Client;
 using Aksio.Cratis.Configuration;
 using Aksio.Execution;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Basic;
 
-var builder = WebApplication.CreateBuilder(args);
-builder.Services.Configure<KernelConnectivity>(_ => _.SingleKernel = new() { Endpoint = new Uri("http://cratis:8080") });
-builder.UseCratis(_ => _
-    .ForMicroservice(MicroserviceId.Unspecified, "Basic"));
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+
+var builder = WebApplication
+                .CreateBuilder(args)
+                .UseCratis(_ => _
+                    .MultiTenanted()
+                    .ForMicroservice("00000000-0000-0000-0000-000000000000", "Basic"));
+
+builder.Host
+        .UseMongoDB()
+        .ConfigureServices(services => services.AddMongoDBReadModels())
+        .UseAksio();
+
 var app = builder.Build();
+app.UseRouting();
 app.UseCratis();
-await app.RunAsync();
+app.UseAksio();
+
+app.Run();

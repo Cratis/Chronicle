@@ -12,9 +12,6 @@
         <None Include="cratis.json">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
-        <None Include="appSettings.client.json">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
     </ItemGroup>
 
     <ItemGroup>
