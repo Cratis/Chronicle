@@ -46,7 +46,7 @@ public class ReducerPipeline : IReducerPipeline
             await Sink.BeginReplay();
         }
 
-        var isReplaying = context.ObservationState == EventObservationState.Replay;
+        var isReplaying = context.ObservationState.HasFlag(EventObservationState.Replay);
         var initial = await Sink.FindOrDefault(context.Key, isReplaying);
 
         var reduced = await reducer(context.Events, initial);
