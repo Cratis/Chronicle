@@ -8,6 +8,7 @@ using Aksio.Cratis.Observation;
 using Aksio.Cratis.Reducers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.Builder;
 
@@ -21,14 +22,16 @@ public static class WebApplicationBuilderExtensions
     /// </summary>
     /// <param name="webApplicationBuilder"><see cref="WebApplicationBuilder"/> to build on.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
+    /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
     /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
     public static WebApplicationBuilder UseCratis(
         this WebApplicationBuilder webApplicationBuilder,
-        Action<IClientBuilder>? configureDelegate = default)
+        Action<IClientBuilder>? configureDelegate = default,
+        ILoggerFactory? loggerFactory = default)
     {
         webApplicationBuilder.Services.AddRules();
         webApplicationBuilder.Services.AddHttpContextAccessor();
-        webApplicationBuilder.Host.UseCratis(configureDelegate);
+        webApplicationBuilder.Host.UseCratis(configureDelegate, loggerFactory);
         return webApplicationBuilder;
     }
 

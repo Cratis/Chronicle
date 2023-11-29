@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Specifications.Integration</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="cratis.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="mongodb.driver" />
+      <PackageReference Include="Testcontainers" />
+    </ItemGroup>
+</Project>
