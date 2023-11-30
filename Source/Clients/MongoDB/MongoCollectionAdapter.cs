@@ -10,8 +10,6 @@ using MongoDB.Driver;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
-#pragma warning disable AS0010, AS0013
-
 /// <summary>
 /// Represents an adapter for <see cref="IMongoCollection{T}"/> to overcome shortcomings of open generic service registrations with the default ServiceCollection registrations.
 /// </summary>
