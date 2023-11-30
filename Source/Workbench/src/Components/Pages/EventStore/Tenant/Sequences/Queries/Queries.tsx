@@ -23,6 +23,7 @@ export const Queries = withViewModel(QueriesViewModel, () => {
         const newQuery = {
             title: `Query ${newQueryIdx}`,
             id: `${newQueryIdx}`,
+            isEditing: false,
         };
         setQueries([...queries, newQuery]);
     };
@@ -33,6 +34,14 @@ export const Queries = withViewModel(QueriesViewModel, () => {
         );
         setQueries(updatedQueries);
     };
+
+    const toggleEdit = (idx: number) => {
+        const updatedQueries = queries.map((query, index) =>
+            index === idx ? { ...query, isEditing: !query.isEditing } : query
+        );
+        setQueries(updatedQueries);
+    };
+
 
     return (
         <div className={css.container}>
@@ -60,6 +69,7 @@ export const Queries = withViewModel(QueriesViewModel, () => {
                             <QueryHeader
                                 idx={idx}
                                 query={query}
+                                onToggleEdit={toggleEdit}
                                 onQueryChange={onQueryChange}
                             />
                         }
