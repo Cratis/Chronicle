@@ -8,6 +8,7 @@ import { withViewModel } from 'MVVM/withViewModel';
 import { ChangeEvent, useState } from 'react';
 import { Button } from 'primereact/button';
 import css from './Queries.module.css';
+import { QuerySidebar } from './QuerySidebar';
 
 export const Queries = withViewModel(QueriesViewModel, () => {
     const [queries, setQueries] = useState<QueryType[]>([
@@ -62,7 +63,15 @@ export const Queries = withViewModel(QueriesViewModel, () => {
                             </div>
                         }
                     >
-                        {query.title}
+                        <QuerySidebar>
+                            {query.title}
+                            <br />
+                            sidebar content goes here
+                            sidebar content goes here
+                            sidebar content goes here
+                            sidebar content goes here
+                            sidebar content goes here
+                        </QuerySidebar>
                     </TabPanel>
                 ))}
             </TabView>

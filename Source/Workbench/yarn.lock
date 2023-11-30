@@ -2072,13 +2072,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"i18next-fs-backend@npm:^2.3.0":
-  version: 2.3.0
-  resolution: "i18next-fs-backend@npm:2.3.0"
-  checksum: ca7f1679a31ca1404e8e924d1857cbe58d36f945b3e1dc6fda615708da112d92352fc380e4d48533796e4a189a7007aca28cce6c6c5e64911845b8d8c0818516
-  languageName: node
-  linkType: hard
-
 "i18next@npm:23.7.6":
   version: 23.7.6
   resolution: "i18next@npm:23.7.6"
@@ -3810,7 +3803,6 @@ __metadata:
     eslint-plugin-react-hooks: 4.6.0
     eslint-plugin-react-refresh: 0.4.3
     i18next: 23.7.6
-    i18next-fs-backend: ^2.3.0
     mobx: 6.11.0
     mobx-react: 9.1.0
     postcss: ^8.4.31
