@@ -8,41 +8,33 @@ using MongoDB.Driver;
 namespace Aksio.Cratis.Kernel;
 
 [Collection(GlobalCollection.Name)]
-public class Test : IClassFixture<KernelFixture>
+public class Test : KernelTest
 {
-    readonly GlobalFixture _globalFixture;
-    readonly KernelFixture _kernelFixture;
-
-    public Test(
-        KernelFixture kernelFixture,
-        GlobalFixture globalFixture)
+    public Test(KernelFixture fixture) : base(fixture)
     {
-        _globalFixture = globalFixture;
-        _kernelFixture = kernelFixture;
+        // kernelFixture.EventStore.Database.GetCollection<BsonDocument>("event-log").Find(_ => true).ToList();
 
-        // _globalFixture.EventStore.Database.GetCollection<BsonDocument>("event-log").Find(_ => true).ToList();
-
-        _globalFixture.Cluster.Changes
+        fixture.Cluster.Changes
             .Subscribe(_ => Console.WriteLine("Got cluster change"));
 
-        _globalFixture.SharedEventStore.Changes
+        fixture.SharedEventStore.Changes
             .Subscribe(_ => Console.WriteLine("Got shared change"));
 
-        _globalFixture.EventStore.Changes
+        fixture.EventStore.Changes
             .Subscribe(_ => Console.WriteLine("Got event store change"));
 
-        _globalFixture.SharedEventStore.Changes
+        fixture.SharedEventStore.Changes
              .Where(_ => _.OperationType == ChangeStreamOperationType.Insert)
              .Subscribe(_ => Console.WriteLine("Got insert"));
 
-        var container = new TestClient("Basic", "Basic");
+        var container = new TestClient(fixture, "Basic");
         container.Start().GetAwaiter().GetResult();
     }
 
     [Fact]
     async Task DoStuff()
     {
-        await Task.Delay(60000);
+        // await Task.Delay(60000);
         Assert.True(true);
     }
 }

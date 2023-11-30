@@ -20,7 +20,7 @@ var builder = WebApplication
                 .CreateBuilder(args)
                 .UseCratis(_ => _
                     .MultiTenanted()
-                    .ForMicroservice("00000000-0000-0000-0000-000000000000", "Basic"));
+                    .ForMicroservice("cfd2f397-3476-4080-885f-feb36878a307", "Basic"));
 
 builder.Host
         .UseMongoDB()

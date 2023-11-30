@@ -5,25 +5,29 @@ using System;
 using Aksio.Cratis.Connections;
 using Aksio.Execution;
 using Aksio.Cratis.EventSequences;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Basic;
 
 public class ConnectionStatus : IParticipateInConnectionLifecycle
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly IEventLog _eventLog;
+    readonly IServiceProvider _serviceProvider;
 
-    public ConnectionStatus(IExecutionContextManager executionContextManager, IEventLog eventLog)
+    public ConnectionStatus(
+        IExecutionContextManager executionContextManager,
+        IServiceProvider serviceProvider)
     {
         _executionContextManager = executionContextManager;
-        _eventLog = eventLog;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task ClientConnected()
     {
         Console.WriteLine("Cratis Client Connected");
-        _executionContextManager.Establish(TenantId.Development, CorrelationId.New(), MicroserviceId.Unspecified);
-        await _eventLog.Append(Guid.NewGuid().ToString(), new MyEvent());
+        _executionContextManager.Establish(TenantId.Development, CorrelationId.New(), _executionContextManager.Current.MicroserviceId);
+        var eventLog = _serviceProvider.GetRequiredService<IEventLog>();
+        await eventLog.Append(Guid.NewGuid().ToString(), new MyEvent());
     }
 
     public Task ClientDisconnected()

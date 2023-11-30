@@ -1,22 +1,28 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
-using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel;
 
 public class TestClient
 {
-    public TestClient(string relativePath, string executable)
+    public TestClient(KernelFixture fixture, string relativePath, string? executable = null)
     {
         var imageName = Guid.NewGuid().ToString().Replace("-", string.Empty).ToLowerInvariant();
 
-        var dockerBuildContextPath = GetDirectoryThatHasSubDirectory(".git");
-        var testClientsPath = GetDirectoryThatHasSubDirectory("TestClients");
+        var dockerBuildContextPath = DirectoryHelper.GetDirectoryThatHasSubDirectory(".git");
+        var testClientsPath = DirectoryHelper.GetDirectoryThatHasSubDirectory("TestClients");
+
+        if (executable is null)
+        {
+            var lastSegmentStart = relativePath.LastIndexOfAny(new[] { '/', '\\' });
+            if (lastSegmentStart > 0) lastSegmentStart++;
+            if (lastSegmentStart == -1) lastSegmentStart = 0;
+            executable = relativePath.Substring(lastSegmentStart);
+        }
 
         ContainerImage = new ImageFromDockerfileBuilder()
             .WithName(imageName)
@@ -30,12 +36,12 @@ public class TestClient
 
         var appSettingsPath = Path.Combine(testClientsPath, "TestClients", "appsettings.json");
         Container = new ContainerBuilder()
-            .WithImage(imageName)
-            .WithNetwork(GlobalFixture.Network)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Cratis Client Connected"))
-            .WithEnvironment("ASPNETCORE_URLS", "http://+:9094")
-            .WithBindMount(appSettingsPath, "/App/appsettings.json")
-            .Build();
+                .WithImage(imageName)
+                .WithNetwork(fixture.Network)
+                .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Cratis Client Connected"))
+                .WithEnvironment("ASPNETCORE_URLS", "http://+:9094")
+                .WithBindMount(appSettingsPath, "/App/appsettings.json")
+                .Build();
     }
 
     public IFutureDockerImage ContainerImage { get; }
@@ -44,15 +50,4 @@ public class TestClient
     public Task Start() => Container.StartAsync();
 
     public Task Stop() => Container.StopAsync();
-
-    string GetDirectoryThatHasSubDirectory(string subDirectoryToLookFor)
-    {
-        var current = Directory.GetCurrentDirectory();
-        do
-        {
-            if (Directory.GetDirectories(current).Any(_ => _.EndsWith(subDirectoryToLookFor))) break;
-            current = Directory.GetParent(current)?.FullName;
-        } while (current != null);
-        return current;
-    }
 }

@@ -5,7 +5,7 @@
         }
     },
     "microservices": {
-        "00000000-0000-0000-0000-000000000000": {
+        "cfd2f397-3476-4080-885f-feb36878a307": {
             "name": "Default"
         }
     },
@@ -23,7 +23,7 @@
             "connectionDetails": "mongodb://mongo:27017/cratis-shared"
         },
         "microservices": {
-            "00000000-0000-0000-0000-000000000000": {
+            "cfd2f397-3476-4080-885f-feb36878a307": {
                 "shared": {
                     "eventStore": {
                         "type": "MongoDB",
@@ -34,7 +34,7 @@
                     "3352d47d-c154-4457-b3fb-8a2efb725113": {
                         "readModels": {
                             "type": "MongoDB",
-                            "connectionDetails": "mongodb://lmongo:27017/dev-read-models"
+                            "connectionDetails": "mongodb://mongo:27017/dev-read-models"
                         },
                         "eventStore": {
                             "type": "MongoDB",

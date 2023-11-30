@@ -15,7 +15,7 @@ COPY ./Source/Infrastructure ./Source/Infrastructure
 COPY ./Source/Kernel/Directory.Build.props ./Source/Kernel/
 COPY ./Source/Kernel/GlobalUsings.cs ./Source/Kernel/
 COPY ./Source/Kernel/Shared ./Source/Kernel/Shared
-COPY ./Specifications/Integration/TestClients/Directory.Build_Source.props ./Source/Directory.Build.props
+COPY ./Specifications/Integration/TestClients/Directory.Build.TestClient.props ./Source/Directory.Build.props
 COPY ./Specifications/Integration/TestClients/$CLIENT_PATH ./Specifications/Integration/TestClients/$CLIENT_PATH
 
 WORKDIR /App/Specifications/Integration/TestClients/$CLIENT_PATH

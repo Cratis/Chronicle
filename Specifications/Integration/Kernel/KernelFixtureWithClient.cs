@@ -13,7 +13,7 @@ public class KernelFixtureWithClient : KernelFixture
 {
     readonly CancellationTokenSource _cancellationTokenSource = new();
 
-    public KernelFixtureWithClient()
+    public KernelFixtureWithClient(GlobalFixture globalFixture) : base(globalFixture)
     {
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var webAppBuilder = WebApplication.CreateBuilder()
