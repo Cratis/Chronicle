@@ -1,27 +1,40 @@
 /* Copyright (c) Aksio Insurtech. All rights reserved.
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
+.container {
+    display: flex;
+    background-color: var(--surface-0);
+    padding: 5px;
+}
+
+.buttonContainer {
+    display: flex;
+    gap: 5px;
+}
+.container > .buttonContainer {
+    align-self: flex-start;
+}
+
+.panelContainer {
+    display: flex;
+    gap: 20px;
+    height: 70vh;
+}
+
 .tabView {
     flex-grow: 1;
-    height: 100vh;
     overflow: hidden;
 }
 
-.panelHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.tabButton {
-    margin-right: 2px;
+.tabPanel {
+    padding: 0;
 }
 
 .queryContainer {
     display: flex;
+    flex-direction: column;
     position: relative;
-    border-right: 1px solid #ddd;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+    border: 1px solid #ddd;
     width: 20%;
     transition: width 250ms ease-in-out;
 }
@@ -58,5 +71,13 @@
 }
 
 .toggleButton.open {
-    left: 200px;
+    left: 215px;
+}
+
+.actions {
+    margin-top: 10px;
+}
+
+.activeTab .p-tabview .p-tabview-nav .p-tabview-nav-link.p-highlight {
+    background-color: red;
 }

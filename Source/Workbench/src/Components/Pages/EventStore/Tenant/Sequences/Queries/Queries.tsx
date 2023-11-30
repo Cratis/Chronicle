@@ -3,12 +3,13 @@
 
 import { TabView, TabPanel } from 'primereact/tabview';
 import { QueryHeader, QueryType } from './QueryHeader';
+import { QueryMenuActions } from './QueryMenuActions';
 import { QueriesViewModel } from './QueriesViewModel';
 import { withViewModel } from 'MVVM/withViewModel';
+import { QuerySidebar } from './QuerySidebar';
 import { ChangeEvent, useState } from 'react';
 import { Button } from 'primereact/button';
 import css from './Queries.module.css';
-import { QuerySidebar } from './QuerySidebar';
 
 export const Queries = withViewModel(QueriesViewModel, () => {
     const [queries, setQueries] = useState<QueryType[]>([
@@ -35,7 +36,16 @@ export const Queries = withViewModel(QueriesViewModel, () => {
 
     return (
         <div className={css.container}>
+            <div className={css.buttonContainer}>
+                <Button icon='pi pi-book' />
+                <Button icon='pi pi-plus' onClick={addQuery} />
+            </div>
             <TabView
+                pt={{
+                    panelContainer: () => ({
+                        className: css.tabPanel,
+                    }),
+                }}
                 scrollable
                 className={css.tabView}
                 activeIndex={currentQuery}
@@ -43,35 +53,28 @@ export const Queries = withViewModel(QueriesViewModel, () => {
             >
                 {queries.map((query, idx) => (
                     <TabPanel
+                        className={css.activeTab}
                         key={query.id}
                         closable={idx !== 0}
                         header={
-                            <div className={css.panelHeader}>
-                                <Button
-                                    style={{
-                                        visibility: idx === 0 ? 'visible' : 'hidden',
-                                    }}
-                                    icon='pi pi-plus'
-                                    onClick={addQuery}
-                                    className={css.tabButton}
-                                />
-                                <QueryHeader
-                                    idx={idx}
-                                    query={query}
-                                    onQueryChange={onQueryChange}
-                                />
-                            </div>
+                            <QueryHeader
+                                idx={idx}
+                                query={query}
+                                onQueryChange={onQueryChange}
+                            />
                         }
                     >
-                        <QuerySidebar>
-                            {query.title}
-                            <br />
-                            sidebar content goes here
-                            sidebar content goes here
-                            sidebar content goes here
-                            sidebar content goes here
-                            sidebar content goes here
-                        </QuerySidebar>
+                        <div className={css.panelContainer}>
+                            <QuerySidebar>
+                                {query.title}
+                                <div>Logs</div>
+                                <div>Outbox</div>
+                                <div>People</div>
+                            </QuerySidebar>
+                            <div>
+                                <QueryMenuActions />
+                            </div>
+                        </div>
                     </TabPanel>
                 ))}
             </TabView>
