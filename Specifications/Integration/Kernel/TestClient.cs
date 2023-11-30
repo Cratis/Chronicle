@@ -11,7 +11,6 @@ public class TestClient
 {
     public TestClient(KernelFixture fixture, string relativePath, string? executable = null)
     {
-        var imageName = Guid.NewGuid().ToString().Replace("-", string.Empty).ToLowerInvariant();
 
         var dockerBuildContextPath = DirectoryHelper.GetDirectoryThatHasSubDirectory(".git");
         var testClientsPath = DirectoryHelper.GetDirectoryThatHasSubDirectory("TestClients");
@@ -24,6 +23,7 @@ public class TestClient
             executable = relativePath.Substring(lastSegmentStart);
         }
 
+        var imageName = executable.ToLowerInvariant();
         ContainerImage = new ImageFromDockerfileBuilder()
             .WithName(imageName)
             .WithDockerfileDirectory(dockerBuildContextPath)
