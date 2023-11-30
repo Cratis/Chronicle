@@ -10,6 +10,8 @@ namespace Aksio.Cratis.Kernel;
 
 public class MongoDBDatabase
 {
+    public Subject<ChangeStreamDocument<BsonDocument>> _changes = new();
+
     public MongoDBDatabase(IContainer mongoDBContainer, string database)
     {
         var mongoClient = new MongoClient($"mongodb://{mongoDBContainer.Hostname}:{mongoDBContainer.GetMappedPublicPort(27017)}");
@@ -34,7 +36,7 @@ public class MongoDBDatabase
 
                 foreach (var document in cursor.Current)
                 {
-                    Changes.OnNext(document);
+                    _changes.OnNext(document);
                     var changesCollection = changeDatabase.GetCollection<BsonDocument>(document.CollectionNamespace.CollectionName);
                     var changeDocument = new BsonDocument
                     {
@@ -50,5 +52,7 @@ public class MongoDBDatabase
     }
 
     public IMongoDatabase Database { get; }
-    public Subject<ChangeStreamDocument<BsonDocument>> Changes { get; } = new();
+    public IObservable<ChangeStreamDocument<BsonDocument>> Changes => _changes;
+
+    public void Complete() => _changes.OnCompleted();
 }
