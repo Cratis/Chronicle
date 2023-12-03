@@ -16,7 +16,7 @@ public class Order : AggregateRoot<OrderState>
     {
         Console.WriteLine($"Before : {State.CartItems.Count()}");
 
-        await Apply(new ItemAddedToCart(
+        Apply(new ItemAddedToCart(
             new(Guid.NewGuid()),
             new(Guid.NewGuid()),
             1));
@@ -26,7 +26,7 @@ public class Order : AggregateRoot<OrderState>
 
     public async Task DoOtherStuff()
     {
-        await Apply(new ItemRemovedFromCart(
+        Apply(new ItemRemovedFromCart(
             new(Guid.NewGuid()),
             new(Guid.NewGuid())));
     }
