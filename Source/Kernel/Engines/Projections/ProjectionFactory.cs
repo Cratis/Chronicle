@@ -123,28 +123,14 @@ public class ProjectionFactory : IProjectionFactory
         var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
-            var joinExpressions = projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key));
-            var propertyMappers = fromDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
-            propertyMappers.AddRange(propertyMappersForAllEventTypes);
-            var projected = projection.Event
-                .WhereEventTypeEquals(eventType)
-                .Project(
-                    childrenAccessorProperty,
-                    actualIdentifiedByProperty,
-                    propertyMappers);
+            SetupFromSubscription(projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromDefinition);
+        }
 
-            if (joinExpressions.Any())
+        foreach (var fromAnyDefinition in projectionDefinition.FromAny)
+        {
+            foreach (var eventType in fromAnyDefinition.EventTypes)
             {
-                foreach (var (joinEventType, joinDefinition) in joinExpressions)
-                {
-                    var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
-                    projected = projected
-                        .ResolveJoin(_eventProvider, joinEventType, joinDefinition.On)
-                                        .Project(
-                                            childrenAccessorProperty,
-                                            actualIdentifiedByProperty,
-                                            joinPropertyMappers);
-                }
+                SetupFromSubscription(projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromAnyDefinition.From);
             }
         }
 
@@ -179,6 +165,40 @@ public class ProjectionFactory : IProjectionFactory
         }
 
         return projection;
+    }
+
+    void SetupFromSubscription(
+        ProjectionDefinition projectionDefinition,
+        PropertyPath childrenAccessorProperty,
+        PropertyPath actualIdentifiedByProperty,
+        Projection projection,
+        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappersForAllEventTypes,
+        EventType eventType,
+        FromDefinition fromDefinition)
+    {
+        var joinExpressions = projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key));
+        var propertyMappers = fromDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
+        propertyMappers.AddRange(propertyMappersForAllEventTypes);
+        var projected = projection.Event
+            .WhereEventTypeEquals(eventType)
+            .Project(
+                childrenAccessorProperty,
+                actualIdentifiedByProperty,
+                propertyMappers);
+
+        if (joinExpressions.Any())
+        {
+            foreach (var (joinEventType, joinDefinition) in joinExpressions)
+            {
+                var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
+                projected = projected
+                    .ResolveJoin(_eventProvider, joinEventType, joinDefinition.On)
+                                    .Project(
+                                        childrenAccessorProperty,
+                                        actualIdentifiedByProperty,
+                                        joinPropertyMappers);
+            }
+        }
     }
 
     PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(IProjection projection, PropertyPath propertyPath, string expression)
