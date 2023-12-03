@@ -1,3 +1,10 @@
+# [v9.12.0] - 2023-12-3 [PR: #1029](https://github.com/aksio-insurtech/Cratis/pull/1029)
+
+### Added
+
+- Adding support for using base event types or interfaces in observers, reducers and aggregates. The system will identify event types from derivatives and register the event types of these for handling. (#1025)
+
+
 # [v9.11.0] - 2023-11-29 [PR: #1022](https://github.com/aksio-insurtech/Cratis/pull/1022)
 
 ### Fixed
