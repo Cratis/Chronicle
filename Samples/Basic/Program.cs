@@ -1,4 +1,5 @@
-﻿// Copyright (c) Aksio Insurtech. All rights reserved.
+﻿using System;
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Aggregates;
@@ -23,7 +24,7 @@ var app = builder.Build();
 app.MapGet("/add", () =>
 {
     var eventLog = app.Services.GetRequiredService<IEventLog>();
-    eventLog.Append("299681c4-f100-4dea-bfea-633115349ed1", new ItemAddedToCart(
+    eventLog.Append(Guid.NewGuid().ToString(), new ItemAddedToCart(
         new(Guid.NewGuid()),
         new(Guid.NewGuid()),
         1));
