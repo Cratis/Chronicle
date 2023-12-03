@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Reflection;
 using Aksio.Cratis.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,9 +14,8 @@ namespace Aksio.Cratis.Reducers;
 public class ReducerInvoker : IReducerInvoker
 {
     static readonly MethodInfo _getResultMethod = typeof(ReducerInvoker).GetMethod(nameof(GetResult), BindingFlags.Instance | BindingFlags.NonPublic)!;
-    readonly Dictionary<EventType, MethodInfo> _reduceMethodsByEventType = new();
+    readonly Dictionary<Type, MethodInfo> _reduceMethodsByEventType = new();
     readonly IServiceProvider _serviceProvider;
-    readonly IEventTypes _eventTypes;
     readonly Type _targetType;
 
     /// <summary>
@@ -32,16 +32,17 @@ public class ReducerInvoker : IReducerInvoker
         Type readModelType)
     {
         _serviceProvider = serviceProvider;
-        _eventTypes = eventTypes;
         _targetType = targetType;
         ReadModelType = readModelType;
         _reduceMethodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                                        .Where(_ => _.IsReducerMethod(readModelType))
-                                        .ToDictionary(_ => eventTypes.GetEventTypeFor(_.GetParameters()[0].ParameterType), _ => _);
+                                        .Where(_ => _.IsReducerMethod(readModelType, eventTypes.AllClrTypes))
+                                        .ToDictionary(_ => _.GetParameters()[0].ParameterType, _ => _);
+
+        EventTypes = _reduceMethodsByEventType.Keys.Select(_ => eventTypes.GetEventTypeFor(_)).ToImmutableList();
     }
 
     /// <inheritdoc/>
-    public IEnumerable<EventType> EventTypes => _reduceMethodsByEventType.Keys;
+    public IImmutableList<EventType> EventTypes { get; }
 
     /// <inheritdoc/>
     public Type ReadModelType { get; }
@@ -55,7 +56,7 @@ public class ReducerInvoker : IReducerInvoker
 
         foreach (var eventAndContext in eventsAndContexts)
         {
-            var eventType = _eventTypes.GetEventTypeFor(eventAndContext.Event.GetType());
+            var eventType = eventAndContext.Event.GetType();
             object returnValue = null!;
 
             try

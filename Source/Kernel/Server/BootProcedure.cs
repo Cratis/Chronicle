@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Boot;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences.Inboxes;
@@ -11,6 +12,7 @@ using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 using Aksio.Cratis.Kernel.Grains.Projections;
+using Aksio.Cratis.Schemas;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Server;
@@ -25,6 +27,7 @@ public class BootProcedure : IPerformBootProcedure
     readonly IGrainFactory _grainFactory;
     readonly KernelConfiguration _configuration;
     readonly IEventTypes _eventTypes;
+    readonly IJsonSchemaGenerator _schemaGenerator;
     readonly ILogger<BootProcedure> _logger;
 
     /// <summary>
@@ -35,6 +38,7 @@ public class BootProcedure : IPerformBootProcedure
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
     /// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> in process. </param>
+    /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas for event types.</param>
     /// <param name="logger">Logger for logging.</param>
     public BootProcedure(
         IServiceProvider serviceProvider,
@@ -42,6 +46,7 @@ public class BootProcedure : IPerformBootProcedure
         IGrainFactory grainFactory,
         KernelConfiguration configuration,
         IEventTypes eventTypes,
+        IJsonSchemaGenerator schemaGenerator,
         ILogger<BootProcedure> logger)
     {
         _serviceProvider = serviceProvider;
@@ -49,6 +54,7 @@ public class BootProcedure : IPerformBootProcedure
         _grainFactory = grainFactory;
         _configuration = configuration;
         _eventTypes = eventTypes;
+        _schemaGenerator = schemaGenerator;
         _logger = logger;
     }
 
@@ -57,7 +63,14 @@ public class BootProcedure : IPerformBootProcedure
     {
         Task.Run(async () =>
         {
-            var eventTypeRegistrations = _eventTypes.AllAsRegistrations;
+            var eventTypeRegistrations = _eventTypes.AllClrTypes.Select(_ =>
+            {
+                var type = _;
+                return new EventTypeRegistration(
+                    _eventTypes.GetEventTypeFor(type)!,
+                    type.Name,
+                    JsonNode.Parse(_schemaGenerator.Generate(type).ToJson())!);
+            });
 
             foreach (var (microserviceId, microservice) in _configuration.Microservices)
             {

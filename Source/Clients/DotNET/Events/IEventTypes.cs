@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Schemas;
+using System.Collections.Immutable;
 
 namespace Aksio.Cratis.Events;
 
@@ -13,12 +13,12 @@ public interface IEventTypes
     /// <summary>
     /// Gets all the available event types.
     /// </summary>
-    IEnumerable<EventType> All { get; }
+    IImmutableList<EventType> All { get; }
 
     /// <summary>
-    /// Get all event types as <see cref="EventTypeRegistration"/>.
+    /// Gests all the available event types as CLR types.
     /// </summary>
-    IEnumerable<EventTypeRegistration> AllAsRegistrations { get; }
+    IImmutableList<Type> AllClrTypes { get; }
 
     /// <summary>
     /// Check if there is a registered <see cref="Type">Clr Type</see> for a specific <see cref="EventTypeId"/>.

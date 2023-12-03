@@ -6,10 +6,14 @@ namespace Aksio.Cratis.Aggregates.for_AggregateRootEventHandlersFactory;
 public class when_creating_for_stateless_aggregate_root : Specification
 {
     AggregateRootEventHandlersFactory factory;
-
     IAggregateRootEventHandlers result;
+    Mock<IEventTypes> event_types;
 
-    void Establish() => factory = new();
+    void Establish()
+    {
+        event_types = new();
+        factory = new(event_types.Object);
+    }
 
     void Because() => result = factory.CreateFor(new StatelessAggregateRoot());
 

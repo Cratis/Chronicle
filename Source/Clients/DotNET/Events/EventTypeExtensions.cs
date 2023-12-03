@@ -14,8 +14,12 @@ public static class EventTypeExtensions
     /// Check if a type is an event type.
     /// </summary>
     /// <param name="type">Type to check.</param>
+    /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>True if it is an event type, false if not.</returns>
-    public static bool IsEventType(this Type type) => type.GetCustomAttribute<EventTypeAttribute>() != null;
+    public static bool IsEventType(this Type type, IEnumerable<Type> eventTypes)
+    {
+        return type.GetCustomAttribute<EventTypeAttribute>() != null;
+    }
 
     /// <summary>
     /// Validate if a type is an event type.

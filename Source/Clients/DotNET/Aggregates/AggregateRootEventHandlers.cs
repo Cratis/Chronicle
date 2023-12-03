@@ -18,11 +18,12 @@ public class AggregateRootEventHandlers : IAggregateRootEventHandlers
     /// <summary>
     /// Initializes a new instance of the <see cref="AggregateRootEventHandlers"/> class.
     /// </summary>
+    /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
     /// <param name="aggregateRootType">Type of <see cref="IAggregateRoot"/>.</param>
-    public AggregateRootEventHandlers(Type aggregateRootType)
+    public AggregateRootEventHandlers(IEventTypes eventTypes, Type aggregateRootType)
     {
         _handleMethodsByEventType = aggregateRootType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                                        .Where(_ => _.IsEventHandlerMethod())
+                                        .Where(_ => _.IsEventHandlerMethod(eventTypes.AllClrTypes))
                                         .ToDictionary(_ => _.GetParameters()[0].ParameterType, _ => _);
 
         EventTypes = _handleMethodsByEventType.Keys.Select(_ => _.GetEventType()).ToImmutableList();

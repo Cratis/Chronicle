@@ -23,7 +23,7 @@ public static class AggregateRootExtensions
     /// <returns>The aggregate root for continuation.</returns>
     public static AggregateRoot Initialize(this AggregateRoot aggregateRoot, EventSourceId eventSourceId, IEnumerable<object>? events = default)
     {
-        aggregateRoot.EventHandlers = new AggregateRootEventHandlers(aggregateRoot.GetType());
+        aggregateRoot.EventHandlers = new AggregateRootEventHandlers(GlobalsForSpecifications.EventTypes, aggregateRoot.GetType());
         aggregateRoot.EventSequence = new NullEventSequence();
         aggregateRoot.CausationManager = new NullCausationManager();
         aggregateRoot._eventSourceId = eventSourceId;

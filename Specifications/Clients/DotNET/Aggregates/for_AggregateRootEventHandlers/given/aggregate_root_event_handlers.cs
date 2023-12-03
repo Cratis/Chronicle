@@ -7,11 +7,13 @@ public class aggregate_root_event_handlers : Specification
 {
     protected AggregateRootEventHandlers handlers;
     protected StatelessAggregateRoot aggregate_root;
+    protected Mock<IEventTypes> event_types;
 
     void Establish()
     {
         aggregate_root = new();
+        event_types = new();
 
-        handlers = new AggregateRootEventHandlers(typeof(StatelessAggregateRoot));
+        handlers = new AggregateRootEventHandlers(event_types.Object, typeof(StatelessAggregateRoot));
     }
 }
