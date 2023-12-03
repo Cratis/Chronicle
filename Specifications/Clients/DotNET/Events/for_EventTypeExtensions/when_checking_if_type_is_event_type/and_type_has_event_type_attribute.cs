@@ -16,4 +16,3 @@ public class and_type_has_event_type_attribute : Specification
 
     [Fact] void should_be_considered_an_event_type() => result.ShouldBeTrue();
 }
-
