@@ -19,7 +19,7 @@ public class and_type_it_an_interface_but_has_derivatives_that_are : Specificati
 
     IEnumerable<Type> result;
 
-    void Because() => result = typeof(IMyEvent).GetEventTypesFor(new[] { typeof(FirstDerivative), typeof(SecondDerivative) });
+    void Because() => result = typeof(IMyEvent).GetEventTypes(new[] { typeof(FirstDerivative), typeof(SecondDerivative) });
 
     [Fact] void should_return_the_expected_types() => result.ShouldContainOnly(typeof(FirstDerivative), typeof(SecondDerivative));
 }

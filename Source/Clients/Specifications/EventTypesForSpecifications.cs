@@ -18,8 +18,14 @@ public class EventTypesForSpecifications : IEventTypes
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypesForSpecifications"/> class.
     /// </summary>
-    public EventTypesForSpecifications()
+    /// <param name="types"><see cref="IEnumerable{T}"/> of <see cref="Type"/> representing the event types.</param>
+    public EventTypesForSpecifications(IEnumerable<Type>? types = null)
     {
+        types ??= Enumerable.Empty<Type>();
+
+        _eventTypes = types.ToDictionary(_ => _, _ => _.GetEventType());
+        _clrTypesByEventType = _eventTypes.ToDictionary(_ => _.Value.Id, _ => _.Key);
+
         All = _eventTypes.Values.ToImmutableList();
         AllClrTypes = _clrTypesByEventType.Values.ToImmutableList();
     }

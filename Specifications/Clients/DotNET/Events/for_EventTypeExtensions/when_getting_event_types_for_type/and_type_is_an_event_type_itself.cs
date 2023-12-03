@@ -12,7 +12,7 @@ public class and_type_is_an_event_type_itself : Specification
 
     IEnumerable<Type> result;
 
-    void Because() => result = typeof(MyEvent).GetEventTypesFor(new[] { typeof(MyEvent) });
+    void Because() => result = typeof(MyEvent).GetEventTypes(new[] { typeof(MyEvent) });
 
     [Fact] void should_return_the_type() => result.ShouldContainOnly(typeof(MyEvent));
 }

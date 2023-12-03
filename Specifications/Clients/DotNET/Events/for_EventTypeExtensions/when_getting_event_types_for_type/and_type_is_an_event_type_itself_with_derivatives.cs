@@ -20,7 +20,7 @@ public class and_type_is_an_event_type_itself_with_derivatives : Specification
 
     IEnumerable<Type> result;
 
-    void Because() => result = typeof(MyEvent).GetEventTypesFor(new[] { typeof(MyEvent), typeof(FirstDerivative), typeof(SecondDerivative) });
+    void Because() => result = typeof(MyEvent).GetEventTypes(new[] { typeof(MyEvent), typeof(FirstDerivative), typeof(SecondDerivative) });
 
     [Fact] void should_return_the_expected_types() => result.ShouldContainOnly(typeof(MyEvent), typeof(FirstDerivative), typeof(SecondDerivative));
 }

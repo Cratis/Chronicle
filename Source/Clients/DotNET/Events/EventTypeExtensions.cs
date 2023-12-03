@@ -32,7 +32,7 @@ public static class EventTypeExtensions
     /// <param name="type">The CLR type to get for.</param>
     /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>Collection of actual event types.</returns>
-    public static IEnumerable<Type> GetEventTypesFor(this Type type, IEnumerable<Type> eventTypes)
+    public static IEnumerable<Type> GetEventTypes(this Type type, IEnumerable<Type> eventTypes)
     {
         eventTypes = eventTypes.Except(new[] { type });
 

@@ -41,7 +41,8 @@ public class ObserverInvoker : IObserverInvoker
         _logger = logger;
         _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
                                         .Where(_ => _.IsEventHandlerMethod(eventTypes.AllClrTypes))
-                                        .ToDictionary(_ => _.GetParameters()[0].ParameterType, _ => _);
+                                        .SelectMany(_ => _.GetParameters()[0].ParameterType.GetEventTypes(eventTypes.AllClrTypes).Select(eventType => (eventType, method: _)))
+                                        .ToDictionary(_ => _.eventType, _ => _.method);
 
         EventTypes = _methodsByEventType.Keys.Select(_ => eventTypes.GetEventTypeFor(_)).ToImmutableList();
     }
