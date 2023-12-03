@@ -35,4 +35,7 @@ public record Key(object Value, ArrayIndexers ArrayIndexers)
     /// </summary>
     /// <param name="key"><see cref="Key"/> to convert from.</param>
     public static implicit operator EventSourceId(Key key) => new(key.Value.ToString()!);
+
+    /// <inheritdoc/>
+    public override string ToString() => Value.ToString() ?? base.ToString()!;
 }
