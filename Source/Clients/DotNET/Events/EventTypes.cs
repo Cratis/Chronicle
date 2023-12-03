@@ -1,8 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
-using Aksio.Cratis.Schemas;
+using System.Collections.Immutable;
 
 namespace Aksio.Cratis.Events;
 
@@ -12,16 +11,12 @@ namespace Aksio.Cratis.Events;
 public class EventTypes : IEventTypes
 {
     readonly IDictionary<EventType, Type> _typesByEventType;
-    readonly IJsonSchemaGenerator _schemaGenerator;
 
     /// <summary>
     /// /// Initializes a new instance of <see cref="EventTypes"/>.
     /// </summary>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-    /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas for event types.</param>
-    public EventTypes(
-        IClientArtifactsProvider clientArtifacts,
-        IJsonSchemaGenerator schemaGenerator)
+    public EventTypes(IClientArtifactsProvider clientArtifacts)
     {
         var eventTypes = clientArtifacts.EventTypes.Select(_ => new
         {
@@ -37,24 +32,16 @@ public class EventTypes : IEventTypes
         }
 
         _typesByEventType = eventTypes.ToDictionary(_ => _.EventType, _ => _.ClrType);
-        All = eventTypes.Select(_ => _.EventType).ToArray();
-        _schemaGenerator = schemaGenerator;
+        All = eventTypes.Select(_ => _.EventType).ToImmutableList();
 
-        AllAsRegistrations = All.Select(_ =>
-           {
-               var type = GetClrTypeFor(_.Id)!;
-               return new EventTypeRegistration(
-                   _,
-                   type.Name,
-                   JsonNode.Parse(_schemaGenerator.Generate(type).ToJson())!);
-           }).ToArray();
+        AllClrTypes = _typesByEventType.Values.ToImmutableList();
     }
 
     /// <inheritdoc/>
-    public IEnumerable<EventType> All { get; }
+    public IImmutableList<EventType> All { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<EventTypeRegistration> AllAsRegistrations { get; }
+    public IImmutableList<Type> AllClrTypes { get; }
 
     /// <inheritdoc/>
     public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.Id == eventTypeId);

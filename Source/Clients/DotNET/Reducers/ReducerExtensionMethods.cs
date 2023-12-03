@@ -19,6 +19,7 @@ public static class ReducerExtensionMethods
     /// </summary>
     /// <param name="methodInfo"><see cref="MethodInfo"/> to check.</param>
     /// <param name="readModelType">Type of read model.</param>
+    /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>True if it is a reducer method, false if not.</returns>
     /// <remarks>
     /// The following are considered valid reducer method signatures.
@@ -29,7 +30,7 @@ public static class ReducerExtensionMethods
     /// TReadModel {MethodName}(TEvent event, TReadModel? current)
     /// ]]>
     /// </remarks>
-    public static bool IsReducerMethod(this MethodInfo methodInfo, Type readModelType)
+    public static bool IsReducerMethod(this MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes)
     {
         var isReducerMethod = methodInfo.ReturnType == readModelType ||
                               methodInfo.ReturnType == typeof(Task<>).MakeGenericType(readModelType) ||
@@ -41,7 +42,7 @@ public static class ReducerExtensionMethods
         if (parameters.Length > 3) return false;
 
         if (parameters.Length >= 2 &&
-            parameters[0].ParameterType.IsEventType() &&
+            parameters[0].ParameterType.IsEventType(eventTypes) &&
             parameters[1].ParameterType.Equals(readModelType))
         {
             if (methodInfo.DeclaringType.IsNullableContext() && !parameters[1].IsNullableReferenceType())

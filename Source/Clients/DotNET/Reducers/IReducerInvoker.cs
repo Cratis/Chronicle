@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Reducers;
@@ -13,7 +14,7 @@ public interface IReducerInvoker
     /// <summary>
     /// Gets the event types the reducer is for.
     /// </summary>
-    IEnumerable<EventType> EventTypes { get; }
+    IImmutableList<EventType> EventTypes { get; }
 
     /// <summary>
     /// Gets the type of the read model.

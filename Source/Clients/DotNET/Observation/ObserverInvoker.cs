@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Reflection;
 using Aksio.Cratis.Conventions;
 using Aksio.Cratis.Events;
@@ -13,9 +14,8 @@ namespace Aksio.Cratis.Observation;
 /// </summary>
 public class ObserverInvoker : IObserverInvoker
 {
-    readonly Dictionary<EventType, MethodInfo> _methodsByEventTypeId;
+    readonly Dictionary<Type, MethodInfo> _methodsByEventType;
     readonly IServiceProvider _serviceProvider;
-    readonly IEventTypes _eventTypes;
     readonly IObserverMiddlewares _middlewares;
     readonly Type _targetType;
     readonly ILogger<ObserverInvoker> _logger;
@@ -36,17 +36,19 @@ public class ObserverInvoker : IObserverInvoker
         ILogger<ObserverInvoker> logger)
     {
         _serviceProvider = serviceProvider;
-        _eventTypes = eventTypes;
         _middlewares = middlewares;
         _targetType = targetType;
         _logger = logger;
-        _methodsByEventTypeId = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                                        .Where(_ => _.IsEventHandlerMethod())
-                                        .ToDictionary(_ => _eventTypes.GetEventTypeFor(_.GetParameters()[0].ParameterType), _ => _);
+        _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                                        .Where(_ => _.IsEventHandlerMethod(eventTypes.AllClrTypes))
+                                        .SelectMany(_ => _.GetParameters()[0].ParameterType.GetEventTypes(eventTypes.AllClrTypes).Select(eventType => (eventType, method: _)))
+                                        .ToDictionary(_ => _.eventType, _ => _.method);
+
+        EventTypes = _methodsByEventType.Keys.Select(_ => eventTypes.GetEventTypeFor(_)).ToImmutableList();
     }
 
     /// <inheritdoc/>
-    public IEnumerable<EventType> EventTypes => _methodsByEventTypeId.Keys;
+    public IImmutableList<EventType> EventTypes { get; }
 
     /// <inheritdoc/>
     public async Task Invoke(object content, EventContext eventContext)
@@ -54,12 +56,12 @@ public class ObserverInvoker : IObserverInvoker
         try
         {
             var actualObserver = _serviceProvider.GetService(_targetType);
-            var eventType = _eventTypes.GetEventTypeFor(content.GetType());
+            var eventType = content.GetType();
 
-            if (_methodsByEventTypeId.ContainsKey(eventType))
+            if (_methodsByEventType.ContainsKey(eventType))
             {
                 Task returnValue;
-                var method = _methodsByEventTypeId[eventType];
+                var method = _methodsByEventType[eventType];
                 var parameters = method.GetParameters();
 
                 await _middlewares.BeforeInvoke(eventContext, content);

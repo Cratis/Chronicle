@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Observation;
@@ -13,7 +14,7 @@ public interface IObserverInvoker
     /// <summary>
     /// Gets the supported <see cref="EventType">event types</see>.
     /// </summary>
-    IEnumerable<EventType> EventTypes { get; }
+    IImmutableList<EventType> EventTypes { get; }
 
     /// <summary>
     /// Invoke the observer.
