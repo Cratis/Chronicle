@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Reducers;
 public class ReducerInvoker : IReducerInvoker
 {
     static readonly MethodInfo _getResultMethod = typeof(ReducerInvoker).GetMethod(nameof(GetResult), BindingFlags.Instance | BindingFlags.NonPublic)!;
-    readonly Dictionary<Type, MethodInfo> _reduceMethodsByEventType = new();
+    readonly Dictionary<Type, MethodInfo> _methodsByEventType = new();
     readonly IServiceProvider _serviceProvider;
     readonly Type _targetType;
 
@@ -34,11 +34,12 @@ public class ReducerInvoker : IReducerInvoker
         _serviceProvider = serviceProvider;
         _targetType = targetType;
         ReadModelType = readModelType;
-        _reduceMethodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+        _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
                                         .Where(_ => _.IsReducerMethod(readModelType, eventTypes.AllClrTypes))
-                                        .ToDictionary(_ => _.GetParameters()[0].ParameterType, _ => _);
+                                        .SelectMany(_ => _.GetParameters()[0].ParameterType.GetEventTypes(eventTypes.AllClrTypes).Select(eventType => (eventType, method: _)))
+                                        .ToDictionary(_ => _.eventType, _ => _.method);
 
-        EventTypes = _reduceMethodsByEventType.Keys.Select(_ => eventTypes.GetEventTypeFor(_)).ToImmutableList();
+        EventTypes = _methodsByEventType.Keys.Select(_ => eventTypes.GetEventTypeFor(_)).ToImmutableList();
     }
 
     /// <inheritdoc/>
@@ -61,9 +62,9 @@ public class ReducerInvoker : IReducerInvoker
 
             try
             {
-                if (_reduceMethodsByEventType.ContainsKey(eventType))
+                if (_methodsByEventType.ContainsKey(eventType))
                 {
-                    var method = _reduceMethodsByEventType[eventType];
+                    var method = _methodsByEventType[eventType];
                     var parameters = method.GetParameters();
 
                     if (parameters.Length == 3)
