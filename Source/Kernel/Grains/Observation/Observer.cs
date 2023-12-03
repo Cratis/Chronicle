@@ -22,7 +22,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// Represents an implementation of <see cref="IObserver"/>.
 /// </summary>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Observers)]
-public class Observer : StateMachine<ObserverState>, IObserver
+public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<Observer> _logger;
@@ -35,7 +35,6 @@ public class Observer : StateMachine<ObserverState>, IObserver
     ObserverSubscription _subscription;
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
-    IDisposable? _retryFailureTimer;
     IEventSequence _eventSequence = null!;
 
     /// <summary>
@@ -133,11 +132,9 @@ public class Observer : StateMachine<ObserverState>, IObserver
     public async Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes, object? subscriberArgs = null)
         where TObserverSubscriber : IObserverSubscriber
     {
-        _logger.Subscribing(
-            _observerId,
-            _observerKey.MicroserviceId,
-            _observerKey.TenantId,
-            _observerKey.EventSequenceId);
+        using var scope = _logger.BeginObserverScope(_observerId, _observerKey);
+
+        _logger.Subscribing();
 
         _subscription = new ObserverSubscription(
             _observerId,
@@ -240,17 +237,17 @@ public class Observer : StateMachine<ObserverState>, IObserver
     public Task PartitionReplayed(Key partition) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public async Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    public async Task PartitionFailed(
+        Key partition,
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<string> exceptionMessages,
+        string exceptionStackTrace)
     {
+        using var scope = _logger.BeginObserverScope(_observerId, _observerKey);
+
         _logger.PartitionFailed(
             partition,
-            sequenceNumber,
-            _observerId,
-            _observerKey.EventSequenceId,
-            _observerKey.MicroserviceId,
-            _observerKey.TenantId,
-            _observerKey.SourceMicroserviceId ?? MicroserviceId.Unspecified,
-            _observerKey.SourceTenantId ?? TenantId.NotSet);
+            sequenceNumber);
 
         var failure = Failures.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         var time = TimeSpan.FromSeconds((failure.Attempts.Count() - 1) * 2);
@@ -261,15 +258,11 @@ public class Observer : StateMachine<ObserverState>, IObserver
 
         if (failure.Attempts.Count() < 10)
         {
-            _retryFailureTimer = RegisterTimer(
-                async (_) =>
-                {
-                    _retryFailureTimer?.Dispose();
-                    await TryRecoverFailedPartition(partition);
-                },
-                null,
-                time,
-                TimeSpan.FromDays(30));
+            await this.RegisterOrUpdateReminder(partition.ToString(), time, TimeSpan.FromHours(48));
+        }
+        else
+        {
+            _logger.GivingUpOnRecoveringFailedPartition(partition);
         }
 
         await _failuresState.WriteStateAsync();
@@ -285,10 +278,16 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <inheritdoc/>
     public async Task TryRecoverFailedPartition(Key partition)
     {
+        using var scope = _logger.BeginObserverScope(_observerId, _observerKey);
+
+        _logger.TryingToRecoverFailedPartition(partition);
+
         var failure = Failures.Get(partition);
         if (failure is null) return;
         var lastAttempt = failure.LastAttempt;
         if (lastAttempt is null) return;
+
+        await RemoveReminder(partition.ToString());
 
         await _jobsManager.Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(
             JobId.New(),
@@ -413,6 +412,18 @@ public class Observer : StateMachine<ObserverState>, IObserver
         await WriteStateAsync();
     }
 
+    /// <inheritdoc/>
+    public async Task ReceiveReminder(string reminderName, TickStatus status)
+    {
+        await RemoveReminder(reminderName);
+
+        var partition = _failuresState.State.Partitions.FirstOrDefault(_ => _.Partition.ToString() == reminderName);
+        if (partition is not null)
+        {
+            await TryRecoverFailedPartition(partition.Partition);
+        }
+    }
+
     /// <summary>
     /// Set subscription explicitly, without subscribing. This method is internal and visible to the test suite and only meant to be used with testing.
     /// </summary>
@@ -438,6 +449,15 @@ public class Observer : StateMachine<ObserverState>, IObserver
     {
         if (_stateWritingSuspended) return;
         await base.WriteStateAsync();
+    }
+
+    async Task RemoveReminder(string reminderName)
+    {
+        var reminder = await this.GetReminder(reminderName);
+        if (reminder is not null)
+        {
+            await this.UnregisterReminder(reminder);
+        }
     }
 
     class WriteSuspension : IDisposable
