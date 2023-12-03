@@ -27,6 +27,30 @@ public static class EventTypeExtensions
     }
 
     /// <summary>
+    /// Get the event types for a type.
+    /// </summary>
+    /// <param name="type">The CLR type to get for.</param>
+    /// <param name="eventTypes">Known event types in the process.</param>
+    /// <returns>Collection of actual event types.</returns>
+    public static IEnumerable<Type> GetEventTypesFor(this Type type, IEnumerable<Type> eventTypes)
+    {
+        eventTypes = eventTypes.Except(new[] { type });
+
+        if (type.GetCustomAttribute<EventTypeAttribute>() != null)
+        {
+            yield return type;
+        }
+
+        foreach (var eventType in eventTypes)
+        {
+            if (eventType.IsAssignableTo(type))
+            {
+                yield return eventType;
+            }
+        }
+    }
+
+    /// <summary>
     /// Validate if a type is an event type.
     /// </summary>
     /// <param name="type">Type to validate.</param>

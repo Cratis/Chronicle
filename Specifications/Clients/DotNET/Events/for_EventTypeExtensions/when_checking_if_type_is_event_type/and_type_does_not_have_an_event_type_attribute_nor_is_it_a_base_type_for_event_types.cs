@@ -15,4 +15,3 @@ public class and_type_does_not_have_an_event_type_attribute_nor_is_it_a_base_typ
 
     [Fact] void should_not_be_considered_an_event_type() => result.ShouldBeFalse();
 }
-

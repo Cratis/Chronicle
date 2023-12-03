@@ -19,4 +19,3 @@ public class and_type_is_a_base_type_for_event_types : Specification
 
     [Fact] void should_be_considered_an_event_type() => result.ShouldBeTrue();
 }
-
