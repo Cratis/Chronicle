@@ -29,6 +29,11 @@ public class an_observer : GrainSpecification<ObserverState>
 
     protected override string GrainKeyExtension => ObserverKey;
 
+    public an_observer(OrleansClusterFixture clusterFixture)
+        : base(clusterFixture)
+    {
+    }
+
     protected override Grain GetGrainInstance()
     {
         execution_context_manager = new();

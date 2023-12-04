@@ -3,8 +3,14 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
+[Collection(OrleansClusterCollection.Name)]
 public class and_subscription_is_disconnected : given.an_observer_with_subscription_for_specific_event_type
 {
+    public and_subscription_is_disconnected(OrleansClusterFixture clusterFixture)
+        : base(clusterFixture)
+    {
+    }
+
     void Establish()
     {
         state = state with

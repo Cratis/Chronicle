@@ -5,6 +5,11 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver.given;
 
 public class a_catchup_observer_and_a_request : a_catchup_observer
 {
+    public a_catchup_observer_and_a_request(OrleansClusterFixture clusterFixture)
+        : base(clusterFixture)
+    {
+    }
+
     void Establish()
     {
         state.Request = new(

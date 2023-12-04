@@ -5,11 +5,16 @@ using Aksio.Cratis.Kernel.Keys;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_failing_partition;
 
+[Collection(OrleansClusterCollection.Name)]
 public class first_time : given.an_observer
 {
     const string event_source_id = "Something";
     const string stack_trace = "This is the stack trace";
     const string message = "Something went wrong";
+
+    public first_time(OrleansClusterFixture clusterFixture) : base(clusterFixture)
+    {
+    }
 
     async Task Because() => await observer.PartitionFailed(event_source_id, 42UL, new[] { message }, stack_trace);
 

@@ -3,10 +3,16 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver.when_asking_if_can_resume;
 
+[Collection(OrleansClusterCollection.Name)]
 public class and_it_is_subscribed : given.a_catchup_observer_and_a_request
 {
     Mock<IObserver> observer;
     bool result;
+
+    public and_it_is_subscribed(OrleansClusterFixture clusterFixture)
+        : base(clusterFixture)
+    {
+    }
 
     void Establish()
     {

@@ -3,8 +3,13 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
+[Collection(OrleansClusterCollection.Name)]
 public class and_subscription_is_disconnected_with_last_successful_observation_being_unavailable : given.an_observer_with_subscription_for_specific_event_type
 {
+    public and_subscription_is_disconnected_with_last_successful_observation_being_unavailable(OrleansClusterFixture clusterFixture) : base(clusterFixture)
+    {
+    }
+
     void Establish()
     {
         subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable)));

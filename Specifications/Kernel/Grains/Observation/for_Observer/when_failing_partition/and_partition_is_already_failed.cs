@@ -7,6 +7,7 @@ using Aksio.Cratis.Kernel.Observation;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_failing_partition;
 
+[Collection(OrleansClusterCollection.Name)]
 public class and_partition_is_already_failed : given.an_observer
 {
     const string event_source_id = "Something";
@@ -15,8 +16,11 @@ public class and_partition_is_already_failed : given.an_observer
     const string second_stack_trace = "Second: This is the stack trace";
     const string second_message = "Second: Something went wrong";
 
-
     FailedPartition failed_partition;
+
+    public and_partition_is_already_failed(OrleansClusterFixture clusterFixture) : base(clusterFixture)
+    {
+    }
 
     void Establish()
     {

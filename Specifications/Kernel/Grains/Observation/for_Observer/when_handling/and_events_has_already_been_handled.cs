@@ -3,8 +3,14 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
+[Collection(OrleansClusterCollection.Name)]
 public class and_events_has_already_been_handled : given.an_observer_with_subscription_for_specific_event_type
 {
+    public and_events_has_already_been_handled(OrleansClusterFixture clusterFixture)
+        : base(clusterFixture)
+    {
+    }
+
     void Establish()
     {
         state = state with

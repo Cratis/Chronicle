@@ -6,6 +6,7 @@ using Aksio.Cratis.Kernel.Keys;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver.given;
 
+[Collection(OrleansClusterCollection.Name)]
 public class a_catchup_observer : GrainSpecification<CatchUpObserverState>
 {
     protected Mock<IObserverKeyIndexes> indexes;
@@ -14,6 +15,11 @@ public class a_catchup_observer : GrainSpecification<CatchUpObserverState>
 
     protected override Guid GrainId => Guid.Parse("6341bcdb-c644-40ab-81cf-43907c510285");
     protected override string GrainKeyExtension => job_key;
+
+    public a_catchup_observer(OrleansClusterFixture clusterFixture)
+        : base(clusterFixture)
+    {
+    }
 
     protected override Grain GetGrainInstance()
     {

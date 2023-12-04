@@ -8,6 +8,11 @@ public class an_observer_with_subscription : an_observer
     protected ObserverSubscription subscription;
     protected ObserverSubscriberKey subscriber_key;
 
+    public an_observer_with_subscription(OrleansClusterFixture clusterFixture)
+        : base(clusterFixture)
+    {
+    }
+
     protected override void OnBeforeGrainActivate()
     {
         base.OnBeforeGrainActivate();

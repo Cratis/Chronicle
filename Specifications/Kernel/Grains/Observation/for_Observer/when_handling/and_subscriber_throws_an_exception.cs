@@ -3,11 +3,16 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
+[Collection(OrleansClusterCollection.Name)]
 public class and_subscriber_throws_an_exception : given.an_observer_with_subscription_for_specific_event_type
 {
     const string exception_message = "Something went wrong";
     const string event_source_id = "Something";
     const string exception_stack_trace = "This is the stack trace";
+
+    public and_subscriber_throws_an_exception(OrleansClusterFixture clusterFixture) : base(clusterFixture)
+    {
+    }
 
     void Establish() =>
         subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Throws(new ExceptionWithPreDefinedStackTrace(exception_message, exception_stack_trace));

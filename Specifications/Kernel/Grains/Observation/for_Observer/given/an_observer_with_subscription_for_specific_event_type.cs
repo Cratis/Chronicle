@@ -9,6 +9,10 @@ public class an_observer_with_subscription_for_specific_event_type : an_observer
     protected ObserverSubscription subscription;
     protected ObserverSubscriberKey subscriber_key;
 
+    public an_observer_with_subscription_for_specific_event_type(OrleansClusterFixture clusterFixture)
+        : base(clusterFixture)
+    {
+    }
 
     protected override void OnBeforeGrainActivate()
     {

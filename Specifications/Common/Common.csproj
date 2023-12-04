@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Source/Kernel/Orleans/Orleans.csproj"/>
+        <ProjectReference Include="../../Source/Kernel/Serialization/Serialization.csproj"/>
         <ProjectReference Include="../../Source/Clients/Specifications/Specifications.csproj"/>
     </ItemGroup>
 
@@ -13,5 +14,6 @@
       <PackageReference Include="Microsoft.Orleans.Streaming" />
       <PackageReference Include="Microsoft.Orleans.Reminders" />
       <PackageReference Include="Microsoft.Orleans.Sdk" />
+      <PackageReference Include="Microsoft.Orleans.TestingHost"/>
     </ItemGroup>
 </Project>

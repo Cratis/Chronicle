@@ -5,9 +5,15 @@ using Aksio.Cratis.Kernel.Grains.Observation.States;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;
 
+[Collection(OrleansClusterCollection.Name)]
 public class when_completed : given.a_catchup_observer_and_a_request
 {
     Mock<IObserver> observer;
+
+    public when_completed(OrleansClusterFixture clusterFixture)
+        : base(clusterFixture)
+    {
+    }
 
     void Establish()
     {

@@ -8,11 +8,17 @@ using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;
 
+[Collection(OrleansClusterCollection.Name)]
 public class when_preparing_steps : given.a_catchup_observer_and_a_request
 {
     Mock<IObserverKeyIndex> index;
     IEnumerable<Key> keys;
     IImmutableList<JobStepDetails> job_steps;
+
+    public when_preparing_steps(OrleansClusterFixture clusterFixture)
+        : base(clusterFixture)
+    {
+    }
 
     void Establish()
     {
