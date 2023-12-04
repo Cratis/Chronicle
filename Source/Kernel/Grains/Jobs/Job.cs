@@ -29,6 +29,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     bool _isRunning;
     IDisposable? _subscriptionTimer;
     JsonSerializerOptions? _jsonSerializerOptions;
+    ILogger<IJob>? _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Job{TRequest, TJobState}"/> class.
@@ -61,6 +62,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        _logger = ServiceProvider.GetService<ILogger<Job<TRequest, TJobState>>>() ?? new NullLogger<Job<TRequest, TJobState>>();
+
         _observers = new(
             TimeSpan.FromMinutes(1),
             ServiceProvider.GetService<ILogger<ObserverManager<IJobObserver>>>() ?? new NullLogger<ObserverManager<IJobObserver>>(),
@@ -84,6 +87,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <inheritdoc/>
     public async Task Start(TRequest request)
     {
+        using var scope = _logger?.BeginJobScope(JobId, JobKey);
+        _logger?.Starting();
+
         _isRunning = true;
         State.Request = request!;
         State.Details = GetJobDetails();
@@ -133,6 +139,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             return;
         }
 
+        using var scope = _logger?.BeginJobScope(JobId, JobKey);
+        _logger?.Resuming();
+
         var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
         var steps = await stepStorage.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused);
         foreach (var step in steps)
@@ -149,6 +158,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         {
             return;
         }
+
+        using var scope = _logger?.BeginJobScope(JobId, JobKey);
+        _logger?.Pausing();
 
         _observers?.Notify(_ => _.OnJobPaused());
 
@@ -167,6 +179,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         {
             return;
         }
+
+        using var scope = _logger?.BeginJobScope(JobId, JobKey);
+        _logger?.Stopping();
 
         _observers?.Notify(_ => _.OnJobStopped());
 
@@ -188,6 +203,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         State.Progress.SuccessfulSteps++;
 
+        using var scope = _logger?.BeginJobScope(JobId, JobKey);
+        _logger?.StepSuccessfullyCompleted(stepId);
+
         if (result.Result is JsonElement jsonResult)
         {
             result = result with { Result = jsonResult.Deserialize(_jobStepGrains[stepId].ResultType, _jsonSerializerOptions) };
@@ -208,6 +226,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     public async Task OnStepFailed(JobStepId stepId, JobStepResult result)
     {
         State.Progress.FailedSteps++;
+
+        using var scope = _logger?.BeginJobScope(JobId, JobKey);
+        _logger?.StepFailed(stepId);
 
         await OnStepCompleted(stepId, result);
         await HandleCompletion();
