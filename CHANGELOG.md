@@ -2,7 +2,7 @@
 
 ### Added
 
-- Added support for base types with derivative event types for projections. Introducing a new `FromAny` in the projection definition. Internal engine does not really care about the inheritance chain, as it just observes all concrete derivatives - just as we do with observers, reducers and aggregate roots. This new feature applies to all types of projections, including immediate projections which will then also be supported by Rules and AggregateRoot states. (#1030)
+- Added support for base types with derivative event types for projections. Projections can just use the `From()` syntax with a base type, nothing changes. Behind the covers there is a new `FromAny` in the projection definition. Internal engine does not really care about the inheritance chain, as it just observes all concrete derivatives - just as we do with observers, reducers and aggregate roots. This new feature applies to all types of projections, including immediate projections which will then also be supported by Rules and AggregateRoot states. (#1030)
 
 # [v9.12.0] - 2023-12-3 [PR: #1029](https://github.com/aksio-insurtech/Cratis/pull/1029)
 
