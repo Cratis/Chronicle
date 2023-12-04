@@ -32,7 +32,7 @@ public class an_observer : Specification
     protected ObserverId observer_id => Guid.Parse("d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e");
     protected ObserverKey observer_key => new(MicroserviceId.Unspecified, TenantId.NotSet, EventSequenceId.Log);
     protected TestKitSilo silo = new();
-    protected IStorage<ObserverState> observer_state_storage;
+    protected IStorage<ObserverState> state_storage;
 
     async Task Establish()
     {
@@ -66,7 +66,7 @@ public class an_observer : Specification
 
         silo.AddService(mapper.Object);
 
-        observer_state_storage = silo.StorageManager.GetStorage<ObserverState>();
+        state_storage = silo.StorageManager.GetStorage<ObserverState>();
 
         var eventSequence = silo.AddProbe<IEventSequence>(
             observer_key.EventSequenceId,
@@ -79,17 +79,4 @@ public class an_observer : Specification
 
         silo.StorageStats().ResetCounts();
     }
-
-    // protected override void OnBeforeGrainActivate()
-    // {
-    //     sequence_stream_provider = new();
-    //     stream_provider_collection.Setup(_ => _.GetService(service_provider.Object, WellKnownProviders.EventSequenceStreamProvider)).Returns(sequence_stream_provider.Object);
-    //     subscriber = new();
-    //     grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), GrainId, IsAny<string>())).Returns(subscriber.Object);
-    // }
-
-    // protected override void OnAfterGrainActivate()
-    // {
-    //     written_states.Clear();
-    // }
 }

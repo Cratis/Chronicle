@@ -13,7 +13,7 @@ public class and_subscriber_returns_disconnected : given.an_observer_with_subscr
     async Task Because() => await observer.Handle("Something", new[] { AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL) });
 
     [Fact] void should_write_state_once() => silo.StorageStats().Writes.ShouldEqual(1);
-    [Fact] void should_set_next_sequence_number() => observer_state_storage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
-    [Fact] void should_set_last_handled_event_sequence_number() => observer_state_storage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
+    [Fact] void should_set_next_sequence_number() => state_storage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
+    [Fact] void should_set_last_handled_event_sequence_number() => state_storage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_set_subscription_to_unsubscribed() => observer.GetSubscription().GetAwaiter().GetResult().ShouldEqual(ObserverSubscription.Unsubscribed);
 }
