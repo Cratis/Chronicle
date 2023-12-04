@@ -8,9 +8,10 @@ using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 
-namespace Aksio.Cratis.Kernel.Server;
+namespace Aksio.Cratis.Kernel.Serialization;
 
 /// <summary>
 /// Extension methods for configuring serialization.
@@ -24,6 +25,25 @@ public static class SerializationConfigurationExtensions
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder ConfigureSerialization(this ISiloBuilder siloBuilder)
     {
+        siloBuilder.ConfigureServices(Configure);
+
+        return siloBuilder;
+    }
+
+    /// <summary>
+    /// Configure serialization for Orleans.
+    /// </summary>
+    /// <param name="clientBuilder"><see cref="IClientBuilder"/> to configure for.</param>
+    /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
+    public static IClientBuilder ConfigureSerialization(this IClientBuilder clientBuilder)
+    {
+        clientBuilder.ConfigureServices(Configure);
+
+        return clientBuilder;
+    }
+
+    static void Configure(this IServiceCollection services)
+    {
         var options = new JsonSerializerOptions(Globals.JsonSerializerOptions);
         options.Converters.Add(new TypeJsonConverter());
         options.Converters.Add(new KeyJsonConverter());
@@ -34,10 +54,8 @@ public static class SerializationConfigurationExtensions
         options.Converters.Add(new JoinDefinitionsConverter());
         options.Converters.Add(new EventSequenceNumberTokenJsonConverter());
 
-        siloBuilder.Services.AddSerializer(serializerBuilder => serializerBuilder.AddJsonSerializer(
+        services.AddSerializer(serializerBuilder => serializerBuilder.AddJsonSerializer(
             _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Aksio") ?? false),
             options));
-
-        return siloBuilder;
     }
 }

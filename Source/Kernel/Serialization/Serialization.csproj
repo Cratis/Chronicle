@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Serialization</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Serialization</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aksio.Fundamentals"/>
+        <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../Common/Common.csproj" />
+    </ItemGroup>
+
+</Project>
