@@ -18,6 +18,8 @@ public static class GrainExtensions
     /// <exception cref="InvalidGrainName">If there is not a matching interface.</exception>
     public static Type GetGrainType(this IGrain grain)
     {
+        if (grain is IGrainType grainType) return grainType.GrainType;
+
         var type = grain.GetType();
         return type.AllBaseAndImplementingTypes().SingleOrDefault(_ => _.Name == $"I{type.Name}") ?? throw new InvalidGrainName(type);
     }
