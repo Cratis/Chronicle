@@ -3,7 +3,7 @@
 
 using System.Globalization;
 using Aksio.Applications.Autofac;
-using Aksio.Cratis.Kernel.Serialization;
+using Aksio.Cratis.Kernel.Server.Serialization;
 using Serilog;
 
 #pragma warning disable SA1600

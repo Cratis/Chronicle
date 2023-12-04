@@ -8,10 +8,9 @@ using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Json;
-using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 
-namespace Aksio.Cratis.Kernel.Serialization;
+namespace Aksio.Cratis.Kernel.Server.Serialization;
 
 /// <summary>
 /// Extension methods for configuring serialization.
@@ -28,18 +27,6 @@ public static class SerializationConfigurationExtensions
         siloBuilder.ConfigureServices(Configure);
 
         return siloBuilder;
-    }
-
-    /// <summary>
-    /// Configure serialization for Orleans.
-    /// </summary>
-    /// <param name="clientBuilder"><see cref="IClientBuilder"/> to configure for.</param>
-    /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
-    public static IClientBuilder ConfigureSerialization(this IClientBuilder clientBuilder)
-    {
-        clientBuilder.ConfigureServices(Configure);
-
-        return clientBuilder;
     }
 
     static void Configure(this IServiceCollection services)

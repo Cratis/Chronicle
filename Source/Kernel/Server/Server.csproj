@@ -34,7 +34,6 @@
         <ProjectReference Include="../Persistence/Persistence.csproj" />
         <ProjectReference Include="../Reactions/Reactions.csproj" />
         <ProjectReference Include="../Read/Read.csproj" />
-        <ProjectReference Include="../Serialization/Serialization.csproj" />
         <ProjectReference Include="../Shared/Shared.csproj" />
     </ItemGroup>
 
