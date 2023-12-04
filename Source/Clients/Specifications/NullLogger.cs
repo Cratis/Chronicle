@@ -11,8 +11,13 @@ namespace Aksio.Cratis.Specifications;
 /// <typeparam name="T">Type the logger is for.</typeparam>
 public class NullLogger<T> : ILogger<T>
 {
+    /// <summary>
+    /// The singleton instance of the logger.
+    /// </summary>
+    public static readonly ILogger<T> Instance = new NullLogger<T>();
+
     /// <inheritdoc/>
-    public IDisposable BeginScope<TState>(TState state) => throw new NotImplementedException();
+    public IDisposable BeginScope<TState>(TState state) => NullLoggerScope.Instance;
 
     /// <inheritdoc/>
     public bool IsEnabled(LogLevel logLevel) => false;

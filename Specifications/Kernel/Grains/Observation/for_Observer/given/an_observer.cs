@@ -1,18 +1,24 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Specifications;
 using Aksio.Json;
 using Microsoft.Extensions.Logging;
+using Orleans.Core;
 using Orleans.Runtime;
 using Orleans.Streams;
+using Orleans.TestKit;
+using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.given;
 
-public class an_observer : GrainSpecification<ObserverState>
+public class an_observer : Specification
 {
     protected Observer observer;
     protected Mock<IExecutionContextManager> execution_context_manager;
@@ -21,23 +27,20 @@ public class an_observer : GrainSpecification<ObserverState>
     protected Mock<IObserverSubscriber> subscriber;
     protected Mock<IPersistentState<FailedPartitions>> failed_partitions_persistent_state;
     protected Mock<IObserverServiceClient> observer_service_client;
-    protected ObserverKey ObserverKey => new(MicroserviceId.Unspecified, TenantId.NotSet, EventSequenceId.Log);
     protected List<FailedPartitions> written_failed_partitions_states = new();
     protected FailedPartitions failed_partitions_state;
+    protected ObserverId observer_id => Guid.Parse("d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e");
+    protected ObserverKey observer_key => new(MicroserviceId.Unspecified, TenantId.NotSet, EventSequenceId.Log);
+    protected TestKitSilo silo = new();
+    protected IStorage<ObserverState> observer_state_storage;
 
-    protected override Guid GrainId => Guid.Parse("d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e");
-
-    protected override string GrainKeyExtension => ObserverKey;
-
-    public an_observer(OrleansClusterFixture clusterFixture)
-        : base(clusterFixture)
+    async Task Establish()
     {
-    }
+        subscriber = new();
+        silo.AddProbe((_) => subscriber.Object);
 
-    protected override Grain GetGrainInstance()
-    {
-        execution_context_manager = new();
-        failed_partitions_persistent_state = new();
+        execution_context_manager = silo.AddServiceProbe<IExecutionContextManager>();
+        failed_partitions_persistent_state = silo.AddServiceProbe<IPersistentState<FailedPartitions>>();
         failed_partitions_state = new();
         failed_partitions_persistent_state.SetupGet(_ => _.State).Returns(failed_partitions_state);
 
@@ -51,28 +54,42 @@ public class an_observer : GrainSpecification<ObserverState>
                 written_failed_partitions_states.Add(clone);
             }).Returns(Task.CompletedTask);
 
-        observer_service_client = new();
+        observer_service_client = silo.AddServiceProbe<IObserverServiceClient>();
 
-        observer = new Observer(
-            execution_context_manager.Object,
-            failed_partitions_persistent_state.Object,
-            observer_service_client.Object,
-            Mock.Of<ILogger<Observer>>(),
-            Mock.Of<ILoggerFactory>());
+        var logger = silo.AddService(NullLogger<Observer>.Instance);
+        var loggerFactory = silo.AddServiceProbe<ILoggerFactory>();
+        loggerFactory.Setup(_ => _.CreateLogger(IsAny<string>())).Returns(logger);
 
-        return observer;
+        var mapper = new Mock<IAttributeToFactoryMapper<PersistentStateAttribute>>();
+        mapper.Setup(_ => _.GetFactory(IsAny<ParameterInfo>(), IsAny<PersistentStateAttribute>())).Returns(
+            context => failed_partitions_persistent_state.Object);
+
+        silo.AddService(mapper.Object);
+
+        observer_state_storage = silo.StorageManager.GetStorage<ObserverState>();
+
+        var eventSequence = silo.AddProbe<IEventSequence>(
+            observer_key.EventSequenceId,
+            new EventSequenceKey(observer_key.MicroserviceId, observer_key.TenantId));
+
+        eventSequence.Setup(_ => _.GetTailSequenceNumber()).ReturnsAsync(EventSequenceNumber.Unavailable);
+        eventSequence.Setup(_ => _.GetTailSequenceNumberForEventTypes(IsAny<IEnumerable<EventType>>())).ReturnsAsync(EventSequenceNumber.Unavailable);
+
+        observer = await silo.CreateGrainAsync<Observer>(observer_id, observer_key);
+
+        silo.StorageStats().ResetCounts();
     }
 
-    protected override void OnBeforeGrainActivate()
-    {
-        sequence_stream_provider = new();
-        stream_provider_collection.Setup(_ => _.GetService(service_provider.Object, WellKnownProviders.EventSequenceStreamProvider)).Returns(sequence_stream_provider.Object);
-        subscriber = new();
-        grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), GrainId, IsAny<string>())).Returns(subscriber.Object);
-    }
+    // protected override void OnBeforeGrainActivate()
+    // {
+    //     sequence_stream_provider = new();
+    //     stream_provider_collection.Setup(_ => _.GetService(service_provider.Object, WellKnownProviders.EventSequenceStreamProvider)).Returns(sequence_stream_provider.Object);
+    //     subscriber = new();
+    //     grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), GrainId, IsAny<string>())).Returns(subscriber.Object);
+    // }
 
-    protected override void OnAfterGrainActivate()
-    {
-        written_states.Clear();
-    }
+    // protected override void OnAfterGrainActivate()
+    // {
+    //     written_states.Clear();
+    // }
 }

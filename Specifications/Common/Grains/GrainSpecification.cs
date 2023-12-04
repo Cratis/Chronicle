@@ -8,6 +8,7 @@ using Aksio.Json;
 using Orleans.Core;
 using Orleans.Runtime;
 using Orleans.Streams;
+using Orleans.TestKit;
 using Orleans.Timers;
 
 namespace Aksio.Cratis.Common.Grains;
@@ -20,11 +21,6 @@ public abstract class GrainSpecification<TState> : GrainSpecification
     protected IList<TState> written_states = new List<TState>();
     protected TState most_recent_written_state;
     protected Type grain_type = typeof(Grain<TState>);
-
-    public GrainSpecification(IOrleansClusterFixture clusterFixture)
-        : base(clusterFixture)
-    {
-    }
 
     protected override void OnStateManagement()
     {
@@ -59,7 +55,7 @@ public abstract class GrainSpecification : Specification
     protected Mock<ITimerRegistry> timer_registry;
     protected Mock<IGrainFactory> grain_factory;
     protected Grain grain;
-    IOrleansClusterFixture _clusterFixture;
+    protected readonly TestKitSilo silo = new();
 
     protected abstract Guid GrainId { get; }
     protected abstract string GrainKeyExtension { get; }
@@ -76,11 +72,6 @@ public abstract class GrainSpecification : Specification
 
     protected virtual void OnAfterGrainActivate()
     {
-    }
-
-    public GrainSpecification(IOrleansClusterFixture clusterFixture)
-    {
-        _clusterFixture = clusterFixture;
     }
 
     void Establish()
