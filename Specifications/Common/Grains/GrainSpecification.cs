@@ -12,6 +12,7 @@ using Orleans.Timers;
 
 namespace Aksio.Cratis.Common.Grains;
 
+[Collection(OrleansClusterCollection.Name)]
 public abstract class GrainSpecification<TState> : GrainSpecification
     where TState : new()
 {
@@ -47,6 +48,7 @@ public abstract class GrainSpecification : Specification
 {
     protected Mock<IGrainRuntime> runtime;
     protected Mock<IGrainContext> grain_context;
+    protected Mock<IGrainLifecycle> grain_lifecycle;
     protected Mock<IServiceProvider> service_provider;
     protected Mock<IKeyedServiceCollection<string, IStreamProvider>> stream_provider_collection;
     protected Mock<ITimerRegistry> timer_registry;
@@ -72,8 +74,11 @@ public abstract class GrainSpecification : Specification
 
     void Establish()
     {
-        grain = GetGrainInstance();
+        grain_lifecycle = new Mock<IGrainLifecycle>();
         grain_context = new();
+        grain_context.SetupGet(_ => _.ObservableLifecycle).Returns(grain_lifecycle.Object);
+
+        grain = GetGrainInstance();
         grain_context.SetupGet(_ => _.GrainId).Returns(() =>
         {
             var grainType = grain.GetType().FullName;
@@ -106,6 +111,8 @@ public abstract class GrainSpecification : Specification
 
         stream_provider_collection = new Mock<IKeyedServiceCollection<string, IStreamProvider>>();
         service_provider.Setup(_ => _.GetService(typeof(IKeyedServiceCollection<string, IStreamProvider>))).Returns(stream_provider_collection.Object);
+
+
 
         OnStateManagement();
         OnBeforeGrainActivate();
