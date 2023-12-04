@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#if false
+
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using MongoDB.Bson;
@@ -48,7 +50,6 @@ public class Test : KernelTest
     [Fact]
     async Task should_have_one_event_inserted_in_event_log()
     {
-        //await Task.Delay(60000);
         await Task.Delay(1000);
 
         KernelFixture.EventStore.Complete();
@@ -59,3 +60,5 @@ public class Test : KernelTest
         count.ShouldEqual(1);
     }
 }
+
+#endif

@@ -11,7 +11,6 @@ public class TestClient
 {
     public TestClient(KernelFixture fixture, string relativePath, string? executable = null)
     {
-
         var dockerBuildContextPath = DirectoryHelper.GetDirectoryThatHasSubDirectory(".git");
         var testClientsPath = DirectoryHelper.GetDirectoryThatHasSubDirectory("TestClients");
 
