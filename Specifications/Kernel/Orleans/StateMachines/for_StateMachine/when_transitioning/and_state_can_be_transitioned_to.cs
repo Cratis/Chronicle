@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Orleans.TestKit;
+
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines.when_transitioning;
 
 public class and_state_can_be_transitioned_to : given.a_state_machine_with_well_known_states
@@ -10,7 +12,7 @@ public class and_state_can_be_transitioned_to : given.a_state_machine_with_well_
     void Establish()
     {
         // We clear this, because we don't care about the initial state transitions and state written to storage in this spec
-        written_states.Clear();
+        silo.StorageStats().ResetCounts();
         on_calls.Clear();
 
         state_machine.OnBeforeEnteringStates.Clear();
@@ -27,8 +29,8 @@ public class and_state_can_be_transitioned_to : given.a_state_machine_with_well_
     [Fact] void should_call_the_state_transitioned_from() => on_calls[0].Type.ShouldEqual(typeof(StateThatSupportsTransitioningFrom));
     [Fact] void should_call_on_leave_on_the_state_transitioned_from() => on_calls[0].IsEnter.ShouldBeFalse();
     [Fact] void should_call_on_leave_with_the_state_transitioned_from() => on_calls[0].State.ShouldEqual(state_that_supports_transitioning.StateToReturnOnEnter);
-    [Fact] void should_write_state_once() => written_states.Count.ShouldEqual(1);
-    [Fact] void should_write_state_coming_from_on_enter() => written_states[0].ShouldEqual(state_that_does_not_support_transitioning.StateToReturnOnEnter);
+    [Fact] void should_write_state_once() => silo.StorageStats().Writes.ShouldEqual(1);
+    [Fact] void should_write_state_coming_from_on_enter() => state_storage.State.ShouldEqual(state_that_does_not_support_transitioning.StateToReturnOnEnter);
     [Fact] void should_call_on_before_entering_state_for_state_entered() => state_machine.OnBeforeEnteringStates.ShouldContainOnly(new[] { state_that_does_not_support_transitioning });
     [Fact] void should_call_on_after_entering_state_for_state_entered() => state_machine.OnAfterEnteringStates.ShouldContainOnly(new[] { state_that_does_not_support_transitioning });
     [Fact] void should_call_on_before_leaving_state_for_state_entered() => state_machine.OnBeforeLeavingStates.ShouldContainOnly(new[] { state_that_supports_transitioning });

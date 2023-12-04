@@ -1,22 +1,29 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Orleans.Core;
+using Orleans.Runtime;
+using Orleans.TestKit;
+
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines.given;
 
-public abstract class a_state_machine : GrainSpecification<StateMachineState>
+public abstract class a_state_machine : Specification
 {
-    protected StateMachineForTesting state_machine;
+    StateMachineForTesting? state_machine_private;
 
-    protected override Guid GrainId => Guid.Empty;
-
-    protected override string GrainKeyExtension => string.Empty;
-
+    protected StateMachineForTesting state_machine => state_machine_private ??= silo.CreateGrainAsync<StateMachineForTesting>(IdSpan.Create(string.Empty)).GetAwaiter().GetResult();
     protected virtual Type? initial_state => default;
+    protected IStorage<StateMachineState> state_storage;
 
-    protected override Grain GetGrainInstance()
+    protected TestKitSilo silo = new();
+
+    void Establish()
     {
-        state_machine = new(CreateStates(), initial_state);
-        return state_machine;
+        var states = CreateStates();
+        silo.AddService(states);
+        silo.AddService(initial_state);
+
+        state_storage = silo.StorageManager.GetStorage<StateMachineState>();
     }
 
     protected abstract IEnumerable<IState<StateMachineState>> CreateStates();

@@ -3,18 +3,20 @@
 
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines.when_activating;
 
-public class with_unknown_initial_state_type : GrainSpecification<StateMachineState>
+public class with_unknown_initial_state_type : given.a_state_machine
 {
     Exception exception;
 
-    protected override Guid GrainId => Guid.Empty;
 
-    protected override string GrainKeyExtension => string.Empty;
+    protected override Type initial_state => typeof(StateThatDoesNotSupportTransitioningFrom);
 
-    protected override Grain GetGrainInstance() => new StateMachineWithUnknownInitialStateType();
+    protected override IEnumerable<IState<StateMachineState>> CreateStates() => new IState<StateMachineState>[]
+        {
+            new StateThatSupportsTransitioningFrom()
+        };
 
-    async Task Because() => exception = await Catch.Exception(async () => await grain.OnActivateAsync(CancellationToken.None));
+    async Task Because() => exception = await Catch.Exception(async () => await state_machine.OnActivateAsync(CancellationToken.None));
 
     [Fact] void should_throw_invalid_type_for_state_exception() => exception.ShouldBeOfExactType<UnknownStateTypeInStateMachine>();
-    [Fact] async Task should_set_state_machine_on_all_states() => (await ((StateMachineWithUnknownInitialStateType)grain).GetStates()).All(_ => _.StateMachine.Equals(grain)).ShouldBeTrue();
+    [Fact] async Task should_set_state_machine_on_all_states() => (await state_machine.GetStates()).All(_ => _.StateMachine.Equals(state_machine)).ShouldBeTrue();
 }
