@@ -7,8 +7,10 @@ using Aksio.Cratis.Kernel.Keys;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;
 
-public class CatchUpObserverWrapper : CatchUpObserver
+public class CatchUpObserverWrapper : CatchUpObserver, IGrainType
 {
+    public Type GrainType => typeof(ICatchUpObserver);
+
     public CatchUpObserverWrapper(IObserverKeyIndexes observerKeyIndexes) : base(observerKeyIndexes) { }
 
     public Task<IImmutableList<JobStepDetails>> WrappedPrepareSteps(CatchUpObserverRequest request) => PrepareSteps(request);

@@ -2,23 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.Grains.Jobs;
+using Orleans.TestKit;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;
 
-[Collection(OrleansClusterCollection.Name)]
 public class when_step_completes : given.a_catchup_observer_and_a_request
 {
     Mock<IObserver> observer;
 
-    public when_step_completes(OrleansClusterFixture clusterFixture)
-        : base(clusterFixture)
-    {
-    }
-
     void Establish()
     {
-        observer = new();
-        grain_factory.Setup(_ => _.GetGrain<IObserver>(state.Request.ObserverId, state.Request.ObserverKey, null)).Returns(observer.Object);
+        observer = silo.AddProbe<IObserver>(state_storage.State.Request.ObserverId, state_storage.State.Request.ObserverKey);
         state.HandledCount = 42;
     }
 

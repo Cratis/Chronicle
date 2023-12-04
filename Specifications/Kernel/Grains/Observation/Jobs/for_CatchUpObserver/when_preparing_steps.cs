@@ -8,22 +8,16 @@ using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;
 
-[Collection(OrleansClusterCollection.Name)]
 public class when_preparing_steps : given.a_catchup_observer_and_a_request
 {
     Mock<IObserverKeyIndex> index;
     IEnumerable<Key> keys;
     IImmutableList<JobStepDetails> job_steps;
 
-    public when_preparing_steps(OrleansClusterFixture clusterFixture)
-        : base(clusterFixture)
-    {
-    }
-
     void Establish()
     {
         index = new();
-        indexes.Setup(_ => _.GetFor(state.Request.ObserverId, state.Request.ObserverKey)).ReturnsAsync(index.Object);
+        indexes.Setup(_ => _.GetFor(state_storage.State.Request.ObserverId, state_storage.State.Request.ObserverKey)).ReturnsAsync(index.Object);
 
         keys = new[]
         {
@@ -31,10 +25,10 @@ public class when_preparing_steps : given.a_catchup_observer_and_a_request
             new Key(Guid.NewGuid(), ArrayIndexers.NoIndexers),
             new Key(Guid.NewGuid(), ArrayIndexers.NoIndexers)
         };
-        index.Setup(_ => _.GetKeys(state.Request.FromEventSequenceNumber)).Returns(() => new ObserverKeysForTesting(keys));
+        index.Setup(_ => _.GetKeys(state_storage.State.Request.FromEventSequenceNumber)).Returns(() => new ObserverKeysForTesting(keys));
     }
 
-    async Task Because() => job_steps = await job.WrappedPrepareSteps(state.Request);
+    async Task Because() => job_steps = await job.WrappedPrepareSteps(state_storage.State.Request);
 
     [Fact] void should_generate_same_amount_of_steps_as_keys() => job_steps.Count.ShouldEqual(keys.Count());
     [Fact] void should_set_correct_observer_id_for_all_steps() => job_steps.All(_ => ((HandleEventsForPartitionArguments)_.Request).ObserverId == state.Request.ObserverId).ShouldBeTrue();

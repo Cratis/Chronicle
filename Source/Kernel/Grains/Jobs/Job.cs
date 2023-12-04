@@ -30,13 +30,14 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     IDisposable? _subscriptionTimer;
     JsonSerializerOptions? _jsonSerializerOptions;
     ILogger<IJob>? _logger;
+    IJob<TRequest> _thisJob;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Job{TRequest, TJobState}"/> class.
     /// </summary>
     protected Job()
     {
-        ThisJob = null!;
+        _thisJob = null!;
     }
 
     /// <summary>
@@ -57,7 +58,18 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <summary>
     /// Gets the job as a Grain reference.
     /// </summary>
-    protected IJob<TRequest> ThisJob { get; private set; }
+    protected IJob<TRequest> ThisJob
+    {
+        get
+        {
+            if (_thisJob is null)
+            {
+                var grainType = this.GetGrainType();
+                _thisJob = GrainFactory.GetGrain(grainType, JobId, JobKey).AsReference<IJob<TRequest>>();
+            }
+            return _thisJob;
+        }
+    }
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -76,11 +88,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         JobId = this.GetPrimaryKey(out var keyExtension);
         JobKey = (JobKey)keyExtension;
 
-        ThisJob = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJob<TRequest>>();
-
-        var grainType = this.GetGrainType();
         State.Name = GetType().Name;
-        State.Type = grainType;
+        State.Type = this.GetGrainType();
         await WriteStateAsync();
     }
 
