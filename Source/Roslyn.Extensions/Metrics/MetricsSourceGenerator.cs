@@ -1,12 +1,19 @@
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Roslyn.Extensions.Templates;
 
 namespace Roslyn.Extensions.Metrics;
 
+/// <summary>
+/// Represents the source generator for metrics.
+/// </summary>
 [Generator]
 public class MetricsSourceGenerator : ISourceGenerator
 {
+    /// <inheritdoc/>
     public void Execute(GeneratorExecutionContext context)
     {
         if (context.SyntaxReceiver is not MetricsSyntaxReceiver receiver) return;
@@ -62,6 +69,7 @@ public class MetricsSourceGenerator : ISourceGenerator
         }
     }
 
+    /// <inheritdoc/>
     public void Initialize(GeneratorInitializationContext context)
     {
         context.RegisterForSyntaxNotifications(() => new MetricsSyntaxReceiver());
