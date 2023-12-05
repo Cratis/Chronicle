@@ -51,7 +51,7 @@ public class FailedPartitions : ControllerBase
 
         var clientObservable = new ClientObservable<IEnumerable<FailedPartition>>();
         var observable = _failedPartitionsStateProvider().ObserveAllFor(observerId);
-        var subscription = observable.Subscribe(_ => clientObservable.OnNext(_));
+        var subscription = observable.Subscribe(clientObservable.OnNext);
         clientObservable.ClientDisconnected = () =>
         {
             subscription.Dispose();

@@ -16,5 +16,5 @@ public class ConsolidateStateForObservers : Job<ConsolidateStateForObserveReques
 
     /// <inheritdoc/>
     protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ConsolidateStateForObserveRequest request) =>
-        Task.FromResult<IImmutableList<JobStepDetails>>(request.Observers.Select(_ => CreateStep<IConsolidateStateForObserver>(_)).ToImmutableList());
+        Task.FromResult<IImmutableList<JobStepDetails>>(request.Observers.Select(CreateStep<IConsolidateStateForObserver>).ToImmutableList());
 }

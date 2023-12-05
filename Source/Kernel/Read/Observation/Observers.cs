@@ -62,7 +62,7 @@ public class Observers : ControllerBase
 
         var clientObservable = new ClientObservable<IEnumerable<ObserverInformation>>();
         var observable = _observerStorageProvider().ObserveAll();
-        var subscription = observable.Subscribe(_ => clientObservable.OnNext(_));
+        var subscription = observable.Subscribe(clientObservable.OnNext);
         clientObservable.ClientDisconnected = () =>
         {
             subscription.Dispose();

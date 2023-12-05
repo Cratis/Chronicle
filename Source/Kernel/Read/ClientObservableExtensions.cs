@@ -19,8 +19,8 @@ public static class ClientObservableExtensions
     public static ClientObservable<TType> ToClientObservable<TType>(this IObservable<TType> observable)
     {
         var clientObservable = new ClientObservable<TType>();
-        var subscription = observable.Subscribe(_ => clientObservable.OnNext(_));
-        clientObservable.ClientDisconnected = () => subscription.Dispose();
+        var subscription = observable.Subscribe(clientObservable.OnNext);
+        clientObservable.ClientDisconnected = subscription.Dispose;
         return clientObservable;
     }
 }
