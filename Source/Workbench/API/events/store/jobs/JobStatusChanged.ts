@@ -13,4 +13,10 @@ export class JobStatusChanged {
 
     @field(Date)
     occurred!: Date;
+
+    @field(String, true)
+    exceptionMessages!: string[];
+
+    @field(String)
+    exceptionStackTrace!: string;
 }

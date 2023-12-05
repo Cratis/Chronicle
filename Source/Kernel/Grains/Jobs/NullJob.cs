@@ -30,7 +30,7 @@ public class NullJob : IJob
     public Task SetTotalSteps(int totalSteps) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task StatusChanged(JobStatus status) => Task.CompletedTask;
+    public Task StatusChanged(JobStatus status, Exception? exception = null) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task Stop() => Task.CompletedTask;

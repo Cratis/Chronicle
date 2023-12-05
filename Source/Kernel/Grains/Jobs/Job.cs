@@ -245,12 +245,14 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     }
 
     /// <inheritdoc/>
-    public Task StatusChanged(JobStatus status)
+    public Task StatusChanged(JobStatus status, Exception? exception = null)
     {
         State.StatusChanges.Add(new JobStatusChanged
         {
             Status = status,
-            Occurred = DateTimeOffset.UtcNow
+            Occurred = DateTimeOffset.UtcNow,
+            ExceptionStackTrace = exception?.StackTrace ?? string.Empty,
+            ExceptionMessages = exception?.GetAllMessages() ?? Enumerable.Empty<string>()
         });
 
         return Task.CompletedTask;
@@ -342,12 +344,41 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
     void PrepareAndStartAllJobSteps(GrainId grainId) => _ = Task.Run(async () =>
     {
-        await PrepareJobStepsForRunning();
+        using var scope = _logger?.BeginJobScope(JobId, JobKey);
+        _logger?.PrepareJobStepsForRunning();
 
-        await ThisJob.StatusChanged(JobStatus.Running);
+        await ThisJob.StatusChanged(JobStatus.PreparingStepsForRunning);
+
+        try
+        {
+            await PrepareJobStepsForRunning();
+        }
+        catch (Exception ex)
+        {
+            _logger?.Failed(ex);
+
+            await ThisJob.StatusChanged(JobStatus.Failed, ex);
+            await ThisJob.WriteState();
+            return;
+        }
+
+        await ThisJob.StatusChanged(JobStatus.StartingSteps);
         await ThisJob.WriteState();
 
-        await StartAllJobSteps(grainId);
+        try
+        {
+            await StartAllJobSteps(grainId);
+
+            await ThisJob.StatusChanged(JobStatus.Running);
+            await ThisJob.WriteState();
+        }
+        catch (Exception ex)
+        {
+            _logger?.Failed(ex);
+
+            await ThisJob.StatusChanged(JobStatus.Failed, ex);
+            await ThisJob.WriteState();
+        }
     });
 
     async Task StartAllJobSteps(GrainId grainId)

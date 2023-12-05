@@ -17,4 +17,14 @@ public class JobStatusChanged
     /// Gets or sets when the event occurred.
     /// </summary>
     public DateTimeOffset Occurred { get; set; }
+
+    /// <summary>
+    /// Gets or sets any exception messages that happened during the job step - typically when it failed.
+    /// </summary>
+    public IEnumerable<string> ExceptionMessages { get; set; } = Enumerable.Empty<string>();
+
+    /// <summary>
+    /// Gets or sets the stack trace for the exception that happened during the job step - typically when it failed.
+    /// </summary>
+    public string ExceptionStackTrace { get; set; } = string.Empty;
 }

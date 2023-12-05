@@ -23,6 +23,8 @@ const getJobStatusText = (status: JobStatus) => {
         case JobStatus.none: return 'None';
         case JobStatus.preparing: return 'Preparing job';
         case JobStatus.preparingSteps: return 'Preparing steps';
+        case JobStatus.preparingStepsForRunning: return 'Preparing steps for running';
+        case JobStatus.startingSteps: return 'Starting steps';
         case JobStatus.running: return 'Running';
         case JobStatus.completedSuccessfully: return 'Completed successfully';
         case JobStatus.completedWithFailures: return 'Completed with failures';

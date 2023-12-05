@@ -63,13 +63,14 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// Adds a status change to the job.
     /// </summary>
     /// <param name="status"><see cref="JobStatus"/> to add.</param>
+    /// <param name="exception">Optional <see cref="Exception"/> associated with the status.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// This is called internally. Do not call this from external code.
     /// Due to the intricacy of how jobs run from different task contexts outside of Orleans, this is needed to be able to
     /// update state.
     /// </remarks>
-    Task StatusChanged(JobStatus status);
+    Task StatusChanged(JobStatus status, Exception? exception = null);
 
     /// <summary>
     /// Set the total number of steps for the job.

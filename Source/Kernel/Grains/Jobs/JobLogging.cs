@@ -23,10 +23,16 @@ internal static partial class JobLogMessages
     internal static partial void Stopping(this ILogger<IJob> logger);
 
     [LoggerMessage(4, LogLevel.Trace, "Step {JobStepId} successfully completed")]
-
     internal static partial void StepSuccessfullyCompleted(this ILogger<IJob> logger, JobStepId jobStepId);
+
     [LoggerMessage(5, LogLevel.Trace, "Step {JobStepId} failed")]
     internal static partial void StepFailed(this ILogger<IJob> logger, JobStepId jobStepId);
+
+    [LoggerMessage(6, LogLevel.Trace, "Preparing job steps for running")]
+    internal static partial void PrepareJobStepsForRunning(this ILogger<IJob> logger);
+
+    [LoggerMessage(7, LogLevel.Error, "Job failed")]
+    internal static partial void Failed(this ILogger<IJob> logger, Exception exception);
 }
 
 internal static class JobScopes
