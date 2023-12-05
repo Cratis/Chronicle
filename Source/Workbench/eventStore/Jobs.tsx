@@ -30,6 +30,7 @@ const getJobStatusText = (status: JobStatus) => {
         case JobStatus.completedWithFailures: return 'Completed with failures';
         case JobStatus.paused: return 'Paused';
         case JobStatus.stopped: return 'Stopped';
+        case JobStatus.failed: return 'Failed';
     }
 }
 
