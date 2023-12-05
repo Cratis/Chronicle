@@ -27,7 +27,9 @@ public class a_catchup_observer : Specification
         silo.AddService(indexes.Object);
         silo.AddService(new JsonSerializerOptions());
 
-        silo.AddProbe<ICatchUpObserver>(_ => job);
+        var jobMock = new Mock<ICatchUpObserver>();
+
+        silo.AddProbe(_ => jobMock.Object);
         job = await silo.CreateGrainAsync<CatchUpObserverWrapper>(job_id, job_key);
     }
 }
