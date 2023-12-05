@@ -30,6 +30,11 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
     /// <inheritdoc/>
     protected override Task<bool> CanResume()
     {
+        if (State.Request is null)
+        {
+            return Task.FromResult(false);
+        }
+
         var observer = GrainFactory.GetGrain<IObserver>(State.Request.ObserverId, State.Request.ObserverKey);
         return observer.IsSubscribed();
     }
