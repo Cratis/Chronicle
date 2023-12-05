@@ -132,7 +132,11 @@ public class MongoDBSchemaStore : ISchemaStore
 
         if (schemas.Count == 0)
         {
-            throw new MissingEventSchemaForEventType(type, generation);
+            throw new MissingEventSchemaForEventType(
+                _executionContextManager.Current.MicroserviceId,
+                _executionContextManager.Current.TenantId,
+                type,
+                generation);
         }
 
         return schemas[0].ToEventSchema();

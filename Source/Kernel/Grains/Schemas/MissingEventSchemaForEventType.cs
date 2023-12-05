@@ -11,9 +11,12 @@ public class MissingEventSchemaForEventType : Exception
     /// <summary>
     /// Initializes a new instance of the <see cref="MissingEventSchemaForEventType"/>.
     /// </summary>
+    /// <param name="microserviceId">The <see cref="MicroserviceId"/> the schema is missing for.</param>
+    /// <param name="tenantId">The <see cref="TenantId"/> the schema is missing for.</param>
     /// <param name="type">The <see cref="EventTypeId"/> missing.</param>
     /// <param name="generation">The <see cref="EventGeneration"/> that is missing.</param>
-    public MissingEventSchemaForEventType(EventTypeId type, EventGeneration generation) : base($"Event type '{type}' with generation '{generation}' is missing from the event schema store")
+    public MissingEventSchemaForEventType(MicroserviceId microserviceId, TenantId tenantId, EventTypeId type, EventGeneration generation)
+        : base($"Event type '{type}' with generation '{generation}' is missing from the event schema store for microservice '{microserviceId}' and tenant '{tenantId}'")
     {
     }
 }
