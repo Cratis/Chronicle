@@ -1,9 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Reflection;
 using Aksio.Cratis.Conventions;
 using Aksio.Cratis.Events;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Observation;
 
@@ -12,11 +14,11 @@ namespace Aksio.Cratis.Observation;
 /// </summary>
 public class ObserverInvoker : IObserverInvoker
 {
-    readonly Dictionary<EventType, MethodInfo> _methodsByEventTypeId;
+    readonly Dictionary<Type, MethodInfo> _methodsByEventType;
     readonly IServiceProvider _serviceProvider;
-    readonly IEventTypes _eventTypes;
     readonly IObserverMiddlewares _middlewares;
     readonly Type _targetType;
+    readonly ILogger<ObserverInvoker> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverInvoker"/> class.
@@ -25,49 +27,62 @@ public class ObserverInvoker : IObserverInvoker
     /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
     /// <param name="middlewares"><see cref="IObserverMiddlewares"/> to call.</param>
     /// <param name="targetType">Type of observer.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ObserverInvoker(
         IServiceProvider serviceProvider,
         IEventTypes eventTypes,
         IObserverMiddlewares middlewares,
-        Type targetType)
+        Type targetType,
+        ILogger<ObserverInvoker> logger)
     {
         _serviceProvider = serviceProvider;
-        _eventTypes = eventTypes;
         _middlewares = middlewares;
         _targetType = targetType;
-        _methodsByEventTypeId = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                                        .Where(_ => _.IsEventHandlerMethod())
-                                        .ToDictionary(_ => _eventTypes.GetEventTypeFor(_.GetParameters()[0].ParameterType), _ => _);
+        _logger = logger;
+        _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                                        .Where(_ => _.IsEventHandlerMethod(eventTypes.AllClrTypes))
+                                        .SelectMany(_ => _.GetParameters()[0].ParameterType.GetEventTypes(eventTypes.AllClrTypes).Select(eventType => (eventType, method: _)))
+                                        .ToDictionary(_ => _.eventType, _ => _.method);
+
+        EventTypes = _methodsByEventType.Keys.Select(_ => eventTypes.GetEventTypeFor(_)).ToImmutableList();
     }
 
     /// <inheritdoc/>
-    public IEnumerable<EventType> EventTypes => _methodsByEventTypeId.Keys;
+    public IImmutableList<EventType> EventTypes { get; }
 
     /// <inheritdoc/>
     public async Task Invoke(object content, EventContext eventContext)
     {
-        var actualObserver = _serviceProvider.GetService(_targetType);
-        var eventType = _eventTypes.GetEventTypeFor(content.GetType());
-
-        if (_methodsByEventTypeId.ContainsKey(eventType))
+        try
         {
-            Task returnValue;
-            var method = _methodsByEventTypeId[eventType];
-            var parameters = method.GetParameters();
+            var actualObserver = _serviceProvider.GetService(_targetType);
+            var eventType = content.GetType();
 
-            await _middlewares.BeforeInvoke(eventContext, content);
-
-            if (parameters.Length == 2)
+            if (_methodsByEventType.ContainsKey(eventType))
             {
-                returnValue = (Task)method.Invoke(actualObserver, new object[] { content, eventContext })!;
-            }
-            else
-            {
-                returnValue = (Task)method.Invoke(actualObserver, new object[] { content })!;
-            }
+                Task returnValue;
+                var method = _methodsByEventType[eventType];
+                var parameters = method.GetParameters();
 
-            if (returnValue is not null) await returnValue;
-            await _middlewares.AfterInvoke(eventContext, content);
+                await _middlewares.BeforeInvoke(eventContext, content);
+
+                if (parameters.Length == 2)
+                {
+                    returnValue = (Task)method.Invoke(actualObserver, new object[] { content, eventContext })!;
+                }
+                else
+                {
+                    returnValue = (Task)method.Invoke(actualObserver, new object[] { content })!;
+                }
+
+                if (returnValue is not null) await returnValue;
+                await _middlewares.AfterInvoke(eventContext, content);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.ObserverFailed(_targetType.FullName ?? _targetType.Name, content.GetType().Name, ex);
+            throw;
         }
     }
 }

@@ -39,6 +39,7 @@ public record ChildrenDefinition(
         From,
         Join,
         Children,
+        Enumerable.Empty<FromAnyDefinition>(),
         All,
         FromEventProperty,
         RemovedWith);

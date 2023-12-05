@@ -1,3 +1,39 @@
+# [v9.13.0] - 2023-12-3 [PR: #0]()
+
+### Added
+
+- Added support for base types with derivative event types for projections. Projections can just use the `From()` syntax with a base type, nothing changes. Behind the covers there is a new `FromAny` in the projection definition. Internal engine does not really care about the inheritance chain, as it just observes all concrete derivatives - just as we do with observers, reducers and aggregate roots. This new feature applies to all types of projections, including immediate projections which will then also be supported by Rules and AggregateRoot states. (#1030)
+
+# [v9.12.0] - 2023-12-3 [PR: #1029](https://github.com/aksio-insurtech/Cratis/pull/1029)
+
+### Added
+
+- Adding support for using base event types or interfaces in observers, reducers and aggregates. The system will identify event types from derivatives and register the event types of these for handling. (#1025)
+
+
+# [v9.11.0] - 2023-11-29 [PR: #1022](https://github.com/aksio-insurtech/Cratis/pull/1022)
+
+### Fixed
+
+- Equality check for projection definitions is now ignoring the `LastUpdated` property, which caused it to always be changed.
+- Fixing reducer pipeline to look at the flag `Replay` rather than comparing the entire value `Replay`. This caused the first event not to be considered part of replay and ended up in the sink being saved to the regular collection rather than the temporary replay collection.
+
+# [v9.10.0] - 2023-11-24 [PR: #1020](https://github.com/aksio-insurtech/Cratis/pull/1020)
+
+### Fixed
+
+- Converter from JSON to ExpandoObject and back now honors null values. If a property if missing from the JSON or the ExpandoObject but is in the schema, we set it to default value for primitives and null for non primitives.
+
+
+# [v9.9.1] - 2023-11-16 [PR: #1016](https://github.com/aksio-insurtech/Cratis/pull/1016)
+
+### Fixed
+
+- Added logging to `GetModelInstance()` for immediate projections.
+- Added last updated to projection definitions.
+- Immediate projection now uses the `LastUpdated` property of a projection to decide if ti should rewind the sequence number if it is newer than what the "cached" state is based on.
+
+
 # [v9.9.0] - 2023-11-15 [PR: #0]()
 
 ### Added

@@ -139,6 +139,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         }
 
         var result = await _sink.FindOrDefault(key);
+        result?.RemoveNulls();
         var json = JsonSerializer.Serialize(result, Globals.JsonSerializerOptions);
         return new(JsonSerializer.Deserialize<TModel>(json, Globals.JsonSerializerOptions)!, Array.Empty<PropertyPath>(), projectedEventsCount);
     }

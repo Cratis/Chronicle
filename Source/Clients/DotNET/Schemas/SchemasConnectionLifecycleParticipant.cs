@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Microsoft.Extensions.Logging;
@@ -21,15 +22,24 @@ public class SchemasConnectionLifecycleParticipant : IParticipateInConnectionLif
     /// </summary>
     /// <param name="connection">The Kernel <see cref="IConnection"/>.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/>.</param>
+    /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas for event types.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public SchemasConnectionLifecycleParticipant(
         IConnection connection,
         IEventTypes eventTypes,
+        IJsonSchemaGenerator schemaGenerator,
         ILogger<SchemasConnectionLifecycleParticipant> logger)
     {
         _connection = connection;
         _logger = logger;
-        _definitions = eventTypes.AllAsRegistrations;
+        _definitions = eventTypes.AllClrTypes.Select(_ =>
+        {
+            var type = _;
+            return new EventTypeRegistration(
+                eventTypes.GetEventTypeFor(type)!,
+                type.Name,
+                JsonNode.Parse(schemaGenerator.Generate(type).ToJson())!);
+        });
     }
 
     /// <inheritdoc/>

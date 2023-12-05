@@ -55,5 +55,6 @@ public class when_there_are_projections_from_all_sources : given.all_dependencie
                 new Dictionary<EventType, FromDefinition>(),
                 new Dictionary<EventType, JoinDefinition>(),
                 new Dictionary<PropertyPath, ChildrenDefinition>(),
+                Enumerable.Empty<FromAnyDefinition>(),
                 new AllDefinition(new Dictionary<PropertyPath, string>(), false))).ToArray();
 }

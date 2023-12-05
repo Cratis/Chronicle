@@ -247,6 +247,45 @@ public static class JsonSchemaExtensions
         };
     }
 
+    /// <summary>
+    /// Get the default value for a <see cref="JsonSchemaProperty"/>.
+    /// </summary>
+    /// <param name="schemaProperty"><see cref="JsonSchemaProperty"/> to get default value for.</param>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> holding known JSON schema type formats.</param>
+    /// <returns>The default value.</returns>
+    public static object? GetDefaultValue(this JsonSchemaProperty schemaProperty, ITypeFormats typeFormats)
+    {
+        if (schemaProperty.IsNullable())
+        {
+            return null;
+        }
+
+        var type = schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats);
+
+        if (type is not null && (type.IsPrimitive || !type.IsByRef) &&
+                type != typeof(string) &&
+                type != typeof(object))
+        {
+            try
+            {
+                return Activator.CreateInstance(type);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Get whether or not property format is set to nullable.
+    /// </summary>
+    /// <param name="schemaProperty"><see cref="JsonSchemaProperty"/> to check.</param>
+    /// <returns>True if it is, false if not.</returns>
+    public static bool IsNullable(this JsonSchemaProperty schemaProperty) => schemaProperty.Format?.EndsWith("?") ?? false;
+
     static void CollectPropertiesFrom(JsonSchema schema, List<JsonSchemaProperty> properties)
     {
         properties.AddRange(schema.ActualProperties.Select(_ => _.Value));

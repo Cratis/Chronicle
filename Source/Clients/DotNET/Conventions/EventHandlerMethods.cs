@@ -15,8 +15,9 @@ public static class EventHandlerMethods
     /// Check if a <see cref="MethodInfo"/> is an event handler method.
     /// </summary>
     /// <param name="methodInfo"><see cref="MethodInfo"/> to check.</param>
+    /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>True if it is, false if not.</returns>
-    public static bool IsEventHandlerMethod(this MethodInfo methodInfo)
+    public static bool IsEventHandlerMethod(this MethodInfo methodInfo, IEnumerable<Type> eventTypes)
     {
         var isEventHandlerMethod = (methodInfo.ReturnType.IsAssignableTo(typeof(Task)) && !methodInfo.ReturnType.IsGenericType) ||
                                     methodInfo.ReturnType == typeof(void);
@@ -25,7 +26,7 @@ public static class EventHandlerMethods
         var parameters = methodInfo.GetParameters();
         if (parameters.Length >= 1)
         {
-            isEventHandlerMethod = parameters[0].ParameterType.IsEventType();
+            isEventHandlerMethod = parameters[0].ParameterType.IsEventType(eventTypes);
             if (parameters.Length == 2)
             {
                 isEventHandlerMethod &= parameters[1].ParameterType == typeof(EventContext);

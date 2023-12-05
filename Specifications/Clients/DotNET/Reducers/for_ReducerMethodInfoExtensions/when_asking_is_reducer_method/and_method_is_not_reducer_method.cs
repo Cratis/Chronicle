@@ -16,7 +16,7 @@ public class and_method_is_not_reducer_method : Specification
 
     bool result;
 
-    void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something)).IsReducerMethod(typeof(ReadModel));
+    void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something)).IsReducerMethod(typeof(ReadModel), Enumerable.Empty<Type>());
 
     [Fact] void should_not_be_considered_a_reducer_method() => result.ShouldBeFalse();
 }

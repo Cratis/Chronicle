@@ -57,6 +57,11 @@ public class EventValueProviderExpressionResolvers : IEventValueProviderExpressi
 
     object Convert(JsonSchemaProperty schemaProperty, object input)
     {
+        if (input is null)
+        {
+            return null!;
+        }
+
         if (input is ExpandoObject)
         {
             var expandoObject = (input as IDictionary<string, object>)!;
