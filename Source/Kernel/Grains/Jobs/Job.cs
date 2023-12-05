@@ -402,9 +402,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         {
             var id = this.GetPrimaryKey(out var keyExtension);
             var key = (JobKey)keyExtension!;
-            await GrainFactory
-                    .GetGrain<IJobsManager>(0, new JobsManagerKey(key.MicroserviceId, key.TenantId))
-                    .OnCompleted(id, State.Status);
             await OnCompleted();
 
             if (State.Progress.FailedSteps > 0)
@@ -415,6 +412,10 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             {
                 await StatusChanged(JobStatus.CompletedSuccessfully);
             }
+
+            await GrainFactory
+                    .GetGrain<IJobsManager>(0, new JobsManagerKey(key.MicroserviceId, key.TenantId))
+                    .OnCompleted(id, State.Status);
 
             State.Remove = RemoveAfterCompleted;
 
