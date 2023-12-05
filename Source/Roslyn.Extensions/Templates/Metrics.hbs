@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using Fundamentals.Metrics;
+using Aksio.Cratis.Metrics;
 
 namespace {{Namespace}};
 
@@ -20,7 +20,7 @@ public static partial class {{ClassName}}
             {{#Tags}}
             new("{{Name}}", {{name}}){{#unless @last}},{{/unless}}
             {{/Tags}}
-        }));        
+        }));
 
         {{MethodName}}Metric.Add(1, tags);
     }
