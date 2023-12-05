@@ -14,6 +14,7 @@ namespace Aksio.Cratis.Kernel.Engines.Projections;
 [SingletonPerMicroserviceAndTenant]
 public class ProjectionManager : IProjectionManager
 {
+    readonly IExecutionContextManager _executionContextManager;
     readonly IProjectionFactory _projectionFactory;
     readonly IProjectionPipelineFactory _projectionPipelineFactory;
     readonly ILogger<ProjectionManager> _logger;
@@ -23,14 +24,17 @@ public class ProjectionManager : IProjectionManager
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionManager"/> class.
     /// </summary>
+    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> to use.</param>
     /// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> to use.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ProjectionManager(
+        IExecutionContextManager executionContextManager,
         IProjectionFactory projectionFactory,
         IProjectionPipelineFactory projectionPipelineFactory,
         ILogger<ProjectionManager> logger)
     {
+        _executionContextManager = executionContextManager;
         _projectionFactory = projectionFactory;
         _projectionPipelineFactory = projectionPipelineFactory;
         _logger = logger;
@@ -56,6 +60,8 @@ public class ProjectionManager : IProjectionManager
     /// <inheritdoc/>
     public async Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition)
     {
+        using var scope = _logger.BeginProjectionManagerScope(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId);
+
         _logger.Registering(projectionDefinition.Identifier, projectionDefinition.Name);
 
         var projection = await _projectionFactory.CreateFrom(projectionDefinition);
