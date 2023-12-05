@@ -12,8 +12,8 @@ public class when_deactivating_grain : given.a_state_machine_with_well_known_sta
     void Establish()
     {
         // We clear this, because we don't care about the initial state transitions and state written to storage in this spec
+        _ = state_machine;  // Since the state machine is lazily created, we need an instance of it before we can clear states since it performs operations on creation that we record
         silo.StorageStats().ResetCounts();
-        _ = state_machine;  // Since the state machine is lazily created, we need an instance of it before we can clear states
         on_calls.Clear();
 
         state_that_does_not_support_transitioning.StateToReturnOnLeave = new() { Something = "Leave State" };

@@ -15,8 +15,7 @@ public class with_unknown_initial_state_type : given.a_state_machine
             new StateThatSupportsTransitioningFrom()
         };
 
-    async Task Because() => exception = await Catch.Exception(async () => await state_machine.OnActivateAsync(CancellationToken.None));
+    void Because() => exception = Catch.Exception(() => _ = state_machine);
 
     [Fact] void should_throw_invalid_type_for_state_exception() => exception.ShouldBeOfExactType<UnknownStateTypeInStateMachine>();
-    [Fact] async Task should_set_state_machine_on_all_states() => (await state_machine.GetStates()).All(_ => _.StateMachine.Equals(state_machine)).ShouldBeTrue();
 }

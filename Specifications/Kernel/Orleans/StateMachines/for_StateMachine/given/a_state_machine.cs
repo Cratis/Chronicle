@@ -9,9 +9,20 @@ namespace Aksio.Cratis.Kernel.Orleans.StateMachines.given;
 
 public abstract class a_state_machine : Specification
 {
+    object lock_object = new();
     StateMachineForTesting? state_machine_private;
 
-    protected StateMachineForTesting state_machine => state_machine_private ??= silo.CreateGrainAsync<StateMachineForTesting>(IdSpan.Create(string.Empty)).GetAwaiter().GetResult();
+    protected StateMachineForTesting state_machine
+    {
+        get
+        {
+            lock (lock_object)
+            {
+                state_machine_private ??= silo.CreateGrainAsync<StateMachineForTesting>(IdSpan.Create(string.Empty)).GetAwaiter().GetResult();
+                return state_machine_private;
+            }
+        }
+    }
     protected virtual Type? initial_state => default;
     protected IStorage<StateMachineState> state_storage;
 
