@@ -98,7 +98,6 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         var streamId = StreamId.Create(_eventSequenceKey, (Guid)_eventSequenceId);
         var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _stream = streamProvider.GetStream<AppendedEvent>(streamId);
-
         _meterScope = _meter.BeginEventSequenceScope(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId);
 
         await base.OnActivateAsync(cancellationToken);
