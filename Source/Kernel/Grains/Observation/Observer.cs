@@ -10,6 +10,7 @@ using Aksio.Cratis.Kernel.Grains.Observation.States;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
+using Aksio.Cratis.Metrics;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
@@ -26,6 +27,7 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<Observer> _logger;
+    readonly IMeter<Observer> _meter;
     readonly ILoggerFactory _loggerFactory;
     readonly IPersistentState<FailedPartitions> _failuresState;
     readonly IObserverServiceClient _replayStateServiceClient;
@@ -36,6 +38,7 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
     IEventSequence _eventSequence = null!;
+    IMeterScope<Observer>? _metrics;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
@@ -44,6 +47,7 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
     /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
     /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Observer(
         IExecutionContextManager executionContextManager,
@@ -51,12 +55,14 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
         IPersistentState<FailedPartitions> failures,
         IObserverServiceClient replayStateServiceClient,
         ILogger<Observer> logger,
+        IMeter<Observer> meter,
         ILoggerFactory loggerFactory)
     {
         _executionContextManager = executionContextManager;
         _failuresState = failures;
         _replayStateServiceClient = replayStateServiceClient;
         _logger = logger;
+        _meter = meter;
         _loggerFactory = loggerFactory;
         _subscription = ObserverSubscription.Unsubscribed;
     }
@@ -83,6 +89,8 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
             _observerKey.EventSequenceId,
             new EventSequenceKey(_observerKey.MicroserviceId, _observerKey.TenantId));
+
+        _metrics = _meter.BeginObserverScope(_observerId, _observerKey);
     }
 
     /// <inheritdoc/>
@@ -244,6 +252,8 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
         string exceptionStackTrace)
     {
         using var scope = _logger.BeginObserverScope(_observerId, _observerKey);
+
+        _metrics?.PartitionFailed(partition);
 
         _logger.PartitionFailed(
             partition,

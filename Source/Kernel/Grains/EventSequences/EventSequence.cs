@@ -33,7 +33,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly ProviderFor<IIdentityStore> _identityStoreProvider;
     readonly ProviderFor<IObserverStorage> _observerStorageProvider;
-    readonly Meter<EventSequence> _meter;
+    readonly IMeter<EventSequence> _meter;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManagerProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
@@ -41,7 +41,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
     IAsyncStream<AppendedEvent>? _stream;
-    IMeterScope<EventSequence>? _meterScope;
+    IMeterScope<EventSequence>? _metrics;
 
     /// <summary>
     /// Initializes a new instance of <see cref="EventSequence"/>.
@@ -60,7 +60,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         ProviderFor<IIdentityStore> identityStoreProvider,
         ProviderFor<IObserverStorage> observerStorageProvider,
-        Meter<EventSequence> meter,
+        IMeter<EventSequence> meter,
         IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManagerProvider,
         IExpandoObjectConverter expandoObjectConverter,
@@ -98,7 +98,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         var streamId = StreamId.Create(_eventSequenceKey, (Guid)_eventSequenceId);
         var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _stream = streamProvider.GetStream<AppendedEvent>(streamId);
-        _meterScope = _meter.BeginEventSequenceScope(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId);
+        _metrics = _meter.BeginEventSequenceScope(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId);
 
         await base.OnActivateAsync(cancellationToken);
     }
@@ -206,7 +206,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 
                     await _stream!.OnNextAsync(appendedEvent, new EventSequenceNumberToken(State.SequenceNumber));
 
-                    _meterScope?.AppendedEvent(eventSourceId, eventName);
+                    _metrics?.AppendedEvent(eventSourceId, eventName);
 
                     State.TailSequenceNumberPerEventType[eventType.Id] = State.SequenceNumber;
 
@@ -214,7 +214,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                 }
                 catch (DuplicateEventSequenceNumber)
                 {
-                    _meterScope?.DuplicateEventSequenceNumber(eventSourceId, eventName);
+                    _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
                     State.SequenceNumber++;
                     await WriteStateAsync();
                 }
@@ -223,7 +223,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         }
         catch (UnableToAppendToEventSequence ex)
         {
-            _meterScope?.FailedAppending(eventSourceId, eventName);
+            _metrics?.FailedAppending(eventSourceId, eventName);
             _logger.FailedAppending(
                 _eventSequenceKey.MicroserviceId,
                 _eventSequenceKey.TenantId,

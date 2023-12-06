@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics.Metrics;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Metrics;
 
@@ -24,7 +23,7 @@ internal static partial class EventSequenceMetrics
 
 internal static class EventSequenceMetricsScopes
 {
-    internal static IMeterScope<EventSequence> BeginEventSequenceScope(this Meter<EventSequence> meter, MicroserviceId microserviceId, TenantId tenantId) =>
+    internal static IMeterScope<EventSequence> BeginEventSequenceScope(this IMeter<EventSequence> meter, MicroserviceId microserviceId, TenantId tenantId) =>
         meter.BeginScope(new Dictionary<string, object>
         {
             ["MicroserviceId"] = microserviceId,
