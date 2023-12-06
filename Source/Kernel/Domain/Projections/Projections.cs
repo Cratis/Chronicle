@@ -16,7 +16,7 @@ namespace Aksio.Cratis.Kernel.Domain.Projections;
 /// Represents the API for projections.
 /// </summary>
 [Route("/api/events/store/{microserviceId}/projections")]
-public class Projections : Controller
+public class Projections : ControllerBase
 {
     readonly IGrainFactory _grainFactory;
     readonly IJsonProjectionSerializer _projectionSerializer;

@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using Aksio.Applications.Autofac;
+using Aksio.Cratis.Kernel.Server.Serialization;
 using Serilog;
 
 #pragma warning disable SA1600
@@ -29,13 +30,15 @@ public static class Program
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
             .UseMongoDB()
-            .UseAksio()
+            .UseAksio(mvcOptions => mvcOptions.Filters.Add<KernelReadyResourceFilter>(0))
             .UseCratis(_ => _.InKernel())
             .UseOrleans(_ => _
                 .UseCluster()
                 .UseStreamCaching()
                 .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
+                .ConfigureCpuBoundWorkers()
                 .ConfigureSerialization()
+                .AddReplayStateManagement()
                 .UseTelemetry()
                 .UseDashboard(options =>
                 {

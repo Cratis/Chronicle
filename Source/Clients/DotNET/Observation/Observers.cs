@@ -46,7 +46,7 @@ public class Observers : IObservers
     public async Task<IEnumerable<ObserverInformation>> GetObserversForEventTypes(IEnumerable<Type> eventTypes)
     {
         var observers = await GetAllObservers();
-        var eventTypeIdentifiers = eventTypes.Select(_ => _eventTypes.GetEventTypeFor(_));
+        var eventTypeIdentifiers = eventTypes.Select(_eventTypes.GetEventTypeFor);
         return observers.Where(_ => _.EventTypes.Any(_ => eventTypeIdentifiers.Contains(_)));
     }
 }

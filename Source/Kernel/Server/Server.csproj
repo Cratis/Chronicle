@@ -31,6 +31,7 @@
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
         <ProjectReference Include="../MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../Orleans/Orleans.csproj" />
+        <ProjectReference Include="../Persistence/Persistence.csproj" />
         <ProjectReference Include="../Reactions/Reactions.csproj" />
         <ProjectReference Include="../Read/Read.csproj" />
         <ProjectReference Include="../Shared/Shared.csproj" />

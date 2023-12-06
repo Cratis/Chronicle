@@ -14,12 +14,12 @@ namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 public interface IMongoDBConverter
 {
     /// <summary>
-    /// Convert a <see cref="PropertyPath"/> and <see cref="IArrayIndexers"/> to a MongoDB property.
+    /// Convert a <see cref="PropertyPath"/> and <see cref="ArrayIndexers"/> to a MongoDB property.
     /// </summary>
     /// <param name="propertyPath"><see cref="PropertyPath"/> to convert from.</param>
-    /// <param name="arrayIndexers">Accompanying <see cref="IArrayIndexers"/> for indexing an array.</param>
+    /// <param name="arrayIndexers">Accompanying <see cref="ArrayIndexers"/> for indexing an array.</param>
     /// <returns>Converted <see cref="MongoDBProperty"/>.</returns>
-    MongoDBProperty ToMongoDBProperty(PropertyPath propertyPath, IArrayIndexers arrayIndexers);
+    MongoDBProperty ToMongoDBProperty(PropertyPath propertyPath, ArrayIndexers arrayIndexers);
 
     /// <summary>
     /// Convert a <see cref="Key"/> to a <see cref="BsonValue"/>.

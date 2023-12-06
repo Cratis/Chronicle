@@ -12,7 +12,7 @@ namespace Basic;
 
 public class Order : AggregateRoot<OrderState>
 {
-    public async Task DoStuff()
+    public void DoStuff()
     {
         Console.WriteLine($"Before : {State.CartItems.Count()}");
 
@@ -24,7 +24,7 @@ public class Order : AggregateRoot<OrderState>
         Console.WriteLine($"After : {State.CartItems.Count()}");
     }
 
-    public async Task DoOtherStuff()
+    public void DoOtherStuff()
     {
         Apply(new ItemRemovedFromCart(
             new(Guid.NewGuid()),

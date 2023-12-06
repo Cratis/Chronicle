@@ -21,6 +21,7 @@ public class MoneyLaundering
 
     public async Task AccountOpened(DebitAccountOpened @event, EventContext context)
     {
+        throw new NotImplementedException();
         var count = await _immediateProjections.GetInstanceById<AccountsCounter>(context.EventSourceId);
         if (count.Model.Count > 42)
         {

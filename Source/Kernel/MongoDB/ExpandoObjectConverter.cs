@@ -208,7 +208,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
         if (value is BsonArray array)
         {
-            return array.Select(_ => ConvertUnknownSchemaTypeToClrType(_)).ToArray();
+            return array.Select(ConvertUnknownSchemaTypeToClrType).ToArray();
         }
 
         switch (value.BsonType)

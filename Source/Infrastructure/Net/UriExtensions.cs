@@ -17,7 +17,8 @@ public static class UriExtensions
     /// <returns>The URI.</returns>'
     public static Uri GetFirstAddressAsUri(this IServerAddressesFeature addresses)
     {
-        var address = addresses.Addresses.First();
+        var address = addresses.Addresses.FirstOrDefault(a => a.StartsWith("http:"));
+        address ??= addresses.Addresses.First();
         address = address.Replace("//+", "//localhost").Replace("//*", "//localhost");
         return new Uri(address);
     }

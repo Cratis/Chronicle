@@ -9,11 +9,6 @@ namespace Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
 public class TenantConfigurationState : Dictionary<string, string>
 {
     /// <summary>
-    /// The name of the storage provider used for working with this type of state.
-    /// </summary>
-    public const string StorageProvider = "tenant-configuration-state";
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="TenantConfigurationState"/> class.
     /// </summary>
     public TenantConfigurationState()

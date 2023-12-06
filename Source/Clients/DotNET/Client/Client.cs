@@ -31,10 +31,10 @@ public class Client : IClient
     public bool IsMultiTenanted { get; }
 
     /// <inheritdoc/>
-    public Task Connect()
-    {
-        return _connection.Connect();
-    }
+    public Task Connect() => _connection.Connect();
+
+    /// <inheritdoc/>
+    public Task Disconnect() => _connection.Disconnect();
 
     /// <inheritdoc/>
     public IEventSequences GetEventSequences(TenantId? tenantId = default)

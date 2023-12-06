@@ -20,17 +20,7 @@ public enum EventObservationState
     Initial = 1,
 
     /// <summary>
-    /// The head of the replay, the first event for the replay.
-    /// </summary>
-    HeadOfReplay = 1 << 1,
-
-    /// <summary>
     /// Replay observation, this is not the first time its observed for the observer.
     /// </summary>
-    Replay = 1 << 2,
-
-    /// <summary>
-    /// The tail of the replay, the last event for the replay.
-    /// </summary>
-    TailOfReplay = 1 << 3,
+    Replay = 1 << 1,
 }

@@ -1,0 +1,43 @@
+{{#UsingStatements}}
+using {{this}};
+{{/UsingStatements}}
+
+namespace {{Namespace}};
+
+#nullable enable
+
+{{ClassDefinition}}
+{
+    {{#Counters}}
+    static Counter<{{Type}}>? {{MethodName}}Metric;
+    {{/Counters}}
+
+    {{#Counters}}
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Cratis.Roslyn.Extensions", "1.0.0")]
+    {{{MethodSignature}}}
+    {
+        {{#if IsScoped}}
+        if( {{MethodName}}Metric is null && {{ScopeParameter}}.Meter is not null )
+        {
+            {{MethodName}}Metric = {{ScopeParameter}}.Meter.CreateCounter<{{Type}}>("{{Name}}", "{{Description}}");
+        }
+        {{/if}}
+
+        var tags = new TagList(new ReadOnlySpan<KeyValuePair<string, object?>>(new KeyValuePair<string, object?>[]
+        {
+            {{#Tags}}
+            new("{{Name}}", {{name}}){{#unless @last}},{{/unless}}
+            {{/Tags}}
+        }));
+
+        {{#if IsScoped}}
+        foreach (var (key, value) in {{ScopeParameter}}.Tags)
+        {
+            tags.Add(key, value);
+        }
+        {{/if}}
+
+        {{MethodName}}Metric?.Add(1, tags);
+    }
+    {{/Counters}}
+}

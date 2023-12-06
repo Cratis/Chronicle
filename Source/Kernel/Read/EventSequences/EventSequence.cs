@@ -4,7 +4,8 @@
 using System.Text.Json;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +17,7 @@ namespace Aksio.Cratis.Kernel.Read.EventSequences;
 /// Represents the API for working with the event log.
 /// </summary>
 [Route("/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}")]
-public class EventSequence : Controller
+public class EventSequence : ControllerBase
 {
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProviderProvider;
     readonly ProviderFor<IObserverStorage> _observerStorage;
@@ -122,7 +123,7 @@ public class EventSequence : Controller
         [FromQuery(Name = "eventTypes[]")] IEnumerable<string> eventTypes = null!)
     {
         var result = new List<AppendedEventWithJsonAsContent>();
-        var parsedEventTypes = eventTypes.Select(EventType.Parse).ToArray();
+        var parsedEventTypes = eventTypes?.Select(EventType.Parse).ToArray();
 
         var correlationId = _executionContextManager.Current.CorrelationId;
         _executionContextManager.Establish(tenantId, correlationId, microserviceId);
@@ -200,5 +201,5 @@ public class EventSequence : Controller
     public Task<IEnumerable<EventHistogramEntry>> Histogram(/*[FromRoute] EventSequenceId eventSequenceId*/) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
 
     IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
-        _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new MicroserviceAndTenant(microserviceId, tenantId));
+        _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new EventSequenceKey(microserviceId, tenantId));
 }

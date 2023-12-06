@@ -145,5 +145,5 @@ public class MongoDBIdentityStore : IIdentityStore
         return false;
     }
 
-    IMongoCollection<MongoDBIdentity> GetCollection() => _database.GetCollection<MongoDBIdentity>(CollectionNames.Identities);
+    IMongoCollection<MongoDBIdentity> GetCollection() => _database.GetCollection<MongoDBIdentity>(WellKnownCollectionNames.Identities);
 }

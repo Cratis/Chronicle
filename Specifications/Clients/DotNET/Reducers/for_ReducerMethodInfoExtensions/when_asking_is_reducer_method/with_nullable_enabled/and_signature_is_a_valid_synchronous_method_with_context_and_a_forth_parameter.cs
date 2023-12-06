@@ -18,7 +18,7 @@ public class and_signature_is_a_valid_synchronous_method_with_context_and_a_fort
 
     bool result;
 
-    void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something)).IsReducerMethod(typeof(ReadModel), Enumerable.Empty<Type>());
+    void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something))!.IsReducerMethod(typeof(ReadModel), Enumerable.Empty<Type>());
 
     [Fact] void should_not_be_considered_a_reducer_method() => result.ShouldBeFalse();
 }

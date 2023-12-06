@@ -32,7 +32,7 @@ public class EventSequences : Grain, IEventSequences
             EventSequenceId.System,
         };
 
-        var eventSequenceKey = new MicroserviceAndTenant(_key.MicroserviceId, _key.TenantId);
+        var eventSequenceKey = new EventSequenceKey(_key.MicroserviceId, _key.TenantId);
         foreach (var eventSequence in eventSequences)
         {
             var grain = GrainFactory.GetGrain<IEventSequence>(eventSequence, eventSequenceKey);

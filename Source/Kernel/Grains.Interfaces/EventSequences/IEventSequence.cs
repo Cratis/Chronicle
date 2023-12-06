@@ -5,7 +5,6 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Identities;
-using Aksio.Cratis.Kernel.Grains.Workers;
 using Orleans.Concurrency;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
@@ -102,8 +101,8 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <param name="reason">Reason for redacting.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the redaction, defined by <see cref="Identity"/>.</param>
-    /// <returns>A <see cref="IWorker{TRequest, TResponse}"/>.</returns>
-    Task<IWorker<RewindPartitionForObserversAfterRedactRequest, RewindPartitionForObserversAfterRedactResponse>> Redact(EventSequenceNumber sequenceNumber, RedactionReason reason, IEnumerable<Causation> causation, Identity causedBy);
+    /// <returns>Awaitable task.</returns>
+    Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Redact all events for a specific <see cref="EventSourceId"/>.
@@ -113,6 +112,6 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <param name="eventTypes">Optionally any specific event types.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the redaction, defined by <see cref="Identity"/>.</param>
-    /// <returns>A <see cref="IWorker{TRequest, TResponse}"/>.</returns>
-    Task<IWorker<RewindPartitionForObserversAfterRedactRequest, RewindPartitionForObserversAfterRedactResponse>> Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes, IEnumerable<Causation> causation, Identity causedBy);
+    /// <returns>Awaitable task.</returns>
+    Task Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes, IEnumerable<Causation> causation, Identity causedBy);
 }

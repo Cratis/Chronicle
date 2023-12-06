@@ -74,7 +74,7 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
                 await _pipeline.Handle(@event);
                 lastSuccessfullyObservedEvent = @event;
             }
-            return ObserverSubscriberResult.Ok;
+            return ObserverSubscriberResult.Ok(events.Last().Metadata.SequenceNumber);
         }
         catch (Exception ex)
         {

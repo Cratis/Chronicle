@@ -11,14 +11,14 @@ namespace Benchmarks.Projections;
 
 public class ProjectionJob : BenchmarkJob
 {
-    protected IObserverSupervisor ObserverSupervisor { get; private set; } = null!;
+    protected IObserver Observer { get; private set; } = null!;
 
     [IterationSetup]
     public void CleanEventStore()
     {
         SetExecutionContext();
 
-        Database?.DropCollection(CollectionNames.Observers);
+        Database?.DropCollection(WellKnownCollectionNames.Observers);
     }
 
     protected override void Setup()
@@ -27,6 +27,6 @@ public class ProjectionJob : BenchmarkJob
         base.Setup();
 
         var key = new ObserverKey(GlobalVariables.MicroserviceId, GlobalVariables.TenantId, EventSequenceId.Log);
-        ObserverSupervisor = GrainFactory.GetGrain<IObserverSupervisor>(Guid.Parse(CartProjection.ActualIdentifier), key);
+        Observer = GrainFactory.GetGrain<IObserver>(Guid.Parse(CartProjection.ActualIdentifier), key);
     }
 }

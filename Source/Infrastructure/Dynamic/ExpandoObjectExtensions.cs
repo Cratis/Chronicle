@@ -131,7 +131,7 @@ public static class ExpandoObjectExtensions
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns><see cref="ExpandoObject"/> at property.</returns>
     /// <exception cref="SegmentValueIsNotCollection">Thrown if a segment value should be expando object.</exception>
-    public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property, IArrayIndexers arrayIndexers)
+    public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property, ArrayIndexers arrayIndexers)
     {
         var currentTarget = target as IDictionary<string, object>;
         var segments = property.Segments.ToArray();
@@ -220,7 +220,7 @@ public static class ExpandoObjectExtensions
     /// <param name="arrayIndexers">Any <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns>The ensured <see cref="ICollection{ExpandoObject}"/>.</returns>
     /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown if there is an existing property and it is not enumerable.</exception>
-    public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, IArrayIndexers arrayIndexers)
+    public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, ArrayIndexers arrayIndexers)
     {
         var inner = target.EnsurePath(childrenProperty, arrayIndexers) as IDictionary<string, object>;
         if (!inner.ContainsKey(childrenProperty.LastSegment.Value) || inner[childrenProperty.LastSegment.Value] is null)

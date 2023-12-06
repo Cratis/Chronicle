@@ -4,7 +4,7 @@
 namespace Read.AccountHolders;
 
 [Route("/api/accountholders")]
-public class AccountHolderQueries : Controller
+public class AccountHolderQueries : ControllerBase
 {
     readonly IMongoCollection<AccountHolder> _collection;
     readonly IMongoCollection<AccountHolderWithAccounts> _withAccountsCollection;

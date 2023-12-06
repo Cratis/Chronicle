@@ -39,7 +39,7 @@ public class ReducerInvoker : IReducerInvoker
                                         .SelectMany(_ => _.GetParameters()[0].ParameterType.GetEventTypes(eventTypes.AllClrTypes).Select(eventType => (eventType, method: _)))
                                         .ToDictionary(_ => _.eventType, _ => _.method);
 
-        EventTypes = _methodsByEventType.Keys.Select(_ => eventTypes.GetEventTypeFor(_)).ToImmutableList();
+        EventTypes = _methodsByEventType.Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
     }
 
     /// <inheritdoc/>
@@ -94,14 +94,17 @@ public class ReducerInvoker : IReducerInvoker
                         new InternalReduceResult(
                             initialReadModelContent,
                             lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
-                            ex));
+                            ex.GetAllMessages(),
+                            ex.StackTrace ?? string.Empty));
             }
         }
 
         return Task.FromResult(
             new InternalReduceResult(
                 initialReadModelContent,
-                lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable));
+                lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
+                Enumerable.Empty<string>(),
+                string.Empty));
     }
 
     TReadModel GetResult<TReadModel>(Task<TReadModel> task) => task.GetAwaiter().GetResult();

@@ -28,18 +28,16 @@ public interface ISink
     /// Find a model by key, or return an empty object if not found.
     /// </summary>
     /// <param name="key">Key of the model to find.</param>
-    /// <param name="isReplaying">Whether or not we're in replay mode.</param>
     /// <returns>A model instance with the data from the source, or an empty object.</returns>
-    Task<ExpandoObject?> FindOrDefault(Key key, bool isReplaying);
+    Task<ExpandoObject?> FindOrDefault(Key key);
 
     /// <summary>
     /// Update or insert model based on key.
     /// </summary>
     /// <param name="key">Key of the model to upsert.</param>
     /// <param name="changeset">All changes in the form of a <see cref="Changeset{Event, ExpandoObject}"/>.</param>
-    /// <param name="isReplaying">Whether or not we're in replay mode.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isReplaying);
+    Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset);
 
     /// <summary>
     /// Enter replay state.
@@ -56,11 +54,10 @@ public interface ISink
     /// <summary>
     /// Prepare the sink for an initial run.
     /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     /// <remarks>
     /// Typically the sink will clear out any existing data. This is to be able to guarantee
     /// the idempotency of the projection.
     /// </remarks>
-    /// <param name="isReplaying">Whether or not we're in replay mode.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task PrepareInitialRun(bool isReplaying);
+    Task PrepareInitialRun();
 }

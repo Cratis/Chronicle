@@ -18,8 +18,10 @@ public interface IEventSequenceStorage
     /// Get count of events in an event sequence.
     /// </summary>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to get count for.</param>
+    /// <param name="lastEventSequenceNumber">Optional last sequence number to count.</param>
+    /// <param name="eventTypes">Event types to count for.</param>
     /// <returns>Total number of events.</returns>
-    Task<long> GetCount(EventSequenceId eventSequenceId);
+    Task<EventCount> GetCount(EventSequenceId eventSequenceId, EventSequenceNumber? lastEventSequenceNumber = null, IEnumerable<EventType>? eventTypes = null);
 
     /// <summary>
     /// Append a single event to the event store.
@@ -94,6 +96,14 @@ public interface IEventSequenceStorage
     Task<EventSequenceNumber> GetTailSequenceNumber(EventSequenceId eventSequenceId, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
 
     /// <summary>
+    /// Get the tail sequence numbers for a specific event sequence and any of a given set of event types.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence to get for.</param>
+    /// <param name="eventTypes">Event types to get for.</param>
+    /// <returns>The <see cref="TailEventSequenceNumbers"/>.</returns>
+    Task<TailEventSequenceNumbers> GetTailSequenceNumbers(EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes);
+
+    /// <summary>
     /// Get the sequence number of the last event as part for given event types.
     /// </summary>
     /// <param name="eventSequenceId">The event sequence to get for.</param>
@@ -157,8 +167,9 @@ public interface IEventSequenceStorage
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> to get from.</param>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to filter for.</param>
     /// <param name="eventTypes">Optional collection of <see cref="EventType">event types</see> to filter for.</param>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/>.</returns>
-    Task<IEventCursor> GetFromSequenceNumber(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default);
+    Task<IEventCursor> GetFromSequenceNumber(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get events within a specific sequence number range.
@@ -168,6 +179,7 @@ public interface IEventSequenceStorage
     /// <param name="end">End of the range.</param>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to filter for.</param>
     /// <param name="eventTypes">Optional collection of <see cref="EventType">event types</see> to filter for.</param>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/>.</returns>
-    Task<IEventCursor> GetRange(EventSequenceId eventSequenceId, EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default);
+    Task<IEventCursor> GetRange(EventSequenceId eventSequenceId, EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default);
 }

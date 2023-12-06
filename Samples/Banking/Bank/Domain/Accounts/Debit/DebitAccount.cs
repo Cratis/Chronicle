@@ -7,7 +7,7 @@ using Events.Accounts.Debit;
 namespace Domain.Accounts.Debit;
 
 [Route("/api/accounts/debit/{accountId}")]
-public class DebitAccount : Controller
+public class DebitAccount : ControllerBase
 {
     readonly IEventLog _eventLog;
 

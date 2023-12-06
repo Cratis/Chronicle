@@ -39,15 +39,15 @@ public class ReducerPipeline : IReducerPipeline
     public ISink Sink { get; }
 
     /// <inheritdoc/>
+    public Task BeginReplay() => Sink.BeginReplay();
+
+    /// <inheritdoc/>
+    public Task EndReplay() => Sink.EndReplay();
+
+    /// <inheritdoc/>
     public async Task Handle(ReducerContext context, ReducerDelegate reducer)
     {
-        if (context.ObservationState.HasFlag(EventObservationState.HeadOfReplay))
-        {
-            await Sink.BeginReplay();
-        }
-
-        var isReplaying = context.ObservationState.HasFlag(EventObservationState.Replay);
-        var initial = await Sink.FindOrDefault(context.Key, isReplaying);
+        var initial = await Sink.FindOrDefault(context.Key);
 
         var reduced = await reducer(context.Events, initial);
 
@@ -56,11 +56,6 @@ public class ReducerPipeline : IReducerPipeline
         {
             changeset.Add(new PropertiesChanged<ExpandoObject>(null!, differences));
         }
-        await Sink.ApplyChanges(context.Key, changeset, isReplaying);
-
-        if (context.ObservationState.HasFlag(EventObservationState.TailOfReplay))
-        {
-            await Sink.EndReplay();
-        }
+        await Sink.ApplyChanges(context.Key, changeset);
     }
 }

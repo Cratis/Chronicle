@@ -5,6 +5,10 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
+using Aksio.Cratis.Kernel.Grains.Observation.States;
+using Aksio.Cratis.Kernel.Grains.Recommendations;
+using Aksio.Cratis.Kernel.Observation.Replaying;
+using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.DependencyInversion;
@@ -70,6 +74,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
 
         foreach (var microserviceId in _microservices.GetMicroserviceIds())
         {
+            _executionContextManager.Establish(microserviceId);
             var projectionPipelineDefinitions = await _projectionPipelineDefinitions().GetAll();
             foreach (var pipeline in projectionPipelineDefinitions)
             {
@@ -77,13 +82,12 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
 
                 if (await _projectionDefinitions().TryGetFor(pipeline.ProjectionId) is (true, ProjectionDefinition projectionDefinition))
                 {
-                    await _projectionManagerProvider().Register(projectionDefinition, pipeline);
-
                     if (!projectionDefinition.IsActive) continue;
 
                     foreach (var tenant in _configuration.Tenants.GetTenantIds())
                     {
                         _executionContextManager.Establish(tenant, CorrelationId.New(), microserviceId);
+                        await _projectionManagerProvider().Register(projectionDefinition, pipeline);
                         var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
                         await GrainFactory.GetGrain<IProjection>(pipeline.ProjectionId, key).Ensure();
                     }
@@ -176,7 +180,22 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             else
             {
                 _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
-                await projection.Rewind();
+
+                foreach (var tenantId in _configuration.Tenants.GetTenantIds())
+                {
+                    var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(microserviceId, tenantId));
+                    await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
+                        "Projection definition has changed.",
+                        new ReplayCandidateRequest
+                        {
+                            ObserverId = (Guid)projectionDefinition.Identifier,
+                            ObserverKey = new ObserverKey(microserviceId, tenantId, EventSequenceId.Log),
+                            Reasons = new[]
+                            {
+                                new ProjectionDefinitionChangedReplayCandidateReason()
+                            }
+                        });
+                }
             }
         }
     }

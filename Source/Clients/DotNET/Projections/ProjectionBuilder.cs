@@ -85,7 +85,7 @@ public class ProjectionBuilder<TModel, TBuilder> : IProjectionBuilder<TModel, TB
             throw new TypeIsNotAnEventType(typeof(TEvent));
         }
 
-        var eventTypes = type.GetEventTypes(_eventTypes.AllClrTypes).Select(_ => _eventTypes.GetEventTypeFor(_)).ToArray();
+        var eventTypes = type.GetEventTypes(_eventTypes.AllClrTypes).Select(_eventTypes.GetEventTypeFor).ToArray();
 
         var builder = new FromBuilder<TModel, TEvent, TBuilder>(this);
         builderCallback(builder);

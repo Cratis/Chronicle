@@ -6,6 +6,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Events.EventSequences;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Microsoft.AspNetCore.Mvc;
 using EventRedacted = Aksio.Cratis.Kernel.Events.EventSequences.EventRedacted;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
@@ -18,7 +19,7 @@ namespace Aksio.Cratis.Kernel.Domain.EventSequences;
 /// Represents the API for working with the event log.
 /// </summary>
 [Route("/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}")]
-public class EventSequence : Controller
+public class EventSequence : ControllerBase
 {
     readonly IGrainFactory _grainFactory;
     readonly IExecutionContextManager _executionContextManager;
@@ -182,5 +183,5 @@ public class EventSequence : Controller
     }
 
     IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
-        _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new MicroserviceAndTenant(microserviceId, tenantId));
+        _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new EventSequenceKey(microserviceId, tenantId));
 }

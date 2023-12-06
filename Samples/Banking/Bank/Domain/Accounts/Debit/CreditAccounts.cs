@@ -6,7 +6,7 @@ using Events.Accounts.Credit;
 namespace Domain.Accounts.Debit;
 
 [Route("/api/accounts/credit")]
-public class CreditAccounts : Controller
+public class CreditAccounts : ControllerBase
 {
     readonly IEventLog _eventLog;
 

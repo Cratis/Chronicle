@@ -40,7 +40,14 @@ public class KernelConfiguration : IPerformPostBindOperations
     /// <inheritdoc/>
     public void Perform()
     {
-        Tenants[TenantId.NotSet.ToString()] = new();
+        Tenants[TenantId.NotSet.ToString()] = new()
+        {
+            Name = "Default Single Tenant"
+        };
+        Microservices[MicroserviceId.Unspecified.ToString()] = new()
+        {
+            Name = "Shared"
+        };
         Microservices[MicroserviceId.Unspecified.ToString()] = new() { Name = "Shared" };
         Microservices[MicroserviceId.Kernel.ToString()] = new() { Name = "Kernel" };
         Storage.ConfigureKernelMicroservice(Tenants.Select(_ => _.Key));

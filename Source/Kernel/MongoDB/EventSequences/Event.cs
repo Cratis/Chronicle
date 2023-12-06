@@ -6,8 +6,6 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Identities;
 using MongoDB.Bson;
 
-#nullable disable
-
 namespace Aksio.Cratis.Kernel.MongoDB;
 
 /// <summary>

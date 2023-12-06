@@ -20,6 +20,12 @@ public interface IClient
     Task Connect();
 
     /// <summary>
+    /// DIsconnect from the Cratis kernel.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Disconnect();
+
+    /// <summary>
     /// Gets the <see cref="IEventSequences"/>.
     /// </summary>
     /// <param name="tenantId">Optional <see cref="TenantId"/>.</param>

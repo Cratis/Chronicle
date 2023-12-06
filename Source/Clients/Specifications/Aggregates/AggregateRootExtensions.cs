@@ -24,6 +24,7 @@ public static class AggregateRootExtensions
     public static AggregateRoot Initialize(this AggregateRoot aggregateRoot, EventSourceId eventSourceId, IEnumerable<object>? events = default)
     {
         aggregateRoot.EventHandlers = new AggregateRootEventHandlers(GlobalsForSpecifications.EventTypes, aggregateRoot.GetType());
+        aggregateRoot.StateProvider = new NullAggregateRootStateProvider();
         aggregateRoot.EventSequence = new NullEventSequence();
         aggregateRoot.CausationManager = new NullCausationManager();
         aggregateRoot._eventSourceId = eventSourceId;

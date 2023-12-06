@@ -23,7 +23,7 @@ and call the appropriate `Append` method.
 using Aksio.Cratis.Events;
 
 [Route("/api/employees")]
-public class EmployeesController : Controller
+public class EmployeesController : ControllerBase
 {
     readonly IEventLog _eventLog;
 

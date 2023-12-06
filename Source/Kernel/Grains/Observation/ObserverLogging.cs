@@ -1,0 +1,39 @@
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Keys;
+using Aksio.Cratis.Observation;
+using Microsoft.Extensions.Logging;
+
+namespace Aksio.Cratis.Kernel.Grains.Observation;
+
+#pragma warning disable SA1600 // Elements should be documented
+#pragma warning disable MA0048 // File name must match type name
+
+internal static partial class ObserverLogMessages
+{
+    [LoggerMessage(0, LogLevel.Information, "Subscribing observer")]
+    internal static partial void Subscribing(this ILogger<Observer> logger);
+
+    [LoggerMessage(1, LogLevel.Trace, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}")]
+    internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(2, LogLevel.Trace, "Trying to recover partition {Partition}")]
+    internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(3, LogLevel.Trace, "Giving up on trying to recover failed partition {Partition} automatically")]
+    internal static partial void GivingUpOnRecoveringFailedPartition(this ILogger<Observer> logger, Key partition);
+}
+
+internal static class ObserverScopes
+{
+    internal static IDisposable? BeginObserverScope(this ILogger<Observer> logger, ObserverId observerId, ObserverKey observerKey) =>
+        logger.BeginScope(new Dictionary<string, object>
+        {
+            ["ObserverId"] = observerId,
+            ["MicroserviceId"] = observerKey.MicroserviceId,
+            ["TenantId"] = observerKey.TenantId,
+            ["EventSequenceId"] = observerKey.EventSequenceId
+        });
+}

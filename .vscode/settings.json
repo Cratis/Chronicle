@@ -55,6 +55,7 @@
     "cSpell.words": [
         "aksioinsurtech",
         "appsettings",
+        "ASPNETCORE",
         "Autofac",
         "Brotli",
         "Bson",
@@ -91,6 +92,7 @@
         "Referer",
         "Remindable",
         "Swashbuckle",
+        "Testcontainers",
         "tinycolor",
         "typeparam",
         "Unmap",

@@ -3,6 +3,7 @@
 
 using System.Diagnostics.Metrics;
 using Aksio.Cratis.Kernel.Orleans.Configuration;
+using Aksio.Cratis.Metrics;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -26,6 +27,7 @@ public static class TelemetryConfigurationExtensions
             var telemetryConfig = services.GetTelemetryConfig();
             var meter = new Meter("Cratis.Kernel");
             services.AddSingleton(meter);
+            services.AddSingleton(typeof(Meter<>));
 
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 

@@ -20,7 +20,7 @@ public class Inbox : Grain, IInbox
         var microserviceId = this.GetPrimaryKey(out var keyAsString);
         var key = InboxKey.Parse(keyAsString);
 
-        var observer = GrainFactory.GetGrain<IObserverSupervisor>(
+        var observer = GrainFactory.GetGrain<IObserver>(
             microserviceId,
             new ObserverKey(
                 microserviceId,

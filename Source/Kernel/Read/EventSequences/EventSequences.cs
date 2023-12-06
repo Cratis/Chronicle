@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Kernel.Read.EventSequences;
 /// Represents the API for working with event logs.
 /// </summary>
 [Route("/api/events/store/sequences")]
-public class EventSequences : Controller
+public class EventSequences : ControllerBase
 {
     /// <summary>
     /// Gets all event sequences.

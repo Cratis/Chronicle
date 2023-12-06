@@ -238,7 +238,7 @@ public class PropertyPath
     /// <param name="target">Object to get from.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns>Value, if any.</returns>
-    public bool HasValue(object target, IArrayIndexers arrayIndexers)
+    public bool HasValue(object target, ArrayIndexers arrayIndexers)
     {
         if (target is ExpandoObject targetAsExpandoObject)
         {
@@ -257,7 +257,7 @@ public class PropertyPath
     /// <param name="target">Object to get from.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns>Value, if any.</returns>
-    public object? GetValue(object target, IArrayIndexers arrayIndexers)
+    public object? GetValue(object target, ArrayIndexers arrayIndexers)
     {
         if (target is ExpandoObject targetAsExpandoObject)
         {
@@ -276,7 +276,7 @@ public class PropertyPath
     /// <param name="target">Object to set to.</param>
     /// <param name="value">Value to set.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
-    public void SetValue(object target, object value, IArrayIndexers arrayIndexers)
+    public void SetValue(object target, object value, ArrayIndexers arrayIndexers)
     {
         if (target is ExpandoObject targetAsExpandoObject)
         {

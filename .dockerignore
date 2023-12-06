@@ -9,5 +9,6 @@ package-json.lock
 dist
 for_*
 Dockerfile
+**/Dockerfile
 appsettings.json
 appsettings.Development.json

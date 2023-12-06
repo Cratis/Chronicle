@@ -7,8 +7,6 @@ using Aksio.Cratis.Reducers.Validators;
 
 namespace Aksio.Cratis.Reducers;
 
-#nullable disable
-
 /// <summary>
 /// Extension methods for identifying a <see cref="MethodInfo"/> as reducer method.
 /// </summary>
@@ -33,8 +31,7 @@ public static class ReducerExtensionMethods
     public static bool IsReducerMethod(this MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes)
     {
         var isReducerMethod = methodInfo.ReturnType == readModelType ||
-                              methodInfo.ReturnType == typeof(Task<>).MakeGenericType(readModelType) ||
-                              methodInfo.ReturnType == typeof(void);
+                              methodInfo.ReturnType == typeof(Task<>).MakeGenericType(readModelType);
 
         if (!isReducerMethod) return false;
         var parameters = methodInfo.GetParameters();
@@ -45,7 +42,7 @@ public static class ReducerExtensionMethods
             parameters[0].ParameterType.IsEventType(eventTypes) &&
             parameters[1].ParameterType.Equals(readModelType))
         {
-            if (methodInfo.DeclaringType.IsNullableContext() && !parameters[1].IsNullableReferenceType())
+            if ((methodInfo.DeclaringType?.IsNullableContext() ?? false) && !parameters[1].IsNullableReferenceType())
             {
                 return false;
             }

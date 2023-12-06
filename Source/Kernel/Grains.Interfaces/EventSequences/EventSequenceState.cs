@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#nullable disable
-
 using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
@@ -12,11 +10,6 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 /// </summary>
 public class EventSequenceState
 {
-    /// <summary>
-    /// The name of the storage provider used for working with this type of state.
-    /// </summary>
-    public const string StorageProvider = "event-sequence-state";
-
     /// <summary>
     /// Gets or sets the next event sequence number for the next event being appended.
     /// </summary>

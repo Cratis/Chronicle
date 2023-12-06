@@ -2,19 +2,21 @@
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Kernel.Grains</AssemblyName>
         <RootNamespace>Aksio.Cratis.Kernel.Grains</RootNamespace>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\GeneratedFiles</CompilerGeneratedFilesOutputPath>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="../Engines/Engines.csproj" />
+        <ProjectReference Include="../Persistence/Persistence.csproj" />
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
+        <ProjectReference Include="../../Roslyn.Extensions/Roslyn.Extensions.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Orleans.Streaming" />
       <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
       <PackageReference Include="Microsoft.Orleans.Sdk" />
+      <PackageReference Include="Microsoft.Orleans.Reminders" />
     </ItemGroup>
 </Project>
