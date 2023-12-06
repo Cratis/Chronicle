@@ -6,7 +6,7 @@ namespace Roslyn.Extensions.Metrics;
 /// <summary>
 /// Represents the template for counter tags.
 /// </summary>
-public class CounterTagTemplateData
+public class TagTemplateData
 {
     /// <summary>
     /// Gets or sets the type of tag.

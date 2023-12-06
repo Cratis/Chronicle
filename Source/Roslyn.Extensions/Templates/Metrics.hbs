@@ -1,26 +1,42 @@
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
-using Aksio.Cratis.Metrics;
+{{#UsingStatements}}
+using {{this}};
+{{/UsingStatements}}
 
 namespace {{Namespace}};
 
 #nullable enable
 
-public static partial class {{ClassName}}
+{{ClassDefinition}}
 {
     {{#Counters}}
-    static readonly Counter<{{Type}}> {{MethodName}}Metric = GlobalMetrics.Meter.CreateCounter<{{Type}}>("{{Name}}", "{{Description}}");
+    static Counter<{{Type}}>? {{MethodName}}Metric;
     {{/Counters}}
 
     {{#Counters}}
-    public static partial void {{MethodName}}({{#Tags}}{{Type}} {{Name}}{{#unless @last}}, {{/unless}}{{/Tags}})
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Cratis.Roslyn.Extensions", "1.0.0")]
+    {{{MethodSignature}}}
     {
+        {{#if IsScoped}}
+        if( {{MethodName}}Metric == null )
+        {
+            {{MethodName}}Metric = {{ScopeParameter}}.Meter.CreateCounter<{{Type}}>("{{Name}}", "{{Description}}");
+        }
+        {{/if}}
+
         var tags = new TagList(new ReadOnlySpan<KeyValuePair<string, object?>>(new KeyValuePair<string, object?>[]
         {
             {{#Tags}}
             new("{{Name}}", {{name}}){{#unless @last}},{{/unless}}
             {{/Tags}}
         }));
+
+        {{#if IsScoped}}
+        foreach (var tag in {{ScopeParameter}}.Tags)
+        {
+            tags.Append(tag);
+        }
+        {{/if}}
 
         {{MethodName}}Metric.Add(1, tags);
     }

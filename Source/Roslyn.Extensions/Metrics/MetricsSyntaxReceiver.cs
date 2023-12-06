@@ -12,6 +12,12 @@ namespace Roslyn.Extensions.Metrics;
 /// </summary>
 public class MetricsSyntaxReceiver : ISyntaxReceiver
 {
+    static readonly string[] _metricsAttributes = new[]
+    {
+        "Counter",
+        "Measurement"
+    };
+
     readonly List<ClassDeclarationSyntax> _candidates = new();
 
     /// <summary>
@@ -25,12 +31,19 @@ public class MetricsSyntaxReceiver : ISyntaxReceiver
         if (syntaxNode is not ClassDeclarationSyntax classSyntax) return;
 
         if (classSyntax.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PartialKeyword)) &&
-            classSyntax.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.StaticKeyword)) && classSyntax.Members.Any(member =>
-                member.IsKind(SyntaxKind.MethodDeclaration) &&
+            classSyntax.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.StaticKeyword)) &&
+            classSyntax.Members.Any(member => member.IsKind(SyntaxKind.MethodDeclaration) &&
+                HasMetricsAttribute(member) &&
                 member.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PartialKeyword)) &&
                 member.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.StaticKeyword))))
         {
             _candidates.Add(classSyntax);
         }
     }
+
+    bool HasMetricsAttribute(MemberDeclarationSyntax memberSyntax) => memberSyntax
+                            .AttributeLists
+                            .SelectMany(_ => _.Attributes)
+                            .Any(_ => _metricsAttributes
+                                .Any(m => _.Name.ToString().StartsWith(m)));
 }

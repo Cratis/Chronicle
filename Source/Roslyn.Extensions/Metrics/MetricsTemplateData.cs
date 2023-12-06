@@ -19,7 +19,22 @@ public class MetricsTemplateData
     public string ClassName { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the definition of the class.
+    /// </summary>
+    public string ClassDefinition { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the using statements.
+    /// </summary>
+    public IList<string> UsingStatements { get; set; } = new List<string>();
+
+    /// <summary>
     /// Gets or sets the counters.
     /// </summary>
-    public IList<CounterTemplateData> Counters { get; set; } = new List<CounterTemplateData>();
+    public IList<MetricTemplateData> Counters { get; set; } = new List<MetricTemplateData>();
+
+    /// <summary>
+    /// Gets or sets the measurements.
+    /// </summary>
+    public IList<MetricTemplateData> Measurements { get; set; } = new List<MetricTemplateData>();
 }
