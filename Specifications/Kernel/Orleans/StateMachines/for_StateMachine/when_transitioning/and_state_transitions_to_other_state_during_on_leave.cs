@@ -8,7 +8,7 @@ public class and_state_transitions_to_other_state_during_on_leave : given.a_stat
     protected override Type initial_state => typeof(StateThatTransitionsOnLeave);
     Exception result;
 
-    async Task Because() => result = await Catch.Exception(async () => await state_machine.TransitionTo<StateThatSupportsTransitioningFrom>());
+    async Task Because() => result = await Catch.Exception(state_machine.TransitionTo<StateThatSupportsTransitioningFrom>);
 
     [Fact] void should_throw_transitioning_during_on_leave_is_not_supported() => result.ShouldBeOfExactType<TransitioningDuringOnLeaveIsNotSupported>();
 }
