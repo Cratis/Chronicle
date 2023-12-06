@@ -4,8 +4,9 @@ import React from 'react';
 
 interface EditableFolderProps {
     node: IBookmarkNode;
+    editMode: (key: string) => void;
+    exitEditMode: () => void;
     editingNodeKey: string | null;
-    handleDoubleClick: (node: IBookmarkNode) => void;
     handleInputChange: (
         event: React.ChangeEvent<HTMLInputElement>,
         node: IBookmarkNode
@@ -15,21 +16,22 @@ interface EditableFolderProps {
 
 export const EditableFolder = ({
     node,
+    editMode,
+    exitEditMode,
     editingNodeKey,
     handleInputChange,
     handleInputKeyDown,
-    handleDoubleClick,
 }: EditableFolderProps) => {
     return editingNodeKey === node.key && node.children ? (
         <InputText
             type='text'
             autoFocus
             value={node.label}
-            onBlur={() => handleDoubleClick(node)}
-            onChange={(e) => handleInputChange(e, node)}
             onKeyDown={handleInputKeyDown}
+            onBlur={exitEditMode}
+            onChange={(e) => handleInputChange(e, node)}
         />
     ) : (
-        <span onDoubleClick={() => handleDoubleClick(node)}>{node.label}</span>
+        <span onDoubleClick={() => editMode(node.key)}>{node.label}</span>
     );
 };

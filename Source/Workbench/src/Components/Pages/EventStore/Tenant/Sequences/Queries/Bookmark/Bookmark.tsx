@@ -46,19 +46,22 @@ export const Bookmark = () => {
         []
     );
 
-    const handleDoubleClick = useCallback((node: IBookmarkNode) => {
-        if (node.children) {
-            setEditingNodeKey(node.key);
-        }
+    const editingMode = useCallback((key: string) => {
+        setEditingNodeKey(key);
+    }, []);
+
+    const exitEditMode = useCallback(() => {
+        setEditingNodeKey(null);
     }, []);
 
     const nodeTemplate = (node: any) => (
         <EditableFolder
             node={node}
+            editMode={editingMode}
+            exitEditMode={exitEditMode}
             editingNodeKey={editingNodeKey}
             handleInputChange={handleInputChange}
             handleInputKeyDown={handleInputKeyDown}
-            handleDoubleClick={handleDoubleClick}
         />
     );
 
