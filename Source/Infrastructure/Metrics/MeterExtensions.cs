@@ -15,7 +15,7 @@ public static class MeterExtensions
     /// <param name="tags">The tags associated with the scope.</param>
     /// <typeparam name="T">Type the scope is for.</typeparam>
     /// <returns>A new <see cref="IMeterScope{T}"/>.</returns>
-    public static IMeterScope<T> BeginScope<T>(this Meter<T> meter, IDictionary<string, object> tags)
+    public static IMeterScope<T> BeginScope<T>(this IMeter<T> meter, IDictionary<string, object> tags)
     {
         return new MeterScope<T>(meter, tags);
     }

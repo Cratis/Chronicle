@@ -14,9 +14,9 @@ public class MeterScope<T> : IMeterScope<T>
     /// <summary>
     /// Initializes a new instance of the <see cref="MeterScope{T}"/> class.
     /// </summary>
-    /// <param name="meter">The <see cref="Meter{T}"/> the scope is for.</param>
+    /// <param name="meter">The <see cref="IMeter{T}"/> the scope is for.</param>
     /// <param name="tags">Tags associated with the scope.</param>
-    public MeterScope(Meter<T> meter, IDictionary<string, object> tags)
+    public MeterScope(IMeter<T> meter, IDictionary<string, object> tags)
     {
         Meter = meter.ActualMeter;
         Tags = tags;
