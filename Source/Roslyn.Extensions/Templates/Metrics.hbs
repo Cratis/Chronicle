@@ -32,9 +32,9 @@ namespace {{Namespace}};
         }));
 
         {{#if IsScoped}}
-        foreach (var tag in {{ScopeParameter}}.Tags)
+        foreach (var (key, value) in {{ScopeParameter}}.Tags)
         {
-            tags.Append(tag);
+            tags.Add(key, value);
         }
         {{/if}}
 
