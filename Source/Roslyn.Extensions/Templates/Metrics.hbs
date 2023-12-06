@@ -17,7 +17,7 @@ namespace {{Namespace}};
     {{{MethodSignature}}}
     {
         {{#if IsScoped}}
-        if( {{MethodName}}Metric == null )
+        if( {{MethodName}}Metric is null && {{ScopeParameter}}.Meter is not null )
         {
             {{MethodName}}Metric = {{ScopeParameter}}.Meter.CreateCounter<{{Type}}>("{{Name}}", "{{Description}}");
         }
@@ -37,7 +37,7 @@ namespace {{Namespace}};
         }
         {{/if}}
 
-        {{MethodName}}Metric.Add(1, tags);
+        {{MethodName}}Metric?.Add(1, tags);
     }
     {{/Counters}}
 }
