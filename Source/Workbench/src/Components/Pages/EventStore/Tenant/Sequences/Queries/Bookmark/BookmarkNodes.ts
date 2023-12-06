@@ -1,4 +1,4 @@
-interface IBookmarkNode {
+export interface IBookmarkNode {
     key: string;
     label: string;
     icon?: string;
