@@ -14,6 +14,12 @@ namespace Roslyn.Extensions.Metrics;
 [Generator]
 public class MetricsSourceGenerator : ISourceGenerator
 {
+    static readonly string[] _systemUsings = new[]
+    {
+        "System.Diagnostics",
+        "System.Diagnostics.Metrics"
+    };
+
     /// <inheritdoc/>
     public void Execute(GeneratorExecutionContext context)
     {
@@ -104,7 +110,15 @@ public class MetricsSourceGenerator : ISourceGenerator
             }
         }
 
-        return usings;
+        foreach (var usingNamespace in _systemUsings.Reverse())
+        {
+            if (!usings.Contains(usingNamespace))
+            {
+                usings.Insert(0, usingNamespace);
+            }
+        }
+
+        return usings.Distinct();
     }
 
     static IEnumerable<TagTemplateData> GetParametersAsTags(MethodDeclarationSyntax method) =>
