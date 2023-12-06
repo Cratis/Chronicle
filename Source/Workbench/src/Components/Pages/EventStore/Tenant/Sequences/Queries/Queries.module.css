@@ -71,7 +71,7 @@
 }
 
 .toggleButton.open {
-    left: 215px;
+    left: 180px;
 }
 
 .actions {
@@ -80,4 +80,8 @@
 
 .activeTab .p-tabview .p-tabview-nav .p-tabview-nav-link.p-highlight {
     background-color: red;
+}
+
+.saveQuery {
+    width: 50vw;
 }

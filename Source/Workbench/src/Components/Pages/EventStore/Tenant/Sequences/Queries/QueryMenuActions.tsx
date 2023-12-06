@@ -1,5 +1,6 @@
 import { EChartExample } from './EChartExample';
 import { Menubar } from 'primereact/menubar';
+import { SaveQuery } from './SaveQuery';
 import css from './Queries.module.css';
 import { useState } from 'react';
 export interface QueryMenuActionsProps {
@@ -20,7 +21,7 @@ export const QueryMenuActions = (props: QueryMenuActionsProps) => {
             icon: 'pi pi-play',
         },
         {
-            label: 'Time rang',
+            label: 'Time range',
             icon: 'pi pi-chart-line',
             command: showChartHandler,
         },
@@ -36,6 +37,8 @@ export const QueryMenuActions = (props: QueryMenuActionsProps) => {
                 <Menubar model={items} />
             </div>
             {showChart && <EChartExample />}
+
+            <SaveQuery />
         </div>
     );
 };

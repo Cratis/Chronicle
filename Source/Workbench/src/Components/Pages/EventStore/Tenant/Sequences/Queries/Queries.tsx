@@ -3,19 +3,23 @@
 
 import { TabView, TabPanel } from 'primereact/tabview';
 import { QueryHeader, QueryType } from './QueryHeader';
+import { OverlayPanel } from 'primereact/overlaypanel';
 import { QueryMenuActions } from './QueryMenuActions';
+import { ChangeEvent, useRef, useState } from 'react';
 import { QueriesViewModel } from './QueriesViewModel';
 import { withViewModel } from 'MVVM/withViewModel';
 import { QuerySidebar } from './QuerySidebar';
-import { ChangeEvent, useState } from 'react';
 import { Button } from 'primereact/button';
 import css from './Queries.module.css';
+import { Bookmark } from './Bookmark/Bookmark';
 
 export const Queries = withViewModel(QueriesViewModel, () => {
     const [queries, setQueries] = useState<QueryType[]>([
         { title: 'Query 1', id: '1' },
         { title: 'Query 2', id: '2' },
     ]);
+    const op = useRef<OverlayPanel>(null);
+
     const [currentQuery, setCurrentQuery] = useState(0);
 
     const addQuery = () => {
@@ -42,11 +46,14 @@ export const Queries = withViewModel(QueriesViewModel, () => {
         setQueries(updatedQueries);
     };
 
-
     return (
         <div className={css.container}>
             <div className={css.buttonContainer}>
-                <Button icon='pi pi-book' />
+                <Button icon='pi pi-book' onClick={(e) => op.current?.toggle(e)} />
+                <OverlayPanel ref={op}>
+                    <h1>Queries</h1>
+                    <Bookmark />
+                </OverlayPanel>
                 <Button icon='pi pi-plus' onClick={addQuery} />
             </div>
             <TabView
