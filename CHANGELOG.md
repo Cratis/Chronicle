@@ -1,3 +1,31 @@
+# [v9.14.0] - 2023-12-6 [PR: #961](https://github.com/aksio-insurtech/Cratis/pull/961)
+
+## Summary
+
+This PR brings major changes to the observer infrastructure in the form of a complete rewrite of how it works. It also affects long running processes such as catch-up, replay and retry of failed partitions. This brings with it improved stability but also improved performance for the long running processes as these are scaled out on partition level.
+
+### Added
+
+- A new statemachine system at the core.
+- A new CPU bound system when wanting to perform work that is CPU bound but should be limited to a set number of parallell activities at once.
+- A Job system for scheduling long running jobs with a UI in the Workbench to see status of jobs.
+- Observer indexes - for now only one type of index; `EventSourceId`.
+- Recommendation system for taking recommendations from the system that can be turned into action.
+- Indexes for event sequences
+- Added number of events handled count on observers
+- More details on failed partitions, isolating every attempt with all information related to each attempt.
+- Started consolidation and formalization of the persistence layer, this is the first step to make it easier to implement support for other storage engines other than MongoDB.
+
+### Changes
+
+- Cratis no longer automatically replays when a definition change happen on an observer. It will instead add a recommendation for doing so, which can be applied if one wishes to do so.
+- Failed partition definition has changed - this is unfortunately a breaking change, without a migration path. The only way to deal with this is to delete any `failed-partitions` collections in the MongoDB.
+- All observers are now rehydrated on startup of the Kernel. This was lazily done before, causing the clients to have to wait on first connect.
+- Added infrastructure for writing integration tests.
+- Internally formalized when replaying. Rather than leveraging flags for knowing when a replay is happening, we now explicitly know. This had to change as we now perform replays by fanning out all partitions.
+
+
+
 # [v9.13.0] - 2023-12-3 [PR: #0]()
 
 ### Added
