@@ -16,6 +16,10 @@ public class a_projection_manager_without_any_projections : Specification
     void Establish()
     {
         execution_context_manager = new();
+        execution_context_manager.Setup(_ => _.Current).Returns(new ExecutionContext(
+            MicroserviceId.Unspecified,
+            TenantId.Development,
+            CorrelationId.New()));
         projection_factory = new();
         projection_pipeline_factory = new();
         manager = new ProjectionManager(
