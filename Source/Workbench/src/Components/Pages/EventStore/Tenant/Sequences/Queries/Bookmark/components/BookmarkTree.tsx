@@ -1,0 +1,59 @@
+/* Copyright (c) Aksio Insurtech. All rights reserved.
+   Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+import { NodeTemplate } from './NodeTemplate';
+import { IBookmarkNode } from '../TestData';
+import { Tree } from 'primereact/tree';
+
+export interface IBookmarkTreeProps {
+    nodes: IBookmarkNode[];
+    exitEditMode: () => void;
+    editingNodeKey: string | null;
+    editMode: (key: string) => void;
+    expandedKeys: { [key: string]: boolean };
+    addNewFolder: (parentNodeKey: string) => void;
+    handleInputChange: (
+        evt: React.ChangeEvent<HTMLInputElement>,
+        editingNode: IBookmarkNode
+    ) => void;
+    handleInputKeyDown: (evt: React.KeyboardEvent<HTMLInputElement>) => void;
+    setExpandedKeys: React.Dispatch<React.SetStateAction<{ [key: string]: boolean }>>;
+}
+
+export const BookmarkTree = (props: IBookmarkTreeProps) => {
+    const {
+        nodes,
+        editMode,
+        exitEditMode,
+        expandedKeys,
+        setExpandedKeys,
+        addNewFolder,
+        editingNodeKey,
+        handleInputChange,
+        handleInputKeyDown,
+    } = props;
+
+    const nodeTemplate = (node: any) => (
+        <NodeTemplate
+            node={node}
+            editMode={editMode}
+            exitEditMode={exitEditMode}
+            addNewFolder={addNewFolder}
+            editingNodeKey={editingNodeKey}
+            handleInputChange={handleInputChange}
+            handleInputKeyDown={handleInputKeyDown}
+        />
+    );
+
+    return (
+        <Tree
+            filter
+            value={nodes}
+            filterMode='lenient'
+            filterPlaceholder='Search'
+            nodeTemplate={nodeTemplate}
+            expandedKeys={expandedKeys}
+            onToggle={(e) => setExpandedKeys(e.value)}
+        />
+    );
+};

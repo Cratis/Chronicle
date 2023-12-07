@@ -1,14 +1,12 @@
+/* Copyright (c) Aksio Insurtech. All rights reserved.
+   Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
 import { EChartExample } from './EChartExample';
 import { Menubar } from 'primereact/menubar';
-import { SaveQuery } from './SaveQuery';
 import css from './Queries.module.css';
 import { useState } from 'react';
-export interface QueryMenuActionsProps {
-    val?: unknown;
-}
 
-export const QueryMenuActions = (props: QueryMenuActionsProps) => {
-    const { val } = props;
+export const QueryMenuActions = () => {
     const [showChart, setShowChart] = useState(false);
 
     const showChartHandler = () => {
@@ -37,8 +35,6 @@ export const QueryMenuActions = (props: QueryMenuActionsProps) => {
                 <Menubar model={items} />
             </div>
             {showChart && <EChartExample />}
-
-            <SaveQuery />
         </div>
     );
 };

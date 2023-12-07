@@ -8,10 +8,10 @@ import { QueryMenuActions } from './QueryMenuActions';
 import { ChangeEvent, useRef, useState } from 'react';
 import { QueriesViewModel } from './QueriesViewModel';
 import { withViewModel } from 'MVVM/withViewModel';
+import { Bookmark } from './Bookmark/Bookmark';
 import { QuerySidebar } from './QuerySidebar';
 import { Button } from 'primereact/button';
 import css from './Queries.module.css';
-import { Bookmark } from './Bookmark/Bookmark';
 
 export const Queries = withViewModel(QueriesViewModel, () => {
     const [queries, setQueries] = useState<QueryType[]>([

@@ -1,9 +1,12 @@
+/* Copyright (c) Aksio Insurtech. All rights reserved.
+   Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
 import { InputText } from 'primereact/inputtext';
 import { ChangeEvent } from 'react';
 
 export interface QueryType {
-    title: string;
     id: string;
+    title: string;
     isEditing?: boolean;
 }
 
