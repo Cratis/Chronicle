@@ -74,7 +74,7 @@ public class MongoDBRecommendationStorage : IRecommendationStorage
 
         if (requestAsDocument is not null)
         {
-            document["request"] = requestAsDocument[RecommendationRequestType];
+            document["request"] = requestAsDocument;
             document[RecommendationRequestType] = recommendationState.Request?.GetType().AssemblyQualifiedName ?? string.Empty;
         }
 
