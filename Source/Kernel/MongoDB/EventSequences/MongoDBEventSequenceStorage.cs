@@ -243,7 +243,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var filter = Builders<Event>.Filter.And(filters.ToArray());
 
         var highest = await collection.Find(filter)
-                                      .SortBy(_ => _.SequenceNumber)
+                                      .SortBySequenceNumber()
                                       .Limit(1)
                                       .SingleOrDefaultAsync()
                                       .ConfigureAwait(false);
@@ -275,7 +275,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
         var highest = await collection.Find(filter)
-                                      .SortByDescending(_ => _.SequenceNumber)
+                                      .SortByDescendingSequenceNumber()
                                       .Limit(1)
                                       .SingleOrDefaultAsync()
                                       .ConfigureAwait(false);
@@ -389,7 +389,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
         var highest = await collection.Find(filter)
-                                      .SortBy(_ => _.SequenceNumber)
+                                      .SortBySequenceNumber()
                                       .Limit(1)
                                       .SingleOrDefaultAsync()
                                       .ConfigureAwait(false);
@@ -419,7 +419,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 
         var collection = GetCollectionFor(eventSequenceId);
         var @event = await collection.Find(filter)
-                                     .SortByDescending(_ => _.SequenceNumber)
+                                     .SortByDescendingSequenceNumber()
                                      .Limit(1)
                                      .SingleAsync()
                                      .ConfigureAwait(false);
@@ -440,7 +440,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 
         var collection = GetCollectionFor(eventSequenceId);
         var @event = await collection.Find(filter)
-                                     .SortByDescending(_ => _.SequenceNumber)
+                                     .SortByDescendingSequenceNumber()
                                      .Limit(1)
                                      .SingleOrDefaultAsync()
                                      .ConfigureAwait(false) ?? throw new MissingEvent(eventSequenceId, eventTypeId, eventSourceId);
@@ -463,7 +463,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 
         var collection = GetCollectionFor(eventSequenceId);
         var @event = await collection.Find(filter)
-                                     .SortByDescending(_ => _.SequenceNumber)
+                                     .SortByDescendingSequenceNumber()
                                      .Limit(1)
                                      .SingleAsync()
                                      .ConfigureAwait(false);
@@ -498,7 +498,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
         var cursor = await collection.Find(filter)
-                                     .SortBy(_ => _.SequenceNumber)
+                                     .SortBySequenceNumber()
                                      .ToCursorAsync(cancellationToken)
                                      .ConfigureAwait(false);
         return new EventCursor(_converterProvider(), cursor);
@@ -534,7 +534,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var filter = Builders<Event>.Filter.And(filters.ToArray());
 
         var cursor = await collection.Find(filter)
-                                     .SortBy(_ => _.SequenceNumber)
+                                     .SortBySequenceNumber()
                                      .ToCursorAsync(cancellationToken)
                                      .ConfigureAwait(false);
         return new EventCursor(_converterProvider(), cursor);
