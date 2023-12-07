@@ -1,3 +1,10 @@
+# [v9.14.5] - 2023-12-7 [PR: #1036](https://github.com/aksio-insurtech/Cratis/pull/1036)
+
+### Fixed
+
+- Latest version of `Aksio.Applications``
+- Fixing serialization of JobSteps and Recommendations. Looks like the latest version of MongoDB.Driver is explicitly looking at the type definition of the owning type when serializing, rather than doing a `.GetType()`. It will default to an `ObjectSerializer` if the definition is set to `object` while the actual instance is a different type and it will then fall over.
+
 # [v9.14.4] - 2023-12-7 [PR: #1035](https://github.com/aksio-insurtech/Cratis/pull/1035)
 
 ### Fixed
