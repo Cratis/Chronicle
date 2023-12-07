@@ -1,3 +1,11 @@
+# [v9.14.2] - 2023-12-7 [PR: #1033](https://github.com/aksio-insurtech/Cratis/pull/1033)
+
+### Fixed
+
+- MongoDB version bumped to latest.
+- Implementing new `SearchIndexes` property for our `MongoCollectionAdapter<>` wrapper of `IMongoCollection<>`.
+
+
 # [v9.14.1] - 2023-12-7 [PR: #1032](https://github.com/aksio-insurtech/Cratis/pull/1032)
 
 ### Fixed
