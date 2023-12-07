@@ -1,3 +1,10 @@
+# [v9.14.6] - 2023-12-7 [PR: #1037](https://github.com/aksio-insurtech/Cratis/pull/1037)
+
+### Fixed
+
+- Passing along the request type on recommendation to `.ToBsonDocument()` as it then will pick the correct serializer.
+
+
 # [v9.14.5] - 2023-12-7 [PR: #1036](https://github.com/aksio-insurtech/Cratis/pull/1036)
 
 ### Fixed
