@@ -1,3 +1,20 @@
+# [v9.14.3] - 2023-12-7 [PR: #1034](https://github.com/aksio-insurtech/Cratis/pull/1034)
+
+## Summary
+
+Summary of the PR here. The GitHub release description is created from this comment so keep it nice and descriptive.
+Remember to remove sections that you don't need or use.
+If it does not make sense to have a summary, you can take that out as well.
+
+### Added
+
+- Support for specifications for immediate projections.
+
+### Fixed
+
+- Queries on event sequence that has sort is now using new extension methods for doing the sorting, which will unwrap the inner value of the `EventSequenceNumber` concept to avoid problems with the inner Linq provider of the MongoDB Driver.
+
+
 # [v9.14.2] - 2023-12-7 [PR: #1033](https://github.com/aksio-insurtech/Cratis/pull/1033)
 
 ### Fixed
