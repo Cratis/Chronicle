@@ -1,14 +1,14 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>1.4.2</ApplicationModel>
+    <ApplicationModel>1.5.3</ApplicationModel>
     <Orleans>7.2.4</Orleans>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.7" />
     <PackageVersion Include="docfx.console" Version="2.59.3" />
     <PackageVersion Include="Aksio.Fundamentals" Version="1.5.2" />
-    <PackageVersion Include="Aksio.MongoDB" Version="1.1.0" />
+    <PackageVersion Include="Aksio.MongoDB" Version="1.1.1" />
     <PackageVersion Include="Aksio.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Aksio.Applications.CQRS" Version="$(ApplicationModel)" />
     <PackageVersion Include="Aksio.Applications.CQRS.MongoDB" Version="$(ApplicationModel)" />
