@@ -1,3 +1,10 @@
+# [v9.14.7] - 2023-12-7 [PR: #1039](https://github.com/aksio-insurtech/Cratis/pull/1039)
+
+### Fixed
+
+- Removing JSON serialization for request object of recommendations, which caused an error since we now serialize it BsonDocument directly.
+
+
 # [v9.14.6] - 2023-12-7 [PR: #1037](https://github.com/aksio-insurtech/Cratis/pull/1037)
 
 ### Fixed
