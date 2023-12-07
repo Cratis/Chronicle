@@ -1,3 +1,10 @@
+# [v9.14.4] - 2023-12-7 [PR: #1035](https://github.com/aksio-insurtech/Cratis/pull/1035)
+
+### Fixed
+
+- Fixed the EventSequence queries that used `.Value` for the sequence number to be just the actual value. This seems to fix a problem where it tries to add a `Convert()` method to the query, which is not something that can be translated to MongoDB.
+
+
 # [v9.14.3] - 2023-12-7 [PR: #1034](https://github.com/aksio-insurtech/Cratis/pull/1034)
 
 ## Summary
