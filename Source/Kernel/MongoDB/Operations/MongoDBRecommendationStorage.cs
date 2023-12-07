@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using System.Text.Json;
 using Aksio.Cratis.Kernel.Grains.Recommendations;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.Persistence.Recommendations;
@@ -22,19 +21,15 @@ public class MongoDBRecommendationStorage : IRecommendationStorage
 {
     const string RecommendationRequestType = "requestType";
     readonly ProviderFor<IEventStoreDatabase> _databaseProvider;
-    readonly JsonSerializerOptions _jsonSerializerOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBRecommendationStorage"/> class.
     /// </summary>
     /// <param name="databaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
-    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
     public MongoDBRecommendationStorage(
-        ProviderFor<IEventStoreDatabase> databaseProvider,
-        JsonSerializerOptions jsonSerializerOptions)
+        ProviderFor<IEventStoreDatabase> databaseProvider)
     {
         _databaseProvider = databaseProvider;
-        _jsonSerializerOptions = jsonSerializerOptions;
     }
 
     IMongoCollection<BsonDocument> Collection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.Recommendations);
