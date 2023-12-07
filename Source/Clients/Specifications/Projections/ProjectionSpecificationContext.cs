@@ -62,7 +62,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var builder = new ProjectionBuilderFor<TModel>(
             identifier.Value,
             new ModelNameResolver(new DefaultModelNameConvention()),
-            new EventTypesForSpecifications(),
+            GlobalsForSpecifications.EventTypes,
             schemaGenerator,
             Globals.JsonSerializerOptions);
         defineProjection(builder);
