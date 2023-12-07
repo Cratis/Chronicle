@@ -67,7 +67,7 @@ public class MongoDBRecommendationStorage : IRecommendationStorage
         {
             var request = recommendationState.Request;
             recommendationState.Request = null!;
-            requestAsDocument = request.ToBsonDocument();
+            requestAsDocument = request.ToBsonDocument(request.GetType());
         }
 
         var document = recommendationState.ToBsonDocument();
