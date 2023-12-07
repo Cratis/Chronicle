@@ -1,3 +1,11 @@
+# [v9.14.1] - 2023-12-7 [PR: #1032](https://github.com/aksio-insurtech/Cratis/pull/1032)
+
+### Fixed
+
+- Bumping `Aksio.MongoDB` to latest.
+- Bumping `Aksio.Applications.*` to latest.
+
+
 # [v9.14.0] - 2023-12-6 [PR: #961](https://github.com/aksio-insurtech/Cratis/pull/961)
 
 ## Summary
