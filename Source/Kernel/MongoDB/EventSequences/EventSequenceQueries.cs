@@ -15,12 +15,12 @@ public static class EventSequenceQueries
     /// </summary>
     /// <param name="query">The query to sort.</param>
     /// <returns>The resulting query for continuation.</returns>
-    public static IFindFluent<Event, Event> SortBySequenceNumber(this IFindFluent<Event, Event> query) => query.SortBy(_ => _.SequenceNumber.Value);
+    public static IFindFluent<Event, Event> SortBySequenceNumber(this IFindFluent<Event, Event> query) => query.SortBy(_ => _.SequenceNumber);
 
     /// <summary>
     /// Sort by sequence number descending.
     /// </summary>
     /// <param name="query">The query to sort.</param>
     /// <returns>The resulting query for continuation.</returns>
-    public static IFindFluent<Event, Event> SortByDescendingSequenceNumber(this IFindFluent<Event, Event> query) => query.SortByDescending(_ => _.SequenceNumber.Value);
+    public static IFindFluent<Event, Event> SortByDescendingSequenceNumber(this IFindFluent<Event, Event> query) => query.SortByDescending(_ => _.SequenceNumber);
 }

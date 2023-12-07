@@ -71,7 +71,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var filters = new List<FilterDefinition<Event>>();
         if (lastEventSequenceNumber is not null)
         {
-            filters.Add(Builders<Event>.Filter.Lte(_ => _.SequenceNumber, lastEventSequenceNumber.Value));
+            filters.Add(Builders<Event>.Filter.Lte(_ => _.SequenceNumber, lastEventSequenceNumber));
         }
         if (eventTypes?.Any() ?? false)
         {
@@ -375,7 +375,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>
             {
-                Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber.Value)
+                Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber)
             };
 
         if (eventTypes?.Any() ?? false)
@@ -483,7 +483,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var collection = GetCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>
             {
-                Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber.Value)
+                Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber)
             };
 
         if (eventSourceId?.IsSpecified == true)
@@ -517,8 +517,8 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var collection = GetCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>
             {
-                Builders<Event>.Filter.Gte(_ => _.SequenceNumber, start.Value),
-                Builders<Event>.Filter.Lte(_ => _.SequenceNumber, end.Value)
+                Builders<Event>.Filter.Gte(_ => _.SequenceNumber, start),
+                Builders<Event>.Filter.Lte(_ => _.SequenceNumber, end)
             };
 
         if (eventSourceId?.IsSpecified == true)
