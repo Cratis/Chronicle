@@ -60,10 +60,26 @@ public class MongoDBRecommendationStorage : IRecommendationStorage
     public Task Save(RecommendationId recommendationId, RecommendationState recommendationState)
     {
         var filter = GetIdFilter(recommendationId);
+
+        BsonDocument? requestAsDocument = null;
+
+        if (recommendationState.Request is not null)
+        {
+            var request = recommendationState.Request;
+            recommendationState.Request = null!;
+            requestAsDocument = request.ToBsonDocument();
+        }
+
         var document = recommendationState.ToBsonDocument();
+
+        if (requestAsDocument is not null)
+        {
+            document["request"] = requestAsDocument[RecommendationRequestType];
+            document[RecommendationRequestType] = recommendationState.Request?.GetType().AssemblyQualifiedName ?? string.Empty;
+        }
+
         var requestProperty = nameof(RecommendationState.Request).ToCamelCase();
         document.Remove("_id");
-        document[RecommendationRequestType] = recommendationState.Request.GetType().AssemblyQualifiedName;
         var json = JsonSerializer.Serialize(recommendationState.Request, _jsonSerializerOptions);
         document[requestProperty] = BsonDocument.Parse(json);
         return Collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true });

@@ -193,7 +193,23 @@ public class MongoDBJobStepStorage<TJobStepState> : MongoDBJobStepStorage, IJobS
         var jobStepState = (state as JobStepState)!;
         var collection = jobStepState.Status == JobStepStatus.Failed ? FailedCollection : Collection;
 
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
+        object request = ((dynamic)state)!.Request;
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
+
+        BsonDocument? requestAsDocument = null;
+
+        if (request is not null)
+        {
+            ((dynamic)state)!.Request = null!;
+            requestAsDocument = request.ToBsonDocument(request.GetType());
+        }
+
         var document = state.ToBsonDocument();
+        if (requestAsDocument is not null)
+        {
+            document["request"] = requestAsDocument;
+        }
         document.Remove("_id");
         document.RemoveTypeInfo();
         await collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
