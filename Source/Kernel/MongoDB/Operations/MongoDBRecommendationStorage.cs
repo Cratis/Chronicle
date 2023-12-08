@@ -52,16 +52,16 @@ public class MongoDBRecommendationStorage : IRecommendationStorage
     }
 
     /// <inheritdoc/>
-    public Task Save(RecommendationId recommendationId, RecommendationState recommendationState)
+    public async Task Save(RecommendationId recommendationId, RecommendationState recommendationState)
     {
         var filter = GetIdFilter(recommendationId);
         var requestProperty = nameof(RecommendationState.Request).ToCamelCase();
 
         BsonDocument? requestAsDocument = null;
+        var request = recommendationState.Request;
 
         if (recommendationState.Request is not null)
         {
-            var request = recommendationState.Request;
             recommendationState.Request = null!;
             requestAsDocument = request.ToBsonDocument(request.GetType());
         }
@@ -75,7 +75,9 @@ public class MongoDBRecommendationStorage : IRecommendationStorage
         }
 
         document.Remove("_id");
-        return Collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true });
+        await Collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true });
+
+        recommendationState.Request = request;
     }
 
     /// <inheritdoc/>

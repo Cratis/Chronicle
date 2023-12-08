@@ -213,6 +213,8 @@ public class MongoDBJobStepStorage<TJobStepState> : MongoDBJobStepStorage, IJobS
         document.Remove("_id");
         document.RemoveTypeInfo();
         await collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+
+        ((dynamic)state)!.Request = request;
     }
 
     /// <inheritdoc/>
