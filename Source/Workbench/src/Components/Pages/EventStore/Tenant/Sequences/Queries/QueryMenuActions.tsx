@@ -1,10 +1,11 @@
 /* Copyright (c) Aksio Insurtech. All rights reserved.
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
-import { EChartExample } from './EChartExample';
 import { Menubar } from 'primereact/menubar';
 import css from './Queries.module.css';
 import { useState } from 'react';
+import { Histogram } from '../../../../../../../API/events/store/sequence/Histogram';
+import { EventHistogram } from './Histogram/Histogram';
 
 export const QueryMenuActions = () => {
     const [showChart, setShowChart] = useState(false);
@@ -34,7 +35,12 @@ export const QueryMenuActions = () => {
             <div>
                 <Menubar model={items} />
             </div>
-            {showChart && <EChartExample />}
+            {showChart && (
+                <>
+                    Timeline here
+                    <EventHistogram eventLog={''} />
+                </>
+            )}
         </div>
     );
 };

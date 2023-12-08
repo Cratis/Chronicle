@@ -1048,7 +1048,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"autoprefixer@npm:^10.4.16":
+"autoprefixer@npm:10.4.16":
   version: 10.4.16
   resolution: "autoprefixer@npm:10.4.16"
   dependencies:
@@ -1395,13 +1395,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"echarts@npm:^5.4.3":
-  version: 5.4.3
-  resolution: "echarts@npm:5.4.3"
+"echarts@npm:5.2.2":
+  version: 5.2.2
+  resolution: "echarts@npm:5.2.2"
   dependencies:
     tslib: 2.3.0
-    zrender: 5.4.4
-  checksum: f4f69becf1cf8f546f9488ffa3bffaa971dcfbd49f5d635f288cbc8c5177839154bd6c325d6ed72c2b822c89c9bba4947ac73400614fd23c6f2f7ace3c939132
+    zrender: 5.2.1
+  checksum: ab08a52895ce8e49acccb81673f78400aa5c5a4ae7c0b0bdaeae22036e6e34f94da9d43166718e3b1e1fb1e29e02f419702e21b8b84371747201e7ab01744fca
   languageName: node
   linkType: hard
 
@@ -2937,7 +2937,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss@npm:^8.4.23, postcss@npm:^8.4.26, postcss@npm:^8.4.31":
+"postcss@npm:8.4.31, postcss@npm:^8.4.23, postcss@npm:^8.4.26":
   version: 8.4.31
   resolution: "postcss@npm:8.4.31"
   dependencies:
@@ -3026,7 +3026,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-i18next@npm:^13.5.0":
+"react-i18next@npm:13.5.0":
   version: 13.5.0
   resolution: "react-i18next@npm:13.5.0"
   dependencies:
@@ -3712,7 +3712,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"usehooks-ts@npm:^2.9.1":
+"usehooks-ts@npm:2.9.1":
   version: 2.9.1
   resolution: "usehooks-ts@npm:2.9.1"
   peerDependencies:
@@ -3815,27 +3815,27 @@ __metadata:
     "@typescript-eslint/eslint-plugin": 6.0.0
     "@typescript-eslint/parser": 6.0.0
     "@vitejs/plugin-react": 4.0.3
-    autoprefixer: ^10.4.16
-    echarts: ^5.4.3
+    autoprefixer: 10.4.16
+    echarts: 5.2.2
     eslint: 8.45.0
     eslint-plugin-react-hooks: 4.6.0
     eslint-plugin-react-refresh: 0.4.3
     i18next: 23.7.6
     mobx: 6.11.0
     mobx-react: 9.1.0
-    postcss: ^8.4.31
+    postcss: 8.4.31
     primeicons: 6.0.1
     primereact: 10.0.3
     react: 18.2.0
     react-dom: 18.2.0
-    react-i18next: ^13.5.0
+    react-i18next: 13.5.0
     react-icons: 4.11.0
     react-router-dom: 6.17.0
     reflect-metadata: 0.1.13
     tailwindcss: 3.3.3
     tsyringe: 4.8.0
     typescript: 5.2.2
-    usehooks-ts: ^2.9.1
+    usehooks-ts: 2.9.1
     vite: 4.4.5
   languageName: unknown
   linkType: soft
@@ -3897,11 +3897,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zrender@npm:5.4.4":
-  version: 5.4.4
-  resolution: "zrender@npm:5.4.4"
+"zrender@npm:5.2.1":
+  version: 5.2.1
+  resolution: "zrender@npm:5.2.1"
   dependencies:
     tslib: 2.3.0
-  checksum: 4b317346af8eca38e62ba029239c3a13e97eac4fa15b3ddadbae23442d8b373f0e937c255dee8080d6bb2fc79c9da54f1106415586ed8942bd8bc684b3890ea9
+  checksum: 4252ca7bd638d23cfef115b9d6a42c6eb893af3e37f25416afc65214139298817d2d3221022b3b2359d36fe7dacc887c8d21cbea454e3d6105f8263d579919e1
   languageName: node
   linkType: hard

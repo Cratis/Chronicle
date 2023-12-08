@@ -12,7 +12,7 @@
     "dependencies": {
         "@aksio/applications": "1.5.1",
         "@aksio/fundamentals": "1.5.2",
-        "echarts": "5.4.3",
+        "echarts": "5.2.2",
         "i18next": "23.7.6",
         "mobx": "6.11.0",
         "mobx-react": "9.1.0",
