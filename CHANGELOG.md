@@ -1,3 +1,11 @@
+# [v9.14.8] - 2023-12-8 [PR: #1040](https://github.com/aksio-insurtech/Cratis/pull/1040)
+
+### Fixed
+
+- Fixing job storage to serialize the request object explicitly.
+- Setting the request back for the job step storage and recommendation storage, so that the inmemory representation is correct.
+
+
 # [v9.14.7] - 2023-12-7 [PR: #1039](https://github.com/aksio-insurtech/Cratis/pull/1039)
 
 ### Fixed
