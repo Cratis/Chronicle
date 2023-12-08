@@ -176,10 +176,29 @@ public class MongoDBJobStorage<TJobState> : MongoDBJobStorage, IJobStorage<TJobS
     public async Task Save(JobId jobId, TJobState state)
     {
         var filter = GetIdFilter(jobId);
+
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
+        object request = ((dynamic)state)!.Request;
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
+
+        BsonDocument? requestAsDocument = null;
+        if (request is not null)
+        {
+            ((dynamic)state)!.Request = null!;
+            requestAsDocument = request.ToBsonDocument(request.GetType());
+        }
+
         var document = state.ToBsonDocument();
+        if (requestAsDocument is not null)
+        {
+            document["request"] = requestAsDocument;
+        }
+
         document.Remove("_id");
         document.RemoveTypeInfo();
         await Collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+
+        ((dynamic)state)!.Request = request;
     }
 
     /// <inheritdoc/>
