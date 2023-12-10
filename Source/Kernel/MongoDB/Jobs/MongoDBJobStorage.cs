@@ -8,7 +8,6 @@ using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Aksio.DependencyInversion;
 using Aksio.Strings;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Jobs;
@@ -29,39 +28,33 @@ public class MongoDBJobStorage : IJobStorage
         _databaseProvider = databaseProvider;
     }
 
-    /// <summary>
-    /// Gets the <see cref="IMongoCollection{TDocument}"/> to work with.
-    /// </summary>
-    protected IMongoCollection<BsonDocument> Collection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.Jobs);
+    IMongoCollection<JobState> Collection => _databaseProvider().GetCollection<JobState>(WellKnownCollectionNames.Jobs);
 
     /// <inheritdoc/>
-    public async Task<JobState<object>> GetJob(JobId jobId)
+    public async Task<JobState> GetJob(JobId jobId)
     {
-        var filter = GetIdFilter(jobId);
-        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        var job = cursor.Single();
-        return BsonSerializer.Deserialize<JobState<object>>(job);
+        var cursor = await Collection.FindAsync(GetIdFilter(jobId)).ConfigureAwait(false);
+        return cursor.Single();
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<JobState<object>>> GetJobs(params JobStatus[] statuses)
+    public async Task<IImmutableList<JobState>> GetJobs(params JobStatus[] statuses)
     {
-        var documents = await GetJobsRaw(statuses).ConfigureAwait(false);
-        return documents.Select(_ => BsonSerializer.Deserialize<JobState<object>>(_)).ToImmutableList();
+        var jobs = await GetJobsRaw(statuses).ConfigureAwait(false);
+        return jobs.ToImmutableList();
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<JobState<object>>> ObserveJobs(params JobStatus[] statuses)
+    public IObservable<IEnumerable<JobState>> ObserveJobs(params JobStatus[] statuses)
     {
         var statusFilters = statuses.Select(status =>
-            Builders<ChangeStreamDocument<BsonDocument>>.Filter.Eq(
-                new StringFieldDefinition<ChangeStreamDocument<BsonDocument>, JobStatus>($"fullDocument.{nameof(JobState<object>.Status).ToCamelCase()}"), status));
+            Builders<ChangeStreamDocument<JobState>>.Filter.Eq(_ => _.FullDocument.Status, status));
 
         var initialItems = GetJobs(statuses).GetAwaiter().GetResult();
 
         var filter = statuses.Length == 0 ?
-                                Builders<ChangeStreamDocument<BsonDocument>>.Filter.Empty :
-                                Builders<ChangeStreamDocument<BsonDocument>>.Filter.Or(statusFilters);
+                                Builders<ChangeStreamDocument<JobState>>.Filter.Empty :
+                                Builders<ChangeStreamDocument<JobState>>.Filter.Or(statusFilters);
 
         return Collection.Observe(initialItems, HandleChangesForJobs, filter);
     }
@@ -70,20 +63,15 @@ public class MongoDBJobStorage : IJobStorage
     public async Task Remove(JobId jobId) =>
         await Collection.DeleteOneAsync(GetIdFilter(jobId)).ConfigureAwait(false);
 
-    /// <summary>
-    /// Get the filter for a given <see cref="JobId"/>.
-    /// </summary>
-    /// <param name="id"><see cref="Guid"/> identifier of the job.</param>
-    /// <returns><see cref="FilterDefinition{T}"/> for the BsonDocument.</returns>
-    protected FilterDefinition<BsonDocument> GetIdFilter(Guid id) => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, Guid>("_id"), id);
+    FilterDefinition<JobState> GetIdFilter(Guid id) => Builders<JobState>.Filter.Eq(new StringFieldDefinition<JobState, Guid>("_id"), id);
 
-    async Task<List<BsonDocument>> GetJobsRaw(params JobStatus[] statuses)
+    async Task<List<JobState>> GetJobsRaw(params JobStatus[] statuses)
     {
-        var statusFilters = statuses.Select(status => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState<object>.Status).ToCamelCase()), status));
+        var statusFilters = statuses.Select(status => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState.Status).ToCamelCase()), status));
 
         if (statuses.Length == 0)
         {
-            var cursor = await Collection.FindAsync(Builders<BsonDocument>.Filter.Empty).ConfigureAwait(false);
+            var cursor = await Collection.FindAsync(_ => true).ConfigureAwait(false);
             return await cursor.ToListAsync().ConfigureAwait(false);
         }
 
@@ -108,11 +96,11 @@ public class MongoDBJobStorage : IJobStorage
         return await aggregation.ToListAsync().ConfigureAwait(false);
     }
 
-    void HandleChangesForJobs(IChangeStreamCursor<ChangeStreamDocument<BsonDocument>> cursor, List<JobState<object>> jobs)
+    void HandleChangesForJobs(IChangeStreamCursor<ChangeStreamDocument<JobState>> cursor, List<JobState> jobs)
     {
         foreach (var change in cursor.Current)
         {
-            var changedJob = change.FullDocument;
+            var jobState = change.FullDocument;
             if (change.OperationType == ChangeStreamOperationType.Delete)
             {
                 var job = jobs.Find(_ => _.Id == (JobId)change.DocumentKey["_id"].AsGuid);
@@ -123,22 +111,15 @@ public class MongoDBJobStorage : IJobStorage
                 continue;
             }
 
-            var jobTypeString = changedJob["type"].AsString;
-            var jobType = Type.GetType(jobTypeString);
-            if (jobType is not null)
+            var observer = jobs.Find(_ => _.Id == jobState.Id);
+            if (observer is not null)
             {
-                var observer = jobs.Find(_ => _.Id == (JobId)changedJob["_id"].AsGuid);
-
-                var jobState = BsonSerializer.Deserialize<JobState<object>>(changedJob);
-                if (observer is not null)
-                {
-                    var index = jobs.IndexOf(observer);
-                    jobs[index] = jobState;
-                }
-                else
-                {
-                    jobs.Add(jobState);
-                }
+                var index = jobs.IndexOf(observer);
+                jobs[index] = jobState;
+            }
+            else
+            {
+                jobs.Add(jobState);
             }
         }
     }
@@ -147,73 +128,49 @@ public class MongoDBJobStorage : IJobStorage
 /// <summary>
 /// Represents an implementation of <see cref="IJobStorage{TJobState}"/> for MongoDB.
 /// </summary>
-/// <typeparam name="TJobState">Type of <see cref="JobState{T}"/> to work with.</typeparam>
+/// <typeparam name="TJobState">Type of <see cref="JobState"/> to work with.</typeparam>
 public class MongoDBJobStorage<TJobState> : MongoDBJobStorage, IJobStorage<TJobState>
+    where TJobState : JobState
 {
+    readonly ProviderFor<IEventStoreDatabase> _databaseProvider;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBJobStorage{TJobState}"/> class.
     /// </summary>
     /// <param name="databaseProvider">Provider for <see cref="IEventStoreDatabase"/> for persistence.</param>
     public MongoDBJobStorage(ProviderFor<IEventStoreDatabase> databaseProvider) : base(databaseProvider)
     {
+        _databaseProvider = databaseProvider;
     }
+
+    IMongoCollection<TJobState> Collection => _databaseProvider().GetCollection<TJobState>(WellKnownCollectionNames.Jobs);
 
     /// <inheritdoc/>
     public async Task<TJobState?> Read(JobId jobId)
     {
-        var filter = GetIdFilter(jobId);
-        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        var state = cursor.FirstOrDefault();
-        if (state is not null)
-        {
-            return BsonSerializer.Deserialize<TJobState>(state);
-        }
-
-        return default!;
+        var cursor = await Collection.FindAsync(GetIdFilter(jobId)).ConfigureAwait(false);
+        return cursor.FirstOrDefault();
     }
 
     /// <inheritdoc/>
-    public async Task Save(JobId jobId, TJobState state)
-    {
-        var filter = GetIdFilter(jobId);
-
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
-        object request = ((dynamic)state)!.Request;
-#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
-
-        BsonDocument? requestAsDocument = null;
-        if (request is not null)
-        {
-            ((dynamic)state)!.Request = null!;
-            requestAsDocument = request.ToBsonDocument(request.GetType());
-        }
-
-        var document = state.ToBsonDocument();
-        if (requestAsDocument is not null)
-        {
-            document["request"] = requestAsDocument;
-        }
-
-        document.Remove("_id");
-        document.RemoveTypeInfo();
-        await Collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
-
-        ((dynamic)state)!.Request = request;
-    }
+    public async Task Save(JobId jobId, TJobState state) =>
+        await Collection.ReplaceOneAsync(GetIdFilter(jobId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
 
     /// <inheritdoc/>
     public async Task<IImmutableList<TJobState>> GetJobs<TJobType>(params JobStatus[] statuses)
     {
         var jobType = (JobType)typeof(TJobType);
-        var jobTypeFilter = Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(nameof(JobState<object>.Type).ToCamelCase()), jobType);
-        var statusFilters = statuses.Select(status => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState<object>.Status).ToCamelCase()), status));
+        var jobTypeFilter = Builders<TJobState>.Filter.Eq(_ => _.Type, jobType);
+        var statusFilters = statuses.Select(status => Builders<TJobState>.Filter.Eq(_ => _.Status, status));
 
         var filter = statuses.Length == 0 ?
                                 jobTypeFilter :
-                                Builders<BsonDocument>.Filter.And(jobTypeFilter, Builders<BsonDocument>.Filter.Or(statusFilters));
+                                Builders<TJobState>.Filter.And(jobTypeFilter, Builders<TJobState>.Filter.Or(statusFilters));
 
         var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        var documents = await cursor.ToListAsync().ConfigureAwait(false);
-        return documents.Select(_ => BsonSerializer.Deserialize<TJobState>(_)).ToImmutableList();
+        var jobs = await cursor.ToListAsync().ConfigureAwait(false);
+        return jobs.ToImmutableList();
     }
+
+    FilterDefinition<TJobState> GetIdFilter(JobId jobId) => Builders<TJobState>.Filter.Eq(new StringFieldDefinition<TJobState, Guid>("_id"), jobId);
 }

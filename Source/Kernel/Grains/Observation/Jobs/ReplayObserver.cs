@@ -28,7 +28,7 @@ public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, I
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
-        var observer = GrainFactory.GetGrain<IObserver>(State.Request.ObserverId, State.Request.ObserverKey);
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
         await observer.ReportHandledEvents(State.HandledCount);
         await observer.TransitionTo<Routing>();
     }
@@ -45,12 +45,12 @@ public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, I
     }
 
     /// <inheritdoc/>
-    protected override JobDetails GetJobDetails() => $"{State.Request.ObserverId}";
+    protected override JobDetails GetJobDetails() => $"{Request.ObserverId}";
 
     /// <inheritdoc/>
     protected override Task<bool> CanResume()
     {
-        var observer = GrainFactory.GetGrain<IObserver>(State.Request.ObserverId, State.Request.ObserverKey);
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
         return observer.IsSubscribed();
     }
 

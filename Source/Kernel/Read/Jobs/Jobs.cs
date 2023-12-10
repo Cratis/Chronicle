@@ -40,9 +40,9 @@ public class Jobs : ControllerBase
     /// </summary>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> to observe for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> to observe for. </param>
-    /// <returns>A <see cref="ClientObservable{T}"/> for observing a collection of <see cref="JobState{T}"/>.</returns>
+    /// <returns>A <see cref="ClientObservable{T}"/> for observing a collection of <see cref="JobState"/>.</returns>
     [HttpGet]
-    public ClientObservable<IEnumerable<JobState<object>>> AllJobs(
+    public ClientObservable<IEnumerable<JobState>> AllJobs(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {

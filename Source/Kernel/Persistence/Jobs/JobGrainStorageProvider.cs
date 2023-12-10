@@ -30,7 +30,19 @@ public class JobGrainStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
+    public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
+    {
+        if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
+        {
+            var key = (JobKey)keyExtension!;
+            _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
+            var storage = _serviceProvider.GetRequiredService<IJobStorage<T>>();
+            var stepStorage = _serviceProvider.GetRequiredService<IJobStepStorage>();
+
+            await stepStorage.RemoveAllForJob(jobId);
+            await storage.Remove(jobId);
+        }
+    }
 
     /// <inheritdoc/>
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
@@ -43,7 +55,7 @@ public class JobGrainStorageProvider : IGrainStorage
             var state = await jobStorage.Read(jobId);
             if (state is not null)
             {
-                var jobState = (state as IJobState)!;
+                var jobState = (state as JobState)!;
                 var jobStepStorage = _serviceProvider.GetRequiredService<IJobStepStorage>();
                 var successfulCount = await jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Succeeded);
                 var failedCount = await jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Failed);
@@ -57,7 +69,7 @@ public class JobGrainStorageProvider : IGrainStorage
 
                 if (hasChanges)
                 {
-                    await jobStorage.Save(jobId, state);
+                    await jobStorage.Save(jobId, grainState.State);
                 }
             }
         }
@@ -71,18 +83,10 @@ public class JobGrainStorageProvider : IGrainStorage
             var key = (JobKey)keyExtension!;
             _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
             var storage = _serviceProvider.GetRequiredService<IJobStorage<T>>();
-            var stepStorage = _serviceProvider.GetRequiredService<IJobStepStorage>();
-            var state = (grainState.State as IJobState)!;
+            var state = (grainState.State as JobState)!;
+            state.Id = jobId;
 
-            if (state.Remove)
-            {
-                await stepStorage.RemoveAllForJob(jobId);
-                await storage.Remove(jobId);
-            }
-            else
-            {
-                await storage.Save(jobId, grainState.State);
-            }
+            await storage.Save(jobId, grainState.State);
         }
     }
 }

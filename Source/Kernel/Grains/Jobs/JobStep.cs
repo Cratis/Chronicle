@@ -70,7 +70,6 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
         _state.State.Name = GetType().Name;
         _state.State.Id = new(jobStepKey.JobId, JobStepId);
         _state.State.Type = grainType;
-        await _state.WriteStateAsync();
     }
 
     /// <inheritdoc/>

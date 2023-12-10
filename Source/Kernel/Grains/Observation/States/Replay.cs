@@ -15,6 +15,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 /// </summary>
 public class Replay : BaseObserverState
 {
+    readonly ObserverId _observerId;
     readonly ObserverKey _observerKey;
     readonly IObserverServiceClient _replayStateServiceClient;
     readonly IJobsManager _jobsManager;
@@ -24,16 +25,19 @@ public class Replay : BaseObserverState
     /// <summary>
     /// Initializes a new instance of the <see cref="CatchUp"/> class.
     /// </summary>
+    /// <param name="observerId">The <see cref="ObserverId"/> for the observer.</param>
     /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
     /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
     /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
     /// <param name="logger">Logger for logging.</param>
     public Replay(
+        ObserverId observerId,
         ObserverKey observerKey,
         IObserverServiceClient replayStateServiceClient,
         IJobsManager jobsManager,
         ILogger<Replay> logger)
     {
+        _observerId = observerId;
         _observerKey = observerKey;
         _replayStateServiceClient = replayStateServiceClient;
         _jobsManager = jobsManager;
@@ -61,7 +65,7 @@ public class Replay : BaseObserverState
         var subscription = await Observer.GetSubscription();
 
         var jobs = await _jobsManager.GetJobsOfType<IReplayObserver, ReplayObserverRequest>();
-        var jobsForThisObserver = jobs.Where(_ => _.Request.ObserverId == state.ObserverId && _.Request.ObserverKey == _observerKey);
+        var jobsForThisObserver = jobs.Where(IsJobForThisObserver);
         if (jobsForThisObserver.Any(_ => _.Status == JobStatus.Running))
         {
             _logger.FinishingExistingReplayJob();
@@ -100,4 +104,8 @@ public class Replay : BaseObserverState
         }
         return state;
     }
+
+    bool IsJobForThisObserver(JobState jobState) =>
+        ((ReplayObserverRequest)jobState.Request).ObserverId == _observerId &&
+        ((ReplayObserverRequest)jobState.Request).ObserverKey == _observerKey;
 }
