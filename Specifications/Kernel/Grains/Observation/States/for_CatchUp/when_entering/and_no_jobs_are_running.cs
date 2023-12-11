@@ -33,7 +33,7 @@ public class and_no_jobs_are_running : given.a_catch_up_state
 
         jobs_manager
             .Setup(_ => _.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>())
-            .ReturnsAsync(Enumerable.Empty<JobState<CatchUpObserverRequest>>().ToImmutableList());
+            .ReturnsAsync(Enumerable.Empty<JobState>().ToImmutableList());
 
         jobs_manager
             .Setup(_ => _.Start<ICatchUpObserver, CatchUpObserverRequest>(IsAny<JobId>(), IsAny<CatchUpObserverRequest>()))

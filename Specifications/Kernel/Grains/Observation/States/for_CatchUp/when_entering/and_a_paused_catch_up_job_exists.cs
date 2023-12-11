@@ -9,10 +9,10 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_CatchUp.when_enterin
 
 public class and_a_paused_catch_up_job_exists : given.a_catch_up_state
 {
-    JobState<CatchUpObserverRequest> paused_job;
+    JobState paused_job;
     void Establish()
     {
-        paused_job = new JobState<CatchUpObserverRequest>
+        paused_job = new JobState
         {
             Id = JobId.New(),
             Request = new CatchUpObserverRequest(

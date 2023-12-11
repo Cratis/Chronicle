@@ -15,7 +15,7 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
             .Setup(_ => _.GetJobsOfType<IReplayObserver, ReplayObserverRequest>())
             .ReturnsAsync(new[]
                 {
-                    new JobState<ReplayObserverRequest>
+                    new JobState
                     {
                         Id = JobId.New(),
                         Request = new ReplayObserverRequest(

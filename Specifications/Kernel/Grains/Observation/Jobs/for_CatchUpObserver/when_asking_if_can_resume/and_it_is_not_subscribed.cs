@@ -12,7 +12,7 @@ public class and_it_is_not_subscribed : given.a_catchup_observer_and_a_request
 
     void Establish()
     {
-        observer = silo.AddProbe<IObserver>(state_storage.State.Request.ObserverId, state_storage.State.Request.ObserverKey);
+        observer = silo.AddProbe<IObserver>(((CatchUpObserverRequest)state_storage.State.Request).ObserverId, ((CatchUpObserverRequest)state_storage.State.Request).ObserverKey);
         observer.Setup(_ => _.IsSubscribed()).ReturnsAsync(false);
     }
 

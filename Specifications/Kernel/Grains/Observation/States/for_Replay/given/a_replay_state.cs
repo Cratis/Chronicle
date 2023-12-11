@@ -20,14 +20,17 @@ public class a_replay_state : Specification
     protected ObserverState stored_state;
     protected ObserverState resulting_stored_state;
     protected Replay state;
+    protected ObserverId observer_id;
 
     void Establish()
     {
         observer = new();
+        observer_id = Guid.NewGuid();
         observer_key = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         observer_service_client = new();
         jobs_manager = new();
         state = new Replay(
+            observer_id,
             observer_key,
             observer_service_client.Object,
             jobs_manager.Object,
@@ -36,7 +39,7 @@ public class a_replay_state : Specification
 
         stored_state = new ObserverState
         {
-            ObserverId = Guid.NewGuid(),
+            ObserverId = observer_id,
             RunningState = ObserverRunningState.CatchingUp,
         };
 
@@ -51,6 +54,6 @@ public class a_replay_state : Specification
 
         jobs_manager
             .Setup(_ => _.GetJobsOfType<IReplayObserver, ReplayObserverRequest>())
-            .ReturnsAsync(Enumerable.Empty<JobState<ReplayObserverRequest>>().ToImmutableList());
+            .ReturnsAsync(Enumerable.Empty<JobState>().ToImmutableList());
     }
 }

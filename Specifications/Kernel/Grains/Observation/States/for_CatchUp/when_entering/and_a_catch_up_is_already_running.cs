@@ -15,7 +15,7 @@ public class and_a_catch_up_is_already_running : given.a_catch_up_state
             .Setup(_ => _.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>())
             .ReturnsAsync(new[]
                 {
-                    new JobState<CatchUpObserverRequest>
+                    new JobState
                     {
                         Id = JobId.New(),
                         Request = new CatchUpObserverRequest(

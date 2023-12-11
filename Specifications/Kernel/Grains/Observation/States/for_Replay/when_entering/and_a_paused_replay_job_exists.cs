@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Replay.when_entering
 
 public class and_a_paused_replay_job_exists : given.a_replay_state
 {
-    JobState<ReplayObserverRequest> paused_job;
+    JobState paused_job;
     ObserverDetails observer_details;
 
     void Establish()
@@ -19,7 +19,7 @@ public class and_a_paused_replay_job_exists : given.a_replay_state
             Type = ObserverType.Client
         };
 
-        paused_job = new JobState<ReplayObserverRequest>
+        paused_job = new JobState
         {
             Id = JobId.New(),
             Request = new ReplayObserverRequest(
