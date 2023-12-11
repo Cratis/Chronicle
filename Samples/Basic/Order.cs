@@ -19,7 +19,8 @@ public class Order : AggregateRoot<OrderState>
         Apply(new ItemAddedToCart(
             new(Guid.NewGuid()),
             new(Guid.NewGuid()),
-            1));
+            1,
+            null));
 
         Console.WriteLine($"After : {State.CartItems.Count()}");
     }

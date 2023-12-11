@@ -27,7 +27,8 @@ app.MapGet("/add", () =>
     eventLog.Append(Guid.NewGuid().ToString(), new ItemAddedToCart(
         new(Guid.NewGuid()),
         new(Guid.NewGuid()),
-        1));
+        1,
+        null));
 });
 
 app.MapGet("/agg", async () =>
