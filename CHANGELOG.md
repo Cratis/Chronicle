@@ -1,3 +1,10 @@
+# [v9.14.11] - 2023-12-11 [PR: #1043](https://github.com/aksio-insurtech/Cratis/pull/1043)
+
+### Fixed
+
+- Fixing a crash in how the JSON schema gets configured with nullable information for primitive type based `ConceptAs`.
+
+
 # [v9.14.10] - 2023-12-11 [PR: #1042](https://github.com/aksio-insurtech/Cratis/pull/1042)
 
 ### Fixed
