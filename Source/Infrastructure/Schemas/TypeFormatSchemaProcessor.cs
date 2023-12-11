@@ -25,9 +25,10 @@ public class TypeFormatSchemaProcessor : ISchemaProcessor
 
         context.Schema.Format = _typeFormats.GetFormatForType(context.ContextualType.Type);
 
-        if (context.ContextualType.Parent is not null &&
+        if (context.ContextualType.Attributes.OfType<NullableAttribute>().Any() ||
+            (context.ContextualType.Parent is not null &&
             context.ContextualType.Type == context.ContextualType.Parent.Type &&
-            context.ContextualType.Parent.IsNullableType)
+            context.ContextualType.Parent.IsNullableType))
         {
             context.Schema.Format = $"{context.Schema.Format}?";
         }
