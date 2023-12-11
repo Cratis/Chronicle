@@ -1,7 +1,6 @@
 /* Copyright (c) Aksio Insurtech. All rights reserved.
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
-import { InputText } from 'primereact/inputtext';
 import { ChangeEvent } from 'react';
 
 export interface QueryType {
@@ -27,7 +26,7 @@ export const QueryHeader = (props: QueryHeaderProps) => {
     return (
         <div onClick={handleDoubleClick}>
             {query.isEditing ? (
-                <InputText
+                <input
                     autoFocus
                     value={query.title}
                     onBlur={() => onToggleEdit(idx)}

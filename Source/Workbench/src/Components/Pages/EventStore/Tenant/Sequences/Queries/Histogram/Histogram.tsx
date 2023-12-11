@@ -1,10 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useRef, useEffect } from 'react';
-import * as echarts from 'echarts';
 import { default as styles } from './EventHistogram.module.css';
 import { useMockData } from './useMockData';
+import { useRef, useEffect } from 'react';
+import * as echarts from 'echarts';
 
 type EChartsOption = echarts.EChartsOption;
 
