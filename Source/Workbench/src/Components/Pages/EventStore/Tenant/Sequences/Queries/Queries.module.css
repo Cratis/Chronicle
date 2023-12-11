@@ -89,3 +89,7 @@
 .nonActiveTabHeader {
     background-color: gray;
 }
+
+.editButton {
+    margin-left: 10px;
+}

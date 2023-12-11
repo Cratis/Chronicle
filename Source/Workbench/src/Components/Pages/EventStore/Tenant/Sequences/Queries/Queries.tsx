@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { ChangeEvent, useCallback, useRef, useState } from 'react';
-import { TabView, TabPanel } from 'primereact/tabview';
 import { QueryHeader, QueryType } from './components/QueryHeader';
-import { OverlayPanel } from 'primereact/overlaypanel';
 import { QueryMenuActions } from './components/QueryMenuActions';
+import { QuerySidebar } from './components/QuerySidebar';
+import { TabView, TabPanel } from 'primereact/tabview';
+import { OverlayPanel } from 'primereact/overlaypanel';
 import { QueriesViewModel } from './QueriesViewModel';
 import { withViewModel } from 'MVVM/withViewModel';
 import { Bookmark } from './Bookmark/Bookmark';
-import { QuerySidebar } from './components/QuerySidebar';
 import { Button } from 'primereact/button';
 import css from './Queries.module.css';
 
