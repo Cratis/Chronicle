@@ -125,6 +125,12 @@ public static class BsonValueExtensions
 
             case Guid actualValue:
                 return new BsonBinaryData(actualValue, GuidRepresentation.Standard);
+
+            case Type actualValue:
+                return new BsonString(actualValue.AssemblyQualifiedName);
+
+            case Uri actualValue:
+                return new BsonString(actualValue.ToString());
         }
 
         var document = new BsonDocument();
