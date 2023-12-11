@@ -17,13 +17,15 @@ public class a_catch_up_state : Specification
     protected ObserverState stored_state;
     protected ObserverState resulting_stored_state;
     protected CatchUp state;
+    protected ObserverId observer_id;
 
     void Establish()
     {
         observer = new();
+        observer_id = Guid.NewGuid();
         observer_key = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         jobs_manager = new();
-        state = new CatchUp(observer_key, jobs_manager.Object, Mock.Of<ILogger<CatchUp>>());
+        state = new CatchUp(observer_id, observer_key, jobs_manager.Object, Mock.Of<ILogger<CatchUp>>());
         state.SetStateMachine(observer.Object);
 
         stored_state = new ObserverState
