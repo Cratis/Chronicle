@@ -2,27 +2,28 @@
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
 import { FaAnglesRight, FaAnglesLeft } from 'react-icons/fa6';
+import { useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
-import css from './Queries.module.css';
-import { useState } from 'react';
+import css from '../Queries.module.css';
 
 export interface QuerySidebarProps {
     children?: React.ReactNode;
+    tabIndex?: number;
 }
 
 export const QuerySidebar = (props: QuerySidebarProps) => {
-    const { children } = props;
+    const { children, tabIndex } = props;
     const [isSidebarOpen, setSidebarOpen] = useState(false);
 
     const toggleSidebar = () => {
         setSidebarOpen(!isSidebarOpen);
     };
 
+    useEffect(() => {}, [tabIndex]);
+
     return (
         <div className={`${css.queryContainer} ${isSidebarOpen ? '' : css.collapsed}`}>
             <Button
-                text
-                rounded
                 unstyled
                 onClick={toggleSidebar}
                 icon={isSidebarOpen ? <FaAnglesLeft /> : <FaAnglesRight />}

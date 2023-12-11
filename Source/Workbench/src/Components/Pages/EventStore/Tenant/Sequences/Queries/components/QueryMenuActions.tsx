@@ -1,9 +1,9 @@
 /* Copyright (c) Aksio Insurtech. All rights reserved.
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
-import { EventHistogram } from './Histogram/Histogram';
+import { EventHistogram } from '../Histogram/Histogram';
 import { Menubar } from 'primereact/menubar';
-import css from './Queries.module.css';
+import css from '../Queries.module.css';
 import { useState } from 'react';
 
 export const QueryMenuActions = () => {

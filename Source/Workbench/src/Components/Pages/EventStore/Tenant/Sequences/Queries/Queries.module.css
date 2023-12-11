@@ -44,11 +44,11 @@
 }
 
 .querySidebar {
-    width: 250px;
+    width: 200px;
     padding: 10px;
     overflow: hidden;
     position: relative;
-    left: -250px;
+    left: -200px;
     transition: left 250ms ease-in-out;
 }
 
@@ -84,4 +84,8 @@
 
 .saveQuery {
     width: 50vw;
+}
+
+.nonActiveTabHeader {
+    background-color: gray;
 }

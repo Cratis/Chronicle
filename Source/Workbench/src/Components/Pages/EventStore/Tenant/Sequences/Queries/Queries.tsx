@@ -3,13 +3,13 @@
 
 import { ChangeEvent, useCallback, useRef, useState } from 'react';
 import { TabView, TabPanel } from 'primereact/tabview';
-import { QueryHeader, QueryType } from './QueryHeader';
+import { QueryHeader, QueryType } from './components/QueryHeader';
 import { OverlayPanel } from 'primereact/overlaypanel';
-import { QueryMenuActions } from './QueryMenuActions';
+import { QueryMenuActions } from './components/QueryMenuActions';
 import { QueriesViewModel } from './QueriesViewModel';
 import { withViewModel } from 'MVVM/withViewModel';
 import { Bookmark } from './Bookmark/Bookmark';
-import { QuerySidebar } from './QuerySidebar';
+import { QuerySidebar } from './components/QuerySidebar';
 import { Button } from 'primereact/button';
 import css from './Queries.module.css';
 
@@ -19,35 +19,69 @@ const initialQueries = [
 ];
 
 export const Queries = withViewModel(QueriesViewModel, () => {
-    const op = useRef<OverlayPanel>(null);
-    const [currentQuery, setCurrentQuery] = useState(1);
+    const overlayPanelRef = useRef<OverlayPanel>(null);
+    const [currentQuery, setCurrentQuery] = useState<number>(1);
     const [queries, setQueries] = useState<QueryType[]>(initialQueries);
 
     const addQuery = useCallback(() => {
-        setQueries((prevQueries) => {
-            const newQueryIdx = prevQueries.length + 1;
-            return [
-                ...prevQueries,
-                { title: `Query ${newQueryIdx}`, id: `${newQueryIdx}`, isEditing: false },
-            ];
-        });
+        setQueries((prevQueries) => [
+            ...prevQueries,
+            {
+                title: `Query ${prevQueries.length + 1}`,
+                id: `${prevQueries.length + 1}`,
+                isEditing: false,
+            },
+        ]);
     }, []);
+
+    const updateQuery = (idx: number, update: Partial<QueryType>) =>
+        setQueries((prevQueries) =>
+            prevQueries.map((query, index) =>
+                index === idx ? { ...query, ...update } : query
+            )
+        );
 
     const onQueryChange = useCallback((e: ChangeEvent<HTMLInputElement>, idx: number) => {
-        setQueries((prevQueries) =>
-            prevQueries.map((query, index) =>
-                index === idx ? { ...query, title: e.target.value } : query
-            )
-        );
+        updateQuery(idx, { title: e.target.value });
     }, []);
 
-    const toggleEdit = useCallback((idx: number) => {
-        setQueries((prevQueries) =>
-            prevQueries.map((query, index) =>
-                index === idx ? { ...query, isEditing: !query.isEditing } : query
-            )
+    const toggleEdit = useCallback(
+        (idx: number) => {
+            updateQuery(idx, { isEditing: queries[idx].isEditing ? false : true });
+        },
+        [queries]
+    );
+
+    const renderQueryTabPanel = (query: QueryType, idx: number) => {
+        return (
+            <TabPanel
+                key={query.id}
+                closable={idx !== 0}
+                className={css.activeTab}
+                header={
+                    <QueryHeader
+                        idx={idx}
+                        query={query}
+                        onToggleEdit={toggleEdit}
+                        onQueryChange={onQueryChange}
+                    />
+                }
+            >
+                <div className={css.panelContainer}>
+                    <QuerySidebar tabIndex={currentQuery}>
+                        {query.title}
+
+                        <div>Logs</div>
+                        <div>Outbox</div>
+                        <div>People</div>
+                    </QuerySidebar>
+                    <div>
+                        <QueryMenuActions />
+                    </div>
+                </div>
+            </TabPanel>
         );
-    }, []);
+    };
 
     return (
         <div className={css.container}>
@@ -60,51 +94,24 @@ export const Queries = withViewModel(QueriesViewModel, () => {
                 scrollable
                 className={css.tabView}
                 activeIndex={currentQuery}
-                onTabChange={(evt) => setCurrentQuery(evt.index)}
+                onTabChange={(e) => setCurrentQuery(e.index)}
             >
                 <TabPanel
                     headerTemplate={
                         <div className={css.buttonContainer}>
                             <Button
                                 icon='pi pi-book'
-                                onClick={(evt) => op.current?.toggle(evt)}
+                                onClick={(e) => overlayPanelRef.current?.toggle(e)}
                             />
-                            <OverlayPanel ref={op}>
-                                <h1>Queries</h1>
+                            <OverlayPanel ref={overlayPanelRef}>
                                 <Bookmark />
                             </OverlayPanel>
                         </div>
                     }
                 />
-                {queries.map((query, idx) => (
-                    <TabPanel
-                        className={css.activeTab}
-                        key={query.id}
-                        closable={idx !== 0}
-                        header={
-                            <QueryHeader
-                                idx={idx}
-                                query={query}
-                                onToggleEdit={toggleEdit}
-                                onQueryChange={onQueryChange}
-                            />
-                        }
-                    >
-                        <div className={css.panelContainer}>
-                            <QuerySidebar>
-                                {query.title}
-                                <div>Logs</div>
-                                <div>Outbox</div>
-                                <div>People</div>
-                            </QuerySidebar>
-                            <div>
-                                <QueryMenuActions />
-                            </div>
-                        </div>
-                    </TabPanel>
-                ))}
+                {queries.map(renderQueryTabPanel)}
                 <TabPanel
-                    headerTemplate={<Button icon='pi pi-plus' onClick={addQuery} />}
+                    headerTemplate={<Button text icon='pi pi-plus' onClick={addQuery} />}
                 />
             </TabView>
         </div>
