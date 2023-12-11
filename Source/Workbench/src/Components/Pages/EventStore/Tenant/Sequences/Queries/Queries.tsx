@@ -20,6 +20,7 @@ const initialQueries = [
 
 export const Queries = withViewModel(QueriesViewModel, () => {
     const overlayPanelRef = useRef<OverlayPanel>(null);
+    const [isSidebarOpen, setSidebarOpen] = useState(false);
     const [currentQuery, setCurrentQuery] = useState<number>(1);
     const [queries, setQueries] = useState<QueryType[]>(initialQueries);
 
@@ -68,7 +69,10 @@ export const Queries = withViewModel(QueriesViewModel, () => {
                 }
             >
                 <div className={css.panelContainer}>
-                    <QuerySidebar tabIndex={currentQuery}>
+                    <QuerySidebar
+                        isSidebarOpen={isSidebarOpen}
+                        toggleSidebar={() => setSidebarOpen(!isSidebarOpen)}
+                    >
                         {query.title}
 
                         <div>Logs</div>
