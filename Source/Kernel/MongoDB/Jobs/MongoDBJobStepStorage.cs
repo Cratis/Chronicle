@@ -8,7 +8,6 @@ using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Aksio.DependencyInversion;
 using Aksio.Strings;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Jobs;
@@ -29,34 +28,28 @@ public class MongoDBJobStepStorage : IJobStepStorage
         _databaseProvider = databaseProvider;
     }
 
-    /// <summary>
-    /// Gets the <see cref="IMongoCollection{T}"/> for the job steps.
-    /// </summary>
-    protected IMongoCollection<BsonDocument> Collection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.JobSteps);
+    IMongoCollection<JobStepState> Collection => _databaseProvider().GetCollection<JobStepState>(WellKnownCollectionNames.JobSteps);
 
-    /// <summary>
-    /// Gets the <see cref="IMongoCollection{T}"/> for the failed job steps.
-    /// </summary>
-    protected IMongoCollection<BsonDocument> FailedCollection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.FailedJobSteps);
+    IMongoCollection<JobStepState> FailedCollection => _databaseProvider().GetCollection<JobStepState>(WellKnownCollectionNames.FailedJobSteps);
 
     /// <inheritdoc/>
     public async Task RemoveAllForJob(JobId jobId)
     {
-        await Collection.DeleteOneAsync(GetJobIdFilter<BsonDocument>(jobId)).ConfigureAwait(false);
-        await FailedCollection.DeleteOneAsync(GetJobIdFilter<BsonDocument>(jobId)).ConfigureAwait(false);
+        await Collection.DeleteOneAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
+        await FailedCollection.DeleteOneAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
     public async Task RemoveAllNonFailedForJob(JobId jobId)
     {
-        await Collection.DeleteOneAsync(GetJobIdFilter<BsonDocument>(jobId)).ConfigureAwait(false);
+        await Collection.DeleteOneAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
     public async Task Remove(JobId jobId, JobStepId jobStepId)
     {
-        await Collection.DeleteOneAsync(GetIdFilter(jobId, jobStepId)).ConfigureAwait(false);
-        await FailedCollection.DeleteOneAsync(GetIdFilter(jobId, jobStepId)).ConfigureAwait(false);
+        await Collection.DeleteOneAsync(GetIdFilter<JobStepState>(jobId, jobStepId)).ConfigureAwait(false);
+        await FailedCollection.DeleteOneAsync(GetIdFilter<JobStepState>(jobId, jobStepId)).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -64,11 +57,11 @@ public class MongoDBJobStepStorage : IJobStepStorage
     {
         var failedJobSteps = new List<JobStepState>();
 
-        var filter = GetJobIdFilter<BsonDocument>(jobId);
+        var filter = GetJobIdFilter<JobStepState>(jobId);
         if (statuses.Any(_ => _ == JobStepStatus.Failed) || statuses.Length == 0)
         {
             var failedCursor = await FailedCollection.FindAsync(filter).ConfigureAwait(false);
-            failedJobSteps = failedCursor.ToList().ConvertAll(_ => BsonSerializer.Deserialize<JobStepState>(_));
+            failedJobSteps = failedCursor.ToList();
 
             if (statuses.Any(_ => _ != JobStepStatus.Failed))
             {
@@ -78,18 +71,18 @@ public class MongoDBJobStepStorage : IJobStepStorage
 
         if (statuses.Length > 0)
         {
-            filter &= Builders<BsonDocument>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
+            filter &= Builders<JobStepState>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
         }
 
         var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        var jobsSteps = cursor.ToList().ConvertAll(_ => BsonSerializer.Deserialize<JobStepState>(_));
+        var jobsSteps = cursor.ToList();
         return jobsSteps.Concat(failedJobSteps).ToImmutableList();
     }
 
     /// <inheritdoc/>
     public async Task<int> CountForJob(JobId jobId, params JobStepStatus[] statuses)
     {
-        var filter = GetJobIdFilter<BsonDocument>(jobId);
+        var filter = GetJobIdFilter<JobStepState>(jobId);
         var count = 0L;
         if (statuses.Any(_ => _ == JobStepStatus.Failed) || statuses.Length == 0)
         {
@@ -102,7 +95,7 @@ public class MongoDBJobStepStorage : IJobStepStorage
 
         if (statuses.Length > 0)
         {
-            filter &= Builders<BsonDocument>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
+            filter &= Builders<JobStepState>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
         }
         count += await Collection.CountDocumentsAsync(filter).ConfigureAwait(false);
         return (int)count;
@@ -111,7 +104,7 @@ public class MongoDBJobStepStorage : IJobStepStorage
     /// <inheritdoc/>
     public IObservable<IEnumerable<JobStepState>> ObserveForJob(JobId jobId)
     {
-        var filter = GetJobIdFilter<ChangeStreamDocument<BsonDocument>>(jobId, "fullDocument.");
+        var filter = GetJobIdFilter<ChangeStreamDocument<JobStepState>>(jobId, "fullDocument.");
         var initialItems = GetForJob(jobId).GetAwaiter().GetResult();
 
         return Collection.Observe(initialItems, HandleChangesForJobSteps, filter);
@@ -134,10 +127,11 @@ public class MongoDBJobStepStorage : IJobStepStorage
     /// </summary>
     /// <param name="jobId">Identifier of the job.</param>
     /// <param name="jobStepId">Identifier of the job step.</param>
+    /// <typeparam name="TDocument">Type of document to query.</typeparam>
     /// <returns><see cref="FilterDefinition{T}"/> for the BsonDocument.</returns>
-    protected FilterDefinition<BsonDocument> GetIdFilter(Guid jobId, Guid jobStepId) =>
-        Builders<BsonDocument>.Filter.Eq(
-            new StringFieldDefinition<BsonDocument, BsonDocument>("_id"),
+    protected FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid jobId, Guid jobStepId) =>
+        Builders<TDocument>.Filter.Eq(
+            new StringFieldDefinition<TDocument, BsonDocument>("_id"),
             new BsonDocument
             {
                 {
@@ -149,7 +143,7 @@ public class MongoDBJobStepStorage : IJobStepStorage
                 }
             });
 
-    void HandleChangesForJobSteps(IChangeStreamCursor<ChangeStreamDocument<BsonDocument>> cursor, List<JobStepState> jobs)
+    void HandleChangesForJobSteps(IChangeStreamCursor<ChangeStreamDocument<JobStepState>> cursor, List<JobStepState> jobs)
     {
     }
 }
@@ -159,7 +153,10 @@ public class MongoDBJobStepStorage : IJobStepStorage
 /// </summary>
 /// <typeparam name="TJobStepState">Type of <see cref="JobStepState"/> to work with.</typeparam>
 public class MongoDBJobStepStorage<TJobStepState> : MongoDBJobStepStorage, IJobStepStorage<TJobStepState>
+    where TJobStepState : JobStepState
 {
+    readonly ProviderFor<IEventStoreDatabase> _databaseProvider;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBJobStorage{TJobState}"/> class.
     /// </summary>
@@ -167,20 +164,19 @@ public class MongoDBJobStepStorage<TJobStepState> : MongoDBJobStepStorage, IJobS
     public MongoDBJobStepStorage(ProviderFor<IEventStoreDatabase> databaseProvider)
         : base(databaseProvider)
     {
+        _databaseProvider = databaseProvider;
     }
+
+    IMongoCollection<TJobStepState> Collection => _databaseProvider().GetCollection<TJobStepState>(WellKnownCollectionNames.JobSteps);
+
+    IMongoCollection<TJobStepState> FailedCollection => _databaseProvider().GetCollection<TJobStepState>(WellKnownCollectionNames.FailedJobSteps);
 
     /// <inheritdoc/>
     public async Task<TJobStepState?> Read(JobId jobId, JobStepId jobStepId)
     {
-        var filter = GetIdFilter(jobId, jobStepId);
+        var filter = GetIdFilter<TJobStepState>(jobId, jobStepId);
         var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        var state = cursor.FirstOrDefault();
-        if (state is not null)
-        {
-            return BsonSerializer.Deserialize<TJobStepState>(state);
-        }
-
-        return default!;
+        return cursor.FirstOrDefault();
     }
 
     /// <inheritdoc/>
@@ -189,32 +185,8 @@ public class MongoDBJobStepStorage<TJobStepState> : MongoDBJobStepStorage, IJobS
         JobStepId jobStepId,
         TJobStepState state)
     {
-        var filter = GetIdFilter(jobId, jobStepId);
-        var jobStepState = (state as JobStepState)!;
-        var collection = jobStepState.Status == JobStepStatus.Failed ? FailedCollection : Collection;
-
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
-        object request = ((dynamic)state)!.Request;
-#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
-
-        BsonDocument? requestAsDocument = null;
-
-        if (request is not null)
-        {
-            ((dynamic)state)!.Request = null!;
-            requestAsDocument = request.ToBsonDocument(request.GetType());
-        }
-
-        var document = state.ToBsonDocument();
-        if (requestAsDocument is not null)
-        {
-            document["request"] = requestAsDocument;
-        }
-        document.Remove("_id");
-        document.RemoveTypeInfo();
-        await collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
-
-        ((dynamic)state)!.Request = request;
+        var collection = state.Status == JobStepStatus.Failed ? FailedCollection : Collection;
+        await collection.ReplaceOneAsync(GetIdFilter<TJobStepState>(jobId, jobStepId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -223,7 +195,7 @@ public class MongoDBJobStepStorage<TJobStepState> : MongoDBJobStepStorage, IJobS
         JobStepId jobStepId,
         TJobStepState jobStepState)
     {
-        await Collection.DeleteOneAsync(GetIdFilter(jobId, jobStepId)).ConfigureAwait(false);
+        await Collection.DeleteOneAsync(GetIdFilter<TJobStepState>(jobId, jobStepId)).ConfigureAwait(false);
         await Save(jobId, jobStepId, jobStepState);
     }
 }

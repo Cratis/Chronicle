@@ -66,7 +66,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     protected TRequest Request => (State.Request as TRequest)!;
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _logger = ServiceProvider.GetService<ILogger<Job<TRequest, TJobState>>>() ?? new NullLogger<Job<TRequest, TJobState>>();
 
@@ -77,8 +77,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         _jsonSerializerOptions = ServiceProvider.GetService<JsonSerializerOptions>() ?? new JsonSerializerOptions();
 
-        await StatusChanged(JobStatus.Preparing);
-
         JobId = this.GetPrimaryKey(out var keyExtension);
         JobKey = (JobKey)keyExtension;
 
@@ -86,6 +84,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         State.Name = GetType().Name;
         State.Type = this.GetGrainType();
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -93,6 +93,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         using var scope = _logger?.BeginJobScope(JobId, JobKey);
         _logger?.Starting();
+
+        await StatusChanged(JobStatus.Preparing);
 
         _isRunning = true;
         State.Request = request!;
@@ -190,10 +192,13 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
         await stepStorage.RemoveAllForJob(JobId);
-        await OnCompleted();
 
-        await StatusChanged(JobStatus.Stopped);
-        await WriteStateAsync();
+        if (State.Status > JobStatus.None && State.Status < JobStatus.CompletedSuccessfully)
+        {
+            await OnCompleted();
+            await StatusChanged(JobStatus.Stopped);
+            await WriteStateAsync();
+        }
 
         _subscriptionTimer?.Dispose();
     }
@@ -215,7 +220,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         }
 
         await OnStepCompleted(stepId, result);
-        await HandleCompletion();
         if (!await HandleCompletion())
         {
             await WriteStateAsync();

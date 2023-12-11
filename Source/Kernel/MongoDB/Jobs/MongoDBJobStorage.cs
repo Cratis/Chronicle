@@ -33,7 +33,7 @@ public class MongoDBJobStorage : IJobStorage
     /// <inheritdoc/>
     public async Task<JobState> GetJob(JobId jobId)
     {
-        var cursor = await Collection.FindAsync(GetIdFilter(jobId)).ConfigureAwait(false);
+        var cursor = await Collection.FindAsync(GetIdFilter<JobState>(jobId)).ConfigureAwait(false);
         return cursor.Single();
     }
 
@@ -61,9 +61,15 @@ public class MongoDBJobStorage : IJobStorage
 
     /// <inheritdoc/>
     public async Task Remove(JobId jobId) =>
-        await Collection.DeleteOneAsync(GetIdFilter(jobId)).ConfigureAwait(false);
+        await Collection.DeleteOneAsync(GetIdFilter<JobState>(jobId)).ConfigureAwait(false);
 
-    FilterDefinition<JobState> GetIdFilter(Guid id) => Builders<JobState>.Filter.Eq(new StringFieldDefinition<JobState, Guid>("_id"), id);
+    /// <summary>
+    /// Get the filter for a specific <see cref="JobId"/>.
+    /// </summary>
+    /// <param name="id"><see cref="JobId"/> to get filter for.</param>
+    /// <typeparam name="TDocument">Type of document.</typeparam>
+    /// <returns>The <see cref="FilterDefinition{T}"/> to be used with a query.</returns>
+    protected FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid id) => Builders<TDocument>.Filter.Eq(new StringFieldDefinition<TDocument, Guid>("_id"), id);
 
     async Task<List<JobState>> GetJobsRaw(params JobStatus[] statuses)
     {
@@ -148,13 +154,13 @@ public class MongoDBJobStorage<TJobState> : MongoDBJobStorage, IJobStorage<TJobS
     /// <inheritdoc/>
     public async Task<TJobState?> Read(JobId jobId)
     {
-        var cursor = await Collection.FindAsync(GetIdFilter(jobId)).ConfigureAwait(false);
+        var cursor = await Collection.FindAsync(GetIdFilter<TJobState>(jobId)).ConfigureAwait(false);
         return cursor.FirstOrDefault();
     }
 
     /// <inheritdoc/>
     public async Task Save(JobId jobId, TJobState state) =>
-        await Collection.ReplaceOneAsync(GetIdFilter(jobId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+        await Collection.ReplaceOneAsync(GetIdFilter<TJobState>(jobId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
 
     /// <inheritdoc/>
     public async Task<IImmutableList<TJobState>> GetJobs<TJobType>(params JobStatus[] statuses)
@@ -171,6 +177,4 @@ public class MongoDBJobStorage<TJobState> : MongoDBJobStorage, IJobStorage<TJobS
         var jobs = await cursor.ToListAsync().ConfigureAwait(false);
         return jobs.ToImmutableList();
     }
-
-    FilterDefinition<TJobState> GetIdFilter(JobId jobId) => Builders<TJobState>.Filter.Eq(new StringFieldDefinition<TJobState, Guid>("_id"), jobId);
 }

@@ -3,7 +3,6 @@
 
 using Aksio.Cratis;
 using Aksio.Cratis.Kernel.MongoDB;
-using Aksio.Cratis.Kernel.MongoDB.Jobs;
 using Aksio.Cratis.Kernel.MongoDB.Reminders;
 using Aksio.Cratis.Kernel.MongoDB.Tenants;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
@@ -41,7 +40,8 @@ public static class SiloBuilderExtensions
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.Recommendations, (serviceProvider, _) => serviceProvider.GetRequiredService<RecommendationGrainStorageProvider>());
         });
 
-        BsonSerializer.RegisterSerializationProvider(new JobStateSerializationProvider());
+        BsonSerializer.RegisterSerializer(new JsonElementSerializer());
+        BsonSerializer.RegisterSerializer(new UriSerializer());
 
         builder.AddReminders();
         builder.ConfigureServices(services => services.AddSingleton<IReminderTable, MongoDBReminderTable>());
