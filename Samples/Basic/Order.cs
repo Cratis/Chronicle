@@ -20,6 +20,7 @@ public class Order : AggregateRoot<OrderState>
             new(Guid.NewGuid()),
             new(Guid.NewGuid()),
             1,
+            null,
             null));
 
         Console.WriteLine($"After : {State.CartItems.Count()}");

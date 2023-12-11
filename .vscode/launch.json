@@ -115,6 +115,34 @@
             }
         },
         {
+            "name": ".NET Core Launch (Basic sample - not just my code)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build basic sample",
+            "program": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Samples/Basic",
+            "stopAtEntry": false,
+            "justMyCode": false,
+            "requireExactSource": false,
+            "symbolOptions": {
+                "moduleFilter": {
+                    "mode": "loadOnlyIncluded",
+                    "includedModules": [
+                        "Aksio.*.dll",
+                        "Namotion.Reflection.dll"
+                    ]
+                },
+                "searchPaths": [],
+                "searchMicrosoftSymbolServer": false,
+                "searchNuGetOrgSymbolServer": true
+            },
+            "suppressJITOptimizations": true,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
             "name": ".NET Core Launch (Benchmarks)",
             "type": "coreclr",
             "request": "launch",

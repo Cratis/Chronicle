@@ -28,6 +28,7 @@ app.MapGet("/add", () =>
         new(Guid.NewGuid()),
         new(Guid.NewGuid()),
         1,
+        null,
         null));
 });
 
