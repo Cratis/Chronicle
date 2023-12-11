@@ -74,33 +74,29 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
                 @event.Context.SequenceNumber);
         }
 
-        if (context.Metadata is JsonElement connectedClientJsonObject)
+        if (context.Metadata is ConnectedClient connectedClient)
         {
-            var connectedClient = connectedClientJsonObject.Deserialize<ConnectedClient>(_jsonSerializerOptions);
-            if (connectedClient is not null)
+            using var httpClient = _httpClientFactory.CreateClient(Grains.Clients.ConnectedClients.ConnectedClientsHttpClient);
+            httpClient.BaseAddress = connectedClient.ClientUri;
+
+            using var jsonContent = JsonContent.Create(events, options: _jsonSerializerOptions);
+            httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
+            var response = await httpClient.PostAsync($"/.cratis/observers/{_observerId}", jsonContent);
+            var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
+            var state = ObserverSubscriberState.Ok;
+            var lastSuccessfullyObservedEvent = ((JsonElement)commandResult.Response!).Deserialize<EventSequenceNumber>(Globals.JsonSerializerOptions)!;
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                using var httpClient = _httpClientFactory.CreateClient(Grains.Clients.ConnectedClients.ConnectedClientsHttpClient);
-                httpClient.BaseAddress = connectedClient.ClientUri;
-
-                using var jsonContent = JsonContent.Create(events, options: _jsonSerializerOptions);
-                httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
-                var response = await httpClient.PostAsync($"/.cratis/observers/{_observerId}", jsonContent);
-                var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
-                var state = ObserverSubscriberState.Ok;
-                var lastSuccessfullyObservedEvent = ((JsonElement)commandResult.Response!).Deserialize<EventSequenceNumber>(Globals.JsonSerializerOptions)!;
-
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                {
-                    await ConnectedClients.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
-                    state = ObserverSubscriberState.Disconnected;
-                }
-                else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)
-                {
-                    state = ObserverSubscriberState.Failed;
-                }
-
-                return new ObserverSubscriberResult(state, lastSuccessfullyObservedEvent, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
+                await ConnectedClients.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
+                state = ObserverSubscriberState.Disconnected;
             }
+            else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)
+            {
+                state = ObserverSubscriberState.Failed;
+            }
+
+            return new ObserverSubscriberResult(state, lastSuccessfullyObservedEvent, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
         }
 
         return new ObserverSubscriberResult(ObserverSubscriberState.Disconnected, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
