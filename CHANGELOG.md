@@ -1,3 +1,13 @@
+# [v9.14.9] - 2023-12-11 [PR: #1041](https://github.com/aksio-insurtech/Cratis/pull/1041)
+
+### Fixed
+
+- Serialization to and from MongoDB fixed for types with `object` properties. These are now getting a discriminator value that makes sense and is possible to get back to the original type. Allowing any types to be considered.
+- Internal fallback JSON serialization for Grain communication with support for types with `object` properties.
+- Adding metadata to the JSON schema for properties that hold a nullable `ConceptAs<>` type allowing the Kernel to treat these as nullables and not give a default value if the value is indeed null.
+
+
+
 # [v9.14.8] - 2023-12-8 [PR: #1040](https://github.com/aksio-insurtech/Cratis/pull/1040)
 
 ### Fixed
