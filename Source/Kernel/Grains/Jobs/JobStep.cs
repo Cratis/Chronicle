@@ -18,6 +18,7 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
     readonly IPersistentState<TState> _state;
     readonly CancellationTokenSource _cancellationTokenSource = new();
     bool _running;
+    JobStepResult? _result;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobStep{TRequest, TResult, TState}"/> class.
@@ -70,7 +71,6 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
         _state.State.Name = GetType().Name;
         _state.State.Id = new(jobStepKey.JobId, JobStepId);
         _state.State.Type = grainType;
-        await _state.WriteStateAsync();
     }
 
     /// <inheritdoc/>
@@ -125,10 +125,9 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
     /// <inheritdoc/>
     public async Task ReportFailure(IList<string> exceptionMessages, string exceptionStackTrace)
     {
-        var result = await GetResult();
         StatusChanged(JobStepStatus.Failed, exceptionMessages, exceptionStackTrace);
         await _state.WriteStateAsync();
-        await Job.OnStepFailed(JobStepId, result!);
+        await Job.OnStepFailed(JobStepId, _result!);
     }
 
     /// <summary>
@@ -170,6 +169,7 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
             result = new JobStepResult(JobStepStatus.Failed, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
         }
 
+        _result = result;
         if (result.IsSuccess)
         {
             await Job.OnStepSucceeded(JobStepId, result);

@@ -3,7 +3,10 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.EventSequences;
+using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Properties;
@@ -32,7 +35,6 @@ public static class SerializationConfigurationExtensions
     static void Configure(this IServiceCollection services)
     {
         var options = new JsonSerializerOptions(Globals.JsonSerializerOptions);
-        options.Converters.Add(new TypeJsonConverter());
         options.Converters.Add(new KeyJsonConverter());
         options.Converters.Add(new PropertyPathJsonConverter());
         options.Converters.Add(new PropertyPathChildrenDefinitionDictionaryJsonConverter());
@@ -40,6 +42,10 @@ public static class SerializationConfigurationExtensions
         options.Converters.Add(new FromDefinitionsConverter());
         options.Converters.Add(new JoinDefinitionsConverter());
         options.Converters.Add(new EventSequenceNumberTokenJsonConverter());
+        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>());
+        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>());
+        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<JobStateJsonConverter, JobState>());
+        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<JobStepStateJsonConverter, JobStepState>());
 
         services.AddSerializer(serializerBuilder => serializerBuilder.AddJsonSerializer(
             _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Aksio") ?? false),

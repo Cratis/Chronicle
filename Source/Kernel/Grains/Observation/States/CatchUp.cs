@@ -14,6 +14,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 /// </summary>
 public class CatchUp : BaseObserverState
 {
+    readonly ObserverId _observerId;
     readonly ObserverKey _observerKey;
     readonly IJobsManager _jobsManager;
     readonly ILogger<CatchUp> _logger;
@@ -21,14 +22,17 @@ public class CatchUp : BaseObserverState
     /// <summary>
     /// Initializes a new instance of the <see cref="CatchUp"/> class.
     /// </summary>
+    /// <param name="observerId">The <see cref="ObserverId"/> for the observer.</param>
     /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
     /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
     /// <param name="logger">Logger for logging.</param>
     public CatchUp(
+        ObserverId observerId,
         ObserverKey observerKey,
         IJobsManager jobsManager,
         ILogger<CatchUp> logger)
     {
+        _observerId = observerId;
         _observerKey = observerKey;
         _jobsManager = jobsManager;
         _logger = logger;
@@ -54,7 +58,7 @@ public class CatchUp : BaseObserverState
         var subscription = await Observer.GetSubscription();
 
         var jobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
-        var jobsForThisObserver = jobs.Where(_ => _.Request.ObserverId == state.ObserverId && _.Request.ObserverKey == _observerKey);
+        var jobsForThisObserver = jobs.Where(IsJobForThisObserver);
         if (jobs.Any(_ => _.Status == JobStatus.Running))
         {
             _logger.FinishingExistingCatchUpJob();
@@ -89,4 +93,8 @@ public class CatchUp : BaseObserverState
     {
         return Task.FromResult(state);
     }
+
+    bool IsJobForThisObserver(JobState jobState) =>
+        ((ReplayObserverRequest)jobState.Request).ObserverId == _observerId &&
+        ((ReplayObserverRequest)jobState.Request).ObserverKey == _observerKey;
 }

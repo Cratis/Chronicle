@@ -66,6 +66,7 @@ public class RecommendationGrainStorageProvider : IGrainStorage
 
             _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
             var recommendationStorage = _serviceProvider.GetRequiredService<IRecommendationStorage>();
+            actualGrainState.State.Id = recommendationId;
             await recommendationStorage.Save(recommendationId, actualGrainState.State);
         }
     }

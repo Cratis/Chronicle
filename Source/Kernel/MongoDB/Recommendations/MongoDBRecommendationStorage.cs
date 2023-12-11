@@ -7,9 +7,6 @@ using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.Persistence.Recommendations;
 using Aksio.Cratis.Kernel.Recommendations;
 using Aksio.DependencyInversion;
-using Aksio.Strings;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Recommendations;
@@ -19,7 +16,6 @@ namespace Aksio.Cratis.Kernel.MongoDB.Recommendations;
 /// </summary>
 public class MongoDBRecommendationStorage : IRecommendationStorage
 {
-    const string RecommendationRequestType = "requestType";
     readonly ProviderFor<IEventStoreDatabase> _databaseProvider;
 
     /// <summary>
@@ -32,16 +28,14 @@ public class MongoDBRecommendationStorage : IRecommendationStorage
         _databaseProvider = databaseProvider;
     }
 
-    IMongoCollection<BsonDocument> Collection => _databaseProvider().GetCollection<BsonDocument>(WellKnownCollectionNames.Recommendations);
+    IMongoCollection<RecommendationState> Collection => _databaseProvider().GetCollection<RecommendationState>(WellKnownCollectionNames.Recommendations);
 
     /// <inheritdoc/>
     public async Task<RecommendationState?> Get(RecommendationId recommendationId)
     {
         var filter = GetIdFilter(recommendationId);
         var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        var state = cursor.SingleOrDefault();
-        if (state is null) return null;
-        return DeserializeState(state);
+        return cursor.SingleOrDefault();
     }
 
     /// <inheritdoc/>
@@ -52,39 +46,14 @@ public class MongoDBRecommendationStorage : IRecommendationStorage
     }
 
     /// <inheritdoc/>
-    public async Task Save(RecommendationId recommendationId, RecommendationState recommendationState)
-    {
-        var filter = GetIdFilter(recommendationId);
-        var requestProperty = nameof(RecommendationState.Request).ToCamelCase();
-
-        BsonDocument? requestAsDocument = null;
-        var request = recommendationState.Request;
-
-        if (recommendationState.Request is not null)
-        {
-            recommendationState.Request = null!;
-            requestAsDocument = request.ToBsonDocument(request.GetType());
-        }
-
-        var document = recommendationState.ToBsonDocument();
-
-        if (requestAsDocument is not null)
-        {
-            document[requestProperty] = requestAsDocument;
-            document[RecommendationRequestType] = recommendationState.Request?.GetType().AssemblyQualifiedName ?? string.Empty;
-        }
-
-        document.Remove("_id");
-        await Collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true });
-
-        recommendationState.Request = request;
-    }
+    public async Task Save(RecommendationId recommendationId, RecommendationState recommendationState) =>
+        await Collection.ReplaceOneAsync(GetIdFilter(recommendationId), recommendationState, new ReplaceOptions { IsUpsert = true });
 
     /// <inheritdoc/>
     public async Task<IImmutableList<RecommendationState>> GetRecommendations()
     {
         var cursor = await Collection.FindAsync(_ => true).ConfigureAwait(false);
-        var deserialized = cursor.ToList().Select(DeserializeState);
+        var deserialized = cursor.ToList();
         return deserialized.ToImmutableList();
     }
 
@@ -95,19 +64,7 @@ public class MongoDBRecommendationStorage : IRecommendationStorage
         return Collection.Observe(recommendations, HandleChangesForRecommendations);
     }
 
-    RecommendationState DeserializeState(BsonDocument document)
-    {
-        var requestProperty = nameof(RecommendationState.Request).ToCamelCase();
-        var requestAsDocument = document.GetValue(requestProperty).AsBsonDocument;
-        var requestType = Type.GetType(document[RecommendationRequestType].AsString);
-        var request = BsonSerializer.Deserialize(requestAsDocument, requestType);
-        document.Remove(requestProperty);
-        var state = BsonSerializer.Deserialize<RecommendationState>(document);
-        state.Request = request;
-        return state;
-    }
-
-    void HandleChangesForRecommendations(IChangeStreamCursor<ChangeStreamDocument<BsonDocument>> cursor, List<RecommendationState> recommendations)
+    void HandleChangesForRecommendations(IChangeStreamCursor<ChangeStreamDocument<RecommendationState>> cursor, List<RecommendationState> recommendations)
     {
         foreach (var change in cursor.Current)
         {
@@ -122,20 +79,18 @@ public class MongoDBRecommendationStorage : IRecommendationStorage
                 continue;
             }
 
-            var observer = recommendations.Find(_ => _.Id == (RecommendationId)changedRecommendation["_id"].AsGuid);
-
-            var recommendationState = DeserializeState(changedRecommendation);
+            var observer = recommendations.Find(_ => _.Id == changedRecommendation.Id);
             if (observer is not null)
             {
                 var index = recommendations.IndexOf(observer);
-                recommendations[index] = recommendationState;
+                recommendations[index] = changedRecommendation;
             }
             else
             {
-                recommendations.Add(recommendationState);
+                recommendations.Add(changedRecommendation);
             }
         }
     }
 
-    FilterDefinition<BsonDocument> GetIdFilter(Guid id) => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, Guid>("_id"), id);
+    FilterDefinition<RecommendationState> GetIdFilter(Guid id) => Builders<RecommendationState>.Filter.Eq(new StringFieldDefinition<RecommendationState, Guid>("_id"), id);
 }

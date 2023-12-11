@@ -67,6 +67,7 @@ public class JobsManager : Grain, IJobsManager
     /// <inheritdoc/>
     public async Task Start<TJob, TRequest>(JobId jobId, TRequest request)
         where TJob : IJob<TRequest>
+        where TRequest : class
     {
         using var scope = _logger.BeginJobsManagerScope(_key);
 
@@ -132,12 +133,12 @@ public class JobsManager : Grain, IJobsManager
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<JobState<TRequest>>> GetJobsOfType<TJob, TRequest>()
+    public async Task<IImmutableList<JobState>> GetJobsOfType<TJob, TRequest>()
         where TJob : IJob<TRequest>
         where TRequest : class
     {
         _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
-        var storage = ServiceProvider.GetRequiredService<IJobStorage<JobState<TRequest>>>();
+        var storage = ServiceProvider.GetRequiredService<IJobStorage<JobState>>();
         return await storage.GetJobs<TJob>();
     }
 }

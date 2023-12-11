@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents the state for a <see cref="ReplayObserver"/> job step.
 /// </summary>
-public class ReplayObserverState : JobState<ReplayObserverRequest>
+public class ReplayObserverState : JobState
 {
     /// <summary>
     /// Gets or sets the number of handled events by the job.

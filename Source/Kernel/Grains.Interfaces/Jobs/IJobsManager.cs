@@ -25,7 +25,8 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
     /// <typeparam name="TRequest">Type of the request to pass along.</typeparam>
     /// <returns>Awaitable task.</returns>
     Task Start<TJob, TRequest>(JobId jobId, TRequest request)
-        where TJob : IJob<TRequest>;
+        where TJob : IJob<TRequest>
+        where TRequest : class;
 
     /// <summary>
     /// Resume a job.
@@ -62,7 +63,7 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
     /// <typeparam name="TJob">Type of job to get for.</typeparam>
     /// <typeparam name="TRequest">Type of request.</typeparam>
     /// <returns>Collection of request instances.</returns>
-    Task<IImmutableList<JobState<TRequest>>> GetJobsOfType<TJob, TRequest>()
+    Task<IImmutableList<JobState>> GetJobsOfType<TJob, TRequest>()
         where TJob : IJob<TRequest>
         where TRequest : class;
 }

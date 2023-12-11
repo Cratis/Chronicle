@@ -9,15 +9,15 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a job for retrying a failed partition.
 /// </summary>
-public class ReplayObserverPartition : Job<ReplayObserverPartitionRequest, JobState<ReplayObserverPartitionRequest>>, IReplayObserverPartition
+public class ReplayObserverPartition : Job<ReplayObserverPartitionRequest, JobState>, IReplayObserverPartition
 {
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
         if (State.Progress.SuccessfulSteps == 1)
         {
-            var observer = GrainFactory.GetGrain<IObserver>(State.Request.ObserverId, State.Request.ObserverKey);
-            await observer.PartitionReplayed(State.Request.Key);
+            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
+            await observer.PartitionReplayed(Request.Key);
         }
     }
 

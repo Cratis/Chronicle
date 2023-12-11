@@ -16,7 +16,7 @@ public interface IJobStorage
     /// </summary>
     /// <param name="jobId">The unique <see cref="JobId"/> for the job to get.</param>
     /// <returns>The job instance.</returns>
-    Task<JobState<object>> GetJob(JobId jobId);
+    Task<JobState> GetJob(JobId jobId);
 
     /// <summary>
     /// Get all jobs of a given type with a given status.
@@ -26,7 +26,7 @@ public interface IJobStorage
     /// <remarks>
     /// If no job statuses are specified, all jobs of the given type will be returned.
     /// </remarks>
-    Task<IImmutableList<JobState<object>>> GetJobs(params JobStatus[] statuses);
+    Task<IImmutableList<JobState>> GetJobs(params JobStatus[] statuses);
 
     /// <summary>
     /// Observe jobs of a given type with a given status.
@@ -36,7 +36,7 @@ public interface IJobStorage
     /// <remarks>
     /// If no job statuses are specified, all jobs of the given type will be returned.
     /// </remarks>
-    IObservable<IEnumerable<JobState<object>>> ObserveJobs(params JobStatus[] statuses);
+    IObservable<IEnumerable<JobState>> ObserveJobs(params JobStatus[] statuses);
 
     /// <summary>
     /// Remove a job.
@@ -49,7 +49,7 @@ public interface IJobStorage
 /// <summary>
 /// Defines a system that can store job state.
 /// </summary>
-/// <typeparam name="TJobState">Type of <see cref="JobState{T}"/> to store.</typeparam>
+/// <typeparam name="TJobState">Type of <see cref="JobState"/> to store.</typeparam>
 public interface IJobStorage<TJobState> : IJobStorage
 {
     /// <summary>
@@ -63,7 +63,7 @@ public interface IJobStorage<TJobState> : IJobStorage
     /// Save the state of a job.
     /// </summary>
     /// <param name="jobId">The <see cref="JobId"/> of the job to save.</param>
-    /// <param name="state"><see cref="JobState{T}"/> to save.</param>
+    /// <param name="state"><see cref="JobState"/> to save.</param>
     /// <returns>Awaitable task.</returns>
     Task Save(JobId jobId, TJobState state);
 

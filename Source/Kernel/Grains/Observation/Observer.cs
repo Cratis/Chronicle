@@ -170,16 +170,19 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
             _loggerFactory.CreateLogger<Routing>()),
 
         new CatchUp(
+            _observerId,
             _observerKey,
             _jobsManager,
             _loggerFactory.CreateLogger<CatchUp>()),
 
         new ResumeReplay(
+            _observerId,
             _observerKey,
             _replayStateServiceClient,
             _jobsManager),
 
         new Replay(
+            _observerId,
             _observerKey,
             _replayStateServiceClient,
             _jobsManager,

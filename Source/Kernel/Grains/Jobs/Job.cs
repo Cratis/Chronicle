@@ -22,7 +22,8 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// <typeparam name="TJobState">Type of state for the job.</typeparam>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Jobs)]
 public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest>
-    where TJobState : JobState<TRequest>
+    where TRequest : class
+    where TJobState : JobState
 {
     IDictionary<JobStepId, JobStepGrainAndRequest> _jobStepGrains = new Dictionary<JobStepId, JobStepGrainAndRequest>();
     ObserverManager<IJobObserver>? _observers;
@@ -59,8 +60,13 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// </summary>
     protected IJob<TRequest> ThisJob { get; private set; }
 
+    /// <summary>
+    /// Gets the request associated with the job.
+    /// </summary>
+    protected TRequest Request => (State.Request as TRequest)!;
+
     /// <inheritdoc/>
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _logger = ServiceProvider.GetService<ILogger<Job<TRequest, TJobState>>>() ?? new NullLogger<Job<TRequest, TJobState>>();
 
@@ -71,8 +77,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         _jsonSerializerOptions = ServiceProvider.GetService<JsonSerializerOptions>() ?? new JsonSerializerOptions();
 
-        await StatusChanged(JobStatus.Preparing);
-
         JobId = this.GetPrimaryKey(out var keyExtension);
         JobKey = (JobKey)keyExtension;
 
@@ -80,7 +84,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         State.Name = GetType().Name;
         State.Type = this.GetGrainType();
-        await WriteStateAsync();
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -88,6 +93,8 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         using var scope = _logger?.BeginJobScope(JobId, JobKey);
         _logger?.Starting();
+
+        await StatusChanged(JobStatus.Preparing);
 
         _isRunning = true;
         State.Request = request!;
@@ -106,10 +113,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                 var jobSteps = await jobStepsTask;
                 if (jobSteps.Count == 0)
                 {
-                    State.Remove = true;
                     await OnCompleted();
                     await StatusChanged(JobStatus.CompletedSuccessfully);
-                    await WriteStateAsync();
+                    await ClearStateAsync();
                     return;
                 }
                 _jobStepGrains = CreateGrainsFromJobSteps(jobSteps);
@@ -186,10 +192,13 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
         await stepStorage.RemoveAllForJob(JobId);
-        await OnCompleted();
 
-        await StatusChanged(JobStatus.Stopped);
-        await WriteStateAsync();
+        if (State.Status > JobStatus.None && State.Status < JobStatus.CompletedSuccessfully)
+        {
+            await OnCompleted();
+            await StatusChanged(JobStatus.Stopped);
+            await WriteStateAsync();
+        }
 
         _subscriptionTimer?.Dispose();
     }
@@ -211,8 +220,10 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         }
 
         await OnStepCompleted(stepId, result);
-        await HandleCompletion();
-        await WriteStateAsync();
+        if (!await HandleCompletion())
+        {
+            await WriteStateAsync();
+        }
 
         await Unsubscribe(_jobStepGrains[stepId].Grain.AsReference<IJobObserver>());
         _jobStepGrains.Remove(stepId);
@@ -230,8 +241,10 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         _logger?.StepFailed(stepId);
 
         await OnStepCompleted(stepId, result);
-        await HandleCompletion();
-        await WriteStateAsync();
+        if (!await HandleCompletion())
+        {
+            await WriteStateAsync();
+        }
 
         await Unsubscribe(_jobStepGrains[stepId].Grain.AsReference<IJobObserver>());
         _jobStepGrains.Remove(stepId);
@@ -427,8 +440,10 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         return Task.CompletedTask;
     }
 
-    async Task HandleCompletion()
+    async Task<bool> HandleCompletion()
     {
+        var cleared = false;
+
         if (State.Progress.IsCompleted)
         {
             var id = this.GetPrimaryKey(out var keyExtension);
@@ -448,10 +463,16 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                     .GetGrain<IJobsManager>(0, new JobsManagerKey(key.MicroserviceId, key.TenantId))
                     .OnCompleted(id, State.Status);
 
-            State.Remove = RemoveAfterCompleted;
+            if (RemoveAfterCompleted)
+            {
+                await ClearStateAsync();
+                cleared = true;
+            }
 
             DeactivateOnIdle();
         }
+
+        return cleared;
     }
 
     static class JobStepInvoker

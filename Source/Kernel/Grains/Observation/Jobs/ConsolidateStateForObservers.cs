@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents an implementation of <see cref="IConsolidateStateForObservers"/>.
 /// </summary>
-public class ConsolidateStateForObservers : Job<ConsolidateStateForObserveRequest, JobState<ConsolidateStateForObserveRequest>>, IConsolidateStateForObservers
+public class ConsolidateStateForObservers : Job<ConsolidateStateForObserveRequest, JobState>, IConsolidateStateForObservers
 {
     /// <inheritdoc/>
     protected override bool RemoveAfterCompleted => true;

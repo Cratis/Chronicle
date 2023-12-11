@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents the state for a <see cref="CatchUpObserver"/> job step.
 /// </summary>
-public class CatchUpObserverState : JobState<CatchUpObserverRequest>
+public class CatchUpObserverState : JobState
 {
     /// <summary>
     /// Gets or sets the number of handled events by the job.

@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using Aksio.Concepts;
 using Namotion.Reflection;
 using Newtonsoft.Json;
@@ -22,7 +23,14 @@ public class ReflectionService : DefaultReflectionService
         if (contextualType.Type.IsConcept())
         {
             defaultReferenceTypeNullHandling = ReferenceTypeNullHandling.NotNull;
-            contextualType = contextualType.Type.GetConceptValueType().ToContextualType();
+
+            var conceptValueType = contextualType.Type.GetConceptValueType();
+            if (contextualType.OriginalNullability == Nullability.Nullable)
+            {
+                conceptValueType = typeof(Nullable<>).MakeGenericType(conceptValueType);
+            }
+
+            contextualType = conceptValueType.ToContextualType(contextualType.Type.GetCustomAttributes());
         }
 
         return base.GetDescription(contextualType, defaultReferenceTypeNullHandling, settings);

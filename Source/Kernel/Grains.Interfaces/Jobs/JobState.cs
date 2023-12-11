@@ -6,35 +6,45 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// <summary>
 /// Holds the state of a <see cref="IJob{TRequest}"/>.
 /// </summary>
-/// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
-public class JobState<TRequest> : IJobState
+public class JobState
 {
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets or sets the <see cref="JobId"/>.
+    /// </summary>
     public JobId Id { get; set; } = JobId.NotSet;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets or sets the name of the job.
+    /// </summary>
     public JobName Name { get; set; } = JobName.NotSet;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets or sets the details for a job.
+    /// </summary>
     public JobDetails Details { get; set; } = JobDetails.NotSet;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets or sets the <see cref="JobType"/>.
+    /// </summary>
     public JobType Type { get; set; } = JobType.NotSet;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets or sets the <see cref="JobStatus"/>.
+    /// </summary>
     public JobStatus Status => StatusChanges.Count == 0 ? JobStatus.None : StatusChanges.Last().Status;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets or sets collection of status changes that happened to the job.
+    /// </summary>
     public IList<JobStatusChanged> StatusChanges { get; set; } = new List<JobStatusChanged>();
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets or sets the <see cref="JobProgress"/>.
+    /// </summary>
     public JobProgress Progress { get; set; } = new();
-
-    /// <inheritdoc/>
-    public bool Remove { get; set; }
 
     /// <summary>
     /// Gets or sets the request associated with the job.
     /// </summary>
-    public TRequest Request { get; set; } = default!;
+    public object Request { get; set; } = default!;
 }
