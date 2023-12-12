@@ -14,7 +14,7 @@ export interface QueryHeaderProps {
     idx: number;
     query: QueryType;
     onToggleEdit: (idx: number) => void;
-    onQueryChange: (e: ChangeEvent<HTMLInputElement>, idx: number) => void;
+    onQueryChange: (evt: ChangeEvent<HTMLInputElement>, idx: number) => void;
 }
 
 export const QueryHeader = (props: QueryHeaderProps) => {

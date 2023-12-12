@@ -34,7 +34,7 @@
     display: flex;
     flex-direction: column;
     position: relative;
-    border: 1px solid #ddd;
+    border: 1px solid var(--surface-border);
     width: 20%;
     transition: width 250ms ease-in-out;
 }
@@ -78,18 +78,15 @@
     margin-top: 10px;
 }
 
-.activeTab .p-tabview .p-tabview-nav .p-tabview-nav-link.p-highlight {
-    background-color: red;
-}
-
 .saveQuery {
     width: 50vw;
 }
 
-.nonActiveTabHeader {
-    background-color: gray;
-}
-
 .editButton {
     margin-left: 10px;
+}
+
+.activeMenuItem {
+    color: var(--surface-900);
+    background-color: var(--surface-c);
 }

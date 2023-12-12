@@ -8,32 +8,54 @@ import { useState } from 'react';
 
 export const QueryMenuActions = () => {
     const [showChart, setShowChart] = useState(false);
+    const [activeItem, setActiveItem] = useState<string | null>(null);
 
-    const showChartHandler = () => {
-        setShowChart((prev) => !prev);
+    const handleMenuItemClick = (label: string) => {
+        setActiveItem((prev) => (prev === label ? null : label));
+
+        if (label === 'Time range') {
+            setShowChart((prev) => !prev);
+        } else {
+            setShowChart(false);
+        }
+    };
+
+    const getMenuItemClass = (label: string) => {
+        return label === 'Time range'
+            ? showChart
+                ? css.activeMenuItem
+                : ''
+            : label === activeItem
+            ? css.activeMenuItem
+            : '';
     };
 
     const items = [
         {
             label: 'Run',
             icon: 'pi pi-play',
+            command: () => handleMenuItemClick('Run'),
         },
         {
             label: 'Time range',
             icon: 'pi pi-chart-line',
-            command: showChartHandler,
+            command: () => handleMenuItemClick('Time range'),
         },
         {
             label: 'Save',
             icon: 'pi pi-save',
+            command: () => handleMenuItemClick('Save'),
         },
     ];
 
     return (
         <div className={css.actions}>
-            <div>
-                <Menubar model={items} />
-            </div>
+            <Menubar
+                model={items.map((item) => ({
+                    ...item,
+                    className: getMenuItemClass(item.label),
+                }))}
+            />
             {showChart && (
                 <>
                     Timeline here
