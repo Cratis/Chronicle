@@ -1,3 +1,12 @@
+# [v9.14.15] - 2023-12-12 [PR: #1047](https://github.com/aksio-insurtech/Cratis/pull/1047)
+
+### Fixed
+
+- Fixing so that we have at least 1 degree of parallelism for concurrency for our task scheduler.
+- Adding more explicit exception to see when parallism is configured wrongly.
+- Added logging to see the degree of parallelism for concurrency for our task scheduler.
+
+
 # [v9.14.14] - 2023-12-12 [PR: #1046](https://github.com/aksio-insurtech/Cratis/pull/1046)
 
 ### Fixed
