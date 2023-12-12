@@ -1,3 +1,10 @@
+# [v9.14.14] - 2023-12-12 [PR: #1046](https://github.com/aksio-insurtech/Cratis/pull/1046)
+
+### Fixed
+
+- Lazily getting an instance of the `TaskScheduler` for `CpuBoundWorker` when its needed the first time.
+
+
 # [v9.14.13] - 2023-12-12 [PR: #1045](https://github.com/aksio-insurtech/Cratis/pull/1045)
 
 ### Fixed
