@@ -23,7 +23,7 @@ public static class CpuBoundWorkersExtensions
         {
             maxLevelOfParallelism = 1;
         }
-        builder.ConfigureServices((services) => services.AddSingleton((IServiceProvider _) => new LimitedConcurrencyLevelTaskScheduler(maxLevelOfParallelism)));
+        builder.ConfigureServices((services) => services.AddSingleton(new LimitedConcurrencyLevelTaskScheduler(maxLevelOfParallelism)));
 
         return builder;
     }
