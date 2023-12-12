@@ -1,3 +1,10 @@
+# [v9.14.12] - 2023-12-12 [PR: #1044](https://github.com/aksio-insurtech/Cratis/pull/1044)
+
+### Fixed
+
+- Configuring the CPU bound workers as the first thing, seems to be a timing issue with this not being configured and dependencies to `LimitedConcurrencyLevelTaskScheduler`. 
+
+
 # [v9.14.11] - 2023-12-11 [PR: #1043](https://github.com/aksio-insurtech/Cratis/pull/1043)
 
 ### Fixed
