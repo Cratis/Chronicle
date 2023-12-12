@@ -29,6 +29,7 @@ public static class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
+            .ConfigureCpuBoundWorkers()
             .UseMongoDB()
             .UseAksio(mvcOptions => mvcOptions.Filters.Add<KernelReadyResourceFilter>(0))
             .UseCratis(_ => _.InKernel())
@@ -36,7 +37,6 @@ public static class Program
                 .UseCluster()
                 .UseStreamCaching()
                 .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
-                .ConfigureCpuBoundWorkers()
                 .ConfigureSerialization()
                 .AddReplayStateManagement()
                 .UseTelemetry()

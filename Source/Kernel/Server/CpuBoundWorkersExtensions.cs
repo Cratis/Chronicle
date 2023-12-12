@@ -16,7 +16,7 @@ public static class CpuBoundWorkersExtensions
     /// </summary>
     /// <param name="builder">The <see cref="ISiloBuilder"/> to configure.</param>
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
-    public static ISiloBuilder ConfigureCpuBoundWorkers(this ISiloBuilder builder)
+    public static IHostBuilder ConfigureCpuBoundWorkers(this IHostBuilder builder)
     {
         var maxLevelOfParallelism = Environment.ProcessorCount - 2;
         if (maxLevelOfParallelism < 0)
