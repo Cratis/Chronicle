@@ -98,6 +98,8 @@ public class BootProcedure : IPerformBootProcedure
 
                 foreach (var (tenantId, _) in _configuration.Tenants)
                 {
+                    _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+
                     foreach (var outbox in microservice.Inbox.FromOutboxes)
                     {
                         var key = new InboxKey(tenantId, outbox.Microservice);
