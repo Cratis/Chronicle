@@ -28,11 +28,12 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     Task? _task;
     TResult? _result;
 
+    TaskScheduler TaskScheduler => _taskScheduler ??= ServiceProvider.GetService<LimitedConcurrencyLevelTaskScheduler>() ?? TaskScheduler.Default;
+
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _logger = ServiceProvider.GetService<ILogger<CpuBoundWorker<TRequest, TResult>>>() ?? new NullLogger<CpuBoundWorker<TRequest, TResult>>();
-        _taskScheduler = ServiceProvider.GetService<LimitedConcurrencyLevelTaskScheduler>() ?? TaskScheduler.Default;
         return Task.CompletedTask;
     }
 
@@ -114,6 +115,6 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
             },
             cancellationToken,
             TaskCreationOptions.LongRunning,
-            _taskScheduler!);
+            TaskScheduler);
     }
 }
