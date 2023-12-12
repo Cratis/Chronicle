@@ -1,3 +1,11 @@
+# [v9.14.17] - 2023-12-12 [PR: #1049](https://github.com/aksio-insurtech/Cratis/pull/1049)
+
+### Fixed
+
+- Ensuring correct execution context for the different parts of the boot procedure of the Kernel.
+
+
+
 # [v9.14.16] - 2023-12-12 [PR: #1048](https://github.com/aksio-insurtech/Cratis/pull/1048)
 
 ### Fixed
