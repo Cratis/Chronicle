@@ -1,3 +1,10 @@
+# [v9.14.19] - 2023-12-12 [PR: #1050](https://github.com/aksio-insurtech/Cratis/pull/1050)
+
+### Fixed
+
+- Jobs view now shows `[N/A]` when there is no status changes instead of crashing.
+
+
 # [v9.14.17] - 2023-12-12 [PR: #1049](https://github.com/aksio-insurtech/Cratis/pull/1049)
 
 ### Fixed
