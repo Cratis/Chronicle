@@ -1,3 +1,10 @@
+# [v9.14.13] - 2023-12-12 [PR: #1045](https://github.com/aksio-insurtech/Cratis/pull/1045)
+
+### Fixed
+
+- Moved to a concrete singleton instead of a provider that provides the singleton for `LimitedConcurrencyLevelTaskScheduler`.
+
+
 # [v9.14.12] - 2023-12-12 [PR: #1044](https://github.com/aksio-insurtech/Cratis/pull/1044)
 
 ### Fixed
