@@ -94,6 +94,9 @@ const jobColumns: GridColDef[] = [
         field: 'startTime',
         width: 200,
         valueGetter: (params: GridValueGetterParams<JobState>) => {
+            if (params.row.statusChanges.length == 0) {
+                return '[N/A]';
+            }
             return params.row.statusChanges[0].occurred.toLocaleString();
         }
     },
@@ -205,8 +208,8 @@ export const Jobs = () => {
                 }
 
                 {(selectedJob && (selectedJob.status == JobStatus.running ||
-                        selectedJob.status == JobStatus.preparing ||
-                        selectedJob.status == JobStatus.preparingSteps)) &&
+                    selectedJob.status == JobStatus.preparing ||
+                    selectedJob.status == JobStatus.preparingSteps)) &&
                     <Button
                         startIcon={<icons.Stop />}
                         onClick={async () => {
