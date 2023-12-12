@@ -1,3 +1,11 @@
+# [v9.14.16] - 2023-12-12 [PR: #1048](https://github.com/aksio-insurtech/Cratis/pull/1048)
+
+### Fixed
+
+- Stopping the rehydration of event sequences from failing at startup, instead log an error. We want the server to survive any non fatal errors at startup.
+
+
+
 # [v9.14.15] - 2023-12-12 [PR: #1047](https://github.com/aksio-insurtech/Cratis/pull/1047)
 
 ### Fixed
