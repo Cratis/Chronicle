@@ -145,7 +145,7 @@ public static class ExpandoObjectExtensions
             {
                 case PropertyName propertyName:
                     {
-                        if (!currentTarget.ContainsKey(propertyName.Value))
+                        if (!currentTarget.ContainsKey(propertyName.Value) || currentTarget[propertyName.Value] is null)
                         {
                             var nested = new ExpandoObject();
                             currentTarget[segment.Value] = nested;
