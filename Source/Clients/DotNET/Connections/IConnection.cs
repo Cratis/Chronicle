@@ -16,9 +16,14 @@ public interface IConnection
     ConnectionId ConnectionId { get; }
 
     /// <summary>
+    /// Gets the current tenant id.
+    /// </summary>
+    TenantId TenantId { get; }
+
+    /// <summary>
     /// Gets whether or not the client is connected.
     /// </summary>
-    bool IsConnected { get; }
+    bool IsConnected { get; }
 
     /// <summary>
     /// Connect to the kernel.

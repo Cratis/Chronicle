@@ -75,6 +75,9 @@ public class InsideKernelConnection : IConnection, IDisposable
     public bool IsConnected => _innerClient.IsConnected;
 
     /// <inheritdoc/>
+    public TenantId TenantId => _innerClient.TenantId;
+
+    /// <inheritdoc/>
     public ConnectionId ConnectionId => _innerClient.ConnectionId;
 
     /// <inheritdoc/>

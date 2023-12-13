@@ -88,6 +88,12 @@ public abstract class RestKernelConnection : IConnection, IDisposable
     /// <inheritdoc/>
     public ConnectionId ConnectionId => _connectionLifecycle.ConnectionId;
 
+    /// <inheritdoc/>
+    public TenantId TenantId =>
+        (_options.Value.IsMultiTenanted && _executionContextManager.IsInContext) ?
+            _executionContextManager.Current.TenantId :
+            TenantId.NotSet;
+
     MicroserviceId MicroserviceId => _executionContextManager.Current.MicroserviceId;
 
     /// <inheritdoc/>
@@ -190,7 +196,7 @@ public abstract class RestKernelConnection : IConnection, IDisposable
         await _connectCompletion.Task.WaitAsync(TimeSpan.FromSeconds(30));
         ThrowIfClientIsDisconnected();
 
-        var client = CreateReadHttpClient();
+        var client = CreateTenantedHttpClient();
         QueryResult result;
         if (queryString is not null)
         {
@@ -235,7 +241,7 @@ public abstract class RestKernelConnection : IConnection, IDisposable
 
     async Task<CommandResult> PerformCommandInternal(string route, object? command = null, bool logResult = true)
     {
-        using var client = CreateHttpClient();
+        using var client = CreateTenantedHttpClient();
         HttpResponseMessage response;
 
         if (command is not null)
@@ -254,14 +260,10 @@ public abstract class RestKernelConnection : IConnection, IDisposable
         return result!;
     }
 
-    HttpClient CreateReadHttpClient()
+    HttpClient CreateTenantedHttpClient()
     {
         var client = CreateHttpClient();
-        if (_executionContextManager.IsInContext)
-        {
-            var tenantId = _options.Value.IsMultiTenanted ? _executionContextManager.Current.TenantId : TenantId.NotSet;
-            client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, tenantId.ToString());
-        }
+        client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, TenantId.ToString());
         return client;
     }
 

@@ -27,7 +27,6 @@ public class ImmediateProjections : IImmediateProjections
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
     readonly IJsonSchemaGenerator _schemaGenerator;
-    readonly IExecutionContextManager _executionContextManager;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly IConnection _connection;
@@ -46,7 +45,6 @@ public class ImmediateProjections : IImmediateProjections
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="projectionSerializer">The <see cref="IJsonProjectionSerializer"/> for serializing projection definitions.</param>
     /// <param name="connection">The <see cref="IConnection"/> for connecting to the kernel.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with the execution context.</param>
     public ImmediateProjections(
         IModelNameResolver modelNameResolver,
         IClientArtifactsProvider clientArtifacts,
@@ -56,8 +54,7 @@ public class ImmediateProjections : IImmediateProjections
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions,
         IJsonProjectionSerializer projectionSerializer,
-        IConnection connection,
-        IExecutionContextManager executionContextManager)
+        IConnection connection)
     {
         _modelNameResolver = modelNameResolver;
         _clientArtifacts = clientArtifacts;
@@ -68,7 +65,6 @@ public class ImmediateProjections : IImmediateProjections
         _jsonSerializerOptions = jsonSerializerOptions;
         _projectionSerializer = projectionSerializer;
         _connection = connection;
-        _executionContextManager = executionContextManager;
 
         _clientArtifacts.ImmediateProjections.ForEach(_ =>
         {
@@ -145,7 +141,7 @@ public class ImmediateProjections : IImmediateProjections
             modelKey,
             eventsToApply);
 
-        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}/session/{correlationId}/with-events";
+        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_connection.TenantId}/session/{correlationId}/with-events";
 
         var response = await _connection.PerformCommand(route, immediateProjection);
         var element = (JsonElement)response.Response!;
@@ -164,7 +160,7 @@ public class ImmediateProjections : IImmediateProjections
             EventSequenceId.Log,
             modelKey);
 
-        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}/session/{correlationId}/dehydrate";
+        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_connection.TenantId}/session/{correlationId}/dehydrate";
         await _connection.PerformCommand(route, immediateProjection);
     }
 
@@ -175,7 +171,7 @@ public class ImmediateProjections : IImmediateProjections
             EventSequenceId.Log,
             modelKey);
 
-        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}";
+        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_connection.TenantId}";
         if (correlationId is not null)
         {
             route = $"{route}/session/{correlationId}";

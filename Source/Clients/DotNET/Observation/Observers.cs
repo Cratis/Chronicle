@@ -35,9 +35,8 @@ public class Observers : IObservers
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetAllObservers()
     {
-        var tenantId = _executionContextManager.Current.TenantId;
         var microserviceId = _executionContextManager.Current.MicroserviceId;
-        var route = $"/api/events/store/{microserviceId}/{tenantId}/observers";
+        var route = $"/api/events/store/{microserviceId}/{_connection.TenantId}/observers";
         var result = await _connection.PerformQuery<IEnumerable<ObserverInformation>>(route);
         return result.Data;
     }
