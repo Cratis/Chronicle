@@ -29,8 +29,8 @@ public class ImmediateProjection : Grain, IImmediateProjection
     readonly ProviderFor<IProjectionManager> _projectionManagerProvider;
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitions;
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly IObjectComparer _objectComparer;
-    readonly IEventSequenceStorage _eventProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<ImmediateProjection> _logger;
@@ -46,8 +46,8 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// <param name="projectionManagerProvider">Provider for <see cref="IProjectionManager"/> for working with engine projections.</param>
     /// <param name="projectionDefinitions">Provider for <see cref="IProjectionDefinitions"/> for working with the projection definitions.</param>
     /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
+    /// <param name="eventSequenceStorageProvider"><see cref="IEventSequenceStorage"/> for getting events from storage.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
-    /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for getting events from storage.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="logger">Logger for logging.</param>
@@ -55,8 +55,8 @@ public class ImmediateProjection : Grain, IImmediateProjection
         ProviderFor<IProjectionManager> projectionManagerProvider,
         ProviderFor<IProjectionDefinitions> projectionDefinitions,
         ProviderFor<ISchemaStore> schemaStoreProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         IObjectComparer objectComparer,
-        IEventSequenceStorage eventProvider,
         IExpandoObjectConverter expandoObjectConverter,
         IExecutionContextManager executionContextManager,
         ILogger<ImmediateProjection> logger)
@@ -64,8 +64,8 @@ public class ImmediateProjection : Grain, IImmediateProjection
         _projectionManagerProvider = projectionManagerProvider;
         _projectionDefinitions = projectionDefinitions;
         _schemaStoreProvider = schemaStoreProvider;
+        _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _objectComparer = objectComparer;
-        _eventProvider = eventProvider;
         _expandoObjectConverter = expandoObjectConverter;
         _executionContextManager = executionContextManager;
         _logger = logger;
@@ -124,7 +124,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
             var affectedProperties = new HashSet<PropertyPath>();
 
             var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
-            var cursor = await _eventProvider.GetFromSequenceNumber(EventSequenceId.Log, fromSequenceNumber, modelKey, projection.EventTypes);
+            var cursor = await _eventSequenceStorageProvider().GetFromSequenceNumber(EventSequenceId.Log, fromSequenceNumber, modelKey, projection.EventTypes);
             var projectedEventsCount = 0;
             var state = GetInitialState(projection, definition);
             while (await cursor.MoveNext())
@@ -209,7 +209,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
         {
             var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, @event, state);
             var keyResolver = projection.GetKeyResolverFor(@event.Metadata.Type);
-            var key = await keyResolver(_eventProvider!, @event);
+            var key = await keyResolver(_eventSequenceStorageProvider()!, @event);
             var context = new ProjectionEventContext(key, @event, changeset);
 
             await HandleEventFor(projection!, context);
