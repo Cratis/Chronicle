@@ -17,9 +17,7 @@ public static class EventObservationStateConverters
     {
         EventObservationState.None => Kernel.Contracts.Events.EventObservationState.None,
         EventObservationState.Initial => Kernel.Contracts.Events.EventObservationState.Initial,
-        EventObservationState.HeadOfReplay => Kernel.Contracts.Events.EventObservationState.HeadOfReplay,
         EventObservationState.Replay => Kernel.Contracts.Events.EventObservationState.Replay,
-        EventObservationState.TailOfReplay => Kernel.Contracts.Events.EventObservationState.TailOfReplay,
         _ => Kernel.Contracts.Events.EventObservationState.None
     };
 
@@ -32,9 +30,7 @@ public static class EventObservationStateConverters
     {
         Kernel.Contracts.Events.EventObservationState.None => EventObservationState.None,
         Kernel.Contracts.Events.EventObservationState.Initial => EventObservationState.Initial,
-        Kernel.Contracts.Events.EventObservationState.HeadOfReplay => EventObservationState.HeadOfReplay,
         Kernel.Contracts.Events.EventObservationState.Replay => EventObservationState.Replay,
-        Kernel.Contracts.Events.EventObservationState.TailOfReplay => EventObservationState.TailOfReplay,
         _ => EventObservationState.None
     };
 }
