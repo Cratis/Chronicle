@@ -13,4 +13,4 @@ namespace Aksio.Cratis.Changes;
 /// <param name="OnProperty">The property being joined.</param>
 /// <param name="ArrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
 /// <param name="Changes">Changes applicable for the join change.</param>
-public record ResolvedJoin(object State, object Key, PropertyPath OnProperty, IArrayIndexers ArrayIndexers, IEnumerable<Change> Changes) : Change(State);
+public record ResolvedJoin(object State, object Key, PropertyPath OnProperty, ArrayIndexers ArrayIndexers, IEnumerable<Change> Changes) : Change(State);

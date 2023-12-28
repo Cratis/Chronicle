@@ -22,6 +22,18 @@ public interface IReducerPipeline
     ISink Sink { get; }
 
     /// <summary>
+    /// Notifies about the beginning of a replay.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task BeginReplay();
+
+    /// <summary>
+    /// Notifies about the end of a replay.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task EndReplay();
+
+    /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.
     /// </summary>
     /// <param name="context">The <ee cref="ReducerContext"/> being reduced.</param>

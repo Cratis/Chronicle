@@ -17,7 +17,7 @@ public class all_dependencies : Specification
     {
         database = new();
         collection = new();
-        database.Setup(_ => _.GetCollection<MongoDBIdentity>(CollectionNames.Identities)).Returns(collection.Object);
+        database.Setup(_ => _.GetCollection<MongoDBIdentity>(WellKnownCollectionNames.Identities)).Returns(collection.Object);
 
         identities_from_database = new();
         inserted_identities = new();

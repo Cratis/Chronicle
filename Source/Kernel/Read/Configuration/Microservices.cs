@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Kernel.Read.Configuration.Microservices;
 /// Represents the API for working with the configuration of the kernel.
 /// </summary>
 [Route("/api/configuration/microservices")]
-public class Microservices : Controller
+public class Microservices : ControllerBase
 {
     readonly KernelConfiguration _configuration;
     readonly IGrainFactory _grainFactory;

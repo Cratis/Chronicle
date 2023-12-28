@@ -50,6 +50,6 @@ public class ClientReducers : IClientReducers
         }
 
         _logger.UnknownReducer(reducerId);
-        return new(initialAsJson, EventSequenceNumber.Unavailable);
+        return new(initialAsJson, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
     }
 }

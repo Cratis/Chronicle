@@ -43,7 +43,6 @@ public class ObserverHandler
     /// </summary>
     public static readonly CausationType CausationType = new("Client Observer");
 
-    readonly IEventTypes _eventTypes;
     readonly IObserverInvoker _observerInvoker;
     readonly ICausationManager _causationManager;
     readonly IEventSerializer _eventSerializer;
@@ -54,7 +53,6 @@ public class ObserverHandler
     /// <param name="observerId">Unique identifier.</param>
     /// <param name="name">Name of the observer.</param>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the observer is for.</param>
-    /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
     /// <param name="observerInvoker">The actual invoker.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
     /// <param name="eventSerializer">The serializer to use.</param>
@@ -62,7 +60,6 @@ public class ObserverHandler
         ObserverId observerId,
         ObserverName name,
         EventSequenceId eventSequenceId,
-        IEventTypes eventTypes,
         IObserverInvoker observerInvoker,
         ICausationManager causationManager,
         IEventSerializer eventSerializer)
@@ -70,7 +67,6 @@ public class ObserverHandler
         ObserverId = observerId;
         Name = name;
         EventSequenceId = eventSequenceId;
-        _eventTypes = eventTypes;
         _observerInvoker = observerInvoker;
         _causationManager = causationManager;
         _eventSerializer = eventSerializer;
@@ -105,6 +101,8 @@ public class ObserverHandler
     /// <returns>Awaitable task.</returns>
     public async Task OnNext(EventMetadata metadata, EventContext context, object content)
     {
+        BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = @event.Context.CausedBy });
+
         _causationManager.Add(CausationType, new Dictionary<string, string>
         {
             { CausationObserverIdProperty, ObserverId.ToString() },
@@ -114,6 +112,9 @@ public class ObserverHandler
             { CausationEventSequenceNumberProperty, metadata.SequenceNumber.ToString() }
         });
 
-        await _observerInvoker.Invoke(content, context);
+        var content = await _eventSerializer.Deserialize(@event);
+        await _observerInvoker.Invoke(content, @event.Context);
+
+        BaseIdentityProvider.ClearCurrentIdentity();
     }
 }

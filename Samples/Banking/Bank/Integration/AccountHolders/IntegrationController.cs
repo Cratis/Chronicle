@@ -8,7 +8,7 @@ namespace Integration.AccountHolders;
 
 [Route("/api/integration")]
 
-public class IntegrationController : Controller
+public class IntegrationController : ControllerBase
 {
     readonly KontoEierConnector _connector;
     readonly ITenants _tenants;
@@ -27,9 +27,9 @@ public class IntegrationController : Controller
     [HttpGet]
     public async Task Trigger()
     {
-        foreach (var tenant in await _tenants.All())
+        // foreach (var tenant in await _tenants.All())
         {
-            using var scope = _executionContextManager.ForTenant(tenant.Id);
+            using var scope = _executionContextManager.ForTenant(TenantId.Development);
             await _connector.ImportOne("03050712345");
         }
     }

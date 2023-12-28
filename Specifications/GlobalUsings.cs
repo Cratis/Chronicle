@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 global using Aksio.Concepts;
-global using Aksio.Cratis.Common;
-global using Aksio.Cratis.Common.Grains;
 global using Aksio.Cratis.Events;
 global using Aksio.Cratis.Observation;
 global using Aksio.Cratis.Projections;

@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Kernel.Domain.Configuration.Tenants;
 /// Represents the API for working with configuration related to specific tenants.
 /// </summary>
 [Route("/api/configuration/tenants/{tenantId}")]
-public class TenantConfiguration : Controller
+public class TenantConfiguration : ControllerBase
 {
     readonly IGrainFactory _grainFactory;
 

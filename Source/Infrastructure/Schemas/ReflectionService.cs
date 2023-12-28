@@ -22,7 +22,15 @@ public class ReflectionService : DefaultReflectionService
         if (contextualType.Type.IsConcept())
         {
             defaultReferenceTypeNullHandling = ReferenceTypeNullHandling.NotNull;
-            contextualType = contextualType.Type.GetConceptValueType().ToContextualType();
+
+            var conceptValueType = contextualType.Type.GetConceptValueType();
+            var attributes = contextualType.ContextAttributes.ToList();
+            if (contextualType.OriginalNullability == Nullability.Nullable)
+            {
+                attributes.Add(new NullableAttribute());
+            }
+
+            contextualType = conceptValueType.ToContextualType(attributes);
         }
 
         return base.GetDescription(contextualType, defaultReferenceTypeNullHandling, settings);

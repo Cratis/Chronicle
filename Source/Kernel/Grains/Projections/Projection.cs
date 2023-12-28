@@ -26,7 +26,7 @@ public class Projection : Grain, IProjection
     readonly ILocalSiloDetails _localSiloDetails;
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers;
     EngineProjection? _projection;
-    IObserverSupervisor? _observer;
+    IObserver? _observer;
     ProjectionId _projectionId;
     ProjectionDefinition? _definition;
     TenantId? _tenantId;
@@ -65,8 +65,10 @@ public class Projection : Grain, IProjection
 
         await RefreshDefinition();
 
-        _observer = GrainFactory.GetGrain<IObserverSupervisor>(_projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
-        await _observer.Subscribe<IProjectionObserverSubscriber>(_definition!.Name.Value, ObserverType.Projection, _projection!.EventTypes, SiloAddress.Zero);
+        _observer = GrainFactory.GetGrain<IObserver>(_projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
+
+        await _observer.SetNameAndType(_definition!.Name.Value, ObserverType.Projection);
+        await _observer.Subscribe<IProjectionObserverSubscriber>(_projection!.EventTypes);
     }
 
     /// <inheritdoc/>
@@ -90,11 +92,4 @@ public class Projection : Grain, IProjection
 
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
-
-    /// <inheritdoc/>
-    public Task Rewind()
-    {
-        _observer?.Rewind();
-        return Task.CompletedTask;
-    }
 }

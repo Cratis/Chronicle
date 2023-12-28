@@ -73,8 +73,8 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
                 @event.Context.SequenceNumber);
         }
 
-        if (context.State == null && context.State is not JsonElement) throw new MissingStateForObserverSubscriber(_observerId);
-        var connectedClientAsJsonObject = (JsonElement)context.State;
+        if (context.Metadata == null && context.Metadata is not JsonElement) throw new MissingStateForObserverSubscriber(_observerId);
+        var connectedClientAsJsonObject = (JsonElement)context.Metadata;
         var connectedClient = connectedClientAsJsonObject.Deserialize<ConnectedClient>(_jsonSerializerOptions)!;
         var tcs = new TaskCompletionSource<ObserverSubscriberResult>();
 

@@ -1,7 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Keys;
+using Aksio.Cratis.Properties;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Keys;
@@ -11,14 +13,15 @@ namespace Aksio.Cratis.Kernel.MongoDB.Keys;
 /// </summary>
 public class MongoDBObserverKeysAsyncEnumerator : IAsyncEnumerator<Key>
 {
-    readonly IAsyncCursor<Key> _cursor;
-    readonly Key? _current;
+    readonly IAsyncCursor<EventSourceId> _cursor;
+    Key? _current;
+    Queue<Key>? _queue;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBObserverKeysAsyncEnumerator"/> class.
     /// </summary>
     /// <param name="cursor">The inner <see cref="IAsyncCursor{T}"/>.</param>
-    public MongoDBObserverKeysAsyncEnumerator(IAsyncCursor<Key> cursor)
+    public MongoDBObserverKeysAsyncEnumerator(IAsyncCursor<EventSourceId> cursor)
     {
         _cursor = cursor;
         _current = default;
@@ -35,5 +38,32 @@ public class MongoDBObserverKeysAsyncEnumerator : IAsyncEnumerator<Key>
     }
 
     /// <inheritdoc/>
-    public async ValueTask<bool> MoveNextAsync() => await _cursor.MoveNextAsync();
+    public async ValueTask<bool> MoveNextAsync()
+    {
+        if (_queue is null)
+        {
+            var result = await _cursor.MoveNextAsync();
+            if (!result)
+            {
+                _current = null;
+                return false;
+            }
+
+            _queue = new Queue<Key>(_cursor.Current.Select(_ => new Key(_.Value, ArrayIndexers.NoIndexers)));
+        }
+
+        if (_queue.Count == 0)
+        {
+            _current = null;
+            return false;
+        }
+
+        _current = _queue.Dequeue();
+        if (_queue.Count == 0)
+        {
+            _queue = null;
+        }
+
+        return true;
+    }
 }

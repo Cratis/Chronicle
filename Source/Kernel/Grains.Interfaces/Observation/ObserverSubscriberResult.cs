@@ -17,7 +17,9 @@ public record ObserverSubscriberResult(ObserverSubscriberState State, EventSeque
     /// <summary>
     /// The result that represents a ok observer call.
     /// </summary>
-    public static readonly ObserverSubscriberResult Ok = new(ObserverSubscriberState.Ok, 0, Enumerable.Empty<string>(), string.Empty);
+    /// <param name="lastSuccessfulObservation">The <see cref="EventSequenceNumber"/> of the last successful observation.</param>
+    /// <returns>The result object to use.</returns>
+    public static ObserverSubscriberResult Ok(EventSequenceNumber lastSuccessfulObservation) => new(ObserverSubscriberState.Ok, lastSuccessfulObservation, Enumerable.Empty<string>(), string.Empty);
 
     /// <summary>
     /// The result that represents a failed observer.

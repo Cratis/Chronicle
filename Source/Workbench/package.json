@@ -23,8 +23,8 @@
         "up": "yarn g:up"
     },
     "dependencies": {
-        "@aksio/applications": "1.1.17",
-        "@aksio/applications-mui": "1.1.17",
+        "@aksio/applications": "1.5.4",
+        "@aksio/applications-mui": "1.5.4",
         "@aksio/fundamentals": "1.5.1",
         "@aksio/typescript": "1.4.2",
         "@ctrl/tinycolor": "3.4.1",

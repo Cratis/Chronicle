@@ -4,7 +4,8 @@
 using System.Linq.Expressions;
 using System.Text.Json;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Contracts.Projections;
+using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Projections.Expressions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
@@ -16,9 +17,14 @@ namespace Aksio.Cratis.Projections;
 /// </summary>
 /// <typeparam name="TParentModel">Parent model type.</typeparam>
 /// <typeparam name="TChildModel">Child model type.</typeparam>
-public class ChildrenBuilder<TParentModel, TChildModel> : ProjectionBuilder<TChildModel, IChildrenBuilder<TParentModel, TChildModel>>, IChildrenBuilder<TParentModel, TChildModel>
+public class ChildrenBuilder<TParentModel, TChildModel> :
+    ProjectionBuilder<TChildModel,
+    IChildrenBuilder<TParentModel, TChildModel>>,
+    IChildrenBuilder<TParentModel, TChildModel>
 {
     PropertyPath _identifiedBy = PropertyPath.NotSet;
+    EventType? _fromEventPropertyEventType;
+    IEventValueExpression? _fromEventPropertyExpression;
 
     /// <summary>
     /// /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
@@ -35,9 +41,24 @@ public class ChildrenBuilder<TParentModel, TChildModel> : ProjectionBuilder<TChi
     }
 
     /// <inheritdoc/>
+    public IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy(PropertyPath propertyPath)
+    {
+        _identifiedBy = propertyPath;
+        return this;
+    }
+
+    /// <inheritdoc/>
     public IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy<TProperty>(Expression<Func<TChildModel, TProperty>> propertyExpression)
     {
         _identifiedBy = propertyExpression.GetPropertyPath();
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IChildrenBuilder<TParentModel, TChildModel> FromEventProperty<TEvent>(Expression<Func<TEvent, TChildModel>> propertyExpression)
+    {
+        _fromEventPropertyEventType = typeof(TEvent).GetEventType();
+        _fromEventPropertyExpression = new EventContentPropertyExpression(propertyExpression.GetPropertyPath());
         return this;
     }
 

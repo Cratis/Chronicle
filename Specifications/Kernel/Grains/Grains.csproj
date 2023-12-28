@@ -8,4 +8,8 @@
         <ProjectReference Include="../../../Source/Kernel/Grains/Grains.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="OrleansTestKit" />
+    </ItemGroup>
+
 </Project>

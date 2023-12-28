@@ -4,6 +4,7 @@
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Events.EventSequences;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Observation;
 using EventRedacted = Aksio.Cratis.Kernel.Events.EventSequences.EventRedacted;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
@@ -39,7 +40,7 @@ public class Redaction
     public async Task SingleEvent(EventRedacted @event, EventContext context)
     {
         _executionContextManager.Establish(@event.TenantId, context.CorrelationId, @event.Microservice);
-        var grain = _grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new MicroserviceAndTenant(@event.Microservice, @event.TenantId));
+        var grain = _grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new EventSequenceKey(@event.Microservice, @event.TenantId));
         await grain.Redact(@event.SequenceNumber, @event.Reason, context.Causation, context.CausedBy);
     }
 
@@ -52,7 +53,7 @@ public class Redaction
     public async Task ByEventSource(EventsRedactedForEventSource @event, EventContext context)
     {
         _executionContextManager.Establish(@event.TenantId, context.CorrelationId, @event.Microservice);
-        var grain = _grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new MicroserviceAndTenant(@event.Microservice, @event.TenantId));
+        var grain = _grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new EventSequenceKey(@event.Microservice, @event.TenantId));
         await grain.Redact(@event.EventSourceId, @event.Reason, @event.EventTypes, context.Causation, context.CausedBy);
     }
 }

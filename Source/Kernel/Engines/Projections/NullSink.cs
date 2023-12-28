@@ -22,7 +22,7 @@ public class NullSink : ISink
     public SinkTypeName Name => "Null sink";
 
     /// <inheritdoc/>
-    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isReplaying) => Task.CompletedTask;
+    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task BeginReplay() => Task.CompletedTask;
@@ -31,8 +31,8 @@ public class NullSink : ISink
     public Task EndReplay() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task<ExpandoObject?> FindOrDefault(Key key, bool isReplaying) => Task.FromResult<ExpandoObject?>(null);
+    public Task<ExpandoObject?> FindOrDefault(Key key) => Task.FromResult<ExpandoObject?>(null);
 
     /// <inheritdoc/>
-    public Task PrepareInitialRun(bool isReplaying) => Task.CompletedTask;
+    public Task PrepareInitialRun() => Task.CompletedTask;
 }

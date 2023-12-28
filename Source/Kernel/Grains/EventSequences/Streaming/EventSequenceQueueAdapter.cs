@@ -84,12 +84,12 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                 {
                     // Make sure we put all successful events on the stream for any subscribers to get.
                     _receivers[queueId].AddAppendedEvent(streamId, appendedEvents, requestContext);
-                    var microserviceAndTenant = MicroserviceAndTenant.Parse(streamId.GetNamespace()!);
+                    var eventSequenceKey = EventSequenceKey.Parse(streamId.GetNamespace()!);
 
                     throw new UnableToAppendToEventSequence(
                         streamId.GetKeyAsString(),
-                        microserviceAndTenant.MicroserviceId,
-                        microserviceAndTenant.TenantId,
+                        eventSequenceKey.MicroserviceId,
+                        eventSequenceKey.TenantId,
                         appendedEvent.Metadata.SequenceNumber,
                         appendedEvent.Context.EventSourceId,
                         ex);

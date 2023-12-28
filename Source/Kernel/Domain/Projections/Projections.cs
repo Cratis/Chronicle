@@ -16,7 +16,7 @@ namespace Aksio.Cratis.Kernel.Domain.Projections;
 /// Represents the API for projections.
 /// </summary>
 [Route("/api/events/store/{microserviceId}/projections")]
-public class Projections : Controller
+public class Projections : ControllerBase
 {
     readonly IGrainFactory _grainFactory;
     readonly IJsonProjectionSerializer _projectionSerializer;
@@ -78,6 +78,84 @@ public class Projections : Controller
             immediateProjection.ModelKey);
 
         var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
-        return await projection.GetModelInstance(immediateProjection.ProjectionId);
+        return await projection.GetModelInstance();
+    }
+
+    /// <summary>
+    /// Perform an immediate projection for a specific session based on the current correlation id.
+    /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to perform for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> to perform for.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> identifying the session.</param>
+    /// <param name="immediateProjection">The details about the <see cref="ImmediateProjection"/>.</param>
+    /// <returns><see cref="ImmediateProjectionResult"/>.</returns>
+    [HttpPost("immediate/{tenantId}/session/{correlationId}")]
+    public async Task<ImmediateProjectionResult> ImmediateForSession(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId,
+        [FromRoute] CorrelationId correlationId,
+        [FromBody] ImmediateProjection immediateProjection)
+    {
+        var key = new ImmediateProjectionKey(
+            microserviceId,
+            tenantId,
+            immediateProjection.EventSequenceId,
+            immediateProjection.ModelKey,
+            correlationId);
+
+        var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
+        return await projection.GetModelInstance();
+    }
+
+    /// <summary>
+    /// Apply additional events to an immediate projection in session, assuming it already exists with state.
+    /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to perform for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> to perform for.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> identifying the session.</param>
+    /// <param name="immediateProjection">The details about the <see cref="ImmediateProjectionWithEventsToApply"/>.</param>
+    /// <returns><see cref="ImmediateProjectionResult"/>.</returns>
+    [HttpPost("immediate/{tenantId}/session/{correlationId}/with-events")]
+    public async Task<ImmediateProjectionResult> ImmediateForSessionWithEvents(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId,
+        [FromRoute] CorrelationId correlationId,
+        [FromBody] ImmediateProjectionWithEventsToApply immediateProjection)
+    {
+        var key = new ImmediateProjectionKey(
+            microserviceId,
+            tenantId,
+            immediateProjection.EventSequenceId,
+            immediateProjection.ModelKey,
+            correlationId);
+
+        var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
+        return await projection.GetCurrentModelInstanceWithAdditionalEventsApplied(immediateProjection.Events);
+    }
+
+    /// <summary>
+    /// Apply additional events to an immediate projection in session, assuming it already exists with state.
+    /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to perform for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> to perform for.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> identifying the session.</param>
+    /// <param name="immediateProjection">The details about the <see cref="ImmediateProjectionWithEventsToApply"/>.</param>
+    /// <returns><see cref="ImmediateProjectionResult"/>.</returns>
+    [HttpPost("immediate/{tenantId}/session/{correlationId}/dehydrate")]
+    public async Task Dehydrate(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId,
+        [FromRoute] CorrelationId correlationId,
+        [FromBody] ImmediateProjection immediateProjection)
+    {
+        var key = new ImmediateProjectionKey(
+            microserviceId,
+            tenantId,
+            immediateProjection.EventSequenceId,
+            immediateProjection.ModelKey,
+            correlationId);
+
+        var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
+        await projection.Dehydrate();
     }
 }

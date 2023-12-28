@@ -3,13 +3,17 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.EventSequences;
+using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Json;
 using Orleans.Serialization;
 
-namespace Aksio.Cratis.Kernel.Server;
+namespace Aksio.Cratis.Kernel.Server.Serialization;
 
 /// <summary>
 /// Extension methods for configuring serialization.
@@ -23,19 +27,28 @@ public static class SerializationConfigurationExtensions
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder ConfigureSerialization(this ISiloBuilder siloBuilder)
     {
+        siloBuilder.ConfigureServices(Configure);
+
+        return siloBuilder;
+    }
+
+    static void Configure(this IServiceCollection services)
+    {
         var options = new JsonSerializerOptions(Globals.JsonSerializerOptions);
-        options.Converters.Add(new TypeJsonConverter());
+        options.Converters.Add(new KeyJsonConverter());
         options.Converters.Add(new PropertyPathJsonConverter());
         options.Converters.Add(new PropertyPathChildrenDefinitionDictionaryJsonConverter());
         options.Converters.Add(new PropertyExpressionDictionaryConverter());
         options.Converters.Add(new FromDefinitionsConverter());
         options.Converters.Add(new JoinDefinitionsConverter());
         options.Converters.Add(new EventSequenceNumberTokenJsonConverter());
+        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>());
+        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>());
+        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<JobStateJsonConverter, JobState>());
+        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<JobStepStateJsonConverter, JobStepState>());
 
-        siloBuilder.Services.AddSerializer(serializerBuilder => serializerBuilder.AddJsonSerializer(
+        services.AddSerializer(serializerBuilder => serializerBuilder.AddJsonSerializer(
             _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Aksio") ?? false),
             options));
-
-        return siloBuilder;
     }
 }

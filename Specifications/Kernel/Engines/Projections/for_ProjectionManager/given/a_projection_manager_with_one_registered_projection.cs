@@ -27,6 +27,7 @@ public class a_projection_manager_with_one_registered_projection : a_projection_
             new Dictionary<EventType, FromDefinition>(),
             new Dictionary<EventType, JoinDefinition>(),
             new Dictionary<PropertyPath, ChildrenDefinition>(),
+            Enumerable.Empty<FromAnyDefinition>(),
             new AllDefinition(new Dictionary<PropertyPath, string>(), false));
 
         pipeline_definition = new ProjectionPipelineDefinition(projection_definition.Identifier, Enumerable.Empty<ProjectionSinkDefinition>());

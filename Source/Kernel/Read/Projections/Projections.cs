@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Read.Projections;
 /// Represents the API for projections.
 /// </summary>
 [Route("/api/events/store/{microserviceId}/projections")]
-public class Projections : Controller
+public class Projections : ControllerBase
 {
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
     readonly IExecutionContextManager _executionContextManager;

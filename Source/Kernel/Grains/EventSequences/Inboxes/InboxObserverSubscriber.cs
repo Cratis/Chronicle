@@ -55,7 +55,7 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
 
         _inboxEventSequence = GrainFactory.GetGrain<IEventSequence>(
             EventSequenceId.Inbox,
-            keyExtension: new MicroserviceAndTenant(_microserviceId, _key.TenantId));
+            keyExtension: new EventSequenceKey(_microserviceId, _key.TenantId));
 
         _executionContextManager.Establish(_microserviceId);
         _schemaStore = _schemaStoreProvider();
@@ -98,7 +98,7 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
                 lastSuccessfullyObservedEvent = @event;
             }
 
-            return ObserverSubscriberResult.Ok;
+            return ObserverSubscriberResult.Ok(events.Last().Metadata.SequenceNumber);
         }
         catch (Exception ex)
         {

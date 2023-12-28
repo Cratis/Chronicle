@@ -9,13 +9,18 @@ using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Engines.Changes;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
-using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Grains.Observation.Clients;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.MongoDB.EventSequences;
 using Aksio.Cratis.Kernel.MongoDB.Identities;
+using Aksio.Cratis.Kernel.MongoDB.Jobs;
+using Aksio.Cratis.Kernel.MongoDB.Keys;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.MongoDB.Projections;
-using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Kernel.MongoDB.Recommendations;
+using Aksio.Cratis.Kernel.Persistence.Jobs;
+using Aksio.Cratis.Kernel.Persistence.Observation;
+using Aksio.Cratis.Kernel.Persistence.Recommendations;
 using Autofac;
 
 namespace Aksio.Cratis.Kernel.Server;
@@ -31,15 +36,22 @@ public class ServiceRegistrations : Module
         builder.RegisterType<ObserverMediator>().As<IObserverMediator>().SingleInstance();
         builder.RegisterType<MongoDBEncryptionKeyStore>().AsSelf().InstancePerMicroservice();
         builder.Register(_ => new CacheEncryptionKeyStore(_.Resolve<MongoDBEncryptionKeyStore>())).As<IEncryptionKeyStore>().InstancePerMicroservice();
-        builder.RegisterType<MongoDBChangesetStorage>().As<IChangesetStorage>().InstancePerMicroserviceAndTenant();
         builder.RegisterType<MongoDBSchemaStore>().As<Schemas.ISchemaStore>().InstancePerMicroservice();
         builder.RegisterType<MongoDBProjectionDefinitionsStorage>().As<IProjectionDefinitionsStorage>().InstancePerMicroservice();
         builder.RegisterType<MongoDBProjectionPipelineDefinitionsStorage>().As<IProjectionPipelineDefinitionsStorage>().InstancePerMicroservice();
         builder.RegisterType<MongoDBProjectionDefinitionsStorage>().As<IProjectionDefinitionsStorage>().InstancePerMicroservice();
-        builder.RegisterType<MongoDBEventSequenceStorage>().As<IEventSequenceStorage>().SingleInstance();
-        builder.RegisterType<MongoDBObserverStorage>().As<IObserverStorage>().SingleInstance();
-        builder.RegisterType<MongoDBObserversState>().As<IObserversState>().SingleInstance();
-        builder.RegisterType<MongoDBFailedPartitionState>().As<IFailedPartitionsState>().SingleInstance();
+
+        builder.RegisterType<MongoDBChangesetStorage>().As<IChangesetStorage>().InstancePerMicroserviceAndTenant();
+        builder.RegisterType<MongoDBEventSequenceStorage>().As<IEventSequenceStorage>().InstancePerMicroserviceAndTenant();
+        builder.RegisterType<MongoDBObserverStorage>().As<IObserverStorage>().InstancePerMicroserviceAndTenant();
+        builder.RegisterType<MongoDBFailedPartitionStorage>().As<IFailedPartitionsStorage>().InstancePerMicroserviceAndTenant();
+        builder.RegisterType<MongoDBObserverKeyIndexes>().As<IObserverKeyIndexes>().InstancePerMicroserviceAndTenant();
+        builder.RegisterType(typeof(MongoDBJobStorage)).As(typeof(IJobStorage)).InstancePerMicroserviceAndTenant();
+        builder.RegisterType(typeof(MongoDBJobStepStorage)).As(typeof(IJobStepStorage)).InstancePerMicroserviceAndTenant();
+        builder.RegisterGeneric(typeof(MongoDBJobStorage<>)).As(typeof(IJobStorage<>)).InstancePerMicroserviceAndTenant();
+        builder.RegisterGeneric(typeof(MongoDBJobStepStorage<>)).As(typeof(IJobStepStorage<>)).InstancePerMicroserviceAndTenant();
+        builder.RegisterType(typeof(MongoDBRecommendationStorage)).As(typeof(IRecommendationStorage)).InstancePerMicroserviceAndTenant();
+
         builder.RegisterType<MongoDBIdentityStore>().As<IIdentityStore>().InstancePerTenant();
     }
 }

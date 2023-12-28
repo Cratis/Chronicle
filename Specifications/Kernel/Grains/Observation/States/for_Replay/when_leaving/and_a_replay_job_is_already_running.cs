@@ -1,0 +1,48 @@
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Collections.Immutable;
+using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
+
+namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Replay.when_leaving;
+
+public class and_a_replay_job_is_already_running : given.a_replay_state
+{
+    async Task Establish()
+    {
+        stored_state = stored_state with
+        {
+            Type = ObserverType.Client
+        };
+
+        jobs_manager
+            .Setup(_ => _.GetJobsOfType<IReplayObserver, ReplayObserverRequest>())
+            .ReturnsAsync(new[]
+                {
+                    new JobState
+                    {
+                        Id = JobId.New(),
+                        Request = new ReplayObserverRequest(
+                            stored_state.ObserverId,
+                            observer_key,
+                            subscription,
+                            new[] { new EventType(Guid.NewGuid(), EventGeneration.First) }),
+                        StatusChanges = new[]
+                        {
+                            new JobStatusChanged
+                            {
+                                Status = JobStatus.Running,
+                                Occurred = DateTimeOffset.UtcNow
+                            }
+                        }.ToList()
+                    }
+                }.ToImmutableList());
+
+        stored_state = await state.OnEnter(stored_state);
+    }
+
+    async Task Because() => resulting_stored_state = await state.OnLeave(stored_state);
+
+    [Fact] void should_not_end_replay() => observer_service_client.Verify(_ => _.BeginReplayFor(IsAny<ObserverDetails>()), Never);
+}

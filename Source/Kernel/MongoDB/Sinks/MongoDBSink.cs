@@ -26,24 +26,26 @@ public class MongoDBSink : ISink
     readonly IMongoDBChangesetConverter _changesetConverter;
     readonly IExpandoObjectConverter _expandoObjectConverter;
 
+    bool _isReplaying;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBSink"/> class.
     /// </summary>
     /// <param name="model">The <see cref="Model"/> the sink is for.</param>
-    /// <param name="converter"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
-    /// <param name="collections"><see cref="IMongoDBSinkCollections"/> to use.</param>
-    /// <param name="changesetConverter"><see cref="IMongoDBChangesetConverter"/> for converting changesets.</param>
+    /// <param name="converterProvider"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
+    /// <param name="collections">Provider for <see cref="IMongoDBSinkCollections"/> to use.</param>
+    /// <param name="changesetConverter">Provider for <see cref="IMongoDBChangesetConverter"/> for converting changesets.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
     public MongoDBSink(
         Model model,
-        IMongoDBConverter converter,
+        IMongoDBConverter converterProvider,
         IMongoDBSinkCollections collections,
         IMongoDBChangesetConverter changesetConverter,
         IExpandoObjectConverter expandoObjectConverter)
     {
         _expandoObjectConverter = expandoObjectConverter;
         _model = model;
-        _converter = converter;
+        _converter = converterProvider;
         _collections = collections;
         _changesetConverter = changesetConverter;
     }
@@ -54,12 +56,12 @@ public class MongoDBSink : ISink
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
-    /// <inheritdoc/>
-    public async Task<ExpandoObject?> FindOrDefault(Key key, bool isReplaying)
-    {
-        var collection = _collections.GetCollection(isReplaying);
+    IMongoCollection<BsonDocument> Collection => _collections.GetCollection();
 
-        var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", _converter.ToBsonValue(key)));
+    /// <inheritdoc/>
+    public async Task<ExpandoObject?> FindOrDefault(Key key)
+    {
+        var result = await Collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", _converter.ToBsonValue(key)));
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
@@ -70,22 +72,21 @@ public class MongoDBSink : ISink
     }
 
     /// <inheritdoc/>
-    public async Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isReplaying)
+    public async Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
     {
         var filter = Builders<BsonDocument>.Filter.Eq("_id", _converter.ToBsonValue(key));
-        var collection = _collections.GetCollection(isReplaying);
 
         if (changeset.HasBeenRemoved())
         {
-            await collection.DeleteOneAsync(filter);
+            await Collection.DeleteOneAsync(filter);
             return;
         }
 
-        var converted = await _changesetConverter.ToUpdateDefinition(key, changeset, isReplaying);
+        var converted = await _changesetConverter.ToUpdateDefinition(key, changeset, _isReplaying);
 
         if (!converted.hasChanges) return;
 
-        await collection.UpdateOneAsync(
+        await Collection.UpdateOneAsync(
             filter,
             converted.UpdateDefinition,
             new UpdateOptions
@@ -96,11 +97,19 @@ public class MongoDBSink : ISink
     }
 
     /// <inheritdoc/>
-    public Task PrepareInitialRun(bool isReplaying) => _collections.PrepareInitialRun(isReplaying);
+    public Task PrepareInitialRun() => _collections.PrepareInitialRun();
 
     /// <inheritdoc/>
-    public Task BeginReplay() => _collections.BeginReplay();
+    public async Task BeginReplay()
+    {
+        _isReplaying = true;
+        await _collections.BeginReplay();
+    }
 
     /// <inheritdoc/>
-    public Task EndReplay() => _collections.EndReplay();
+    public async Task EndReplay()
+    {
+        await _collections.EndReplay();
+        _isReplaying = true;
+    }
 }

@@ -132,7 +132,11 @@ public class MongoDBSchemaStore : ISchemaStore
 
         if (schemas.Count == 0)
         {
-            throw new MissingEventSchemaForEventType(type, generation);
+            throw new MissingEventSchemaForEventType(
+                _executionContextManager.Current.MicroserviceId,
+                _executionContextManager.Current.TenantId,
+                type,
+                generation);
         }
 
         return schemas[0].ToEventSchema();
@@ -153,7 +157,7 @@ public class MongoDBSchemaStore : ISchemaStore
         return schemas.Count == 1;
     }
 
-    IMongoCollection<EventSchemaMongoDB> GetCollection() => _sharedDatabase.GetCollection<EventSchemaMongoDB>(CollectionNames.Schemas);
+    IMongoCollection<EventSchemaMongoDB> GetCollection() => _sharedDatabase.GetCollection<EventSchemaMongoDB>(WellKnownCollectionNames.Schemas);
 
     FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(EventTypeId type, EventGeneration? generation) => Builders<EventSchemaMongoDB>.Filter.And(
                    Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Value),

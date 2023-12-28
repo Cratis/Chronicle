@@ -14,9 +14,8 @@ public interface IMongoDBSinkCollections
     /// <summary>
     /// Gets the <see cref="IMongoCollection{TDocument}"/> used by the <see cref="MongoDBSink"/>.
     /// </summary>
-    /// <param name="isReplaying">Whether or not to get the collection for replay or not.</param>
     /// <returns><see cref="IMongoCollection{T}"/> for the state.</returns>
-    IMongoCollection<BsonDocument> GetCollection(bool isReplaying);
+    IMongoCollection<BsonDocument> GetCollection();
 
     /// <summary>
     /// Signals that a replay is about to begin.
@@ -37,7 +36,6 @@ public interface IMongoDBSinkCollections
     /// Typically the sink will clear out any existing data. This is to be able to guarantee
     /// the idempotency of the projection.
     /// </remarks>
-    /// <param name="isReplaying">Whether or not we're in replay mode.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task PrepareInitialRun(bool isReplaying);
+    Task PrepareInitialRun();
 }

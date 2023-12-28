@@ -32,7 +32,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
     readonly IHttpClientFactory _httpClientFactory;
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IReducerPipelineDefinitions> _reducerPipelineDefinitionsProvider;
-    readonly IReducerPipelineFactory _reducerPipelineFactory;
+    readonly ProviderFor<IReducerPipelines> _reducerPipelinesProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
@@ -49,7 +49,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
     /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> for connecting to the client.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="reducerPipelineDefinitionsProvider"><see cref="IReducerPipelineDefinitions"/> to get pipeline definitions from.</param>
-    /// <param name="reducerPipelineFactory"><see cref="IReducerPipelineFactory"/> for creating instances of <see cref="IReducerPipeline"/>.</param>
+    /// <param name="reducerPipelinesProvider"><see cref="IReducerPipelines"/> for getting instances of <see cref="IReducerPipeline"/>.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and <see cref="ExpandoObject"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     public ClientReducerSubscriber(
@@ -57,7 +57,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
         IHttpClientFactory httpClientFactory,
         IExecutionContextManager executionContextManager,
         ProviderFor<IReducerPipelineDefinitions> reducerPipelineDefinitionsProvider,
-        IReducerPipelineFactory reducerPipelineFactory,
+        ProviderFor<IReducerPipelines> reducerPipelinesProvider,
         IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions)
     {
@@ -65,7 +65,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
         _httpClientFactory = httpClientFactory;
         _executionContextManager = executionContextManager;
         _reducerPipelineDefinitionsProvider = reducerPipelineDefinitionsProvider;
-        _reducerPipelineFactory = reducerPipelineFactory;
+        _reducerPipelinesProvider = reducerPipelinesProvider;
         _expandoObjectConverter = expandoObjectConverter;
         _jsonSerializerOptions = jsonSerializerOptions;
     }
@@ -84,7 +84,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
 
         _executionContextManager.Establish(_tenantId, _executionContextManager.Current.CorrelationId, _microserviceId);
         var definition = await _reducerPipelineDefinitionsProvider().GetFor(_reducerId);
-        _pipeline = await _reducerPipelineFactory.CreateFrom(definition);
+        _pipeline = await _reducerPipelinesProvider().GetFor(definition);
     }
 
     /// <inheritdoc/>
@@ -102,73 +102,70 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                 @event.Context.SequenceNumber);
         }
 
-        if (context.Metadata is JsonElement connectedClientJsonObject)
+        if (context.Metadata is ConnectedClient connectedClient)
         {
-            var connectedClient = connectedClientJsonObject.Deserialize<ConnectedClient>(_jsonSerializerOptions);
-            if (connectedClient is not null)
+            using var httpClient = _httpClientFactory.CreateClient(ConnectedClients.ConnectedClientsHttpClient);
+            httpClient.BaseAddress = connectedClient.ClientUri;
+            var state = ObserverSubscriberState.Ok;
+            var commandResult = CommandResult.Success;
+
+            var firstEvent = events.First();
+            var reducerContext = new ReducerContext(
+                events,
+                new Key(firstEvent.Context.EventSourceId, ArrayIndexers.NoIndexers));
+
+            var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
+
+            ReduceResult? reduceResult = null;
+
+            await (_pipeline?.Handle(reducerContext, async (_, initial) =>
             {
-                using var httpClient = _httpClientFactory.CreateClient(ConnectedClients.ConnectedClientsHttpClient);
-                httpClient.BaseAddress = connectedClient.ClientUri;
-                var state = ObserverSubscriberState.Ok;
-                var commandResult = CommandResult.Success;
-
-                var isReplaying = events.Any(_ => _.Context.ObservationState.HasFlag(EventObservationState.Replay));
-                var isHeadOfReplay = events.Any(_ => _.Context.ObservationState.HasFlag(EventObservationState.HeadOfReplay));
-                var isTailOfReplay = events.Any(_ => _.Context.ObservationState.HasFlag(EventObservationState.TailOfReplay));
-
-                var observationState = EventObservationState.None;
-                if (isReplaying) observationState |= EventObservationState.Replay;
-                if (isHeadOfReplay) observationState |= EventObservationState.HeadOfReplay;
-                if (isTailOfReplay) observationState |= EventObservationState.TailOfReplay;
-
-                var firstEvent = events.First();
-                var reducerContext = new ReducerContext(
+                var reduce = new Reduce(
                     events,
-                    new Key(firstEvent.Context.EventSourceId, ArrayIndexers.NoIndexers),
-                    observationState);
+                    initial is not null ? _expandoObjectConverter.ToJsonObject(initial, _pipeline.ReadModel.Schema) : null);
+                using var jsonContent = JsonContent.Create(reduce, options: _jsonSerializerOptions);
+                httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
+                var response = await httpClient.PostAsync($"/.cratis/reducers/{_reducerId}", jsonContent);
 
-                await (_pipeline?.Handle(reducerContext, async (_, initial) =>
+                var contentAsString = string.Empty;
+
+                try
                 {
-                    var reduce = new Reduce(
-                        events,
-                        initial is not null ? _expandoObjectConverter.ToJsonObject(initial, _pipeline.ReadModel.Schema) : null);
-                    using var jsonContent = JsonContent.Create(reduce, options: _jsonSerializerOptions);
-                    httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
-                    var response = await httpClient.PostAsync($"/.cratis/reducers/{_reducerId}", jsonContent);
+                    contentAsString = await response.Content.ReadAsStringAsync();
+                    commandResult = JsonSerializer.Deserialize<CommandResult>(contentAsString, _jsonSerializerOptions)!;
+                }
+                catch
+                {
+                    throw new InvalidReturnContentFromReducer(response.StatusCode, response.ReasonPhrase ?? "[n/a]", contentAsString);
+                }
 
-                    var contentAsString = string.Empty;
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    await ConnectedClientsGrain.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
+                    state = ObserverSubscriberState.Disconnected;
+                }
+                else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)
+                {
+                    state = ObserverSubscriberState.Failed;
+                }
 
-                    try
-                    {
-                        contentAsString = await response.Content.ReadAsStringAsync();
-                        commandResult = JsonSerializer.Deserialize<CommandResult>(contentAsString, _jsonSerializerOptions)!;
-                    }
-                    catch
-                    {
-                        throw new InvalidReturnContentFromReducer(response.StatusCode, response.ReasonPhrase ?? "[n/a]", contentAsString);
-                    }
+                if (commandResult.Response is not null && commandResult.Response is JsonElement jsonElement)
+                {
+                    reduceResult = jsonElement.Deserialize<ReduceResult>(_jsonSerializerOptions)!;
+                    return _expandoObjectConverter.ToExpandoObject(reduceResult.State ?? new JsonObject(), _pipeline.ReadModel.Schema);
+                }
 
-                    if (response.StatusCode == HttpStatusCode.NotFound)
-                    {
-                        await ConnectedClientsGrain.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
-                        state = ObserverSubscriberState.Disconnected;
-                    }
-                    else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)
-                    {
-                        state = ObserverSubscriberState.Failed;
-                    }
+                return new ExpandoObject();
+            }) ?? Task.CompletedTask);
 
-                    if (commandResult.Response is not null && commandResult.Response is JsonElement jsonElement)
-                    {
-                        var result = jsonElement.Deserialize<ReduceResult>(_jsonSerializerOptions)!;
-                        return _expandoObjectConverter.ToExpandoObject(result.State ?? new JsonObject(), _pipeline.ReadModel.Schema);
-                    }
-
-                    return new ExpandoObject();
-                }) ?? Task.CompletedTask);
-
-                return new ObserverSubscriberResult(state, EventSequenceNumber.Unavailable, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
+#pragma warning disable CA1508 // Avoid dead conditional code - false positive
+            if (reduceResult is null)
+            {
+                return new ObserverSubscriberResult(state, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
             }
+#pragma warning restore CA1508 // Avoid dead conditional code
+
+            return new ObserverSubscriberResult(state, reduceResult.LastSuccessfullyObservedEvent, reduceResult.ErrorMessages, reduceResult.StackTrace);
         }
 
         return new ObserverSubscriberResult(ObserverSubscriberState.Disconnected, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);

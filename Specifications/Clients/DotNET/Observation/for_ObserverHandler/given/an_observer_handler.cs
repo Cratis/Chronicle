@@ -11,7 +11,6 @@ public class an_observer_handler : all_dependencies
         observer_id,
         observer_name,
         event_sequence_id,
-        event_types.Object,
         observer_invoker.Object,
         causation_manager.Object,
         event_serializer.Object);

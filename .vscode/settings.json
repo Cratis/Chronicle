@@ -3,7 +3,7 @@
     "editor.formatOnSave": false,
     "editor.insertSpaces": true,
     "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": false
+        "source.fixAll.eslint": "never"
     },
     "files.exclude": {
         "**/*.scss.d.ts": true,
@@ -55,6 +55,7 @@
     "cSpell.words": [
         "aksioinsurtech",
         "appsettings",
+        "ASPNETCORE",
         "Autofac",
         "Brotli",
         "Bson",
@@ -92,6 +93,7 @@
         "Remindable",
         "Retryable",
         "Swashbuckle",
+        "Testcontainers",
         "tinycolor",
         "typeparam",
         "Unmap",

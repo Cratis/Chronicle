@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Applications.Queries;
-using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Kernel.Persistence.Observation;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,25 +13,21 @@ namespace Aksio.Cratis.Kernel.Read.Observation;
 /// Represents the API for working with observers.
 /// </summary>
 [Route("/api/events/store/{microserviceId}/{tenantId}/observers")]
-public class Observers : Controller
+public class Observers : ControllerBase
 {
     readonly ProviderFor<IObserverStorage> _observerStorageProvider;
-    readonly ProviderFor<IObserversState> _observersStateProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
     /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
-    /// <param name="observersStateProvider">Provider for <see cref="IObserversState"/> for working with the state of observers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public Observers(
         ProviderFor<IObserverStorage> observerStorageProvider,
-        ProviderFor<IObserversState> observersStateProvider,
         IExecutionContextManager executionContextManager)
     {
         _observerStorageProvider = observerStorageProvider;
-        _observersStateProvider = observersStateProvider;
         _executionContextManager = executionContextManager;
     }
 
@@ -56,17 +52,17 @@ public class Observers : Controller
     /// </summary>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the observers are for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the observers are for.</param>
-    /// <returns>Client observable of a collection of <see cref="ObserverState"/>.</returns>
+    /// <returns>Client observable of a collection of <see cref="ObserverInformation"/>.</returns>
     [HttpGet("observe")]
-    public Task<ClientObservable<IEnumerable<ObserverState>>> AllObservers(
+    public Task<ClientObservable<IEnumerable<ObserverInformation>>> AllObservers(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
 
-        var clientObservable = new ClientObservable<IEnumerable<ObserverState>>();
-        var observable = _observersStateProvider().All;
-        var subscription = observable.Subscribe(_ => clientObservable.OnNext(_));
+        var clientObservable = new ClientObservable<IEnumerable<ObserverInformation>>();
+        var observable = _observerStorageProvider().ObserveAll();
+        var subscription = observable.Subscribe(clientObservable.OnNext);
         clientObservable.ClientDisconnected = () =>
         {
             subscription.Dispose();

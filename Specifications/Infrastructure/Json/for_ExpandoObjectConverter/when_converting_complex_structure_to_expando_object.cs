@@ -134,4 +134,7 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
     [Fact] void should_child_double_value_to_hold_correct_value() => ((double)result.children[0].doubleValue).ShouldEqual(child["doubleValue"].GetValue<double>());
     [Fact] void should_child_guid_value_to_be_of_guid_type() => ((object)result.children[0].guidValue).ShouldBeOfExactType<Guid>();
     [Fact] void should_child_guid_value_to_hold_correct_value() => ((Guid)result.children[0].guidValue).ShouldEqual(Guid.Parse(child["guidValue"].GetValue<string>()));
+
+    [Fact] void should_set_top_level_missing_string_from_source_to_null() => ((object)result.missingStringFromSource).ShouldBeNull();
+    [Fact] void should_set_top_level_missing_int_from_source_to_default_value() => ((int)result.missingIntFromSource).ShouldEqual(0);
 }

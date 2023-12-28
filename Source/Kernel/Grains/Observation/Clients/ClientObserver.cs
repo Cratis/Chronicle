@@ -70,4 +70,10 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
         var observer = GrainFactory.GetGrain<IObserverSupervisor>(id, key);
         observer.Unsubscribe();
     }
+
+    async Task HandleConnectedClientsSubscription(object state)
+    {
+        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(_observerKey!.MicroserviceId);
+        await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
+    }
 }

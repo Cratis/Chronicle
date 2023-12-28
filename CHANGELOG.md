@@ -1,3 +1,310 @@
+# [v9.14.19] - 2023-12-12 [PR: #1050](https://github.com/aksio-insurtech/Cratis/pull/1050)
+
+### Fixed
+
+- Jobs view now shows `[N/A]` when there is no status changes instead of crashing.
+
+
+# [v9.14.17] - 2023-12-12 [PR: #1049](https://github.com/aksio-insurtech/Cratis/pull/1049)
+
+### Fixed
+
+- Ensuring correct execution context for the different parts of the boot procedure of the Kernel.
+
+
+
+# [v9.14.16] - 2023-12-12 [PR: #1048](https://github.com/aksio-insurtech/Cratis/pull/1048)
+
+### Fixed
+
+- Stopping the rehydration of event sequences from failing at startup, instead log an error. We want the server to survive any non fatal errors at startup.
+
+
+
+# [v9.14.15] - 2023-12-12 [PR: #1047](https://github.com/aksio-insurtech/Cratis/pull/1047)
+
+### Fixed
+
+- Fixing so that we have at least 1 degree of parallelism for concurrency for our task scheduler.
+- Adding more explicit exception to see when parallism is configured wrongly.
+- Added logging to see the degree of parallelism for concurrency for our task scheduler.
+
+
+# [v9.14.14] - 2023-12-12 [PR: #1046](https://github.com/aksio-insurtech/Cratis/pull/1046)
+
+### Fixed
+
+- Lazily getting an instance of the `TaskScheduler` for `CpuBoundWorker` when its needed the first time.
+
+
+# [v9.14.13] - 2023-12-12 [PR: #1045](https://github.com/aksio-insurtech/Cratis/pull/1045)
+
+### Fixed
+
+- Moved to a concrete singleton instead of a provider that provides the singleton for `LimitedConcurrencyLevelTaskScheduler`.
+
+
+# [v9.14.12] - 2023-12-12 [PR: #1044](https://github.com/aksio-insurtech/Cratis/pull/1044)
+
+### Fixed
+
+- Configuring the CPU bound workers as the first thing, seems to be a timing issue with this not being configured and dependencies to `LimitedConcurrencyLevelTaskScheduler`. 
+
+
+# [v9.14.11] - 2023-12-11 [PR: #1043](https://github.com/aksio-insurtech/Cratis/pull/1043)
+
+### Fixed
+
+- Fixing a crash in how the JSON schema gets configured with nullable information for primitive type based `ConceptAs`.
+
+
+# [v9.14.10] - 2023-12-11 [PR: #1042](https://github.com/aksio-insurtech/Cratis/pull/1042)
+
+### Fixed
+
+- Serialization to and from MongoDB fixed for types with `object` properties. These are now getting a discriminator value that makes sense and is possible to get back to the original type. Allowing any types to be considered.
+- Internal fallback JSON serialization for Grain communication with support for types with `object` properties.
+- Adding metadata to the JSON schema for properties that hold a nullable `ConceptAs<>` type allowing the Kernel to treat these as nullables and not give a default value if the value is indeed null.
+
+
+
+# [v9.14.9] - 2023-12-11 [PR: #1041](https://github.com/aksio-insurtech/Cratis/pull/1041)
+
+### Fixed
+
+- Serialization to and from MongoDB fixed for types with `object` properties. These are now getting a discriminator value that makes sense and is possible to get back to the original type. Allowing any types to be considered.
+- Internal fallback JSON serialization for Grain communication with support for types with `object` properties.
+- Adding metadata to the JSON schema for properties that hold a nullable `ConceptAs<>` type allowing the Kernel to treat these as nullables and not give a default value if the value is indeed null.
+
+
+
+# [v9.14.8] - 2023-12-8 [PR: #1040](https://github.com/aksio-insurtech/Cratis/pull/1040)
+
+### Fixed
+
+- Fixing job storage to serialize the request object explicitly.
+- Setting the request back for the job step storage and recommendation storage, so that the inmemory representation is correct.
+
+
+# [v9.14.7] - 2023-12-7 [PR: #1039](https://github.com/aksio-insurtech/Cratis/pull/1039)
+
+### Fixed
+
+- Removing JSON serialization for request object of recommendations, which caused an error since we now serialize it BsonDocument directly.
+
+
+# [v9.14.6] - 2023-12-7 [PR: #1037](https://github.com/aksio-insurtech/Cratis/pull/1037)
+
+### Fixed
+
+- Passing along the request type on recommendation to `.ToBsonDocument()` as it then will pick the correct serializer.
+
+
+# [v9.14.5] - 2023-12-7 [PR: #1036](https://github.com/aksio-insurtech/Cratis/pull/1036)
+
+### Fixed
+
+- Latest version of `Aksio.Applications``
+- Fixing serialization of JobSteps and Recommendations. Looks like the latest version of MongoDB.Driver is explicitly looking at the type definition of the owning type when serializing, rather than doing a `.GetType()`. It will default to an `ObjectSerializer` if the definition is set to `object` while the actual instance is a different type and it will then fall over.
+
+# [v9.14.4] - 2023-12-7 [PR: #1035](https://github.com/aksio-insurtech/Cratis/pull/1035)
+
+### Fixed
+
+- Fixed the EventSequence queries that used `.Value` for the sequence number to be just the actual value. This seems to fix a problem where it tries to add a `Convert()` method to the query, which is not something that can be translated to MongoDB.
+
+
+# [v9.14.3] - 2023-12-7 [PR: #1034](https://github.com/aksio-insurtech/Cratis/pull/1034)
+
+## Summary
+
+Summary of the PR here. The GitHub release description is created from this comment so keep it nice and descriptive.
+Remember to remove sections that you don't need or use.
+If it does not make sense to have a summary, you can take that out as well.
+
+### Added
+
+- Support for specifications for immediate projections.
+
+### Fixed
+
+- Queries on event sequence that has sort is now using new extension methods for doing the sorting, which will unwrap the inner value of the `EventSequenceNumber` concept to avoid problems with the inner Linq provider of the MongoDB Driver.
+
+
+# [v9.14.2] - 2023-12-7 [PR: #1033](https://github.com/aksio-insurtech/Cratis/pull/1033)
+
+### Fixed
+
+- MongoDB version bumped to latest.
+- Implementing new `SearchIndexes` property for our `MongoCollectionAdapter<>` wrapper of `IMongoCollection<>`.
+
+
+# [v9.14.1] - 2023-12-7 [PR: #1032](https://github.com/aksio-insurtech/Cratis/pull/1032)
+
+### Fixed
+
+- Bumping `Aksio.MongoDB` to latest.
+- Bumping `Aksio.Applications.*` to latest.
+
+
+# [v9.14.0] - 2023-12-6 [PR: #961](https://github.com/aksio-insurtech/Cratis/pull/961)
+
+## Summary
+
+This PR brings major changes to the observer infrastructure in the form of a complete rewrite of how it works. It also affects long running processes such as catch-up, replay and retry of failed partitions. This brings with it improved stability but also improved performance for the long running processes as these are scaled out on partition level.
+
+### Added
+
+- A new statemachine system at the core.
+- A new CPU bound system when wanting to perform work that is CPU bound but should be limited to a set number of parallell activities at once.
+- A Job system for scheduling long running jobs with a UI in the Workbench to see status of jobs.
+- Observer indexes - for now only one type of index; `EventSourceId`.
+- Recommendation system for taking recommendations from the system that can be turned into action.
+- Indexes for event sequences
+- Added number of events handled count on observers
+- More details on failed partitions, isolating every attempt with all information related to each attempt.
+- Started consolidation and formalization of the persistence layer, this is the first step to make it easier to implement support for other storage engines other than MongoDB.
+
+### Changes
+
+- Cratis no longer automatically replays when a definition change happen on an observer. It will instead add a recommendation for doing so, which can be applied if one wishes to do so.
+- Failed partition definition has changed - this is unfortunately a breaking change, without a migration path. The only way to deal with this is to delete any `failed-partitions` collections in the MongoDB.
+- All observers are now rehydrated on startup of the Kernel. This was lazily done before, causing the clients to have to wait on first connect.
+- Added infrastructure for writing integration tests.
+- Internally formalized when replaying. Rather than leveraging flags for knowing when a replay is happening, we now explicitly know. This had to change as we now perform replays by fanning out all partitions.
+
+
+
+# [v9.13.0] - 2023-12-3 [PR: #0]()
+
+### Added
+
+- Added support for base types with derivative event types for projections. Projections can just use the `From()` syntax with a base type, nothing changes. Behind the covers there is a new `FromAny` in the projection definition. Internal engine does not really care about the inheritance chain, as it just observes all concrete derivatives - just as we do with observers, reducers and aggregate roots. This new feature applies to all types of projections, including immediate projections which will then also be supported by Rules and AggregateRoot states. (#1030)
+
+# [v9.12.0] - 2023-12-3 [PR: #1029](https://github.com/aksio-insurtech/Cratis/pull/1029)
+
+### Added
+
+- Adding support for using base event types or interfaces in observers, reducers and aggregates. The system will identify event types from derivatives and register the event types of these for handling. (#1025)
+
+
+# [v9.11.0] - 2023-11-29 [PR: #1022](https://github.com/aksio-insurtech/Cratis/pull/1022)
+
+### Fixed
+
+- Equality check for projection definitions is now ignoring the `LastUpdated` property, which caused it to always be changed.
+- Fixing reducer pipeline to look at the flag `Replay` rather than comparing the entire value `Replay`. This caused the first event not to be considered part of replay and ended up in the sink being saved to the regular collection rather than the temporary replay collection.
+
+# [v9.10.0] - 2023-11-24 [PR: #1020](https://github.com/aksio-insurtech/Cratis/pull/1020)
+
+### Fixed
+
+- Converter from JSON to ExpandoObject and back now honors null values. If a property if missing from the JSON or the ExpandoObject but is in the schema, we set it to default value for primitives and null for non primitives.
+
+
+# [v9.9.1] - 2023-11-16 [PR: #1016](https://github.com/aksio-insurtech/Cratis/pull/1016)
+
+### Fixed
+
+- Added logging to `GetModelInstance()` for immediate projections.
+- Added last updated to projection definitions.
+- Immediate projection now uses the `LastUpdated` property of a projection to decide if ti should rewind the sequence number if it is newer than what the "cached" state is based on.
+
+
+# [v9.9.0] - 2023-11-15 [PR: #0]()
+
+### Added
+
+- Adding support for `AggregateRoot`. Aggregates can either be stateless, meaning you can implement handle methods for the events you want it to possibly create state from when rehydrating an aggregate, or they can be stateful in the sense that state can be produced during rehydration based on a `IReducerFor<>` or an `IImmediateProjectionFor<>`. These 3 options are mutually exclusive. Documentation of all this will follow. There are also an early approach to writing tests for this, which will be improved upon in the future.
+
+
+# [v9.8.0] - 2023-11-13 [PR: #1013](https://github.com/aksio-insurtech/Cratis/pull/1013)
+
+### Fixed
+
+- Fixing BSON to `ExpandoObject` converter to support collections of primitives such as `int` and `string`. It made the items `null` before.
+
+
+# [v9.8.0-beta.1] - 2023-11-2 [PR: #0]()
+
+No release notes
+
+# [v9.7.2] - 2023-11-1 [PR: #1006](https://github.com/aksio-insurtech/Cratis/pull/1006)
+
+### Fixed
+
+- Children with composite keys are now recognized when creating changesets within projections. Two items with same key will now not result in a `ChildAdded` change. This accidently worked when running it with MongoDB but got highlighted as a problem when running unit tests for projections.
+
+
+# [v9.7.1] - 2023-10-31 [PR: #0]()
+
+No release notes
+
+# [v9.7.0] - 2023-10-30 [PR: #1000](https://github.com/aksio-insurtech/Cratis/pull/1000)
+
+### Fixed
+
+- Fixing `InMemorySink` to set the `Id` property to the key value. This fixes a problem when using immediate projections and the read model coming back does not have a `null` for the `Id` property.
+
+
+# [v9.7.0-beta.1] - 2023-10-28 [PR: #0]()
+
+No release notes
+
+# [v9.6.0] - 2023-10-26 [PR: #999](https://github.com/aksio-insurtech/Cratis/pull/999)
+
+### Added
+
+- Adding a way to simply add a child based on the content of a property on an event for projections. This is super useful when wanting to have a collection of primitive types based on a property on the event. Important to remember, the type of the event property and the element type has to match - this is handled at compile time.
+
+```csharp
+public record AccountTransactions(string Account, IEnumerable<DateTimeOffset> TransactionDates);
+
+public class LatestTransactions : IProjectionFor<AccountTransactions>
+{
+    public ProjectionId Identifier => "d661904f-15e0-4a96-a0cc-c7389635e4cd";
+
+    public void Define(IProjectionBuilderFor<DebitAccountLatestTransactions> builder) => builder
+         .From<DepositPerformed>(_ => _
+             .Set(m => m.Account).To(e => e.Account)
+             .AddChild(m => m.TransactionDates, e => e.TransactionDate);
+}
+```
+
+
+
+# [v9.5.13] - 2023-10-25 [PR: #996](https://github.com/aksio-insurtech/Cratis/pull/996)
+
+### Added
+
+- Trace logging to `MongoDBIdentityStore`. One should be aware that there is a compliance aspect of these logs, as the user name is present in the log. By default this log will not show up, as it is `Trace` level, but if one configures Cratis with a `Verbose` level, these logs will show up.
+
+### Fixed
+
+- Fixing fallback resolution to username when subject is missing. This practically never kicked in.
+
+
+# [v9.5.12] - 2023-10-23 [PR: #995](https://github.com/aksio-insurtech/Cratis/pull/995)
+
+### Fixed
+
+- Observers ended up being in a stale state due to not getting the actual next sequence number based on the event types. This is now fixed.
+- Optimizing query for getting next event sequence number greater or equal to a given sequence number by using `.In()` rather than a collection of `.Or()` statements for the event types.
+
+# [v9.5.11] - 2023-10-23 [PR: #0]()
+
+### Fixed
+
+- Fixing `CatchUp` and `Replay` to not write state on the `Stop()` method, as it is not altering any `ObserverState` at that point. This fixes a problem we've seen were observers seem to be observing events multiple times. The reason for this is that the in-memory state representation of the grain is stale. Observer worker jobs share the state with the parent supervisor, but it is not synchronized and only updated when absolutely needed. This whole thing will be ripped out in an upcoming version with a complete rewrite of how observers work.ease notes
+
+# [v9.5.10] - 2023-10-22 [PR: #993](https://github.com/aksio-insurtech/Cratis/pull/993)
+
+### Fixed
+
+- Moving underlying database communication from `ObserverSupervisor` to the state provider for increased stability and avoiding `Task`dead lock scenarios.
+- Fixed so that the running state of an observer is reflected correctly, it could in some cases become active but showed "Subscribing" - as "Active" and subscribing to the underlying stream is the default, but was not reflected in the `RunningState` property.
+
+
 # [v9.5.9] - 2023-10-19 [PR: #992](https://github.com/aksio-insurtech/Cratis/pull/992)
 
 ### Changed

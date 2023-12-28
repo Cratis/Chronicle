@@ -7,10 +7,9 @@ using Aksio.Reflection;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using MongoDB.Driver.Search;
 
 namespace Microsoft.Extensions.DependencyInjection;
-
-#pragma warning disable AS0010, AS0013
 
 /// <summary>
 /// Represents an adapter for <see cref="IMongoCollection{T}"/> to overcome shortcomings of open generic service registrations with the default ServiceCollection registrations.
@@ -47,6 +46,7 @@ public class MongoCollectionAdapter<T> : IMongoCollection<T>
     public IBsonSerializer<T> DocumentSerializer => _collection.DocumentSerializer;
     public IMongoIndexManager<T> Indexes => _collection.Indexes;
     public MongoCollectionSettings Settings => _collection.Settings;
+    public IMongoSearchIndexManager SearchIndexes => _collection.SearchIndexes;
     public IAsyncCursor<TResult> Aggregate<TResult>(PipelineDefinition<T, TResult> pipeline, AggregateOptions options = null, CancellationToken cancellationToken = default) => _collection.Aggregate(pipeline, options, cancellationToken);
     public IAsyncCursor<TResult> Aggregate<TResult>(IClientSessionHandle session, PipelineDefinition<T, TResult> pipeline, AggregateOptions options = null, CancellationToken cancellationToken = default) => _collection.Aggregate(session, pipeline, options, cancellationToken);
     public Task<IAsyncCursor<TResult>> AggregateAsync<TResult>(PipelineDefinition<T, TResult> pipeline, AggregateOptions options = null, CancellationToken cancellationToken = default) => _collection.AggregateAsync(pipeline, options, cancellationToken);

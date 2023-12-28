@@ -3,6 +3,7 @@
 
 #pragma warning disable SA1600
 
+using Aksio.Cratis.Client;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
@@ -32,13 +33,15 @@ public class Startup
         app.UseRouting();
         app.UseWebSockets();
         app.MapGrpcServices();
-
         app.UseCratis();
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
         appLifetime.ApplicationStarted.Register(() =>
         {
             logger.PerformingBootProcedures();
             app.PerformBootProcedures();
+
+            KernelReadyResourceFilter.KernelReady = true;
+            app.ApplicationServices.GetRequiredService<IClient>().Connect().Wait();
         });
         app.UseAksio();
     }

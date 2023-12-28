@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Collections;
+using Aksio.Cratis.Aggregates;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Compliance.GDPR;
@@ -203,6 +204,10 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<PIIMetadataProvider>()
             .AddSingleton(typeof(IIdentityProvider), _identityProviderType)
             .AddSingleton<IRules, Rules.Rules>()
+            .AddSingleton<IAggregateRootFactory, AggregateRootFactory>()
+            .AddSingleton<IAggregateRootStateProviders, AggregateRootStateProviders>()
+            .AddSingleton<IAggregateRootEventHandlersFactory, AggregateRootEventHandlersFactory>()
+            .AddTransient<ClientObservers>()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>));
 
         _logger.ConfiguringCompliance();

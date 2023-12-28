@@ -4,6 +4,7 @@
 using System.Globalization;
 using Aksio.Applications.Autofac;
 using Aksio.Cratis.Kernel.Grains.Observation.Placement;
+using Aksio.Cratis.Kernel.Server.Serialization;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 
@@ -30,8 +31,9 @@ public static class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
+            .ConfigureCpuBoundWorkers()
             .UseMongoDB()
-            .UseAksio()
+            .UseAksio(mvcOptions => mvcOptions.Filters.Add<KernelReadyResourceFilter>(0))
             .UseCratis(_ => _.InKernel())
             .UseOrleans(_ => _
                 .UseCluster()
@@ -39,6 +41,7 @@ public static class Program
                 .UseStreamCaching()
                 .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
                 .ConfigureSerialization()
+                .AddReplayStateManagement()
                 .UseTelemetry()
                 .UseDashboard(options =>
                 {

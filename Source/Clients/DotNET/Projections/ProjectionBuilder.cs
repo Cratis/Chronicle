@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.Models;
+using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
@@ -35,7 +36,8 @@ public class ProjectionBuilder<TModel, TBuilder> : IProjectionBuilder<TModel, TB
     protected readonly Dictionary<EventType, FromDefinition> _fromDefinitions = new();
     protected readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
     protected readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = new();
-    protected AllDefinition _allDefinition = new() { Properties = new Dictionary<string, string>(), IncludeChildren = false };
+    protected readonly List<FromAnyDefinition> _fromAnyDefinitions = new();
+    protected AllDefinition _allDefinition = new(new Dictionary<PropertyPath, string>(), false);
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected EventType? _removedWithEvent;
     protected string _modelName;
@@ -78,16 +80,38 @@ public class ProjectionBuilder<TModel, TBuilder> : IProjectionBuilder<TModel, TB
     /// <inheritdoc/>
     public TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>> builderCallback)
     {
+        var type = typeof(TEvent);
+
+        if (!type.IsEventType(_eventTypes.AllClrTypes))
+        {
+            throw new TypeIsNotAnEventType(typeof(TEvent));
+        }
+
+        var eventTypes = type.GetEventTypes(_eventTypes.AllClrTypes).Select(_eventTypes.GetEventTypeFor).ToArray();
+
         var builder = new FromBuilder<TModel, TEvent, TBuilder>(this);
         builderCallback(builder);
-        var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
-        _fromDefinitions[eventType.ToContract()] = builder.Build();
+        var fromDefinition = builder.Build();
+
+        if (eventTypes.Length > 1)
+        {
+            _fromAnyDefinitions.Add(new FromAnyDefinition(eventTypes, fromDefinition));
+        }
+        else
+        {
+            _fromDefinitions[eventTypes[0]] = fromDefinition;
+        }
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public TBuilder Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>> builderCallback)
     {
+        if (!typeof(TEvent).IsEventType(_eventTypes.AllClrTypes))
+        {
+            throw new TypeIsNotAnEventType(typeof(TEvent));
+        }
+
         var builder = new JoinBuilder<TModel, TEvent, TBuilder>(this);
         builderCallback(builder);
         var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));

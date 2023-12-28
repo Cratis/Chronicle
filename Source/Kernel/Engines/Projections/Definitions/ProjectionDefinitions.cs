@@ -52,7 +52,9 @@ public class ProjectionDefinitions : IProjectionDefinitions
     /// <inheritdoc/>
     public async Task Register(ProjectionDefinition definition)
     {
+        definition = definition with { LastUpdated = DateTimeOffset.UtcNow };
         _definitions[definition.Identifier] = definition;
+
         await _storage.Save(definition);
     }
 
@@ -64,9 +66,14 @@ public class ProjectionDefinitions : IProjectionDefinitions
         {
             return (true, false);
         }
-        var incoming = _projectionSerializer.Serialize(projectionDefinition);
-        var existing = _projectionSerializer.Serialize(_definitions[projectionDefinition.Identifier]);
-        var changed = !incoming.ToString().Equals(existing.ToString());
+
+        var incoming = projectionDefinition with { LastUpdated = null };
+        var existing = _definitions[projectionDefinition.Identifier] with { LastUpdated = null };
+        var incomingJson = _projectionSerializer.Serialize(incoming);
+        var existingJson = _projectionSerializer.Serialize(existing);
+        var incomingAsJsonString = incomingJson.ToJsonString();
+        var existingAsJsonString = existingJson.ToJsonString();
+        var changed = !incomingAsJsonString.Equals(existingAsJsonString);
         return (false, changed);
     }
 

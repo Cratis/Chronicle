@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.EventSequences;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 
@@ -10,7 +11,22 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 /// </summary>
 public class EventSequences : Grain, IEventSequences
 {
+    readonly IExecutionContextManager _executionContextManager;
+    readonly ILogger<EventSequences> _logger;
     EventSequencesKey _key = EventSequencesKey.NotSet;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventSequences"/> class.
+    /// </summary>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for managing the execution context.</param>
+    /// <param name="logger">Logger for logging.</param>
+    public EventSequences(
+        IExecutionContextManager executionContextManager,
+        ILogger<EventSequences> logger)
+    {
+        _executionContextManager = executionContextManager;
+        _logger = logger;
+    }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -32,11 +48,19 @@ public class EventSequences : Grain, IEventSequences
             EventSequenceId.System,
         };
 
-        var eventSequenceKey = new MicroserviceAndTenant(_key.MicroserviceId, _key.TenantId);
+        var eventSequenceKey = new EventSequenceKey(_key.MicroserviceId, _key.TenantId);
         foreach (var eventSequence in eventSequences)
         {
             var grain = GrainFactory.GetGrain<IEventSequence>(eventSequence, eventSequenceKey);
-            await grain.Rehydrate();
+            try
+            {
+                _executionContextManager.Establish(_key.TenantId, CorrelationId.New(), _key.MicroserviceId);
+                await grain.Rehydrate();
+            }
+            catch (Exception ex)
+            {
+                _logger.FailedRehydratingEventSequence(eventSequence, _key.MicroserviceId, _key.TenantId, ex);
+            }
         }
     }
 }

@@ -127,9 +127,35 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
     }
 
     /// <inheritdoc/>
+    public ISetBuilder<TModel, TEvent, TBuilder> SetThisValue()
+    {
+        var setBuilder = new SetBuilder<TModel, TEvent, TBuilder>((this as TBuilder)!, new PropertyPath("$this"), false);
+        _propertyExpressions.Add(setBuilder);
+        return setBuilder;
+    }
+
+    /// <inheritdoc/>
     public TBuilder Count<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
     {
         _propertyExpressions.Add(new CountBuilder<TModel, TEvent, TProperty>(modelPropertyAccessor.GetPropertyPath()));
+        return (this as TBuilder)!;
+    }
+
+    /// <inheritdoc/>
+    public TBuilder AddChild<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Expression<Func<TEvent, TChildModel>> eventProperty)
+    {
+        var sourcePropertyInfo = eventProperty.GetPropertyInfo();
+        if (sourcePropertyInfo.PropertyType.IsAPrimitiveType())
+        {
+            _projectionBuilder
+                .Children(targetProperty, childrenBuilder => childrenBuilder
+                    .FromEventProperty(eventProperty));
+        }
+        else
+        {
+            AddChild(targetProperty, builder => builder.FromObject(eventProperty));
+        }
+
         return (this as TBuilder)!;
     }
 

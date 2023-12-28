@@ -4,11 +4,9 @@
 using System.Reflection;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Reducers.Validators;
-using Aksio.Reflection;
+using Aksio.Cratis.Reflection;
 
 namespace Aksio.Cratis.Reducers;
-
-#nullable disable
 
 /// <summary>
 /// Extension methods for identifying a <see cref="MethodInfo"/> as reducer method.
@@ -20,6 +18,7 @@ public static class ReducerExtensionMethods
     /// </summary>
     /// <param name="methodInfo"><see cref="MethodInfo"/> to check.</param>
     /// <param name="readModelType">Type of read model.</param>
+    /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>True if it is a reducer method, false if not.</returns>
     /// <remarks>
     /// The following are considered valid reducer method signatures.
@@ -30,11 +29,10 @@ public static class ReducerExtensionMethods
     /// TReadModel {MethodName}(TEvent event, TReadModel? current)
     /// ]]>
     /// </remarks>
-    public static bool IsReducerMethod(this MethodInfo methodInfo, Type readModelType)
+    public static bool IsReducerMethod(this MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes)
     {
         var isReducerMethod = methodInfo.ReturnType == readModelType ||
-                              methodInfo.ReturnType == typeof(Task<>).MakeGenericType(readModelType) ||
-                              methodInfo.ReturnType == typeof(void);
+                              methodInfo.ReturnType == typeof(Task<>).MakeGenericType(readModelType);
 
         if (!isReducerMethod) return false;
         var parameters = methodInfo.GetParameters();
@@ -42,10 +40,10 @@ public static class ReducerExtensionMethods
         if (parameters.Length > 3) return false;
 
         if (parameters.Length >= 2 &&
-            parameters[0].ParameterType.HasAttribute<EventTypeAttribute>() &&
+            parameters[0].ParameterType.IsEventType(eventTypes) &&
             parameters[1].ParameterType.Equals(readModelType))
         {
-            if (methodInfo.DeclaringType.IsNullableContext() && !parameters[1].IsNullableReferenceType())
+            if ((methodInfo.DeclaringType?.IsNullableContext() ?? false) && !parameters[1].IsNullableReferenceType())
             {
                 return false;
             }
@@ -75,20 +73,4 @@ public static class ReducerExtensionMethods
         var reducerInterface = interfaces.Single(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IReducerFor<>));
         return reducerInterface.GetGenericArguments()[0];
     }
-
-    /// <summary>
-    /// Check whether or not a type is in a nullable context.
-    /// </summary>
-    /// <param name="type">Type to check.</param>
-    /// <returns>True if it is in a nullable context, false if not.</returns>
-    public static bool IsNullableContext(this Type type) =>
-        type.GetCustomAttributes().Any(_ => _.GetType().FullName == "System.Runtime.CompilerServices.NullableContextAttribute");
-
-    /// <summary>
-    /// Check whether or not a member that implements <see cref="ICustomAttributeProvider"/> is a nullable reference type.
-    /// </summary>
-    /// <param name="member">Member that implements <see cref="ICustomAttributeProvider"/> to check.</param>
-    /// <returns>True if it nullable, false if not.</returns>
-    public static bool IsNullableReferenceType(this ICustomAttributeProvider member) =>
-        member.GetCustomAttributes(false).Any(_ => _.GetType().FullName == "System.Runtime.CompilerServices.NullableAttribute");
 }

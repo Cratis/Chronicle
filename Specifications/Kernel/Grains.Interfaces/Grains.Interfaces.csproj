@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Grains.Interfaces.Specs</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Grains.Interfaces</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Kernel/Grains.Interfaces/Grains.Interfaces.csproj" />
+    </ItemGroup>
+
+</Project>

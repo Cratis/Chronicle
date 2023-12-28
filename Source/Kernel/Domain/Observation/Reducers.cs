@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Kernel.Domain.Observation;
 /// Represents the API for working with observers.
 /// </summary>
 [Route("/api/events/store/{microserviceId}/reducers")]
-public class Reducers : Controller
+public class Reducers : ControllerBase
 {
     readonly KernelConfiguration _configuration;
     readonly IGrainFactory _grainFactory;

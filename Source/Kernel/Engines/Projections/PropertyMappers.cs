@@ -24,7 +24,7 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> FromEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
     {
-        return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
+        return (AppendedEvent @event, ExpandoObject target, ArrayIndexers arrayIndexers) =>
         {
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
             actualTarget[targetProperty.LastSegment.Value] = eventValueProvider(@event);
@@ -39,7 +39,7 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> AddWithEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
     {
-        return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
+        return (AppendedEvent @event, ExpandoObject target, ArrayIndexers arrayIndexers) =>
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
@@ -61,7 +61,7 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> SubtractWithEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
     {
-        return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
+        return (AppendedEvent @event, ExpandoObject target, ArrayIndexers arrayIndexers) =>
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
@@ -86,7 +86,7 @@ public static class PropertyMappers
     {
         var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats);
 
-        return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
+        return (AppendedEvent @event, ExpandoObject target, ArrayIndexers arrayIndexers) =>
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;

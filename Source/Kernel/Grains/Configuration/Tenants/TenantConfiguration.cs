@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
 /// <summary>
 /// Represents an implementation of <see cref="ITenantConfiguration"/>.
 /// </summary>
-[StorageProvider(ProviderName = TenantConfigurationState.StorageProvider)]
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.TenantConfiguration)]
 public class TenantConfiguration : Grain<TenantConfigurationState>, ITenantConfiguration
 {
     /// <inheritdoc/>

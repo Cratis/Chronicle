@@ -25,7 +25,7 @@ public class TenantConfigurationStorageProvider : IGrainStorage
         _database = database;
     }
 
-    IMongoCollection<MongoDBTenantConfigurationState> Collection => _database.GetCollection<MongoDBTenantConfigurationState>(CollectionNames.TenantConfiguration);
+    IMongoCollection<MongoDBTenantConfigurationState> Collection => _database.GetCollection<MongoDBTenantConfigurationState>(WellKnownCollectionNames.TenantConfiguration);
 
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;

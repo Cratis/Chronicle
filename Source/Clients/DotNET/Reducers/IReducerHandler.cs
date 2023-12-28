@@ -35,7 +35,17 @@ public interface IReducerHandler
     /// <summary>
     /// Gets the type of the read model.
     /// </summary>
-    Type ReadModelType { get; }
+    Type ReadModelType { get; }
+
+    /// <summary>
+    /// Gets whether or not the reducer should be actively running on the Kernel.
+    /// </summary>
+    bool IsActive { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IReducerInvoker"/> that will perform the invocations.
+    /// </summary>
+    IReducerInvoker Invoker { get; }
 
     /// <summary>
     /// Handle next events as bulk.

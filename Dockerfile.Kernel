@@ -1,0 +1,20 @@
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build-env
+WORKDIR /App
+
+COPY ./.git/config ./.git/
+COPY ./.editorconfig ./
+COPY ./.globalconfig ./
+COPY ./Directory.Build.props ./
+COPY ./Directory.Packages.props ./
+COPY ./Source/ ./Source
+COPY ./Specifications/Integration/Directory.Build.Testing.props ./Source/Directory.Build.props
+
+WORKDIR /App/Source/Kernel/Server
+RUN dotnet restore
+RUN dotnet publish -c Release -o out
+
+FROM mcr.microsoft.com/dotnet/aspnet:7.0
+WORKDIR /App
+COPY --from=build-env /App/Source/Kernel/Server/out .
+ENTRYPOINT ["dotnet", "Aksio.Cratis.Kernel.Server.dll"]
+

@@ -55,7 +55,9 @@ export const EventList = (props: EventListProps) => {
             microserviceId: props.microserviceId,
             tenantId: props.tenantId,
             pageNumber: pageState.pageNumber,
-            pageSize: pageState.pageSize
+            pageSize: pageState.pageSize,
+            eventSourceId: '',
+            eventTypes: []
         } as GetAppendedEventsArguments;
     };
 
@@ -123,7 +125,7 @@ export const EventList = (props: EventListProps) => {
                     tenantId: output.context.tenantId,
                     reason: output.content.reason,
                     eventSourceId: output.context.eventSourceId,
-                    eventTypes: []
+                    eventTypes: null!
                 });
                 const cmdResult = await redactEventsCmd.execute();
                 if (cmdResult.isSuccess) {

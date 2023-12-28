@@ -21,7 +21,7 @@ Below shows a simple ASP.NET controller that iterates all tenants and can then u
 using Aksio.Cratis.Tenants;
 
 [Route("/api/my-controller")]
-public class MyController : Controller
+public class MyController : ControllerBase
 {
     readonly ITenants _tenants;
 
@@ -49,7 +49,7 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Tenants;
 
 [Route("/api/my-controller")]
-public class MyController : Controller
+public class MyController : ControllerBase
 {
     readonly ITenants _tenants;
     readonly IExecutionContextManager _executionContextManager;
@@ -87,7 +87,7 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Tenants;
 
 [Route("/api/my-controller")]
-public class MyController : Controller
+public class MyController : ControllerBase
 {
     readonly ITenants _tenants;
     readonly ITenantConfiguration _tenantConfiguration,

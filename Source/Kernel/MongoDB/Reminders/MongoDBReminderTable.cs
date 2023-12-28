@@ -154,7 +154,7 @@ public class MongoDBReminderTable : IReminderTable
         return JsonConvert.DeserializeObject<ReminderEntry>(json, _serializerSettings)!;
     }
 
-    IMongoCollection<BsonDocument> GetCollection() => _database.GetCollection<BsonDocument>(CollectionNames.Reminders);
+    IMongoCollection<BsonDocument> GetCollection() => _database.GetCollection<BsonDocument>(WellKnownCollectionNames.Reminders);
 
     FilterDefinition<BsonDocument> GetKeyFilterFor(string key) => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>("_id"), key);
 

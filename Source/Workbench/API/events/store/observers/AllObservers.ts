@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@aksio/applications/queries';
-import { ObserverState } from './ObserverState';
+import { ObserverInformation } from './ObserverInformation';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/observers/observe');
@@ -12,13 +12,13 @@ export interface AllObserversArguments {
     microserviceId: string;
     tenantId: string;
 }
-export class AllObservers extends ObservableQueryFor<ObserverState[], AllObserversArguments> {
+export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllObserversArguments> {
     readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/observers/observe';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly defaultValue: ObserverState[] = [];
+    readonly defaultValue: ObserverInformation[] = [];
 
     constructor() {
-        super(ObserverState, true);
+        super(ObserverInformation, true);
     }
 
     get requestArguments(): string[] {
@@ -28,7 +28,7 @@ export class AllObservers extends ObservableQueryFor<ObserverState[], AllObserve
         ];
     }
 
-    static use(args?: AllObserversArguments): [QueryResultWithState<ObserverState[]>] {
-        return useObservableQuery<ObserverState[], AllObservers, AllObserversArguments>(AllObservers, args);
+    static use(args?: AllObserversArguments): [QueryResultWithState<ObserverInformation[]>] {
+        return useObservableQuery<ObserverInformation[], AllObservers, AllObserversArguments>(AllObservers, args);
     }
 }

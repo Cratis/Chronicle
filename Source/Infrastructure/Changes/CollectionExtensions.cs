@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Objects;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Changes;
@@ -40,7 +41,7 @@ public static class CollectionExtensions
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns>The ensured <see cref="ICollection{ExpandoObject}"/>.</returns>
     /// <exception cref="ChildrenPropertyIsNotEnumerableForType">Thrown if there is an existing property and it is not enumerable.</exception>
-    public static ICollection<TChild> EnsureCollection<TTarget, TChild>(this TTarget target, PropertyPath childrenProperty, IArrayIndexers arrayIndexers)
+    public static ICollection<TChild> EnsureCollection<TTarget, TChild>(this TTarget target, PropertyPath childrenProperty, ArrayIndexers arrayIndexers)
     {
         if (target is ExpandoObject targetAsExpandoObject)
         {
@@ -78,6 +79,6 @@ public static class CollectionExtensions
         }
 
         if (items is IEnumerable<ExpandoObject> expandoObjectItems) return ExpandoObjectExtensions.Contains(expandoObjectItems, identityProperty, key);
-        return items.Any(_ => identityProperty.GetValue(_!, ArrayIndexers.NoIndexers)!.Equals(key));
+        return items.Any(_ => identityProperty.GetValue(_!, ArrayIndexers.NoIndexers)!.IsEqualTo(key));
     }
 }

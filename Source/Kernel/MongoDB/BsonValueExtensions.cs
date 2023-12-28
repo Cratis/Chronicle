@@ -5,6 +5,8 @@ using System.Collections;
 using System.Globalization;
 using Aksio.Cratis.Reflection;
 using Aksio.MongoDB;
+using Aksio.Reflection;
+using Aksio.Strings;
 using Aksio.Types;
 using MongoDB.Bson;
 using NJsonSchema;
@@ -28,8 +30,9 @@ public static class BsonValueExtensions
         {
             return BsonNull.Value;
         }
+        var inputType = input.GetType();
 
-        if (input.GetType().IsDictionary())
+        if (inputType.IsDictionary())
         {
             var dictionaryType = input.GetType();
             var keyType = dictionaryType.GetKeyType();
@@ -39,13 +42,23 @@ public static class BsonValueExtensions
             var valueProperty = keyValuePairType.GetProperty(nameof(KeyValuePair<object, object>.Value))!;
 
             var dictionary = input as IEnumerable;
-            var document = new BsonDocument();
+            var dictionaryDocument = new BsonDocument();
             foreach (var keyValuePair in dictionary!)
             {
                 var key = keyProperty.GetValue(keyValuePair)?.ToString() ?? string.Empty;
-                document[key] = ToBsonValue(valueProperty.GetValue(keyValuePair));
+                dictionaryDocument[key] = ToBsonValue(valueProperty.GetValue(keyValuePair));
             }
-            return document;
+            return dictionaryDocument;
+        }
+
+        if (inputType.IsEnumerable())
+        {
+            var array = new BsonArray();
+            foreach (var item in (input as IEnumerable)!)
+            {
+                array.Add(ToBsonValue(item));
+            }
+            return array;
         }
 
         if (input.IsConcept())
@@ -56,6 +69,11 @@ public static class BsonValueExtensions
         if (targetType is not null)
         {
             input = TypeConversion.Convert(targetType, input);
+        }
+
+        if (inputType.IsEnum)
+        {
+            input = (int)input;
         }
 
         switch (input)
@@ -91,11 +109,6 @@ public static class BsonValueExtensions
                 return new BsonBoolean(actualValue);
 
             case string actualValue:
-
-                // if (Guid.TryParse(actualValue, out var actualValueAsGuid))
-                // {
-                //     return new BsonBinaryData(actualValueAsGuid, GuidRepresentation.Standard);
-                // }
                 return new BsonString(actualValue);
 
             case DateTime actualValue:
@@ -112,9 +125,27 @@ public static class BsonValueExtensions
 
             case Guid actualValue:
                 return new BsonBinaryData(actualValue, GuidRepresentation.Standard);
+
+            case Type actualValue:
+                return new BsonString(actualValue.AssemblyQualifiedName);
+
+            case Uri actualValue:
+                return new BsonString(actualValue.ToString());
         }
 
-        return BsonNull.Value;
+        var document = new BsonDocument();
+        foreach (var property in inputType.GetProperties())
+        {
+            var propertyName = property.Name.ToCamelCase();
+            if (propertyName == "id")
+            {
+                propertyName = "_id";
+            }
+            var propertyValue = property.GetValue(input);
+            document.Add(propertyName, propertyValue.ToBsonValue()!);
+        }
+
+        return document;
     }
 
     /// <summary>

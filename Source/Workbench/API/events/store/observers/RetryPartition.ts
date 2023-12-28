@@ -6,13 +6,13 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/applications/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/observers/{{observerId}}/failed-partitions/{{tenantId}}/retry/{{partitionId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/observers/{{observerId}}/failed-partitions/{{tenantId}}/retry/{{partition}}');
 
 export interface IRetryPartition {
     microserviceId?: string;
     tenantId?: string;
     observerId?: string;
-    partitionId?: string;
+    partition?: string;
 }
 
 export class RetryPartitionValidator extends CommandValidator {
@@ -20,19 +20,19 @@ export class RetryPartitionValidator extends CommandValidator {
         microserviceId: new Validator(),
         tenantId: new Validator(),
         observerId: new Validator(),
-        partitionId: new Validator(),
+        partition: new Validator(),
     };
 }
 
 export class RetryPartition extends Command<IRetryPartition> implements IRetryPartition {
-    readonly route: string = '/api/events/store/{{microserviceId}}/observers/{{observerId}}/failed-partitions/{{tenantId}}/retry/{{partitionId}}';
+    readonly route: string = '/api/events/store/{{microserviceId}}/observers/{{observerId}}/failed-partitions/{{tenantId}}/retry/{{partition}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RetryPartitionValidator();
 
     private _microserviceId!: string;
     private _tenantId!: string;
     private _observerId!: string;
-    private _partitionId!: string;
+    private _partition!: string;
 
     constructor() {
         super(Object, false);
@@ -43,7 +43,7 @@ export class RetryPartition extends Command<IRetryPartition> implements IRetryPa
             'microserviceId',
             'tenantId',
             'observerId',
-            'partitionId',
+            'partition',
         ];
     }
 
@@ -52,7 +52,7 @@ export class RetryPartition extends Command<IRetryPartition> implements IRetryPa
             'microserviceId',
             'tenantId',
             'observerId',
-            'partitionId',
+            'partition',
         ];
     }
 
@@ -80,13 +80,13 @@ export class RetryPartition extends Command<IRetryPartition> implements IRetryPa
         this._observerId = value;
         this.propertyChanged('observerId');
     }
-    get partitionId(): string {
-        return this._partitionId;
+    get partition(): string {
+        return this._partition;
     }
 
-    set partitionId(value: string) {
-        this._partitionId = value;
-        this.propertyChanged('partitionId');
+    set partition(value: string) {
+        this._partition = value;
+        this.propertyChanged('partition');
     }
 
     static use(initialValues?: IRetryPartition): [RetryPartition, SetCommandValues<IRetryPartition>, ClearCommandValues] {
