@@ -79,10 +79,8 @@ public class Observers : IObservers
                                         observer.ObserverId,
                                         observerType.FullName ?? $"{observerType.Namespace}.{observerType.Name}",
                                         observer.EventSequenceId,
-                                        _eventStore.EventTypes,
                                         new ObserverInvoker(_serviceProvider, _eventStore.EventTypes, _middlewares, observerType, logger),
-                                        _causationManager,
-                                        _eventSerializer);
+                                        _causationManager);
                                 });
 
         foreach (var handler in handlers)

@@ -15,17 +15,17 @@ public class FromDefinition
     /// Gets or sets the properties and expressions for each property.
     /// </summary>
     [ProtoMember(1)]
-    public IDictionary<string, string> Properties { get; set; }
+    public IDictionary<string, string> Properties { get; set; }
 
     /// <summary>
     /// Gets or sets the key expression, represents the key to use for identifying the model instance.
     /// </summary>
     [ProtoMember(2)]
-    public string Key { get; set; }
+    public string Key { get; set; }
 
     /// <summary>
     /// Gets or sets the optional parent key expression, typically used in child relationships for identifying parent model.
     /// </summary>
     [ProtoMember(3)]
-    public string? ParentKey { get; set; }
+    public string? ParentKey { get; set; }
 }

@@ -8,7 +8,6 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.Models;
-using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
@@ -37,7 +36,7 @@ public class ProjectionBuilder<TModel, TBuilder> : IProjectionBuilder<TModel, TB
     protected readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
     protected readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = new();
     protected readonly List<FromAnyDefinition> _fromAnyDefinitions = new();
-    protected AllDefinition _allDefinition = new(new Dictionary<PropertyPath, string>(), false);
+    protected AllDefinition _allDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected EventType? _removedWithEvent;
     protected string _modelName;
@@ -95,11 +94,15 @@ public class ProjectionBuilder<TModel, TBuilder> : IProjectionBuilder<TModel, TB
 
         if (eventTypes.Length > 1)
         {
-            _fromAnyDefinitions.Add(new FromAnyDefinition(eventTypes, fromDefinition));
+            _fromAnyDefinitions.Add(new FromAnyDefinition
+            {
+                EventTypes = eventTypes.ToContract(),
+                From = fromDefinition
+            });
         }
         else
         {
-            _fromDefinitions[eventTypes[0]] = fromDefinition;
+            _fromDefinitions[eventTypes[0].ToContract()] = fromDefinition;
         }
         return (this as TBuilder)!;
     }

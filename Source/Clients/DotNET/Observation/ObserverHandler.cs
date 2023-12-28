@@ -45,7 +45,6 @@ public class ObserverHandler
 
     readonly IObserverInvoker _observerInvoker;
     readonly ICausationManager _causationManager;
-    readonly IEventSerializer _eventSerializer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverHandler"/>.
@@ -55,21 +54,18 @@ public class ObserverHandler
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the observer is for.</param>
     /// <param name="observerInvoker">The actual invoker.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
-    /// <param name="eventSerializer">The serializer to use.</param>
     public ObserverHandler(
         ObserverId observerId,
         ObserverName name,
         EventSequenceId eventSequenceId,
         IObserverInvoker observerInvoker,
-        ICausationManager causationManager,
-        IEventSerializer eventSerializer)
+        ICausationManager causationManager)
     {
         ObserverId = observerId;
         Name = name;
         EventSequenceId = eventSequenceId;
         _observerInvoker = observerInvoker;
         _causationManager = causationManager;
-        _eventSerializer = eventSerializer;
     }
 
     /// <summary>
@@ -101,7 +97,7 @@ public class ObserverHandler
     /// <returns>Awaitable task.</returns>
     public async Task OnNext(EventMetadata metadata, EventContext context, object content)
     {
-        BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = @event.Context.CausedBy });
+        BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
 
         _causationManager.Add(CausationType, new Dictionary<string, string>
         {
@@ -112,8 +108,7 @@ public class ObserverHandler
             { CausationEventSequenceNumberProperty, metadata.SequenceNumber.ToString() }
         });
 
-        var content = await _eventSerializer.Deserialize(@event);
-        await _observerInvoker.Invoke(content, @event.Context);
+        await _observerInvoker.Invoke(content, context);
 
         BaseIdentityProvider.ClearCurrentIdentity();
     }

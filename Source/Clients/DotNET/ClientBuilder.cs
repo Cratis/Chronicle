@@ -207,7 +207,6 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IAggregateRootFactory, AggregateRootFactory>()
             .AddSingleton<IAggregateRootStateProviders, AggregateRootStateProviders>()
             .AddSingleton<IAggregateRootEventHandlersFactory, AggregateRootEventHandlersFactory>()
-            .AddTransient<ClientObservers>()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>));
 
         _logger.ConfiguringCompliance();

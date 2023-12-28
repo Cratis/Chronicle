@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Client;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +18,7 @@ public class AggregateRootFactory : IAggregateRootFactory
     readonly IAggregateRootStateProviders _aggregateRootStateProviders;
     readonly IAggregateRootEventHandlersFactory _aggregateRootEventHandlersFactory;
     readonly ICausationManager _causationManager;
-    readonly IEventSequences _eventSequences;
+    readonly IEventStore _eventStore;
     readonly IEventSerializer _eventSerializer;
     readonly IServiceProvider _serviceProvider;
 
@@ -29,21 +28,21 @@ public class AggregateRootFactory : IAggregateRootFactory
     /// <param name="aggregateRootStateProviders"><see cref="IAggregateRootStateProvider"/> for managing state for an aggregate root.</param>
     /// <param name="aggregateRootEventHandlersFactory"><see cref="IAggregateRootEventHandlersFactory"/> for creating <see cref="IAggregateRootEventHandlers"/>.</param>
     /// <param name="causationManager">The <see cref="ICausationManager"/> for handling causation.</param>
-    /// <param name="eventSequences"><see cref="IEventSequences"/> to get event sequence to work with.</param>
+    /// <param name="eventStore"><see cref="IEventStore"/> to get event sequence to work with.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances.</param>
     public AggregateRootFactory(
         IAggregateRootStateProviders aggregateRootStateProviders,
         IAggregateRootEventHandlersFactory aggregateRootEventHandlersFactory,
         ICausationManager causationManager,
-        IEventSequences eventSequences,
+        IEventStore eventStore,
         IEventSerializer eventSerializer,
         IServiceProvider serviceProvider)
     {
         _aggregateRootStateProviders = aggregateRootStateProviders;
         _aggregateRootEventHandlersFactory = aggregateRootEventHandlersFactory;
         _causationManager = causationManager;
-        _eventSequences = eventSequences;
+        _eventStore = eventStore;
         _eventSerializer = eventSerializer;
         _serviceProvider = serviceProvider;
     }
@@ -55,7 +54,7 @@ public class AggregateRootFactory : IAggregateRootFactory
         var aggregateRoot = ActivatorUtilities.CreateInstance<T>(_serviceProvider);
         var eventHandlers = GetEventHandlers(aggregateRoot);
 
-        var eventSequence = _eventSequences.GetEventSequence(aggregateRoot.EventSequenceId);
+        var eventSequence = _eventStore.GetEventSequence(aggregateRoot.EventSequenceId);
 
         if (aggregateRoot is AggregateRoot knownAggregateRoot)
         {

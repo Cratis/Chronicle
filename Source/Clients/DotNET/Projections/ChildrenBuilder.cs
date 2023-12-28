@@ -4,11 +4,12 @@
 using System.Linq.Expressions;
 using System.Text.Json;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.Projections.Expressions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
+using EventType = Aksio.Cratis.Kernel.Contracts.Events.EventType;
 
 namespace Aksio.Cratis.Projections;
 
@@ -57,7 +58,7 @@ public class ChildrenBuilder<TParentModel, TChildModel> :
     /// <inheritdoc/>
     public IChildrenBuilder<TParentModel, TChildModel> FromEventProperty<TEvent>(Expression<Func<TEvent, TChildModel>> propertyExpression)
     {
-        _fromEventPropertyEventType = typeof(TEvent).GetEventType();
+        _fromEventPropertyEventType = typeof(TEvent).GetEventType().ToContract();
         _fromEventPropertyExpression = new EventContentPropertyExpression(propertyExpression.GetPropertyPath());
         return this;
     }

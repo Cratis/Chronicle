@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Contracts.Events;
 using Aksio.Cratis.Schemas;
 
@@ -35,6 +36,9 @@ public class EventTypes : IEventTypes
 
     /// <inheritdoc/>
     public IEnumerable<EventTypeRegistration> AllAsRegistrations { get; private set; } = Enumerable.Empty<EventTypeRegistration>();
+
+    /// <inheritdoc/>
+    public IImmutableList<Type> AllClrTypes => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task Discover()

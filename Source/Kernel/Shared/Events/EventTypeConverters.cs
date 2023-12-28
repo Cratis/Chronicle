@@ -24,10 +24,26 @@ public static class EventTypeConverters
     }
 
     /// <summary>
+    /// Convert to a collection of contract version of <see cref="EventType"/>.
+    /// </summary>
+    /// <param name="types">Collection of <see cref="EventType"/> to convert.</param>
+    /// <returns>Converted collection of contract version.</returns>
+    public static IEnumerable<Kernel.Contracts.Events.EventType> ToContract(this IEnumerable<EventType> types) =>
+        types.Select(_ => _.ToContract()).ToArray();
+
+    /// <summary>
     /// Convert to Kernel representation.
     /// </summary>
     /// <param name="eventType"><see cref="Kernel.Contracts.Events.EventType"/> to convert from.</param>
     /// <returns>Converted <see cref="EventType"/>.</returns>
     public static EventType ToKernel(this Kernel.Contracts.Events.EventType eventType) =>
         new(eventType.Id, eventType.Generation, eventType.IsPublic);
+
+    /// <summary>
+    /// Convert to a collection of kernel version of <see cref="Kernel.Contracts.Events.EventType"/>.
+    /// </summary>
+    /// <param name="types">Collection of <see cref="Kernel.Contracts.Events.EventType"/> to convert.</param>
+    /// <returns>Converted collection of contract version.</returns>
+    public static IEnumerable<EventType> ToKernel(this IEnumerable<Kernel.Contracts.Events.EventType> types) =>
+        types.Select(_ => _.ToKernel()).ToArray();
 }
