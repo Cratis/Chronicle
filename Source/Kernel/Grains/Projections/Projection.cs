@@ -38,16 +38,19 @@ public class Projection : Grain, IProjection
     /// <param name="projectionDefinitionsProvider"><see cref="IProjectionDefinitions"/>.</param>
     /// <param name="projectionManagerProvider"><see cref="IProjectionManager"/> for working with engine projections.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
+    /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
     /// <param name="logger">Logger for logging.</param>
     public Projection(
         ProviderFor<IProjectionDefinitions> projectionDefinitionsProvider,
         ProviderFor<IProjectionManager> projectionManagerProvider,
         IExecutionContextManager executionContextManager,
+        ILocalSiloDetails localSiloDetails,
         ILogger<Projection> logger)
     {
         _projectionDefinitionsProvider = projectionDefinitionsProvider;
         _projectionManagerProvider = projectionManagerProvider;
         _executionContextManager = executionContextManager;
+        _localSiloDetails = localSiloDetails;
         _projectionId = ProjectionId.NotSet;
         _definitionObservers = new(TimeSpan.FromMinutes(1), logger, "ProjectionDefinitionObservers");
     }
@@ -67,8 +70,11 @@ public class Projection : Grain, IProjection
 
         _observer = GrainFactory.GetGrain<IObserver>(_projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
 
-        await _observer.SetNameAndType(_definition!.Name.Value, ObserverType.Projection);
-        await _observer.Subscribe<IProjectionObserverSubscriber>(_projection!.EventTypes);
+        await _observer.Subscribe<IProjectionObserverSubscriber>(
+            _definition!.Name.Value,
+            ObserverType.Projection,
+            _projection!.EventTypes,
+            _localSiloDetails.SiloAddress);
     }
 
     /// <inheritdoc/>

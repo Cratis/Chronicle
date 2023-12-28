@@ -56,6 +56,7 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
             request.ObserverKey.TenantId,
             request.ObserverKey.EventSequenceId,
             eventSourceId,
+            request.ObserverSubscription.SiloAddress.ToString(),
             request.ObserverKey.SourceMicroserviceId,
             request.ObserverKey.SourceTenantId);
 

@@ -11,6 +11,8 @@ using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Projections;
+using Aksio.Cratis.Observation;
+using IObservers = Aksio.Cratis.Kernel.Grains.Observation.IObservers;
 
 namespace Aksio.Cratis.Kernel.Server;
 

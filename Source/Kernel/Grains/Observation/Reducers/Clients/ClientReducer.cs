@@ -52,12 +52,16 @@ public class ClientReducer : Grain, IClientReducer, INotifyClientDisconnected
         _executionContextManager.Establish(_observerKey!.TenantId, CorrelationId.New(), _observerKey!.MicroserviceId);
         _logger.Starting(_observerKey!.MicroserviceId, _reducerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
         var observer = GrainFactory.GetGrain<IObserver>(_reducerId!, _observerKey!);
-        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(_observerKey!.MicroserviceId);
+        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
 
         RegisterTimer(HandleConnectedClientsSubscription, null!, TimeSpan.Zero, TimeSpan.FromSeconds(5));
-        await observer.SetNameAndType(name, ObserverType.Reducer);
         var connectedClient = await connectedClients.GetConnectedClient(connectionId);
-        await observer.Subscribe<IClientReducerSubscriber>(eventTypes.Select(_ => _.EventType).ToArray(), connectedClient);
+        await observer.Subscribe<IClientReducerSubscriber>(
+            name,
+            ObserverType.Reducer,
+            eventTypes.Select(_ => _.EventType).ToArray(),
+            _localSiloDetails.SiloAddress,
+            connectedClient);
     }
 
     /// <inheritdoc/>
@@ -72,7 +76,7 @@ public class ClientReducer : Grain, IClientReducer, INotifyClientDisconnected
 
     async Task HandleConnectedClientsSubscription(object state)
     {
-        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(_observerKey!.MicroserviceId);
+        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
         await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
     }
 }

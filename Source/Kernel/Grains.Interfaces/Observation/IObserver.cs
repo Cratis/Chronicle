@@ -5,6 +5,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
@@ -34,14 +35,6 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithGuidCompoun
     Task SetHandledStats(EventCount handled, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
-    /// Set metadata associated with the observer.
-    /// </summary>
-    /// <param name="name">Friendly name of the observer.</param>
-    /// <param name="type"><see cref="ObserverType"/>.</param>
-    /// <returns>Awaitable task.</returns>
-    Task SetNameAndType(ObserverName name, ObserverType type);
-
-    /// <summary>
     /// Get the subscription for the observer.
     /// </summary>
     /// <returns>Tbe <see cref="ObserverSubscription"/>.</returns>
@@ -63,10 +56,18 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithGuidCompoun
     /// Subscribe to observer.
     /// </summary>
     /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>
+    /// <param name="name">Friendly name of the observer.</param>
+    /// <param name="type"><see cref="ObserverType"/>.</param>
     /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
+    /// <param name="siloAddress"><see cref="SiloAddress"/> the subscriber is connected to.</param>
     /// <param name="subscriberArgs">Optional arguments associated with the subscription.</param>
     /// <returns>Awaitable task.</returns>
-    Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes, object? subscriberArgs = default)
+    Task Subscribe<TObserverSubscriber>(
+        ObserverName name,
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        object? subscriberArgs = default)
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>

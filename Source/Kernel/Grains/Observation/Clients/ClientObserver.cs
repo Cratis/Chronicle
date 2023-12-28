@@ -54,7 +54,7 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
         _executionContextManager.Establish(_observerKey!.TenantId, CorrelationId.New(), _observerKey!.MicroserviceId);
         _logger.Starting(_observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
         var key = new ObserverKey(_observerKey.MicroserviceId, _observerKey.TenantId, _observerKey.EventSequenceId);
-        var observer = GrainFactory.GetGrain<IObserverSupervisor>(_observerId!, key);
+        var observer = GrainFactory.GetGrain<IObserver>(_observerId!, key);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
         await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
         var connectedClient = await connectedClients.GetConnectedClient(_observerKey.ConnectionId!);
@@ -67,13 +67,13 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
         _logger.ClientDisconnected(client.ConnectionId, _observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
         var id = this.GetPrimaryKey(out var _);
         var key = new ObserverKey(_observerKey.MicroserviceId, _observerKey.TenantId, _observerKey.EventSequenceId);
-        var observer = GrainFactory.GetGrain<IObserverSupervisor>(id, key);
+        var observer = GrainFactory.GetGrain<IObserver>(id, key);
         observer.Unsubscribe();
     }
 
     async Task HandleConnectedClientsSubscription(object state)
     {
-        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(_observerKey!.MicroserviceId);
+        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
         await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
     }
 }

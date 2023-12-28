@@ -121,13 +121,6 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
     }
 
     /// <inheritdoc/>
-    public async Task SetNameAndType(ObserverName name, ObserverType type)
-    {
-        State = State with { Name = name, Type = type };
-        await WriteStateAsync();
-    }
-
-    /// <inheritdoc/>
     public Task<ObserverSubscription> GetSubscription() => Task.FromResult(_subscription);
 
     /// <inheritdoc/>
@@ -137,18 +130,26 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
     public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(State.EventTypes);
 
     /// <inheritdoc/>
-    public async Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes, object? subscriberArgs = null)
+    public async Task Subscribe<TObserverSubscriber>(
+        ObserverName name,
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        object? subscriberArgs = null)
         where TObserverSubscriber : IObserverSubscriber
     {
         using var scope = _logger.BeginObserverScope(_observerId, _observerKey);
 
         _logger.Subscribing();
 
+        State = State with { Name = name, Type = type };
+
         _subscription = new ObserverSubscription(
             _observerId,
             _observerKey,
             eventTypes,
             typeof(TObserverSubscriber),
+            siloAddress,
             subscriberArgs);
 
         await TransitionTo<Routing>();
@@ -356,6 +357,7 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
                         _observerKey.TenantId,
                         _observerKey.EventSequenceId,
                         partition,
+                        _subscription.SiloAddress.ToString(),
                         _observerKey.SourceMicroserviceId,
                         _observerKey.SourceTenantId);
 
