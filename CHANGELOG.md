@@ -1,3 +1,14 @@
+# [v9.15.0] - 2023-12-29 [PR: #1060](https://github.com/aksio-insurtech/Cratis/pull/1060)
+
+## Summary
+
+Minor bugfix.
+
+### Fixed
+
+- Fixes `/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}/all` endpoint to have eventTypes actually be optional as it should.
+
+
 # [v9.14.19] - 2023-12-12 [PR: #1050](https://github.com/aksio-insurtech/Cratis/pull/1050)
 
 ### Fixed
