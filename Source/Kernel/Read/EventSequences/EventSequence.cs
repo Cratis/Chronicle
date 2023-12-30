@@ -154,7 +154,61 @@ public class EventSequence : ControllerBase
         }
         return new(result, tail);
     }
+    
+    /// <summary>
+    /// Get events for a specific event sequence in a microservice for a specific tenant.
+    /// </summary>
+    /// <param name="eventSequenceId">Event sequence to get for.</param>
+    /// <param name="microserviceId">Microservice to get for.</param>
+    /// <param name="tenantId">Tenant to get for.</param>
+    /// <param name="fromSequenceNumber">Fetch events from this id, including.</param>
+    /// <param name="toSequenceNumber">Fetch events to this id, excluding.</param>
+    /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for.</param>
+    /// <param name="eventTypes">Optional collection of <see cref="EventType"/> to get for.</param>
+    /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
+    [HttpGet]
+    [HttpGet("range")]
+    public async Task<PagedQueryResult<AppendedEventWithJsonAsContent>> GetAppendedEventsRange(
+        [FromRoute] EventSequenceId eventSequenceId,
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId,
+        [FromQuery] ulong fromSequenceNumber,
+        [FromQuery] ulong toSequenceNumber,
+        [FromQuery] EventSourceId eventSourceId = null!,
+        [FromQuery(Name = "eventTypes[]")] IEnumerable<string> eventTypes = null!)
+    {
+        var result = new List<AppendedEventWithJsonAsContent>();
+        var parsedEventTypes = eventTypes?.Select(EventType.Parse).ToArray();
 
+        var correlationId = _executionContextManager.Current.CorrelationId;
+        _executionContextManager.Establish(tenantId, correlationId, microserviceId);
+
+        var tail = await _eventSequenceStorageProviderProvider().GetTailSequenceNumber(
+            eventSequenceId,
+            eventTypes: parsedEventTypes,
+            eventSourceId: eventSourceId);
+
+        if (tail == EventSequenceNumber.Unavailable)
+        {
+            return new(Enumerable.Empty<AppendedEventWithJsonAsContent>(), 0);
+        }
+
+        var cursor = await _eventSequenceStorageProviderProvider().GetRange(
+            eventSequenceId,
+            start: fromSequenceNumber,
+            end: toSequenceNumber,
+            eventSourceId: eventSourceId,
+            eventTypes: parsedEventTypes);
+        while (await cursor.MoveNext())
+        {
+            result.AddRange(cursor.Current.Select(_ => new AppendedEventWithJsonAsContent(
+                _.Metadata,
+                _.Context,
+                JsonSerializer.SerializeToNode(_.Content, _jsonSerializerOptions)!)));
+        }
+        return new(result, tail);
+    }
+    
     /// <summary>
     /// Get events for a specific event sequence in a microservice for a specific tenant.
     /// </summary>
