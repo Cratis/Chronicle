@@ -35,10 +35,7 @@ public class EventTypes : IEventTypes
     }
 
     /// <inheritdoc/>
-    public IEnumerable<EventTypeRegistration> AllAsRegistrations { get; private set; } = Enumerable.Empty<EventTypeRegistration>();
-
-    /// <inheritdoc/>
-    public IImmutableList<Type> AllClrTypes => throw new NotImplementedException();
+    public IImmutableList<Type> AllClrTypes => _typesByEventType.Values.ToImmutableList();
 
     /// <inheritdoc/>
     public Task Discover()
@@ -60,16 +57,6 @@ public class EventTypes : IEventTypes
         {
             _typesByEventType[eventType.EventType] = eventType.ClrType;
         }
-
-        AllAsRegistrations = eventTypes.Select(_ =>
-           {
-               return new EventTypeRegistration
-               {
-                   Type = _.EventType.ToContract(),
-                   FriendlyName = _.ClrType.Name,
-                   Schema = _jsonSchemaGenerator.Generate(_.ClrType).ToJson()
-               };
-           }).ToArray();
 
         return Task.CompletedTask;
     }
