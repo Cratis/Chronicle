@@ -1,3 +1,9 @@
+# [v9.15.1] - 2023-12-31 [PR: #1062](https://github.com/aksio-insurtech/Cratis/pull/1062)
+
+### Fixed
+
+- Build error
+
 # [v9.15.0] - 2023-12-29 [PR: #1060](https://github.com/aksio-insurtech/Cratis/pull/1060)
 
 ## Summary
