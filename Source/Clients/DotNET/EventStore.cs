@@ -148,6 +148,15 @@ public class EventStore : IEventStore
     }
 
     /// <inheritdoc/>
+    public Task RegisterAll()
+    {
+        _logger.RegisterAllArtifacts();
+        return Task.WhenAll(
+            EventTypes.Register(),
+            Observers.Register());
+    }
+
+    /// <inheritdoc/>
     public IEventSequence GetEventSequence(EventSequenceId id) =>
         new EventSequence(
             _eventStoreName,

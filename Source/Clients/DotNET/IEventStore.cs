@@ -66,6 +66,12 @@ public interface IEventStore
     Task DiscoverAll();
 
     /// <summary>
+    /// Register all artifacts for the event store.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task RegisterAll();
+
+    /// <summary>
     /// Get an event sequence by id.
     /// </summary>
     /// <param name="id">The identifier of the event sequence to get.</param>
