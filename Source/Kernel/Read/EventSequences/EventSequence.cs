@@ -154,7 +154,7 @@ public class EventSequence : ControllerBase
         }
         return new(result, tail);
     }
-    
+
     /// <summary>
     /// Get events for a specific event sequence in a microservice for a specific tenant.
     /// </summary>
@@ -208,7 +208,7 @@ public class EventSequence : ControllerBase
         }
         return new(result, tail);
     }
-    
+
     /// <summary>
     /// Get events for a specific event sequence in a microservice for a specific tenant.
     /// </summary>
