@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 
@@ -13,18 +14,25 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 [Singleton]
 public class ObserverMediator : IObserverMediator
 {
-    readonly ConcurrentDictionary<ConnectionId, EventsObserver> _observables = new();
+    readonly ConcurrentDictionary<ObserverMediatorKey, EventsObserver> _observers = new();
 
     /// <inheritdoc/>
-    public void Subscribe(ConnectionId connectionId, EventsObserver target)
+    public void Subscribe(
+        ObserverId observerId,
+        ConnectionId connectionId,
+        EventsObserver target)
     {
-        _observables[connectionId] = target;
+        _observers[new(observerId, connectionId)] = target;
     }
 
     /// <inheritdoc/>
-    public void OnNext(ConnectionId connectionId, IEnumerable<AppendedEvent> events, TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource)
+    public void OnNext(
+        ObserverId observerId,
+        ConnectionId connectionId,
+        IEnumerable<AppendedEvent> events,
+        TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource)
     {
-        if (_observables.TryGetValue(connectionId, out var observable))
+        if (_observers.TryGetValue(new(observerId, connectionId), out var observable))
         {
             observable(events, taskCompletionSource);
         }
@@ -35,8 +43,10 @@ public class ObserverMediator : IObserverMediator
     }
 
     /// <inheritdoc/>
-    public void Disconnected(ConnectionId connectionId)
+    public void Disconnected(
+        ObserverId observerId,
+        ConnectionId connectionId)
     {
-        _observables.TryRemove(connectionId, out var _);
+        _observers.TryRemove(new(observerId, connectionId), out var _);
     }
 }

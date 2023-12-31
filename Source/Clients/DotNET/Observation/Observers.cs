@@ -150,6 +150,7 @@ public class Observers : IObservers
             ObserverName = handler.Name,
             EventTypes = handler.EventTypes.Select(_ => _.ToContract()).ToArray()
         };
+
         var messages = new BehaviorSubject<ObserverClientMessage>(new(new(registration)));
 
         var eventsToObserve = _eventStore.Connection.Services.ClientObservers.Observe(messages);

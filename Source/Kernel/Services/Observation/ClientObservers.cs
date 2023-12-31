@@ -80,18 +80,23 @@ public class ClientObservers : IClientObservers
         return Observable.Create<EventsToObserve>(async (observer, cancellationToken) =>
         {
             var connectionId = ConnectionId.NotSet;
+            var observerId = ObserverId.Unspecified;
 
             try
             {
                 var registration = await registrationTcs.Task;
                 connectionId = registration.ConnectionId;
+                observerId = registration.ObserverId;
 
                 eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>();
-                _observerMediator.Subscribe(registration.ConnectionId, (events, tcs) =>
-                {
-                    observationResultTcs = tcs;
-                    eventsTcs.SetResult(events);
-                });
+                _observerMediator.Subscribe(
+                    registration.ObserverId,
+                    registration.ConnectionId,
+                    (events, tcs) =>
+                    {
+                        observationResultTcs = tcs;
+                        eventsTcs.SetResult(events);
+                    });
 
                 while (!context.CancellationToken.IsCancellationRequested)
                 {
@@ -108,13 +113,13 @@ public class ClientObservers : IClientObservers
             }
             catch (OperationCanceledException)
             {
-                _observerMediator.Disconnected(connectionId);
+                _observerMediator.Disconnected(observerId, connectionId);
                 observationResultTcs?.SetResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable));
                 observer.OnCompleted();
             }
             catch (Exception ex)
             {
-                _observerMediator.Disconnected(connectionId);
+                _observerMediator.Disconnected(observerId, connectionId);
                 observationResultTcs?.SetResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable));
                 observer.OnError(ex);
             }

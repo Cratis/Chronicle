@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
@@ -24,7 +23,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
 {
     readonly IObserverMediator _observerMediator;
-    readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILogger<ClientObserverSubscriber> _logger;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
     ObserverId _observerId = ObserverId.Unspecified;
@@ -35,15 +33,12 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
     /// Initializes a new instance of the <see cref="ClientObserverSubscriber"/> class.
     /// </summary>
     /// <param name="observerMediator"><see cref="IObserverMediator"/> for notifying actual clients.</param>
-    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientObserverSubscriber(
         IObserverMediator observerMediator,
-        JsonSerializerOptions jsonSerializerOptions,
         ILogger<ClientObserverSubscriber> logger)
     {
         _observerMediator = observerMediator;
-        _jsonSerializerOptions = jsonSerializerOptions;
         _logger = logger;
     }
 
@@ -73,14 +68,18 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
                 @event.Context.SequenceNumber);
         }
 
-        if (context.Metadata == null && context.Metadata is not JsonElement) throw new MissingStateForObserverSubscriber(_observerId);
-        var connectedClientAsJsonObject = (JsonElement)context.Metadata;
-        var connectedClient = connectedClientAsJsonObject.Deserialize<ConnectedClient>(_jsonSerializerOptions)!;
+        if (context.Metadata is not ConnectedClient connectedClient)
+        {
+            throw new MissingStateForObserverSubscriber(_observerId);
+        }
         var tcs = new TaskCompletionSource<ObserverSubscriberResult>();
-
         try
         {
-            _observerMediator.OnNext(connectedClient.ConnectionId, events, tcs);
+            _observerMediator.OnNext(
+                _observerId,
+                connectedClient.ConnectionId,
+                events,
+                tcs);
             return await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         }
         catch (TaskCanceledException)
