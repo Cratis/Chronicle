@@ -33,11 +33,44 @@ async Task AddItemToCart()
             Description: "This is a description"));
 }
 
+async Task AddBulkOfItemsToCart()
+{
+    var events = Enumerable.Range(1, 1000).Select(_ => new ItemAddedToCart(
+        PersonId: new(Guid.NewGuid()),
+        MaterialId: new(Guid.NewGuid()),
+        Quantity: 1,
+        Price: 42,
+        Description: "This is a description"));
+
+    foreach (var @event in events)
+    {
+        await eventStore.EventLog.Append(
+            eventSourceId: Guid.NewGuid(),
+            @event);
+    }
+}
+
+async Task AddManyItemsToCart()
+{
+    var events = Enumerable.Range(1, 1000).Select(_ => new ItemAddedToCart(
+        PersonId: new(Guid.NewGuid()),
+        MaterialId: new(Guid.NewGuid()),
+        Quantity: 1,
+        Price: 42,
+        Description: "This is a description"));
+
+    await eventStore.EventLog.AppendMany(
+        eventSourceId: Guid.NewGuid(),
+        events);
+}
+
 while (true)
 {
     Console.WriteLine("\n\n****** Menu *******");
     Console.WriteLine("---------------------");
     Console.WriteLine("I - Add item to cart");
+    Console.WriteLine("B - Add a bulk of items to cart");
+    Console.WriteLine("M - Add many items to cart");
     Console.WriteLine("---------------------");
     Console.WriteLine("Q - Exit");
     Console.WriteLine("****** Menu *******");
@@ -49,6 +82,14 @@ while (true)
 
         case ConsoleKey.I:
             await AddItemToCart();
+            break;
+
+        case ConsoleKey.B:
+            await AddBulkOfItemsToCart();
+            break;
+
+        case ConsoleKey.M:
+            await AddManyItemsToCart();
             break;
     }
 }
