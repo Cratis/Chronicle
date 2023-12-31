@@ -1,7 +1,7 @@
-﻿using System;
-// Copyright (c) Aksio Insurtech. All rights reserved.
+﻿// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using Aksio.Cratis;
 using Aksio.Cratis.Configuration;
 using Basic;
@@ -19,6 +19,7 @@ using var client = new CratisClient(
 
 var eventStore = client.GetEventStore(Guid.Empty.ToString());
 await eventStore.DiscoverAll();
+await eventStore.RegisterAll();
 
 async Task AddItemToCart()
 {
@@ -27,12 +28,13 @@ async Task AddItemToCart()
         new ItemAddedToCart(
             PersonId: new(Guid.NewGuid()),
             MaterialId: new(Guid.NewGuid()),
-            Quantity: 1));
+            Quantity: 1,
+            Price: 42,
+            Description: "This is a description"));
 }
 
 while (true)
 {
-
     Console.WriteLine("\n\n****** Menu *******");
     Console.WriteLine("---------------------");
     Console.WriteLine("I - Add item to cart");
