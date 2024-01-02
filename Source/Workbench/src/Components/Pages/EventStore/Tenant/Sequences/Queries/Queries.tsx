@@ -42,9 +42,12 @@ export const Queries = withViewModel(QueriesViewModel, () => {
             )
         );
 
-    const onQueryChange = useCallback((e: ChangeEvent<HTMLInputElement>, idx: number) => {
-        updateQuery(idx, { title: e.target.value });
-    }, []);
+    const onQueryChange = useCallback(
+        (evt: ChangeEvent<HTMLInputElement>, idx: number) => {
+            updateQuery(idx, { title: evt.target.value });
+        },
+        []
+    );
 
     const toggleEdit = useCallback(
         (idx: number) => {

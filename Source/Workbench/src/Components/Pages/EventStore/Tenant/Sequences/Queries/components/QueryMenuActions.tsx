@@ -56,12 +56,7 @@ export const QueryMenuActions = () => {
                     className: getMenuItemClass(item.label),
                 }))}
             />
-            {showChart && (
-                <>
-                    Timeline here
-                    <EventHistogram eventLog={''} />
-                </>
-            )}
+            {showChart && <EventHistogram eventLog={''} />}
         </div>
     );
 };

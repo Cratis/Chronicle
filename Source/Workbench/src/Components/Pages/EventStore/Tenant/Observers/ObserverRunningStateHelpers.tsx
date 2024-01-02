@@ -59,7 +59,7 @@ export const ObserverRunningStateFilterTemplate = (
             onChange={(e: MultiSelectChangeEvent) => {
                 options.filterCallback(e.value);
             }}
-            placeholder='Any'
+            placeholder='All'
             optionLabel='name'
         />
     );
