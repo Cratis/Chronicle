@@ -4,7 +4,8 @@
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Kernel.Schemas;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.Schemas;
 using Aksio.DependencyInversion;
 using MongoDB.Driver;
 using Orleans.Runtime;

@@ -3,7 +3,7 @@
 
 #pragma warning disable CA1819 // Allow arrays for properties
 
-using Aksio.Cratis.Kernel.Engines.Compliance;
+using Aksio.Cratis.Kernel.Persistence.Compliance;
 
 namespace Aksio.Cratis.Compliance.MongoDB;
 

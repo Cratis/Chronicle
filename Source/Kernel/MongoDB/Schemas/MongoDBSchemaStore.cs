@@ -1,9 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Kernel.MongoDB;
-using Aksio.Cratis.Kernel.Schemas;
+using Aksio.Cratis.Kernel.Persistence.Schemas;
 using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Compliance</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Compliance</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Shared/Shared.csproj"/>
+        <ProjectReference Include="../Persistence/Persistence.csproj"/>
+    </ItemGroup>
+</Project>
