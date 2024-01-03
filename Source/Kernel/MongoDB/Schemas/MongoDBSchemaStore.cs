@@ -1,8 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.EventTypes;
 using Aksio.Cratis.Kernel.MongoDB;
-using Aksio.Cratis.Kernel.Persistence.Schemas;
+using Aksio.Cratis.Kernel.Persistence.EventTypes;
 using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;
@@ -12,15 +13,15 @@ using NJsonSchema;
 namespace Aksio.Cratis.Events.MongoDB.Schemas;
 
 /// <summary>
-/// Represents an implementation of <see cref="ISchemaStore"/>.
+/// Represents an implementation of <see cref="IEventTypeStorage"/>.
 /// </summary>
 [SingletonPerMicroservice]
-public class MongoDBSchemaStore : ISchemaStore
+public class MongoDBSchemaStore : IEventTypeStorage
 {
     readonly IEventStoreDatabase _sharedDatabase;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<MongoDBSchemaStore> _logger;
-    Dictionary<EventTypeId, Dictionary<EventGeneration, EventSchema>> _schemasByTypeAndGeneration = new();
+    Dictionary<EventTypeId, Dictionary<EventGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBSchemaStore"/> class.
@@ -65,7 +66,7 @@ public class MongoDBSchemaStore : ISchemaStore
         schema.SetDisplayName(friendlyName);
         schema.SetGeneration(type.Generation);
 
-        var eventSchema = new EventSchema(type, schema);
+        var eventSchema = new EventTypeSchema(type, schema);
         if (!_schemasByTypeAndGeneration.ContainsKey(type.Id))
         {
             _schemasByTypeAndGeneration[type.Id] = new();
@@ -94,7 +95,7 @@ public class MongoDBSchemaStore : ISchemaStore
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EventSchema>> GetLatestForAllEventTypes()
+    public async Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes()
     {
         var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var schemas = result.ToList();
@@ -104,7 +105,7 @@ public class MongoDBSchemaStore : ISchemaStore
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EventSchema>> GetAllGenerationsForEventType(EventType eventType)
+    public async Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(EventType eventType)
     {
         var collection = GetCollection();
         var filter = Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, eventType.Id.Value);
@@ -116,7 +117,7 @@ public class MongoDBSchemaStore : ISchemaStore
     }
 
     /// <inheritdoc/>
-    public async Task<EventSchema> GetFor(EventTypeId type, EventGeneration? generation = default)
+    public async Task<EventTypeSchema> GetFor(EventTypeId type, EventGeneration? generation = default)
     {
         generation ??= EventGeneration.First;
         if (_schemasByTypeAndGeneration.TryGetValue(type, out var generationalSchemas) && generationalSchemas.TryGetValue(generation, out var schema))

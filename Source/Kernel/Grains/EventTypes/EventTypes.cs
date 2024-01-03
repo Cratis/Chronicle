@@ -2,24 +2,25 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Persistence.EventTypes;
 using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Grains.Schemas;
+namespace Aksio.Cratis.Kernel.Grains.EventTypes;
 
 /// <summary>
-/// Represents an implementation of <see cref="ISchemaStore"/>.
+/// Represents an implementation of <see cref="IEventTypes"/>.
 /// </summary>
-public class SchemaStore : Grain, ISchemaStore
+public class EventTypes : Grain, IEventTypes
 {
-    readonly ProviderFor<Kernel.Schemas.ISchemaStore> _underlyingSchemaStore;
+    readonly ProviderFor<IEventTypeStorage> _underlyingSchemaStore;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SchemaStore"/> class.
+    /// Initializes a new instance of the <see cref="EventTypes"/> class.
     /// </summary>
-    /// <param name="underlyingSchemaStore"><see cref="Kernel.Schemas.ISchemaStore"/> underlying schema store.</param>
-    public SchemaStore(ProviderFor<Kernel.Schemas.ISchemaStore> underlyingSchemaStore)
+    /// <param name="underlyingSchemaStore"><see cref="IEventTypeStorage"/> underlying schema store.</param>
+    public EventTypes(ProviderFor<IEventTypeStorage> underlyingSchemaStore)
     {
         _underlyingSchemaStore = underlyingSchemaStore;
     }

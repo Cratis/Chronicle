@@ -4,7 +4,7 @@
 using Aksio.Cratis.Events;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Schemas;
+namespace Aksio.Cratis.EventTypes;
 
 /// <summary>
 /// Extension methods for working with <see cref="JsonSchema"/> and specific metadata.

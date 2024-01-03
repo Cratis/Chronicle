@@ -1,13 +1,13 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Schemas;
+using Aksio.Cratis.EventTypes;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace Aksio.Cratis.Events.MongoDB.Schemas;
 
 /// <summary>
-/// Represents the <see cref="EventSchema"/> for MongoDB storage purpose.
+/// Represents the <see cref="EventTypeSchema"/> for MongoDB storage purpose.
 /// </summary>
 public class EventSchemaMongoDB
 {

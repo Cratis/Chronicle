@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.Persistence.Schemas;
+namespace Aksio.Cratis.Kernel.Persistence.EventTypes;
 
 /// <summary>
 /// Exception that gets thrown when an event type is missing from the schema store.

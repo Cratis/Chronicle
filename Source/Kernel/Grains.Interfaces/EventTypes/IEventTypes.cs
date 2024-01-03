@@ -4,12 +4,12 @@
 using Aksio.Cratis.Events;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Grains.Schemas;
+namespace Aksio.Cratis.Kernel.Grains.EventTypes;
 
 /// <summary>
 /// Defines the store for event schemas.
 /// </summary>
-public interface ISchemaStore : IGrainWithGuidKey
+public interface IEventTypes : IGrainWithGuidKey
 {
     /// <summary>
     /// Register a <see cref="JsonSchema"/> for a specific <see cref="EventType"/>.

@@ -79,7 +79,7 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
                 currentEvent = @event;
                 _executionContextManager.Establish(_key!.TenantId, @event.Context.CorrelationId, _microserviceId);
 
-                EventSchema eventSchema;
+                EventTypeSchema eventSchema;
 
                 if (!await _schemaStore!.HasFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation))
                 {

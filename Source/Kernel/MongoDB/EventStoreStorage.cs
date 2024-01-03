@@ -3,9 +3,9 @@
 
 using Aksio.Cratis.Kernel.MongoDB.Identities;
 using Aksio.Cratis.Kernel.Persistence;
+using Aksio.Cratis.Kernel.Persistence.EventTypes;
 using Aksio.Cratis.Kernel.Persistence.Identities;
 using Aksio.Cratis.Kernel.Persistence.Projections;
-using Aksio.Cratis.Kernel.Persistence.Schemas;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.MongoDB;
@@ -33,7 +33,7 @@ public class EventStoreStorage : IEventStoreStorage
     public IIdentityStorage Identities { get; }
 
     /// <inheritdoc/>
-    public ISchemaStore Schemas => throw new NotImplementedException();
+    public IEventTypeStorage Schemas => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public IProjectionDefinitionsStorage Projections => throw new NotImplementedException();

@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Persistence.EventTypes;
 using Aksio.Cratis.Kernel.Persistence.Identities;
 using Aksio.Cratis.Kernel.Persistence.Projections;
-using Aksio.Cratis.Kernel.Persistence.Schemas;
 
 namespace Aksio.Cratis.Kernel.Persistence;
 
@@ -18,9 +18,9 @@ public interface IEventStoreStorage
     IIdentityStorage Identities { get; }
 
     /// <summary>
-    /// Gets the <see cref="ISchemaStore"/> for the event store.
+    /// Gets the <see cref="IEventTypeStorage"/> for the event store.
     /// </summary>
-    ISchemaStore Schemas { get; }
+    IEventTypeStorage Schemas { get; }
 
     /// <summary>
     /// Gets the <see cref="IProjectionDefinitionsStorage"/> for the event store.

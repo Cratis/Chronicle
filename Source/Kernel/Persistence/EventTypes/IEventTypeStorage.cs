@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Schemas;
+using Aksio.Cratis.EventTypes;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Persistence.Schemas;
+namespace Aksio.Cratis.Kernel.Persistence.EventTypes;
 
 /// <summary>
 /// Defines the store for event schemas.
 /// </summary>
-public interface ISchemaStore
+public interface IEventTypeStorage
 {
     /// <summary>
     /// Populate the schema store with existing schemas.
@@ -28,20 +28,20 @@ public interface ISchemaStore
     Task Register(EventType type, string friendlyName, JsonSchema schema);
 
     /// <summary>
-    /// Get the latest <see cref="EventSchema">event schema</see> for all registered <see cref="EventType">event types</see>.
+    /// Get the latest <see cref="EventTypeSchema">event schema</see> for all registered <see cref="EventType">event types</see>.
     /// </summary>
-    /// <returns>A collection of <see cref="EventSchema">event schemas</see>.</returns>
-    Task<IEnumerable<EventSchema>> GetLatestForAllEventTypes();
+    /// <returns>A collection of <see cref="EventTypeSchema">event schemas</see>.</returns>
+    Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes();
 
     /// <summary>
-    /// Get all the <see cref="EventSchema">event schemas</see> for all generations for a specific <see cref="EventType"/>.
+    /// Get all the <see cref="EventTypeSchema">event schemas</see> for all generations for a specific <see cref="EventType"/>.
     /// </summary>
     /// <param name="eventType"><see cref="EventType"/> to get for.</param>
-    /// <returns>A collection of <see cref="EventSchema">event schemas</see> - one item per generation.</returns>
-    Task<IEnumerable<EventSchema>> GetAllGenerationsForEventType(EventType eventType);
+    /// <returns>A collection of <see cref="EventTypeSchema">event schemas</see> - one item per generation.</returns>
+    Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(EventType eventType);
 
     /// <summary>
-    /// Check if an <see cref="EventSchema"/> for a specific <see cref="EventType"/> exists.
+    /// Check if an <see cref="EventTypeSchema"/> for a specific <see cref="EventType"/> exists.
     /// </summary>
     /// <param name="type"><see cref="EventTypeId"/> to check for.</param>
     /// <param name="generation">Optional <see cref="EventGeneration"/>.</param>
@@ -52,13 +52,13 @@ public interface ISchemaStore
     Task<bool> HasFor(EventTypeId type, EventGeneration? generation = default);
 
     /// <summary>
-    /// Gets a <see cref="EventSchema"/> for a specific <see cref="Type"/>.
+    /// Gets a <see cref="EventTypeSchema"/> for a specific <see cref="Type"/>.
     /// </summary>
     /// <param name="type"><see cref="EventTypeId"/> to get for.</param>
     /// <param name="generation">Optional <see cref="EventGeneration"/>.</param>
-    /// <returns><see cref="EventSchema"/> for the type.</returns>
+    /// <returns><see cref="EventTypeSchema"/> for the type.</returns>
     /// <remarks>
     /// If generation is not provided, it will get what is associated with the <see cref="EventType"/>.
     /// </remarks>
-    Task<EventSchema> GetFor(EventTypeId type, EventGeneration? generation = default);
+    Task<EventTypeSchema> GetFor(EventTypeId type, EventGeneration? generation = default);
 }
