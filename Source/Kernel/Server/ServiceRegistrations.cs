@@ -3,7 +3,7 @@
 
 using Aksio.Applications.Autofac;
 using Aksio.Cratis.Compliance.MongoDB;
-using Aksio.Cratis.Events.MongoDB.Schemas;
+using Aksio.Cratis.Events.MongoDB.EventTypes;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Engines.Changes;
@@ -34,7 +34,7 @@ public class ServiceRegistrations : Module
     {
         builder.RegisterType<MongoDBEncryptionKeyStore>().AsSelf().InstancePerMicroservice();
         builder.Register(_ => new CacheEncryptionKeyStore(_.Resolve<MongoDBEncryptionKeyStore>())).As<IEncryptionKeyStore>().InstancePerMicroservice();
-        builder.RegisterType<MongoDBSchemaStore>().As<Schemas.ISchemaStore>().InstancePerMicroservice();
+        builder.RegisterType<EventTypesStorage>().As<Schemas.ISchemaStore>().InstancePerMicroservice();
         builder.RegisterType<MongoDBProjectionDefinitionsStorage>().As<IProjectionDefinitionsStorage>().InstancePerMicroservice();
         builder.RegisterType<MongoDBProjectionPipelineDefinitionsStorage>().As<IProjectionPipelineDefinitionsStorage>().InstancePerMicroservice();
         builder.RegisterType<MongoDBProjectionDefinitionsStorage>().As<IProjectionDefinitionsStorage>().InstancePerMicroservice();

@@ -33,7 +33,7 @@ public class EventStoreStorage : IEventStoreStorage
     public IIdentityStorage Identities { get; }
 
     /// <inheritdoc/>
-    public IEventTypeStorage Schemas => throw new NotImplementedException();
+    public IEventTypesStorage Schemas => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public IProjectionDefinitionsStorage Projections => throw new NotImplementedException();

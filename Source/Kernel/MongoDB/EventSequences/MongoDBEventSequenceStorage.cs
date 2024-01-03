@@ -29,7 +29,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventConverter> _converterProvider;
     readonly ProviderFor<IEventStoreInstanceDatabase> _eventStoreDatabaseProvider;
-    readonly ProviderFor<IEventTypeStorage> _schemaStoreProvider;
+    readonly ProviderFor<IEventTypesStorage> _schemaStoreProvider;
     readonly Json.IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILogger<MongoDBEventSequenceStorage> _logger;
@@ -40,7 +40,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting current <see cref="ExecutionContext"/>.</param>
     /// <param name="converterProvider"><see cref="IEventConverter"/> to convert event types.</param>
     /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/> to use.</param>
-    /// <param name="schemaStoreProvider">The <see cref="IEventTypeStorage"/> for working with the schema types.</param>
+    /// <param name="schemaStoreProvider">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
@@ -48,7 +48,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventConverter> converterProvider,
         ProviderFor<IEventStoreInstanceDatabase> eventStoreDatabaseProvider,
-        ProviderFor<IEventTypeStorage> schemaStoreProvider,
+        ProviderFor<IEventTypesStorage> schemaStoreProvider,
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<MongoDBEventSequenceStorage> logger)

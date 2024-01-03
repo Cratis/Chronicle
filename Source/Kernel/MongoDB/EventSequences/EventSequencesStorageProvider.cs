@@ -20,7 +20,7 @@ public class EventSequencesStorageProvider : IGrainStorage
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventStoreInstanceDatabase> _eventStoreDatabaseProvider;
-    readonly ProviderFor<IEventTypeStorage> _schemaStoreProvider;
+    readonly ProviderFor<IEventTypesStorage> _schemaStoreProvider;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
 
     /// <summary>
@@ -28,12 +28,12 @@ public class EventSequencesStorageProvider : IGrainStorage
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/>.</param>
-    /// <param name="schemaStoreProvider">Provider for <see cref="IEventTypeStorage"/>.</param>
+    /// <param name="schemaStoreProvider">Provider for <see cref="IEventTypesStorage"/>.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     public EventSequencesStorageProvider(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventStoreInstanceDatabase> eventStoreDatabaseProvider,
-        ProviderFor<IEventTypeStorage> schemaStoreProvider,
+        ProviderFor<IEventTypesStorage> schemaStoreProvider,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
     {
         _executionContextManager = executionContextManager;

@@ -5,7 +5,7 @@ using Aksio.Cratis.EventTypes;
 using Aksio.Cratis.Schemas;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Events.MongoDB.Schemas;
+namespace Aksio.Cratis.Events.MongoDB.EventTypes;
 
 /// <summary>
 /// Extension methods for working with <see cref="EventTypeSchema"/>.

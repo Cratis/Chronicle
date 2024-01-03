@@ -14,13 +14,13 @@ namespace Aksio.Cratis.Kernel.Grains.EventTypes;
 /// </summary>
 public class EventTypes : Grain, IEventTypes
 {
-    readonly ProviderFor<IEventTypeStorage> _underlyingSchemaStore;
+    readonly ProviderFor<IEventTypesStorage> _underlyingSchemaStore;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypes"/> class.
     /// </summary>
-    /// <param name="underlyingSchemaStore"><see cref="IEventTypeStorage"/> underlying schema store.</param>
-    public EventTypes(ProviderFor<IEventTypeStorage> underlyingSchemaStore)
+    /// <param name="underlyingSchemaStore"><see cref="IEventTypesStorage"/> underlying schema store.</param>
+    public EventTypes(ProviderFor<IEventTypesStorage> underlyingSchemaStore)
     {
         _underlyingSchemaStore = underlyingSchemaStore;
     }

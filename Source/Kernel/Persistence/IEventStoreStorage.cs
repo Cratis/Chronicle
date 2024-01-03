@@ -18,9 +18,9 @@ public interface IEventStoreStorage
     IIdentityStorage Identities { get; }
 
     /// <summary>
-    /// Gets the <see cref="IEventTypeStorage"/> for the event store.
+    /// Gets the <see cref="IEventTypesStorage"/> for the event store.
     /// </summary>
-    IEventTypeStorage Schemas { get; }
+    IEventTypesStorage Schemas { get; }
 
     /// <summary>
     /// Gets the <see cref="IProjectionDefinitionsStorage"/> for the event store.

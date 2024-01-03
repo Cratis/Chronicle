@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Kernel.Persistence.EventTypes;
 /// <summary>
 /// Defines the store for event schemas.
 /// </summary>
-public interface IEventTypeStorage
+public interface IEventTypesStorage
 {
     /// <summary>
     /// Populate the schema store with existing schemas.

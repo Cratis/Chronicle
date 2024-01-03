@@ -10,29 +10,29 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Events.MongoDB.Schemas;
+namespace Aksio.Cratis.Events.MongoDB.EventTypes;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventTypeStorage"/>.
+/// Represents an implementation of <see cref="IEventTypesStorage"/>.
 /// </summary>
 [SingletonPerMicroservice]
-public class MongoDBSchemaStore : IEventTypeStorage
+public class EventTypesStorage : IEventTypesStorage
 {
     readonly IEventStoreDatabase _sharedDatabase;
     readonly IExecutionContextManager _executionContextManager;
-    readonly ILogger<MongoDBSchemaStore> _logger;
+    readonly ILogger<EventTypesStorage> _logger;
     Dictionary<EventTypeId, Dictionary<EventGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = new();
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBSchemaStore"/> class.
+    /// Initializes a new instance of the <see cref="EventTypesStorage"/> class.
     /// </summary>
     /// <param name="sharedDatabase">The <see cref="IEventStoreDatabase"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="logger">Logger for logging.</param>
-    public MongoDBSchemaStore(
+    public EventTypesStorage(
         IEventStoreDatabase sharedDatabase,
         IExecutionContextManager executionContextManager,
-        ILogger<MongoDBSchemaStore> logger)
+        ILogger<EventTypesStorage> logger)
     {
         _sharedDatabase = sharedDatabase;
         _executionContextManager = executionContextManager;
