@@ -26,7 +26,7 @@ public class EventStoreStorage : IEventStoreStorage
         IEventStoreDatabase eventStoreDatabase,
         ILoggerFactory loggerFactory)
     {
-        Identities = new MongoDBIdentityStorage(clusterDatabase, loggerFactory.CreateLogger<MongoDBIdentityStorage>());
+        Identities = new IdentityStorage(clusterDatabase, loggerFactory.CreateLogger<IdentityStorage>());
     }
 
     /// <inheritdoc/>

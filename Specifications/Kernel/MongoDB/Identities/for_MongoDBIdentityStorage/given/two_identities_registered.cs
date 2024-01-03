@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStorage.give
 
 public class two_identities_registered : all_dependencies
 {
-    protected MongoDBIdentityStorage store;
+    protected IdentityStorage store;
     protected IdentityId first_identity;
     protected IdentityId second_identity;
     protected MongoDBIdentity first_identity_from_database;
@@ -38,6 +38,6 @@ public class two_identities_registered : all_dependencies
         };
         identities_from_database.Add(second_identity_from_database);
 
-        store = new(database.Object, Mock.Of<ILogger<MongoDBIdentityStorage>>());
+        store = new(database.Object, Mock.Of<ILogger<IdentityStorage>>());
     }
 }

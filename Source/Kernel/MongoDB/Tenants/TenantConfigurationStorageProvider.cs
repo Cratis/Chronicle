@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
 using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
 using Orleans.Runtime;
@@ -25,7 +24,7 @@ public class TenantConfigurationStorageProvider : IGrainStorage
         _database = database;
     }
 
-    IMongoCollection<MongoDBTenantConfigurationState> Collection => _database.GetCollection<MongoDBTenantConfigurationState>(WellKnownCollectionNames.TenantConfiguration);
+    IMongoCollection<TenantConfigurationState> Collection => _database.GetCollection<TenantConfigurationState>(WellKnownCollectionNames.TenantConfiguration);
 
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
@@ -33,17 +32,17 @@ public class TenantConfigurationStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var actualGrainState = (grainState as IGrainState<TenantConfigurationState>)!;
+        var actualGrainState = (grainState as IGrainState<Kernel.Grains.Configuration.Tenants.TenantConfigurationState>)!;
         var tenantId = (TenantId)grainId.GetGuidKey();
         var cursor = await Collection.FindAsync(_ => _.Id == tenantId).ConfigureAwait(false);
         var state = await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
         if (state is not null)
         {
-            actualGrainState.State = new TenantConfigurationState(state.Configuration.ToDictionary(_ => _.Key, _ => _.Value));
+            actualGrainState.State = new Kernel.Grains.Configuration.Tenants.TenantConfigurationState(state.Configuration.ToDictionary(_ => _.Key, _ => _.Value));
         }
         else
         {
-            actualGrainState.State = TenantConfigurationState.Empty();
+            actualGrainState.State = Kernel.Grains.Configuration.Tenants.TenantConfigurationState.Empty();
         }
     }
 
@@ -51,8 +50,8 @@ public class TenantConfigurationStorageProvider : IGrainStorage
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var tenantId = (TenantId)grainId.GetGuidKey();
-        var state = (grainState.State as TenantConfigurationState)!;
-        var mongoDBState = new MongoDBTenantConfigurationState(tenantId, state.Select(_ => new MongoDBTenantConfigurationKeyValuePair(_.Key, _.Value)));
+        var state = (grainState.State as Kernel.Grains.Configuration.Tenants.TenantConfigurationState)!;
+        var mongoDBState = new TenantConfigurationState(tenantId, state.Select(_ => new TenantConfigurationKeyValuePair(_.Key, _.Value)));
         await Collection.ReplaceOneAsync(
             _ => _.Id == tenantId,
             mongoDBState,

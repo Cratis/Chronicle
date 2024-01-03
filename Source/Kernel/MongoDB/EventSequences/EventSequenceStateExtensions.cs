@@ -2,31 +2,30 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
 
 namespace Aksio.Cratis.Kernel.MongoDB;
 
 /// <summary>
-/// Extension methods for working with <see cref="EventSequenceState"/>.
+/// Extension methods for working with <see cref="Kernel.Grains.EventSequences.EventSequenceState"/>.
 /// </summary>
 public static class EventSequenceStateExtensions
 {
     /// <summary>
-    /// Convert to <see cref="MongoDBEventSequenceState"/>.
+    /// Convert to <see cref="EventSequenceState"/>.
     /// </summary>
-    /// <param name="state"><see cref="EventSequenceState"/> to convert.</param>
-    /// <returns>Converted <see cref="MongoDBEventSequenceState"/>.</returns>
-    public static MongoDBEventSequenceState ToMongoDB(this EventSequenceState state)
+    /// <param name="state"><see cref="Kernel.Grains.EventSequences.EventSequenceState"/> to convert.</param>
+    /// <returns>Converted <see cref="EventSequenceState"/>.</returns>
+    public static EventSequenceState ToMongoDB(this Kernel.Grains.EventSequences.EventSequenceState state)
         => new(
             state.SequenceNumber,
             state.TailSequenceNumberPerEventType?.ToDictionary(_ => _.Key.Value.ToString(), _ => _.Value) ?? new Dictionary<string, EventSequenceNumber>());
 
     /// <summary>
-    /// Convert to <see cref="EventSequenceState"/>.
+    /// Convert to <see cref="Kernel.Grains.EventSequences.EventSequenceState"/>.
     /// </summary>
-    /// <param name="state"><see cref="MongoDBEventSequenceState"/> to convert.</param>
-    /// <returns>Converted <see cref="EventSequenceState"/>.</returns>
-    public static EventSequenceState ToKernel(this MongoDBEventSequenceState state) =>
+    /// <param name="state"><see cref="EventSequenceState"/> to convert.</param>
+    /// <returns>Converted <see cref="Kernel.Grains.EventSequences.EventSequenceState"/>.</returns>
+    public static Kernel.Grains.EventSequences.EventSequenceState ToKernel(this EventSequenceState state) =>
         new()
         {
             SequenceNumber = state.SequenceNumber,

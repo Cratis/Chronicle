@@ -32,24 +32,24 @@ public class ServiceRegistrations : Module
     /// <inheritdoc/>
     protected override void Load(ContainerBuilder builder)
     {
-        builder.RegisterType<MongoDBEncryptionKeyStore>().AsSelf().InstancePerMicroservice();
-        builder.Register(_ => new CacheEncryptionKeyStore(_.Resolve<MongoDBEncryptionKeyStore>())).As<IEncryptionKeyStore>().InstancePerMicroservice();
+        builder.RegisterType<EncryptionKeyStore>().AsSelf().InstancePerMicroservice();
+        builder.Register(_ => new CacheEncryptionKeyStore(_.Resolve<EncryptionKeyStore>())).As<IEncryptionKeyStore>().InstancePerMicroservice();
         builder.RegisterType<EventTypesStorage>().As<Schemas.ISchemaStore>().InstancePerMicroservice();
-        builder.RegisterType<MongoDBProjectionDefinitionsStorage>().As<IProjectionDefinitionsStorage>().InstancePerMicroservice();
-        builder.RegisterType<MongoDBProjectionPipelineDefinitionsStorage>().As<IProjectionPipelineDefinitionsStorage>().InstancePerMicroservice();
-        builder.RegisterType<MongoDBProjectionDefinitionsStorage>().As<IProjectionDefinitionsStorage>().InstancePerMicroservice();
+        builder.RegisterType<ProjectionDefinitionsStorage>().As<IProjectionDefinitionsStorage>().InstancePerMicroservice();
+        builder.RegisterType<ProjectionPipelineDefinitionsStorage>().As<IProjectionPipelineDefinitionsStorage>().InstancePerMicroservice();
+        builder.RegisterType<ProjectionDefinitionsStorage>().As<IProjectionDefinitionsStorage>().InstancePerMicroservice();
 
-        builder.RegisterType<MongoDBChangesetStorage>().As<IChangesetStorage>().InstancePerMicroserviceAndTenant();
-        builder.RegisterType<MongoDBEventSequenceStorage>().As<IEventSequenceStorage>().InstancePerMicroserviceAndTenant();
-        builder.RegisterType<MongoDBObserverStorage>().As<IObserverStorage>().InstancePerMicroserviceAndTenant();
-        builder.RegisterType<MongoDBFailedPartitionStorage>().As<IFailedPartitionsStorage>().InstancePerMicroserviceAndTenant();
-        builder.RegisterType<MongoDBObserverKeyIndexes>().As<IObserverKeyIndexes>().InstancePerMicroserviceAndTenant();
-        builder.RegisterType(typeof(MongoDBJobStorage)).As(typeof(IJobStorage)).InstancePerMicroserviceAndTenant();
-        builder.RegisterType(typeof(MongoDBJobStepStorage)).As(typeof(IJobStepStorage)).InstancePerMicroserviceAndTenant();
-        builder.RegisterGeneric(typeof(MongoDBJobStorage<>)).As(typeof(IJobStorage<>)).InstancePerMicroserviceAndTenant();
-        builder.RegisterGeneric(typeof(MongoDBJobStepStorage<>)).As(typeof(IJobStepStorage<>)).InstancePerMicroserviceAndTenant();
-        builder.RegisterType(typeof(MongoDBRecommendationStorage)).As(typeof(IRecommendationStorage)).InstancePerMicroserviceAndTenant();
+        builder.RegisterType<ChangesetStorage>().As<IChangesetStorage>().InstancePerMicroserviceAndTenant();
+        builder.RegisterType<EventSequenceStorage>().As<IEventSequenceStorage>().InstancePerMicroserviceAndTenant();
+        builder.RegisterType<ObserverStorage>().As<IObserverStorage>().InstancePerMicroserviceAndTenant();
+        builder.RegisterType<FailedPartitionStorage>().As<IFailedPartitionsStorage>().InstancePerMicroserviceAndTenant();
+        builder.RegisterType<ObserverKeyIndexes>().As<IObserverKeyIndexes>().InstancePerMicroserviceAndTenant();
+        builder.RegisterType(typeof(JobStorage)).As(typeof(IJobStorage)).InstancePerMicroserviceAndTenant();
+        builder.RegisterType(typeof(JobStepStorage)).As(typeof(IJobStepStorage)).InstancePerMicroserviceAndTenant();
+        builder.RegisterGeneric(typeof(JobStorage<>)).As(typeof(IJobStorage<>)).InstancePerMicroserviceAndTenant();
+        builder.RegisterGeneric(typeof(JobStepStorage<>)).As(typeof(IJobStepStorage<>)).InstancePerMicroserviceAndTenant();
+        builder.RegisterType(typeof(RecommendationStorage)).As(typeof(IRecommendationStorage)).InstancePerMicroserviceAndTenant();
 
-        builder.RegisterType<MongoDBIdentityStorage>().As<IIdentityStore>().InstancePerTenant();
+        builder.RegisterType<IdentityStorage>().As<IIdentityStore>().InstancePerTenant();
     }
 }

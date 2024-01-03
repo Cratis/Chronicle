@@ -44,7 +44,7 @@ public static class SiloBuilderExtensions
         BsonSerializer.RegisterSerializer(new UriSerializer());
 
         builder.AddReminders();
-        builder.ConfigureServices(services => services.AddSingleton<IReminderTable, MongoDBReminderTable>());
+        builder.ConfigureServices(services => services.AddSingleton<IReminderTable, ReminderTable>());
         return builder;
     }
 }

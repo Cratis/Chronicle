@@ -7,10 +7,10 @@ namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStorage.give
 
 public class no_identities_registered : all_dependencies
 {
-    protected MongoDBIdentityStorage store;
+    protected IdentityStorage store;
 
     void Establish()
     {
-        store = new(database.Object, Mock.Of<ILogger<MongoDBIdentityStorage>>());
+        store = new(database.Object, Mock.Of<ILogger<IdentityStorage>>());
     }
 }
