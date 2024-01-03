@@ -3,14 +3,14 @@
 
 using Aksio.Cratis.Identities;
 
-namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStore.when_getting_single_by_username_on_identity;
+namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStorage.when_getting_single_by_identity;
 
-public class and_it_already_exists : given.two_identities_registered
+public class without_subject_and_it_already_exists_by_name : given.two_identities_registered
 {
     Identity identity;
     IdentityId identityId;
 
-    void Establish() => identity = new Identity(string.Empty, string.Empty, first_identity_from_database.UserName);
+    void Establish() => identity = new Identity(string.Empty, first_identity_from_database.Name, first_identity_from_database.UserName);
 
     async Task Because() => identityId = await store.GetSingleFor(identity);
 

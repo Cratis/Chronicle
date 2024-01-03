@@ -12,24 +12,24 @@ using MongoDB.Driver;
 namespace Aksio.Cratis.Kernel.MongoDB.Identities;
 
 /// <summary>
-/// Represents an implementation of <see cref="IIdentityStore"/> using MongoDB.
+/// Represents an implementation of <see cref="IIdentityStorage"/> using MongoDB.
 /// </summary>
-public class MongoDBIdentityStore : IIdentityStore
+public class MongoDBIdentityStorage : IIdentityStorage
 {
     readonly IClusterDatabase _database;
-    readonly ILogger<MongoDBIdentityStore> _logger;
+    readonly ILogger<MongoDBIdentityStorage> _logger;
     Dictionary<IdentityId, Identity> _identitiesByIdentityId = new();
     Dictionary<string, IdentityId> _identityIdsBySubject = new();
     Dictionary<string, IdentityId> _identityIdsByUserName = new();
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBIdentityStore"/> class.
+    /// Initializes a new instance of the <see cref="MongoDBIdentityStorage"/> class.
     /// </summary>
     /// <param name="database">The cluster database.</param>
     /// <param name="logger">Logger for logging.</param>
-    public MongoDBIdentityStore(
+    public MongoDBIdentityStorage(
         IClusterDatabase database,
-        ILogger<MongoDBIdentityStore> logger)
+        ILogger<MongoDBIdentityStorage> logger)
     {
         _database = database;
         _logger = logger;

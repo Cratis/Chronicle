@@ -3,18 +3,18 @@
 
 using Aksio.Cratis.Identities;
 
-namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStore.when_getting_single_by_username_on_identity;
+namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStorage.when_getting_chain_for_single_identity;
 
 public class and_it_does_not_exist : given.no_identities_registered
 {
     Identity identity;
-    IdentityId identityId;
+    IEnumerable<IdentityId> identities;
 
-    void Establish() => identity = new Identity(string.Empty, string.Empty, "Some user name");
+    void Establish() => identity = new Identity("Some subject", "Some name", "Some user name");
 
-    async Task Because() => identityId = await store.GetSingleFor(identity);
+    async Task Because() => identities = await store.GetFor(identity);
 
-    [Fact] void should_return_an_id() => identityId.ShouldNotBeNull();
+    [Fact] void should_return_only_one_identity() => identities.Count().ShouldEqual(1);
     [Fact] void should_insert_the_identity() => inserted_identities.Count.ShouldEqual(1);
     [Fact] void should_insert_the_identity_with_the_correct_subject() => inserted_identities[0].Subject.ShouldEqual(identity.Subject);
     [Fact] void should_insert_the_identity_with_the_correct_name() => inserted_identities[0].Name.ShouldEqual(identity.Name);

@@ -4,11 +4,11 @@
 using Aksio.Cratis.Identities;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStore.given;
+namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStorage.given;
 
-public class two_identities_without_subject_registered : all_dependencies
+public class two_identities_registered : all_dependencies
 {
-    protected MongoDBIdentityStore store;
+    protected MongoDBIdentityStorage store;
     protected IdentityId first_identity;
     protected IdentityId second_identity;
     protected MongoDBIdentity first_identity_from_database;
@@ -22,7 +22,7 @@ public class two_identities_without_subject_registered : all_dependencies
         first_identity_from_database = new MongoDBIdentity
         {
             Id = first_identity,
-            Subject = string.Empty,
+            Subject = "First subject",
             Name = "First name",
             UserName = "First user name"
         };
@@ -32,12 +32,12 @@ public class two_identities_without_subject_registered : all_dependencies
         second_identity_from_database = new MongoDBIdentity
         {
             Id = second_identity,
-            Subject = string.Empty,
+            Subject = "Second subject",
             Name = "Second name",
             UserName = "Second user name"
         };
         identities_from_database.Add(second_identity_from_database);
 
-        store = new(database.Object, Mock.Of<ILogger<MongoDBIdentityStore>>());
+        store = new(database.Object, Mock.Of<ILogger<MongoDBIdentityStorage>>());
     }
 }

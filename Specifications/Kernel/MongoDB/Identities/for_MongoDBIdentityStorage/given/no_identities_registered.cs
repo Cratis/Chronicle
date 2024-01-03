@@ -3,14 +3,14 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStore.given;
+namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStorage.given;
 
 public class no_identities_registered : all_dependencies
 {
-    protected MongoDBIdentityStore store;
+    protected MongoDBIdentityStorage store;
 
     void Establish()
     {
-        store = new(database.Object, Mock.Of<ILogger<MongoDBIdentityStore>>());
+        store = new(database.Object, Mock.Of<ILogger<MongoDBIdentityStorage>>());
     }
 }

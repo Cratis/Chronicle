@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Persistence.Identities;
 /// <summary>
 /// Defines a system that manages <see cref="Identity">caused by</see> instances.
 /// </summary>
-public interface IIdentityStore
+public interface IIdentityStorage
 {
     /// <summary>
     /// Populate the caused by store.

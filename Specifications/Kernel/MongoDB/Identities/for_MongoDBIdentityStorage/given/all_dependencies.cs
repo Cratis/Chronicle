@@ -4,7 +4,7 @@
 using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStore.given;
+namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStorage.given;
 
 public class all_dependencies : Specification
 {

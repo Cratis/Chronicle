@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Identities;
 
-namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStore.when_getting_chain_for_single_identity;
+namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStorage.when_getting_chain_for_single_identity;
 
 public class and_it_already_exists : given.two_identities_registered
 {

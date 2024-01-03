@@ -16,7 +16,7 @@ namespace Aksio.Cratis.Kernel.MongoDB;
 public class EventConverter : IEventConverter
 {
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
-    readonly ProviderFor<IIdentityStore> _identityStoreProvider;
+    readonly ProviderFor<IIdentityStorage> _identityStoreProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManager;
     readonly Json.IExpandoObjectConverter _expandoObjectConverter;
@@ -25,13 +25,13 @@ public class EventConverter : IEventConverter
     /// Initializes a new instance of the <see cref="EventConverter"/> class.
     /// </summary>
     /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
-    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
+    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     public EventConverter(
         ProviderFor<ISchemaStore> schemaStoreProvider,
-        ProviderFor<IIdentityStore> identityStoreProvider,
+        ProviderFor<IIdentityStorage> identityStoreProvider,
         IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManager,
         Json.IExpandoObjectConverter expandoObjectConverter)
