@@ -3,8 +3,8 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Compliance;
+using Aksio.Cratis.Kernel.Persistence.Identities;
 using Aksio.Cratis.Kernel.Persistence.Schemas;
 using Aksio.DependencyInversion;
 
