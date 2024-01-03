@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Events.MongoDB.EventTypes;
 
-internal static partial class MongoDBSchemaStoreLogMessages
+internal static partial class EventTypesStorageLogMessages
 {
     [LoggerMessage(1, LogLevel.Debug, "Populating event schemas for microservice '{MicroserviceId}' and tenant '{TenantId}'")]
     internal static partial void Populating(this ILogger<EventTypesStorage> logger, MicroserviceId microserviceId, TenantId tenantId);
