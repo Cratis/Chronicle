@@ -1,8 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
+using Aksio.Cratis.Kernel.Projections;
+using Aksio.Cratis.Kernel.Projections.Definitions;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Orleans.Observers;
 using Aksio.Cratis.Observation;
@@ -10,7 +10,7 @@ using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Aksio.Cratis.Kernel.Engines.Projections.IProjection;
+using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;
 

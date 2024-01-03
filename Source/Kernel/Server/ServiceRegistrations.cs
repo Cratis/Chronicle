@@ -8,7 +8,7 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Engines.Changes;
 using Aksio.Cratis.Kernel.Engines.Compliance;
-using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
+using Aksio.Cratis.Kernel.Projections.Definitions;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.MongoDB.EventSequences;
 using Aksio.Cratis.Kernel.MongoDB.Identities;

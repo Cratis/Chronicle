@@ -25,7 +25,7 @@
         <ProjectReference Include="../Common/Common.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <ProjectReference Include="../Domain/Domain.csproj" />
-        <ProjectReference Include="../Engines/Engines.csproj" />
+        <ProjectReference Include="../Projections/Projections.csproj" />
         <ProjectReference Include="../Events/Events.csproj" />
         <ProjectReference Include="../Grains/Grains.csproj" />
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />

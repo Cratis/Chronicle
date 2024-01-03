@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Persistence.Specs</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Persistence</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Kernel/Persistence/Persistence.csproj"/>
+        <ProjectReference Include="../../../Source/Clients/Specifications/Specifications.csproj"/>
+    </ItemGroup>
+
+</Project>

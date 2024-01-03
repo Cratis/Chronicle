@@ -7,8 +7,8 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
+using Aksio.Cratis.Kernel.Projections;
+using Aksio.Cratis.Kernel.Projections.Definitions;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Persistence.EventSequences;
@@ -18,7 +18,7 @@ using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Aksio.Cratis.Kernel.Engines.Projections.IProjection;
+using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;
 
