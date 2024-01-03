@@ -18,16 +18,16 @@ namespace Aksio.Cratis.Kernel.MongoDB.Projections;
 [SingletonPerMicroservice]
 public class MongoDBProjectionDefinitionsStorage : IProjectionDefinitionsStorage
 {
-    readonly ISharedDatabase _sharedDatabase;
+    readonly IEventStoreDatabase _sharedDatabase;
     readonly IJsonProjectionSerializer _projectionSerializer;
 
     /// <summary>
     /// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
     /// </summary>
-    /// <param name="sharedDatabase">The <see cref="ISharedDatabase"/>.</param>
+    /// <param name="sharedDatabase">The <see cref="IEventStoreDatabase"/>.</param>
     /// <param name="projectionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
     public MongoDBProjectionDefinitionsStorage(
-        ISharedDatabase sharedDatabase,
+        IEventStoreDatabase sharedDatabase,
         IJsonProjectionSerializer projectionSerializer)
     {
         _sharedDatabase = sharedDatabase;

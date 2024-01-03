@@ -17,13 +17,13 @@ namespace Aksio.Cratis.Kernel.MongoDB.Jobs;
 /// </summary>
 public class MongoDBJobStorage : IJobStorage
 {
-    readonly ProviderFor<IEventStoreDatabase> _databaseProvider;
+    readonly ProviderFor<IEventStoreInstanceDatabase> _databaseProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBJobStorage{TJobState}"/> class.
     /// </summary>
-    /// <param name="databaseProvider">Provider for <see cref="IEventStoreDatabase"/> for persistence.</param>
-    public MongoDBJobStorage(ProviderFor<IEventStoreDatabase> databaseProvider)
+    /// <param name="databaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/> for persistence.</param>
+    public MongoDBJobStorage(ProviderFor<IEventStoreInstanceDatabase> databaseProvider)
     {
         _databaseProvider = databaseProvider;
     }
@@ -138,13 +138,13 @@ public class MongoDBJobStorage : IJobStorage
 public class MongoDBJobStorage<TJobState> : MongoDBJobStorage, IJobStorage<TJobState>
     where TJobState : JobState
 {
-    readonly ProviderFor<IEventStoreDatabase> _databaseProvider;
+    readonly ProviderFor<IEventStoreInstanceDatabase> _databaseProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBJobStorage{TJobState}"/> class.
     /// </summary>
-    /// <param name="databaseProvider">Provider for <see cref="IEventStoreDatabase"/> for persistence.</param>
-    public MongoDBJobStorage(ProviderFor<IEventStoreDatabase> databaseProvider) : base(databaseProvider)
+    /// <param name="databaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/> for persistence.</param>
+    public MongoDBJobStorage(ProviderFor<IEventStoreInstanceDatabase> databaseProvider) : base(databaseProvider)
     {
         _databaseProvider = databaseProvider;
     }

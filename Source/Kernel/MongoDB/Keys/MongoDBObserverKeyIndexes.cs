@@ -13,18 +13,18 @@ namespace Aksio.Cratis.Kernel.MongoDB.Keys;
 /// </summary>
 public class MongoDBObserverKeyIndexes : IObserverKeyIndexes
 {
-    readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
+    readonly ProviderFor<IEventStoreInstanceDatabase> _eventStoreDatabaseProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IGrainFactory _grainFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBObserverKeyIndexes"/> class.
     /// </summary>
-    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
+    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
     public MongoDBObserverKeyIndexes(
-        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
+        ProviderFor<IEventStoreInstanceDatabase> eventStoreDatabaseProvider,
         IExecutionContextManager executionContextManager,
         IGrainFactory grainFactory)
     {

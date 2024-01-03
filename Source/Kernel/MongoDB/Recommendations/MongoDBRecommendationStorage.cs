@@ -16,14 +16,14 @@ namespace Aksio.Cratis.Kernel.MongoDB.Recommendations;
 /// </summary>
 public class MongoDBRecommendationStorage : IRecommendationStorage
 {
-    readonly ProviderFor<IEventStoreDatabase> _databaseProvider;
+    readonly ProviderFor<IEventStoreInstanceDatabase> _databaseProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBRecommendationStorage"/> class.
     /// </summary>
-    /// <param name="databaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
+    /// <param name="databaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/>.</param>
     public MongoDBRecommendationStorage(
-        ProviderFor<IEventStoreDatabase> databaseProvider)
+        ProviderFor<IEventStoreInstanceDatabase> databaseProvider)
     {
         _databaseProvider = databaseProvider;
     }

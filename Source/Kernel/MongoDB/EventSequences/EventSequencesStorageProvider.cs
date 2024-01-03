@@ -19,7 +19,7 @@ namespace Aksio.Cratis.Kernel.MongoDB;
 public class EventSequencesStorageProvider : IGrainStorage
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
+    readonly ProviderFor<IEventStoreInstanceDatabase> _eventStoreDatabaseProvider;
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
 
@@ -27,12 +27,12 @@ public class EventSequencesStorageProvider : IGrainStorage
     /// Initializes a new instance of the <see cref="EventSequencesStorageProvider"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
+    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/>.</param>
     /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/>.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     public EventSequencesStorageProvider(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
+        ProviderFor<IEventStoreInstanceDatabase> eventStoreDatabaseProvider,
         ProviderFor<ISchemaStore> schemaStoreProvider,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
     {

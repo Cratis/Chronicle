@@ -11,21 +11,21 @@ using MongoDB.Driver;
 namespace Aksio.Cratis.Kernel.MongoDB;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventStoreDatabase"/>.
+/// Represents an implementation of <see cref="IEventStoreInstanceDatabase"/>.
 /// </summary>
 [SingletonPerMicroserviceAndTenant]
-public class EventStoreDatabase : IEventStoreDatabase
+public class EventStoreInstanceDatabase : IEventStoreInstanceDatabase
 {
     readonly IMongoDatabase _database;
     readonly HashSet<EventSequenceId> _indexedEventSequences = new();
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
+    /// Initializes a new instance of the <see cref="EventStoreInstanceDatabase"/> class.
     /// </summary>
     /// <param name="executionContext"><see cref="ExecutionContext"/> the database is for.</param>
     /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
-    public EventStoreDatabase(
+    public EventStoreInstanceDatabase(
         ExecutionContext executionContext,
         IMongoDBClientFactory mongoDBClientFactory,
         Storage configuration)

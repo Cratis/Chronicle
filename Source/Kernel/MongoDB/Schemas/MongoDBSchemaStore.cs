@@ -17,7 +17,7 @@ namespace Aksio.Cratis.Events.MongoDB.Schemas;
 [SingletonPerMicroservice]
 public class MongoDBSchemaStore : ISchemaStore
 {
-    readonly ISharedDatabase _sharedDatabase;
+    readonly IEventStoreDatabase _sharedDatabase;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<MongoDBSchemaStore> _logger;
     Dictionary<EventTypeId, Dictionary<EventGeneration, EventSchema>> _schemasByTypeAndGeneration = new();
@@ -25,11 +25,11 @@ public class MongoDBSchemaStore : ISchemaStore
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBSchemaStore"/> class.
     /// </summary>
-    /// <param name="sharedDatabase">The <see cref="ISharedDatabase"/>.</param>
+    /// <param name="sharedDatabase">The <see cref="IEventStoreDatabase"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="logger">Logger for logging.</param>
     public MongoDBSchemaStore(
-        ISharedDatabase sharedDatabase,
+        IEventStoreDatabase sharedDatabase,
         IExecutionContextManager executionContextManager,
         ILogger<MongoDBSchemaStore> logger)
     {

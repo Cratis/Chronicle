@@ -16,7 +16,7 @@ public class ClusterDatabase : IClusterDatabase
     readonly IMongoDatabase _database;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SharedDatabase"/> class.
+    /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
     /// </summary>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>

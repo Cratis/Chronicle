@@ -8,7 +8,7 @@ namespace Aksio.Cratis.MongoDB;
 /// <summary>
 /// Defines the common database for event store that goes across all tenants within a microservice.
 /// </summary>
-public interface ISharedDatabase
+public interface IEventStoreDatabase
 {
     /// <summary>
     /// Gets a <see cref="IMongoCollection{T}"/> for a specific type of document.

@@ -8,25 +8,25 @@ using MongoDB.Driver;
 namespace Aksio.Cratis.MongoDB;
 
 /// <summary>
-/// Represents an implementation of <see cref="ISharedDatabase"/>.
+/// Represents an implementation of <see cref="IEventStoreDatabase"/>.
 /// </summary>
 [SingletonPerMicroservice]
-public class SharedDatabase : ISharedDatabase
+public class EventStoreDatabase : IEventStoreDatabase
 {
     readonly IMongoDatabase _database;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SharedDatabase"/> class.
+    /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
     /// </summary>
-    /// <param name="executionContext">Current <see cref="ExecutionContext"/>.</param>
+    /// <param name="eventStore"><see cref="EventStore"/> the database is for.</param>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
-    public SharedDatabase(
-        ExecutionContext executionContext,
+    public EventStoreDatabase(
+        EventStore eventStore,
         IMongoDBClientFactory clientFactory,
         Storage configuration)
     {
-        var url = new MongoUrl(configuration.Microservices.Get(executionContext.MicroserviceId).Shared.Get(WellKnownStorageTypes.EventStore).ConnectionDetails.ToString());
+        var url = new MongoUrl(configuration.Microservices.Get((string)eventStore).Shared.Get(WellKnownStorageTypes.EventStore).ConnectionDetails.ToString());
         var client = clientFactory.Create(url);
         _database = client.GetDatabase(url.DatabaseName);
     }

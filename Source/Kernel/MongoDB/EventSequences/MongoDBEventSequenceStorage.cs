@@ -28,7 +28,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventConverter> _converterProvider;
-    readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
+    readonly ProviderFor<IEventStoreInstanceDatabase> _eventStoreDatabaseProvider;
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
     readonly Json.IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
@@ -39,7 +39,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting current <see cref="ExecutionContext"/>.</param>
     /// <param name="converterProvider"><see cref="IEventConverter"/> to convert event types.</param>
-    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/> to use.</param>
+    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/> to use.</param>
     /// <param name="schemaStoreProvider">The <see cref="ISchemaStore"/> for working with the schema types.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
@@ -47,7 +47,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
     public MongoDBEventSequenceStorage(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventConverter> converterProvider,
-        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
+        ProviderFor<IEventStoreInstanceDatabase> eventStoreDatabaseProvider,
         ProviderFor<ISchemaStore> schemaStoreProvider,
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,

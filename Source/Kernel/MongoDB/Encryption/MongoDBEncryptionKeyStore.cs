@@ -12,13 +12,13 @@ namespace Aksio.Cratis.Compliance.MongoDB;
 /// </summary>
 public class MongoDBEncryptionKeyStore : IEncryptionKeyStore
 {
-    readonly ISharedDatabase _database;
+    readonly IEventStoreDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBEncryptionKeyStore"/> class.
     /// </summary>
-    /// <param name="database"><see cref="ISharedDatabase"/> to use for accessing database.</param>
-    public MongoDBEncryptionKeyStore(ISharedDatabase database)
+    /// <param name="database"><see cref="IEventStoreDatabase"/> to use for accessing database.</param>
+    public MongoDBEncryptionKeyStore(IEventStoreDatabase database)
     {
         _database = database;
     }

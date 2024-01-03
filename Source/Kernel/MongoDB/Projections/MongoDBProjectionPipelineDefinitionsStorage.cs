@@ -23,10 +23,10 @@ public class MongoDBProjectionPipelineDefinitionsStorage : IProjectionPipelineDe
     /// <summary>
     /// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
     /// </summary>
-    /// <param name="sharedDatabase">The <see cref="ISharedDatabase"/>.</param>
+    /// <param name="sharedDatabase">The <see cref="IEventStoreDatabase"/>.</param>
     /// <param name="projectionPipelineSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
     public MongoDBProjectionPipelineDefinitionsStorage(
-        ISharedDatabase sharedDatabase,
+        IEventStoreDatabase sharedDatabase,
         IJsonProjectionPipelineSerializer projectionPipelineSerializer)
     {
         _projectionPipelineSerializer = projectionPipelineSerializer;

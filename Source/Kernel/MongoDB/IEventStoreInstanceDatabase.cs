@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Kernel.MongoDB;
 /// <summary>
 /// Defines the database used by the event store.
 /// </summary>
-public interface IEventStoreDatabase
+public interface IEventStoreInstanceDatabase
 {
     /// <summary>
     /// Get a collection - optionally by its name. If no name is given, it will go by convention from the type name.

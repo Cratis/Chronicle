@@ -18,14 +18,14 @@ namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 /// </summary>
 public class MongoDBObserverStorage : IObserverStorage
 {
-    readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
+    readonly ProviderFor<IEventStoreInstanceDatabase> _eventStoreDatabaseProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBObserverStorage"/> class.
     /// </summary>
-    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
+    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/>.</param>
     public MongoDBObserverStorage(
-        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
+        ProviderFor<IEventStoreInstanceDatabase> eventStoreDatabaseProvider)
     {
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
