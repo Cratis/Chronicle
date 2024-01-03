@@ -1,11 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Persistence.Projections;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.Definitions;
+namespace Aksio.Cratis.Kernel.Grains.Projections.Definitions;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionDefinitions"/>.

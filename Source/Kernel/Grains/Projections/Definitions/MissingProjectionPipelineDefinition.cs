@@ -4,7 +4,7 @@
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.Definitions;
+namespace Aksio.Cratis.Kernel.Grains.Projections.Definitions;
 
 /// <summary>
 /// Exception that gets thrown when a <see cref="ProjectionPipelineDefinition"/> is missing in the system.

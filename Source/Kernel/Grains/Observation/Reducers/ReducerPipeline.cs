@@ -4,10 +4,10 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Engines.Sinks;
+using Aksio.Cratis.Kernel.Persistence.Sinks;
 using Aksio.Cratis.Projections;
 
-namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
+namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReducerPipeline"/>.

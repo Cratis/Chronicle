@@ -5,7 +5,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Projections;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
+namespace Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
 
 /// <summary>
 /// Holds log messages for <see cref="ProjectionPipeline"/>.

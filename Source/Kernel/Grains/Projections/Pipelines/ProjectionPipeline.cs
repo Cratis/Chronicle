@@ -4,16 +4,16 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Engines.Changes;
-using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Kernel.Keys;
+using Aksio.Cratis.Kernel.Persistence.Changes;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.Sinks;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Types;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
+namespace Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionPipeline"/>.
@@ -24,13 +24,13 @@ public class ProjectionPipeline : IProjectionPipeline
     readonly IChangesetStorage _changesetStorage;
     readonly ITypeFormats _typeFormats;
     readonly ILogger<ProjectionPipeline> _logger;
-    readonly IEventSequenceStorage _eventProvider;
+    readonly IEventSequenceStorage _eventSequenceStorage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
     /// </summary>
     /// <param name="projection">The <see cref="IProjection"/> the pipeline is for.</param>
-    /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> to use.</param>
+    /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> to use.</param>
     /// <param name="sink"><see cref="ISink"/> to use.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
@@ -38,14 +38,14 @@ public class ProjectionPipeline : IProjectionPipeline
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public ProjectionPipeline(
         IProjection projection,
-        IEventSequenceStorage eventProvider,
+        IEventSequenceStorage eventSequenceStorage,
         ISink sink,
         IObjectComparer objectComparer,
         IChangesetStorage changesetStorage,
         ITypeFormats typeFormats,
         ILogger<ProjectionPipeline> logger)
     {
-        _eventProvider = eventProvider;
+        _eventSequenceStorage = eventSequenceStorage;
         Sink = sink;
         _objectComparer = objectComparer;
         _changesetStorage = changesetStorage;
@@ -72,7 +72,7 @@ public class ProjectionPipeline : IProjectionPipeline
         _logger.HandlingEvent(@event.Metadata.SequenceNumber);
         var correlationId = CorrelationId.New();
         var keyResolver = Projection.GetKeyResolverFor(@event.Metadata.Type);
-        var key = await keyResolver(_eventProvider, @event);
+        var key = await keyResolver(_eventSequenceStorage, @event);
         key = EnsureCorrectTypeForArrayIndexersOnKey(key);
         _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
         var initialState = await Sink.FindOrDefault(key);
@@ -126,7 +126,7 @@ public class ProjectionPipeline : IProjectionPipeline
             if (child.HasKeyResolverFor(context.Event.Metadata.Type))
             {
                 var keyResolver = child.GetKeyResolverFor(context.Event.Metadata.Type);
-                var key = await keyResolver(_eventProvider, context.Event);
+                var key = await keyResolver(_eventSequenceStorage, context.Event);
                 await HandleEventFor(child, context with { Key = key });
             }
             else

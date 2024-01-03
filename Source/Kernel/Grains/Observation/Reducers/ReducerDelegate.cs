@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
+namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers;
 
 /// <summary>
 /// Represents the reducer delegate.

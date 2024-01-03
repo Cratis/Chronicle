@@ -4,7 +4,7 @@
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Keys;
 
-namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
+namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers;
 
 /// <summary>
 /// Represents the context for a reducer operation.

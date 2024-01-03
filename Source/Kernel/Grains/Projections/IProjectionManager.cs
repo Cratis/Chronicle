@@ -1,11 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
+using Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections;
+namespace Aksio.Cratis.Kernel.Grains.Projections;
 
 /// <summary>
 /// Defines a system that is responsible for supervises projections in the system.

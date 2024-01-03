@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Observation.Reducers;
 
-namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
+namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers;
 
 /// <summary>
 /// Exception that gets thrown when a reducer pipeline definition is missing.

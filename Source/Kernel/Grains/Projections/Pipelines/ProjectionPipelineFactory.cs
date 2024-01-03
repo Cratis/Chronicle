@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Changes;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Engines.Changes;
-using Aksio.Cratis.Kernel.Engines.Sinks;
+using Aksio.Cratis.Kernel.Persistence.Changes;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.Sinks;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
+namespace Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionPipelineFactory"/>.
@@ -17,7 +17,7 @@ namespace Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
 public class ProjectionPipelineFactory : IProjectionPipelineFactory
 {
     readonly ISinks _sinks;
-    readonly IEventSequenceStorage _eventProvider;
+    readonly IEventSequenceStorage _eventSequenceStorage;
     readonly IObjectComparer _objectComparer;
     readonly IChangesetStorage _changesetStorage;
     readonly ITypeFormats _typeFormats;
@@ -41,7 +41,7 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
         ILoggerFactory loggerFactory)
     {
         _sinks = sinks;
-        _eventProvider = eventProvider;
+        _eventSequenceStorage = eventProvider;
         _objectComparer = objectComparer;
         _changesetStorage = changesetStorage;
         _typeFormats = typeFormats;
@@ -60,7 +60,7 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
 
         return new ProjectionPipeline(
             projection,
-            _eventProvider,
+            _eventSequenceStorage,
             sink,
             _objectComparer,
             _changesetStorage,

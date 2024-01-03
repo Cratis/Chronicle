@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Engines.Sinks;
+using Aksio.Cratis.Kernel.Persistence.Sinks;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
+namespace Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
 
 /// <summary>
 /// Defines a system that can coordinate the effort around projections.

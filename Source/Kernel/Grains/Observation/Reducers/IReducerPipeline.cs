@@ -1,10 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Engines.Sinks;
+using Aksio.Cratis.Kernel.Persistence.Sinks;
 using Aksio.Cratis.Projections;
 
-namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
+namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers;
 
 /// <summary>
 /// Defines a system that can coordinate the effort around reducers.

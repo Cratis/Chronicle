@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
+namespace Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
 
 /// <summary>
 /// Defines a system for working with <see cref="IProjectionPipeline">projection pipelines</see>.

@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Observation.Reducers;
 
-namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
+namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers;
 
 /// <summary>
 /// Defines a system that manages <see cref="IReducerPipeline"/> instances.

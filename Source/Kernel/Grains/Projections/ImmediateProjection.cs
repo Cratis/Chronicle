@@ -11,7 +11,8 @@ using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Schemas;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.EventTypes;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
@@ -28,7 +29,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
 {
     readonly ProviderFor<IProjectionManager> _projectionManagerProvider;
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitions;
-    readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
+    readonly ProviderFor<IEventTypesStorage> _eventTypesStorageProvider;
     readonly IObjectComparer _objectComparer;
     readonly IEventSequenceStorage _eventProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
@@ -45,7 +46,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// </summary>
     /// <param name="projectionManagerProvider">Provider for <see cref="IProjectionManager"/> for working with engine projections.</param>
     /// <param name="projectionDefinitions">Provider for <see cref="IProjectionDefinitions"/> for working with the projection definitions.</param>
-    /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
+    /// <param name="eventTypesStorageProvider">Provider for <see cref="IEventTypesStorage"/> for event schemas.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for getting events from storage.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
@@ -54,7 +55,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
     public ImmediateProjection(
         ProviderFor<IProjectionManager> projectionManagerProvider,
         ProviderFor<IProjectionDefinitions> projectionDefinitions,
-        ProviderFor<ISchemaStore> schemaStoreProvider,
+        ProviderFor<IEventTypesStorage> eventTypesStorageProvider,
         IObjectComparer objectComparer,
         IEventSequenceStorage eventProvider,
         IExpandoObjectConverter expandoObjectConverter,
@@ -63,7 +64,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
     {
         _projectionManagerProvider = projectionManagerProvider;
         _projectionDefinitions = projectionDefinitions;
-        _schemaStoreProvider = schemaStoreProvider;
+        _eventTypesStorageProvider = eventTypesStorageProvider;
         _objectComparer = objectComparer;
         _eventProvider = eventProvider;
         _expandoObjectConverter = expandoObjectConverter;
@@ -162,7 +163,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
         var projection = _projectionManagerProvider().Get(_projectionId);
         var affectedProperties = new HashSet<PropertyPath>();
 
-        var schemaStoreProvider = _schemaStoreProvider();
+        var schemaStoreProvider = _eventTypesStorageProvider();
         var eventsToApplyTasks = events.Select(async _ =>
         {
             var eventSchema = await schemaStoreProvider.GetFor(_.EventType.Id, _.EventType.Generation);
