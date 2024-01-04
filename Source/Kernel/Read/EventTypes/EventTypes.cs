@@ -3,8 +3,8 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Schemas;
-using Aksio.Cratis.Schemas;
+using Aksio.Cratis.EventTypes;
+using Aksio.Cratis.Kernel.Persistence.EventTypes;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,19 +16,19 @@ namespace Aksio.Cratis.Kernel.Read.EventTypes;
 [Route("/api/events/store/{microserviceId}/types")]
 public class EventTypes : ControllerBase
 {
-    readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
+    readonly ProviderFor<IEventTypesStorage> _eventTypesStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypes"/> class.
     /// </summary>
-    /// <param name="schemaStoreProvider">Underlying <see cref="ISchemaStore"/>.</param>
+    /// <param name="eventTypesStorageProvider">Underlying <see cref="IEventTypesStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public EventTypes(
-        ProviderFor<ISchemaStore> schemaStoreProvider,
+        ProviderFor<IEventTypesStorage> eventTypesStorageProvider,
         IExecutionContextManager executionContextManager)
     {
-        _schemaStoreProvider = schemaStoreProvider;
+        _eventTypesStorageProvider = eventTypesStorageProvider;
         _executionContextManager = executionContextManager;
     }
 
@@ -42,7 +42,7 @@ public class EventTypes : ControllerBase
     {
         _executionContextManager.Establish(microserviceId);
 
-        var schemas = await _schemaStoreProvider().GetLatestForAllEventTypes();
+        var schemas = await _eventTypesStorageProvider().GetLatestForAllEventTypes();
 
         return schemas.Select(_ =>
             new EventTypeInformation(
@@ -63,7 +63,7 @@ public class EventTypes : ControllerBase
         [FromRoute] EventTypeId eventTypeId)
     {
         _executionContextManager.Establish(microserviceId);
-        var schemas = await _schemaStoreProvider().GetAllGenerationsForEventType(new(eventTypeId, 1));
+        var schemas = await _eventTypesStorageProvider().GetAllGenerationsForEventType(new(eventTypeId, 1));
         return schemas.Select(_ => JsonDocument.Parse(_.Schema.ToJson()));
     }
 
@@ -77,7 +77,7 @@ public class EventTypes : ControllerBase
     {
         _executionContextManager.Establish(microserviceId);
 
-        var schemas = await _schemaStoreProvider().GetLatestForAllEventTypes();
+        var schemas = await _eventTypesStorageProvider().GetLatestForAllEventTypes();
 
         return schemas.Select(_ =>
             new EventTypeWithSchemas(

@@ -5,15 +5,17 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.EventTypes;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Engines.Compliance;
+using Aksio.Cratis.Kernel.Compliance;
 using Aksio.Cratis.Kernel.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.EventTypes;
+using Aksio.Cratis.Kernel.Persistence.Identities;
 using Aksio.Cratis.Kernel.Persistence.Observation;
-using Aksio.Cratis.Kernel.Schemas;
 using Aksio.Cratis.Metrics;
 using Aksio.Cratis.Observation;
-using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
@@ -29,9 +31,9 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
-    readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
+    readonly ProviderFor<IEventTypesStorage> _schemaStoreProvider;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly ProviderFor<IIdentityStore> _identityStoreProvider;
+    readonly ProviderFor<IIdentityStorage> _identityStoreProvider;
     readonly ProviderFor<IObserverStorage> _observerStorageProvider;
     readonly IMeter<EventSequence> _meter;
     readonly IExecutionContextManager _executionContextManager;
@@ -46,9 +48,9 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <summary>
     /// Initializes a new instance of <see cref="EventSequence"/>.
     /// </summary>
-    /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
+    /// <param name="schemaStoreProvider">Provider for <see cref="IEventTypesStorage"/> for event schemas.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
+    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStorage"/>.</param>
     /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
     /// <param name="meter">The meter to use for metrics.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
@@ -56,9 +58,9 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public EventSequence(
-        ProviderFor<ISchemaStore> schemaStoreProvider,
+        ProviderFor<IEventTypesStorage> schemaStoreProvider,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        ProviderFor<IIdentityStore> identityStoreProvider,
+        ProviderFor<IIdentityStorage> identityStoreProvider,
         ProviderFor<IObserverStorage> observerStorageProvider,
         IMeter<EventSequence> meter,
         IExecutionContextManager executionContextManager,

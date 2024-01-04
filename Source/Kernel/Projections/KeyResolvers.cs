@@ -6,6 +6,7 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Keys;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Projections;
@@ -19,7 +20,7 @@ public static class KeyResolvers
     /// Create a <see cref="KeyResolver"/> that provides the event source id from an event.
     /// </summary>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
-    public static readonly KeyResolver FromEventSourceId = (IEventSequenceStorage eventProvider, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.EventSourceId(@event), ArrayIndexers.NoIndexers))!;
+    public static readonly KeyResolver FromEventSourceId = (IEventSequenceStorage eventSequenceStorage, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.EventSourceId(@event), ArrayIndexers.NoIndexers))!;
 
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a value from the event content.
@@ -28,7 +29,7 @@ public static class KeyResolvers
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public static KeyResolver FromEventValueProvider(ValueProvider<AppendedEvent> eventValueProvider)
     {
-        return (IEventSequenceStorage eventProvider, AppendedEvent @event) =>
+        return (IEventSequenceStorage eventSequenceStorage, AppendedEvent @event) =>
         {
             var key = eventValueProvider(@event);
             return Task.FromResult(new Key(key, ArrayIndexers.NoIndexers))!;
@@ -42,7 +43,7 @@ public static class KeyResolvers
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public static KeyResolver Composite(IDictionary<PropertyPath, ValueProvider<AppendedEvent>> propertiesWithKeyValueProviders)
     {
-        return (IEventSequenceStorage eventProvider, AppendedEvent @event) =>
+        return (IEventSequenceStorage eventSequenceStorage, AppendedEvent @event) =>
         {
             var key = new ExpandoObject();
             foreach (var keyValue in propertiesWithKeyValueProviders)
@@ -64,13 +65,13 @@ public static class KeyResolvers
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public static KeyResolver FromParentHierarchy(IProjection projection, KeyResolver keyResolver, KeyResolver parentKeyResolver, PropertyPath identifiedByProperty)
     {
-        return async (IEventSequenceStorage eventProvider, AppendedEvent @event) =>
+        return async (IEventSequenceStorage eventSequenceStorage, AppendedEvent @event) =>
         {
             var arrayIndexers = new List<ArrayIndexer>();
-            var parentKey = await parentKeyResolver(eventProvider, @event);
+            var parentKey = await parentKeyResolver(eventSequenceStorage, @event);
             if (projection.HasParent)
             {
-                var key = await keyResolver(eventProvider, @event);
+                var key = await keyResolver(eventSequenceStorage, @event);
                 arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, key.Value));
                 var parentProjection = projection.Parent!;
                 var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
@@ -83,12 +84,12 @@ public static class KeyResolvers
                     }
                     else
                     {
-                        parentEvent = await eventProvider.GetLastInstanceOfAny(EventSequenceId.Log, parentKey.Value.ToString()!, parentEventTypeIds);
+                        parentEvent = await eventSequenceStorage.GetLastInstanceOfAny(EventSequenceId.Log, parentKey.Value.ToString()!, parentEventTypeIds);
                     }
 
                     var eventType = parentProjection.EventTypes.First(_ => _.Id == parentEvent.Metadata.Type.Id);
                     var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
-                    var resolvedParentKey = await keyResolverForEventType(eventProvider, parentEvent);
+                    var resolvedParentKey = await keyResolverForEventType(eventSequenceStorage, parentEvent);
                     parentKey = resolvedParentKey;
                     arrayIndexers.AddRange(resolvedParentKey.ArrayIndexers.All);
                 }

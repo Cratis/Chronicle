@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Schemas;
+using Aksio.Cratis.Kernel.Persistence.EventTypes;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 using NJsonSchema;
@@ -14,19 +14,19 @@ namespace Aksio.Cratis.Kernel.Domain.Projections;
 [Route("/api/events/store/{microserviceId}/types")]
 public class EventTypes : ControllerBase
 {
-    readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
+    readonly ProviderFor<IEventTypesStorage> _eventTypesStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypes"/> class.
     /// </summary>
-    /// <param name="schemaStoreProvider">Underlying <see cref="ISchemaStore"/>.</param>
+    /// <param name="eventTypesStorageProvider">Underlying <see cref="IEventTypesStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public EventTypes(
-        ProviderFor<ISchemaStore> schemaStoreProvider,
+        ProviderFor<IEventTypesStorage> eventTypesStorageProvider,
         IExecutionContextManager executionContextManager)
     {
-        _schemaStoreProvider = schemaStoreProvider;
+        _eventTypesStorageProvider = eventTypesStorageProvider;
         _executionContextManager = executionContextManager;
     }
 
@@ -45,7 +45,7 @@ public class EventTypes : ControllerBase
         foreach (var eventType in payload.Types)
         {
             var schema = await JsonSchema.FromJsonAsync(eventType.Schema.ToJsonString());
-            await _schemaStoreProvider().Register(eventType.Type, eventType.FriendlyName, schema);
+            await _eventTypesStorageProvider().Register(eventType.Type, eventType.FriendlyName, schema);
         }
     }
 }

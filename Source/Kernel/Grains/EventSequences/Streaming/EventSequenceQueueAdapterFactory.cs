@@ -1,8 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Identities;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.Identities;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
@@ -18,19 +18,19 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     readonly IStreamQueueMapper _mapper;
     readonly string _name;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly ProviderFor<IIdentityStore> _identityStoreProvider;
+    readonly ProviderFor<IIdentityStorage> _identityStoreProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
     /// <param name="name">Name of stream.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
+    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStorage"/>.</param>
     /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
     public EventSequenceQueueAdapterFactory(
         string name,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        ProviderFor<IIdentityStore> identityStoreProvider,
+        ProviderFor<IIdentityStorage> identityStoreProvider,
         IEventSequenceCaches caches)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
@@ -51,7 +51,7 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
         return new(
             name,
             serviceProvider.GetRequiredService<ProviderFor<IEventSequenceStorage>>(),
-            serviceProvider.GetRequiredService<ProviderFor<IIdentityStore>>(),
+            serviceProvider.GetRequiredService<ProviderFor<IIdentityStorage>>(),
             serviceProvider.GetRequiredService<IEventSequenceCaches>());
     }
 

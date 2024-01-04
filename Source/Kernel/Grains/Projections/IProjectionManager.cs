@@ -4,6 +4,7 @@
 using Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
+using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;
 
@@ -24,7 +25,7 @@ public interface IProjectionManager
     /// </summary>
     /// <param name="id"><see cref="Projection"/> instance.</param>
     /// <returns>A projection instance.</returns>
-    IProjection Get(ProjectionId id);
+    EngineProjection Get(ProjectionId id);
 
     /// <summary>
     /// Get a projection pipeline by its <see cref="ProjectionId"/>.

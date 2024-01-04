@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
+using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Orleans.Observers;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Aksio.Reflection;

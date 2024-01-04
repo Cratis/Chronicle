@@ -11,7 +11,6 @@ using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Engines.Observation.Reducers;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Observation;

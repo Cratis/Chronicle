@@ -1,11 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Projections;
 using Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
+using Aksio.Cratis.Kernel.Projections;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Microsoft.Extensions.Logging;
+using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;
 
@@ -19,7 +20,7 @@ public class ProjectionManager : IProjectionManager
     readonly IProjectionFactory _projectionFactory;
     readonly IProjectionPipelineFactory _projectionPipelineFactory;
     readonly ILogger<ProjectionManager> _logger;
-    readonly Dictionary<ProjectionId, IProjection> _projections = new();
+    readonly Dictionary<ProjectionId, EngineProjection> _projections = new();
     readonly Dictionary<ProjectionId, IProjectionPipeline> _pipelines = new();
 
     /// <summary>
@@ -45,7 +46,7 @@ public class ProjectionManager : IProjectionManager
     public bool Exists(ProjectionId id) => _projections.ContainsKey(id);
 
     /// <inheritdoc/>
-    public IProjection Get(ProjectionId id)
+    public EngineProjection Get(ProjectionId id)
     {
         ThrowIfMissingProjection(id);
         return _projections[id];

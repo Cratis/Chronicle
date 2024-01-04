@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Persistence.EventSequences;
 using Aksio.Cratis.Kernel.Persistence.EventTypes;
 using Aksio.DependencyInversion;
@@ -50,7 +49,7 @@ public class EventSequencesStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var actualGrainState = (grainState as IGrainState<Kernel.Grains.EventSequences.EventSequenceState>)!;
+        var actualGrainState = (grainState as IGrainState<Persistence.EventSequences.EventSequenceState>)!;
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
         var key = EventSequenceKey.Parse(keyAsString!);
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
@@ -58,7 +57,7 @@ public class EventSequencesStorageProvider : IGrainStorage
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
         var cursor = await Collection.FindAsync(filter);
         var state = await cursor.FirstOrDefaultAsync();
-        actualGrainState.State = state?.ToKernel() ?? new Kernel.Grains.EventSequences.EventSequenceState();
+        actualGrainState.State = state?.ToKernel() ?? new Persistence.EventSequences.EventSequenceState();
 
         await HandleTailSequenceNumbersForEventTypes(actualGrainState, eventSequenceId);
     }
@@ -69,11 +68,11 @@ public class EventSequencesStorageProvider : IGrainStorage
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
         var key = EventSequenceKey.Parse(keyAsString!);
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-        var eventSequenceState = (grainState.State as Kernel.Grains.EventSequences.EventSequenceState)!;
+        var eventSequenceState = (grainState.State as Persistence.EventSequences.EventSequenceState)!;
         await Write(eventSequenceId, eventSequenceState);
     }
 
-    async Task HandleTailSequenceNumbersForEventTypes(IGrainState<Kernel.Grains.EventSequences.EventSequenceState> actualGrainState, EventSequenceId eventSequenceId)
+    async Task HandleTailSequenceNumbersForEventTypes(IGrainState<Persistence.EventSequences.EventSequenceState> actualGrainState, EventSequenceId eventSequenceId)
     {
         if (actualGrainState.State.SequenceNumber > EventSequenceNumber.First &&
             actualGrainState.State.TailSequenceNumberPerEventType.Count == 0)
@@ -88,7 +87,7 @@ public class EventSequencesStorageProvider : IGrainStorage
         }
     }
 
-    async Task Write(EventSequenceId eventSequenceId, Kernel.Grains.EventSequences.EventSequenceState state)
+    async Task Write(EventSequenceId eventSequenceId, Persistence.EventSequences.EventSequenceState state)
     {
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
         await Collection.ReplaceOneAsync(

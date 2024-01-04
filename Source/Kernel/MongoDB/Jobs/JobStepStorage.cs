@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.Persistence.Jobs;
 using Aksio.DependencyInversion;

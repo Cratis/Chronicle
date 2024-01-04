@@ -3,9 +3,8 @@
 
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Kernel.Projections;
-using Aksio.Cratis.Kernel.Projections.Definitions;
 using Aksio.Cratis.Kernel.Grains.Observation.States;
+using Aksio.Cratis.Kernel.Grains.Projections.Definitions;
 using Aksio.Cratis.Kernel.Grains.Recommendations;
 using Aksio.Cratis.Kernel.Observation.Replaying;
 using Aksio.Cratis.Observation;

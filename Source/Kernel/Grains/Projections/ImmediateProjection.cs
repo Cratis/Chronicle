@@ -7,12 +7,12 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Projections;
-using Aksio.Cratis.Kernel.Projections.Definitions;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
+using Aksio.Cratis.Kernel.Grains.Projections.Definitions;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Persistence.EventSequences;
 using Aksio.Cratis.Kernel.Persistence.EventTypes;
+using Aksio.Cratis.Kernel.Projections;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
@@ -31,7 +31,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitions;
     readonly ProviderFor<IEventTypesStorage> _eventTypesStorageProvider;
     readonly IObjectComparer _objectComparer;
-    readonly IEventSequenceStorage _eventProvider;
+    readonly IEventSequenceStorage _eventSequenceStorage;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<ImmediateProjection> _logger;
@@ -48,7 +48,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// <param name="projectionDefinitions">Provider for <see cref="IProjectionDefinitions"/> for working with the projection definitions.</param>
     /// <param name="eventTypesStorageProvider">Provider for <see cref="IEventTypesStorage"/> for event schemas.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
-    /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for getting events from storage.</param>
+    /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for getting events from storage.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="logger">Logger for logging.</param>
@@ -57,7 +57,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
         ProviderFor<IProjectionDefinitions> projectionDefinitions,
         ProviderFor<IEventTypesStorage> eventTypesStorageProvider,
         IObjectComparer objectComparer,
-        IEventSequenceStorage eventProvider,
+        IEventSequenceStorage eventSequenceStorage,
         IExpandoObjectConverter expandoObjectConverter,
         IExecutionContextManager executionContextManager,
         ILogger<ImmediateProjection> logger)
@@ -66,7 +66,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
         _projectionDefinitions = projectionDefinitions;
         _eventTypesStorageProvider = eventTypesStorageProvider;
         _objectComparer = objectComparer;
-        _eventProvider = eventProvider;
+        _eventSequenceStorage = eventSequenceStorage;
         _expandoObjectConverter = expandoObjectConverter;
         _executionContextManager = executionContextManager;
         _logger = logger;
@@ -125,7 +125,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
             var affectedProperties = new HashSet<PropertyPath>();
 
             var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
-            var cursor = await _eventProvider.GetFromSequenceNumber(EventSequenceId.Log, fromSequenceNumber, modelKey, projection.EventTypes);
+            var cursor = await _eventSequenceStorage.GetFromSequenceNumber(EventSequenceId.Log, fromSequenceNumber, modelKey, projection.EventTypes);
             var projectedEventsCount = 0;
             var state = GetInitialState(projection, definition);
             while (await cursor.MoveNext())
@@ -210,7 +210,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
         {
             var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, @event, state);
             var keyResolver = projection.GetKeyResolverFor(@event.Metadata.Type);
-            var key = await keyResolver(_eventProvider!, @event);
+            var key = await keyResolver(_eventSequenceStorage!, @event);
             var context = new ProjectionEventContext(key, @event, changeset);
 
             await HandleEventFor(projection!, context);

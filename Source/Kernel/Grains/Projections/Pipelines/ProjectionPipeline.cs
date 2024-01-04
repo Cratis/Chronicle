@@ -8,10 +8,12 @@ using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Persistence.Changes;
 using Aksio.Cratis.Kernel.Persistence.EventSequences;
 using Aksio.Cratis.Kernel.Persistence.Sinks;
+using Aksio.Cratis.Kernel.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Types;
 using Microsoft.Extensions.Logging;
+using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
 
@@ -29,7 +31,7 @@ public class ProjectionPipeline : IProjectionPipeline
     /// <summary>
     /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
     /// </summary>
-    /// <param name="projection">The <see cref="IProjection"/> the pipeline is for.</param>
+    /// <param name="projection">The <see cref="EngineProjection"/> the pipeline is for.</param>
     /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> to use.</param>
     /// <param name="sink"><see cref="ISink"/> to use.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
@@ -37,7 +39,7 @@ public class ProjectionPipeline : IProjectionPipeline
     /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public ProjectionPipeline(
-        IProjection projection,
+        EngineProjection projection,
         IEventSequenceStorage eventSequenceStorage,
         ISink sink,
         IObjectComparer objectComparer,
@@ -55,7 +57,7 @@ public class ProjectionPipeline : IProjectionPipeline
     }
 
     /// <inheritdoc/>
-    public IProjection Projection { get; }
+    public EngineProjection Projection { get; }
 
     /// <inheritdoc/>
     public ISink Sink { get; }
@@ -110,7 +112,7 @@ public class ProjectionPipeline : IProjectionPipeline
         };
     }
 
-    async Task HandleEventFor(IProjection projection, ProjectionEventContext context)
+    async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
     {
         if (projection.Accepts(context.Event.Metadata.Type))
         {

@@ -3,11 +3,12 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.EventTypes;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Kernel.Schemas;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.EventTypes;
 using Aksio.Cratis.Observation;
-using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 
@@ -18,30 +19,30 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 /// </summary>
 public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
 {
-    readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
+    readonly ProviderFor<IEventTypesStorage> _eventTypesStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly ILogger<InboxObserverSubscriber> _logger;
     IEventSequence? _inboxEventSequence;
-    ISchemaStore? _schemaStore;
-    ISchemaStore? _sourceSchemaStore;
+    IEventTypesStorage? _eventTypesStorage;
+    IEventTypesStorage? _sourceEventTypesStorage;
     MicroserviceId? _microserviceId;
     ObserverSubscriberKey? _key;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InboxObserverSubscriber"/> class.
     /// </summary>
-    /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for getting schema stores for other microservices.</param>
+    /// <param name="eventTypesStorageProvider">Provider for <see cref="IEventTypesStorage"/> for getting schema stores for other microservices.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     /// <param name="logger">Logger for logging.</param>
     public InboxObserverSubscriber(
-        ProviderFor<ISchemaStore> schemaStoreProvider,
+        ProviderFor<IEventTypesStorage> eventTypesStorageProvider,
         IExecutionContextManager executionContextManager,
         IExpandoObjectConverter expandoObjectConverter,
         ILogger<InboxObserverSubscriber> logger)
     {
-        _schemaStoreProvider = schemaStoreProvider;
+        _eventTypesStorageProvider = eventTypesStorageProvider;
         _executionContextManager = executionContextManager;
         _expandoObjectConverter = expandoObjectConverter;
         _logger = logger;
@@ -58,10 +59,10 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
             keyExtension: new EventSequenceKey(_microserviceId, _key.TenantId));
 
         _executionContextManager.Establish(_microserviceId);
-        _schemaStore = _schemaStoreProvider();
+        _eventTypesStorage = _eventTypesStorageProvider();
 
         _executionContextManager.Establish(_key.SourceMicroserviceId!);
-        _sourceSchemaStore = _schemaStoreProvider();
+        _sourceEventTypesStorage = _eventTypesStorageProvider();
 
         return Task.CompletedTask;
     }
@@ -81,14 +82,14 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
 
                 EventTypeSchema eventSchema;
 
-                if (!await _schemaStore!.HasFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation))
+                if (!await _eventTypesStorage!.HasFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation))
                 {
-                    eventSchema = await _sourceSchemaStore!.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
-                    await _schemaStore.Register(eventSchema.Type, eventSchema.Schema.GetDisplayName(), eventSchema.Schema);
+                    eventSchema = await _sourceEventTypesStorage!.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
+                    await _eventTypesStorage.Register(eventSchema.Type, eventSchema.Schema.GetDisplayName(), eventSchema.Schema);
                 }
                 else
                 {
-                    eventSchema = await _schemaStore!.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
+                    eventSchema = await _eventTypesStorage!.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
                 }
 
                 _logger.ForwardingEvent(_key!.TenantId, _microserviceId!, @event.Metadata.Type.Id, eventSchema.Schema.GetDisplayName(), @event.Metadata.SequenceNumber);

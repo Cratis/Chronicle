@@ -187,7 +187,7 @@ public class ClientBuilder : IClientBuilder
             .AddTransient<IClientReducers, ClientReducers>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
             .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
-            .AddSingleton<IEventTypes, EventTypes>()
+            .AddSingleton<IEventTypes, Events.EventTypes>()
             .AddSingleton<IEventSerializer, EventSerializer>()
             .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
             .AddSingleton<ITypes>(Types.Types.Instance)

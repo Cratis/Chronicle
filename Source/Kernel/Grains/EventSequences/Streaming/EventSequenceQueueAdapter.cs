@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.Identities;
 using Aksio.DependencyInversion;
 using Orleans.Runtime;
 using Orleans.Streams;
@@ -20,7 +20,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
 
     readonly IStreamQueueMapper _mapper;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly ProviderFor<IIdentityStore> _identityStoreProvider;
+    readonly ProviderFor<IIdentityStorage> _identityStorageProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
@@ -28,17 +28,17 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     /// <param name="name">Name of stream.</param>
     /// <param name="mapper"><see cref="IStreamQueueMapper"/> for getting queue identifiers.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
+    /// <param name="identityStorageProvider">Provider for <see cref="IIdentityStorage"/>.</param>
     public EventSequenceQueueAdapter(
         string name,
         IStreamQueueMapper mapper,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        ProviderFor<IIdentityStore> identityStoreProvider)
+        ProviderFor<IIdentityStorage> identityStorageProvider)
     {
         Name = name;
         _mapper = mapper;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
-        _identityStoreProvider = identityStoreProvider;
+        _identityStorageProvider = identityStorageProvider;
     }
 
     /// <inheritdoc/>
@@ -73,7 +73,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                         appendedEvent.Context.EventSourceId,
                         appendedEvent.Metadata.Type,
                         appendedEvent.Context.Causation,
-                        await _identityStoreProvider().GetFor(appendedEvent.Context.CausedBy),
+                        await _identityStorageProvider().GetFor(appendedEvent.Context.CausedBy),
                         DateTimeOffset.UtcNow,
                         appendedEvent.Context.ValidFrom,
                         appendedEvent.Content);

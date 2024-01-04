@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Engines.Sinks;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.Sinks;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Sinks;
 

@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Persistence.Sinks;
+using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
 
@@ -14,7 +15,7 @@ public interface IProjectionPipeline
     /// <summary>
     /// Gets the <see cref="IProjection"/> the pipeline is for.
     /// </summary>
-    IProjection Projection { get; }
+    EngineProjection Projection { get; }
 
     /// <summary>
     /// Gets the <see cref="ISink">sink</see> to use for output.

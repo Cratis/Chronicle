@@ -1,9 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
-using Aksio.Cratis.Kernel.Grains.Observation;
-
 namespace Aksio.Cratis.Kernel.MongoDB;
 
 /// <summary>
@@ -32,7 +29,7 @@ public static class WellKnownCollectionNames
     public const string System = "system";
 
     /// <summary>
-    /// The collection that holds <see cref="ObserverState"/>.
+    /// The collection that holds observer state.
     /// </summary>
     public const string Observers = "observers";
 
@@ -42,7 +39,7 @@ public static class WellKnownCollectionNames
     public const string Reminders = "reminders";
 
     /// <summary>
-    /// The collection that holds <see cref="TenantConfigurationState"/>.
+    /// The collection that holds tenant configuration.
     /// </summary>
     public const string TenantConfiguration = "tenants-configuration";
 

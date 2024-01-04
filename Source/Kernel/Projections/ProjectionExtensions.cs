@@ -8,6 +8,7 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
 using Aksio.Cratis.Properties;
 using Aksio.Reflection;
 
@@ -55,13 +56,13 @@ public static class ProjectionExtensions
     /// Resolve a join for events that has happened.
     /// </summary>
     /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
-    /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for getting the event in the past.</param>
+    /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for getting the event in the past.</param>
     /// <param name="joinEventType">Type of event to be joined.</param>
     /// <param name="onModelProperty">The property on the model to join on.</param>
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> ResolveJoin(
         this IObservable<ProjectionEventContext> observable,
-        IEventSequenceStorage eventProvider,
+        IEventSequenceStorage eventSequenceStorage,
         EventType joinEventType,
         PropertyPath onModelProperty)
     {
@@ -71,11 +72,11 @@ public static class ProjectionExtensions
             var onValue = onModelProperty.GetValue(_.Changeset.CurrentState, ArrayIndexers.NoIndexers);
             if (onValue is not null)
             {
-                var checkTask = eventProvider.HasInstanceFor(EventSequenceId.Log, joinEventType.Id, onValue.ToString()!);
+                var checkTask = eventSequenceStorage.HasInstanceFor(EventSequenceId.Log, joinEventType.Id, onValue.ToString()!);
                 checkTask.Wait();
                 if (checkTask.Result)
                 {
-                    var lastEventInstanceTask = eventProvider.GetLastInstanceFor(EventSequenceId.Log, joinEventType.Id, onValue.ToString()!);
+                    var lastEventInstanceTask = eventSequenceStorage.GetLastInstanceFor(EventSequenceId.Log, joinEventType.Id, onValue.ToString()!);
                     lastEventInstanceTask.Wait();
                     var lastEventInstance = lastEventInstanceTask.Result;
 

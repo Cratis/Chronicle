@@ -3,8 +3,8 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
 using Aksio.Cratis.Kernel.Projections.Expressions;
 using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Projections.Expressions.Keys;
@@ -25,7 +25,7 @@ public class ProjectionFactory : IProjectionFactory
     readonly IEventValueProviderExpressionResolvers _eventValueProviderExpressionResolvers;
     readonly IKeyExpressionResolvers _keyExpressionResolvers;
     readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly IEventSequenceStorage _eventProvider;
+    readonly IEventSequenceStorage _eventSequenceStorage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionFactory"/> class.
@@ -34,19 +34,19 @@ public class ProjectionFactory : IProjectionFactory
     /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving expressions for accessing values on events.</param>
     /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
-    /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for providing events from the event store.</param>
+    /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for providing events from the event store.</param>
     public ProjectionFactory(
         IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
         IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers,
         IKeyExpressionResolvers keyExpressionResolvers,
         IExpandoObjectConverter expandoObjectConverter,
-        IEventSequenceStorage eventProvider)
+        IEventSequenceStorage eventSequenceStorage)
     {
         _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
         _eventValueProviderExpressionResolvers = eventValueProviderExpressionResolvers;
         _keyExpressionResolvers = keyExpressionResolvers;
         _expandoObjectConverter = expandoObjectConverter;
-        _eventProvider = eventProvider;
+        _eventSequenceStorage = eventSequenceStorage;
     }
 
     /// <inheritdoc/>
@@ -195,7 +195,7 @@ public class ProjectionFactory : IProjectionFactory
             {
                 var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
                 projected = projected
-                    .ResolveJoin(_eventProvider, joinEventType, joinDefinition.On)
+                    .ResolveJoin(_eventSequenceStorage, joinEventType, joinDefinition.On)
                                     .Project(
                                         childrenAccessorProperty,
                                         actualIdentifiedByProperty,

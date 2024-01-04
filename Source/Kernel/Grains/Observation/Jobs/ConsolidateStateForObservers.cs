@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Persistence.Jobs;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 

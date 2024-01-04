@@ -8,13 +8,14 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.EventTypes;
 using Aksio.Cratis.Identities;
-using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Keys;
+using Aksio.Cratis.Kernel.Persistence.EventSequences;
+using Aksio.Cratis.Kernel.Persistence.Sinks;
 using Aksio.Cratis.Objects;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Sinks;
 
 namespace Aksio.Cratis.Kernel.Grains.Sinks.Outbox;

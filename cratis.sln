@@ -21,7 +21,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Concepts", "Source\Kernel\C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Source\Kernel\Domain\Domain.csproj", "{C97E9194-7EE7-4174-8626-5C96AFA0B9B4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engines", "Source\Kernel\Projections\Projections.csproj", "{0DEE1B78-92D5-47BC-A919-29A59ADB3F2A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Projections", "Source\Kernel\Projections\Projections.csproj", "{0DEE1B78-92D5-47BC-A919-29A59ADB3F2A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Events", "Source\Kernel\Events\Events.csproj", "{C52DDC90-5510-4016-B759-BA0A5BEF32BE}"
 EndProject
@@ -53,7 +53,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Specifications.Specs", "Spe
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Kernel", "Kernel", "{57F044DE-7383-42BB-A079-3F12DABCBA9C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engines", "Specifications\Kernel\Projections\Projections.csproj", "{C86797FA-4518-4479-A506-9955367A8AD8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Projections", "Specifications\Kernel\Projections\Projections.csproj", "{C86797FA-4518-4479-A506-9955367A8AD8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grains", "Specifications\Kernel\Grains\Grains.csproj", "{85B03B72-1B65-4F3F-AF36-843667B2E6DF}"
 EndProject

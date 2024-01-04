@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Connections;
-using Aksio.Cratis.Kernel.Engines.Observation.Reducers;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Observation.Reducers;
 using Aksio.DependencyInversion;

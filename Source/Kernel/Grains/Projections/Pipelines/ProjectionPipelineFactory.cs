@@ -8,6 +8,7 @@ using Aksio.Cratis.Kernel.Persistence.Sinks;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;
+using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
 
@@ -27,21 +28,21 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     /// Initializes a new instance of the <see cref="ProjectionPipelineFactory"/> class.
     /// </summary>
     /// <param name="sinks"><see cref="ISinks"/> in the system.</param>
-    /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> in the system.</param>
+    /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> in the system.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
     /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public ProjectionPipelineFactory(
         ISinks sinks,
-        IEventSequenceStorage eventProvider,
+        IEventSequenceStorage eventSequenceStorage,
         IObjectComparer objectComparer,
         IChangesetStorage changesetStorage,
         ITypeFormats typeFormats,
         ILoggerFactory loggerFactory)
     {
         _sinks = sinks;
-        _eventSequenceStorage = eventProvider;
+        _eventSequenceStorage = eventSequenceStorage;
         _objectComparer = objectComparer;
         _changesetStorage = changesetStorage;
         _typeFormats = typeFormats;
@@ -49,7 +50,7 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     }
 
     /// <inheritdoc/>
-    public IProjectionPipeline CreateFrom(IProjection projection, ProjectionPipelineDefinition definition)
+    public IProjectionPipeline CreateFrom(EngineProjection projection, ProjectionPipelineDefinition definition)
     {
         ISink sink = default!;
         if (definition.Sinks.Any())

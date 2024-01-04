@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
+using Aksio.Cratis.Kernel.Persistence.Observation;
 using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States;

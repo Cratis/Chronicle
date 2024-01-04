@@ -23,6 +23,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Common/Common.csproj" />
+        <ProjectReference Include="../Compliance/Compliance.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <ProjectReference Include="../Domain/Domain.csproj" />
         <ProjectReference Include="../Projections/Projections.csproj" />
