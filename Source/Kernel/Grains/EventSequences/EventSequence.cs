@@ -329,7 +329,6 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         EventSourceId eventSourceId,
         IEnumerable<EventType> affectedEventTypes)
     {
-        _executionContextManager.Establish(_eventSequenceKey.TenantId, _executionContextManager.Current.CorrelationId, _eventSequenceKey.MicroserviceId);
         var observers = await ObserverStorage.GetObserversForEventTypes(affectedEventTypes);
         foreach (var observer in observers)
         {
