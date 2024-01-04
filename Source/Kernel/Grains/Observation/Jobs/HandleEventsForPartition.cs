@@ -78,7 +78,6 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
         _executionContextManager.Establish(request.ObserverKey.TenantId, CorrelationId.New(), request.ObserverKey.MicroserviceId);
         var eventSequenceStorage = _eventSequenceStorageProvider();
         using var events = await eventSequenceStorage.GetFromSequenceNumber(
-            request.ObserverKey.EventSequenceId,
             request.StartEventSequenceNumber,
             eventSourceId,
             request.EventTypes);

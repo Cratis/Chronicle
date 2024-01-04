@@ -128,7 +128,7 @@ public class OutboxSink : ISink, IDisposable
         var eventType = _model.Schema.GetEventType();
         try
         {
-            var lastInstance = await _eventSequenceStorageProvider.GetLastInstanceFor(EventSequenceId.Outbox, eventType.Id, key.Value.ToString()!);
+            var lastInstance = await _eventSequenceStorageProvider.GetLastInstanceFor(eventType.Id, key.Value.ToString()!);
             return lastInstance.Content;
         }
         catch (MissingEvent)

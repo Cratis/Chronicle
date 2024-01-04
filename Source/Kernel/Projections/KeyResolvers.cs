@@ -4,7 +4,6 @@
 using System.Dynamic;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Properties;
@@ -84,7 +83,7 @@ public static class KeyResolvers
                     }
                     else
                     {
-                        parentEvent = await eventSequenceStorage.GetLastInstanceOfAny(EventSequenceId.Log, parentKey.Value.ToString()!, parentEventTypeIds);
+                        parentEvent = await eventSequenceStorage.GetLastInstanceOfAny(parentKey.Value.ToString()!, parentEventTypeIds);
                     }
 
                     var eventType = parentProjection.EventTypes.First(_ => _.Id == parentEvent.Metadata.Type.Id);

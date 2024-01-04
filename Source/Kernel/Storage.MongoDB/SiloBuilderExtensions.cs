@@ -2,9 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.MongoDB;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Reminders;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Tenants;
+using Aksio.Cratis.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson.Serialization;
 using Orleans.Runtime;
@@ -26,7 +28,11 @@ public static class SiloBuilderExtensions
     {
         // TODO: Store Grain state in Mongo
         builder.AddMemoryGrainStorage("PubSubStore");
-        builder.ConfigureServices(services => services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.TenantConfiguration, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>()));
+        builder.ConfigureServices(services =>
+        {
+            services.AddSingleton<IClusterStorage, ClusterStorage>();
+            services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.TenantConfiguration, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
+        });
 
         BsonSerializer.RegisterSerializer(new JsonElementSerializer());
         BsonSerializer.RegisterSerializer(new UriSerializer());

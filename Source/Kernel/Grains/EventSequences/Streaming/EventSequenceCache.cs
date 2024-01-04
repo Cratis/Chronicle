@@ -112,7 +112,7 @@ public class EventSequenceCache : IEventSequenceCache
         _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
         _logger.Priming(from, to);
 
-        var eventCursor = _eventSequenceStorageProvider().GetRange(_eventSequenceId, from, to).GetAwaiter().GetResult();
+        var eventCursor = _eventSequenceStorageProvider().GetRange(from, to).GetAwaiter().GetResult();
 
         lock (_lock)
         {
@@ -164,7 +164,7 @@ public class EventSequenceCache : IEventSequenceCache
     public async Task PrimeWithTailWindow()
     {
         _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
-        var tail = await _eventSequenceStorageProvider().GetTailSequenceNumber(_eventSequenceId);
+        var tail = await _eventSequenceStorageProvider().GetTailSequenceNumber();
         tail -= NumberOfEventsToFetch;
         if ((long)tail.Value < 0) tail = 0;
         Prime(tail);

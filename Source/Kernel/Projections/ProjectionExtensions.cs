@@ -7,7 +7,6 @@ using System.Reactive.Subjects;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Properties;
 using Aksio.Reflection;
@@ -72,11 +71,11 @@ public static class ProjectionExtensions
             var onValue = onModelProperty.GetValue(_.Changeset.CurrentState, ArrayIndexers.NoIndexers);
             if (onValue is not null)
             {
-                var checkTask = eventSequenceStorage.HasInstanceFor(EventSequenceId.Log, joinEventType.Id, onValue.ToString()!);
+                var checkTask = eventSequenceStorage.HasInstanceFor(joinEventType.Id, onValue.ToString()!);
                 checkTask.Wait();
                 if (checkTask.Result)
                 {
-                    var lastEventInstanceTask = eventSequenceStorage.GetLastInstanceFor(EventSequenceId.Log, joinEventType.Id, onValue.ToString()!);
+                    var lastEventInstanceTask = eventSequenceStorage.GetLastInstanceFor(joinEventType.Id, onValue.ToString()!);
                     lastEventInstanceTask.Wait();
                     var lastEventInstance = lastEventInstanceTask.Result;
 

@@ -5,7 +5,6 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Projections.Definitions;
@@ -125,7 +124,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
             var affectedProperties = new HashSet<PropertyPath>();
 
             var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
-            var cursor = await _eventSequenceStorage.GetFromSequenceNumber(EventSequenceId.Log, fromSequenceNumber, modelKey, projection.EventTypes);
+            var cursor = await _eventSequenceStorage.GetFromSequenceNumber(fromSequenceNumber, modelKey, projection.EventTypes);
             var projectedEventsCount = 0;
             var state = GetInitialState(projection, definition);
             while (await cursor.MoveNext())

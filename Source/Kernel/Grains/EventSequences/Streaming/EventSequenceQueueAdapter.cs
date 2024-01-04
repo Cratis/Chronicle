@@ -68,7 +68,6 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                 try
                 {
                     await _eventSequenceStorageProvider().Append(
-                        streamId.GetKeyAsString(),
                         appendedEvent.Metadata.SequenceNumber,
                         appendedEvent.Context.EventSourceId,
                         appendedEvent.Metadata.Type,

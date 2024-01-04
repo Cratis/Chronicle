@@ -63,9 +63,7 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, Job
         if (state.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable &&
             state.Handled == EventCount.NotSet)
         {
-            var lastHandled = await _eventSequenceStorageProvider().GetTailSequenceNumber(
-                    state.EventSequenceId,
-                    state.EventTypes);
+            var lastHandled = await _eventSequenceStorageProvider().GetTailSequenceNumber(state.EventTypes);
 
             if (lastHandled < state.NextEventSequenceNumber)
             {
@@ -77,7 +75,6 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, Job
         if (state.Handled == EventCount.NotSet)
         {
             var count = await _eventSequenceStorageProvider().GetCount(
-                state.EventSequenceId,
                 state.LastHandledEventSequenceNumber,
                 state.EventTypes);
 
