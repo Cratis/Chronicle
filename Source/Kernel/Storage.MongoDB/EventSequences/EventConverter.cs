@@ -6,7 +6,6 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Compliance;
 using Aksio.Cratis.Kernel.Storage.EventTypes;
 using Aksio.Cratis.Kernel.Storage.Identities;
-using Aksio.DependencyInversion;
 
 namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 
@@ -15,30 +14,30 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 /// </summary>
 public class EventConverter : IEventConverter
 {
-    readonly ProviderFor<IEventTypesStorage> _schemaStoreProvider;
-    readonly ProviderFor<IIdentityStorage> _identityStoreProvider;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly TenantId _tenantId;
+    readonly IEventTypesStorage _eventTypesStorage;
+    readonly IIdentityStorage _identityStorage;
     readonly IJsonComplianceManager _jsonComplianceManager;
     readonly Json.IExpandoObjectConverter _expandoObjectConverter;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventConverter"/> class.
     /// </summary>
-    /// <param name="schemaStoreProvider">Provider for <see cref="IEventTypesStorage"/> for event schemas.</param>
-    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStorage"/>.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> for the converter.</param>
+    /// <param name="eventTypesStorage"><see cref="IEventTypesStorage"/> for event schemas.</param>
+    /// <param name="identityStorage"><see cref="IIdentityStorage"/>.</param>
     /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     public EventConverter(
-        ProviderFor<IEventTypesStorage> schemaStoreProvider,
-        ProviderFor<IIdentityStorage> identityStoreProvider,
-        IExecutionContextManager executionContextManager,
+        TenantId tenantId,
+        IEventTypesStorage eventTypesStorage,
+        IIdentityStorage identityStorage,
         IJsonComplianceManager jsonComplianceManager,
         Json.IExpandoObjectConverter expandoObjectConverter)
     {
-        _schemaStoreProvider = schemaStoreProvider;
-        _identityStoreProvider = identityStoreProvider;
-        _executionContextManager = executionContextManager;
+        _tenantId = tenantId;
+        _eventTypesStorage = eventTypesStorage;
+        _identityStorage = identityStorage;
         _jsonComplianceManager = jsonComplianceManager;
         _expandoObjectConverter = expandoObjectConverter;
     }
@@ -48,7 +47,7 @@ public class EventConverter : IEventConverter
     {
         var eventType = new EventType(@event.Type, EventGeneration.First);
         var content = (JsonNode.Parse(@event.Content[EventGeneration.First.ToString()].ToString()) as JsonObject)!;
-        var eventSchema = await _schemaStoreProvider().GetFor(eventType.Id, eventType.Generation);
+        var eventSchema = await _eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.EventSourceId, content);
 
         var releasedContentAsExpandoObject = _expandoObjectConverter.ToExpandoObject(releasedContent, eventSchema.Schema);
@@ -60,10 +59,10 @@ public class EventConverter : IEventConverter
                 @event.SequenceNumber,
                 @event.Occurred,
                 @event.ValidFrom,
-                _executionContextManager.Current.TenantId,
+                _tenantId,
                 @event.CorrelationId,
                 @event.Causation,
-                await _identityStoreProvider().GetFor(@event.CausedBy)),
+                await _identityStorage.GetFor(@event.CausedBy)),
             releasedContentAsExpandoObject);
     }
 }

@@ -26,10 +26,7 @@ public static class SiloBuilderExtensions
     {
         // TODO: Store Grain state in Mongo
         builder.AddMemoryGrainStorage("PubSubStore");
-        builder.ConfigureServices(services =>
-        {
-            services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.TenantConfiguration, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
-        });
+        builder.ConfigureServices(services => services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.TenantConfiguration, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>()));
 
         BsonSerializer.RegisterSerializer(new JsonElementSerializer());
         BsonSerializer.RegisterSerializer(new UriSerializer());

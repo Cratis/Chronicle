@@ -15,10 +15,9 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Projections;
 /// <summary>
 /// Represents a <see cref="IProjectionDefinitionsStorage"/> for projection definitions in MongoDB.
 /// </summary>
-[SingletonPerMicroservice]
 public class ProjectionDefinitionsStorage : IProjectionDefinitionsStorage
 {
-    readonly IEventStoreDatabase _sharedDatabase;
+    readonly IEventStoreDatabase _eventStoreDatabase;
     readonly IJsonProjectionSerializer _projectionSerializer;
 
     /// <summary>
@@ -30,11 +29,11 @@ public class ProjectionDefinitionsStorage : IProjectionDefinitionsStorage
         IEventStoreDatabase sharedDatabase,
         IJsonProjectionSerializer projectionSerializer)
     {
-        _sharedDatabase = sharedDatabase;
+        _eventStoreDatabase = sharedDatabase;
         _projectionSerializer = projectionSerializer;
     }
 
-    IMongoCollection<BsonDocument> Collection => _sharedDatabase.GetCollection<BsonDocument>("projection-definitions");
+    IMongoCollection<BsonDocument> Collection => _eventStoreDatabase.GetCollection<BsonDocument>("projection-definitions");
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()

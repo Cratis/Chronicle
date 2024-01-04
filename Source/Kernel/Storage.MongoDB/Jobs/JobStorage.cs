@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Storage.Jobs;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
-using Aksio.DependencyInversion;
 using Aksio.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -17,18 +16,18 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Jobs;
 /// </summary>
 public class JobStorage : IJobStorage
 {
-    readonly ProviderFor<IEventStoreInstanceDatabase> _databaseProvider;
+    readonly IEventStoreInstanceDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobStorage{TJobState}"/> class.
     /// </summary>
-    /// <param name="databaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/> for persistence.</param>
-    public JobStorage(ProviderFor<IEventStoreInstanceDatabase> databaseProvider)
+    /// <param name="database"><see cref="IEventStoreInstanceDatabase"/> for persistence.</param>
+    public JobStorage(IEventStoreInstanceDatabase database)
     {
-        _databaseProvider = databaseProvider;
+        _database = database;
     }
 
-    IMongoCollection<JobState> Collection => _databaseProvider().GetCollection<JobState>(WellKnownCollectionNames.Jobs);
+    IMongoCollection<JobState> Collection => _database.GetCollection<JobState>(WellKnownCollectionNames.Jobs);
 
     /// <inheritdoc/>
     public async Task<JobState> GetJob(JobId jobId)
@@ -138,18 +137,18 @@ public class JobStorage : IJobStorage
 public class JobStorage<TJobState> : JobStorage, IJobStorage<TJobState>
     where TJobState : JobState
 {
-    readonly ProviderFor<IEventStoreInstanceDatabase> _databaseProvider;
+    readonly IEventStoreInstanceDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobStorage{TJobState}"/> class.
     /// </summary>
-    /// <param name="databaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/> for persistence.</param>
-    public JobStorage(ProviderFor<IEventStoreInstanceDatabase> databaseProvider) : base(databaseProvider)
+    /// <param name="database">Provider for <see cref="IEventStoreInstanceDatabase"/> for persistence.</param>
+    public JobStorage(IEventStoreInstanceDatabase database) : base(database)
     {
-        _databaseProvider = databaseProvider;
+        _database = database;
     }
 
-    IMongoCollection<TJobState> Collection => _databaseProvider().GetCollection<TJobState>(WellKnownCollectionNames.Jobs);
+    IMongoCollection<TJobState> Collection => _database.GetCollection<TJobState>(WellKnownCollectionNames.Jobs);
 
     /// <inheritdoc/>
     public async Task<TJobState?> Read(JobId jobId)

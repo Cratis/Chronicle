@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
 using Aksio.Cratis.Kernel.Storage.Recommendations;
 using Aksio.Cratis.Recommendations;
-using Aksio.DependencyInversion;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.Storage.MongoDB.Recommendations;
@@ -15,19 +14,18 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Recommendations;
 /// </summary>
 public class RecommendationStorage : IRecommendationStorage
 {
-    readonly ProviderFor<IEventStoreInstanceDatabase> _databaseProvider;
+    readonly IEventStoreInstanceDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RecommendationStorage"/> class.
     /// </summary>
-    /// <param name="databaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/>.</param>
-    public RecommendationStorage(
-        ProviderFor<IEventStoreInstanceDatabase> databaseProvider)
+    /// <param name="database">Provider for <see cref="IEventStoreInstanceDatabase"/>.</param>
+    public RecommendationStorage(IEventStoreInstanceDatabase database)
     {
-        _databaseProvider = databaseProvider;
+        _database = database;
     }
 
-    IMongoCollection<RecommendationState> Collection => _databaseProvider().GetCollection<RecommendationState>(WellKnownCollectionNames.Recommendations);
+    IMongoCollection<RecommendationState> Collection => _database.GetCollection<RecommendationState>(WellKnownCollectionNames.Recommendations);
 
     /// <inheritdoc/>
     public async Task<RecommendationState?> Get(RecommendationId recommendationId)

@@ -5,7 +5,6 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
@@ -17,19 +16,18 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
 /// </summary>
 public class ObserverStorage : IObserverStorage
 {
-    readonly ProviderFor<IEventStoreInstanceDatabase> _eventStoreDatabaseProvider;
+    readonly IEventStoreInstanceDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverStorage"/> class.
     /// </summary>
-    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/>.</param>
-    public ObserverStorage(
-        ProviderFor<IEventStoreInstanceDatabase> eventStoreDatabaseProvider)
+    /// <param name="database"><see cref="IEventStoreInstanceDatabase"/>.</param>
+    public ObserverStorage(IEventStoreInstanceDatabase database)
     {
-        _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
+        _database = database;
     }
 
-    IMongoCollection<ObserverState> Collection => _eventStoreDatabaseProvider().GetObserverStateCollection();
+    IMongoCollection<ObserverState> Collection => _database.GetObserverStateCollection();
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<ObserverInformation>> ObserveAll()

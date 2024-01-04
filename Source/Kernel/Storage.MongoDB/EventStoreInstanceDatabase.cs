@@ -12,7 +12,6 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreInstanceDatabase"/>.
 /// </summary>
-[SingletonPerMicroserviceAndTenant]
 public class EventStoreInstanceDatabase : IEventStoreInstanceDatabase
 {
     readonly IMongoDatabase _database;
@@ -21,17 +20,19 @@ public class EventStoreInstanceDatabase : IEventStoreInstanceDatabase
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreInstanceDatabase"/> class.
     /// </summary>
-    /// <param name="executionContext"><see cref="ExecutionContext"/> the database is for.</param>
+    /// <param name="eventStore"><see cref="EventStore"/> the database is for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> the database is for.</param>
     /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
     /// <param name="configuration"><see cref="Kernel.Configuration.Storage"/> configuration.</param>
     public EventStoreInstanceDatabase(
-        ExecutionContext executionContext,
+        EventStore eventStore,
+        TenantId tenantId,
         IMongoDBClientFactory mongoDBClientFactory,
         Kernel.Configuration.Storage configuration)
     {
         var storageTypes = configuration.Microservices
-                                .Get(executionContext.MicroserviceId).Tenants
-                                .Get(executionContext.TenantId);
+                                .Get((string)eventStore).Tenants
+                                .Get(tenantId);
         var eventStoreForTenant = storageTypes.Get(WellKnownStorageTypes.EventStore);
         var url = new MongoUrl(eventStoreForTenant.ConnectionDetails.ToString());
         var settings = MongoClientSettings.FromUrl(url);

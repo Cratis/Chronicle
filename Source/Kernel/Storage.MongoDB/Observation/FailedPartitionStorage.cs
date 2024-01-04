@@ -4,7 +4,6 @@
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
@@ -14,19 +13,18 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
 /// </summary>
 public class FailedPartitionStorage : IFailedPartitionsStorage
 {
-    readonly ProviderFor<IEventStoreInstanceDatabase> _eventStoreDatabaseProvider;
+    readonly IEventStoreInstanceDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverStorage"/> class.
     /// </summary>
-    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/>.</param>
-    public FailedPartitionStorage(
-        ProviderFor<IEventStoreInstanceDatabase> eventStoreDatabaseProvider)
+    /// <param name="database">Provider for <see cref="IEventStoreInstanceDatabase"/>.</param>
+    public FailedPartitionStorage(IEventStoreInstanceDatabase database)
     {
-        _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
+        _database = database;
     }
 
-    IMongoCollection<FailedPartition> Collection => _eventStoreDatabaseProvider().GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
+    IMongoCollection<FailedPartition> Collection => _database.GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<FailedPartition>> ObserveAllFor(ObserverId? observerId = default)

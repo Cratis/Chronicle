@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Storage.Jobs;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
-using Aksio.DependencyInversion;
 using Aksio.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -17,20 +16,20 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Jobs;
 /// </summary>
 public class JobStepStorage : IJobStepStorage
 {
-    readonly ProviderFor<IEventStoreInstanceDatabase> _databaseProvider;
+    readonly IEventStoreInstanceDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobStorage"/> class.
     /// </summary>
-    /// <param name="databaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/> for persistence.</param>
-    public JobStepStorage(ProviderFor<IEventStoreInstanceDatabase> databaseProvider)
+    /// <param name="database"><see cref="IEventStoreInstanceDatabase"/> for persistence.</param>
+    public JobStepStorage(IEventStoreInstanceDatabase database)
     {
-        _databaseProvider = databaseProvider;
+        _database = database;
     }
 
-    IMongoCollection<JobStepState> Collection => _databaseProvider().GetCollection<JobStepState>(WellKnownCollectionNames.JobSteps);
+    IMongoCollection<JobStepState> Collection => _database.GetCollection<JobStepState>(WellKnownCollectionNames.JobSteps);
 
-    IMongoCollection<JobStepState> FailedCollection => _databaseProvider().GetCollection<JobStepState>(WellKnownCollectionNames.FailedJobSteps);
+    IMongoCollection<JobStepState> FailedCollection => _database.GetCollection<JobStepState>(WellKnownCollectionNames.FailedJobSteps);
 
     /// <inheritdoc/>
     public async Task RemoveAllForJob(JobId jobId)
@@ -155,21 +154,21 @@ public class JobStepStorage : IJobStepStorage
 public class JobStepStorage<TJobStepState> : JobStepStorage, IJobStepStorage<TJobStepState>
     where TJobStepState : JobStepState
 {
-    readonly ProviderFor<IEventStoreInstanceDatabase> _databaseProvider;
+    readonly IEventStoreInstanceDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobStorage{TJobState}"/> class.
     /// </summary>
-    /// <param name="databaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/> for persistence.</param>
-    public JobStepStorage(ProviderFor<IEventStoreInstanceDatabase> databaseProvider)
-        : base(databaseProvider)
+    /// <param name="database">Provider for <see cref="IEventStoreInstanceDatabase"/> for persistence.</param>
+    public JobStepStorage(IEventStoreInstanceDatabase database)
+        : base(database)
     {
-        _databaseProvider = databaseProvider;
+        _database = database;
     }
 
-    IMongoCollection<TJobStepState> Collection => _databaseProvider().GetCollection<TJobStepState>(WellKnownCollectionNames.JobSteps);
+    IMongoCollection<TJobStepState> Collection => _database.GetCollection<TJobStepState>(WellKnownCollectionNames.JobSteps);
 
-    IMongoCollection<TJobStepState> FailedCollection => _databaseProvider().GetCollection<TJobStepState>(WellKnownCollectionNames.FailedJobSteps);
+    IMongoCollection<TJobStepState> FailedCollection => _database.GetCollection<TJobStepState>(WellKnownCollectionNames.FailedJobSteps);
 
     /// <inheritdoc/>
     public async Task<TJobStepState?> Read(JobId jobId, JobStepId jobStepId)
