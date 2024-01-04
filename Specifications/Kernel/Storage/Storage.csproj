@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.Kernel.Persistence.Specs</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Kernel.Persistence</RootNamespace>
+        <AssemblyName>Aksio.Cratis.Kernel.Storage.Specs</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Storage</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

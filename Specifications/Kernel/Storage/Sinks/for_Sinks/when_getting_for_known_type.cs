@@ -1,15 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Storage.Sinks;
 using Aksio.Cratis.Sinks;
 
-namespace Aksio.Cratis.Kernel.Engines.Sinks.for_Sinks;
+namespace Aksio.Cratis.Kernel.Storage.Sinks.for_Sinks;
 
 public class when_getting_for_known_type : Specification
 {
     static SinkTypeId type = "df371e5d-b244-48d0-aaad-f298a127dd92";
-    Storage.Sinks.Sinks stores;
+    Sinks stores;
     Mock<ISinkFactory> factory;
     Mock<ISink> store;
     ISink result;

@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Compliance;
 
-namespace Aksio.Cratis.Kernel.Engines.Compliance.Engine.for_CacheEncryptionKeyStore.when_checking_if_has_for;
+namespace Aksio.Cratis.Kernel.Storage.Compliance.for_CacheEncryptionKeyStore.when_checking_if_has_for;
 
 public class and_everything_is_empty : given.a_cache_encryption_key_store
 {

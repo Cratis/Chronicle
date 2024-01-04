@@ -1,13 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Storage.Sinks;
-
-namespace Aksio.Cratis.Kernel.Engines.Sinks.for_Sinks;
+namespace Aksio.Cratis.Kernel.Storage.Sinks.for_Sinks;
 
 public class when_asking_for_unknown_type : Specification
 {
-    Storage.Sinks.Sinks stores;
+    Sinks stores;
     bool result;
 
     void Establish() => stores = new(new KnownInstancesOf<ISinkFactory>(Array.Empty<ISinkFactory>()));

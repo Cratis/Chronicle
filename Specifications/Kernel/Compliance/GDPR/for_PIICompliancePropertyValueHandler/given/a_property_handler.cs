@@ -4,7 +4,7 @@
 using System.Text;
 using Aksio.Cratis.Kernel.Storage.Compliance;
 
-namespace Aksio.Cratis.Kernel.Engines.Compliance.GDPR.for_PIICompliancePropertyValueHandler.given;
+namespace Aksio.Cratis.Kernel.Compliance.GDPR.for_PIICompliancePropertyValueHandler.given;
 
 public class a_property_handler : Specification
 {

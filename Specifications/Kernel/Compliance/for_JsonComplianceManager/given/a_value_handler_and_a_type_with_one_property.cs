@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Schemas;
 
-namespace Aksio.Cratis.Kernel.Engines.Compliance.for_JsonComplianceManager.given;
+namespace Aksio.Cratis.Kernel.Compliance.for_JsonComplianceManager.given;
 
 public class a_value_handler_and_a_type_with_one_property : a_type_with_one_property
 {
