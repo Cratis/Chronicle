@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Kernel.Storage.Jobs;
-using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
@@ -17,29 +17,22 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// </summary>
 public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, JobStepState>, IConsolidateStateForObserver
 {
-    readonly ProviderFor<IObserverStorage> _observerStorageProvider;
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IClusterStorage _clusterStorage;
+    IEventSequenceStorage? _eventSequenceStorage;
     IObserver? _observer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConsolidateStateForObserver"/> class.
     /// </summary>
     /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
-    /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing storage for the cluster.</param>
     public ConsolidateStateForObserver(
         [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
         IPersistentState<JobStepState> state,
-        ProviderFor<IObserverStorage> observerStorageProvider,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        IExecutionContextManager executionContextManager)
+        IClusterStorage clusterStorage)
         : base(state)
     {
-        _observerStorageProvider = observerStorageProvider;
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
-        _executionContextManager = executionContextManager;
+        _clusterStorage = clusterStorage;
     }
 
     /// <inheritdoc/>
@@ -58,12 +51,12 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, Job
 
         var modified = false;
 
-        _executionContextManager.Establish(request.ObserverKey.TenantId, _executionContextManager.Current.CorrelationId, request.ObserverKey.MicroserviceId);
+        var eventSequenceStorage = GetEventSequenceStorage(request.ObserverKey.MicroserviceId, request.ObserverKey.TenantId, request.ObserverKey.EventSequenceId);
 
         if (state.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable &&
             state.Handled == EventCount.NotSet)
         {
-            var lastHandled = await _eventSequenceStorageProvider().GetTailSequenceNumber(state.EventTypes);
+            var lastHandled = await eventSequenceStorage.GetTailSequenceNumber(state.EventTypes);
 
             if (lastHandled < state.NextEventSequenceNumber)
             {
@@ -74,7 +67,7 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, Job
 
         if (state.Handled == EventCount.NotSet)
         {
-            var count = await _eventSequenceStorageProvider().GetCount(
+            var count = await eventSequenceStorage.GetCount(
                 state.LastHandledEventSequenceNumber,
                 state.EventTypes);
 
@@ -96,4 +89,6 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, Job
 
         return JobStepResult.Succeeded();
     }
+
+    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _eventSequenceStorage ??= _clusterStorage.GetEventStore((string)microserviceId).GetInstance(tenantId).GetEventSequence(eventSequenceId);
 }
