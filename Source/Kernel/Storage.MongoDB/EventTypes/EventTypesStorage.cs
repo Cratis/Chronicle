@@ -15,34 +15,33 @@ namespace Aksio.Cratis.Events.MongoDB.EventTypes;
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypesStorage"/>.
 /// </summary>
-[SingletonPerMicroservice]
 public class EventTypesStorage : IEventTypesStorage
 {
+    readonly EventStore _eventStore;
     readonly IEventStoreDatabase _sharedDatabase;
-    readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<EventTypesStorage> _logger;
     Dictionary<EventTypeId, Dictionary<EventGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypesStorage"/> class.
     /// </summary>
+    /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
     /// <param name="sharedDatabase">The <see cref="IEventStoreDatabase"/>.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="logger">Logger for logging.</param>
     public EventTypesStorage(
+        EventStore eventStore,
         IEventStoreDatabase sharedDatabase,
-        IExecutionContextManager executionContextManager,
         ILogger<EventTypesStorage> logger)
     {
+        _eventStore = eventStore;
         _sharedDatabase = sharedDatabase;
-        _executionContextManager = executionContextManager;
         _logger = logger;
     }
 
     /// <inheritdoc/>
     public async Task Populate()
     {
-        _logger.Populating(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId);
+        _logger.Populating(_eventStore);
 
         var findResult = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var allSchemas = findResult.ToList();
@@ -84,7 +83,7 @@ public class EventTypesStorage : IEventTypesStorage
         }
 
         schema.EnsureFlattenedProperties();
-        _logger.Registering(friendlyName, type.Id, type.Generation, _executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId);
+        _logger.Registering(friendlyName, type.Id, type.Generation, _eventStore);
 
         var mongoEventSchema = eventSchema.ToMongoDB();
         _schemasByTypeAndGeneration[type.Id][type.Generation] = eventSchema;
@@ -133,8 +132,7 @@ public class EventTypesStorage : IEventTypesStorage
         if (schemas.Count == 0)
         {
             throw new MissingEventSchemaForEventType(
-                _executionContextManager.Current.MicroserviceId,
-                _executionContextManager.Current.TenantId,
+                _eventStore,
                 type,
                 generation);
         }

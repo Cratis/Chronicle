@@ -13,6 +13,11 @@ namespace Aksio.Cratis.Kernel.Storage;
 public interface IEventStoreStorage
 {
     /// <summary>
+    /// Gets the event store the storage represents.
+    /// </summary>
+    EventStore EventStore { get; }
+
+    /// <summary>
     /// Gets the <see cref="IIdentityStorage"/> for the event store.
     /// </summary>
     IIdentityStorage Identities { get; }
@@ -20,7 +25,7 @@ public interface IEventStoreStorage
     /// <summary>
     /// Gets the <see cref="IEventTypesStorage"/> for the event store.
     /// </summary>
-    IEventTypesStorage Schemas { get; }
+    IEventTypesStorage EventTypes { get; }
 
     /// <summary>
     /// Gets the <see cref="IProjectionDefinitionsStorage"/> for the event store.
