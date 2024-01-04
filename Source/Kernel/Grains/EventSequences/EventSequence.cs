@@ -153,7 +153,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         Identity causedBy,
         DateTimeOffset? validFrom = default)
     {
-        var updateSequenceNumber = false;
+        bool updateSequenceNumber;
         var eventName = "[N/A]";
         try
         {

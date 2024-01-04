@@ -14,7 +14,6 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Projections;
 /// <summary>
 /// Represents a <see cref="IProjectionDefinitionsStorage"/> for projection definitions in MongoDB.
 /// </summary>
-[SingletonPerMicroservice]
 public class ProjectionPipelineDefinitionsStorage : IProjectionPipelineDefinitionsStorage
 {
     readonly IJsonProjectionPipelineSerializer _projectionPipelineSerializer;

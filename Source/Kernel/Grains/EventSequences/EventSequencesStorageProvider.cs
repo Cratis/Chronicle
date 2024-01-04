@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Kernel.Storage.EventTypes;
-using Aksio.DependencyInversion;
 using Orleans.Runtime;
 using Orleans.Storage;
 
@@ -15,24 +15,15 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 /// </summary>
 public class EventSequencesStorageProvider : IGrainStorage
 {
-    readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IEventTypesStorage> _eventTypesStorageProvider;
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
+    readonly IClusterStorage _clusterStorage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequencesStorageProvider"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="eventTypesStorageProvider">Provider for <see cref="IEventTypesStorage"/>.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    public EventSequencesStorageProvider(
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IEventTypesStorage> eventTypesStorageProvider,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
+    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing storage for the cluster.</param>
+    public EventSequencesStorageProvider(IClusterStorage clusterStorage)
     {
-        _executionContextManager = executionContextManager;
-        _eventTypesStorageProvider = eventTypesStorageProvider;
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
+        _clusterStorage = clusterStorage;
     }
 
     /// <inheritdoc/>
@@ -44,9 +35,11 @@ public class EventSequencesStorageProvider : IGrainStorage
         var actualGrainState = (grainState as IGrainState<EventSequenceState>)!;
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
         var key = EventSequenceKey.Parse(keyAsString!);
-        _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-        actualGrainState.State = await _eventSequenceStorageProvider().GetState();
-        await HandleTailSequenceNumbersForEventTypes(actualGrainState);
+
+        var eventTypesStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).EventTypes;
+        var eventSequenceStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetInstance(key.TenantId).GetEventSequence(eventSequenceId);
+        actualGrainState.State = await eventSequenceStorage.GetState();
+        await HandleTailSequenceNumbersForEventTypes(eventTypesStorage, eventSequenceStorage, actualGrainState);
     }
 
     /// <inheritdoc/>
@@ -54,23 +47,23 @@ public class EventSequencesStorageProvider : IGrainStorage
     {
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
         var key = EventSequenceKey.Parse(keyAsString!);
-        _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
         var eventSequenceState = (grainState.State as EventSequenceState)!;
-        await _eventSequenceStorageProvider().SaveState(eventSequenceState);
+        var eventSequenceStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetInstance(key.TenantId).GetEventSequence(eventSequenceId);
+        await eventSequenceStorage.SaveState(eventSequenceState);
     }
 
-    async Task HandleTailSequenceNumbersForEventTypes(IGrainState<EventSequenceState> actualGrainState)
+    async Task HandleTailSequenceNumbersForEventTypes(IEventTypesStorage eventTypesStorage, IEventSequenceStorage eventSequenceStorage, IGrainState<EventSequenceState> actualGrainState)
     {
         if (actualGrainState.State.SequenceNumber > EventSequenceNumber.First &&
             actualGrainState.State.TailSequenceNumberPerEventType.Count == 0)
         {
-            var eventSchemas = await _eventTypesStorageProvider().GetLatestForAllEventTypes();
+            var eventSchemas = await eventTypesStorage.GetLatestForAllEventTypes();
             var eventTypes = eventSchemas.Select(_ => _.Type).ToArray();
-            var sequenceNumbers = await _eventSequenceStorageProvider().GetTailSequenceNumbersForEventTypes(eventTypes);
+            var sequenceNumbers = await eventSequenceStorage.GetTailSequenceNumbersForEventTypes(eventTypes);
             actualGrainState.State.TailSequenceNumberPerEventType = sequenceNumbers
                                                                         .Where(_ => _.Value != EventSequenceNumber.Unavailable)
                                                                         .ToDictionary(_ => _.Key.Id, _ => _.Value);
-            await _eventSequenceStorageProvider().SaveState(actualGrainState.State);
+            await eventSequenceStorage.SaveState(actualGrainState.State);
         }
     }
 }

@@ -10,7 +10,6 @@ namespace Aksio.Cratis.MongoDB;
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreDatabase"/>.
 /// </summary>
-[SingletonPerMicroservice]
 public class EventStoreDatabase : IEventStoreDatabase
 {
     readonly IMongoDatabase _database;
