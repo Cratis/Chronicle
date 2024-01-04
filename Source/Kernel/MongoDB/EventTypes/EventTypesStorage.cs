@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.EventTypes;
 using Aksio.Cratis.Kernel.MongoDB;
-using Aksio.Cratis.Kernel.Persistence.EventTypes;
+using Aksio.Cratis.Kernel.Storage.EventTypes;
 using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;

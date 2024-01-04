@@ -5,8 +5,8 @@ using System.Collections.Immutable;
 using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
-using Aksio.Cratis.Kernel.Persistence.Jobs;
-using Aksio.Cratis.Kernel.Persistence.Observation;
+using Aksio.Cratis.Kernel.Storage.Jobs;
+using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States;

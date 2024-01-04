@@ -6,26 +6,26 @@ using Aksio.Cratis.Events;
 namespace Aksio.Cratis.Kernel.MongoDB;
 
 /// <summary>
-/// Extension methods for working with <see cref="Persistence.EventSequences.EventSequenceState"/>.
+/// Extension methods for working with <see cref="Storage.EventSequences.EventSequenceState"/>.
 /// </summary>
 public static class EventSequenceStateExtensions
 {
     /// <summary>
     /// Convert to <see cref="EventSequenceState"/>.
     /// </summary>
-    /// <param name="state"><see cref="Persistence.EventSequences.EventSequenceState"/> to convert.</param>
+    /// <param name="state"><see cref="Storage.EventSequences.EventSequenceState"/> to convert.</param>
     /// <returns>Converted <see cref="EventSequenceState"/>.</returns>
-    public static EventSequenceState ToMongoDB(this Persistence.EventSequences.EventSequenceState state)
+    public static EventSequenceState ToMongoDB(this Storage.EventSequences.EventSequenceState state)
         => new(
             state.SequenceNumber,
             state.TailSequenceNumberPerEventType?.ToDictionary(_ => _.Key.Value.ToString(), _ => _.Value) ?? new Dictionary<string, EventSequenceNumber>());
 
     /// <summary>
-    /// Convert to <see cref="Persistence.EventSequences.EventSequenceState"/>.
+    /// Convert to <see cref="Storage.EventSequences.EventSequenceState"/>.
     /// </summary>
     /// <param name="state"><see cref="EventSequenceState"/> to convert.</param>
-    /// <returns>Converted <see cref="Persistence.EventSequences.EventSequenceState"/>.</returns>
-    public static Persistence.EventSequences.EventSequenceState ToKernel(this EventSequenceState state) =>
+    /// <returns>Converted <see cref="Storage.EventSequences.EventSequenceState"/>.</returns>
+    public static Storage.EventSequences.EventSequenceState ToKernel(this EventSequenceState state) =>
         new()
         {
             SequenceNumber = state.SequenceNumber,

@@ -18,8 +18,8 @@ public interface IConfiguration : IGrainWithGuidKey
     Task<IEnumerable<TenantInfo>> GetTenants();
 
     /// <summary>
-    /// Gets the <see cref="Storage"/> configuration.
+    /// Gets the <see cref="Kernel.Configuration.Storage"/> configuration.
     /// </summary>
-    /// <returns><see cref="Storage"/> configuration instance.</returns>
+    /// <returns><see cref="Kernel.Configuration.Storage"/> configuration instance.</returns>
     Task<StorageForMicroservice> GetStorage();
 }

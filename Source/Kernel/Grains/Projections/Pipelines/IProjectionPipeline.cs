@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Persistence.Sinks;
+using Aksio.Cratis.Kernel.Storage.Sinks;
 using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections.Pipelines;

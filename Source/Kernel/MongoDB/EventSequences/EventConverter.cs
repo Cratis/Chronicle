@@ -4,8 +4,8 @@
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Compliance;
-using Aksio.Cratis.Kernel.Persistence.EventTypes;
-using Aksio.Cratis.Kernel.Persistence.Identities;
+using Aksio.Cratis.Kernel.Storage.EventTypes;
+using Aksio.Cratis.Kernel.Storage.Identities;
 using Aksio.DependencyInversion;
 
 namespace Aksio.Cratis.Kernel.MongoDB;

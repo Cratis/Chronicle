@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.MongoDB.Identities;
-using Aksio.Cratis.Kernel.Persistence;
-using Aksio.Cratis.Kernel.Persistence.EventTypes;
-using Aksio.Cratis.Kernel.Persistence.Identities;
-using Aksio.Cratis.Kernel.Persistence.Projections;
+using Aksio.Cratis.Kernel.Storage;
+using Aksio.Cratis.Kernel.Storage.EventTypes;
+using Aksio.Cratis.Kernel.Storage.Identities;
+using Aksio.Cratis.Kernel.Storage.Projections;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.MongoDB;

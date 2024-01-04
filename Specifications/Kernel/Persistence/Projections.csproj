@@ -5,7 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../../Source/Kernel/Persistence/Persistence.csproj"/>
+        <ProjectReference Include="../../../Source/Kernel/Storage/Storage.csproj"/>
         <ProjectReference Include="../../../Source/Clients/Specifications/Specifications.csproj"/>
     </ItemGroup>
 

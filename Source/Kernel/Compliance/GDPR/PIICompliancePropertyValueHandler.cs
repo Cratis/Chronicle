@@ -4,7 +4,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Kernel.Persistence.Compliance;
+using Aksio.Cratis.Kernel.Storage.Compliance;
 
 namespace Aksio.Cratis.Kernel.Compliance.GDPR;
 

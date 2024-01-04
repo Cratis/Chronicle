@@ -2,8 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Kernel.Persistence.Observation;
+using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -24,11 +23,11 @@ public class EventStoreInstanceDatabase : IEventStoreInstanceDatabase
     /// </summary>
     /// <param name="executionContext"><see cref="ExecutionContext"/> the database is for.</param>
     /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
-    /// <param name="configuration"><see cref="Storage"/> configuration.</param>
+    /// <param name="configuration"><see cref="Configuration.Storage"/> configuration.</param>
     public EventStoreInstanceDatabase(
         ExecutionContext executionContext,
         IMongoDBClientFactory mongoDBClientFactory,
-        Storage configuration)
+        Configuration.Storage configuration)
     {
         var storageTypes = configuration.Microservices
                                 .Get(executionContext.MicroserviceId).Tenants

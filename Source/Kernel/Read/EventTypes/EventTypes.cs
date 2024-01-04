@@ -4,7 +4,7 @@
 using System.Text.Json;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventTypes;
-using Aksio.Cratis.Kernel.Persistence.EventTypes;
+using Aksio.Cratis.Kernel.Storage.EventTypes;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 

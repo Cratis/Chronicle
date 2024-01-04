@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Cryptography;
-using Aksio.Cratis.Kernel.Persistence.Compliance;
+using Aksio.Cratis.Kernel.Storage.Compliance;
 
 namespace Aksio.Cratis.Kernel.Compliance;
 

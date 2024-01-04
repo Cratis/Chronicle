@@ -18,7 +18,7 @@ public class Configuration : Grain, IConfiguration
     /// Initializes a new instance of the <see cref="Configuration"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting the current execution context.</param>
-    /// <param name="kernelConfiguration"><see cref="Storage"/> configuration.</param>
+    /// <param name="kernelConfiguration"><see cref="Kernel.Configuration.Storage"/> configuration.</param>
     public Configuration(IExecutionContextManager executionContextManager, KernelConfiguration kernelConfiguration)
     {
         _executionContextManager = executionContextManager;

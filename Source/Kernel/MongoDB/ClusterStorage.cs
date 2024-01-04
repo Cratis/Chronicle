@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Kernel.Persistence;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.MongoDB;
 using Microsoft.Extensions.Logging;
 

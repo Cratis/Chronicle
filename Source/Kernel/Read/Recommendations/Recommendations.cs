@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Applications.Queries;
-using Aksio.Cratis.Kernel.Persistence.Recommendations;
+using Aksio.Cratis.Kernel.Storage.Recommendations;
 using Aksio.Cratis.Recommendations;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;

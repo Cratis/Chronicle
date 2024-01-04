@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Kernel.Persistence.Sinks;
+using Aksio.Cratis.Kernel.Storage.Sinks;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Sinks;

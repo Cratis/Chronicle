@@ -5,7 +5,7 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Persistence.Sinks;
+using Aksio.Cratis.Kernel.Storage.Sinks;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Sinks;
 using MongoDB.Bson;

@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
-using Aksio.Cratis.Kernel.Persistence.Jobs;
+using Aksio.Cratis.Kernel.Storage.Jobs;
 using Aksio.DependencyInversion;
 using Aksio.Strings;
 using MongoDB.Bson;

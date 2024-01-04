@@ -3,8 +3,8 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.EventSequences;
-using Aksio.Cratis.Kernel.Persistence.EventSequences;
-using Aksio.Cratis.Kernel.Persistence.Identities;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Aksio.Cratis.Kernel.Storage.Identities;
 using Aksio.DependencyInversion;
 using Orleans.Runtime;
 using Orleans.Streams;

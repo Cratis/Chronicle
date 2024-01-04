@@ -3,7 +3,7 @@
 
 using System.Collections.Concurrent;
 using Aksio.Cratis.Changes;
-using Aksio.Cratis.Kernel.Persistence.Sinks;
+using Aksio.Cratis.Kernel.Storage.Sinks;
 using Aksio.Cratis.Observation.Reducers;
 using Aksio.Cratis.Projections;
 using NJsonSchema;

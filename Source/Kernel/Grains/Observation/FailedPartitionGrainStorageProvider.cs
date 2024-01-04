@@ -7,7 +7,7 @@ using Aksio.DependencyInversion;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Aksio.Cratis.Kernel.Persistence.Observation;
+namespace Aksio.Cratis.Kernel.Storage.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling <see cref="FailedPartition" /> storage.

@@ -7,7 +7,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Common/Common.csproj" />
-        <ProjectReference Include="../Persistence/Persistence.csproj" />
+        <ProjectReference Include="../Storage/Storage.csproj" />
     </ItemGroup>
 
     <ItemGroup>

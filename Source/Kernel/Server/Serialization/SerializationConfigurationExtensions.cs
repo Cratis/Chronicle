@@ -7,7 +7,7 @@ using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Persistence.Jobs;
+using Aksio.Cratis.Kernel.Storage.Jobs;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Json;

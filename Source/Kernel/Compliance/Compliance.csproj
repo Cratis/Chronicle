@@ -6,6 +6,6 @@
 
     <ItemGroup>
         <ProjectReference Include="../Shared/Shared.csproj"/>
-        <ProjectReference Include="../Persistence/Persistence.csproj"/>
+        <ProjectReference Include="../Storage/Storage.csproj"/>
     </ItemGroup>
 </Project>

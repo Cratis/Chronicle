@@ -77,7 +77,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "Benchmarks\Be
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grains.Interfaces", "Specifications\Kernel\Grains.Interfaces\Grains.Interfaces.csproj", "{9D12ECE0-763A-4743-98D5-561A348ADFD3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Persistence", "Source\Kernel\Persistence\Persistence.csproj", "{540799D7-A383-4DCD-B7F4-96FD4056D7A1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Persistence", "Source\Kernel\Storage\Storage.csproj", "{540799D7-A383-4DCD-B7F4-96FD4056D7A1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Integration", "Integration", "{25011E0A-4967-4A8E-BCC7-48FE8F8453C4}"
 EndProject

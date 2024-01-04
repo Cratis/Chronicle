@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Persistence.Keys;
+using Aksio.Cratis.Kernel.Storage.Keys;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Keys;

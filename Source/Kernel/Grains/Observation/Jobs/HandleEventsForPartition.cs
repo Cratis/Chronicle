@@ -4,8 +4,8 @@
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Persistence.EventSequences;
-using Aksio.Cratis.Kernel.Persistence.Jobs;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Aksio.Cratis.Kernel.Storage.Jobs;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
 using Orleans.Runtime;

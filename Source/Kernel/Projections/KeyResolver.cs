@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Persistence.EventSequences;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
 
 namespace Aksio.Cratis.Kernel.Projections;
 

@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Grains.Workers;
-using Aksio.Cratis.Kernel.Persistence.Jobs;
+using Aksio.Cratis.Kernel.Storage.Jobs;
 using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Jobs;

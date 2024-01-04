@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Kernel.Compliance;
-using Aksio.Cratis.Kernel.Persistence.Compliance;
+using Aksio.Cratis.Kernel.Storage.Compliance;
 
 namespace Aksio.Cratis.Kernel.Grains.Compliance.GDPR;
 

@@ -5,7 +5,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
-using Aksio.Cratis.Kernel.Persistence.Observation;
+using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
 

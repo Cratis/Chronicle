@@ -32,17 +32,17 @@ public class TenantConfigurationStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var actualGrainState = (grainState as IGrainState<Persistence.Configuration.Tenants.TenantConfigurationState>)!;
+        var actualGrainState = (grainState as IGrainState<Storage.Configuration.Tenants.TenantConfigurationState>)!;
         var tenantId = (TenantId)grainId.GetGuidKey();
         var cursor = await Collection.FindAsync(_ => _.Id == tenantId).ConfigureAwait(false);
         var state = await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
         if (state is not null)
         {
-            actualGrainState.State = new Persistence.Configuration.Tenants.TenantConfigurationState(state.Configuration.ToDictionary(_ => _.Key, _ => _.Value));
+            actualGrainState.State = new Storage.Configuration.Tenants.TenantConfigurationState(state.Configuration.ToDictionary(_ => _.Key, _ => _.Value));
         }
         else
         {
-            actualGrainState.State = Persistence.Configuration.Tenants.TenantConfigurationState.Empty();
+            actualGrainState.State = Storage.Configuration.Tenants.TenantConfigurationState.Empty();
         }
     }
 
@@ -50,7 +50,7 @@ public class TenantConfigurationStorageProvider : IGrainStorage
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var tenantId = (TenantId)grainId.GetGuidKey();
-        var state = (grainState.State as Persistence.Configuration.Tenants.TenantConfigurationState)!;
+        var state = (grainState.State as Storage.Configuration.Tenants.TenantConfigurationState)!;
         var mongoDBState = new TenantConfigurationState(tenantId, state.Select(_ => new TenantConfigurationKeyValuePair(_.Key, _.Value)));
         await Collection.ReplaceOneAsync(
             _ => _.Id == tenantId,

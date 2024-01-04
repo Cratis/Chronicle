@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Persistence.Jobs;
+using Aksio.Cratis.Kernel.Storage.Jobs;
 
 namespace Aksio.Cratis.Kernel.Server.Serialization;
 

@@ -4,7 +4,7 @@
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Grains.Recommendations;
-using Aksio.Cratis.Kernel.Persistence.Observation;
+using Aksio.Cratis.Kernel.Storage.Observation;
 using Orleans.Runtime;
 using Orleans.Storage;
 

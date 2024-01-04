@@ -3,7 +3,7 @@
 
 using Aksio.Applications.Queries;
 using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Persistence.Jobs;
+using Aksio.Cratis.Kernel.Storage.Jobs;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 
