@@ -16,6 +16,21 @@ namespace Aksio.Cratis.Kernel.Storage.EventSequences;
 public interface IEventSequenceStorage
 {
     /// <summary>
+    /// Get the state of an event sequence.
+    /// </summary>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> to get for.</param>
+    /// <returns><see cref="EventSequenceState"/> for the event sequence.</returns>
+    Task<EventSequenceState> GetState(EventSequenceId eventSequenceId);
+
+    /// <summary>
+    /// Save state for an event sequence.
+    /// </summary>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> to save for.</param>
+    /// <param name="state">The <see cref="EventSequenceState"/> to save.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SaveState(EventSequenceId eventSequenceId, EventSequenceState state);
+
+    /// <summary>
     /// Get count of events in an event sequence.
     /// </summary>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to get count for.</param>

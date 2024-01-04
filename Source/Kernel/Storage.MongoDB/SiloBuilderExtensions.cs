@@ -28,7 +28,6 @@ public static class SiloBuilderExtensions
         builder.AddMemoryGrainStorage("PubSubStore");
         builder.ConfigureServices(services =>
         {
-            services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.EventSequences, (serviceProvider, _) => serviceProvider.GetRequiredService<EventSequencesStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.TenantConfiguration, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
         });
 

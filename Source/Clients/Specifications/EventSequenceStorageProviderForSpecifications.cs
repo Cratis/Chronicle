@@ -128,4 +128,10 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
 
     /// <inheritdoc/>
     public Task<TailEventSequenceNumbers> GetTailSequenceNumbers(EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<EventSequenceState> GetState(EventSequenceId eventSequenceId) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task SaveState(EventSequenceId eventSequenceId, EventSequenceState state) => throw new NotImplementedException();
 }

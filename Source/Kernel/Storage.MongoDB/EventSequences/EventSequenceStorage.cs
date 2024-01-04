@@ -63,6 +63,25 @@ public class EventSequenceStorage : IEventSequenceStorage
     }
 
     /// <inheritdoc/>
+    public async Task<Storage.EventSequences.EventSequenceState> GetState(EventSequenceId eventSequenceId)
+    {
+        var collection = _eventStoreDatabaseProvider().GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
+        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
+        var cursor = await collection.FindAsync(filter).ConfigureAwait(false);
+        var state = await cursor.FirstOrDefaultAsync();
+        return state.ToKernel() ?? new Storage.EventSequences.EventSequenceState();
+    }
+
+    /// <inheritdoc/>
+    public async Task SaveState(EventSequenceId eventSequenceId, Storage.EventSequences.EventSequenceState state)
+    {
+        var collection = _eventStoreDatabaseProvider().GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
+        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
+
+        await collection.ReplaceOneAsync(filter, state.ToMongoDB(), new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     public async Task<EventCount> GetCount(
         EventSequenceId eventSequenceId,
         EventSequenceNumber? lastEventSequenceNumber = null,
