@@ -29,7 +29,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grains", "Source\Kernel\Gra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grains.Interfaces", "Source\Kernel\Grains.Interfaces\Grains.Interfaces.csproj", "{6CF4E8F5-0676-4AB0-AD11-0959D58808EC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDB", "Source\Kernel\MongoDB\MongoDB.csproj", "{CE28CE1B-5042-4926-A411-7B33D21F0BB9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Storage.MongoDB", "Source\Kernel\Storage.MongoDB\Storage.MongoDB.csproj", "{CE28CE1B-5042-4926-A411-7B33D21F0BB9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans", "Source\Kernel\Orleans\Orleans.csproj", "{6880135B-1294-4772-9F71-AB9D2901737B}"
 EndProject
@@ -67,7 +67,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore", "Specification
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Specifications\Infrastructure\Infrastructure.csproj", "{7A418228-D4B6-49BF-AD26-7FA2FE82A578}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDB.Kernel", "Specifications\Kernel\MongoDB\MongoDB.csproj", "{663BAF26-8EA4-4D4D-9782-A96CF52D8491}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Storage.MongoDB", "Specifications\Kernel\Storage.MongoDB\Storage.MongoDB.csproj", "{663BAF26-8EA4-4D4D-9782-A96CF52D8491}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Source\Infrastructure\Infrastructure.csproj", "{180308E8-D5D4-4B5F-8558-FAA1B4246F70}"
 EndProject

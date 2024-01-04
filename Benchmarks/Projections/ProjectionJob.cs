@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Kernel.MongoDB;
+using Aksio.Cratis.Kernel.Storage.MongoDB;
 using Aksio.Cratis.Observation;
 using Benchmark.Model;
 
