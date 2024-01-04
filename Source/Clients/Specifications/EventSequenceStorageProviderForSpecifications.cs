@@ -7,6 +7,7 @@ using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
 
 namespace Aksio.Cratis.Specifications;
 

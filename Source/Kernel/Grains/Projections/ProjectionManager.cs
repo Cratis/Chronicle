@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
 using Aksio.Cratis.Kernel.Projections;
+using Aksio.Cratis.Kernel.Projections.Pipelines;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Microsoft.Extensions.Logging;

@@ -7,7 +7,7 @@ using Aksio.Collections;
 using Aksio.Cratis;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Kernel.Schemas;
+using Aksio.Cratis.Kernel.Storage.EventTypes;
 using Aksio.Cratis.Schemas;
 using Aksio.Execution;
 using Aksio.MongoDB;
@@ -21,7 +21,7 @@ public abstract class BenchmarkJob
     protected IGrainFactory GrainFactory { get; private set; } = null!;
     protected IExecutionContextManager? ExecutionContextManager { get; private set; }
     protected IEventSerializer? EventSerializer { get; private set; }
-    protected ISchemaStore? SchemaStore { get; private set; }
+    protected IEventTypesStorage? EventTypesStorage { get; private set; }
     protected IJsonSchemaGenerator? SchemaGenerator { get; private set; }
     protected virtual IEnumerable<Type> EventTypes => Enumerable.Empty<Type>();
 
@@ -36,7 +36,7 @@ public abstract class BenchmarkJob
         GrainFactory = GlobalVariables.ServiceProvider.GetRequiredService<IGrainFactory>();
         ExecutionContextManager = GlobalVariables.ServiceProvider.GetRequiredService<IExecutionContextManager>();
         EventSerializer = GlobalVariables.ServiceProvider.GetRequiredService<IEventSerializer>();
-        SchemaStore = GlobalVariables.ServiceProvider.GetRequiredService<ISchemaStore>();
+        EventTypesStorage = GlobalVariables.ServiceProvider.GetRequiredService<IEventTypesStorage>();
         SchemaGenerator = GlobalVariables.ServiceProvider.GetRequiredService<IJsonSchemaGenerator>();
 
         var configuration = GlobalVariables.ServiceProvider.GetRequiredService<Storage>();
@@ -54,7 +54,7 @@ public abstract class BenchmarkJob
         foreach (var eventType in EventTypes)
         {
             var eventTypeAttribute = eventType.GetCustomAttribute<EventTypeAttribute>()!;
-            SchemaStore.Register(eventTypeAttribute.Type, eventType.Name, SchemaGenerator.Generate(eventType));
+            EventTypesStorage.Register(eventTypeAttribute.Type, eventType.Name, SchemaGenerator.Generate(eventType));
         }
 
         Setup();

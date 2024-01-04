@@ -3,16 +3,16 @@
 
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Compliance;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Engines.Changes;
 using Aksio.Cratis.Kernel.Projections;
 using Aksio.Cratis.Kernel.Projections.Expressions;
 using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Projections.Expressions.Keys;
 using Aksio.Cratis.Kernel.Projections.Pipelines;
-using Aksio.Cratis.Kernel.Engines.Sinks;
-using Aksio.Cratis.Kernel.Engines.Sinks.InMemory;
+using Aksio.Cratis.Kernel.Storage.Changes;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Aksio.Cratis.Kernel.Storage.Sinks;
+using Aksio.Cratis.Kernel.Storage.Sinks.InMemory;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Schemas;
 using Aksio.Json;

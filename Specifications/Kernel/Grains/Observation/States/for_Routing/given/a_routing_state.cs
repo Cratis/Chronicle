@@ -4,6 +4,8 @@
 using System.Collections.Immutable;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Aksio.Cratis.Kernel.Storage.Observation;
 using Microsoft.Extensions.Logging;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
 

@@ -7,6 +7,7 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Keys;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Projections.for_KeyResolvers;

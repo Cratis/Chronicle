@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Keys;
+using Aksio.Cratis.Kernel.Storage.Keys;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;

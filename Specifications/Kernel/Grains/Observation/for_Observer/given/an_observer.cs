@@ -4,9 +4,10 @@
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.Cratis.Specifications;
 using Aksio.Json;
 using Microsoft.Extensions.Logging;

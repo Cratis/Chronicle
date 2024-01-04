@@ -6,6 +6,8 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
+using Aksio.Cratis.Kernel.Storage.Jobs;
+using Aksio.Cratis.Kernel.Storage.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Replay.given;

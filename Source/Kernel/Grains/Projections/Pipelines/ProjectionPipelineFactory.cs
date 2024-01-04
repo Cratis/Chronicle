@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Changes;
+using Aksio.Cratis.Kernel.Projections.Pipelines;
 using Aksio.Cratis.Kernel.Storage.Changes;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Kernel.Storage.Sinks;
