@@ -19,7 +19,7 @@ public class JobStorage : IJobStorage
     readonly IEventStoreNamespaceDatabase _database;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="JobStorage{TJobState}"/> class.
+    /// Initializes a new instance of the <see cref="JobStorage"/> class.
     /// </summary>
     /// <param name="database"><see cref="IEventStoreNamespaceDatabase"/> for persistence.</param>
     public JobStorage(IEventStoreNamespaceDatabase database)
@@ -62,13 +62,49 @@ public class JobStorage : IJobStorage
     public async Task Remove(JobId jobId) =>
         await Collection.DeleteOneAsync(GetIdFilter<JobState>(jobId)).ConfigureAwait(false);
 
-    /// <summary>
-    /// Get the filter for a specific <see cref="JobId"/>.
-    /// </summary>
-    /// <param name="id"><see cref="JobId"/> to get filter for.</param>
-    /// <typeparam name="TDocument">Type of document.</typeparam>
-    /// <returns>The <see cref="FilterDefinition{T}"/> to be used with a query.</returns>
-    protected FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid id) => Builders<TDocument>.Filter.Eq(new StringFieldDefinition<TDocument, Guid>("_id"), id);
+    /// <inheritdoc/>
+    public async Task<TJobState?> Read<TJobState>(JobId jobId)
+    {
+        ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobState));
+        var cursor = await GetTypedCollection<TJobState>().FindAsync(GetIdFilter<TJobState>(jobId)).ConfigureAwait(false);
+        return cursor.FirstOrDefault();
+    }
+
+    /// <inheritdoc/>
+    public async Task Save<TJobState>(JobId jobId, TJobState state)
+    {
+        ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobState));
+        await GetTypedCollection<TJobState>().ReplaceOneAsync(GetIdFilter<TJobState>(jobId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IImmutableList<TJobState>> GetJobs<TJobType, TJobState>(params JobStatus[] statuses)
+    {
+        ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobState));
+        var jobType = (JobType)typeof(TJobType);
+        var jobTypeFilter = Builders<JobState>.Filter.Eq(_ => _.Type, jobType);
+        var statusFilters = statuses.Select(status => Builders<JobState>.Filter.Eq(_ => _.Status, status));
+
+        var filter = statuses.Length == 0 ?
+                                jobTypeFilter :
+                                Builders<JobState>.Filter.And(jobTypeFilter, Builders<JobState>.Filter.Or(statusFilters));
+        var filterAsBsonDocument = filter.ToBsonDocument();
+        var cursor = await GetTypedCollection<TJobState>().FindAsync(filterAsBsonDocument).ConfigureAwait(false);
+        var jobs = await cursor.ToListAsync().ConfigureAwait(false);
+        return jobs.ToImmutableList();
+    }
+
+    void ThrowIfTypeDoesNotDeriveFromJobState(Type type)
+    {
+        if (!typeof(JobState).IsAssignableFrom(type))
+        {
+            throw new InvalidJobStateType(type);
+        }
+    }
+
+    FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid id) => Builders<TDocument>.Filter.Eq(new StringFieldDefinition<TDocument, Guid>("_id"), id);
+
+    IMongoCollection<TJobState> GetTypedCollection<TJobState>() => _database.GetCollection<TJobState>(WellKnownCollectionNames.Jobs);
 
     async Task<List<JobState>> GetJobsRaw(params JobStatus[] statuses)
     {
@@ -127,53 +163,5 @@ public class JobStorage : IJobStorage
                 jobs.Add(jobState);
             }
         }
-    }
-}
-
-/// <summary>
-/// Represents an implementation of <see cref="IJobStorage{TJobState}"/> for MongoDB.
-/// </summary>
-/// <typeparam name="TJobState">Type of <see cref="JobState"/> to work with.</typeparam>
-public class JobStorage<TJobState> : JobStorage, IJobStorage<TJobState>
-    where TJobState : JobState
-{
-    readonly IEventStoreNamespaceDatabase _database;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JobStorage{TJobState}"/> class.
-    /// </summary>
-    /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/> for persistence.</param>
-    public JobStorage(IEventStoreNamespaceDatabase database) : base(database)
-    {
-        _database = database;
-    }
-
-    IMongoCollection<TJobState> Collection => _database.GetCollection<TJobState>(WellKnownCollectionNames.Jobs);
-
-    /// <inheritdoc/>
-    public async Task<TJobState?> Read(JobId jobId)
-    {
-        var cursor = await Collection.FindAsync(GetIdFilter<TJobState>(jobId)).ConfigureAwait(false);
-        return cursor.FirstOrDefault();
-    }
-
-    /// <inheritdoc/>
-    public async Task Save(JobId jobId, TJobState state) =>
-        await Collection.ReplaceOneAsync(GetIdFilter<TJobState>(jobId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
-
-    /// <inheritdoc/>
-    public async Task<IImmutableList<TJobState>> GetJobs<TJobType>(params JobStatus[] statuses)
-    {
-        var jobType = (JobType)typeof(TJobType);
-        var jobTypeFilter = Builders<TJobState>.Filter.Eq(_ => _.Type, jobType);
-        var statusFilters = statuses.Select(status => Builders<TJobState>.Filter.Eq(_ => _.Status, status));
-
-        var filter = statuses.Length == 0 ?
-                                jobTypeFilter :
-                                Builders<TJobState>.Filter.And(jobTypeFilter, Builders<TJobState>.Filter.Or(statusFilters));
-
-        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        var jobs = await cursor.ToListAsync().ConfigureAwait(false);
-        return jobs.ToImmutableList();
     }
 }

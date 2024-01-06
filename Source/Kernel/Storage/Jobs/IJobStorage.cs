@@ -44,28 +44,23 @@ public interface IJobStorage
     /// <param name="jobId">The <see cref="JobId"/> of the job to remove.</param>
     /// <returns>Awaitable task.</returns>
     Task Remove(JobId jobId);
-}
 
-/// <summary>
-/// Defines a system that can store job state.
-/// </summary>
-/// <typeparam name="TJobState">Type of <see cref="JobState"/> to store.</typeparam>
-public interface IJobStorage<TJobState> : IJobStorage
-{
     /// <summary>
     /// Read the state of a job.
     /// </summary>
     /// <param name="jobId">The <see cref="JobId"/> of the job to read.</param>
     /// <returns>Job state instance or null if it doesn't exist.</returns>
-    Task<TJobState?> Read(JobId jobId);
+    /// <typeparam name="TJobState">Type of <see cref="JobState"/> to return.</typeparam>
+    Task<TJobState?> Read<TJobState>(JobId jobId);
 
     /// <summary>
     /// Save the state of a job.
     /// </summary>
     /// <param name="jobId">The <see cref="JobId"/> of the job to save.</param>
     /// <param name="state"><see cref="JobState"/> to save.</param>
+    /// <typeparam name="TJobState">Type of <see cref="JobState"/> to save.</typeparam>
     /// <returns>Awaitable task.</returns>
-    Task Save(JobId jobId, TJobState state);
+    Task Save<TJobState>(JobId jobId, TJobState state);
 
     /// <summary>
     /// Get all jobs of a given type with a given status.
@@ -73,8 +68,9 @@ public interface IJobStorage<TJobState> : IJobStorage
     /// <typeparam name="TJobType">Type of job to get for.</typeparam>
     /// <param name="statuses">Optional params of <see cref="JobStatus"/> to filter on.</param>
     /// <returns>A collection of job state objects.</returns>
+    /// <typeparam name="TJobState">Type of <see cref="JobState"/> to return.</typeparam>
     /// <remarks>
     /// If no job statuses are specified, all jobs of the given type will be returned.
     /// </remarks>
-    Task<IImmutableList<TJobState>> GetJobs<TJobType>(params JobStatus[] statuses);
+    Task<IImmutableList<TJobState>> GetJobs<TJobType, TJobState>(params JobStatus[] statuses);
 }

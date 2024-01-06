@@ -135,9 +135,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     {
         if (_isRunning) return;
 
-        var executionContextManager = ServiceProvider.GetRequiredService<IExecutionContextManager>();
-        executionContextManager.Establish(JobKey.TenantId, executionContextManager.Current.CorrelationId, JobKey.MicroserviceId);
-
         if (!await CanResume())
         {
             await StatusChanged(JobStatus.Paused);

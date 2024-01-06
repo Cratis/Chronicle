@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Jobs;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.Jobs;
-using Microsoft.Extensions.DependencyInjection;
 using Orleans.Runtime;
 using Orleans.Storage;
 
@@ -14,50 +14,48 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// </summary>
 public class JobGrainStorageProvider : IGrainStorage
 {
-    readonly IServiceProvider _serviceProvider;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IClusterStorage _clusterStorage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobGrainStorageProvider"/> class.
     /// </summary>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting services.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public JobGrainStorageProvider(
-        IServiceProvider serviceProvider,
-        IExecutionContextManager executionContextManager)
+    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
+    public JobGrainStorageProvider(IClusterStorage clusterStorage)
     {
-        _serviceProvider = serviceProvider;
-        _executionContextManager = executionContextManager;
+        _clusterStorage = clusterStorage;
     }
 
     /// <inheritdoc/>
     public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
+        ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
+
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
             var key = (JobKey)keyExtension!;
-            _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-            var storage = _serviceProvider.GetRequiredService<IJobStorage<T>>();
-            var stepStorage = _serviceProvider.GetRequiredService<IJobStepStorage>();
+            var jobStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Jobs;
+            var jobStepStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
 
-            await stepStorage.RemoveAllForJob(jobId);
-            await storage.Remove(jobId);
+            await jobStepStorage.RemoveAllForJob(jobId);
+            await jobStorage.Remove(jobId);
         }
     }
 
     /// <inheritdoc/>
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
+        ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
+
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
             var key = (JobKey)keyExtension!;
-            _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-            var jobStorage = _serviceProvider.GetRequiredService<IJobStorage<T>>();
-            var state = await jobStorage.Read(jobId);
+
+            var jobStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Jobs;
+            var state = await jobStorage.Read<T>(jobId);
             if (state is not null)
             {
                 var jobState = (state as JobState)!;
-                var jobStepStorage = _serviceProvider.GetRequiredService<IJobStepStorage>();
+                var jobStepStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
                 var successfulCount = await jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Succeeded);
                 var failedCount = await jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Failed);
 
@@ -79,15 +77,24 @@ public class JobGrainStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
+        ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
+
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
             var key = (JobKey)keyExtension!;
-            _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-            var storage = _serviceProvider.GetRequiredService<IJobStorage<T>>();
+            var jobStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Jobs;
             var state = (grainState.State as JobState)!;
             state.Id = jobId;
 
-            await storage.Save(jobId, grainState.State);
+            await jobStorage.Save(jobId, grainState.State);
+        }
+    }
+
+    void ThrowIfTypeDoesNotDeriveFromJobState(Type type)
+    {
+        if (!typeof(JobState).IsAssignableFrom(type))
+        {
+            throw new InvalidJobStateType(type);
         }
     }
 }

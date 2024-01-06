@@ -148,7 +148,7 @@ public class JobStepStorage : IJobStepStorage
 }
 
 /// <summary>
-/// Represents an implementation of <see cref="IJobStorage{TJobState}"/> for MongoDB.
+/// Represents an implementation of <see cref="IJobStepStorage{TJobState}"/> for MongoDB.
 /// </summary>
 /// <typeparam name="TJobStepState">Type of <see cref="JobStepState"/> to work with.</typeparam>
 public class JobStepStorage<TJobStepState> : JobStepStorage, IJobStepStorage<TJobStepState>
@@ -157,7 +157,7 @@ public class JobStepStorage<TJobStepState> : JobStepStorage, IJobStepStorage<TJo
     readonly IEventStoreNamespaceDatabase _database;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="JobStorage{TJobState}"/> class.
+    /// Initializes a new instance of the <see cref="JobStepStorage{TJobState}"/> class.
     /// </summary>
     /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/> for persistence.</param>
     public JobStepStorage(IEventStoreNamespaceDatabase database)

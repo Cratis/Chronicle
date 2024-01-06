@@ -46,18 +46,10 @@ public interface IEventStoreNamespaceStorage
     IRecommendationStorage Recommendations { get; }
 
     /// <summary>
-    /// Get a <see cref="IJobStorage{TJobState}"/> for a specific <see cref="JobState"/> type.
-    /// </summary>
-    /// <typeparam name="TJobState">Type of <see cref="JobState"/> to get for.</typeparam>
-    /// <returns>An instance of the <see cref="IJobStorage{TJobState}"/> for the given type.</returns>
-    IJobStorage<TJobState> GetJobStorage<TJobState>()
-        where TJobState : JobState;
-
-    /// <summary>
     /// Get a <see cref="IJobStepStorage{TJobStepState}"/> for a specific <see cref="JobStepState"/> type.
     /// </summary>
     /// <typeparam name="TJobStepState">Type of <see cref="JobStepState"/> to get for.</typeparam>
-    /// <returns>An instance of the <see cref="IJobStorage{TJobStepState}"/> for the given type.</returns>
+    /// <returns>An instance of the <see cref="IJobStepStorage{TJobStepState}"/> for the given type.</returns>
     IJobStepStorage<TJobStepState> GetJobStepStorage<TJobStepState>()
        where TJobStepState : JobStepState;
 

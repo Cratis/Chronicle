@@ -131,5 +131,5 @@ public class JobsManager : Grain, IJobsManager
     public async Task<IImmutableList<JobState>> GetJobsOfType<TJob, TRequest>()
         where TJob : IJob<TRequest>
         where TRequest : class =>
-        await _namespaceStorage!.GetJobStorage<JobState>().GetJobs<TJob>();
+        await _namespaceStorage!.Jobs.GetJobs<TJob, JobState>();
 }
