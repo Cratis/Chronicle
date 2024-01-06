@@ -238,8 +238,8 @@ public class EventSequence : ControllerBase
     [HttpGet("histogram")]
     public Task<IEnumerable<EventHistogramEntry>> Histogram(/*[FromRoute] EventSequenceId eventSequenceId*/) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
 
-    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _clusterStorage.GetEventStore((string)microserviceId).GetInstance(tenantId).GetEventSequence(eventSequenceId);
-    IObserverStorage GetObserverStorage(MicroserviceId microserviceId, TenantId tenantId) => _clusterStorage.GetEventStore((string)microserviceId).GetInstance(tenantId).Observers;
+    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
+    IObserverStorage GetObserverStorage(MicroserviceId microserviceId, TenantId tenantId) => _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers;
     IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
         _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new EventSequenceKey(microserviceId, tenantId));
 }

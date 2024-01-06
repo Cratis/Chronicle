@@ -16,7 +16,7 @@ public class JobsManager : Grain, IJobsManager
 {
     readonly IClusterStorage _clusterStorage;
     readonly ILogger<JobsManager> _logger;
-    IEventStoreInstanceStorage? _namespaceStorage;
+    IEventStoreNamespaceStorage? _namespaceStorage;
     IJobStorage? _jobStorage;
     IJobStepStorage? _jobStepStorage;
     JobsManagerKey _key = JobsManagerKey.NotSet;
@@ -40,7 +40,7 @@ public class JobsManager : Grain, IJobsManager
         this.GetPrimaryKeyLong(out var key);
         _key = key;
 
-        _namespaceStorage = _clusterStorage.GetEventStore((string)_key.MicroserviceId).GetInstance(_key.TenantId);
+        _namespaceStorage = _clusterStorage.GetEventStore((string)_key.MicroserviceId).GetNamespace(_key.TenantId);
         _jobStorage = _namespaceStorage.Jobs;
         _jobStepStorage = _namespaceStorage.JobSteps;
 

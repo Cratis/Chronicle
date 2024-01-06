@@ -30,5 +30,5 @@ public class EventSequenceCacheFactory : IEventSequenceCacheFactory
 
     /// <inheritdoc/>
     public IEventSequenceCache Create(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) =>
-        new EventSequenceCache(_clusterStorage.GetEventStore((string)microserviceId).GetInstance(tenantId).GetEventSequence(eventSequenceId), _logger);
+        new EventSequenceCache(_clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId), _logger);
 }

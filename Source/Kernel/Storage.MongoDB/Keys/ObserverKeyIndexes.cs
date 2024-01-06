@@ -13,18 +13,18 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Keys;
 /// </summary>
 public class ObserverKeyIndexes : IObserverKeyIndexes
 {
-    readonly ProviderFor<IEventStoreInstanceDatabase> _eventStoreDatabaseProvider;
+    readonly ProviderFor<IEventStoreNamespaceDatabase> _eventStoreDatabaseProvider;
     readonly ProviderFor<IObserverStorage> _observerStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverKeyIndexes"/> class.
     /// </summary>
-    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreInstanceDatabase"/>.</param>
+    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
     /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public ObserverKeyIndexes(
-        ProviderFor<IEventStoreInstanceDatabase> eventStoreDatabaseProvider,
+        ProviderFor<IEventStoreNamespaceDatabase> eventStoreDatabaseProvider,
         ProviderFor<IObserverStorage> observerStorageProvider,
         IExecutionContextManager executionContextManager)
     {

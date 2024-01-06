@@ -71,10 +71,10 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         _logger = logger;
     }
 
-    IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= _clusterStorage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetInstance(_eventSequenceKey.TenantId).GetEventSequence(_eventSequenceId);
+    IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= _clusterStorage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetNamespace(_eventSequenceKey.TenantId).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= _clusterStorage.GetEventStore((string)_eventSequenceKey.MicroserviceId).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= _clusterStorage.GetEventStore((string)_eventSequenceKey.MicroserviceId).Identities;
-    IObserverStorage ObserverStorage => _observerStorage ??= _clusterStorage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetInstance(_eventSequenceKey.TenantId).Observers;
+    IObserverStorage ObserverStorage => _observerStorage ??= _clusterStorage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetNamespace(_eventSequenceKey.TenantId).Observers;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)

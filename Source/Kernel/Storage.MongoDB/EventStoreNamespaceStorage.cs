@@ -22,13 +22,13 @@ using Microsoft.Extensions.Logging;
 namespace Aksio.Cratis.MongoDB;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventStoreInstanceStorage"/> for MongoDB.
+/// Represents an implementation of <see cref="IEventStoreNamespaceStorage"/> for MongoDB.
 /// </summary>
-public class EventStoreInstanceStorage : IEventStoreInstanceStorage
+public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 {
     readonly EventStore _eventStore;
-    readonly TenantId _tenantId;
-    readonly IEventStoreInstanceDatabase _eventStoreInstanceDatabase;
+    readonly EventStoreNamespace _namespace;
+    readonly IEventStoreNamespaceDatabase _eventStoreNamespaceDatabase;
     readonly IEventConverter _converter;
     readonly IEventTypesStorage _eventTypesStorage;
     readonly Json.ExpandoObjectConverter _expandoObjectConverter;
@@ -38,21 +38,21 @@ public class EventStoreInstanceStorage : IEventStoreInstanceStorage
     readonly ConcurrentDictionary<EventSequenceId, IEventSequenceStorage> _eventSequences = new();
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventStoreInstanceStorage"/> class.
+    /// Initializes a new instance of the <see cref="EventStoreNamespaceStorage"/> class.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the storage is for.</param>
-    /// <param name="eventStoreInstanceDatabase">Provider for <see cref="IEventStoreInstanceDatabase"/> to use.</param>
+    /// <param name="namespace"><see cref="TenantId"/> the storage is for.</param>
+    /// <param name="eventStoreNamespaceDatabase">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
     /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
     /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting the execution context.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-    public EventStoreInstanceStorage(
+    public EventStoreNamespaceStorage(
         EventStore eventStore,
-        TenantId tenantId,
-        IEventStoreInstanceDatabase eventStoreInstanceDatabase,
+        EventStoreNamespace @namespace,
+        IEventStoreNamespaceDatabase eventStoreNamespaceDatabase,
         IEventConverter converter,
         IEventTypesStorage eventTypesStorage,
         Json.ExpandoObjectConverter expandoObjectConverter,
@@ -61,8 +61,8 @@ public class EventStoreInstanceStorage : IEventStoreInstanceStorage
         ILoggerFactory loggerFactory)
     {
         _eventStore = eventStore;
-        _tenantId = tenantId;
-        _eventStoreInstanceDatabase = eventStoreInstanceDatabase;
+        _namespace = @namespace;
+        _eventStoreNamespaceDatabase = eventStoreNamespaceDatabase;
         _converter = converter;
         _eventTypesStorage = eventTypesStorage;
         _expandoObjectConverter = expandoObjectConverter;
@@ -70,11 +70,11 @@ public class EventStoreInstanceStorage : IEventStoreInstanceStorage
         _executionContextManager = executionContextManager;
         _loggerFactory = loggerFactory;
         Changesets = new ChangesetStorage();
-        Jobs = new JobStorage(eventStoreInstanceDatabase);
-        JobSteps = new JobStepStorage(eventStoreInstanceDatabase);
-        Observers = new ObserverStorage(eventStoreInstanceDatabase);
-        FailedPartitions = new FailedPartitionStorage(eventStoreInstanceDatabase);
-        Recommendations = new RecommendationStorage(eventStoreInstanceDatabase);
+        Jobs = new JobStorage(eventStoreNamespaceDatabase);
+        JobSteps = new JobStepStorage(eventStoreNamespaceDatabase);
+        Observers = new ObserverStorage(eventStoreNamespaceDatabase);
+        FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
+        Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
     }
 
     /// <inheritdoc/>
@@ -97,11 +97,11 @@ public class EventStoreInstanceStorage : IEventStoreInstanceStorage
 
     /// <inheritdoc/>
     public IJobStorage<TJobState> GetJobStorage<TJobState>()
-        where TJobState : JobState => JobStorageCache<TJobState>.GetInstance(_eventStoreInstanceDatabase);
+        where TJobState : JobState => JobStorageCache<TJobState>.GetInstance(_eventStoreNamespaceDatabase);
 
     /// <inheritdoc/>
     public IJobStepStorage<TJobStepState> GetJobStepStorage<TJobStepState>()
-        where TJobStepState : JobStepState => JobStepStorageCache<TJobStepState>.GetInstance(_eventStoreInstanceDatabase);
+        where TJobStepState : JobStepState => JobStepStorageCache<TJobStepState>.GetInstance(_eventStoreNamespaceDatabase);
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId)
@@ -113,9 +113,9 @@ public class EventStoreInstanceStorage : IEventStoreInstanceStorage
 
         eventSequenceStorage = new EventSequenceStorage(
             _eventStore,
-            _tenantId,
+            _namespace,
             eventSequenceId,
-            _eventStoreInstanceDatabase,
+            _eventStoreNamespaceDatabase,
             _converter,
             _eventTypesStorage,
             _expandoObjectConverter,
@@ -133,7 +133,7 @@ public class EventStoreInstanceStorage : IEventStoreInstanceStorage
         static readonly object _lock = new();
         static IJobStorage<TJobState>? _instance;
 
-        public static IJobStorage<TJobState> GetInstance(IEventStoreInstanceDatabase database)
+        public static IJobStorage<TJobState> GetInstance(IEventStoreNamespaceDatabase database)
         {
             if (_instance is not null)
             {
@@ -154,7 +154,7 @@ public class EventStoreInstanceStorage : IEventStoreInstanceStorage
         static readonly object _lock = new();
         static IJobStepStorage<TJobStepState>? _instance;
 
-        public static IJobStepStorage<TJobStepState> GetInstance(IEventStoreInstanceDatabase database)
+        public static IJobStepStorage<TJobStepState> GetInstance(IEventStoreNamespaceDatabase database)
         {
             if (_instance is not null)
             {

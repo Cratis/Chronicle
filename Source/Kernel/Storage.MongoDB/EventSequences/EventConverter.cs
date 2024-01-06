@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 /// </summary>
 public class EventConverter : IEventConverter
 {
-    readonly TenantId _tenantId;
+    readonly EventStoreNamespace _namespace;
     readonly IEventTypesStorage _eventTypesStorage;
     readonly IIdentityStorage _identityStorage;
     readonly IJsonComplianceManager _jsonComplianceManager;
@@ -23,19 +23,19 @@ public class EventConverter : IEventConverter
     /// <summary>
     /// Initializes a new instance of the <see cref="EventConverter"/> class.
     /// </summary>
-    /// <param name="tenantId"><see cref="TenantId"/> for the converter.</param>
+    /// <param name="namespace"><see cref="TenantId"/> for the converter.</param>
     /// <param name="eventTypesStorage"><see cref="IEventTypesStorage"/> for event schemas.</param>
     /// <param name="identityStorage"><see cref="IIdentityStorage"/>.</param>
     /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     public EventConverter(
-        TenantId tenantId,
+        EventStoreNamespace @namespace,
         IEventTypesStorage eventTypesStorage,
         IIdentityStorage identityStorage,
         IJsonComplianceManager jsonComplianceManager,
         Json.IExpandoObjectConverter expandoObjectConverter)
     {
-        _tenantId = tenantId;
+        _namespace = @namespace;
         _eventTypesStorage = eventTypesStorage;
         _identityStorage = identityStorage;
         _jsonComplianceManager = jsonComplianceManager;
@@ -59,7 +59,7 @@ public class EventConverter : IEventConverter
                 @event.SequenceNumber,
                 @event.Occurred,
                 @event.ValidFrom,
-                _tenantId,
+                (TenantId)(string)_namespace,
                 @event.CorrelationId,
                 @event.Causation,
                 await _identityStorage.GetFor(@event.CausedBy)),

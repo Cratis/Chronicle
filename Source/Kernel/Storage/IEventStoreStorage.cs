@@ -38,9 +38,9 @@ public interface IEventStoreStorage
     IProjectionPipelineDefinitionsStorage ProjectionPipelines { get; }
 
     /// <summary>
-    /// Get a specific <see cref="IEventStoreInstanceStorage"/> for a <see cref="TenantId"/>.
+    /// Get a specific <see cref="IEventStoreNamespaceStorage"/> for a <see cref="TenantId"/>.
     /// </summary>
-    /// <param name="tenantId">The <see cref="TenantId"/> to get for.</param>
-    /// <returns>The <see cref="IEventStoreInstanceStorage"/> instance.</returns>
-    IEventStoreInstanceStorage GetInstance(TenantId tenantId);
+    /// <param name="namespace">The <see cref="EventStoreNamespace"/> to get for.</param>
+    /// <returns>The <see cref="IEventStoreNamespaceStorage"/> instance.</returns>
+    IEventStoreNamespaceStorage GetNamespace(EventStoreNamespace @namespace);
 }

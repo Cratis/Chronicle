@@ -27,10 +27,10 @@ public class EventSequenceStorage : IEventSequenceStorage
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly EventStore _eventStore;
-    readonly TenantId _tenantId;
+    readonly EventStoreNamespace _namespace;
     readonly EventSequenceId _eventSequenceId;
     readonly IEventConverter _converter;
-    readonly IEventStoreInstanceDatabase _database;
+    readonly IEventStoreNamespaceDatabase _database;
     readonly IEventTypesStorage _eventTypesStorage;
     readonly Json.IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
@@ -40,9 +40,9 @@ public class EventSequenceStorage : IEventSequenceStorage
     /// Initializes a new instance of the <see cref="EventSequenceStorage"/> class.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the storage is for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespace"/> the storage is for.</param>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the storage represent.</param>
-    /// <param name="database">Provider for <see cref="IEventStoreInstanceDatabase"/> to use.</param>
+    /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
     /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
     /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
@@ -51,9 +51,9 @@ public class EventSequenceStorage : IEventSequenceStorage
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public EventSequenceStorage(
         EventStore eventStore,
-        TenantId tenantId,
+        EventStoreNamespace @namespace,
         EventSequenceId eventSequenceId,
-        IEventStoreInstanceDatabase database,
+        IEventStoreNamespaceDatabase database,
         IEventConverter converter,
         IEventTypesStorage eventTypesStorage,
         Json.IExpandoObjectConverter expandoObjectConverter,
@@ -63,7 +63,7 @@ public class EventSequenceStorage : IEventSequenceStorage
     {
         _executionContextManager = executionContextManager;
         _eventStore = eventStore;
-        _tenantId = tenantId;
+        _namespace = @namespace;
         _eventSequenceId = eventSequenceId;
         _converter = converter;
         _database = database;
@@ -136,7 +136,7 @@ public class EventSequenceStorage : IEventSequenceStorage
                 sequenceNumber,
                 _eventSequenceId,
                 _eventStore,
-                _tenantId);
+                _namespace);
             var @event = new Event(
                 sequenceNumber,
                 _executionContextManager.Current.CorrelationId,
@@ -160,7 +160,7 @@ public class EventSequenceStorage : IEventSequenceStorage
                 sequenceNumber,
                 _eventSequenceId,
                 _eventStore,
-                _tenantId);
+                _namespace);
 
             throw new DuplicateEventSequenceNumber(sequenceNumber, _eventSequenceId);
         }
@@ -170,7 +170,7 @@ public class EventSequenceStorage : IEventSequenceStorage
                 sequenceNumber,
                 _eventSequenceId,
                 _eventStore,
-                _tenantId,
+                _namespace,
                 ex);
             throw;
         }

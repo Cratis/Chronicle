@@ -10,29 +10,29 @@ using MongoDB.Driver;
 namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventStoreInstanceDatabase"/>.
+/// Represents an implementation of <see cref="IEventStoreNamespaceDatabase"/>.
 /// </summary>
-public class EventStoreInstanceDatabase : IEventStoreInstanceDatabase
+public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 {
     readonly IMongoDatabase _database;
     readonly HashSet<EventSequenceId> _indexedEventSequences = new();
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventStoreInstanceDatabase"/> class.
+    /// Initializes a new instance of the <see cref="EventStoreNamespaceDatabase"/> class.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStore"/> the database is for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the database is for.</param>
+    /// <param name="namespace"><see cref="TenantId"/> the database is for.</param>
     /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
     /// <param name="configuration"><see cref="Kernel.Configuration.Storage"/> configuration.</param>
-    public EventStoreInstanceDatabase(
+    public EventStoreNamespaceDatabase(
         EventStore eventStore,
-        TenantId tenantId,
+        EventStoreNamespace @namespace,
         IMongoDBClientFactory mongoDBClientFactory,
         Kernel.Configuration.Storage configuration)
     {
         var storageTypes = configuration.Microservices
                                 .Get((string)eventStore).Tenants
-                                .Get(tenantId);
+                                .Get((TenantId)(string)@namespace);
         var eventStoreForTenant = storageTypes.Get(WellKnownStorageTypes.EventStore);
         var url = new MongoUrl(eventStoreForTenant.ConnectionDetails.ToString());
         var settings = MongoClientSettings.FromUrl(url);

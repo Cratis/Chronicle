@@ -23,7 +23,7 @@ namespace Aksio.Cratis.MongoDB;
 /// </summary>
 public class EventStoreStorage : IEventStoreStorage
 {
-    readonly ConcurrentDictionary<TenantId, IEventStoreInstanceStorage> _instances = new();
+    readonly ConcurrentDictionary<EventStoreNamespace, IEventStoreNamespaceStorage> _namespaces = new();
     readonly IJsonComplianceManager _complianceManager;
     readonly Json.ExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
@@ -91,30 +91,30 @@ public class EventStoreStorage : IEventStoreStorage
     public IProjectionPipelineDefinitionsStorage ProjectionPipelines { get; }
 
     /// <inheritdoc/>
-    public IEventStoreInstanceStorage GetInstance(TenantId tenantId)
+    public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespace @namespace)
     {
-        if (_instances.TryGetValue(tenantId, out var instance))
+        if (_namespaces.TryGetValue(@namespace, out var instance))
         {
             return instance;
         }
 
-        var database = new EventStoreInstanceDatabase(
+        var database = new EventStoreNamespaceDatabase(
             EventStore,
-            tenantId,
+            @namespace,
             _mongoDBClientFactory,
             _configuration);
 
         var converter = new EventConverter(
-            tenantId,
+            @namespace,
             EventTypes,
             Identities,
             _complianceManager,
             _expandoObjectConverter);
 
-        return _instances[tenantId] =
-            new EventStoreInstanceStorage(
+        return _namespaces[@namespace] =
+            new EventStoreNamespaceStorage(
                 EventStore,
-                tenantId,
+                @namespace,
                 database,
                 converter,
                 EventTypes,

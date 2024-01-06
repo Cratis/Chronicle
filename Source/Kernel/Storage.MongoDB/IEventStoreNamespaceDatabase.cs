@@ -9,9 +9,9 @@ using MongoDB.Driver;
 namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
-/// Defines the database used by the event store.
+/// Defines the database for accessing a specific namespace of the event store.
 /// </summary>
-public interface IEventStoreInstanceDatabase
+public interface IEventStoreNamespaceDatabase
 {
     /// <summary>
     /// Get a collection - optionally by its name. If no name is given, it will go by convention from the type name.

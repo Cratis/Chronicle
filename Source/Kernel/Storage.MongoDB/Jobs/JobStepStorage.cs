@@ -16,13 +16,13 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Jobs;
 /// </summary>
 public class JobStepStorage : IJobStepStorage
 {
-    readonly IEventStoreInstanceDatabase _database;
+    readonly IEventStoreNamespaceDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobStorage"/> class.
     /// </summary>
-    /// <param name="database"><see cref="IEventStoreInstanceDatabase"/> for persistence.</param>
-    public JobStepStorage(IEventStoreInstanceDatabase database)
+    /// <param name="database"><see cref="IEventStoreNamespaceDatabase"/> for persistence.</param>
+    public JobStepStorage(IEventStoreNamespaceDatabase database)
     {
         _database = database;
     }
@@ -154,13 +154,13 @@ public class JobStepStorage : IJobStepStorage
 public class JobStepStorage<TJobStepState> : JobStepStorage, IJobStepStorage<TJobStepState>
     where TJobStepState : JobStepState
 {
-    readonly IEventStoreInstanceDatabase _database;
+    readonly IEventStoreNamespaceDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobStorage{TJobState}"/> class.
     /// </summary>
-    /// <param name="database">Provider for <see cref="IEventStoreInstanceDatabase"/> for persistence.</param>
-    public JobStepStorage(IEventStoreInstanceDatabase database)
+    /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/> for persistence.</param>
+    public JobStepStorage(IEventStoreNamespaceDatabase database)
         : base(database)
     {
         _database = database;

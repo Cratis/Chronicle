@@ -16,13 +16,13 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
 /// </summary>
 public class ObserverStorage : IObserverStorage
 {
-    readonly IEventStoreInstanceDatabase _database;
+    readonly IEventStoreNamespaceDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverStorage"/> class.
     /// </summary>
-    /// <param name="database"><see cref="IEventStoreInstanceDatabase"/>.</param>
-    public ObserverStorage(IEventStoreInstanceDatabase database)
+    /// <param name="database"><see cref="IEventStoreNamespaceDatabase"/>.</param>
+    public ObserverStorage(IEventStoreNamespaceDatabase database)
     {
         _database = database;
     }

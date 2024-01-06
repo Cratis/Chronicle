@@ -37,7 +37,7 @@ public class EventSequencesStorageProvider : IGrainStorage
         var key = EventSequenceKey.Parse(keyAsString!);
 
         var eventTypesStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).EventTypes;
-        var eventSequenceStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetInstance(key.TenantId).GetEventSequence(eventSequenceId);
+        var eventSequenceStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).GetEventSequence(eventSequenceId);
         actualGrainState.State = await eventSequenceStorage.GetState();
         await HandleTailSequenceNumbersForEventTypes(eventTypesStorage, eventSequenceStorage, actualGrainState);
     }
@@ -48,7 +48,7 @@ public class EventSequencesStorageProvider : IGrainStorage
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
         var key = EventSequenceKey.Parse(keyAsString!);
         var eventSequenceState = (grainState.State as EventSequenceState)!;
-        var eventSequenceStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetInstance(key.TenantId).GetEventSequence(eventSequenceId);
+        var eventSequenceStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).GetEventSequence(eventSequenceId);
         await eventSequenceStorage.SaveState(eventSequenceState);
     }
 

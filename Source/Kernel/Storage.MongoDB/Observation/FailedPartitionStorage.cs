@@ -13,13 +13,13 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
 /// </summary>
 public class FailedPartitionStorage : IFailedPartitionsStorage
 {
-    readonly IEventStoreInstanceDatabase _database;
+    readonly IEventStoreNamespaceDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverStorage"/> class.
     /// </summary>
-    /// <param name="database">Provider for <see cref="IEventStoreInstanceDatabase"/>.</param>
-    public FailedPartitionStorage(IEventStoreInstanceDatabase database)
+    /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
+    public FailedPartitionStorage(IEventStoreNamespaceDatabase database)
     {
         _database = database;
     }

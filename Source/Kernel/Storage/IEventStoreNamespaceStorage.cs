@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Kernel.Storage;
 /// <summary>
 /// Defines the storage for a specific instance of an event store.
 /// </summary>
-public interface IEventStoreInstanceStorage
+public interface IEventStoreNamespaceStorage
 {
     /// <summary>
     /// Gets the <see cref="IEventSequenceStorage"/> for the event store.
@@ -65,6 +65,6 @@ public interface IEventStoreInstanceStorage
     /// Get the <see cref="IEventSequenceStorage"/> for a specific <see cref="EventSequenceId"/>.
     /// </summary>
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>
-    /// <returns>The <see cref="IEventStoreInstanceStorage"/> instance.</returns>
+    /// <returns>The <see cref="IEventStoreNamespaceStorage"/> instance.</returns>
     IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId);
 }
