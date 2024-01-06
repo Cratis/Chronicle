@@ -65,7 +65,7 @@ public class JobStorage : IJobStorage
     /// <inheritdoc/>
     public async Task<TJobState?> Read<TJobState>(JobId jobId)
     {
-        ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobState));
+        InvalidJobStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobState));
         var cursor = await GetTypedCollection<TJobState>().FindAsync(GetIdFilter<TJobState>(jobId)).ConfigureAwait(false);
         return cursor.FirstOrDefault();
     }
@@ -73,14 +73,14 @@ public class JobStorage : IJobStorage
     /// <inheritdoc/>
     public async Task Save<TJobState>(JobId jobId, TJobState state)
     {
-        ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobState));
+        InvalidJobStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobState));
         await GetTypedCollection<TJobState>().ReplaceOneAsync(GetIdFilter<TJobState>(jobId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
     public async Task<IImmutableList<TJobState>> GetJobs<TJobType, TJobState>(params JobStatus[] statuses)
     {
-        ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobState));
+        InvalidJobStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobState));
         var jobType = (JobType)typeof(TJobType);
         var jobTypeFilter = Builders<JobState>.Filter.Eq(_ => _.Type, jobType);
         var statusFilters = statuses.Select(status => Builders<JobState>.Filter.Eq(_ => _.Status, status));
@@ -92,14 +92,6 @@ public class JobStorage : IJobStorage
         var cursor = await GetTypedCollection<TJobState>().FindAsync(filterAsBsonDocument).ConfigureAwait(false);
         var jobs = await cursor.ToListAsync().ConfigureAwait(false);
         return jobs.ToImmutableList();
-    }
-
-    void ThrowIfTypeDoesNotDeriveFromJobState(Type type)
-    {
-        if (!typeof(JobState).IsAssignableFrom(type))
-        {
-            throw new InvalidJobStateType(type);
-        }
     }
 
     FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid id) => Builders<TDocument>.Filter.Eq(new StringFieldDefinition<TDocument, Guid>("_id"), id);

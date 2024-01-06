@@ -109,26 +109,48 @@ public class JobStepStorage : IJobStepStorage
         return Collection.Observe(initialItems, HandleChangesForJobSteps, filter);
     }
 
-    /// <summary>
-    /// Get the id filter for a given <see cref="JobId"/> and <see cref="JobStepId"/>.
-    /// </summary>
-    /// <param name="jobId">Identifier of the job.</param>
-    /// <param name="prefix">The prefix to prepend to the field to query for.</param>
-    /// <typeparam name="TDocument">Type of document to query.</typeparam>
-    /// <returns><see cref="FilterDefinition{T}"/> for the BsonDocument.</returns>
-    protected FilterDefinition<TDocument> GetJobIdFilter<TDocument>(Guid jobId, string prefix = "") =>
+    /// <inheritdoc/>
+    public async Task<TJobStepState?> Read<TJobStepState>(JobId jobId, JobStepId jobStepId)
+    {
+        InvalidJobStepStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobStepState));
+        var filter = GetIdFilter<TJobStepState>(jobId, jobStepId);
+        var cursor = await GetTypedCollection<TJobStepState>().FindAsync(filter).ConfigureAwait(false);
+        return cursor.FirstOrDefault();
+    }
+
+    /// <inheritdoc/>
+    public async Task Save<TJobStepState>(
+        JobId jobId,
+        JobStepId jobStepId,
+        TJobStepState state)
+    {
+        InvalidJobStepStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobStepState));
+        var actualState = (state as JobStepState)!;
+        var collection = actualState.Status == JobStepStatus.Failed ? GetTypedFailedCollection<TJobStepState>() : GetTypedCollection<TJobStepState>();
+        await collection.ReplaceOneAsync(GetIdFilter<TJobStepState>(jobId, jobStepId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task MoveToFailed<TJobStepState>(
+        JobId jobId,
+        JobStepId jobStepId,
+        TJobStepState jobStepState)
+    {
+        InvalidJobStepStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobStepState));
+        await Save(jobId, jobStepId, jobStepState);
+        await GetTypedCollection<TJobStepState>().DeleteOneAsync(GetIdFilter<TJobStepState>(jobId, jobStepId)).ConfigureAwait(false);
+    }
+
+    IMongoCollection<TJobStepState> GetTypedCollection<TJobStepState>() => _database.GetCollection<TJobStepState>(WellKnownCollectionNames.JobSteps);
+
+    IMongoCollection<TJobStepState> GetTypedFailedCollection<TJobStepState>() => _database.GetCollection<TJobStepState>(WellKnownCollectionNames.FailedJobSteps);
+
+    FilterDefinition<TDocument> GetJobIdFilter<TDocument>(Guid jobId, string prefix = "") =>
         Builders<TDocument>.Filter.Eq(
             new StringFieldDefinition<TDocument, BsonBinaryData>($"{prefix}_id.jobId"),
             new BsonBinaryData(jobId, GuidRepresentation.Standard));
 
-    /// <summary>
-    /// Get the id filter for a given <see cref="JobId"/> and <see cref="JobStepId"/>.
-    /// </summary>
-    /// <param name="jobId">Identifier of the job.</param>
-    /// <param name="jobStepId">Identifier of the job step.</param>
-    /// <typeparam name="TDocument">Type of document to query.</typeparam>
-    /// <returns><see cref="FilterDefinition{T}"/> for the BsonDocument.</returns>
-    protected FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid jobId, Guid jobStepId) =>
+    FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid jobId, Guid jobStepId) =>
         Builders<TDocument>.Filter.Eq(
             new StringFieldDefinition<TDocument, BsonDocument>("_id"),
             new BsonDocument
@@ -144,57 +166,5 @@ public class JobStepStorage : IJobStepStorage
 
     void HandleChangesForJobSteps(IChangeStreamCursor<ChangeStreamDocument<JobStepState>> cursor, List<JobStepState> jobs)
     {
-    }
-}
-
-/// <summary>
-/// Represents an implementation of <see cref="IJobStepStorage{TJobState}"/> for MongoDB.
-/// </summary>
-/// <typeparam name="TJobStepState">Type of <see cref="JobStepState"/> to work with.</typeparam>
-public class JobStepStorage<TJobStepState> : JobStepStorage, IJobStepStorage<TJobStepState>
-    where TJobStepState : JobStepState
-{
-    readonly IEventStoreNamespaceDatabase _database;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JobStepStorage{TJobState}"/> class.
-    /// </summary>
-    /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/> for persistence.</param>
-    public JobStepStorage(IEventStoreNamespaceDatabase database)
-        : base(database)
-    {
-        _database = database;
-    }
-
-    IMongoCollection<TJobStepState> Collection => _database.GetCollection<TJobStepState>(WellKnownCollectionNames.JobSteps);
-
-    IMongoCollection<TJobStepState> FailedCollection => _database.GetCollection<TJobStepState>(WellKnownCollectionNames.FailedJobSteps);
-
-    /// <inheritdoc/>
-    public async Task<TJobStepState?> Read(JobId jobId, JobStepId jobStepId)
-    {
-        var filter = GetIdFilter<TJobStepState>(jobId, jobStepId);
-        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        return cursor.FirstOrDefault();
-    }
-
-    /// <inheritdoc/>
-    public async Task Save(
-        JobId jobId,
-        JobStepId jobStepId,
-        TJobStepState state)
-    {
-        var collection = state.Status == JobStepStatus.Failed ? FailedCollection : Collection;
-        await collection.ReplaceOneAsync(GetIdFilter<TJobStepState>(jobId, jobStepId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc/>
-    public async Task MoveToFailed(
-        JobId jobId,
-        JobStepId jobStepId,
-        TJobStepState jobStepState)
-    {
-        await Collection.DeleteOneAsync(GetIdFilter<TJobStepState>(jobId, jobStepId)).ConfigureAwait(false);
-        await Save(jobId, jobStepId, jobStepState);
     }
 }

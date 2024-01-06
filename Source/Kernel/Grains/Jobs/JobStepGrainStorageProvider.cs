@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Jobs;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.Jobs;
-using Microsoft.Extensions.DependencyInjection;
 using Orleans.Runtime;
 using Orleans.Storage;
 
@@ -14,34 +14,34 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// </summary>
 public class JobStepGrainStorageProvider : IGrainStorage
 {
-    readonly IServiceProvider _serviceProvider;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IClusterStorage _clusterStorage;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="JobGrainStorageProvider"/> class.
+    /// Initializes a new instance of the <see cref="JobStepGrainStorageProvider"/> class.
     /// </summary>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting services.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public JobStepGrainStorageProvider(
-        IServiceProvider serviceProvider,
-        IExecutionContextManager executionContextManager)
+    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
+    public JobStepGrainStorageProvider(IClusterStorage clusterStorage)
     {
-        _serviceProvider = serviceProvider;
-        _executionContextManager = executionContextManager;
+        _clusterStorage = clusterStorage;
     }
 
     /// <inheritdoc/>
-    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
+    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
+    {
+        InvalidJobStepStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
+        InvalidJobStepStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
+
         if (grainId.TryGetGuidKey(out var jobStepId, out var keyExtension))
         {
             var key = (JobStepKey)keyExtension!;
-            _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-            var storage = _serviceProvider.GetRequiredService<IJobStepStorage<T>>();
-            var state = await storage.Read(key.JobId, jobStepId);
+            var storage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
+            var state = await storage.Read<T>(key.JobId, jobStepId);
             if (state is not null)
             {
                 grainState.State = state;
@@ -52,11 +52,12 @@ public class JobStepGrainStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
+        InvalidJobStepStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
+
         if (grainId.TryGetGuidKey(out var jobStepId, out var keyExtension))
         {
             var key = (JobStepKey)keyExtension!;
-            _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-            var storage = _serviceProvider.GetRequiredService<IJobStepStorage<T>>();
+            var storage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
 
             var actualState = (grainState.State as JobStepState)!;
 

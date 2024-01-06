@@ -55,21 +55,15 @@ public interface IJobStepStorage
     /// <param name="jobId"><see cref="JobId"/> to observe for.</param>
     /// <returns>An observable of collection of job step state objects.</returns>
     IObservable<IEnumerable<JobStepState>> ObserveForJob(JobId jobId);
-}
 
-/// <summary>
-/// Defines the storage for a <see cref="JobStepState"/>.
-/// </summary>
-/// <typeparam name="TJobStepState">Type of state it is for.</typeparam>
-public interface IJobStepStorage<TJobStepState> : IJobStepStorage
-{
     /// <summary>
     /// Read the state for a specific job step.
     /// </summary>
     /// <param name="jobId"><see cref="JobId"/> the step belongs to.</param>
     /// <param name="jobStepId"><see cref="JobStepId"/> for the step.</param>
+    /// <typeparam name="TJobStepState">Concrete type of <see cref="JobStepState"/> to read.</typeparam>
     /// <returns><see cref="JobStepState"/> if it was found, null if not.</returns>
-    Task<TJobStepState?> Read(JobId jobId, JobStepId jobStepId);
+    Task<TJobStepState?> Read<TJobStepState>(JobId jobId, JobStepId jobStepId);
 
     /// <summary>
     /// Save the state for a specific job step.
@@ -77,8 +71,9 @@ public interface IJobStepStorage<TJobStepState> : IJobStepStorage
     /// <param name="jobId"><see cref="JobId"/> the step belongs to.</param>
     /// <param name="jobStepId"><see cref="JobStepId"/> for the step.</param>
     /// <param name="state">The <see cref="JobStepState"/> to save.</param>
+    /// <typeparam name="TJobStepState">Concrete type of <see cref="JobStepState"/> to save.</typeparam>
     /// <returns>Awaitable task.</returns>
-    Task Save(JobId jobId, JobStepId jobStepId, TJobStepState state);
+    Task Save<TJobStepState>(JobId jobId, JobStepId jobStepId, TJobStepState state);
 
     /// <summary>
     /// Move a job step being failed.
@@ -86,6 +81,7 @@ public interface IJobStepStorage<TJobStepState> : IJobStepStorage
     /// <param name="jobId"><see cref="JobId"/> the step belongs to.</param>
     /// <param name="jobStepId"><see cref="JobStepId"/> for the step.</param>
     /// <param name="jobStepState">The <see cref="JobStepState"/> to move.</param>
+    /// <typeparam name="TJobStepState">Concrete type of <see cref="JobStepState"/> to move.</typeparam>
     /// <returns>Awaitable task.</returns>
-    Task MoveToFailed(JobId jobId, JobStepId jobStepId, TJobStepState jobStepState);
+    Task MoveToFailed<TJobStepState>(JobId jobId, JobStepId jobStepId, TJobStepState jobStepState);
 }

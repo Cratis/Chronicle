@@ -28,7 +28,7 @@ public class JobGrainStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
+        InvalidJobStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
 
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
@@ -44,7 +44,7 @@ public class JobGrainStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
+        InvalidJobStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
 
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
@@ -77,7 +77,7 @@ public class JobGrainStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
+        InvalidJobStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
 
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
@@ -87,14 +87,6 @@ public class JobGrainStorageProvider : IGrainStorage
             state.Id = jobId;
 
             await jobStorage.Save(jobId, grainState.State);
-        }
-    }
-
-    void ThrowIfTypeDoesNotDeriveFromJobState(Type type)
-    {
-        if (!typeof(JobState).IsAssignableFrom(type))
-        {
-            throw new InvalidJobStateType(type);
         }
     }
 }

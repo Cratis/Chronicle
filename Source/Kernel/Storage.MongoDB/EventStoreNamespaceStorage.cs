@@ -96,10 +96,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     public IRecommendationStorage Recommendations { get; }
 
     /// <inheritdoc/>
-    public IJobStepStorage<TJobStepState> GetJobStepStorage<TJobStepState>()
-        where TJobStepState : JobStepState => JobStepStorageCache<TJobStepState>.GetInstance(_eventStoreNamespaceDatabase);
-
-    /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId)
     {
         if (_eventSequences.TryGetValue(eventSequenceId, out var eventSequenceStorage))
@@ -121,26 +117,5 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         _eventSequences[eventSequenceId] = eventSequenceStorage;
 
         return eventSequenceStorage;
-    }
-
-    static class JobStepStorageCache<TJobStepState>
-        where TJobStepState : JobStepState
-    {
-        static readonly object _lock = new();
-        static IJobStepStorage<TJobStepState>? _instance;
-
-        public static IJobStepStorage<TJobStepState> GetInstance(IEventStoreNamespaceDatabase database)
-        {
-            if (_instance is not null)
-            {
-                return _instance;
-            }
-
-            lock (_lock)
-            {
-                _instance = new JobStepStorage<TJobStepState>(database);
-                return _instance;
-            }
-        }
     }
 }

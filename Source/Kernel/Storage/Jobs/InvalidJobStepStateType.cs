@@ -6,26 +6,26 @@ namespace Aksio.Cratis.Kernel.Storage.Jobs;
 /// <summary>
 /// Exception that gets thrown when a type is not a <see cref="JobState"/>.
 /// </summary>
-public class InvalidJobStateType : Exception
+public class InvalidJobStepStateType : Exception
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="InvalidJobStateType"/> class.
+    /// Initializes a new instance of the <see cref="InvalidJobStepStateType"/> class.
     /// </summary>
     /// <param name="type">Type that is invalid.</param>
-    public InvalidJobStateType(Type type) : base($"Type '{type.FullName}' is not a JobState")
+    public InvalidJobStepStateType(Type type) : base($"Type '{type.FullName}' is not a JobStepState")
     {
     }
 
     /// <summary>
-    /// Throw if the type does not derive from <see cref="JobState"/>.
+    /// Throw if the type does not derive from <see cref="JobStepState"/>.
     /// </summary>
     /// <param name="type">Type to check.</param>
-    /// <exception cref="InvalidJobStateType">Thrown if type is invalid.</exception>
+    /// <exception cref="InvalidJobStepStateType">Thrown if type is invalid.</exception>
     public static void ThrowIfTypeDoesNotDeriveFromJobState(Type type)
     {
-        if (!typeof(JobState).IsAssignableFrom(type))
+        if (!typeof(JobStepState).IsAssignableFrom(type))
         {
-            throw new InvalidJobStateType(type);
+            throw new InvalidJobStepStateType(type);
         }
     }
 }
