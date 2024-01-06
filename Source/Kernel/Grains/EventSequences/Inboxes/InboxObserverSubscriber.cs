@@ -6,10 +6,10 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.EventTypes;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Kernel.Storage.EventTypes;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
@@ -19,8 +19,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 /// </summary>
 public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
 {
-    readonly ProviderFor<IEventTypesStorage> _eventTypesStorageProvider;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IClusterStorage _clusterStorage;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly ILogger<InboxObserverSubscriber> _logger;
     IEventSequence? _inboxEventSequence;
@@ -32,18 +31,15 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
     /// <summary>
     /// Initializes a new instance of the <see cref="InboxObserverSubscriber"/> class.
     /// </summary>
-    /// <param name="eventTypesStorageProvider">Provider for <see cref="IEventTypesStorage"/> for getting schema stores for other microservices.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
+    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for working with underlying storage.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     /// <param name="logger">Logger for logging.</param>
     public InboxObserverSubscriber(
-        ProviderFor<IEventTypesStorage> eventTypesStorageProvider,
-        IExecutionContextManager executionContextManager,
+        IClusterStorage clusterStorage,
         IExpandoObjectConverter expandoObjectConverter,
         ILogger<InboxObserverSubscriber> logger)
     {
-        _eventTypesStorageProvider = eventTypesStorageProvider;
-        _executionContextManager = executionContextManager;
+        _clusterStorage = clusterStorage;
         _expandoObjectConverter = expandoObjectConverter;
         _logger = logger;
     }
@@ -58,11 +54,8 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
             EventSequenceId.Inbox,
             keyExtension: new EventSequenceKey(_microserviceId, _key.TenantId));
 
-        _executionContextManager.Establish(_microserviceId);
-        _eventTypesStorage = _eventTypesStorageProvider();
-
-        _executionContextManager.Establish(_key.SourceMicroserviceId!);
-        _sourceEventTypesStorage = _eventTypesStorageProvider();
+        _eventTypesStorage = _clusterStorage.GetEventStore((string)_microserviceId!).EventTypes;
+        _sourceEventTypesStorage = _clusterStorage.GetEventStore((string)_key.SourceMicroserviceId!).EventTypes;
 
         return Task.CompletedTask;
     }
@@ -78,8 +71,6 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
             foreach (var @event in events)
             {
                 currentEvent = @event;
-                _executionContextManager.Establish(_key!.TenantId, @event.Context.CorrelationId, _microserviceId);
-
                 EventTypeSchema eventSchema;
 
                 if (!await _eventTypesStorage!.HasFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation))
