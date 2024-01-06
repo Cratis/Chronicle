@@ -22,7 +22,6 @@ public class EventSequence : ControllerBase
     readonly IClusterStorage _clusterStorage;
     readonly IGrainFactory _grainFactory;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
@@ -30,17 +29,14 @@ public class EventSequence : ControllerBase
     /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing storage for the cluster.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public EventSequence(
         IClusterStorage clusterStorage,
         IGrainFactory grainFactory,
-        JsonSerializerOptions jsonSerializerOptions,
-        IExecutionContextManager executionContextManager)
+        JsonSerializerOptions jsonSerializerOptions)
     {
         _clusterStorage = clusterStorage;
         _grainFactory = grainFactory;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _executionContextManager = executionContextManager;
     }
 
     /// <summary>
@@ -213,9 +209,6 @@ public class EventSequence : ControllerBase
     {
         var result = new List<AppendedEventWithJsonAsContent>();
         var parsedEventTypes = eventTypes?.Select(EventType.Parse).ToArray();
-
-        var correlationId = _executionContextManager.Current.CorrelationId;
-        _executionContextManager.Establish(tenantId, correlationId, microserviceId);
 
         var cursor = await GetEventSequenceStorage(microserviceId, tenantId, eventSequenceId).GetFromSequenceNumber(
             sequenceNumber: EventSequenceNumber.First,
