@@ -3,8 +3,8 @@
 
 using Aksio.Applications.Queries;
 using Aksio.Cratis.Jobs;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.Jobs;
-using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Aksio.Cratis.Kernel.Read.Jobs;
@@ -15,24 +15,15 @@ namespace Aksio.Cratis.Kernel.Read.Jobs;
 [Route("/api/events/store/{microserviceId}/{tenantId}/jobs")]
 public class Jobs : ControllerBase
 {
-    readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IJobStorage> _jobStorage;
-    readonly ProviderFor<IJobStepStorage> _jobStepStorage;
+    readonly IClusterStorage _clusterStorage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Jobs"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="jobStorage">Provider for <see cref="IJobStorage"/> for getting job state.</param>
-    /// <param name="jobStepStorage">Provider for <see cref="IJobStepStorage"/> for getting job step state.</param>
-    public Jobs(
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IJobStorage> jobStorage,
-        ProviderFor<IJobStepStorage> jobStepStorage)
+    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
+    public Jobs(IClusterStorage clusterStorage)
     {
-        _executionContextManager = executionContextManager;
-        _jobStorage = jobStorage;
-        _jobStepStorage = jobStepStorage;
+        _clusterStorage = clusterStorage;
     }
 
     /// <summary>
@@ -44,11 +35,8 @@ public class Jobs : ControllerBase
     [HttpGet]
     public ClientObservable<IEnumerable<JobState>> AllJobs(
         [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId)
-    {
-        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
-        return _jobStorage().ObserveJobs().ToClientObservable();
-    }
+        [FromRoute] TenantId tenantId) =>
+        _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Jobs.ObserveJobs().ToClientObservable();
 
     /// <summary>
     /// Observes all job steps for a specific job and microservice.
@@ -61,9 +49,6 @@ public class Jobs : ControllerBase
     public ClientObservable<IEnumerable<JobStepState>> AllJobSteps(
         [FromRoute] JobId jobId,
         [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId)
-    {
-        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
-        return _jobStepStorage().ObserveForJob(jobId).ToClientObservable();
-    }
+        [FromRoute] TenantId tenantId) =>
+        _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).JobSteps.ObserveForJob(jobId).ToClientObservable();
 }

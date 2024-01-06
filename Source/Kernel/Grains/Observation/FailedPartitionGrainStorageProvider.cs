@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 using Orleans.Runtime;
 using Orleans.Storage;
 
@@ -14,21 +13,15 @@ namespace Aksio.Cratis.Kernel.Storage.Observation;
 /// </summary>
 public class FailedPartitionGrainStorageProvider : IGrainStorage
 {
-    readonly ProviderFor<IFailedPartitionsStorage> _failedPartitionsStorageProvider;
-
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IClusterStorage _clusterStorage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FailedPartitionGrainStorageProvider"/> class.
     /// </summary>
-    /// <param name="failedPartitionsStorageProvider">Provider for <see cref="IFailedPartitionsStorage"/> for actual persistence.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public FailedPartitionGrainStorageProvider(
-        ProviderFor<IFailedPartitionsStorage> failedPartitionsStorageProvider,
-        IExecutionContextManager executionContextManager)
+    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
+    public FailedPartitionGrainStorageProvider(IClusterStorage clusterStorage)
     {
-        _failedPartitionsStorageProvider = failedPartitionsStorageProvider;
-        _executionContextManager = executionContextManager;
+        _clusterStorage = clusterStorage;
     }
 
     /// <inheritdoc/>
@@ -41,8 +34,8 @@ public class FailedPartitionGrainStorageProvider : IGrainStorage
         var observerId = grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
-        actualGrainState.State = await _failedPartitionsStorageProvider().GetFor(observerId);
+        var failedPartitions = _clusterStorage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).FailedPartitions;
+        actualGrainState.State = await failedPartitions.GetFor(observerId);
     }
 
     /// <inheritdoc/>
@@ -52,12 +45,12 @@ public class FailedPartitionGrainStorageProvider : IGrainStorage
         var observerId = grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
+        var failedPartitions = _clusterStorage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).FailedPartitions;
         foreach (var failedPartition in actualGrainState.State.Partitions)
         {
             failedPartition.ObserverId = observerId;
         }
 
-        await _failedPartitionsStorageProvider().Save(observerId, actualGrainState.State);
+        await failedPartitions.Save(observerId, actualGrainState.State);
     }
 }

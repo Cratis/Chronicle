@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 using Orleans.Runtime;
 using Orleans.Storage;
 
@@ -14,20 +14,15 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public class ObserverGrainStorageProvider : IGrainStorage
 {
-    readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IObserverStorage> _observerStorageProvider;
+    readonly IClusterStorage _clusterStorage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverGrainStorageProvider"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
-    public ObserverGrainStorageProvider(
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IObserverStorage> observerStorageProvider)
+    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
+    public ObserverGrainStorageProvider(IClusterStorage clusterStorage)
     {
-        _executionContextManager = executionContextManager;
-        _observerStorageProvider = observerStorageProvider;
+        _clusterStorage = clusterStorage;
     }
 
     /// <inheritdoc/>
@@ -39,10 +34,9 @@ public class ObserverGrainStorageProvider : IGrainStorage
         var actualGrainState = (grainState as IGrainState<ObserverState>)!;
         var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
-        var eventSequenceId = observerKey.EventSequenceId;
 
-        _executionContextManager.Establish(observerKey.TenantId, _executionContextManager.Current.CorrelationId, observerKey.MicroserviceId);
-        actualGrainState.State = await _observerStorageProvider().GetState(observerId, observerKey);
+        var observers = _clusterStorage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).Observers;
+        actualGrainState.State = await observers.GetState(observerId, observerKey);
     }
 
     /// <inheritdoc/>
@@ -52,9 +46,7 @@ public class ObserverGrainStorageProvider : IGrainStorage
         var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var eventSequenceId = observerKey.EventSequenceId;
-        _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
-
-        await _observerStorageProvider().SaveState(observerId, observerKey, actualGrainState.State);
+        var observers = _clusterStorage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).Observers;
+        await observers.SaveState(observerId, observerKey, actualGrainState.State);
     }
 }

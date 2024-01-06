@@ -5,9 +5,8 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
-using Aksio.Cratis.Kernel.Storage.Observation;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
@@ -16,24 +15,20 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public class Observers : Grain, IObservers
 {
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IClusterStorage _clusterStorage;
     readonly IGrainFactory _grainFactory;
-    readonly ProviderFor<IObserverStorage> _observerStorageProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>///
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains outside of Orleans task context.</param>
-    /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
     public Observers(
-        IExecutionContextManager executionContextManager,
-        IGrainFactory grainFactory,
-        ProviderFor<IObserverStorage> observerStorageProvider)
+        IClusterStorage clusterStorage,
+        IGrainFactory grainFactory)
     {
-        _executionContextManager = executionContextManager;
+        _clusterStorage = clusterStorage;
         _grainFactory = grainFactory;
-        _observerStorageProvider = observerStorageProvider;
     }
 
     /// <inheritdoc/>
@@ -42,8 +37,8 @@ public class Observers : Grain, IObservers
         _ = this.GetPrimaryKeyLong(out var keyAsString);
         var key = ObserversKey.Parse(keyAsString!);
 
-        _executionContextManager.Establish(key.TenantId, _executionContextManager.Current.CorrelationId, key.MicroserviceId);
-        var observers = await _observerStorageProvider().GetAllObservers();
+        var observerStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Observers;
+        var observers = await observerStorage.GetAllObservers();
 
         var observersForConsolidation = new List<ObserverIdAndKey>();
 
