@@ -16,22 +16,18 @@ public class EventSequenceCaches : IEventSequenceCaches
     readonly ConcurrentDictionary<(MicroserviceId, TenantId, EventSequenceId), IEventSequenceCache> _caches = new();
     readonly IEventSequenceCacheFactory _eventSequenceCacheFactory;
     readonly KernelConfiguration _configuration;
-    readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceCaches"/> class.
     /// </summary>
     /// <param name="eventSequenceCacheFactory"><see cref="IEventSequenceCacheFactory"/> for creating <see cref="IEventSequenceCache"/> instances.</param>
     /// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
-    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public EventSequenceCaches(
         IEventSequenceCacheFactory eventSequenceCacheFactory,
-        KernelConfiguration configuration,
-        IExecutionContextManager executionContextManager)
+        KernelConfiguration configuration)
     {
         _eventSequenceCacheFactory = eventSequenceCacheFactory;
         _configuration = configuration;
-        _executionContextManager = executionContextManager;
     }
 
     /// <inheritdoc/>
@@ -63,7 +59,6 @@ public class EventSequenceCaches : IEventSequenceCaches
                     continue;
                 }
 
-                _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
                 await GetFor(microserviceId, tenantId, EventSequenceId.Log).PrimeWithTailWindow();
             }
         }
