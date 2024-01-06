@@ -1,9 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.Projections.Definitions;
-using Aksio.Cratis.Projections;
-using Aksio.DependencyInversion;
+using Aksio.Cratis.Kernel.Storage;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Aksio.Cratis.Kernel.Read.Projections;
@@ -14,20 +12,15 @@ namespace Aksio.Cratis.Kernel.Read.Projections;
 [Route("/api/events/store/{microserviceId}/projections")]
 public class Projections : ControllerBase
 {
-    readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IClusterStorage _clusterStorage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
-    /// <param name="projectionDefinitionsProvider">Provider for <see cref="IProjectionDefinitions"/>.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
-    public Projections(
-        ProviderFor<IProjectionDefinitions> projectionDefinitionsProvider,
-        IExecutionContextManager executionContextManager)
+    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
+    public Projections(IClusterStorage clusterStorage)
     {
-        _projectionDefinitionsProvider = projectionDefinitionsProvider;
-        _executionContextManager = executionContextManager;
+        _clusterStorage = clusterStorage;
     }
 
     /// <summary>
@@ -38,31 +31,11 @@ public class Projections : ControllerBase
     [HttpGet]
     public async Task<IEnumerable<Projection>> AllProjections([FromRoute] MicroserviceId microserviceId)
     {
-        _executionContextManager.Establish(microserviceId);
-
-        var projections = await _projectionDefinitionsProvider().GetAll();
+        var projections = await _clusterStorage.GetEventStore((string)microserviceId).Projections.GetAll();
         return projections.Select(_ => new Projection(
             _.Identifier,
             _.Name,
             _.IsActive,
             _.Model.Name)).ToArray();
-    }
-
-    /// <summary>
-    /// Get all collections for projection.
-    /// </summary>
-    /// <param name="microserviceId">The <see cref="MicroserviceId"/> to get projection collections for.</param>
-    /// <param name="projectionId">Id of projection to get for.</param>
-    /// <returns>Collection of all the projection collections.</returns>
-    [HttpGet("{projectionId}/collections")]
-#pragma warning disable IDE0060
-    public IEnumerable<ProjectionCollection> Collections(
-        [FromQuery] MicroserviceId microserviceId,
-        [FromRoute] ProjectionId projectionId)
-    {
-        return new ProjectionCollection[]
-        {
-                new("Something", 42)
-        };
     }
 }
