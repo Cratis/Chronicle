@@ -37,7 +37,7 @@ public class Recommendations : ControllerBase
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
-        var recommendations = await _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations.GetRecommendations();
+        var recommendations = await _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations.GeAll();
         return Convert(recommendations);
     }
 

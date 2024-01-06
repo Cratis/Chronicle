@@ -47,7 +47,7 @@ public class RecommendationStorage : IRecommendationStorage
         await Collection.ReplaceOneAsync(GetIdFilter(recommendationId), recommendationState, new ReplaceOptions { IsUpsert = true });
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<RecommendationState>> GetRecommendations()
+    public async Task<IImmutableList<RecommendationState>> GeAll()
     {
         var cursor = await Collection.FindAsync(_ => true).ConfigureAwait(false);
         var deserialized = cursor.ToList();
@@ -57,7 +57,7 @@ public class RecommendationStorage : IRecommendationStorage
     /// <inheritdoc/>
     public IObservable<IEnumerable<RecommendationState>> ObserveRecommendations()
     {
-        var recommendations = GetRecommendations().GetAwaiter().GetResult();
+        var recommendations = GeAll().GetAwaiter().GetResult();
         return Collection.Observe(recommendations, HandleChangesForRecommendations);
     }
 
