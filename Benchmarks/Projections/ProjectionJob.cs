@@ -16,14 +16,11 @@ public class ProjectionJob : BenchmarkJob
     [IterationSetup]
     public void CleanEventStore()
     {
-        SetExecutionContext();
-
         Database?.DropCollection(WellKnownCollectionNames.Observers);
     }
 
     protected override void Setup()
     {
-        SetExecutionContext();
         base.Setup();
 
         var key = new ObserverKey(GlobalVariables.MicroserviceId, GlobalVariables.TenantId, EventSequenceId.Log);

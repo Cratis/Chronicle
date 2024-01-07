@@ -16,8 +16,6 @@ public abstract class EventLogJob : BenchmarkJob
     [IterationSetup]
     public void CleanEventStore()
     {
-        SetExecutionContext();
-
         Database?.DropCollection(WellKnownCollectionNames.EventLog);
         Database?.DropCollection(WellKnownCollectionNames.EventSequences);
     }
@@ -28,13 +26,10 @@ public abstract class EventLogJob : BenchmarkJob
 
         var grainFactory = GlobalVariables.ServiceProvider.GetRequiredService<IGrainFactory>();
         EventSequence = grainFactory.GetGrain<IEventSequence>(EventSequenceId.Log, keyExtension: new EventSequenceKey(GlobalVariables.MicroserviceId, GlobalVariables.TenantId));
-
-        SetExecutionContext();
     }
 
     protected async Task Perform(Func<IEventSequence, Task> action)
     {
-        SetExecutionContext();
         await action(EventSequence!);
     }
 }

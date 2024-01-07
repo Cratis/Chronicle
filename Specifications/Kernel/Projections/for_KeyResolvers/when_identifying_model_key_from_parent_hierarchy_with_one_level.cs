@@ -52,7 +52,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_one_level : S
         child_projection.SetupGet(_ => _.ChildrenPropertyPath).Returns("children");
         storage = new();
 
-        storage.Setup(_ => _.GetLastInstanceOfAny(EventSequenceId.Log, parent_key, new[] { root_event_type.Id })).Returns(Task.FromResult(root_event));
+        storage.Setup(_ => _.GetLastInstanceOfAny(parent_key, new[] { root_event_type.Id })).Returns(Task.FromResult(root_event));
         root_projection.Setup(_ => _.GetKeyResolverFor(root_event_type)).Returns((_, __) => Task.FromResult(new Key(parent_key, ArrayIndexers.NoIndexers)));
     }
 

@@ -129,7 +129,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var key = new Key(modelId!, ArrayIndexers.NoIndexers);
         _sink.RemoveAnyExisting(key);
 
-        var cursor = await _eventSequenceStorage.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
+        var cursor = await _eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)

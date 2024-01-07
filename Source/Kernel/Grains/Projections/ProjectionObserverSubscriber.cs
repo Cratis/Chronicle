@@ -67,7 +67,6 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
 
         try
         {
-            _executionContextManager.Establish(_tenantId, events.First().Context.CorrelationId, _microserviceId);
             foreach (var @event in events)
             {
                 await _pipeline.Handle(@event);

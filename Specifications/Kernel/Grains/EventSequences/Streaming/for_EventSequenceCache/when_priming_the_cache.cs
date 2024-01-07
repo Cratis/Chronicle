@@ -19,8 +19,8 @@ public class when_priming_the_cache : given.an_event_sequence_cache
             .Returns(Task.FromResult(true))
             .Returns(Task.FromResult(false));
 
-        event_sequence_storage_provider.Setup(_ =>
-            _.GetRange(event_sequence_id, from, from + EventSequenceCache.NumberOfEventsToFetch, null, null, default))
+        event_sequence_storage.Setup(_ =>
+            _.GetRange(from, from + EventSequenceCache.NumberOfEventsToFetch, null, null, default))
             .Returns(Task.FromResult(event_cursor.Object));
 
         fetched_events = Enumerable

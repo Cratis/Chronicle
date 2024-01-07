@@ -7,9 +7,9 @@ using Aksio.Collections;
 using Aksio.Cratis;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Configuration;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.EventTypes;
 using Aksio.Cratis.Schemas;
-using Aksio.Execution;
 using Aksio.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
@@ -19,8 +19,8 @@ namespace Benchmarks;
 public abstract class BenchmarkJob
 {
     protected IGrainFactory GrainFactory { get; private set; } = null!;
-    protected IExecutionContextManager? ExecutionContextManager { get; private set; }
     protected IEventSerializer? EventSerializer { get; private set; }
+    protected IStorage? Storage { get; private set; }
     protected IEventTypesStorage? EventTypesStorage { get; private set; }
     protected IJsonSchemaGenerator? SchemaGenerator { get; private set; }
     protected virtual IEnumerable<Type> EventTypes => Enumerable.Empty<Type>();
@@ -31,12 +31,11 @@ public abstract class BenchmarkJob
     [GlobalSetup]
     public void GlobalSetup()
     {
-        SetExecutionContext();
-
         GrainFactory = GlobalVariables.ServiceProvider.GetRequiredService<IGrainFactory>();
-        ExecutionContextManager = GlobalVariables.ServiceProvider.GetRequiredService<IExecutionContextManager>();
         EventSerializer = GlobalVariables.ServiceProvider.GetRequiredService<IEventSerializer>();
-        EventTypesStorage = GlobalVariables.ServiceProvider.GetRequiredService<IEventTypesStorage>();
+        Storage = GlobalVariables.ServiceProvider.GetRequiredService<IStorage>();
+
+        EventTypesStorage = Storage.GetEventStore((string)GlobalVariables.MicroserviceId).EventTypes;
         SchemaGenerator = GlobalVariables.ServiceProvider.GetRequiredService<IJsonSchemaGenerator>();
 
         var configuration = GlobalVariables.ServiceProvider.GetRequiredService<Storage>();
@@ -72,8 +71,6 @@ public abstract class BenchmarkJob
     protected virtual void Setup()
     {
     }
-
-    protected void SetExecutionContext() => ExecutionContextManager?.Establish(GlobalVariables.TenantId, CorrelationId.New(), GlobalVariables.MicroserviceId);
 
     protected JsonObject SerializeEvent(object @event) => EventSerializer!.Serialize(@event).GetAwaiter().GetResult();
 }
