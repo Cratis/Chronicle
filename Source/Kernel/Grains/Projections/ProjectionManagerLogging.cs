@@ -17,10 +17,10 @@ internal static partial class ProjectionManagerLogMessages
 
 internal static class ProjectionManagerScopes
 {
-    internal static IDisposable? BeginProjectionManagerScope(this ILogger<ProjectionManager> logger, MicroserviceId identifier, TenantId name) =>
+    internal static IDisposable? BeginProjectionManagerScope(this ILogger<ProjectionManager> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
         logger.BeginScope(new Dictionary<string, object>
         {
-            ["ProjectionId"] = identifier,
-            ["ProjectionName"] = name
+            ["EventStore"] = eventStore,
+            ["EventStoreNamespace"] = @namespace
         });
 }

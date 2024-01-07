@@ -3,10 +3,12 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Projections.Expressions;
 using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Projections.Expressions.Keys;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
@@ -34,19 +36,19 @@ public class ProjectionFactory : IProjectionFactory
     /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving expressions for accessing values on events.</param>
     /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
-    /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for providing events from the event store.</param>
+    /// <param name="storage"><see cref="IEventStoreNamespaceStorage"/> for accessing underlying storage for the specific namespace.</param>
     public ProjectionFactory(
         IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
         IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers,
         IKeyExpressionResolvers keyExpressionResolvers,
         IExpandoObjectConverter expandoObjectConverter,
-        IEventSequenceStorage eventSequenceStorage)
+        IEventStoreNamespaceStorage storage)
     {
         _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
         _eventValueProviderExpressionResolvers = eventValueProviderExpressionResolvers;
         _keyExpressionResolvers = keyExpressionResolvers;
         _expandoObjectConverter = expandoObjectConverter;
-        _eventSequenceStorage = eventSequenceStorage;
+        _eventSequenceStorage = storage.GetEventSequence(EventSequenceId.Log);
     }
 
     /// <inheritdoc/>

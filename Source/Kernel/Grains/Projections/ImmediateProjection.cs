@@ -7,7 +7,6 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Kernel.Grains.Projections.Definitions;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Projections;
 using Aksio.Cratis.Kernel.Storage;
@@ -15,7 +14,6 @@ using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
-using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
 
@@ -26,12 +24,10 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 /// </summary>
 public class ImmediateProjection : Grain, IImmediateProjection
 {
-    readonly ProviderFor<IProjectionManager> _projectionManagerProvider;
-    readonly ProviderFor<IProjectionDefinitions> _projectionDefinitions;
+    readonly IKernel _kernel;
     readonly IStorage _storage;
     readonly IObjectComparer _objectComparer;
     readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<ImmediateProjection> _logger;
     IEventSequenceStorage? _eventSequenceStorage;
     ImmediateProjectionKey? _projectionKey;
@@ -43,28 +39,22 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmediateProjection"/> class.
     /// </summary>
-    /// <param name="projectionManagerProvider">Provider for <see cref="IProjectionManager"/> for working with engine projections.</param>
-    /// <param name="projectionDefinitions">Provider for <see cref="IProjectionDefinitions"/> for working with the projection definitions.</param>
+    /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
     /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
-    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="logger">Logger for logging.</param>
     public ImmediateProjection(
-        ProviderFor<IProjectionManager> projectionManagerProvider,
-        ProviderFor<IProjectionDefinitions> projectionDefinitions,
+        IKernel kernel,
         IStorage storage,
         IObjectComparer objectComparer,
         IExpandoObjectConverter expandoObjectConverter,
-        IExecutionContextManager executionContextManager,
         ILogger<ImmediateProjection> logger)
     {
-        _projectionManagerProvider = projectionManagerProvider;
-        _projectionDefinitions = projectionDefinitions;
+        _kernel = kernel;
         _storage = storage;
         _objectComparer = objectComparer;
         _expandoObjectConverter = expandoObjectConverter;
-        _executionContextManager = executionContextManager;
         _logger = logger;
         _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
     }
@@ -91,13 +81,13 @@ public class ImmediateProjection : Grain, IImmediateProjection
 
         try
         {
-            // TODO: This is a temporary work-around till we fix #264 & #265
-            _executionContextManager.Establish(_projectionKey!.TenantId, _executionContextManager.Current.CorrelationId, _projectionKey.MicroserviceId);
+            var eventStore = _kernel.GetEventStore((string)_projectionKey!.MicroserviceId);
+            var @namespace = eventStore.GetNamespace(_projectionKey!.TenantId);
 
             var projectionChanged = false;
 
-            var projection = _projectionManagerProvider().Get(_projectionId);
-            var (foundProjection, definition) = await _projectionDefinitions().TryGetFor(_projectionId);
+            var projection = @namespace.ProjectionManager.Get(_projectionId);
+            var (foundProjection, definition) = await eventStore.ProjectionDefinitions.TryGetFor(_projectionId);
 
             var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
             if (foundProjection && definition is not null)
@@ -157,10 +147,9 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// <inheritdoc/>
     public async Task<ImmediateProjectionResult> GetCurrentModelInstanceWithAdditionalEventsApplied(IEnumerable<EventToApply> events)
     {
-        // TODO: This is a temporary work-around till we fix #264 & #265
-        _executionContextManager.Establish(_projectionKey!.TenantId, _executionContextManager.Current.CorrelationId, _projectionKey.MicroserviceId);
+        var @namespace = _kernel.GetEventStore((string)_projectionKey!.MicroserviceId).GetNamespace(_projectionKey!.TenantId);
 
-        var projection = _projectionManagerProvider().Get(_projectionId);
+        var projection = @namespace.ProjectionManager.Get(_projectionId);
         var affectedProperties = new HashSet<PropertyPath>();
 
         var eventTypesStorage = _storage.GetEventStore((string)_projectionKey!.MicroserviceId).EventTypes;

@@ -22,9 +22,7 @@ public interface ISinks
     /// Get a <see cref="ISink"/> of a specific <see cref="SinkTypeId"/>.
     /// </summary>
     /// <param name="typeId"><see cref="SinkTypeId"/> to get for.</param>
-    /// <param name="eventStore"><see cref="EventStoreName"/> the sink is for.</param>
-    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the sink is for.</param>
     /// <param name="model"><see cref="Model"/> to get for.</param>
     /// <returns><see cref="ISink"/> instance.</returns>
-    ISink GetFor(SinkTypeId typeId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Model model);
+    ISink GetFor(SinkTypeId typeId, Model model);
 }

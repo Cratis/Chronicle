@@ -48,7 +48,7 @@ public class ReducerPipelines : IReducerPipelines
     {
         var readModelSchema = await JsonSchema.FromJsonAsync(definition.ReadModel.Schema);
         var readModel = new Model(definition.ReadModel.Name, readModelSchema);
-        var sink = _sinks.GetForTypeAndModel(definition.SinkTypeId, readModel);
+        var sink = _sinks.GetFor(definition.SinkTypeId, readModel);
         return new ReducerPipeline(readModel, sink, _objectComparer);
     }
 }

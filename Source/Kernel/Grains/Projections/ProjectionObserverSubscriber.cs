@@ -6,7 +6,6 @@ using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Projections.Pipelines;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
-using Aksio.DependencyInversion;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;
 
@@ -15,8 +14,7 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 /// </summary>
 public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
-    readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IProjectionManager> _projectionManagerProvider;
+    readonly IKernel _kernel;
     ProjectionId _projectionId;
     IProjectionPipeline? _pipeline;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
@@ -25,15 +23,11 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="projectionManagerProvider">Provider for <see cref="IProjectionManager"/> for working with projection instances.</param>
-    public ProjectionObserverSubscriber(
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IProjectionManager> projectionManagerProvider)
+    /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
+    public ProjectionObserverSubscriber(IKernel kernel)
     {
-        _executionContextManager = executionContextManager;
-        _projectionManagerProvider = projectionManagerProvider;
         _projectionId = ProjectionId.NotSet;
+        _kernel = kernel;
     }
 
     /// <inheritdoc/>
@@ -86,7 +80,7 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
 
     void HandleDefinitionsAndInstances()
     {
-        _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
-        _pipeline = _projectionManagerProvider().GetPipeline(_projectionId);
+        var projectionManager = _kernel.GetEventStore((string)_microserviceId).GetNamespace(_tenantId).ProjectionManager;
+        _pipeline = projectionManager.GetPipeline(_projectionId);
     }
 }

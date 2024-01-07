@@ -14,10 +14,10 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionManager"/>.
 /// </summary>
-[SingletonPerMicroserviceAndTenant]
 public class ProjectionManager : IProjectionManager
 {
-    readonly IExecutionContextManager _executionContextManager;
+    readonly EventStoreName _eventStoreName;
+    readonly EventStoreNamespaceName _eventStoreNamespace;
     readonly IProjectionFactory _projectionFactory;
     readonly IProjectionPipelineFactory _projectionPipelineFactory;
     readonly ILogger<ProjectionManager> _logger;
@@ -27,17 +27,20 @@ public class ProjectionManager : IProjectionManager
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionManager"/> class.
     /// </summary>
-    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="eventStoreName"><see cref="EventStoreName"/> the manager is for.</param>
+    /// <param name="eventStoreNamespace"><see cref="EventStoreNamespaceName"/> the manager is for.</param>
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> to use.</param>
     /// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> to use.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ProjectionManager(
-        IExecutionContextManager executionContextManager,
+        EventStoreName eventStoreName,
+        EventStoreNamespaceName eventStoreNamespace,
         IProjectionFactory projectionFactory,
         IProjectionPipelineFactory projectionPipelineFactory,
         ILogger<ProjectionManager> logger)
     {
-        _executionContextManager = executionContextManager;
+        _eventStoreName = eventStoreName;
+        _eventStoreNamespace = eventStoreNamespace;
         _projectionFactory = projectionFactory;
         _projectionPipelineFactory = projectionPipelineFactory;
         _logger = logger;
@@ -63,7 +66,7 @@ public class ProjectionManager : IProjectionManager
     /// <inheritdoc/>
     public async Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition)
     {
-        using var scope = _logger.BeginProjectionManagerScope(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId);
+        using var scope = _logger.BeginProjectionManagerScope(_eventStoreName, _eventStoreNamespace);
 
         _logger.Registering(projectionDefinition.Identifier, projectionDefinition.Name);
 
