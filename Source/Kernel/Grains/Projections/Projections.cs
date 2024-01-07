@@ -65,12 +65,13 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             {
                 if (await eventStore.ProjectionDefinitions.TryGetFor(pipeline.ProjectionId) is (true, ProjectionDefinition projectionDefinition))
                 {
-                    if (!projectionDefinition.IsActive) continue;
-
                     foreach (var tenant in _configuration.Tenants.GetTenantIds())
                     {
                         var eventStoreNamespace = eventStore.GetNamespace(tenant);
                         await eventStoreNamespace.ProjectionManager.Register(projectionDefinition, pipeline);
+
+                        if (!projectionDefinition.IsActive) continue;
+
                         var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
                         await GrainFactory.GetGrain<IProjection>(pipeline.ProjectionId, key).Ensure();
                     }
