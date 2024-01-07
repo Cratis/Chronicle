@@ -30,10 +30,10 @@ public class ImmediateProjection : Grain, IImmediateProjection
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitions;
     readonly IStorage _storage;
     readonly IObjectComparer _objectComparer;
-    readonly IEventSequenceStorage _eventSequenceStorage;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<ImmediateProjection> _logger;
+    IEventSequenceStorage? _eventSequenceStorage;
     ImmediateProjectionKey? _projectionKey;
     EventSequenceNumber _lastHandledEventSequenceNumber;
     ExpandoObject? _initialState;
@@ -47,7 +47,6 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// <param name="projectionDefinitions">Provider for <see cref="IProjectionDefinitions"/> for working with the projection definitions.</param>
     /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
-    /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for getting events from storage.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="logger">Logger for logging.</param>
@@ -56,7 +55,6 @@ public class ImmediateProjection : Grain, IImmediateProjection
         ProviderFor<IProjectionDefinitions> projectionDefinitions,
         IStorage storage,
         IObjectComparer objectComparer,
-        IEventSequenceStorage eventSequenceStorage,
         IExpandoObjectConverter expandoObjectConverter,
         IExecutionContextManager executionContextManager,
         ILogger<ImmediateProjection> logger)
@@ -65,7 +63,6 @@ public class ImmediateProjection : Grain, IImmediateProjection
         _projectionDefinitions = projectionDefinitions;
         _storage = storage;
         _objectComparer = objectComparer;
-        _eventSequenceStorage = eventSequenceStorage;
         _expandoObjectConverter = expandoObjectConverter;
         _executionContextManager = executionContextManager;
         _logger = logger;
@@ -77,6 +74,10 @@ public class ImmediateProjection : Grain, IImmediateProjection
     {
         _projectionId = this.GetPrimaryKey(out var keyAsString);
         _projectionKey = ImmediateProjectionKey.Parse(keyAsString);
+        _eventSequenceStorage = _storage
+                                    .GetEventStore((string)_projectionKey.MicroserviceId)
+                                    .GetNamespace(_projectionKey.TenantId)
+                                    .GetEventSequence(_projectionKey.EventSequenceId);
 
         return Task.CompletedTask;
     }
@@ -124,7 +125,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
             var affectedProperties = new HashSet<PropertyPath>();
 
             var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
-            var cursor = await _eventSequenceStorage.GetFromSequenceNumber(fromSequenceNumber, modelKey, projection.EventTypes);
+            var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(fromSequenceNumber, modelKey, projection.EventTypes);
             var projectedEventsCount = 0;
             var state = GetInitialState(projection, definition);
             while (await cursor.MoveNext())
