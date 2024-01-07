@@ -31,8 +31,8 @@ public class a_catchup_observer : Specification
         event_store_storage = new();
         event_store_namespace_storage = new();
         observer_key_indexes = new();
-        storage.Setup(_ => _.GetEventStore(IsAny<string>())).Returns(event_store_storage.Object);
-        event_store_storage.Setup(_ => _.GetNamespace(IsAny<string>())).Returns(event_store_namespace_storage.Object);
+        storage.Setup(_ => _.GetEventStore(IsAny<EventStore>())).Returns(event_store_storage.Object);
+        event_store_storage.Setup(_ => _.GetNamespace(IsAny<EventStoreNamespace>())).Returns(event_store_namespace_storage.Object);
         event_store_namespace_storage.Setup(_ => _.ObserverKeyIndexes).Returns(observer_key_indexes.Object);
         state_storage = silo.StorageManager.GetStorage<CatchUpObserverState>();
 
