@@ -6,7 +6,7 @@ import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/a
 import { PagedQueryResult } from './PagedQueryResult';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}?fromSequenceNumber={{fromSequenceNumber}}&toSequenceNumber={{toSequenceNumber}}&eventSourceId={{eventSourceId}}&eventTypes={{eventTypes}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}/range?fromSequenceNumber={{fromSequenceNumber}}&toSequenceNumber={{toSequenceNumber}}&eventSourceId={{eventSourceId}}&eventTypes={{eventTypes}}');
 
 export interface GetAppendedEventsRangeArguments {
     eventSequenceId: string;
@@ -18,7 +18,7 @@ export interface GetAppendedEventsRangeArguments {
     eventTypes: any;
 }
 export class GetAppendedEventsRange extends QueryFor<PagedQueryResult, GetAppendedEventsRangeArguments> {
-    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}?fromSequenceNumber={{fromSequenceNumber}}&toSequenceNumber={{toSequenceNumber}}&eventSourceId={{eventSourceId}}&eventTypes={{eventTypes}}';
+    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}/range?fromSequenceNumber={{fromSequenceNumber}}&toSequenceNumber={{toSequenceNumber}}&eventSourceId={{eventSourceId}}&eventTypes={{eventTypes}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: PagedQueryResult = {} as any;
 
