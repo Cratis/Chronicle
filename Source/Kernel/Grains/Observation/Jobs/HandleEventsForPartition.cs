@@ -20,7 +20,7 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver? _observer;
     IObserverSubscriber? _subscriber;
@@ -29,13 +29,13 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
     /// Initializes a new instance of the <see cref="HandleEventsForPartition"/> class.
     /// </summary>
     /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing storage for the cluster.</param>
+    /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
     public HandleEventsForPartition(
         [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
         IPersistentState<HandleEventsForPartitionState> state,
-        IClusterStorage clusterStorage) : base(state)
+        IStorage storage) : base(state)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <inheritdoc/>
@@ -166,5 +166,5 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
         return eventsToHandle;
     }
 
-    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _eventSequenceStorage ??= _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
+    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _eventSequenceStorage ??= _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
 }

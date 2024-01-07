@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Identities.for_MongoDBIdentityStor
 
 public class all_dependencies : Specification
 {
-    protected Mock<IClusterDatabase> database;
+    protected Mock<IDatabase> database;
     protected Mock<IMongoCollection<MongoDBIdentity>> collection;
     protected List<MongoDBIdentity> identities_from_database;
     protected List<MongoDBIdentity> inserted_identities;

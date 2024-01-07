@@ -14,15 +14,15 @@ namespace Aksio.Cratis.Kernel.Read.Observation;
 [Route("/api/events/store/{microserviceId}/{tenantId}/observers")]
 public class Observers : ControllerBase
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
-    public Observers(IClusterStorage clusterStorage)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public Observers(IStorage storage)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ public class Observers : ControllerBase
     public Task<IEnumerable<ObserverInformation>> GetObservers(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId) =>
-         _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers.GetAllObservers();
+         _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers.GetAllObservers();
 
     /// <summary>
     /// Get and observe all observers.
@@ -49,7 +49,7 @@ public class Observers : ControllerBase
         [FromRoute] TenantId tenantId)
     {
         var clientObservable = new ClientObservable<IEnumerable<ObserverInformation>>();
-        var observers = _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers;
+        var observers = _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers;
         var observable = observers.ObserveAll();
         var subscription = observable.Subscribe(clientObservable.OnNext);
         clientObservable.ClientDisconnected = () =>

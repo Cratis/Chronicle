@@ -1,17 +1,16 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Configuration;
 using Aksio.MongoDB;
 using MongoDB.Driver;
+using StorageConfiguration = Aksio.Cratis.Kernel.Configuration.Storage;
 
 namespace Aksio.Cratis.MongoDB;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClusterDatabase"/>.
+/// Represents an implementation of <see cref="IDatabase"/>.
 /// </summary>
-[Singleton]
-public class ClusterDatabase : IClusterDatabase
+public class Database : IDatabase
 {
     readonly IMongoDatabase _database;
 
@@ -20,9 +19,9 @@ public class ClusterDatabase : IClusterDatabase
     /// </summary>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
-    public ClusterDatabase(
+    public Database(
         IMongoDBClientFactory clientFactory,
-        Storage configuration)
+        StorageConfiguration configuration)
     {
         var url = new MongoUrl(configuration.Cluster.ConnectionDetails.ToString());
         var client = clientFactory.Create(url);

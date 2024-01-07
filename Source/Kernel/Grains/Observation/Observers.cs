@@ -15,19 +15,19 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public class Observers : Grain, IObservers
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
     readonly IGrainFactory _grainFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>///
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>///
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains outside of Orleans task context.</param>
     public Observers(
-        IClusterStorage clusterStorage,
+        IStorage storage,
         IGrainFactory grainFactory)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
         _grainFactory = grainFactory;
     }
 
@@ -37,7 +37,7 @@ public class Observers : Grain, IObservers
         _ = this.GetPrimaryKeyLong(out var keyAsString);
         var key = ObserversKey.Parse(keyAsString!);
 
-        var observerStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Observers;
+        var observerStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Observers;
         var observers = await observerStorage.GetAllObservers();
 
         var observersForConsolidation = new List<ObserverIdAndKey>();

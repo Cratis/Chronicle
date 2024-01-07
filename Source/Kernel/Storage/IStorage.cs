@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Kernel.Storage;
 /// <summary>
 /// Defines the storage for the cluster level.
 /// </summary>
-public interface IClusterStorage
+public interface IStorage
 {
     /// <summary>
     /// Get the <see cref="IEventStoreStorage"/> for a specific <see cref="EventStore"/>.

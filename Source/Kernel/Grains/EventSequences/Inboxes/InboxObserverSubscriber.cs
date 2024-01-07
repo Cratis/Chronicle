@@ -19,7 +19,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 /// </summary>
 public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly ILogger<InboxObserverSubscriber> _logger;
     IEventSequence? _inboxEventSequence;
@@ -31,15 +31,15 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
     /// <summary>
     /// Initializes a new instance of the <see cref="InboxObserverSubscriber"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for working with underlying storage.</param>
+    /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     /// <param name="logger">Logger for logging.</param>
     public InboxObserverSubscriber(
-        IClusterStorage clusterStorage,
+        IStorage storage,
         IExpandoObjectConverter expandoObjectConverter,
         ILogger<InboxObserverSubscriber> logger)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
         _expandoObjectConverter = expandoObjectConverter;
         _logger = logger;
     }
@@ -54,8 +54,8 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
             EventSequenceId.Inbox,
             keyExtension: new EventSequenceKey(_microserviceId, _key.TenantId));
 
-        _eventTypesStorage = _clusterStorage.GetEventStore((string)_microserviceId!).EventTypes;
-        _sourceEventTypesStorage = _clusterStorage.GetEventStore((string)_key.SourceMicroserviceId!).EventTypes;
+        _eventTypesStorage = _storage.GetEventStore((string)_microserviceId!).EventTypes;
+        _sourceEventTypesStorage = _storage.GetEventStore((string)_key.SourceMicroserviceId!).EventTypes;
 
         return Task.CompletedTask;
     }

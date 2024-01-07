@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Configuration;
 using Aksio.MongoDB;
 using MongoDB.Driver;
+using StorageConfiguration = Aksio.Cratis.Kernel.Configuration.Storage;
 
 namespace Aksio.Cratis.MongoDB;
 
@@ -23,7 +23,7 @@ public class EventStoreDatabase : IEventStoreDatabase
     public EventStoreDatabase(
         EventStore eventStore,
         IMongoDBClientFactory clientFactory,
-        Storage configuration)
+        StorageConfiguration configuration)
     {
         var url = new MongoUrl(configuration.Microservices.Get((string)eventStore).Shared.Get(WellKnownStorageTypes.EventStore).ConnectionDetails.ToString());
         var client = clientFactory.Create(url);

@@ -14,15 +14,15 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// </summary>
 public class JobStepGrainStorageProvider : IGrainStorage
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobStepGrainStorageProvider"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
-    public JobStepGrainStorageProvider(IClusterStorage clusterStorage)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public JobStepGrainStorageProvider(IStorage storage)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <inheritdoc/>
@@ -40,7 +40,7 @@ public class JobStepGrainStorageProvider : IGrainStorage
         if (grainId.TryGetGuidKey(out var jobStepId, out var keyExtension))
         {
             var key = (JobStepKey)keyExtension!;
-            var storage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
+            var storage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
             var state = await storage.Read<T>(key.JobId, jobStepId);
             if (state is not null)
             {
@@ -57,7 +57,7 @@ public class JobStepGrainStorageProvider : IGrainStorage
         if (grainId.TryGetGuidKey(out var jobStepId, out var keyExtension))
         {
             var key = (JobStepKey)keyExtension!;
-            var storage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
+            var storage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
 
             var actualState = (grainState.State as JobStepState)!;
 

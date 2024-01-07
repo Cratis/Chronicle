@@ -13,13 +13,13 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Tenants;
 /// </summary>
 public class TenantConfigurationStorageProvider : IGrainStorage
 {
-    readonly IClusterDatabase _database;
+    readonly IDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantConfigurationStorageProvider"/> class.
     /// </summary>
-    /// <param name="database"><see cref="IClusterDatabase"/> that holds the configuration data.</param>
-    public TenantConfigurationStorageProvider(IClusterDatabase database)
+    /// <param name="database"><see cref="IDatabase"/> that holds the configuration data.</param>
+    public TenantConfigurationStorageProvider(IDatabase database)
     {
         _database = database;
     }

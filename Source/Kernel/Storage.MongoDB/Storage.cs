@@ -3,33 +3,33 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Kernel.Compliance;
-using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Projections.Json;
 using Aksio.MongoDB;
 using Microsoft.Extensions.Logging;
+using StorageConfiguration = Aksio.Cratis.Kernel.Configuration.Storage;
 
 namespace Aksio.Cratis.MongoDB;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClusterDatabase"/> for MongoDB.
+/// Represents an implementation of <see cref="IDatabase"/> for MongoDB.
 /// </summary>
-public class ClusterStorage : IClusterStorage
+public class Storage : IStorage
 {
     readonly IDictionary<EventStore, IEventStoreStorage> _eventStores = new Dictionary<EventStore, IEventStoreStorage>();
-    readonly IClusterDatabase _database;
+    readonly IDatabase _database;
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly IJsonProjectionPipelineSerializer _projectionPipelineSerializer;
     readonly IJsonComplianceManager _complianceManager;
     readonly Json.ExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IMongoDBClientFactory _clientFactory;
-    readonly Storage _configuration;
+    readonly StorageConfiguration _configuration;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ClusterStorage"/> class.
+    /// Initializes a new instance of the <see cref="Storage"/> class.
     /// </summary>
     /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for handling serialization of projection definitions.</param>
     /// <param name="projectionPipelineSerializer"><see cref="IJsonProjectionPipelineSerializer"/> for handling serialization of projection pipeline definitions.</param>
@@ -40,18 +40,18 @@ public class ClusterStorage : IClusterStorage
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting the execution context.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-    public ClusterStorage(
+    public Storage(
         IJsonProjectionSerializer projectionSerializer,
         IJsonProjectionPipelineSerializer projectionPipelineSerializer,
         IJsonComplianceManager complianceManager,
         Json.ExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         IMongoDBClientFactory clientFactory,
-        Storage configuration,
+        StorageConfiguration configuration,
         IExecutionContextManager executionContextManager,
         ILoggerFactory loggerFactory)
     {
-        _database = new ClusterDatabase(clientFactory, configuration);
+        _database = new Database(clientFactory, configuration);
         _projectionSerializer = projectionSerializer;
         _projectionPipelineSerializer = projectionPipelineSerializer;
         _complianceManager = complianceManager;

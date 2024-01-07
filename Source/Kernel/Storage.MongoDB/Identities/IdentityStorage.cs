@@ -16,7 +16,7 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Identities;
 /// </summary>
 public class IdentityStorage : IIdentityStorage
 {
-    readonly IClusterDatabase _database;
+    readonly IDatabase _database;
     readonly ILogger<IdentityStorage> _logger;
     Dictionary<IdentityId, Identity> _identitiesByIdentityId = new();
     Dictionary<string, IdentityId> _identityIdsBySubject = new();
@@ -28,7 +28,7 @@ public class IdentityStorage : IIdentityStorage
     /// <param name="database">The cluster database.</param>
     /// <param name="logger">Logger for logging.</param>
     public IdentityStorage(
-        IClusterDatabase database,
+        IDatabase database,
         ILogger<IdentityStorage> logger)
     {
         _database = database;

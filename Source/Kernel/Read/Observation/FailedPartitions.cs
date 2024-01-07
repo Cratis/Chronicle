@@ -15,15 +15,15 @@ namespace Aksio.Cratis.Kernel.Read.Observation;
 [Route("/api/events/store/{microserviceId}/{tenantId}/failed-partitions")]
 public class FailedPartitions : ControllerBase
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
-    public FailedPartitions(IClusterStorage clusterStorage)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public FailedPartitions(IStorage storage)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <summary>
@@ -42,7 +42,7 @@ public class FailedPartitions : ControllerBase
         observerId ??= ObserverId.Unspecified;
 
         var clientObservable = new ClientObservable<IEnumerable<FailedPartition>>();
-        var failedPartitions = _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).FailedPartitions;
+        var failedPartitions = _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).FailedPartitions;
         var observable = failedPartitions.ObserveAllFor(observerId);
         var subscription = observable.Subscribe(clientObservable.OnNext);
         clientObservable.ClientDisconnected = () =>

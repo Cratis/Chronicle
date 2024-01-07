@@ -12,23 +12,23 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 /// </summary>
 public class EventSequenceCacheFactory : IEventSequenceCacheFactory
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
     readonly ILogger<EventSequenceCache> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceCacheFactory"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing storage for the cluster.</param>
+    /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public EventSequenceCacheFactory(
-        IClusterStorage clusterStorage,
+        IStorage storage,
         ILogger<EventSequenceCache> logger)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
         _logger = logger;
     }
 
     /// <inheritdoc/>
     public IEventSequenceCache Create(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) =>
-        new EventSequenceCache(_clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId), _logger);
+        new EventSequenceCache(_storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId), _logger);
 }

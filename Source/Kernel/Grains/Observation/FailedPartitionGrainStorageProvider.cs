@@ -13,15 +13,15 @@ namespace Aksio.Cratis.Kernel.Storage.Observation;
 /// </summary>
 public class FailedPartitionGrainStorageProvider : IGrainStorage
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FailedPartitionGrainStorageProvider"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
-    public FailedPartitionGrainStorageProvider(IClusterStorage clusterStorage)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public FailedPartitionGrainStorageProvider(IStorage storage)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <inheritdoc/>
@@ -34,7 +34,7 @@ public class FailedPartitionGrainStorageProvider : IGrainStorage
         var observerId = grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var failedPartitions = _clusterStorage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).FailedPartitions;
+        var failedPartitions = _storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).FailedPartitions;
         actualGrainState.State = await failedPartitions.GetFor(observerId);
     }
 
@@ -45,7 +45,7 @@ public class FailedPartitionGrainStorageProvider : IGrainStorage
         var observerId = grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var failedPartitions = _clusterStorage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).FailedPartitions;
+        var failedPartitions = _storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).FailedPartitions;
         foreach (var failedPartition in actualGrainState.State.Partitions)
         {
             failedPartition.ObserverId = observerId;

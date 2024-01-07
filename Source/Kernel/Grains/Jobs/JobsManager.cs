@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// </summary>
 public class JobsManager : Grain, IJobsManager
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
     readonly ILogger<JobsManager> _logger;
     IEventStoreNamespaceStorage? _namespaceStorage;
     IJobStorage? _jobStorage;
@@ -24,13 +24,13 @@ public class JobsManager : Grain, IJobsManager
     /// <summary>
     /// Initializes a new instance of the <see cref="JobsManager"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for working with underlying storage.</param>
+    /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
     /// <param name="logger">Logger for logging.</param>
     public JobsManager(
-        IClusterStorage clusterStorage,
+        IStorage storage,
         ILogger<JobsManager> logger)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
         _logger = logger;
     }
 
@@ -40,7 +40,7 @@ public class JobsManager : Grain, IJobsManager
         this.GetPrimaryKeyLong(out var key);
         _key = key;
 
-        _namespaceStorage = _clusterStorage.GetEventStore((string)_key.MicroserviceId).GetNamespace(_key.TenantId);
+        _namespaceStorage = _storage.GetEventStore((string)_key.MicroserviceId).GetNamespace(_key.TenantId);
         _jobStorage = _namespaceStorage.Jobs;
         _jobStepStorage = _namespaceStorage.JobSteps;
 

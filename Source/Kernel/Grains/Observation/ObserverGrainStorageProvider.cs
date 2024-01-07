@@ -14,15 +14,15 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public class ObserverGrainStorageProvider : IGrainStorage
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverGrainStorageProvider"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
-    public ObserverGrainStorageProvider(IClusterStorage clusterStorage)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public ObserverGrainStorageProvider(IStorage storage)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <inheritdoc/>
@@ -35,7 +35,7 @@ public class ObserverGrainStorageProvider : IGrainStorage
         var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var observers = _clusterStorage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).Observers;
+        var observers = _storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).Observers;
         actualGrainState.State = await observers.GetState(observerId, observerKey);
     }
 
@@ -46,7 +46,7 @@ public class ObserverGrainStorageProvider : IGrainStorage
         var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var observers = _clusterStorage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).Observers;
+        var observers = _storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).Observers;
         await observers.SaveState(observerId, observerKey, actualGrainState.State);
     }
 }

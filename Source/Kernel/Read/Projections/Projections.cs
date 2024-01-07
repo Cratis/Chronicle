@@ -12,15 +12,15 @@ namespace Aksio.Cratis.Kernel.Read.Projections;
 [Route("/api/events/store/{microserviceId}/projections")]
 public class Projections : ControllerBase
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
-    public Projections(IClusterStorage clusterStorage)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public Projections(IStorage storage)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <summary>
@@ -31,7 +31,7 @@ public class Projections : ControllerBase
     [HttpGet]
     public async Task<IEnumerable<Projection>> AllProjections([FromRoute] MicroserviceId microserviceId)
     {
-        var projections = await _clusterStorage.GetEventStore((string)microserviceId).Projections.GetAll();
+        var projections = await _storage.GetEventStore((string)microserviceId).Projections.GetAll();
         return projections.Select(_ => new Projection(
             _.Identifier,
             _.Name,

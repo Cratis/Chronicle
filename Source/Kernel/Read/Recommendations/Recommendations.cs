@@ -15,15 +15,15 @@ namespace Aksio.Cratis.Kernel.Read.Recommendations;
 [Route("/api/events/store/{microserviceId}/{tenantId}/recommendations")]
 public class Recommendations : ControllerBase
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Recommendations"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
-    public Recommendations(IClusterStorage clusterStorage)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public Recommendations(IStorage storage)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ public class Recommendations : ControllerBase
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
-        var recommendations = await _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations.GeAll();
+        var recommendations = await _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations.GeAll();
         return Convert(recommendations);
     }
 
@@ -53,7 +53,7 @@ public class Recommendations : ControllerBase
         [FromRoute] TenantId tenantId)
     {
         var clientObservable = new ClientObservable<IEnumerable<RecommendationInformation>>();
-        var recommendations = _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations;
+        var recommendations = _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations;
         var observable = recommendations.ObserveRecommendations();
         var subscription = observable.Subscribe(recommendations => clientObservable.OnNext(Convert(recommendations)));
         clientObservable.ClientDisconnected = () =>

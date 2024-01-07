@@ -17,7 +17,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// </summary>
 public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, JobStepState>, IConsolidateStateForObserver
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver? _observer;
 
@@ -25,14 +25,14 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, Job
     /// Initializes a new instance of the <see cref="ConsolidateStateForObserver"/> class.
     /// </summary>
     /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing storage for the cluster.</param>
+    /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
     public ConsolidateStateForObserver(
         [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
         IPersistentState<JobStepState> state,
-        IClusterStorage clusterStorage)
+        IStorage storage)
         : base(state)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <inheritdoc/>
@@ -90,5 +90,5 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, Job
         return JobStepResult.Succeeded();
     }
 
-    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _eventSequenceStorage ??= _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
+    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _eventSequenceStorage ??= _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
 }

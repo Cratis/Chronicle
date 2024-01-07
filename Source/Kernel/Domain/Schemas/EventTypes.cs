@@ -13,15 +13,15 @@ namespace Aksio.Cratis.Kernel.Domain.Projections;
 [Route("/api/events/store/{microserviceId}/types")]
 public class EventTypes : ControllerBase
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypes"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for working with underlying storage.</param>
-    public EventTypes(IClusterStorage clusterStorage)
+    /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
+    public EventTypes(IStorage storage)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <summary>
@@ -38,7 +38,7 @@ public class EventTypes : ControllerBase
         foreach (var eventType in payload.Types)
         {
             var schema = await JsonSchema.FromJsonAsync(eventType.Schema.ToJsonString());
-            await _clusterStorage.GetEventStore((string)microserviceId).EventTypes.Register(eventType.Type, eventType.FriendlyName, schema);
+            await _storage.GetEventStore((string)microserviceId).EventTypes.Register(eventType.Type, eventType.FriendlyName, schema);
         }
     }
 }

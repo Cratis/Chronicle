@@ -36,7 +36,7 @@ public class EventStoreStorage : IEventStoreStorage
     /// Initializes a new instance of the <see cref="EventStoreStorage"/> class.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
-    /// <param name="clusterDatabase"><see cref="IClusterDatabase"/> to use.</param>
+    /// <param name="clusterDatabase"><see cref="IDatabase"/> to use.</param>
     /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to use.</param>
     /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for handling serialization of projection definitions.</param>
     /// <param name="projectionPipelineSerializer"><see cref="IJsonProjectionPipelineSerializer"/> for handling serialization of projection pipeline definitions.</param>
@@ -49,7 +49,7 @@ public class EventStoreStorage : IEventStoreStorage
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStoreStorage(
         EventStore eventStore,
-        IClusterDatabase clusterDatabase,
+        IDatabase clusterDatabase,
         IEventStoreDatabase eventStoreDatabase,
         IJsonProjectionSerializer projectionSerializer,
         IJsonProjectionPipelineSerializer projectionPipelineSerializer,

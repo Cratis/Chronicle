@@ -15,23 +15,23 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     readonly IQueueAdapterCache _cache;
     readonly IStreamQueueMapper _mapper;
     readonly string _name;
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
     /// <param name="name">Name of stream.</param>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
     /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
     public EventSequenceQueueAdapterFactory(
         string name,
-        IClusterStorage clusterStorage,
+        IStorage storage,
         IEventSequenceCaches caches)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
         _cache = new EventSequenceQueueAdapterCache(caches);
         _name = name;
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <summary>
@@ -44,12 +44,12 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     {
         return new(
             name,
-            serviceProvider.GetRequiredService<IClusterStorage>(),
+            serviceProvider.GetRequiredService<IStorage>(),
             serviceProvider.GetRequiredService<IEventSequenceCaches>());
     }
 
     /// <inheritdoc/>
-    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _clusterStorage));
+    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _storage));
 
     /// <inheritdoc/>
     public Task<IStreamFailureHandler> GetDeliveryFailureHandler(QueueId queueId) => Task.FromResult<IStreamFailureHandler>(new NoOpStreamDeliveryFailureHandler());

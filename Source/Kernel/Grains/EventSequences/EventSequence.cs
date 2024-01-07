@@ -31,7 +31,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
     readonly IMeter<EventSequence> _meter;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManagerProvider;
@@ -49,21 +49,21 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <summary>
     /// Initializes a new instance of <see cref="EventSequence"/>.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing storage for the cluster.</param>
+    /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
     /// <param name="meter">The meter to use for metrics.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public EventSequence(
-        IClusterStorage clusterStorage,
+        IStorage storage,
         IMeter<EventSequence> meter,
         IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManagerProvider,
         IExpandoObjectConverter expandoObjectConverter,
         ILogger<EventSequence> logger)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
         _meter = meter;
         _executionContextManager = executionContextManager;
         _jsonComplianceManagerProvider = jsonComplianceManagerProvider;
@@ -71,10 +71,10 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         _logger = logger;
     }
 
-    IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= _clusterStorage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetNamespace(_eventSequenceKey.TenantId).GetEventSequence(_eventSequenceId);
-    IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= _clusterStorage.GetEventStore((string)_eventSequenceKey.MicroserviceId).EventTypes;
-    IIdentityStorage IdentityStorage => _identityStorage ??= _clusterStorage.GetEventStore((string)_eventSequenceKey.MicroserviceId).Identities;
-    IObserverStorage ObserverStorage => _observerStorage ??= _clusterStorage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetNamespace(_eventSequenceKey.TenantId).Observers;
+    IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= _storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetNamespace(_eventSequenceKey.TenantId).GetEventSequence(_eventSequenceId);
+    IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= _storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).EventTypes;
+    IIdentityStorage IdentityStorage => _identityStorage ??= _storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).Identities;
+    IObserverStorage ObserverStorage => _observerStorage ??= _storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetNamespace(_eventSequenceKey.TenantId).Observers;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)

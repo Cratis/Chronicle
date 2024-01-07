@@ -24,19 +24,19 @@ public class ReminderTable : IReminderTable
     const string ServiceIdProperty = "serviceId";
 
     readonly JsonSerializerSettings _serializerSettings;
-    readonly IClusterDatabase _database;
+    readonly IDatabase _database;
     readonly IOptions<ClusterOptions> _clusterOptions;
     readonly ILogger<ReminderTable> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReminderTable"/> class.
     /// </summary>
-    /// <param name="database"><see cref="IClusterDatabase"/> to keep state in.</param>
+    /// <param name="database"><see cref="IDatabase"/> to keep state in.</param>
     /// <param name="clusterOptions">The <see cref="ClusterOptions"/>.</param>
     /// <param name="orleansJsonSerializerOptions">The Orleans Json serializer options.</param>
     /// <param name="logger">Logger for logging.</param>
     public ReminderTable(
-        IClusterDatabase database,
+        IDatabase database,
         IOptions<ClusterOptions> clusterOptions,
         IOptions<OrleansJsonSerializerOptions> orleansJsonSerializerOptions,
         ILogger<ReminderTable> logger)

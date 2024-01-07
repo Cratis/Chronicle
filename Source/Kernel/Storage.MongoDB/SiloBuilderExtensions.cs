@@ -6,7 +6,6 @@ using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.MongoDB;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Reminders;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Tenants;
-using Aksio.Cratis.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson.Serialization;
 using Orleans.Runtime;
@@ -30,7 +29,7 @@ public static class SiloBuilderExtensions
         builder.AddMemoryGrainStorage("PubSubStore");
         builder.ConfigureServices(services =>
         {
-            services.AddSingleton<IClusterStorage, ClusterStorage>();
+            services.AddSingleton<IStorage, Aksio.Cratis.MongoDB.Storage>();
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.TenantConfiguration, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
         });
 

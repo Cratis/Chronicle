@@ -15,15 +15,15 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 /// </summary>
 public class EventSequencesStorageProvider : IGrainStorage
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequencesStorageProvider"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing storage for the cluster.</param>
-    public EventSequencesStorageProvider(IClusterStorage clusterStorage)
+    /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
+    public EventSequencesStorageProvider(IStorage storage)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <inheritdoc/>
@@ -36,8 +36,8 @@ public class EventSequencesStorageProvider : IGrainStorage
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
         var key = EventSequenceKey.Parse(keyAsString!);
 
-        var eventTypesStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).EventTypes;
-        var eventSequenceStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).GetEventSequence(eventSequenceId);
+        var eventTypesStorage = _storage.GetEventStore((string)key.MicroserviceId).EventTypes;
+        var eventSequenceStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).GetEventSequence(eventSequenceId);
         actualGrainState.State = await eventSequenceStorage.GetState();
         await HandleTailSequenceNumbersForEventTypes(eventTypesStorage, eventSequenceStorage, actualGrainState);
     }
@@ -48,7 +48,7 @@ public class EventSequencesStorageProvider : IGrainStorage
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
         var key = EventSequenceKey.Parse(keyAsString!);
         var eventSequenceState = (grainState.State as EventSequenceState)!;
-        var eventSequenceStorage = _clusterStorage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).GetEventSequence(eventSequenceId);
+        var eventSequenceStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).GetEventSequence(eventSequenceId);
         await eventSequenceStorage.SaveState(eventSequenceState);
     }
 

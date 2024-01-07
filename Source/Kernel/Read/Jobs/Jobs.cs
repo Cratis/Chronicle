@@ -15,15 +15,15 @@ namespace Aksio.Cratis.Kernel.Read.Jobs;
 [Route("/api/events/store/{microserviceId}/{tenantId}/jobs")]
 public class Jobs : ControllerBase
 {
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Jobs"/> class.
     /// </summary>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
-    public Jobs(IClusterStorage clusterStorage)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public Jobs(IStorage storage)
     {
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <summary>
@@ -36,7 +36,7 @@ public class Jobs : ControllerBase
     public ClientObservable<IEnumerable<JobState>> AllJobs(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId) =>
-        _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Jobs.ObserveJobs().ToClientObservable();
+        _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Jobs.ObserveJobs().ToClientObservable();
 
     /// <summary>
     /// Observes all job steps for a specific job and microservice.
@@ -50,5 +50,5 @@ public class Jobs : ControllerBase
         [FromRoute] JobId jobId,
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId) =>
-        _clusterStorage.GetEventStore((string)microserviceId).GetNamespace(tenantId).JobSteps.ObserveForJob(jobId).ToClientObservable();
+        _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).JobSteps.ObserveForJob(jobId).ToClientObservable();
 }

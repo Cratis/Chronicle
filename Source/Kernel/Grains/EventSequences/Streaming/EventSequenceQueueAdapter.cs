@@ -19,22 +19,22 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     readonly Dictionary<QueueId, EventSequenceQueueAdapterReceiver> _receivers = new();
 
     readonly IStreamQueueMapper _mapper;
-    readonly IClusterStorage _clusterStorage;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
     /// <param name="name">Name of stream.</param>
     /// <param name="mapper"><see cref="IStreamQueueMapper"/> for getting queue identifiers.</param>
-    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
     public EventSequenceQueueAdapter(
         string name,
         IStreamQueueMapper mapper,
-        IClusterStorage clusterStorage)
+        IStorage storage)
     {
         Name = name;
         _mapper = mapper;
-        _clusterStorage = clusterStorage;
+        _storage = storage;
     }
 
     /// <inheritdoc/>
@@ -59,7 +59,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
         {
             var eventSequenceId = (EventSequenceId)streamId.GetKeyAsString();
             var eventSequenceKey = (EventSequenceKey)streamNamespace;
-            var eventStore = _clusterStorage.GetEventStore((string)eventSequenceKey.MicroserviceId);
+            var eventStore = _storage.GetEventStore((string)eventSequenceKey.MicroserviceId);
             var eventSequenceStorage = eventStore.GetNamespace(eventSequenceKey.TenantId).GetEventSequence(eventSequenceId);
 
             events = events.ToArray();
