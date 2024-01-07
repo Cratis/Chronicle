@@ -29,10 +29,10 @@ public class OutboxSink : ISink, IDisposable
     /// The <see cref="CausationType"/> for the sink.
     /// </summary>
     public static readonly CausationType CausationType = new("Outbox Projection Sink");
-
+    readonly EventStore _eventStore;
+    readonly EventStoreNamespace _namespace;
     readonly Model _model;
-    readonly IEventSequenceStorage _eventSequenceStorageProvider;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IEventSequenceStorage _eventSequenceStorage;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IGrainFactory _grainFactory;
     bool _replaying;
@@ -40,21 +40,24 @@ public class OutboxSink : ISink, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxSink"/> class.
     /// </summary>
+    /// <param name="eventStore"><see cref="EventStore"/> the sink is for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespace"/> the sink is for.</param>
     /// <param name="model"><see cref="Model"/> the sink is for.</param>
-    /// <param name="eventSequenceStorageProvider">The <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="eventSequenceStorage">The <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="jsonSerializerOptions">The global serialization options.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
     public OutboxSink(
+        EventStore eventStore,
+        EventStoreNamespace @namespace,
         Model model,
-        IEventSequenceStorage eventSequenceStorageProvider,
-        IExecutionContextManager executionContextManager,
+        IEventSequenceStorage eventSequenceStorage,
         JsonSerializerOptions jsonSerializerOptions,
         IGrainFactory grainFactory)
     {
+        _eventStore = eventStore;
+        _namespace = @namespace;
         _model = model;
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
-        _executionContextManager = executionContextManager;
+        _eventSequenceStorage = eventSequenceStorage;
         _jsonSerializerOptions = jsonSerializerOptions;
         _grainFactory = grainFactory;
     }
@@ -83,8 +86,8 @@ public class OutboxSink : ISink, IDisposable
         var outbox = _grainFactory.GetGrain<IEventSequence>(
             EventSequenceId.Outbox,
             keyExtension: new EventSequenceKey(
-                _executionContextManager.Current.MicroserviceId,
-                _executionContextManager.Current.TenantId));
+                (string)_eventStore,
+                (string)_namespace));
 
         var stateAsJson = JsonSerializer.SerializeToNode(state, _jsonSerializerOptions);
 
@@ -128,7 +131,7 @@ public class OutboxSink : ISink, IDisposable
         var eventType = _model.Schema.GetEventType();
         try
         {
-            var lastInstance = await _eventSequenceStorageProvider.GetLastInstanceFor(eventType.Id, key.Value.ToString()!);
+            var lastInstance = await _eventSequenceStorage.GetLastInstanceFor(eventType.Id, key.Value.ToString()!);
             return lastInstance.Content;
         }
         catch (MissingEvent)

@@ -27,5 +27,5 @@ public class InMemorySinkFactory : ISinkFactory
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
     /// <inheritdoc/>
-    public ISink CreateFor(Model model) => new InMemorySink(model, _typeFormats);
+    public ISink CreateFor(EventStore eventStore, EventStoreNamespace @namespace, Model model) => new InMemorySink(model, _typeFormats);
 }

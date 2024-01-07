@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Kernel.Storage.Sinks;
 public class Sinks : ISinks
 {
     readonly IDictionary<SinkTypeId, ISinkFactory> _factories;
-    readonly ConcurrentDictionary<SinkKey, ISink> _stores = new();
+    readonly ConcurrentDictionary<SinkKey, ISink> _sinks = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Sinks"/> class.
@@ -26,12 +26,16 @@ public class Sinks : ISinks
     }
 
     /// <inheritdoc/>
-    public ISink GetForTypeAndModel(SinkTypeId typeId, Model model)
+    public ISink GetFor(
+        SinkTypeId typeId,
+        EventStore eventStore,
+        EventStoreNamespace @namespace,
+        Model model)
     {
         ThrowIfUnknownProjectionResultStore(typeId);
-        var key = new SinkKey(typeId, model);
-        if (_stores.TryGetValue(key, out var store)) return store;
-        return _stores[key] = _factories[typeId].CreateFor(model);
+        var key = new SinkKey(typeId, eventStore, @namespace, model);
+        if (_sinks.TryGetValue(key, out var store)) return store;
+        return _sinks[key] = _factories[typeId].CreateFor(eventStore, @namespace, model);
     }
 
     /// <inheritdoc/>
@@ -42,5 +46,5 @@ public class Sinks : ISinks
         if (!HasType(typeId)) throw new UnknownSink(typeId);
     }
 
-    sealed record SinkKey(SinkTypeId TypeId, Model Model);
+    sealed record SinkKey(SinkTypeId TypeId, EventStore eventStore, EventStoreNamespace @namespace, Model Model);
 }
