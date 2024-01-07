@@ -1,9 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.Identities;
-using Aksio.DependencyInversion;
+using Aksio.Cratis.Kernel.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
 
@@ -17,27 +15,23 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     readonly IQueueAdapterCache _cache;
     readonly IStreamQueueMapper _mapper;
     readonly string _name;
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly ProviderFor<IIdentityStorage> _identityStoreProvider;
+    readonly IClusterStorage _clusterStorage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
     /// <param name="name">Name of stream.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStorage"/>.</param>
+    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
     /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
     public EventSequenceQueueAdapterFactory(
         string name,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        ProviderFor<IIdentityStorage> identityStoreProvider,
+        IClusterStorage clusterStorage,
         IEventSequenceCaches caches)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
         _cache = new EventSequenceQueueAdapterCache(caches);
         _name = name;
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
-        _identityStoreProvider = identityStoreProvider;
+        _clusterStorage = clusterStorage;
     }
 
     /// <summary>
@@ -50,13 +44,12 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     {
         return new(
             name,
-            serviceProvider.GetRequiredService<ProviderFor<IEventSequenceStorage>>(),
-            serviceProvider.GetRequiredService<ProviderFor<IIdentityStorage>>(),
+            serviceProvider.GetRequiredService<IClusterStorage>(),
             serviceProvider.GetRequiredService<IEventSequenceCaches>());
     }
 
     /// <inheritdoc/>
-    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _eventSequenceStorageProvider, _identityStoreProvider));
+    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _clusterStorage));
 
     /// <inheritdoc/>
     public Task<IStreamFailureHandler> GetDeliveryFailureHandler(QueueId queueId) => Task.FromResult<IStreamFailureHandler>(new NoOpStreamDeliveryFailureHandler());

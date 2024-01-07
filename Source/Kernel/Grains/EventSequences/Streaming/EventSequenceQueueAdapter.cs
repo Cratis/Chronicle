@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.Identities;
-using Aksio.DependencyInversion;
 using Orleans.Runtime;
 using Orleans.Streams;
 
@@ -19,26 +19,22 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     readonly Dictionary<QueueId, EventSequenceQueueAdapterReceiver> _receivers = new();
 
     readonly IStreamQueueMapper _mapper;
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly ProviderFor<IIdentityStorage> _identityStorageProvider;
+    readonly IClusterStorage _clusterStorage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
     /// <param name="name">Name of stream.</param>
     /// <param name="mapper"><see cref="IStreamQueueMapper"/> for getting queue identifiers.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="identityStorageProvider">Provider for <see cref="IIdentityStorage"/>.</param>
+    /// <param name="clusterStorage"><see cref="IClusterStorage"/> for accessing underlying storage.</param>
     public EventSequenceQueueAdapter(
         string name,
         IStreamQueueMapper mapper,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        ProviderFor<IIdentityStorage> identityStorageProvider)
+        IClusterStorage clusterStorage)
     {
         Name = name;
         _mapper = mapper;
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
-        _identityStorageProvider = identityStorageProvider;
+        _clusterStorage = clusterStorage;
     }
 
     /// <inheritdoc/>
@@ -57,9 +53,15 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     public async Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
     {
         var queueId = _mapper.GetQueueForStream(streamId);
+        var streamNamespace = streamId.GetNamespace();
         CreateReceiverIfNotExists(queueId);
-        if (!token.IsWarmUp())
+        if (!token.IsWarmUp() && streamNamespace is not null)
         {
+            var eventSequenceId = (EventSequenceId)streamId.GetKeyAsString();
+            var eventSequenceKey = (EventSequenceKey)streamNamespace;
+            var eventStore = _clusterStorage.GetEventStore((string)eventSequenceKey.MicroserviceId);
+            var eventSequenceStorage = eventStore.GetNamespace(eventSequenceKey.TenantId).GetEventSequence(eventSequenceId);
+
             events = events.ToArray();
             var appendedEvents = new List<AppendedEvent>();
             foreach (var @event in events)
@@ -67,12 +69,12 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                 var appendedEvent = (@event as AppendedEvent)!;
                 try
                 {
-                    await _eventSequenceStorageProvider().Append(
+                    await eventSequenceStorage.Append(
                         appendedEvent.Metadata.SequenceNumber,
                         appendedEvent.Context.EventSourceId,
                         appendedEvent.Metadata.Type,
                         appendedEvent.Context.Causation,
-                        await _identityStorageProvider().GetFor(appendedEvent.Context.CausedBy),
+                        await eventStore.Identities.GetFor(appendedEvent.Context.CausedBy),
                         DateTimeOffset.UtcNow,
                         appendedEvent.Context.ValidFrom,
                         appendedEvent.Content);
@@ -83,10 +85,9 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                 {
                     // Make sure we put all successful events on the stream for any subscribers to get.
                     _receivers[queueId].AddAppendedEvent(streamId, appendedEvents, requestContext);
-                    var eventSequenceKey = EventSequenceKey.Parse(streamId.GetNamespace()!);
 
                     throw new UnableToAppendToEventSequence(
-                        streamId.GetKeyAsString(),
+                        eventSequenceId,
                         eventSequenceKey.MicroserviceId,
                         eventSequenceKey.TenantId,
                         appendedEvent.Metadata.SequenceNumber,
