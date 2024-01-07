@@ -95,7 +95,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             var (isNew, hasChanged) = await eventStore.ProjectionDefinitions.IsNewOrChanged(projectionDefinition);
             var existsInAllNamespaces = eventStore.Namespaces.All(_ => _.ProjectionManager.Exists(projectionDefinition.Identifier));
 
-            if (hasChanged || isNew || existsInAllNamespaces)
+            if (hasChanged || isNew || !existsInAllNamespaces)
             {
                 await RegisterProjectionAndPipeline(
                     microserviceId,
