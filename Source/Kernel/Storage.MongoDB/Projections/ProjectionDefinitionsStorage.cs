@@ -3,7 +3,6 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Kernel.Storage.Projections;
-using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Aksio.MongoDB;

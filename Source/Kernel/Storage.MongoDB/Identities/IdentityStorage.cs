@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Aksio.Collections;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Storage.Identities;
-using Aksio.Cratis.MongoDB;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 

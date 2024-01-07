@@ -3,7 +3,7 @@
 
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.MongoDB;
+namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Defines the common database at the top level for all event stores.

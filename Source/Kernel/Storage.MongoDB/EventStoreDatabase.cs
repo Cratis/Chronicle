@@ -2,12 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.Cratis.Kernel.Storage.MongoDB;
 using Aksio.MongoDB;
 using MongoDB.Driver;
 using StorageConfiguration = Aksio.Cratis.Kernel.Configuration.Storage;
 
-namespace Aksio.Cratis.MongoDB;
+namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreDatabase"/>.

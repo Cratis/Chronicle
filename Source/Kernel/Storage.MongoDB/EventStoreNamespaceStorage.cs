@@ -4,13 +4,11 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.Changes;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Kernel.Storage.EventTypes;
 using Aksio.Cratis.Kernel.Storage.Jobs;
 using Aksio.Cratis.Kernel.Storage.Keys;
-using Aksio.Cratis.Kernel.Storage.MongoDB;
 using Aksio.Cratis.Kernel.Storage.MongoDB.EventSequences;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Jobs;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Keys;
@@ -21,7 +19,7 @@ using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.Cratis.Kernel.Storage.Recommendations;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.MongoDB;
+namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreNamespaceStorage"/> for MongoDB.

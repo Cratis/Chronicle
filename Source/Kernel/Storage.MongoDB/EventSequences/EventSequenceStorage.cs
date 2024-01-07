@@ -74,17 +74,17 @@ public class EventSequenceStorage : IEventSequenceStorage
     }
 
     /// <inheritdoc/>
-    public async Task<Storage.EventSequences.EventSequenceState> GetState()
+    public async Task<Kernel.Storage.EventSequences.EventSequenceState> GetState()
     {
         var collection = _database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), _eventSequenceId);
         var cursor = await collection.FindAsync(filter).ConfigureAwait(false);
         var state = await cursor.FirstOrDefaultAsync();
-        return state.ToKernel() ?? new Storage.EventSequences.EventSequenceState();
+        return state.ToKernel() ?? new Kernel.Storage.EventSequences.EventSequenceState();
     }
 
     /// <inheritdoc/>
-    public async Task SaveState(Storage.EventSequences.EventSequenceState state)
+    public async Task SaveState(Kernel.Storage.EventSequences.EventSequenceState state)
     {
         var collection = _database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), _eventSequenceId);

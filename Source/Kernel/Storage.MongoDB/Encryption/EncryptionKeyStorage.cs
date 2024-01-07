@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.Storage.Compliance;
-using Aksio.Cratis.MongoDB;
+using Aksio.Cratis.Kernel.Storage.MongoDB;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Compliance.MongoDB;

@@ -6,7 +6,7 @@ using Aksio.MongoDB;
 using MongoDB.Driver;
 using StorageConfiguration = Aksio.Cratis.Kernel.Configuration.Storage;
 
-namespace Aksio.Cratis.MongoDB;
+namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IDatabase"/>.
