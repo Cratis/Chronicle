@@ -14,7 +14,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 [Reentrant]
 public class ObserverService : GrainService, IObserverService
 {
-    readonly IExecutionContextManager _executionContextManager;
     readonly IInstancesOf<ICanHandleReplayForObserver> _replayHandlers;
 
     /// <summary>
@@ -22,18 +21,15 @@ public class ObserverService : GrainService, IObserverService
     /// </summary>
     /// <param name="grainId">The <see cref="GrainId"/> for the service.</param>
     /// <param name="silo">The <see cref="Silo"/> the service belongs to.</param>
-    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="replayHandlers">All instances of <see cref="ICanHandleReplayForObserver"/>.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public ObserverService(
         GrainId grainId,
         Silo silo,
-        IExecutionContextManager executionContextManager,
         IInstancesOf<ICanHandleReplayForObserver> replayHandlers,
         ILoggerFactory loggerFactory)
         : base(grainId, silo, loggerFactory)
     {
-        _executionContextManager = executionContextManager;
         _replayHandlers = replayHandlers;
     }
 
@@ -44,7 +40,6 @@ public class ObserverService : GrainService, IObserverService
     /// <inheritdoc/>
     public async Task BeginReplayFor(ObserverDetails observerDetails)
     {
-        _executionContextManager.Establish(observerDetails.Key.TenantId, _executionContextManager.Current.CorrelationId, observerDetails.Key.MicroserviceId);
         foreach (var handler in _replayHandlers)
         {
             if (await handler.CanHandle(observerDetails))
@@ -57,7 +52,6 @@ public class ObserverService : GrainService, IObserverService
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails)
     {
-        _executionContextManager.Establish(observerDetails.Key.TenantId, _executionContextManager.Current.CorrelationId, observerDetails.Key.MicroserviceId);
         foreach (var handler in _replayHandlers)
         {
             if (await handler.CanHandle(observerDetails))
