@@ -19,7 +19,7 @@ public class EventTypes : Grain, IEventTypes
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypes"/> class.
     /// </summary>
-    /// <param name="underlyingSchemaStore"><see cref="IEventTypesStorage"/> underlying schema store.</param>
+    /// <param name="underlyingSchemaStore"><see cref="IEventTypesStorage"/> underlying event types storage.</param>
     public EventTypes(ProviderFor<IEventTypesStorage> underlyingSchemaStore)
     {
         _underlyingSchemaStore = underlyingSchemaStore;
