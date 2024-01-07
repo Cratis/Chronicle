@@ -38,7 +38,7 @@ public class SinkFactory : ISinkFactory
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
-    public ISink CreateFor(EventStore eventStore, EventStoreNamespace @namespace, Model model)
+    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, Model model)
     {
         var mongoDBConverter = new MongoDBConverter(
             _expandoObjectConverter,

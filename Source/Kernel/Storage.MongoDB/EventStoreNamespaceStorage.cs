@@ -26,8 +26,8 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 /// </summary>
 public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 {
-    readonly EventStore _eventStore;
-    readonly EventStoreNamespace _namespace;
+    readonly EventStoreName _eventStore;
+    readonly EventStoreNamespaceName _namespace;
     readonly IEventStoreNamespaceDatabase _eventStoreNamespaceDatabase;
     readonly IEventConverter _converter;
     readonly IEventTypesStorage _eventTypesStorage;
@@ -40,7 +40,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreNamespaceStorage"/> class.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the storage is for.</param>
     /// <param name="namespace"><see cref="TenantId"/> the storage is for.</param>
     /// <param name="eventStoreNamespaceDatabase">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
     /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
@@ -50,8 +50,8 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting the execution context.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStoreNamespaceStorage(
-        EventStore eventStore,
-        EventStoreNamespace @namespace,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         IEventStoreNamespaceDatabase eventStoreNamespaceDatabase,
         IEventConverter converter,
         IEventTypesStorage eventTypesStorage,

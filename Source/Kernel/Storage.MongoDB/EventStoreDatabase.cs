@@ -14,19 +14,19 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 public class EventStoreDatabase : IEventStoreDatabase
 {
     readonly IMongoDatabase _database;
-    readonly ConcurrentDictionary<EventStoreNamespace, IEventStoreNamespaceDatabase> _eventStoreNamespaceDatabases = new();
-    readonly EventStore _eventStore;
+    readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceDatabase> _eventStoreNamespaceDatabases = new();
+    readonly EventStoreName _eventStore;
     readonly IMongoDBClientFactory _clientFactory;
     readonly StorageConfiguration _configuration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStore"/> the database is for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the database is for.</param>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public EventStoreDatabase(
-        EventStore eventStore,
+        EventStoreName eventStore,
         IMongoDBClientFactory clientFactory,
         StorageConfiguration configuration)
     {
@@ -50,7 +50,7 @@ public class EventStoreDatabase : IEventStoreDatabase
     }
 
     /// <inheritdoc/>
-    public IEventStoreNamespaceDatabase GetNamespaceDatabase(EventStoreNamespace @namespace)
+    public IEventStoreNamespaceDatabase GetNamespaceDatabase(EventStoreNamespaceName @namespace)
     {
         if (_eventStoreNamespaceDatabases.TryGetValue(@namespace, out var database))
         {

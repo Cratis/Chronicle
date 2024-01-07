@@ -10,13 +10,13 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.EventSequences;
 internal static partial class EventSequenceStorageLogMessages
 {
     [LoggerMessage(0, LogLevel.Trace, "Appending event with '{SequenceNumber}' as sequence number for sequence '{EventSequenceId}' in event store '{EventStore}' in namespace '{Namespace}'")]
-    internal static partial void Appending(this ILogger<EventSequenceStorage> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, EventStore eventStore, EventStoreNamespace @namespace);
+    internal static partial void Appending(this ILogger<EventSequenceStorage> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     [LoggerMessage(1, LogLevel.Error, "Problem appending event with '{SequenceNumber}' as sequence number for sequence '{EventSequenceId}' in event store '{EventStore}' in namespace '{Namespace}'")]
-    internal static partial void AppendFailure(this ILogger<EventSequenceStorage> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, EventStore eventStore, EventStoreNamespace @namespace, Exception exception);
+    internal static partial void AppendFailure(this ILogger<EventSequenceStorage> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Exception exception);
 
     [LoggerMessage(2, LogLevel.Warning, "Duplicate event sequence number '{SequenceNumber}' when appending for sequence '{EventSequenceId}' in event store '{EventStore}' in namespace '{Namespace}'")]
-    internal static partial void DuplicateEventSequenceNumber(this ILogger<EventSequenceStorage> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, EventStore eventStore, EventStoreNamespace @namespace);
+    internal static partial void DuplicateEventSequenceNumber(this ILogger<EventSequenceStorage> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     [LoggerMessage(3, LogLevel.Debug, "Getting head sequence number for event sequence {EventSequenceId}")]
     internal static partial void GettingHeadSequenceNumber(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId);

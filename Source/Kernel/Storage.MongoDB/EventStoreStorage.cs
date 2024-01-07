@@ -20,7 +20,7 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 /// </summary>
 public class EventStoreStorage : IEventStoreStorage
 {
-    readonly ConcurrentDictionary<EventStoreNamespace, IEventStoreNamespaceStorage> _namespaces = new();
+    readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
     readonly IEventStoreDatabase _eventStoreDatabase;
     readonly IJsonComplianceManager _complianceManager;
     readonly Json.ExpandoObjectConverter _expandoObjectConverter;
@@ -42,7 +42,7 @@ public class EventStoreStorage : IEventStoreStorage
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting the execution context.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStoreStorage(
-        EventStore eventStore,
+        EventStoreName eventStore,
         IDatabase database,
         IEventStoreDatabase eventStoreDatabase,
         IJsonProjectionSerializer projectionSerializer,
@@ -67,7 +67,7 @@ public class EventStoreStorage : IEventStoreStorage
     }
 
     /// <inheritdoc/>
-    public EventStore EventStore { get; }
+    public EventStoreName EventStore { get; }
 
     /// <inheritdoc/>
     public IIdentityStorage Identities { get; }
@@ -82,7 +82,7 @@ public class EventStoreStorage : IEventStoreStorage
     public IProjectionPipelineDefinitionsStorage ProjectionPipelines { get; }
 
     /// <inheritdoc/>
-    public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespace @namespace)
+    public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
     {
         if (_namespaces.TryGetValue(@namespace, out var instance))
         {

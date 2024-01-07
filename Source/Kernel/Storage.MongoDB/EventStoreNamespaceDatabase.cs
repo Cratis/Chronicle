@@ -20,13 +20,13 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreNamespaceDatabase"/> class.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStore"/> the database is for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the database is for.</param>
     /// <param name="namespace"><see cref="TenantId"/> the database is for.</param>
     /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
     /// <param name="configuration"><see cref="Kernel.Configuration.Storage"/> configuration.</param>
     public EventStoreNamespaceDatabase(
-        EventStore eventStore,
-        EventStoreNamespace @namespace,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         IMongoDBClientFactory mongoDBClientFactory,
         Kernel.Configuration.Storage configuration)
     {

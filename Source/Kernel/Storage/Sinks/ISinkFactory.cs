@@ -19,9 +19,9 @@ public interface ISinkFactory
     /// <summary>
     /// Create a <see cref="ISink"/> for a specific <see cref="Model"/>.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStore"/> the sink is for.</param>
-    /// <param name="namespace"><see cref="EventStoreNamespace"/> the sink is for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the sink is for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the sink is for.</param>
     /// <param name="model"><see cref="Model"/> to create for.</param>
     /// <returns>A new instance of <see cref="ISink"/> for the <see cref="Model"/>.</returns>
-    ISink CreateFor(EventStore eventStore, EventStoreNamespace @namespace, Model model);
+    ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, Model model);
 }

@@ -29,8 +29,8 @@ public class OutboxSink : ISink, IDisposable
     /// The <see cref="CausationType"/> for the sink.
     /// </summary>
     public static readonly CausationType CausationType = new("Outbox Projection Sink");
-    readonly EventStore _eventStore;
-    readonly EventStoreNamespace _namespace;
+    readonly EventStoreName _eventStore;
+    readonly EventStoreNamespaceName _namespace;
     readonly Model _model;
     readonly IEventSequenceStorage _eventSequenceStorage;
     readonly JsonSerializerOptions _jsonSerializerOptions;
@@ -40,15 +40,15 @@ public class OutboxSink : ISink, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxSink"/> class.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStore"/> the sink is for.</param>
-    /// <param name="namespace"><see cref="EventStoreNamespace"/> the sink is for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the sink is for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the sink is for.</param>
     /// <param name="model"><see cref="Model"/> the sink is for.</param>
     /// <param name="eventSequenceStorage">The <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="jsonSerializerOptions">The global serialization options.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
     public OutboxSink(
-        EventStore eventStore,
-        EventStoreNamespace @namespace,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         Model model,
         IEventSequenceStorage eventSequenceStorage,
         JsonSerializerOptions jsonSerializerOptions,

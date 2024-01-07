@@ -14,8 +14,8 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 public class Database : IDatabase
 {
     readonly IMongoDatabase _database;
-    readonly ConcurrentDictionary<EventStore, IEventStoreDatabase> _eventStoreDatabases = new();
-    readonly ConcurrentDictionary<(EventStore, EventStoreNamespace), IMongoDatabase> _readModelDatabases = new();
+    readonly ConcurrentDictionary<EventStoreName, IEventStoreDatabase> _eventStoreDatabases = new();
+    readonly ConcurrentDictionary<(EventStoreName, EventStoreNamespaceName), IMongoDatabase> _readModelDatabases = new();
     readonly IMongoDBClientFactory _clientFactory;
     readonly StorageConfiguration _configuration;
 
@@ -47,7 +47,7 @@ public class Database : IDatabase
     }
 
     /// <inheritdoc/>
-    public IEventStoreDatabase GetEventStoreDatabase(EventStore eventStore)
+    public IEventStoreDatabase GetEventStoreDatabase(EventStoreName eventStore)
     {
         if (_eventStoreDatabases.TryGetValue(eventStore, out var database))
         {
@@ -58,7 +58,7 @@ public class Database : IDatabase
     }
 
     /// <inheritdoc/>
-    public IMongoDatabase GetReadModelDatabase(EventStore eventStore, EventStoreNamespace @namespace)
+    public IMongoDatabase GetReadModelDatabase(EventStoreName eventStore, EventStoreNamespaceName @namespace)
     {
         var key = (eventStore, @namespace);
         if (_readModelDatabases.TryGetValue(key, out var database))

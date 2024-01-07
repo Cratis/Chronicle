@@ -19,17 +19,17 @@ public interface IDatabase
     IMongoCollection<T> GetCollection<T>(string? collectionName = null);
 
     /// <summary>
-    /// Get the <see cref="IEventStoreDatabase"/> for a specific <see cref="EventStore"/>.
+    /// Get the <see cref="IEventStoreDatabase"/> for a specific <see cref="EventStoreName"/>.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStore"/> to get for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to get for.</param>
     /// <returns>The <see cref="IEventStoreDatabase"/> instance.</returns>
-    IEventStoreDatabase GetEventStoreDatabase(EventStore eventStore);
+    IEventStoreDatabase GetEventStoreDatabase(EventStoreName eventStore);
 
     /// <summary>
-    /// Get the <see cref="IMongoDatabase"/> for a specific <see cref="EventStore"/> and <see cref="EventStoreNamespace"/>.
+    /// Get the <see cref="IMongoDatabase"/> for a specific <see cref="EventStoreName"/> and <see cref="EventStoreNamespaceName"/>.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStore"/> to get for.</param>
-    /// <param name="namespace"><see cref="EventStoreNamespace"/> to get for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to get for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to get for.</param>
     /// <returns>The <see cref="IMongoDatabase"/> instance.</returns>
-    IMongoDatabase GetReadModelDatabase(EventStore eventStore, EventStoreNamespace @namespace);
+    IMongoDatabase GetReadModelDatabase(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 }

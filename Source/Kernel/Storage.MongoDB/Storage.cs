@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 /// </summary>
 public class Storage : IStorage
 {
-    readonly IDictionary<EventStore, IEventStoreStorage> _eventStores = new Dictionary<EventStore, IEventStoreStorage>();
+    readonly IDictionary<EventStoreName, IEventStoreStorage> _eventStores = new Dictionary<EventStoreName, IEventStoreStorage>();
     readonly IDatabase _database;
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly IJsonProjectionPipelineSerializer _projectionPipelineSerializer;
@@ -55,7 +55,7 @@ public class Storage : IStorage
     }
 
     /// <inheritdoc/>
-    public IEventStoreStorage GetEventStore(EventStore eventStore)
+    public IEventStoreStorage GetEventStore(EventStoreName eventStore)
     {
         if (_eventStores.TryGetValue(eventStore, out var storage))
         {

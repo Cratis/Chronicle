@@ -15,7 +15,7 @@ public interface IEventStoreStorage
     /// <summary>
     /// Gets the event store the storage represents.
     /// </summary>
-    EventStore EventStore { get; }
+    EventStoreName EventStore { get; }
 
     /// <summary>
     /// Gets the <see cref="IIdentityStorage"/> for the event store.
@@ -40,7 +40,7 @@ public interface IEventStoreStorage
     /// <summary>
     /// Get a specific <see cref="IEventStoreNamespaceStorage"/> for a <see cref="TenantId"/>.
     /// </summary>
-    /// <param name="namespace">The <see cref="EventStoreNamespace"/> to get for.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get for.</param>
     /// <returns>The <see cref="IEventStoreNamespaceStorage"/> instance.</returns>
-    IEventStoreNamespaceStorage GetNamespace(EventStoreNamespace @namespace);
+    IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace);
 }

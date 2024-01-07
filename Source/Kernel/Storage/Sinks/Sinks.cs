@@ -28,8 +28,8 @@ public class Sinks : ISinks
     /// <inheritdoc/>
     public ISink GetFor(
         SinkTypeId typeId,
-        EventStore eventStore,
-        EventStoreNamespace @namespace,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         Model model)
     {
         ThrowIfUnknownProjectionResultStore(typeId);
@@ -46,5 +46,5 @@ public class Sinks : ISinks
         if (!HasType(typeId)) throw new UnknownSink(typeId);
     }
 
-    sealed record SinkKey(SinkTypeId TypeId, EventStore eventStore, EventStoreNamespace @namespace, Model Model);
+    sealed record SinkKey(SinkTypeId TypeId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Model Model);
 }

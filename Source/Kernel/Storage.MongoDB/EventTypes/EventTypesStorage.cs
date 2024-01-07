@@ -16,7 +16,7 @@ namespace Aksio.Cratis.Events.MongoDB.EventTypes;
 /// </summary>
 public class EventTypesStorage : IEventTypesStorage
 {
-    readonly EventStore _eventStore;
+    readonly EventStoreName _eventStore;
     readonly IEventStoreDatabase _sharedDatabase;
     readonly ILogger<EventTypesStorage> _logger;
     Dictionary<EventTypeId, Dictionary<EventGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = new();
@@ -24,11 +24,11 @@ public class EventTypesStorage : IEventTypesStorage
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypesStorage"/> class.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the storage is for.</param>
     /// <param name="sharedDatabase">The <see cref="IEventStoreDatabase"/>.</param>
     /// <param name="logger">Logger for logging.</param>
     public EventTypesStorage(
-        EventStore eventStore,
+        EventStoreName eventStore,
         IEventStoreDatabase sharedDatabase,
         ILogger<EventTypesStorage> logger)
     {

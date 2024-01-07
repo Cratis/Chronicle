@@ -9,9 +9,9 @@ namespace Aksio.Cratis.Kernel.Storage;
 public interface IStorage
 {
     /// <summary>
-    /// Get the <see cref="IEventStoreStorage"/> for a specific <see cref="EventStore"/>.
+    /// Get the <see cref="IEventStoreStorage"/> for a specific <see cref="EventStoreName"/>.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStore"/> to get.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to get.</param>
     /// <returns>The <see cref="IEventStoreStorage"/> instance.</returns>
-    IEventStoreStorage GetEventStore(EventStore eventStore);
+    IEventStoreStorage GetEventStore(EventStoreName eventStore);
 }

@@ -19,9 +19,9 @@ public interface IEventStoreDatabase
     IMongoCollection<T> GetCollection<T>(string? collectionName = null);
 
     /// <summary>
-    /// Get the <see cref="IEventStoreNamespaceDatabase"/> for a specific <see cref="EventStoreNamespace"/>.
+    /// Get the <see cref="IEventStoreNamespaceDatabase"/> for a specific <see cref="EventStoreNamespaceName"/>.
     /// </summary>
-    /// <param name="namespace"><see cref="EventStoreNamespace"/> to get for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to get for.</param>
     /// <returns>The <see cref="IEventStoreNamespaceDatabase"/> instance.</returns>
-    IEventStoreNamespaceDatabase GetNamespaceDatabase(EventStoreNamespace @namespace);
+    IEventStoreNamespaceDatabase GetNamespaceDatabase(EventStoreNamespaceName @namespace);
 }

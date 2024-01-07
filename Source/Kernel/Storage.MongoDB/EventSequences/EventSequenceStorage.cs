@@ -26,8 +26,8 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.EventSequences;
 public class EventSequenceStorage : IEventSequenceStorage
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly EventStore _eventStore;
-    readonly EventStoreNamespace _namespace;
+    readonly EventStoreName _eventStore;
+    readonly EventStoreNamespaceName _namespace;
     readonly EventSequenceId _eventSequenceId;
     readonly IEventConverter _converter;
     readonly IEventStoreNamespaceDatabase _database;
@@ -39,8 +39,8 @@ public class EventSequenceStorage : IEventSequenceStorage
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceStorage"/> class.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
-    /// <param name="namespace"><see cref="EventStoreNamespace"/> the storage is for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the storage is for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the storage is for.</param>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the storage represent.</param>
     /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
     /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
@@ -50,8 +50,8 @@ public class EventSequenceStorage : IEventSequenceStorage
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting the execution context.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public EventSequenceStorage(
-        EventStore eventStore,
-        EventStoreNamespace @namespace,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         EventSequenceId eventSequenceId,
         IEventStoreNamespaceDatabase database,
         IEventConverter converter,

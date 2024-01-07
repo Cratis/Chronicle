@@ -39,7 +39,7 @@ public class OutboxSinkFactory : ISinkFactory
     public SinkTypeId TypeId => WellKnownSinkTypes.Outbox;
 
     /// <inheritdoc/>
-    public ISink CreateFor(EventStore eventStore, EventStoreNamespace @namespace, Model model) =>
+    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, Model model) =>
         new OutboxSink(
             eventStore,
             @namespace,

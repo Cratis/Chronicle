@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 /// </summary>
 public class EventConverter : IEventConverter
 {
-    readonly EventStoreNamespace _namespace;
+    readonly EventStoreNamespaceName _namespace;
     readonly IEventTypesStorage _eventTypesStorage;
     readonly IIdentityStorage _identityStorage;
     readonly IJsonComplianceManager _jsonComplianceManager;
@@ -29,7 +29,7 @@ public class EventConverter : IEventConverter
     /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     public EventConverter(
-        EventStoreNamespace @namespace,
+        EventStoreNamespaceName @namespace,
         IEventTypesStorage eventTypesStorage,
         IIdentityStorage identityStorage,
         IJsonComplianceManager jsonComplianceManager,
