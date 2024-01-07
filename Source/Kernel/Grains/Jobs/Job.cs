@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Orleans.Observers;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.Jobs;
 using Aksio.Reflection;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,6 +40,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     protected Job()
     {
         ThisJob = this;
+        Storage = null!;
     }
 
     /// <summary>
@@ -66,6 +68,11 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// </summary>
     protected TRequest Request => (State.Request as TRequest)!;
 
+    /// <summary>
+    /// Gets the underlying <see cref="IStorage"/>.
+    /// </summary>
+    protected IEventStoreNamespaceStorage Storage { get; private set; }
+
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
@@ -85,6 +92,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         State.Name = GetType().Name;
         State.Type = this.GetGrainType();
+        Storage = ServiceProvider.GetRequiredService<IStorage>().GetEventStore((string)JobKey.MicroserviceId).GetNamespace(JobKey.TenantId);
 
         return Task.CompletedTask;
     }
@@ -145,8 +153,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         using var scope = _logger?.BeginJobScope(JobId, JobKey);
         _logger?.Resuming();
 
-        var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
-        var steps = await stepStorage.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused);
+        var steps = await Storage.JobSteps.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused);
         foreach (var step in steps)
         {
             var jobStep = (GrainFactory.GetGrain((Type)step.Type, step.Id.JobStepId, keyExtension: new JobStepKey(JobId, JobKey.MicroserviceId, JobKey.TenantId)) as IJobStep)!;
