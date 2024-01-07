@@ -1,8 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.Recommendations;
-using Microsoft.Extensions.DependencyInjection;
 using Orleans.Runtime;
 using Orleans.Storage;
 
@@ -13,20 +13,15 @@ namespace Aksio.Cratis.Kernel.Grains.Recommendations;
 /// </summary>
 public class RecommendationGrainStorageProvider : IGrainStorage
 {
-    readonly IServiceProvider _serviceProvider;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RecommendationGrainStorageProvider"/> class.
     /// </summary>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting services.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public RecommendationGrainStorageProvider(
-        IServiceProvider serviceProvider,
-        IExecutionContextManager executionContextManager)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public RecommendationGrainStorageProvider(IStorage storage)
     {
-        _serviceProvider = serviceProvider;
-        _executionContextManager = executionContextManager;
+        _storage = storage;
     }
 
     /// <inheritdoc/>
@@ -36,8 +31,7 @@ public class RecommendationGrainStorageProvider : IGrainStorage
         {
             var key = (RecommendationKey)keyExtension!;
 
-            _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-            var recommendationStorage = _serviceProvider.GetRequiredService<IRecommendationStorage>();
+            var recommendationStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Recommendations;
             await recommendationStorage.Remove(recommendationId);
         }
     }
@@ -50,8 +44,7 @@ public class RecommendationGrainStorageProvider : IGrainStorage
             var actualGrainState = (grainState as IGrainState<RecommendationState>)!;
             var key = (RecommendationKey)keyExtension!;
 
-            _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-            var recommendationStorage = _serviceProvider.GetRequiredService<IRecommendationStorage>();
+            var recommendationStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Recommendations;
             actualGrainState.State = await recommendationStorage.Get(recommendationId) ?? new RecommendationState();
         }
     }
@@ -64,8 +57,7 @@ public class RecommendationGrainStorageProvider : IGrainStorage
             var actualGrainState = (grainState as IGrainState<RecommendationState>)!;
             var key = (RecommendationKey)keyExtension!;
 
-            _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-            var recommendationStorage = _serviceProvider.GetRequiredService<IRecommendationStorage>();
+            var recommendationStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Recommendations;
             actualGrainState.State.Id = recommendationId;
             await recommendationStorage.Save(recommendationId, actualGrainState.State);
         }

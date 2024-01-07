@@ -17,22 +17,18 @@ public class ConnectedClients : ControllerBase
 {
     readonly ILogger<ConnectedClients> _logger;
     readonly IGrainFactory _grainFactory;
-    readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
     /// </summary>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with Orleans grains.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ConnectedClients(
         IGrainFactory grainFactory,
-        IExecutionContextManager executionContextManager,
         ILogger<ConnectedClients> logger)
     {
         _logger = logger;
         _grainFactory = grainFactory;
-        _executionContextManager = executionContextManager;
     }
 
     /// <summary>
@@ -47,7 +43,6 @@ public class ConnectedClients : ControllerBase
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] ConnectionId connectionId)
     {
-        _executionContextManager.Establish(microserviceId);
         var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
         if (!await connectedClients.OnClientPing(connectionId))
         {
@@ -68,7 +63,6 @@ public class ConnectedClients : ControllerBase
         [FromRoute] ConnectionId connectionId,
         [FromBody] ClientInformation clientInformation)
     {
-        _executionContextManager.Establish(microserviceId);
         var uri = new Uri(clientInformation.AdvertisedUri);
 
         if (microserviceId != MicroserviceId.Kernel)
@@ -97,7 +91,6 @@ public class ConnectedClients : ControllerBase
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] ConnectionId connectionId)
     {
-        _executionContextManager.Establish(microserviceId);
         _logger.ClientDisconnected(microserviceId, connectionId);
         var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
         await connectedClients.OnClientDisconnected(
