@@ -64,8 +64,12 @@ public class EventStoreNamespace : IEventStoreNamespace
             pipelineFactory,
             loggerFactory.CreateLogger<ProjectionManager>());
 
+        var sinks = new Storage.Sinks.Sinks(
+            eventStore,
+            name,
+            serviceProvider.GetRequiredService<IInstancesOf<ISinkFactory>>());
         ReducerPipelines = new ReducerPipelines(
-            serviceProvider.GetRequiredService<ISinks>(),
+            sinks,
             serviceProvider.GetRequiredService<IObjectComparer>());
     }
 
