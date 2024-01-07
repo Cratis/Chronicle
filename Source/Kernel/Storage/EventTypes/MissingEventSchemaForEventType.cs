@@ -6,7 +6,7 @@ using Aksio.Cratis.Events;
 namespace Aksio.Cratis.Kernel.Storage.EventTypes;
 
 /// <summary>
-/// Exception that gets thrown when an event type is missing from the schema store.
+/// Exception that gets thrown when an event type is missing from the event types storage.
 /// </summary>
 public class MissingEventSchemaForEventType : Exception
 {
@@ -17,7 +17,7 @@ public class MissingEventSchemaForEventType : Exception
     /// <param name="type">The <see cref="EventTypeId"/> missing.</param>
     /// <param name="generation">The <see cref="EventGeneration"/> that is missing.</param>
     public MissingEventSchemaForEventType(EventStoreName eventStore, EventTypeId type, EventGeneration generation)
-        : base($"Event type '{type}' with generation '{generation}' is missing from the event schema store for microservice '{eventStore}'")
+        : base($"Event type '{type}' with generation '{generation}' is missing from the event store '{eventStore}'")
     {
     }
 }

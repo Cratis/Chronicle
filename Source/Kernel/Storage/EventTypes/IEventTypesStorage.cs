@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Kernel.Storage.EventTypes;
 public interface IEventTypesStorage
 {
     /// <summary>
-    /// Populate the schema store with existing schemas.
+    /// Populate the event types with existing schemas.
     /// </summary>
     /// <returns>Async task.</returns>
     Task Populate();
