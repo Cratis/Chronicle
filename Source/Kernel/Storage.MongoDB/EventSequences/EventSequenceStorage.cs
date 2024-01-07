@@ -80,7 +80,7 @@ public class EventSequenceStorage : IEventSequenceStorage
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), _eventSequenceId);
         var cursor = await collection.FindAsync(filter).ConfigureAwait(false);
         var state = await cursor.FirstOrDefaultAsync();
-        return state.ToKernel() ?? new Kernel.Storage.EventSequences.EventSequenceState();
+        return state?.ToKernel() ?? new Kernel.Storage.EventSequences.EventSequenceState();
     }
 
     /// <inheritdoc/>
