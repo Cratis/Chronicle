@@ -14,38 +14,40 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Sinks;
 /// </summary>
 public class SinkFactory : ISinkFactory
 {
+    readonly IDatabase _database;
     readonly ITypeFormats _typeFormats;
     readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly ISinkDatabaseProvider _databaseProvider;
 
     /// <summary>
     /// /// Initializes a new instance of the <see cref="SinkFactory"/> class.
     /// </summary>
+    /// <param name="database"><see cref="IDatabase"/> for accessing MongoDB.</param>
     /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
-    /// <param name="databaseProvider">Provider for <see cref="ISinkCollections"/> to use.</param>
     public SinkFactory(
+        IDatabase database,
         ITypeFormats typeFormats,
-        IExpandoObjectConverter expandoObjectConverter,
-        ISinkDatabaseProvider databaseProvider)
+        IExpandoObjectConverter expandoObjectConverter)
     {
+        _database = database;
         _typeFormats = typeFormats;
         _expandoObjectConverter = expandoObjectConverter;
-        _databaseProvider = databaseProvider;
     }
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
-    public ISink CreateFor(Model model)
+    public ISink CreateFor(EventStore eventStore, EventStoreNamespace @namespace, Model model)
     {
         var mongoDBConverter = new MongoDBConverter(
             _expandoObjectConverter,
             _typeFormats,
             model);
 
-        var mongoDBSinkCollections = new SinkCollections(model, _databaseProvider);
+        var mongoDBSinkCollections = new SinkCollections(
+            model,
+            _database.GetReadModelDatabase(eventStore, @namespace));
         var mongoDBChangesetConverter = new ChangesetConverter(
             model,
             mongoDBConverter,
