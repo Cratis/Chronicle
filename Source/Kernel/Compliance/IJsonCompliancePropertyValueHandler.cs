@@ -19,16 +19,20 @@ public interface IJsonCompliancePropertyValueHandler
     /// <summary>
     /// Apply to the given value.
     /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the value belongs to.</param>
+    /// <param name="eventStoreNamespace"><see cref="EventStoreNamespaceName"/> the value belongs to.</param>
     /// <param name="identifier">Identifier to use.</param>
     /// <param name="value">Value to apply to.</param>
     /// <returns>Applied value.</returns>
-    Task<JsonNode> Apply(string identifier, JsonNode value);
+    Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value);
 
     /// <summary>
     /// Release a given value.
     /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the value belongs to.</param>
+    /// <param name="eventStoreNamespace"><see cref="EventStoreNamespaceName"/> the value belongs to.</param>
     /// <param name="identifier">Identifier to use.</param>
     /// <param name="value">Value to release.</param>
     /// <returns>Released value.</returns>
-    Task<JsonNode> Release(string identifier, JsonNode value);
+    Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value);
 }

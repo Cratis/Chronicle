@@ -29,10 +29,19 @@ public class PIIManager : Grain, IPIIManager
     /// <inheritdoc/>
     public async Task CreateAndRegisterKeyFor(EncryptionKeyIdentifier identifier)
     {
+        _ = this.GetPrimaryKey(out var primaryKeyExtension);
+        var primaryKey = (PIIManagerKey)primaryKeyExtension;
+
         var key = _encryption.GenerateKey();
-        await _keyStore.SaveFor(identifier, key);
+        await _keyStore.SaveFor((string)primaryKey.MicroserviceId, primaryKey.TenantId, identifier, key);
     }
 
     /// <inheritdoc/>
-    public Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier) => _keyStore.DeleteFor(identifier);
+    public async Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier)
+    {
+        _ = this.GetPrimaryKey(out var primaryKeyExtension);
+        var primaryKey = (PIIManagerKey)primaryKeyExtension;
+
+        await _keyStore.DeleteFor((string)primaryKey.MicroserviceId, primaryKey.TenantId, identifier);
+    }
 }

@@ -28,7 +28,7 @@ public class JsonComplianceManager : IJsonComplianceManager
     }
 
     /// <inheritdoc/>
-    public async Task<JsonObject> Apply(JsonSchema schema, string identifier, JsonObject json)
+    public async Task<JsonObject> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
         if (!schema.HasComplianceMetadata())
         {
@@ -36,12 +36,12 @@ public class JsonComplianceManager : IJsonComplianceManager
         }
 
         var result = json.DeepClone();
-        await HandleActionFor(schema, identifier, result, async (h, id, token) => await h.Apply(id, token));
+        await HandleActionFor(schema, identifier, result, async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token));
         return result;
     }
 
     /// <inheritdoc/>
-    public async Task<JsonObject> Release(JsonSchema schema, string identifier, JsonObject json)
+    public async Task<JsonObject> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
         if (!schema.HasComplianceMetadata())
         {
@@ -49,7 +49,7 @@ public class JsonComplianceManager : IJsonComplianceManager
         }
 
         var result = json.DeepClone();
-        await HandleActionFor(schema, identifier, result, async (h, id, token) => await h.Release(id, token));
+        await HandleActionFor(schema, identifier, result, async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
         return result;
     }
 

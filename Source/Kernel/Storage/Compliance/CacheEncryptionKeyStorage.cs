@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Kernel.Storage.Compliance;
 public class CacheEncryptionKeyStorage : IEncryptionKeyStorage
 {
     readonly IEncryptionKeyStorage _actualKeyStore;
-    readonly Dictionary<EncryptionKeyIdentifier, EncryptionKey> _keys = new();
+    readonly Dictionary<Key, EncryptionKey> _keys = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CacheEncryptionKeyStorage"/> class.
@@ -23,35 +23,38 @@ public class CacheEncryptionKeyStorage : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
-    public async Task DeleteFor(EncryptionKeyIdentifier identifier)
+    public async Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
-        _keys.Remove(identifier);
-        await _actualKeyStore.DeleteFor(identifier);
+        _keys.Remove(new(eventStore, eventStoreNamespace, identifier));
+        await _actualKeyStore.DeleteFor(eventStore, eventStoreNamespace, identifier);
     }
 
     /// <inheritdoc/>
-    public async Task<EncryptionKey> GetFor(EncryptionKeyIdentifier identifier)
+    public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
-        if (_keys.TryGetValue(identifier, out var key)) return key;
+        var key = new Key(eventStore, eventStoreNamespace, identifier);
+        if (_keys.TryGetValue(key, out var encryptionKey)) return encryptionKey;
 
-        return _keys[identifier] = await _actualKeyStore.GetFor(identifier);
+        return _keys[key] = await _actualKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
     }
 
     /// <inheritdoc/>
-    public async Task<bool> HasFor(EncryptionKeyIdentifier identifier)
+    public async Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
-        if (_keys.ContainsKey(identifier))
+        if (_keys.ContainsKey(new(eventStore, eventStoreNamespace, identifier)))
         {
             return true;
         }
 
-        return await _actualKeyStore.HasFor(identifier);
+        return await _actualKeyStore.HasFor(eventStore, eventStoreNamespace, identifier);
     }
 
     /// <inheritdoc/>
-    public async Task SaveFor(EncryptionKeyIdentifier identifier, EncryptionKey key)
+    public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
-        _keys[identifier] = key;
-        await _actualKeyStore.SaveFor(identifier, key);
+        _keys[new(eventStore, eventStoreNamespace, identifier)] = key;
+        await _actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key);
     }
+
+    record Key(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier);
 }

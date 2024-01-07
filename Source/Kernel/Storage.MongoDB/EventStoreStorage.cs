@@ -90,6 +90,7 @@ public class EventStoreStorage : IEventStoreStorage
         }
 
         var converter = new EventConverter(
+            EventStore,
             @namespace,
             EventTypes,
             Identities,

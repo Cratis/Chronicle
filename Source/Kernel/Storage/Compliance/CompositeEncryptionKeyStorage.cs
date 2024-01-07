@@ -22,13 +22,13 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
-    public async Task<EncryptionKey> GetFor(EncryptionKeyIdentifier identifier)
+    public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         IEncryptionKeyStorage? store = default;
 
         foreach (var innerStore in _inner)
         {
-            if (await innerStore.HasFor(identifier))
+            if (await innerStore.HasFor(eventStore, eventStoreNamespace, identifier))
             {
                 store = innerStore;
             }
@@ -36,10 +36,10 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage
 
         if (store != default)
         {
-            var key = await store.GetFor(identifier);
+            var key = await store.GetFor(eventStore, eventStoreNamespace, identifier);
             foreach (var storeToSaveIn in _inner.Where(_ => _ != store))
             {
-                await storeToSaveIn.SaveFor(identifier, key);
+                await storeToSaveIn.SaveFor(eventStore, eventStoreNamespace, identifier, key);
             }
 
             return key;
@@ -49,11 +49,11 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
-    public async Task<bool> HasFor(EncryptionKeyIdentifier identifier)
+    public async Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         foreach (var innerStore in _inner)
         {
-            if (await innerStore.HasFor(identifier))
+            if (await innerStore.HasFor(eventStore, eventStoreNamespace, identifier))
             {
                 return true;
             }
@@ -63,20 +63,20 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
-    public async Task SaveFor(EncryptionKeyIdentifier identifier, EncryptionKey key)
+    public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
         foreach (var innerStore in _inner)
         {
-            await innerStore.SaveFor(identifier, key);
+            await innerStore.SaveFor(eventStore, eventStoreNamespace, identifier, key);
         }
     }
 
     /// <inheritdoc/>
-    public async Task DeleteFor(EncryptionKeyIdentifier identifier)
+    public async Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         foreach (var innerStore in _inner)
         {
-            await innerStore.DeleteFor(identifier);
+            await innerStore.DeleteFor(eventStore, eventStoreNamespace, identifier);
         }
     }
 }

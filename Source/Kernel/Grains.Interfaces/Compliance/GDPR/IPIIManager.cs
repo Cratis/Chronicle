@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Kernel.Grains.Compliance.GDPR;
 /// <summary>
 /// Represents a manager of PII in the system.
 /// </summary>
-public interface IPIIManager : IGrainWithGuidKey
+public interface IPIIManager : IGrainWithGuidCompoundKey
 {
     /// <summary>
     /// Creates a new encryption key and registers it for the specific identifier.

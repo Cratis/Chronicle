@@ -168,7 +168,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                 eventSourceId,
                 State.SequenceNumber);
 
-            var compliantEvent = await _jsonComplianceManagerProvider.Apply(eventSchema.Schema, eventSourceId, content);
+            var compliantEvent = await _jsonComplianceManagerProvider.Apply((string)_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, eventSchema.Schema, eventSourceId, content);
 
             var compliantEventAsExpandoObject = _expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
 

@@ -31,9 +31,9 @@ public class PIICompliancePropertyValueHandler : IJsonCompliancePropertyValueHan
     public ComplianceMetadataType Type => ComplianceMetadataType.PII;
 
     /// <inheritdoc/>
-    public async Task<JsonNode> Apply(string identifier, JsonNode value)
+    public async Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
-        var key = await _encryptionKeyStore.GetFor(identifier);
+        var key = await _encryptionKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
         var valueAsString = value.ToString();
         var encrypted = _encryption.Encrypt(Encoding.UTF8.GetBytes(valueAsString), key);
         var encryptedAsBase64 = Convert.ToBase64String(encrypted);
@@ -41,9 +41,9 @@ public class PIICompliancePropertyValueHandler : IJsonCompliancePropertyValueHan
     }
 
     /// <inheritdoc/>
-    public async Task<JsonNode> Release(string identifier, JsonNode value)
+    public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
-        var key = await _encryptionKeyStore.GetFor(identifier);
+        var key = await _encryptionKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
         var encryptedAsString = value.ToString();
         var encrypted = Convert.FromBase64String(encryptedAsString);
         var decrypted = _encryption.Decrypt(encrypted, key);

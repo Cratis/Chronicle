@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis;
+using Aksio.Cratis.Compliance.MongoDB;
 using Aksio.Cratis.Kernel.Storage;
+using Aksio.Cratis.Kernel.Storage.Compliance;
 using Aksio.Cratis.Kernel.Storage.MongoDB;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Reminders;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Tenants;
@@ -30,6 +32,7 @@ public static class SiloBuilderExtensions
         builder.ConfigureServices(services =>
         {
             services.AddSingleton<IDatabase, Database>();
+            services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
             services.AddSingleton<IStorage, Aksio.Cratis.Kernel.Storage.MongoDB.Storage>();
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.TenantConfiguration, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
         });

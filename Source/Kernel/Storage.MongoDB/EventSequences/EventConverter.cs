@@ -14,7 +14,8 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB;
 /// </summary>
 public class EventConverter : IEventConverter
 {
-    readonly EventStoreNamespaceName _namespace;
+    readonly EventStoreName _eventStoreName;
+    readonly EventStoreNamespaceName _eventStoreNamespace;
     readonly IEventTypesStorage _eventTypesStorage;
     readonly IIdentityStorage _identityStorage;
     readonly IJsonComplianceManager _jsonComplianceManager;
@@ -23,19 +24,22 @@ public class EventConverter : IEventConverter
     /// <summary>
     /// Initializes a new instance of the <see cref="EventConverter"/> class.
     /// </summary>
-    /// <param name="namespace"><see cref="TenantId"/> for the converter.</param>
+    /// <param name="eventStoreName"><see cref="EventStoreName"/> the converter is for.</param>
+    /// <param name="eventStoreNamespace"><see cref="EventStoreNamespaceName"/> the converter is for.</param>
     /// <param name="eventTypesStorage"><see cref="IEventTypesStorage"/> for event schemas.</param>
     /// <param name="identityStorage"><see cref="IIdentityStorage"/>.</param>
     /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     public EventConverter(
-        EventStoreNamespaceName @namespace,
+        EventStoreName eventStoreName,
+        EventStoreNamespaceName eventStoreNamespace,
         IEventTypesStorage eventTypesStorage,
         IIdentityStorage identityStorage,
         IJsonComplianceManager jsonComplianceManager,
         Json.IExpandoObjectConverter expandoObjectConverter)
     {
-        _namespace = @namespace;
+        _eventStoreName = eventStoreName;
+        _eventStoreNamespace = eventStoreNamespace;
         _eventTypesStorage = eventTypesStorage;
         _identityStorage = identityStorage;
         _jsonComplianceManager = jsonComplianceManager;
@@ -48,7 +52,12 @@ public class EventConverter : IEventConverter
         var eventType = new EventType(@event.Type, EventGeneration.First);
         var content = (JsonNode.Parse(@event.Content[EventGeneration.First.ToString()].ToString()) as JsonObject)!;
         var eventSchema = await _eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-        var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.EventSourceId, content);
+        var releasedContent = await _jsonComplianceManager.Release(
+            _eventStoreName,
+            _eventStoreNamespace,
+            eventSchema.Schema,
+            @event.EventSourceId,
+            content);
 
         var releasedContentAsExpandoObject = _expandoObjectConverter.ToExpandoObject(releasedContent, eventSchema.Schema);
 
@@ -59,7 +68,7 @@ public class EventConverter : IEventConverter
                 @event.SequenceNumber,
                 @event.Occurred,
                 @event.ValidFrom,
-                (TenantId)(string)_namespace,
+                (TenantId)(string)_eventStoreNamespace,
                 @event.CorrelationId,
                 @event.Causation,
                 await _identityStorage.GetFor(@event.CausedBy)),
