@@ -49,7 +49,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <summary>
     /// Initializes a new instance of <see cref="EventSequence"/>.
     /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
+    /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
     /// <param name="meter">The meter to use for metrics.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
