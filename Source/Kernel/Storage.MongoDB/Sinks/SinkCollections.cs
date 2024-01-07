@@ -14,23 +14,22 @@ namespace Aksio.Cratis.Kernel.Storage.MongoDB.Sinks;
 public class SinkCollections : ISinkCollections
 {
     readonly Model _model;
-    readonly ISinkDatabaseProvider _databaseProvider;
+    readonly IMongoDatabase _database;
     bool _isReplaying;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SinkCollections"/> class.
     /// </summary>
     /// <param name="model">The <see cref="Model"/> the context is for.</param>
-    /// <param name="databaseProvider">The <see cref="ISinkDatabaseProvider"/>.</param>
+    /// <param name="database">The <see cref="IMongoDatabase"/> to use.</param>
     public SinkCollections(
         Model model,
-        ISinkDatabaseProvider databaseProvider)
+        IMongoDatabase database)
     {
         _model = model;
-        _databaseProvider = databaseProvider;
+        _database = database;
     }
 
-    IMongoDatabase Database => _databaseProvider.GetDatabase();
     string ReplayCollectionName => $"replay-{_model.Name}";
 
     /// <inheritdoc/>
@@ -45,7 +44,7 @@ public class SinkCollections : ISinkCollections
     {
         var rewindName = ReplayCollectionName;
         var rewoundCollectionsPrefix = $"{_model.Name}-";
-        var collectionNames = (await Database.ListCollectionNamesAsync()).ToList();
+        var collectionNames = (await _database.ListCollectionNamesAsync()).ToList();
         var nextCollectionSequenceNumber = 1;
         var rewoundCollectionNames = collectionNames.Where(_ => _.StartsWith(rewoundCollectionsPrefix, StringComparison.InvariantCulture)).ToArray();
         if (rewoundCollectionNames.Length > 0)
@@ -68,12 +67,12 @@ public class SinkCollections : ISinkCollections
 
         if (collectionNames.Contains(_model.Name))
         {
-            await Database.RenameCollectionAsync(_model.Name, oldCollectionName);
+            await _database.RenameCollectionAsync(_model.Name, oldCollectionName);
         }
 
         if (collectionNames.Contains(rewindName))
         {
-            await Database.RenameCollectionAsync(rewindName, _model.Name);
+            await _database.RenameCollectionAsync(rewindName, _model.Name);
         }
 
         _isReplaying = false;
@@ -87,5 +86,5 @@ public class SinkCollections : ISinkCollections
     }
 
     /// <inheritdoc/>
-    public IMongoCollection<BsonDocument> GetCollection() => _isReplaying ? Database.GetCollection<BsonDocument>(ReplayCollectionName) : Database.GetCollection<BsonDocument>(_model.Name);
+    public IMongoCollection<BsonDocument> GetCollection() => _isReplaying ? _database.GetCollection<BsonDocument>(ReplayCollectionName) : _database.GetCollection<BsonDocument>(_model.Name);
 }
