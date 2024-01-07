@@ -12,8 +12,7 @@ using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Projections;
-using Aksio.Cratis.Kernel.Storage.EventTypes;
-using Aksio.Cratis.Kernel.Storage.Identities;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
 using NJsonSchema;
@@ -72,24 +71,25 @@ public class BootProcedure : IPerformBootProcedure
                     JsonNode.Parse(_schemaGenerator.Generate(type).ToJson())!);
             });
 
+            var storage = _serviceProvider.GetRequiredService<IStorage>();
+
             foreach (var (microserviceId, microservice) in _configuration.Microservices)
             {
                 _logger.PopulateSchemaStore();
-                var schemaStore = _serviceProvider.GetRequiredService<IEventTypesStorage>()!;
-                await schemaStore.Populate();
+                var eventStoreStorage = storage.GetEventStore(microserviceId);
+                await eventStoreStorage.EventTypes.Populate();
 
                 foreach (var eventTypeRegistration in eventTypeRegistrations)
                 {
                     var schema = await JsonSchema.FromJsonAsync(eventTypeRegistration.Schema.ToJsonString());
-                    await schemaStore.Register(
+                    await eventStoreStorage.EventTypes.Register(
                         eventTypeRegistration.Type,
                         eventTypeRegistration.FriendlyName,
                         schema);
                 }
 
                 _logger.PopulateIdentityStore();
-                var identityStore = _serviceProvider.GetRequiredService<IIdentityStorage>()!;
-                await identityStore.Populate();
+                await eventStoreStorage.Identities.Populate();
 
                 foreach (var (tenantId, _) in _configuration.Tenants)
                 {
