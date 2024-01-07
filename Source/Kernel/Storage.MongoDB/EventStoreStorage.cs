@@ -13,7 +13,6 @@ using Aksio.Cratis.Kernel.Storage.MongoDB.Identities;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Projections;
 using Aksio.Cratis.Kernel.Storage.Projections;
 using Aksio.Cratis.Projections.Json;
-using Aksio.MongoDB;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.MongoDB;
@@ -24,11 +23,10 @@ namespace Aksio.Cratis.MongoDB;
 public class EventStoreStorage : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespace, IEventStoreNamespaceStorage> _namespaces = new();
+    readonly IEventStoreDatabase _eventStoreDatabase;
     readonly IJsonComplianceManager _complianceManager;
     readonly Json.ExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IMongoDBClientFactory _mongoDBClientFactory;
-    readonly Kernel.Configuration.Storage _configuration;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILoggerFactory _loggerFactory;
 
@@ -36,40 +34,35 @@ public class EventStoreStorage : IEventStoreStorage
     /// Initializes a new instance of the <see cref="EventStoreStorage"/> class.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
-    /// <param name="clusterDatabase"><see cref="IDatabase"/> to use.</param>
+    /// <param name="database"><see cref="IDatabase"/> to use.</param>
     /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to use.</param>
     /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for handling serialization of projection definitions.</param>
     /// <param name="projectionPipelineSerializer"><see cref="IJsonProjectionPipelineSerializer"/> for handling serialization of projection pipeline definitions.</param>
     /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
     /// <param name="expandoObjectConverter"><see cref="Json.ExpandoObjectConverter"/> for conversions.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-    /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
-    /// <param name="configuration"><see cref="Kernel.Configuration.Storage"/> configuration.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting the execution context.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStoreStorage(
         EventStore eventStore,
-        IDatabase clusterDatabase,
+        IDatabase database,
         IEventStoreDatabase eventStoreDatabase,
         IJsonProjectionSerializer projectionSerializer,
         IJsonProjectionPipelineSerializer projectionPipelineSerializer,
         IJsonComplianceManager complianceManager,
         Json.ExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
-        IMongoDBClientFactory mongoDBClientFactory,
-        Kernel.Configuration.Storage configuration,
         IExecutionContextManager executionContextManager,
         ILoggerFactory loggerFactory)
     {
         EventStore = eventStore;
+        _eventStoreDatabase = eventStoreDatabase;
         _complianceManager = complianceManager;
         _expandoObjectConverter = expandoObjectConverter;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _mongoDBClientFactory = mongoDBClientFactory;
-        _configuration = configuration;
         _executionContextManager = executionContextManager;
         _loggerFactory = loggerFactory;
-        Identities = new IdentityStorage(clusterDatabase, loggerFactory.CreateLogger<IdentityStorage>());
+        Identities = new IdentityStorage(database, loggerFactory.CreateLogger<IdentityStorage>());
         EventTypes = new EventTypesStorage(eventStore, eventStoreDatabase, loggerFactory.CreateLogger<EventTypesStorage>());
         Projections = new ProjectionDefinitionsStorage(eventStoreDatabase, projectionSerializer);
         ProjectionPipelines = new ProjectionPipelineDefinitionsStorage(eventStoreDatabase, projectionPipelineSerializer);
@@ -98,12 +91,6 @@ public class EventStoreStorage : IEventStoreStorage
             return instance;
         }
 
-        var database = new EventStoreNamespaceDatabase(
-            EventStore,
-            @namespace,
-            _mongoDBClientFactory,
-            _configuration);
-
         var converter = new EventConverter(
             @namespace,
             EventTypes,
@@ -115,7 +102,7 @@ public class EventStoreStorage : IEventStoreStorage
             new EventStoreNamespaceStorage(
                 EventStore,
                 @namespace,
-                database,
+                _eventStoreDatabase.GetNamespaceDatabase(@namespace),
                 converter,
                 EventTypes,
                 _expandoObjectConverter,

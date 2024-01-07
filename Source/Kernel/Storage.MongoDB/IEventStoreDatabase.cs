@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Storage.MongoDB;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.MongoDB;
@@ -17,4 +18,11 @@ public interface IEventStoreDatabase
     /// <typeparam name="T">Type of document.</typeparam>
     /// <returns><see cref="IMongoCollection{T}"/> instance.</returns>
     IMongoCollection<T> GetCollection<T>(string? collectionName = null);
+
+    /// <summary>
+    /// Get the <see cref="IEventStoreNamespaceDatabase"/> for a specific <see cref="EventStoreNamespace"/>.
+    /// </summary>
+    /// <param name="namespace"><see cref="EventStoreNamespace"/> to get for.</param>
+    /// <returns>The <see cref="IEventStoreNamespaceDatabase"/> instance.</returns>
+    IEventStoreNamespaceDatabase GetNamespaceDatabase(EventStoreNamespace @namespace);
 }

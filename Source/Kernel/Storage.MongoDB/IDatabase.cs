@@ -17,4 +17,19 @@ public interface IDatabase
     /// <typeparam name="T">Type of document.</typeparam>
     /// <returns><see cref="IMongoCollection{T}"/> instance.</returns>
     IMongoCollection<T> GetCollection<T>(string? collectionName = null);
+
+    /// <summary>
+    /// Get the <see cref="IEventStoreDatabase"/> for a specific <see cref="EventStore"/>.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStore"/> to get for.</param>
+    /// <returns>The <see cref="IEventStoreDatabase"/> instance.</returns>
+    IEventStoreDatabase GetEventStoreDatabase(EventStore eventStore);
+
+    /// <summary>
+    /// Get the <see cref="IMongoDatabase"/> for a specific <see cref="EventStore"/> and <see cref="EventStoreNamespace"/>.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStore"/> to get for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespace"/> to get for.</param>
+    /// <returns>The <see cref="IMongoDatabase"/> instance.</returns>
+    IMongoDatabase GetReadModelDatabase(EventStore eventStore, EventStoreNamespace @namespace);
 }
