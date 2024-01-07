@@ -152,7 +152,6 @@ public class EventSequence : ControllerBase
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for.</param>
     /// <param name="eventTypes">Optional collection of <see cref="EventType"/> to get for.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
-    [HttpGet]
     [HttpGet("range")]
     public async Task<PagedQueryResult<AppendedEventWithJsonAsContent>> GetAppendedEventsRange(
         [FromRoute] EventSequenceId eventSequenceId,
