@@ -9,9 +9,11 @@ using Aksio.Cratis.Kernel.Storage.Changes;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Kernel.Storage.EventTypes;
 using Aksio.Cratis.Kernel.Storage.Jobs;
+using Aksio.Cratis.Kernel.Storage.Keys;
 using Aksio.Cratis.Kernel.Storage.MongoDB;
 using Aksio.Cratis.Kernel.Storage.MongoDB.EventSequences;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Jobs;
+using Aksio.Cratis.Kernel.Storage.MongoDB.Keys;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Projections;
 using Aksio.Cratis.Kernel.Storage.MongoDB.Recommendations;
@@ -75,6 +77,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Observers = new ObserverStorage(eventStoreNamespaceDatabase);
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
         Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
+        ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, Observers);
     }
 
     /// <inheritdoc/>
@@ -94,6 +97,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; }
+
+    /// <inheritdoc/>
+    public IObserverKeyIndexes ObserverKeyIndexes { get; }
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId)

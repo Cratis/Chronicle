@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Storage.Keys;
 using Orleans.Core;
 using Orleans.TestKit;
 
@@ -13,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver.given;
 public class a_catchup_observer : Specification
 {
     protected TestKitSilo silo = new();
-    protected Mock<IObserverKeyIndexes> indexes;
+    protected Mock<IStorage> storage;
     protected CatchUpObserverWrapper job;
     protected JobKey job_key = new(MicroserviceId.Unspecified, TenantId.NotSet);
     protected JobId job_id => Guid.Parse("6341bcdb-c644-40ab-81cf-43907c510285");
@@ -22,10 +21,10 @@ public class a_catchup_observer : Specification
 
     async Task Establish()
     {
-        indexes = new();
+        storage = new();
         state_storage = silo.StorageManager.GetStorage<CatchUpObserverState>();
 
-        silo.AddService(indexes.Object);
+        silo.AddService(storage.Object);
         silo.AddService(new JsonSerializerOptions());
 
         var jobMock = new Mock<ICatchUpObserver>();

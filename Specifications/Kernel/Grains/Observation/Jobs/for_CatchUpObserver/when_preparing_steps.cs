@@ -18,7 +18,7 @@ public class when_preparing_steps : given.a_catchup_observer_and_a_request
     void Establish()
     {
         index = new();
-        indexes.Setup(_ => _.GetFor(((CatchUpObserverRequest)state_storage.State.Request).ObserverId, ((CatchUpObserverRequest)state_storage.State.Request).ObserverKey)).ReturnsAsync(index.Object);
+        storage.Setup(_ => _.GetFor(((CatchUpObserverRequest)state_storage.State.Request).ObserverId, ((CatchUpObserverRequest)state_storage.State.Request).ObserverKey)).ReturnsAsync(index.Object);
 
         keys = new[]
         {
