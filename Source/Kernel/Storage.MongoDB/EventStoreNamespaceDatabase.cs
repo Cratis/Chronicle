@@ -22,12 +22,12 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the database is for.</param>
     /// <param name="namespace"><see cref="TenantId"/> the database is for.</param>
-    /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
+    /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
     /// <param name="configuration"><see cref="Kernel.Configuration.Storage"/> configuration.</param>
     public EventStoreNamespaceDatabase(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
-        IMongoDBClientFactory mongoDBClientFactory,
+        IMongoDBClientManager clientManager,
         Kernel.Configuration.Storage configuration)
     {
         var storageTypes = configuration.Microservices
@@ -38,7 +38,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         var settings = MongoClientSettings.FromUrl(url);
 
         // settings.ReadPreference = ReadPreference.SecondaryPreferred;
-        var client = mongoDBClientFactory.Create(settings);
+        var client = clientManager.GetClientFor(settings);
         _database = client.GetDatabase(url.DatabaseName);
     }
 

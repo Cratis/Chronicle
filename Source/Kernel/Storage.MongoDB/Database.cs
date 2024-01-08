@@ -16,22 +16,23 @@ public class Database : IDatabase
     readonly IMongoDatabase _database;
     readonly ConcurrentDictionary<EventStoreName, IEventStoreDatabase> _eventStoreDatabases = new();
     readonly ConcurrentDictionary<(EventStoreName, EventStoreNamespaceName), IMongoDatabase> _readModelDatabases = new();
-    readonly IMongoDBClientFactory _clientFactory;
+    readonly IMongoDBClientManager _clientManager;
     readonly StorageConfiguration _configuration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
     /// </summary>
-    /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
+    /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public Database(
-        IMongoDBClientFactory clientFactory,
+        IMongoDBClientManager clientManager,
         StorageConfiguration configuration)
     {
         var url = new MongoUrl(configuration.Cluster.ConnectionDetails.ToString());
-        var client = clientFactory.Create(url);
+        var settings = MongoClientSettings.FromUrl(url);
+        var client = clientManager.GetClientFor(settings);
         _database = client.GetDatabase(url.DatabaseName);
-        _clientFactory = clientFactory;
+        _clientManager = clientManager;
         _configuration = configuration;
     }
 
@@ -54,7 +55,7 @@ public class Database : IDatabase
             return database;
         }
 
-        return _eventStoreDatabases[eventStore] = new EventStoreDatabase(eventStore, _clientFactory, _configuration);
+        return _eventStoreDatabases[eventStore] = new EventStoreDatabase(eventStore, _clientManager, _configuration);
     }
 
     /// <inheritdoc/>
@@ -68,7 +69,8 @@ public class Database : IDatabase
 
         var readModelsConfig = _configuration.Microservices.Get((string)eventStore).Tenants[@namespace].Get(WellKnownStorageTypes.ReadModels);
         var url = new MongoUrl(readModelsConfig.ConnectionDetails.ToString());
-        var client = _clientFactory.Create(url);
+        var settings = MongoClientSettings.FromUrl(url);
+        var client = _clientManager.GetClientFor(settings);
         database = client.GetDatabase(url.DatabaseName);
         _readModelDatabases[key] = database;
         return database;

@@ -32,6 +32,7 @@ public static class SiloBuilderExtensions
         builder.ConfigureServices(services =>
         {
             services.AddSingleton<IDatabase, Database>();
+            services.AddSingleton<IMongoDBClientManager, MongoDBClientManager>();
             services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
             services.AddSingleton<IStorage, Aksio.Cratis.Kernel.Storage.MongoDB.Storage>();
             services.AddSingletonNamedService<IGrainStorage>(WellKnownGrainStorageProviders.TenantConfiguration, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());

@@ -16,25 +16,27 @@ public class EventStoreDatabase : IEventStoreDatabase
     readonly IMongoDatabase _database;
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceDatabase> _eventStoreNamespaceDatabases = new();
     readonly EventStoreName _eventStore;
-    readonly IMongoDBClientFactory _clientFactory;
+    readonly IMongoDBClientManager _clientManager;
     readonly StorageConfiguration _configuration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the database is for.</param>
-    /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
+    /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public EventStoreDatabase(
         EventStoreName eventStore,
-        IMongoDBClientFactory clientFactory,
+        IMongoDBClientManager clientManager,
         StorageConfiguration configuration)
     {
         var url = new MongoUrl(configuration.Microservices.Get((string)eventStore).Shared.Get(WellKnownStorageTypes.EventStore).ConnectionDetails.ToString());
-        var client = clientFactory.Create(url);
+        var settings = MongoClientSettings.FromUrl(url);
+        var client = clientManager.GetClientFor(settings);
+
         _database = client.GetDatabase(url.DatabaseName);
         _eventStore = eventStore;
-        _clientFactory = clientFactory;
+        _clientManager = clientManager;
         _configuration = configuration;
     }
 
@@ -57,6 +59,6 @@ public class EventStoreDatabase : IEventStoreDatabase
             return database;
         }
 
-        return _eventStoreNamespaceDatabases[@namespace] = new EventStoreNamespaceDatabase(_eventStore, @namespace, _clientFactory, _configuration);
+        return _eventStoreNamespaceDatabases[@namespace] = new EventStoreNamespaceDatabase(_eventStore, @namespace, _clientManager, _configuration);
     }
 }
