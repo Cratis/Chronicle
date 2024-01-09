@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { default as styles } from './EventHistogram.module.css';
+import css from './EventHistogram.module.css';
 import { useMockData } from './useMockData';
 import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts';
@@ -14,8 +14,11 @@ function getChartOption(dates: any, counts: any): EChartsOption {
             show: false,
         },
         grid: {
-            bottom: 90,
-            height: 10,
+            left: '-30',
+            right: '10',
+            top: '0',
+            bottom: '0',
+            containLabel: true,
         },
         dataZoom: [
             {
@@ -84,5 +87,5 @@ export const EventHistogram = (props: EventHistogramProps) => {
         return () => window.removeEventListener('resize', listener);
     }, []);
 
-    return <div className={styles.eventSamplesContainer} ref={chartContainer} />;
+    return <div className={css.eventSamplesContainer} ref={chartContainer} />;
 };

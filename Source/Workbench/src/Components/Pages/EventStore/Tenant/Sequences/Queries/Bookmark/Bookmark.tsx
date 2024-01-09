@@ -8,6 +8,7 @@ export const Bookmark = () => {
     const {
         nodes,
         editMode,
+        deleteNode,
         expandedKeys,
         addNewFolder,
         exitEditMode,
@@ -22,6 +23,7 @@ export const Bookmark = () => {
             <BookmarkTree
                 nodes={nodes}
                 editMode={editMode}
+                deleteNode={deleteNode}
                 exitEditMode={exitEditMode}
                 expandedKeys={expandedKeys}
                 addNewFolder={addNewFolder}

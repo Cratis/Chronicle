@@ -4,3 +4,17 @@
 .addButton {
     margin-left: 10px;
 }
+
+.itemContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.deleteButton {
+    color: var(--red-500);
+    font-size: 0.875rem;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.75rem;
+}

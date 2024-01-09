@@ -8,6 +8,7 @@ import { QuerySidebar } from './components/QuerySidebar';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { QueriesViewModel } from './QueriesViewModel';
+import { QueryTable } from './components/QueryTable';
 import { withViewModel } from 'MVVM/withViewModel';
 import { Bookmark } from './Bookmark/Bookmark';
 import { Button } from 'primereact/button';
@@ -72,18 +73,22 @@ export const Queries = withViewModel(QueriesViewModel, () => {
                 }
             >
                 <div className={css.panelContainer}>
-                    <QuerySidebar
-                        isSidebarOpen={isSidebarOpen}
-                        toggleSidebar={() => setSidebarOpen(!isSidebarOpen)}
-                    >
-                        {query.title}
-
-                        <div>Logs</div>
-                        <div>Outbox</div>
-                        <div>People</div>
-                    </QuerySidebar>
                     <div>
+                        <QuerySidebar
+                            isSidebarOpen={isSidebarOpen}
+                            toggleSidebar={() => setSidebarOpen(!isSidebarOpen)}
+                        >
+                            <div>Select Event</div>
+                            <div className={css.sidebarActions}>
+                                <Button text>Logs</Button>
+                                <Button text>Outbox</Button>
+                                <Button text>People</Button>
+                            </div>
+                        </QuerySidebar>
+                    </div>
+                    <div className={css.panelBody}>
                         <QueryMenuActions />
+                        <QueryTable queryNumber={query.id} />
                     </div>
                 </div>
             </TabPanel>
@@ -116,7 +121,9 @@ export const Queries = withViewModel(QueriesViewModel, () => {
                         </div>
                     }
                 />
+
                 {queries.map(renderQueryTabPanel)}
+
                 <TabPanel
                     headerTemplate={<Button text icon='pi pi-plus' onClick={addQuery} />}
                 />

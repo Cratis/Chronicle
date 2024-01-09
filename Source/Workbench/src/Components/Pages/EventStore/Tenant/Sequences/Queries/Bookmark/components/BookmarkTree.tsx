@@ -10,6 +10,7 @@ export interface IBookmarkTreeProps {
     exitEditMode: () => void;
     editingNodeKey: string | null;
     editMode: (key: string) => void;
+    deleteNode: (nodeKey: string) => void;
     expandedKeys: { [key: string]: boolean };
     addNewFolder: (parentNodeKey: string) => void;
     handleInputChange: (
@@ -24,11 +25,12 @@ export const BookmarkTree = (props: IBookmarkTreeProps) => {
     const {
         nodes,
         editMode,
+        deleteNode,
         exitEditMode,
         expandedKeys,
-        setExpandedKeys,
         addNewFolder,
         editingNodeKey,
+        setExpandedKeys,
         handleInputChange,
         handleInputKeyDown,
     } = props;
@@ -37,6 +39,7 @@ export const BookmarkTree = (props: IBookmarkTreeProps) => {
         <NodeTemplate
             node={node}
             editMode={editMode}
+            deleteNode={deleteNode}
             exitEditMode={exitEditMode}
             addNewFolder={addNewFolder}
             editingNodeKey={editingNodeKey}

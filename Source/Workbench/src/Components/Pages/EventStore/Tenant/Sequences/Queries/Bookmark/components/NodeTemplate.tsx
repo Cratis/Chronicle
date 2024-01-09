@@ -9,6 +9,7 @@ export interface INodeTemplateProps {
     exitEditMode: () => void;
     editingNodeKey: string | null;
     editMode: (key: string) => void;
+    deleteNode: (nodeKey: string) => void;
     addNewFolder: (parentNodeKey: string) => void;
     handleInputChange: (
         evt: React.ChangeEvent<HTMLInputElement>,
@@ -20,10 +21,11 @@ export interface INodeTemplateProps {
 export const NodeTemplate = (props: INodeTemplateProps) => {
     const {
         node,
+        editMode,
+        deleteNode,
+        exitEditMode,
         addNewFolder,
         editingNodeKey,
-        editMode,
-        exitEditMode,
         handleInputChange,
         handleInputKeyDown,
     } = props;
@@ -33,6 +35,7 @@ export const NodeTemplate = (props: INodeTemplateProps) => {
         <EditableFolder
             node={node}
             editMode={editMode}
+            deleteNode={deleteNode}
             addNewFolder={addNewFolder}
             exitEditMode={exitEditMode}
             secondElement={secondElement}

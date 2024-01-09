@@ -8,8 +8,13 @@ import { Queries } from './Queries/Queries';
 
 export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
     return (
-        <Page title='Event Sequences'>
-            <Queries />
+        <Page
+            title='Event Sequences'
+            mainClassName={'overflow-hidden flex flex-col h-full'}
+        >
+            <div className={'flex-1 overflow-hidden '}>
+                <Queries />
+            </div>
         </Page>
     );
 });

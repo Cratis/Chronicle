@@ -20,7 +20,7 @@ export const QuerySidebar = (props: QuerySidebarProps) => {
                 unstyled
                 onClick={toggleSidebar}
                 icon={isSidebarOpen ? <FaAnglesLeft /> : <FaAnglesRight />}
-                className={`${css.toggleButton} ${isSidebarOpen ? css.open : ''}`}
+                className={`${css.toggleButton} ${isSidebarOpen ? css.open : css.closed}`}
             />
             <div
                 className={`${css.querySidebar} ${isSidebarOpen ? css.open : css.closed}`}

@@ -21,16 +21,21 @@ export const useBookmarkNodes = () => {
 
         fetchNodes();
     }, []);
+
     const updateNodeLabels = useCallback(
-        (nodes: IBookmarkNode[], key: string, newLabel: string): IBookmarkNode[] => {
+        (
+            nodes: IBookmarkNode[],
+            key: string,
+            newValues: Partial<IBookmarkNode>
+        ): IBookmarkNode[] => {
             return nodes.map((node) => {
                 if (node.key === key) {
-                    return { ...node, label: newLabel };
+                    return { ...node, ...newValues };
                 }
-                if (node.children) {
+                if (node.children && node.children.length > 0) {
                     return {
                         ...node,
-                        children: updateNodeLabels(node.children, key, newLabel),
+                        children: updateNodeLabels(node.children, key, newValues),
                     };
                 }
                 return node;
@@ -42,7 +47,7 @@ export const useBookmarkNodes = () => {
     const handleInputChange = useCallback(
         (evt: React.ChangeEvent<HTMLInputElement>, editingNode: IBookmarkNode) => {
             setNodes((prevNodes) =>
-                updateNodeLabels(prevNodes, editingNode.key, evt.target.value)
+                updateNodeLabels(prevNodes, editingNode.key, { label: evt.target.value })
             );
         },
         [updateNodeLabels]
@@ -56,6 +61,28 @@ export const useBookmarkNodes = () => {
         },
         []
     );
+    const deleteNode = useCallback((nodeKeyToDelete: string): void => {
+        setNodes((prevNodes: IBookmarkNode[]) => {
+            const removeNodeAndChildren = (
+                nodes: IBookmarkNode[],
+                key: string
+            ): IBookmarkNode[] => {
+                return nodes
+                    .filter((node) => node.key !== key)
+                    .map((node) => {
+                        if (node.children) {
+                            return {
+                                ...node,
+                                children: removeNodeAndChildren(node.children, key),
+                            };
+                        }
+                        return node;
+                    });
+            };
+
+            return removeNodeAndChildren(prevNodes, nodeKeyToDelete);
+        });
+    }, []);
 
     const editMode = useCallback((key: string) => {
         setEditingNodeKey(key);
@@ -64,7 +91,6 @@ export const useBookmarkNodes = () => {
     const exitEditMode = useCallback(() => {
         setEditingNodeKey(null);
     }, []);
-
 
     const addNewFolder = useCallback((parentNodeKey: string) => {
         const newFolderKey = 'new_' + Math.random().toString();
@@ -82,19 +108,30 @@ export const useBookmarkNodes = () => {
                     node.key === parentNodeKey
                         ? { ...node, children: [...(node.children || []), newFolder] }
                         : node.children
-                            ? { ...node, children: addFolderToNode(node.children) }
-                            : node
+                        ? { ...node, children: addFolderToNode(node.children) }
+                        : node
                 );
 
             return addFolderToNode(prevNodes);
         });
-        setExpandedKeys(prevExpandedKeys => ({
+        setExpandedKeys((prevExpandedKeys) => ({
             ...prevExpandedKeys,
-            [parentNodeKey]: true
+            [parentNodeKey]: true,
         }));
 
         setEditingNodeKey(newFolderKey);
     }, []);
 
-    return { nodes, addNewFolder, expandedKeys, setExpandedKeys, editingNodeKey, editMode, exitEditMode, handleInputChange, handleInputKeyDown };
+    return {
+        nodes,
+        editMode,
+        deleteNode,
+        expandedKeys,
+        addNewFolder,
+        exitEditMode,
+        editingNodeKey,
+        setExpandedKeys,
+        handleInputChange,
+        handleInputKeyDown,
+    };
 };

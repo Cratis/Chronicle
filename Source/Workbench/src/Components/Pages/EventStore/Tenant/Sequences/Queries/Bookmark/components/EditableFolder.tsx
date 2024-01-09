@@ -13,6 +13,7 @@ interface EditableFolderProps {
     exitEditMode: () => void;
     editingNodeKey: string | null;
     editMode: (key: string) => void;
+    deleteNode: (nodeKey: string) => void;
     addNewFolder: (nodeKey: string) => void;
     handleInputChange: (
         evt: React.ChangeEvent<HTMLInputElement>,
@@ -25,36 +26,43 @@ export const EditableFolder = (props: EditableFolderProps) => {
     const {
         node,
         editMode,
-        secondElement,
+        deleteNode,
         addNewFolder,
         exitEditMode,
+        secondElement,
         editingNodeKey,
         handleInputChange,
         handleInputKeyDown,
     } = props;
     return (
         <>
-            {editingNodeKey === node.key && node.children ? (
+            {editingNodeKey === node.key ? (
                 <InputText
-                    type='text'
                     autoFocus
+                    type='text'
                     value={node.label}
                     onBlur={exitEditMode}
                     onKeyDown={handleInputKeyDown}
                     onChange={(evt) => handleInputChange(evt, node)}
                 />
             ) : (
-                <span onDoubleClick={() => editMode(node?.key)}>{node.label}</span>
-            )}
-
-            {secondElement && (
-                <Button
-                    rounded
-                    size='small'
-                    icon='pi pi-plus'
-                    className={css.addButton}
-                    onClick={() => addNewFolder(node?.key)}
-                />
+                <div className={css.itemContainer}>
+                    <span onDoubleClick={() => editMode(node?.key)}>{node.label}</span>
+                    {secondElement && (
+                        <Button
+                            unstyled
+                            icon='pi pi-plus'
+                            className={css.addButton}
+                            onClick={() => addNewFolder(node?.key)}
+                        />
+                    )}
+                    <Button
+                        unstyled
+                        icon='pi pi-trash'
+                        className={css.deleteButton}
+                        onClick={() => deleteNode(node.key)}
+                    />
+                </div>
             )}
         </>
     );

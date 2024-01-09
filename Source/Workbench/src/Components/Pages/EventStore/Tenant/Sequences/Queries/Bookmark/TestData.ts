@@ -1,7 +1,6 @@
 /* Copyright (c) Aksio Insurtech. All rights reserved.
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
-
 export interface IBookmarkNode {
     key: string;
     label: string;
@@ -11,7 +10,6 @@ export interface IBookmarkNode {
 }
 
 export type IBookmarkNodes = IBookmarkNode;
-
 
 export const BookmarkNodes = {
     getBookmarkNodesData() {
@@ -83,19 +81,19 @@ export const BookmarkNodes = {
                 data: 'Shared queries data here',
                 children: [
                     {
-                        key: '0-0',
+                        key: '1-0',
                         label: 'People',
                         data: 'People data goes here',
                         icon: 'pi pi-fw pi-inbox',
                         children: [
                             {
-                                key: '0-0-0',
+                                key: '1-0-0',
                                 label: 'All people',
                                 icon: 'pi pi-fw pi-file',
                                 data: 'All people data goes here',
                             },
                             {
-                                key: '0-0-1',
+                                key: '1-0-1',
                                 label: 'Specific people',
                                 icon: 'pi pi-fw pi-file',
                                 data: 'Specific people data goes here',
@@ -103,7 +101,7 @@ export const BookmarkNodes = {
                         ],
                     },
                     {
-                        key: '0-1',
+                        key: '1-1',
                         label: 'Work',
                         data: 'Work data goes here',
                         icon: 'pi pi-fw pi-inbox',
@@ -117,19 +115,19 @@ export const BookmarkNodes = {
                         ],
                     },
                     {
-                        key: '0-2',
+                        key: '1-2',
                         label: 'Payment',
                         data: 'Payment data goes here',
                         icon: 'pi pi-fw pi-inbox',
                         children: [
                             {
-                                key: '0-2-0',
+                                key: '1-2-0',
                                 label: 'All payment',
                                 icon: 'pi pi-fw pi-file',
                                 data: 'Data here',
                             },
                             {
-                                key: '0-2-1',
+                                key: '1-2-1',
                                 label: 'June payment',
                                 icon: 'pi pi-fw pi-file',
                                 data: 'Data here',

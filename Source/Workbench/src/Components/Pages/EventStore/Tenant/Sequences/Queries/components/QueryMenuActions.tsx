@@ -49,14 +49,16 @@ export const QueryMenuActions = () => {
     ];
 
     return (
-        <div className={css.actions}>
-            <Menubar
-                model={items.map((item) => ({
-                    ...item,
-                    className: getMenuItemClass(item.label),
-                }))}
-            />
+        <>
+            <div className={css.actions}>
+                <Menubar
+                    model={items.map((item) => ({
+                        ...item,
+                        className: getMenuItemClass(item.label),
+                    }))}
+                />
+            </div>
             {showChart && <EventHistogram eventLog={''} />}
-        </div>
+        </>
     );
 };
