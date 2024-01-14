@@ -2,8 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.DependencyInversion;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
@@ -40,36 +39,20 @@ public class EventSequenceCache : IEventSequenceCache
 #pragma warning restore SA1600
 
     readonly object _lock = new();
-    readonly MicroserviceId _microserviceId;
-    readonly TenantId _tenantId;
-    readonly EventSequenceId _eventSequenceId;
-    readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
+    readonly IEventSequenceStorage _eventSequenceStorage;
     readonly ILogger<EventSequenceCache> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceCache"/> class.
     /// </summary>
-    /// <param name="microserviceId">The <see cref="MicroserviceId"/> the cache is for.</param>
-    /// <param name="tenantId">The <see cref="TenantId"/> the cache is for.</param>
-    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the cache is for.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/> for working with the event store.</param>
+    /// <param name="eventSequenceStorage">Provider for <see cref="IEventSequenceStorage"/> for working with the event store.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public EventSequenceCache(
-        MicroserviceId microserviceId,
-        TenantId tenantId,
-        EventSequenceId eventSequenceId,
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
+        IEventSequenceStorage eventSequenceStorage,
         ILogger<EventSequenceCache> logger)
     {
         _eventsBySequenceNumber = new();
-        _microserviceId = microserviceId;
-        _tenantId = tenantId;
-        _eventSequenceId = eventSequenceId;
-        _executionContextManager = executionContextManager;
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
+        _eventSequenceStorage = eventSequenceStorage;
         _logger = logger;
     }
 
@@ -108,10 +91,9 @@ public class EventSequenceCache : IEventSequenceCache
         }
 
         var to = from + NumberOfEventsToFetch;
-        _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
         _logger.Priming(from, to);
 
-        var eventCursor = _eventSequenceStorageProvider().GetRange(_eventSequenceId, from, to).GetAwaiter().GetResult();
+        var eventCursor = _eventSequenceStorage.GetRange(from, to).GetAwaiter().GetResult();
 
         lock (_lock)
         {
@@ -162,8 +144,7 @@ public class EventSequenceCache : IEventSequenceCache
     /// <inheritdoc/>
     public async Task PrimeWithTailWindow()
     {
-        _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
-        var tail = await _eventSequenceStorageProvider().GetTailSequenceNumber(_eventSequenceId);
+        var tail = await _eventSequenceStorage.GetTailSequenceNumber();
         tail -= NumberOfEventsToFetch;
         if ((long)tail.Value < 0) tail = 0;
         Prime(tail);

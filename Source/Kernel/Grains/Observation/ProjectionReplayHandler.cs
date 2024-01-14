@@ -1,9 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
@@ -12,16 +10,15 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public class ProjectionReplayHandler : ICanHandleReplayForObserver
 {
-    readonly ProviderFor<IProjectionManager> _projectionManager;
+    readonly IKernel _kernel;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerReplayHandler"/> class.
     /// </summary>
-    /// <param name="projectionManager">Provider for <see cref="IProjectionManager"/>.</param>
-    public ProjectionReplayHandler(
-        ProviderFor<IProjectionManager> projectionManager)
+    /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
+    public ProjectionReplayHandler(IKernel kernel)
     {
-        _projectionManager = projectionManager;
+        _kernel = kernel;
     }
 
     /// <inheritdoc/>
@@ -30,14 +27,16 @@ public class ProjectionReplayHandler : ICanHandleReplayForObserver
     /// <inheritdoc/>
     public async Task BeginReplayFor(ObserverDetails observerDetails)
     {
-        var pipeline = _projectionManager().GetPipeline(observerDetails.Identifier.Value);
+        var @namespace = _kernel.GetEventStore((string)observerDetails.Key.MicroserviceId).GetNamespace(observerDetails.Key.TenantId);
+        var pipeline = @namespace.ProjectionManager.GetPipeline(observerDetails.Identifier.Value);
         await pipeline.BeginReplay();
     }
 
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails)
     {
-        var pipeline = _projectionManager().GetPipeline(observerDetails.Identifier.Value);
+        var @namespace = _kernel.GetEventStore((string)observerDetails.Key.MicroserviceId).GetNamespace(observerDetails.Key.TenantId);
+        var pipeline = @namespace.ProjectionManager.GetPipeline(observerDetails.Identifier.Value);
         await pipeline.EndReplay();
     }
 }

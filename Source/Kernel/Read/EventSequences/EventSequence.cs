@@ -4,10 +4,10 @@
 using System.Text.Json;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Kernel.Persistence.Observation;
+using Aksio.Cratis.Kernel.Storage;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
@@ -19,32 +19,24 @@ namespace Aksio.Cratis.Kernel.Read.EventSequences;
 [Route("/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}")]
 public class EventSequence : ControllerBase
 {
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProviderProvider;
-    readonly ProviderFor<IObserverStorage> _observerStorage;
+    readonly IStorage _storage;
     readonly IGrainFactory _grainFactory;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
     /// </summary>
-    /// <param name="eventSequenceStorageProviderProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="observerStorage">Provider for <see cref="IObserverStorage"/>.</param>
+    /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public EventSequence(
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProviderProvider,
-        ProviderFor<IObserverStorage> observerStorage,
+        IStorage storage,
         IGrainFactory grainFactory,
-        JsonSerializerOptions jsonSerializerOptions,
-        IExecutionContextManager executionContextManager)
+        JsonSerializerOptions jsonSerializerOptions)
     {
-        _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
-        _observerStorage = observerStorage;
+        _storage = storage;
         _grainFactory = grainFactory;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _executionContextManager = executionContextManager;
     }
 
     /// <summary>
@@ -94,11 +86,8 @@ public class EventSequence : ControllerBase
         [FromRoute] TenantId tenantId,
         [FromRoute] ObserverId observerId)
     {
-        var correlationId = _executionContextManager.Current.CorrelationId;
-        _executionContextManager.Establish(tenantId, correlationId, microserviceId);
-
-        var observer = await _observerStorage().GetObserver(observerId);
-        return await _eventSequenceStorageProviderProvider().GetTailSequenceNumber(eventSequenceId, observer.EventTypes);
+        var observer = await GetObserverStorage(microserviceId, tenantId).GetObserver(observerId);
+        return await GetEventSequenceStorage(microserviceId, tenantId, eventSequenceId).GetTailSequenceNumber(observer.EventTypes);
     }
 
     /// <summary>
@@ -125,12 +114,10 @@ public class EventSequence : ControllerBase
         var result = new List<AppendedEventWithJsonAsContent>();
         var parsedEventTypes = eventTypes?.Select(EventType.Parse).ToArray();
 
-        var correlationId = _executionContextManager.Current.CorrelationId;
-        _executionContextManager.Establish(tenantId, correlationId, microserviceId);
+        var eventSequenceStorage = GetEventSequenceStorage(microserviceId, tenantId, eventSequenceId);
 
         var from = EventSequenceNumber.First + (pageNumber * pageSize);
-        var tail = await _eventSequenceStorageProviderProvider().GetTailSequenceNumber(
-            eventSequenceId,
+        var tail = await eventSequenceStorage.GetTailSequenceNumber(
             eventTypes: parsedEventTypes,
             eventSourceId: eventSourceId);
 
@@ -139,8 +126,7 @@ public class EventSequence : ControllerBase
             return new(Enumerable.Empty<AppendedEventWithJsonAsContent>(), 0);
         }
 
-        var cursor = await _eventSequenceStorageProviderProvider().GetRange(
-            eventSequenceId,
+        var cursor = await eventSequenceStorage.GetRange(
             start: from,
             end: from + (pageSize - 1),
             eventSourceId: eventSourceId,
@@ -166,7 +152,6 @@ public class EventSequence : ControllerBase
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for.</param>
     /// <param name="eventTypes">Optional collection of <see cref="EventType"/> to get for.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
-    [HttpGet]
     [HttpGet("range")]
     public async Task<PagedQueryResult<AppendedEventWithJsonAsContent>> GetAppendedEventsRange(
         [FromRoute] EventSequenceId eventSequenceId,
@@ -179,12 +164,8 @@ public class EventSequence : ControllerBase
     {
         var result = new List<AppendedEventWithJsonAsContent>();
         var parsedEventTypes = eventTypes?.Select(EventType.Parse).ToArray();
-
-        var correlationId = _executionContextManager.Current.CorrelationId;
-        _executionContextManager.Establish(tenantId, correlationId, microserviceId);
-
-        var tail = await _eventSequenceStorageProviderProvider().GetTailSequenceNumber(
-            eventSequenceId,
+        var eventSequenceStorage = GetEventSequenceStorage(microserviceId, tenantId, eventSequenceId);
+        var tail = await eventSequenceStorage.GetTailSequenceNumber(
             eventTypes: parsedEventTypes,
             eventSourceId: eventSourceId);
 
@@ -193,8 +174,7 @@ public class EventSequence : ControllerBase
             return new(Enumerable.Empty<AppendedEventWithJsonAsContent>(), 0);
         }
 
-        var cursor = await _eventSequenceStorageProviderProvider().GetRange(
-            eventSequenceId,
+        var cursor = await eventSequenceStorage.GetRange(
             start: fromSequenceNumber,
             end: toSequenceNumber,
             eventSourceId: eventSourceId,
@@ -229,11 +209,7 @@ public class EventSequence : ControllerBase
         var result = new List<AppendedEventWithJsonAsContent>();
         var parsedEventTypes = eventTypes?.Select(EventType.Parse).ToArray();
 
-        var correlationId = _executionContextManager.Current.CorrelationId;
-        _executionContextManager.Establish(tenantId, correlationId, microserviceId);
-
-        var cursor = await _eventSequenceStorageProviderProvider().GetFromSequenceNumber(
-            eventSequenceId,
+        var cursor = await GetEventSequenceStorage(microserviceId, tenantId, eventSequenceId).GetFromSequenceNumber(
             sequenceNumber: EventSequenceNumber.First,
             eventSourceId: eventSourceId,
             eventTypes: parsedEventTypes);
@@ -254,6 +230,8 @@ public class EventSequence : ControllerBase
     [HttpGet("histogram")]
     public Task<IEnumerable<EventHistogramEntry>> Histogram(/*[FromRoute] EventSequenceId eventSequenceId*/) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
 
+    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
+    IObserverStorage GetObserverStorage(MicroserviceId microserviceId, TenantId tenantId) => _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers;
     IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
         _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new EventSequenceKey(microserviceId, tenantId));
 }

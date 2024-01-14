@@ -2,7 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Kernel.Engines.Compliance;
+using Aksio.Cratis.Kernel.Compliance;
+using Aksio.Cratis.Kernel.Storage.Compliance;
 
 namespace Aksio.Cratis.Kernel.Grains.Compliance.GDPR;
 
@@ -12,14 +13,14 @@ namespace Aksio.Cratis.Kernel.Grains.Compliance.GDPR;
 public class PIIManager : Grain, IPIIManager
 {
     readonly IEncryption _encryption;
-    readonly IEncryptionKeyStore _keyStore;
+    readonly IEncryptionKeyStorage _keyStore;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PIIManager"/> class.
     /// </summary>
     /// <param name="encryption"><see cref="IEncryption"/> system.</param>
-    /// <param name="keyStore">The <see cref="IEncryptionKeyStore"/>.</param>
-    public PIIManager(IEncryption encryption, IEncryptionKeyStore keyStore)
+    /// <param name="keyStore">The <see cref="IEncryptionKeyStorage"/>.</param>
+    public PIIManager(IEncryption encryption, IEncryptionKeyStorage keyStore)
     {
         _encryption = encryption;
         _keyStore = keyStore;
@@ -28,10 +29,19 @@ public class PIIManager : Grain, IPIIManager
     /// <inheritdoc/>
     public async Task CreateAndRegisterKeyFor(EncryptionKeyIdentifier identifier)
     {
+        _ = this.GetPrimaryKey(out var primaryKeyExtension);
+        var primaryKey = (PIIManagerKey)primaryKeyExtension;
+
         var key = _encryption.GenerateKey();
-        await _keyStore.SaveFor(identifier, key);
+        await _keyStore.SaveFor((string)primaryKey.MicroserviceId, primaryKey.TenantId, identifier, key);
     }
 
     /// <inheritdoc/>
-    public Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier) => _keyStore.DeleteFor(identifier);
+    public async Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier)
+    {
+        _ = this.GetPrimaryKey(out var primaryKeyExtension);
+        var primaryKey = (PIIManagerKey)primaryKeyExtension;
+
+        await _keyStore.DeleteFor((string)primaryKey.MicroserviceId, primaryKey.TenantId, identifier);
+    }
 }

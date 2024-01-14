@@ -6,13 +6,13 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Boot;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences.Inboxes;
-using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Projections;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
 using NJsonSchema;
@@ -26,7 +26,6 @@ namespace Aksio.Cratis.Kernel.Server;
 public class BootProcedure : IPerformBootProcedure
 {
     readonly IServiceProvider _serviceProvider;
-    readonly IExecutionContextManager _executionContextManager;
     readonly IGrainFactory _grainFactory;
     readonly KernelConfiguration _configuration;
     readonly IEventTypes _eventTypes;
@@ -37,7 +36,6 @@ public class BootProcedure : IPerformBootProcedure
     /// Initializes a new instance of the <see cref="BootProcedure"/> class.
     /// </summary>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting services.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
     /// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> in process. </param>
@@ -45,7 +43,6 @@ public class BootProcedure : IPerformBootProcedure
     /// <param name="logger">Logger for logging.</param>
     public BootProcedure(
         IServiceProvider serviceProvider,
-        IExecutionContextManager executionContextManager,
         IGrainFactory grainFactory,
         KernelConfiguration configuration,
         IEventTypes eventTypes,
@@ -53,7 +50,6 @@ public class BootProcedure : IPerformBootProcedure
         ILogger<BootProcedure> logger)
     {
         _serviceProvider = serviceProvider;
-        _executionContextManager = executionContextManager;
         _grainFactory = grainFactory;
         _configuration = configuration;
         _eventTypes = eventTypes;
@@ -75,31 +71,28 @@ public class BootProcedure : IPerformBootProcedure
                     JsonNode.Parse(_schemaGenerator.Generate(type).ToJson())!);
             });
 
+            var storage = _serviceProvider.GetRequiredService<IStorage>();
+
             foreach (var (microserviceId, microservice) in _configuration.Microservices)
             {
-                _executionContextManager.Establish(microserviceId);
-
                 _logger.PopulateSchemaStore();
-                var schemaStore = _serviceProvider.GetRequiredService<Schemas.ISchemaStore>()!;
-                await schemaStore.Populate();
+                var eventStoreStorage = storage.GetEventStore(microserviceId);
+                await eventStoreStorage.EventTypes.Populate();
 
                 foreach (var eventTypeRegistration in eventTypeRegistrations)
                 {
                     var schema = await JsonSchema.FromJsonAsync(eventTypeRegistration.Schema.ToJsonString());
-                    await schemaStore.Register(
+                    await eventStoreStorage.EventTypes.Register(
                         eventTypeRegistration.Type,
                         eventTypeRegistration.FriendlyName,
                         schema);
                 }
 
                 _logger.PopulateIdentityStore();
-                var identityStore = _serviceProvider.GetRequiredService<IIdentityStore>()!;
-                await identityStore.Populate();
+                await eventStoreStorage.Identities.Populate();
 
                 foreach (var (tenantId, _) in _configuration.Tenants)
                 {
-                    _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
-
                     foreach (var outbox in microservice.Inbox.FromOutboxes)
                     {
                         var key = new InboxKey(tenantId, outbox.Microservice);

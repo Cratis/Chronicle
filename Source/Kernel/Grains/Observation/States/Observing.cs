@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
+using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;

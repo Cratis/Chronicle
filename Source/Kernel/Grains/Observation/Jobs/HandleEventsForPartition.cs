@@ -3,9 +3,12 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Storage;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Aksio.Cratis.Kernel.Storage.Jobs;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
@@ -17,8 +20,8 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IStorage _storage;
+    IEventSequenceStorage? _eventSequenceStorage;
     IObserver? _observer;
     IObserverSubscriber? _subscriber;
 
@@ -26,16 +29,13 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
     /// Initializes a new instance of the <see cref="HandleEventsForPartition"/> class.
     /// </summary>
     /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
     public HandleEventsForPartition(
         [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
         IPersistentState<HandleEventsForPartitionState> state,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        IExecutionContextManager executionContextManager) : base(state)
+        IStorage storage) : base(state)
     {
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
-        _executionContextManager = executionContextManager;
+        _storage = storage;
     }
 
     /// <inheritdoc/>
@@ -73,10 +73,8 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
         }
 
         var eventSourceId = (EventSourceId)(request.Partition.Value.ToString() ?? string.Empty);
-        _executionContextManager.Establish(request.ObserverKey.TenantId, CorrelationId.New(), request.ObserverKey.MicroserviceId);
-        var eventSequenceStorage = _eventSequenceStorageProvider();
+        var eventSequenceStorage = GetEventSequenceStorage(request.ObserverKey.MicroserviceId, request.ObserverKey.TenantId, request.ObserverKey.EventSequenceId);
         using var events = await eventSequenceStorage.GetFromSequenceNumber(
-            request.ObserverKey.EventSequenceId,
             request.StartEventSequenceNumber,
             eventSourceId,
             request.EventTypes);
@@ -167,4 +165,6 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
 
         return eventsToHandle;
     }
+
+    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _eventSequenceStorage ??= _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
 }

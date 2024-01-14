@@ -23,15 +23,16 @@
 
     <ItemGroup>
         <ProjectReference Include="../Common/Common.csproj" />
+        <ProjectReference Include="../Compliance/Compliance.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <ProjectReference Include="../Domain/Domain.csproj" />
-        <ProjectReference Include="../Engines/Engines.csproj" />
+        <ProjectReference Include="../Projections/Projections.csproj" />
         <ProjectReference Include="../Events/Events.csproj" />
         <ProjectReference Include="../Grains/Grains.csproj" />
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
-        <ProjectReference Include="../MongoDB/MongoDB.csproj" />
+        <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../Orleans/Orleans.csproj" />
-        <ProjectReference Include="../Persistence/Persistence.csproj" />
+        <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Reactions/Reactions.csproj" />
         <ProjectReference Include="../Read/Read.csproj" />
         <ProjectReference Include="../Shared/Shared.csproj" />

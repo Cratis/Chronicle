@@ -16,7 +16,7 @@ public static class GlobalsForSpecifications
         ClientArtifactsProvider = new DefaultClientArtifactsProvider(
             new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
-        EventTypes = new EventTypes(ClientArtifactsProvider);
+        EventTypes = new Cratis.Events.EventTypes(ClientArtifactsProvider);
     }
 
     /// <summary>

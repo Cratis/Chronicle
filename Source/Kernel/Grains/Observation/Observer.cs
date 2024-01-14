@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
@@ -10,6 +11,8 @@ using Aksio.Cratis.Kernel.Grains.Observation.States;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.Cratis.Metrics;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
@@ -25,7 +28,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Observers)]
 public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
 {
-    readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<Observer> _logger;
     readonly IMeter<Observer> _meter;
     readonly ILoggerFactory _loggerFactory;
@@ -43,14 +45,12 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
     /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Observer(
-        IExecutionContextManager executionContextManager,
         [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
         IPersistentState<FailedPartitions> failures,
         IObserverServiceClient replayStateServiceClient,
@@ -58,7 +58,6 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
         IMeter<Observer> meter,
         ILoggerFactory loggerFactory)
     {
-        _executionContextManager = executionContextManager;
         _failuresState = failures;
         _replayStateServiceClient = replayStateServiceClient;
         _logger = logger;

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Kernel.MongoDB;
+using Aksio.Cratis.Kernel.Storage.MongoDB;
 using Aksio.Cratis.Observation;
 using Benchmark.Model;
 
@@ -15,14 +15,11 @@ public class ClientReducerJob : BenchmarkJob
     [IterationSetup]
     public void CleanEventStore()
     {
-        SetExecutionContext();
-
         Database?.DropCollection(WellKnownCollectionNames.Observers);
     }
 
     protected override void Setup()
     {
-        SetExecutionContext();
         base.Setup();
 
         var key = new ObserverKey(GlobalVariables.MicroserviceId, GlobalVariables.TenantId, GlobalVariables.ObserverEventSequence);

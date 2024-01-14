@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
+using Aksio.Cratis.Kernel.Storage.Observation;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
@@ -28,7 +28,7 @@ public class Routing : BaseObserverState
     /// </summary>
     /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
     /// <param name="replayEvaluator"><see cref="IReplayEvaluator"/> for evaluating replays.</param>
-    /// <param name="eventSequence"><see cref="IEventSequenceStorage"/> provider.</param>
+    /// <param name="eventSequence"><see cref="IEventSequence"/> provider.</param>
     /// <param name="logger">Logger for logging.</param>
     public Routing(
         ObserverKey observerKey,

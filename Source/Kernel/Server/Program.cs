@@ -46,6 +46,7 @@ public static class Program
                     options.Port = 8081;
                     options.HostSelf = true;
                 })
+                .ConfigureStorage()
                 .UseMongoDB()
                 .AddEventSequenceStreaming()
                 .AddExecutionContext())

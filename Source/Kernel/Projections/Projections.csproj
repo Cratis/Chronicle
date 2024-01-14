@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <AssemblyName>Aksio.Cratis.Kernel.Projections</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Projections</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Storage/Storage.csproj"/>
+        <ProjectReference Include="../Shared/Shared.csproj"/>
+    </ItemGroup>
+</Project>

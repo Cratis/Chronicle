@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Kernel.MongoDB;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Aksio.Cratis.Kernel.Storage.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
@@ -16,8 +16,6 @@ public abstract class EventLogJob : BenchmarkJob
     [IterationSetup]
     public void CleanEventStore()
     {
-        SetExecutionContext();
-
         Database?.DropCollection(WellKnownCollectionNames.EventLog);
         Database?.DropCollection(WellKnownCollectionNames.EventSequences);
     }
@@ -28,13 +26,10 @@ public abstract class EventLogJob : BenchmarkJob
 
         var grainFactory = GlobalVariables.ServiceProvider.GetRequiredService<IGrainFactory>();
         EventSequence = grainFactory.GetGrain<IEventSequence>(EventSequenceId.Log, keyExtension: new EventSequenceKey(GlobalVariables.MicroserviceId, GlobalVariables.TenantId));
-
-        SetExecutionContext();
     }
 
     protected async Task Perform(Func<IEventSequence, Task> action)
     {
-        SetExecutionContext();
         await action(EventSequence!);
     }
 }

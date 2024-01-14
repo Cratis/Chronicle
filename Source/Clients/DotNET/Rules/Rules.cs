@@ -55,7 +55,9 @@ public class Rules : IRules
             rule.Identifier.Value,
             modelIdentifier is null ? ModelKey.Unspecified : modelIdentifier.ToString()!).GetAwaiter().GetResult();
 
-        foreach (var property in rule.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty))
+        var properties = rule.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty);
+        properties = properties.Where(_ => _.CanWrite).ToArray();
+        foreach (var property in properties)
         {
             var name = property.Name.ToCamelCase();
             var node = result.Model[name];

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Storage.MongoDB.Specs</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Storage.MongoDB</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
+    </ItemGroup>
+</Project>

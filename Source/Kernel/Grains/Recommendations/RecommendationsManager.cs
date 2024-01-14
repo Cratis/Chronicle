@@ -1,9 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Persistence.Recommendations;
-using Aksio.Cratis.Kernel.Recommendations;
-using Aksio.DependencyInversion;
+using Aksio.Cratis.Kernel.Storage;
+using Aksio.Cratis.Recommendations;
 
 namespace Aksio.Cratis.Kernel.Grains.Recommendations;
 
@@ -12,20 +11,15 @@ namespace Aksio.Cratis.Kernel.Grains.Recommendations;
 /// </summary>
 public class RecommendationsManager : Grain, IRecommendationsManager
 {
-    readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IRecommendationStorage> _storageProvider;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RecommendationsManager"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="storageProvider">Provider for <see cref="IRecommendationStorage"/>.</param>
-    public RecommendationsManager(
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IRecommendationStorage> storageProvider)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public RecommendationsManager(IStorage storage)
     {
-        _executionContextManager = executionContextManager;
-        _storageProvider = storageProvider;
+        _storage = storage;
     }
 
     /// <inheritdoc/>
@@ -56,8 +50,8 @@ public class RecommendationsManager : Grain, IRecommendationsManager
     async Task<IRecommendation> GetGrainFor(RecommendationId recommendationId)
     {
         var key = GetRecommendationKey();
-        _executionContextManager.Establish(key.TenantId, _executionContextManager.Current.CorrelationId, key.MicroserviceId);
-        var recommendationState = await _storageProvider().Get(recommendationId) ?? throw new UnknownRecommendation(key.MicroserviceId, key.TenantId, recommendationId);
+        var recommendationStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Recommendations;
+        var recommendationState = await recommendationStorage.Get(recommendationId) ?? throw new UnknownRecommendation(key.MicroserviceId, key.TenantId, recommendationId);
         var recommendationType = (Type)recommendationState.Type;
         return GrainFactory.GetGrain(recommendationType, recommendationId, keyExtension: GetRecommendationKey()).AsReference<IRecommendation>();
     }

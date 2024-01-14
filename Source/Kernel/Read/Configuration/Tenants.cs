@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Kernel.Grains.Configuration;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Aksio.Cratis.Kernel.Read.Configuration.Tenants;
@@ -13,15 +12,15 @@ namespace Aksio.Cratis.Kernel.Read.Configuration.Tenants;
 [Route("/api/configuration/tenants")]
 public class Tenants : ControllerBase
 {
-    readonly IGrainFactory _grainFactory;
+    readonly KernelConfiguration _configuration;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Tenants"/> class.
+    /// Initializes a new instance of the <see cref="Microservices"/> class.
     /// </summary>
-    /// <param name="grainFactory">Orleans <see cref="IGrainFactory"/>.</param>
-    public Tenants(IGrainFactory grainFactory)
+    /// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
+    public Tenants(KernelConfiguration configuration)
     {
-        _grainFactory = grainFactory;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -29,9 +28,6 @@ public class Tenants : ControllerBase
     /// </summary>
     /// <returns>Collection of <see cref="TenantInfo"/>.</returns>
     [HttpGet]
-    public async Task<IEnumerable<TenantInfo>> AllTenants()
-    {
-        var configuration = _grainFactory.GetGrain<IConfiguration>(Guid.Empty);
-        return (await configuration.GetTenants()).ToArray();
-    }
+    public Task<IEnumerable<TenantInfo>> AllTenants() =>
+       Task.FromResult(_configuration.Tenants.Select(_ => new TenantInfo(_.Key, _.Value.Name)).ToArray().AsEnumerable());
 }

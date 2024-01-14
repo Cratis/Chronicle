@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCache;
 
@@ -19,8 +19,8 @@ public class when_priming_the_cache : given.an_event_sequence_cache
             .Returns(Task.FromResult(true))
             .Returns(Task.FromResult(false));
 
-        event_sequence_storage_provider.Setup(_ =>
-            _.GetRange(event_sequence_id, from, from + EventSequenceCache.NumberOfEventsToFetch, null, null, default))
+        event_sequence_storage.Setup(_ =>
+            _.GetRange(from, from + EventSequenceCache.NumberOfEventsToFetch, null, null, default))
             .Returns(Task.FromResult(event_cursor.Object));
 
         fetched_events = Enumerable
