@@ -13,15 +13,15 @@ namespace Aksio.Cratis.Specifications;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IEventSequenceStorage"/>.
 /// </summary>
-public class EventSequenceStorageProviderForSpecifications : IEventSequenceStorage
+public class EventSequenceStorageForSpecifications : IEventSequenceStorage
 {
     readonly EventLogForSpecifications _eventLog;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequenceStorageProviderForSpecifications"/> class.
+    /// Initializes a new instance of the <see cref="EventSequenceStorageForSpecifications"/> class.
     /// </summary>
     /// <param name="eventLog">The <see creF="EventLogForSpecifications"/>.</param>
-    public EventSequenceStorageProviderForSpecifications(EventLogForSpecifications eventLog)
+    public EventSequenceStorageForSpecifications(EventLogForSpecifications eventLog)
     {
         _eventLog = eventLog;
     }
