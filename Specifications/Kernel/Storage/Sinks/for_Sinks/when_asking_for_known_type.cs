@@ -20,8 +20,8 @@ public class when_asking_for_known_type : Specification
         store = new();
         factory = new();
         factory.SetupGet(_ => _.TypeId).Returns(type);
-        factory.Setup(_ => _.CreateFor(model)).Returns(store.Object);
-        stores = new(new KnownInstancesOf<ISinkFactory>(new[] { factory.Object }));
+        factory.Setup(_ => _.CreateFor(string.Empty, string.Empty, model)).Returns(store.Object);
+        stores = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>(new[] { factory.Object }));
     }
 
     void Because() => result = stores.HasType(type);

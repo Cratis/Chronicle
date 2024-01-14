@@ -3,12 +3,14 @@
 
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Compliance;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Projections;
 using Aksio.Cratis.Kernel.Projections.Expressions;
 using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Projections.Expressions.Keys;
 using Aksio.Cratis.Kernel.Projections.Pipelines;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.Changes;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Kernel.Storage.Sinks;
@@ -25,6 +27,7 @@ public abstract class a_projection_pipeline_for<TModel> : Specification
     protected ProjectionPipeline pipeline;
     protected ITypeFormats type_formats;
     protected ModelPropertyExpressionResolvers expression_resolvers;
+    protected Mock<IEventStoreNamespaceStorage> event_store_namespace_storage;
     protected Mock<IEventSequenceStorage> event_sequence_storage;
     protected ISink sink;
 
@@ -36,12 +39,15 @@ public abstract class a_projection_pipeline_for<TModel> : Specification
         expression_resolvers = new ModelPropertyExpressionResolvers(eventValueProviderExpressionResolvers, type_formats);
         var expandoObjectConverter = new ExpandoObjectConverter(type_formats);
 
+        event_store_namespace_storage = new();
+        event_store_namespace_storage.Setup(_ => _.GetEventSequence(IsAny<EventSequenceId>())).Returns(event_sequence_storage.Object);
+
         var projectionFactory = new ProjectionFactory(
             expression_resolvers,
             eventValueProviderExpressionResolvers,
             new KeyExpressionResolvers(eventValueProviderExpressionResolvers),
             expandoObjectConverter,
-            event_sequence_storage.Object);
+            event_store_namespace_storage.Object);
 
         var complianceMetadataResolver = new Mock<IComplianceMetadataResolver>();
         var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver.Object);

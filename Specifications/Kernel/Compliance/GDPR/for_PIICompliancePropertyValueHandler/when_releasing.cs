@@ -20,7 +20,7 @@ public class when_releasing : given.a_property_handler
         encryption.Setup(_ => _.Decrypt(IsAny<byte[]>(), key)).Returns(decrypted_bytes);
     }
 
-    async Task Because() => result = await handler.Release(identifier, input);
+    async Task Because() => result = await handler.Release(string.Empty, string.Empty, identifier, input);
 
     [Fact] void should_return_encrypted_string() => result.ToString().ShouldEqual(decrypted_string);
 }

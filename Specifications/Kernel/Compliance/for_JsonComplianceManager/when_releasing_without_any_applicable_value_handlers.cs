@@ -9,7 +9,7 @@ public class when_releasing_without_any_applicable_value_handlers : given.no_val
 {
     JsonObject result;
 
-    async Task Because() => result = await manager.Release(schema, string.Empty, input);
+    async Task Because() => result = await manager.Release(string.Empty, string.Empty, schema, string.Empty, input);
 
     [Fact] void should_be_same_instance() => result.GetHashCode().ShouldEqual(input.GetHashCode());
     [Fact] void should_have_equal_objects() => result.ToString().ShouldEqual(input.ToString());

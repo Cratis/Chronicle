@@ -10,8 +10,8 @@ public class when_saving : given.a_cache_encryption_key_store
     static EncryptionKeyIdentifier identifier = "5c6cce36-d60d-46db-9db2-e820559962db";
     static EncryptionKey key = new(Array.Empty<byte>(), Array.Empty<byte>());
 
-    Task Because() => store.SaveFor(identifier, key);
+    Task Because() => store.SaveFor(string.Empty, string.Empty, identifier, key);
 
-    [Fact] void should_save_key_to_actual_store() => actual_store.Verify(_ => _.SaveFor(identifier, key), Once);
-    [Fact] async Task should_have_the_key_anymore() => (await store.HasFor(identifier)).ShouldBeTrue();
+    [Fact] void should_save_key_to_actual_store() => actual_store.Verify(_ => _.SaveFor(string.Empty, string.Empty, identifier, key), Once);
+    [Fact] async Task should_have_the_key_anymore() => (await store.HasFor(string.Empty, string.Empty, identifier)).ShouldBeTrue();
 }

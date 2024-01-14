@@ -21,6 +21,6 @@ public class a_property_handler : Specification
         key_store = new();
         encryption = new();
         handler = new(key_store.Object, encryption.Object);
-        key_store.Setup(_ => _.GetFor(identifier)).Returns(Task.FromResult(key));
+        key_store.Setup(_ => _.GetFor(string.Empty, string.Empty, identifier)).Returns(Task.FromResult(key));
     }
 }

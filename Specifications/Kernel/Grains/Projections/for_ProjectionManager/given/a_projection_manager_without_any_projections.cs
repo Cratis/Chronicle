@@ -9,6 +9,9 @@ namespace Aksio.Cratis.Kernel.Grains.Projections.for_ProjectionManager.given;
 
 public class a_projection_manager_without_any_projections : Specification
 {
+    protected const string event_store_name = "event_store";
+    protected const string event_store_namespace = "event_store_namespace";
+
     protected ProjectionManager manager;
     protected Mock<IExecutionContextManager> execution_context_manager;
     protected Mock<IProjectionFactory> projection_factory;
@@ -24,7 +27,8 @@ public class a_projection_manager_without_any_projections : Specification
         projection_factory = new();
         projection_pipeline_factory = new();
         manager = new ProjectionManager(
-            execution_context_manager.Object,
+            event_store_name,
+            event_store_namespace,
             projection_factory.Object,
             projection_pipeline_factory.Object,
             Mock.Of<ILogger<ProjectionManager>>());

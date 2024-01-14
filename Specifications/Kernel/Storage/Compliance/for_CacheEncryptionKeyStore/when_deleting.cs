@@ -10,10 +10,10 @@ public class when_deleting : given.a_cache_encryption_key_store
     static EncryptionKeyIdentifier identifier = "5c6cce36-d60d-46db-9db2-e820559962db";
     static EncryptionKey key = new(Array.Empty<byte>(), Array.Empty<byte>());
 
-    Task Establish() => store.SaveFor(identifier, key);
+    Task Establish() => store.SaveFor(string.Empty, string.Empty, identifier, key);
 
-    Task Because() => store.DeleteFor(identifier);
+    Task Because() => store.DeleteFor(string.Empty, string.Empty, identifier);
 
-    [Fact] void should_delete_key_from_actual_store() => actual_store.Verify(_ => _.DeleteFor(identifier), Once);
-    [Fact] async Task should_not_have_the_key_anymore() => (await store.HasFor(identifier)).ShouldBeFalse();
+    [Fact] void should_delete_key_from_actual_store() => actual_store.Verify(_ => _.DeleteFor(string.Empty, string.Empty, identifier), Once);
+    [Fact] async Task should_not_have_the_key_anymore() => (await store.HasFor(string.Empty, string.Empty, identifier)).ShouldBeFalse();
 }
