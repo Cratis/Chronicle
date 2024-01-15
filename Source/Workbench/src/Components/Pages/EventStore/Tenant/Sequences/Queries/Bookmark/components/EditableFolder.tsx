@@ -10,6 +10,7 @@ import React from 'react';
 interface EditableFolderProps {
     node: IBookmarkNode;
     secondElement: boolean;
+    showDeleteIcon: boolean;
     exitEditMode: () => void;
     editingNodeKey: string | null;
     editMode: (key: string) => void;
@@ -30,6 +31,7 @@ export const EditableFolder = (props: EditableFolderProps) => {
         addNewFolder,
         exitEditMode,
         secondElement,
+        showDeleteIcon,
         editingNodeKey,
         handleInputChange,
         handleInputKeyDown,
@@ -56,12 +58,14 @@ export const EditableFolder = (props: EditableFolderProps) => {
                             onClick={() => addNewFolder(node?.key)}
                         />
                     )}
-                    <Button
-                        unstyled
-                        icon='pi pi-trash'
-                        className={css.deleteButton}
-                        onClick={() => deleteNode(node.key)}
-                    />
+                    {showDeleteIcon && (
+                        <Button
+                            unstyled
+                            icon='pi pi-trash'
+                            className={css.deleteButton}
+                            onClick={() => deleteNode(node.key)}
+                        />
+                    )}
                 </div>
             )}
         </>

@@ -31,6 +31,7 @@ export const NodeTemplate = (props: INodeTemplateProps) => {
     } = props;
 
     const secondElement = node.key === '1';
+    const isTopLevelNode = !node.key.includes('-');
     return (
         <EditableFolder
             node={node}
@@ -40,6 +41,7 @@ export const NodeTemplate = (props: INodeTemplateProps) => {
             exitEditMode={exitEditMode}
             secondElement={secondElement}
             editingNodeKey={editingNodeKey}
+            showDeleteIcon={!isTopLevelNode}
             handleInputChange={handleInputChange}
             handleInputKeyDown={handleInputKeyDown}
         />
