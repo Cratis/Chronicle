@@ -14,7 +14,7 @@ function getChartOption(dates: any, counts: any): EChartsOption {
             show: false,
         },
         grid: {
-            left: '-30',
+            left: '-10',
             right: '10',
             top: '0',
             bottom: '0',
