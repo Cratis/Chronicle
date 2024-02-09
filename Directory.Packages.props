@@ -25,7 +25,7 @@
     <PackageVersion Include="Azure.Data.Tables" Version="12.7.1" />
     <PackageVersion Include="FluentValidation" Version="11.5.2" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="$(Orleans)" />
