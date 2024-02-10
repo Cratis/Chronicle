@@ -26,32 +26,29 @@
                 "./API/*"
             ],
             "MVVM": [
-                "./src/MVVM/index.ts"
+                "MVVM/index.ts"
             ],
             "MVVM/*": [
-                "./src/MVVM/*"
+                "MVVM/*"
             ],
             "Components/*": [
-                "./src/Components/*"
-            ],
-            "Routing/*": [
-                "./src/Routing/*"
-            ],
-            "Styles/*": [
-                "./src/Styles/*"
+                "Components/*"
             ],
             "Layout/*": [
-                "./src/Layout/*"
-            ],
-            "Pages/*": [
-                "./src/Pages/*"
+                "Layout/*"
             ]
         }
     },
     "include": [
-        "src",
         "global.d.ts",
-        "API"
+        "API",
+        "Components",
+        "FakeData",
+        "Layout",
+        "MVVM",
+        "Utils",
+        "App.tsx",
+        "index.tsx"
     ],
     "exclude": [
         "./backup/**/*"

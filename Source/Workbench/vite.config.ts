@@ -36,13 +36,10 @@ export default defineConfig({
     resolve: {
         alias: {
             'API': path.resolve('./API'),
-            'MVVM': path.resolve('./src/MVVM'),
-            'assets': path.resolve('./src/assets'),
-            'Components': path.resolve('./src/Components'),
-            'Routing': path.resolve('./src/Routing'),
-            'Styles': path.resolve('./src/Styles'),
-            'Layout': path.resolve('./src/Layout'),
-            'Pages': path.resolve('./src/Pages'),
+            'MVVM': path.resolve('./MVVM'),
+            'assets': path.resolve('./assets'),
+            'Components': path.resolve('./Components'),
+            'Layout': path.resolve('./Layout')
         }
     }
 });
