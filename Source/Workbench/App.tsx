@@ -4,8 +4,8 @@
 import { useColorScheme } from './Utils/useColorScheme';
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { BlankLayout } from "./Layout/Blank/BlankLayout";
-import { Home } from "./Components/Pages/Home";
-import { EventStore } from "./Components/Pages/EventStore/EventStore";
+import { Home } from "./Features/Home";
+import { EventStore } from "./Features/EventStore/EventStore";
 
 function App() {
     useColorScheme();

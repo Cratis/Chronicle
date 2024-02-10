@@ -1,10 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DefaultLayout } from "../../../Layout/Default/DefaultLayout";
+import { DefaultLayout } from "../../Layout/Default/DefaultLayout";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Sequences } from "./Tenant/Sequences/Sequences";
-import { IMenuItemGroup } from "../../../Layout/Default/Sidebar/MenuItem/MenuItem";
+import { IMenuItemGroup } from "../../Layout/Default/Sidebar/MenuItem/MenuItem";
 import * as mdIcons from 'react-icons/md';
 import * as devIcons from 'react-icons/di';
 import { Types } from "./General/Types/Types";

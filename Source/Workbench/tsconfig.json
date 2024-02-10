@@ -36,6 +36,9 @@
             ],
             "Layout/*": [
                 "Layout/*"
+            ],
+            "Features/*": [
+                "Features/*"
             ]
         }
     },
@@ -49,7 +52,7 @@
         "Utils",
         "App.tsx",
         "index.tsx"
-    ],
+, "Features"    ],
     "exclude": [
         "./backup/**/*"
     ],
