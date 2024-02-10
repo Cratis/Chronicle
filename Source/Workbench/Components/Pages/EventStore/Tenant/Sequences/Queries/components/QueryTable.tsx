@@ -1,6 +1,5 @@
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import css from '../Queries.module.css';
 
 export interface QueryTableProps {
     queryNumber: string;
@@ -11,7 +10,6 @@ export const QueryTable = (props: QueryTableProps) => {
 
     return (
         <>
-            <h1 className={css.tableHeading}>Sequence table</h1>
             <DataTable
                 rows={100}
                 paginator

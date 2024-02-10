@@ -27,16 +27,10 @@
 
 .panelBody {
     width: 100%;
-    padding: 2px;
+    padding: 5px;
     display: flex;
     flex-direction: column;
     gap: 5;
-}
-
-.tableHeading {
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 10px;
 }
 
 .tabView {
@@ -102,7 +96,6 @@
 }
 
 .actions {
-    display: flex;
     margin-bottom: 5px;
     margin-top: 10px;
 }

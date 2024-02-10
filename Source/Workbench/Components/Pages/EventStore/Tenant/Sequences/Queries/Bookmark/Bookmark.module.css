@@ -18,3 +18,15 @@
     border-radius: 0.5rem;
     padding: 0.25rem 0.75rem;
 }
+
+.savedQuery {
+    padding: 5px;
+}
+
+.content {
+    padding: 0px;
+}
+
+:global(.p-tree .p-tree-container .p-treenode .p-treenode-content) {
+    padding: 0 !important;
+}
