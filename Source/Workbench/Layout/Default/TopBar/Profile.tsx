@@ -9,10 +9,12 @@ import { Button } from 'primereact/button';
 import { useDarkMode } from 'usehooks-ts';
 import strings from 'Strings';
 
+import { tw } from 'typewind';
+
 const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onClick: () => void }) => {
     return (
         <li className={css.profileItem} onClick={onClick}>
-            <span className='mr-4'>{icon}</span>
+            <span className={tw.mr_4}>{icon}</span>
             <span>{label}</span>
         </li>
     )
@@ -23,26 +25,25 @@ export const Profile = () => {
     const overlayPanelRef = useRef<OverlayPanel>(null);
 
     return (
-        <div className='flex-1'>
-            <div className={'flex justify-end gap-3 '}>
+        <div className={tw.flex_1}>
+            <div className={tw.flex.justify_end.gap_3}>
 
                 <Button
-                    icon={<icons.FaUser/>}
+                    icon={<icons.FaUser />}
                     rounded
                     severity="info"
-                    className='p-button-rounded p-2'
-
+                    className={`p-button-rounded ${tw.p_2}`}
                     onClick={(e) => overlayPanelRef.current?.toggle(e)}
-                    aria-label="User"/>
+                    aria-label="User" />
 
 
                 <OverlayPanel ref={overlayPanelRef} className={css.overlayPanel}>
                     <ul className={css.profileItems}>
-                        <ProfileItem icon={<icons.FaUser/>} label={strings.Layout.TopBar.Profile.MyAccount} onClick={() => {
-                        }}/>
+                        <ProfileItem icon={<icons.FaUser />} label={strings.Layout.TopBar.Profile.MyAccount} onClick={() => {
+                        }} />
                         {isDarkMode ?
-                            <ProfileItem icon={<icons.FaSun/>} label={strings.Layout.TopBar.Profile.LightMode} onClick={toggleDarkMode}/> :
-                            <ProfileItem icon={<icons.FaMoon/>} label={strings.Layout.TopBar.Profile.DarkMode} onClick={toggleDarkMode}/>}
+                            <ProfileItem icon={<icons.FaSun />} label={strings.Layout.TopBar.Profile.LightMode} onClick={toggleDarkMode} /> :
+                            <ProfileItem icon={<icons.FaMoon />} label={strings.Layout.TopBar.Profile.DarkMode} onClick={toggleDarkMode} />}
                     </ul>
                 </OverlayPanel>
             </div>

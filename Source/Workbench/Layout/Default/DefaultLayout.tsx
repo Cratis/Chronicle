@@ -13,6 +13,8 @@ import { Footer } from './Footer';
 import { useState } from 'react';
 import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
 
+import { tw } from 'typewind';
+
 interface IDefaultLayoutProps {
     leftMenuItems?: IMenuItemGroup[];
     leftMenuBasePath?: string;
@@ -45,7 +47,7 @@ export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayou
                                 <aside className={css.appLeftSidebar}>
                                     <div className={css.sidebarContainer}>
                                         <TenantSelector
-                                            className='mb-4 mt-1'
+                                            className={tw.mb_4.mt_1}
                                             onTenantSelected={(tenant) =>
                                                 setTenantId(tenant.id)
                                             }
