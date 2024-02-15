@@ -58,7 +58,6 @@
         "Features"
     ],
     "exclude": [
-        "./backup/**/*"
     ],
     "references": [
         {
