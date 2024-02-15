@@ -14,7 +14,7 @@ export const Home = () => {
     return (
         <div>
             <h1 className={tw.text_4xl.m_3}>Select Event Store</h1>
-            <div className={tw.grid.grid_cols_1.md(tw.grid_cols_2).lg(tw.grid_cols_2)}>
+            <div className={`${tw.grid.grid_cols_2} md:${tw.grid_cols_2} lg:${tw.grid_cols_2}`}>
                 <StoreCard
                     title='Opensjon'
                     path='/event-store/opensjon'
