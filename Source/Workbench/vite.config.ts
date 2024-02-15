@@ -12,7 +12,6 @@ export default defineConfig({
         assetsDir: '',
         rollupOptions: {
             external: [
-                './backup',
             ],
         },
     },
