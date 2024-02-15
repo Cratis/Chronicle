@@ -8,7 +8,6 @@ import 'primeicons/primeicons.css';
 import './Styles/tailwind.css';
 import './Styles/theme.css';
 import React from 'react';
-import './Utils/i18n';
 import App from "./App";
 import { configure as configureMobx } from 'mobx';
 import { Bindings } from './MVVM';

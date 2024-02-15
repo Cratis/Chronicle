@@ -21,8 +21,8 @@ export default defineConfig({
         VitePluginEmitMetadata() as any
     ],
     server: {
-        port: 9001,
-        open: true,
+        port: 9000,
+        open: false,
         proxy: {
             '/api': {
                 target: 'http://localhost:8080',
@@ -40,7 +40,8 @@ export default defineConfig({
             'assets': path.resolve('./assets'),
             'Components': path.resolve('./Components'),
             'Layout': path.resolve('./Layout'),
-            'Features': path.resolve('./Features')
+            'Features': path.resolve('./Features'),
+            'Strings': path.resolve('./Strings'),
         }
     }
 });

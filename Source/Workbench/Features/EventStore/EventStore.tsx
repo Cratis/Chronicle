@@ -16,32 +16,31 @@ import { Jobs } from './Tenant/Jobs/Jobs';
 import { Identities } from './Tenant/Identities/Identities';
 import { Sequences as GeneralSequences } from './General/Sequences/Sequences';
 import { Sinks } from './General/Sinks/Sinks';
-import { useTranslation } from "react-i18next";
+import strings from 'Strings';
 
 export const EventStore = () => {
-    const { t } = useTranslation();
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
-                { label: t('MainMenu.Recommendations'), url: 'tenant/:tenantId/recommendations', icon: mdIcons.MdInfo },
-                { label: t('MainMenu.Jobs'), url: 'tenant/:tenantId/jobs', icon: mdIcons.MdGroupWork },
-                { label: t('MainMenu.Sequences'), url: 'tenant/:tenantId/sequences', icon: mdIcons.MdDataArray },
-                { label: t('MainMenu.Observers'), url: 'tenant/:tenantId/observers', icon: mdIcons.MdMediation },
+                { label: strings.MainMenu.Recommendations, url: 'tenant/:tenantId/recommendations', icon: mdIcons.MdInfo },
+                { label: strings.MainMenu.Jobs, url: 'tenant/:tenantId/jobs', icon: mdIcons.MdGroupWork },
+                { label: strings.MainMenu.Sequences, url: 'tenant/:tenantId/sequences', icon: mdIcons.MdDataArray },
+                { label: strings.MainMenu.Observers, url: 'tenant/:tenantId/observers', icon: mdIcons.MdMediation },
                 {
-                    label: t('MainMenu.FailedPartitions'),
+                    label: strings.MainMenu.FailedPartitions,
                     url: 'tenant/:tenantId/failed-partitions',
                     icon: mdIcons.MdErrorOutline
                 },
-                { label: t('MainMenu.Identities'), url: 'tenant/:tenantId/identities', icon: mdIcons.MdPeople },
+                { label: strings.MainMenu.Identities, url: 'tenant/:tenantId/identities', icon: mdIcons.MdPeople },
             ]
         },
         {
-            label: t('MainMenu.General.GroupLabel'),
+            label: strings.MainMenu.General.GroupLabel,
             items: [
-                { label: t('MainMenu.General.Types'), url: 'types', icon: mdIcons.MdDataObject },
-                { label: t('MainMenu.General.Projections'), url: 'projections', icon: mdIcons.MdMediation },
-                { label: t('MainMenu.General.Sequences'), url: 'sequences', icon: mdIcons.MdDataArray },
-                { label: t('MainMenu.General.Sinks'), url: 'sinks', icon: devIcons.DiDatabase }
+                { label: strings.MainMenu.General.Types, url: 'types', icon: mdIcons.MdDataObject },
+                { label: strings.MainMenu.General.Projections, url: 'projections', icon: mdIcons.MdMediation },
+                { label: strings.MainMenu.General.Sequences, url: 'sequences', icon: mdIcons.MdDataArray },
+                { label: strings.MainMenu.General.Sinks, url: 'sinks', icon: devIcons.DiDatabase }
             ]
         }
     ];

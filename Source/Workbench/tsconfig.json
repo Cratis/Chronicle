@@ -39,6 +39,9 @@
             ],
             "Features/*": [
                 "Features/*"
+            ],
+            "Strings": [
+                "Strings"
             ]
         }
     },
@@ -51,8 +54,9 @@
         "MVVM",
         "Utils",
         "App.tsx",
-        "index.tsx"
-, "Features"    ],
+        "index.tsx",
+        "Features"
+    ],
     "exclude": [
         "./backup/**/*"
     ],
