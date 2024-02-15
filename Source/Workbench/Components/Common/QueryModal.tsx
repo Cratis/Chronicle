@@ -3,8 +3,6 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 
-import { tw } from 'typewind';
-
 export interface QueryModalProps {
     isOpen: boolean;
     closeModal: () => void;
@@ -39,14 +37,15 @@ export const QueryModal = (props: QueryModalProps) => {
             visible={isOpen}
             style={{ width: '50vw' }}
             onHide={handleModalClose}
-            footer={footerContent}>
+            footer={footerContent}
+        >
             <InputText
                 value={folderName}
                 onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
                     setFolderName(evt.target.value)
                 }
             />
-            <p className={tw.m_0}>
+            <p className='m-0'>
                 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
                 tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
                 veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea

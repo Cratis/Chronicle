@@ -3,18 +3,16 @@
 
 import { FaRotate, FaXmark, FaWhmcs } from 'react-icons/fa6';
 
-import { tw } from 'typewind';
-
 export const CardFooter = () => {
     return (
-        <div className={tw.flex.justify_end.gap_2}>
-            <div className={tw.flex.gap_1}>
+        <div className='flex justify-end gap-2'>
+            <div className='flex gap-1'>
                 5 <FaXmark size={25} />
             </div>
-            <div className={tw.flex.gap_1}>
+            <div className='flex gap-1'>
                 15 <FaRotate size={20} />
             </div>
-            <div className={tw.flex.gap_1}>
+            <div className='flex gap-1'>
                 <FaWhmcs size={25} />
             </div>
         </div>

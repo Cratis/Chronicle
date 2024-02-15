@@ -7,14 +7,12 @@ import { StoreCard } from '../Components/Common/StoreCard';
 import Innmeldt from 'assets/icons/cogInn.svg';
 import uPlus from 'assets/icons/uPlus.png';
 
-import { tw } from 'typewind';
-
 export const Home = () => {
 
     return (
         <div>
-            <h1 className={tw.text_4xl.m_3}>Select Event Store</h1>
-            <div className={`${tw.grid.grid_cols_2} md:${tw.grid_cols_2} lg:${tw.grid_cols_2}`}>
+            <h1 className='text-4xl m-3'>Select Event Store</h1>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 '>
                 <StoreCard
                     title='Opensjon'
                     path='/event-store/opensjon'

@@ -3,11 +3,9 @@
 
 import { ImConnection } from "react-icons/im";
 
-import { tw } from 'typewind';
-
 export const Connection = () => {
-    return (<div className={tw.flex_1}>
-        <div className={tw.flex.justify_end.gap_3}>
+    return (<div className='flex-1'>
+        <div className={'flex justify-end gap-3 '}>
             <ImConnection size={25} />
         </div>
     </div>)

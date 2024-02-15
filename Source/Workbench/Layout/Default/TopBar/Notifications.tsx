@@ -3,11 +3,9 @@
 
 import { Badge } from 'primereact/badge';
 
-import { tw } from 'typewind';
-
 export const Notifications = () => {
-    return (<div className={tw.flex_1}>
-        <div className={tw.flex.justify_end.gap_3}>
+    return (<div className='flex-1'>
+        <div className={'flex justify-end gap-3 '}>
             <i className="pi pi-bell p-overlay-badge" style={{ fontSize: '25px' }}>
                 <Badge value="2"></Badge>
             </i>

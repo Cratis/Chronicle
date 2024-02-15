@@ -5,8 +5,6 @@ import { Image } from 'primereact/image';
 import { Card } from 'primereact/card';
 import { useNavigate } from 'react-router-dom';
 
-import { tw } from 'typewind';
-
 export interface IStoreCard {
     logo?: string;
     path?: string;
@@ -20,24 +18,25 @@ export function StoreCard(props: IStoreCard) {
     const navigate = useNavigate();
 
     const image = (
-        <div className={tw.w_24.h_24}>
+        <div className='w-24 h-24 '>
             <Image alt='Card' src={logo} />
         </div>
     );
     const heading = (
-        <h1 className={tw.text_2xl.cursor_pointer} onClick={() => navigate(path!)}>
+        <h1 className='text-2xl cursor-pointer' onClick={() => navigate(path!)}>
             {' '}
             {title}
         </h1>
     );
 
     return (
-        <div className={tw.m_4}>
+        <div className='m-4'>
             <Card
-                className={tw.flex.p_2.border_2.shadow_none}
+                className='flex p-2 border-2 shadow-none'
                 title={heading}
                 footer={footer}
-                header={image}>
+                header={image}
+            >
                 {description}
             </Card>
         </div>

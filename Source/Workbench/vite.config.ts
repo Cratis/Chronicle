@@ -16,19 +16,7 @@ export default defineConfig({
         },
     },
     plugins: [
-        react({
-
-            babel: {
-
-                plugins: [
-                    'typewind/babel',
-                    [
-                        '@babel/plugin-proposal-decorators',
-                        { legacy: true }
-                    ]
-                ]
-            }
-        }),
+        react(),
         VitePluginEmitMetadata() as any
     ],
     server: {

@@ -3,8 +3,6 @@
 
 import { Component, ErrorInfo, ReactNode } from 'react';
 
-import { tw } from 'typewind';
-
 interface Props {
     children: ReactNode;
 }
@@ -30,8 +28,8 @@ export class ErrorBoundary extends Component<Props, State> {
     public render() {
         if (this.state.hasError) {
             return (
-                <div className={tw.p_4}>
-                    <h1 className={tw.text_3xl.m_3}>Error</h1>
+                <div className='p-4'>
+                    <h1 className='text-3xl m-3'>Error</h1>
                     <p>{this.state.error.message}</p>
                     <p>{this.state.error.stack}</p>
                 </div>

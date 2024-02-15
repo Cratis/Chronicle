@@ -11,8 +11,6 @@ import { Profile } from "./Profile";
 import { Notifications } from './Notifications';
 import { Connection } from './Connection';
 
-import { tw } from 'typewind';
-
 export interface AppTopBarRef {
     menubutton?: HTMLButtonElement | null;
     topbarmenu?: HTMLDivElement | null;
@@ -28,16 +26,16 @@ export const TopBar = forwardRef<AppTopBarRef>(() => {
                 <div className={css.sidebarToggle}>
                     <Button
                         onClick={toggleLeftSidebarOpen}
-                        className={`p-button-rounded p-button-text ${tw.p_2}`}
+                        className='p-button-rounded p-button-text p-2'
                     >
                         <FaBars/>
                     </Button>
                 </div>
-                <div className={tw.flex_1.flex.align_middle.justify_center}>
+                <div className={'flex-1 flex align-center justify-center'}>
                     <Logo/>
                 </div>
             </div>
-            <div className={tw.flex_1.flex.items_center.justify_end.px_5.gap_6}>
+            <div className="flex-1 flex items-center justify-end px-5 gap-6">
                 <div>
                     <Connection/>
                 </div>
