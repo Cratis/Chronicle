@@ -6,8 +6,10 @@ module.exports = {
     content: {
         files: [
             "./index.html",
-            "./**/*.{js,ts,jsx,tsx}",
-            "./node_modules/primereact/**/*.{js,ts,jsx,tsx}",
+            "./Components/**/*.tsx",
+            "./Features/**/*.tsx",
+            "./Layout/**/*.tsx",
+            "./node_modules/primereact/**/*.{js,ts,jsx,tsx}"
         ]
     },
     theme: {
