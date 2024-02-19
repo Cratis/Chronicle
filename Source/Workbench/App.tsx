@@ -1,14 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useColorScheme } from './Utils/useColorScheme';
+import { useTheme } from './Utils/useTheme';
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { BlankLayout } from "./Layout/Blank/BlankLayout";
 import { Home } from "./Features/Home";
 import { EventStore } from "./Features/EventStore/EventStore";
 
 function App() {
-    useColorScheme();
+    useTheme();
     return (
         <BrowserRouter>
             <Routes>
