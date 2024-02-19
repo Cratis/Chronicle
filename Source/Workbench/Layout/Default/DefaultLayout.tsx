@@ -45,7 +45,6 @@ export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayou
                                 <aside className={css.appLeftSidebar}>
                                     <div className={css.sidebarContainer}>
                                         <TenantSelector
-                                            className='mb-4 mt-1'
                                             onTenantSelected={(tenant) =>
                                                 setTenantId(tenant.id)
                                             }

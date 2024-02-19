@@ -2,13 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { ChangeEvent, useCallback, useRef, useState } from 'react';
-import { QueryHeader, QueryType } from './components/QueryHeader';
-import { QueryMenuActions } from './components/QueryMenuActions';
-import { QuerySidebar } from './components/QuerySidebar';
+import { QueryHeader, QueryType } from './QueryHeader';
+import { QueryMenuActions } from './QueryMenuActions';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { QueriesViewModel } from './QueriesViewModel';
-import { QueryTable } from './components/QueryTable';
+import { QueryTable } from './QueryTable';
 import { withViewModel } from 'MVVM/withViewModel';
 import { Bookmark } from './Bookmark/Bookmark';
 import { Button } from 'primereact/button';
@@ -21,7 +20,6 @@ const initialQueries = [
 
 export const Queries = withViewModel(QueriesViewModel, () => {
     const overlayPanelRef = useRef<OverlayPanel>(null);
-    const [isSidebarOpen, setSidebarOpen] = useState(false);
     const [currentQuery, setCurrentQuery] = useState<number>(1);
     const [queries, setQueries] = useState<QueryType[]>(initialQueries);
 
@@ -61,7 +59,7 @@ export const Queries = withViewModel(QueriesViewModel, () => {
         return (
             <TabPanel
                 key={query.id}
-                closable={idx !== 0}
+                closable
                 className={css.activeTab}
                 header={
                     <QueryHeader
@@ -73,19 +71,6 @@ export const Queries = withViewModel(QueriesViewModel, () => {
                 }
             >
                 <div className={css.panelContainer}>
-                    <div>
-                        <QuerySidebar
-                            isSidebarOpen={isSidebarOpen}
-                            toggleSidebar={() => setSidebarOpen(!isSidebarOpen)}
-                        >
-                            <div>Select Event</div>
-                            <div className={css.sidebarActions}>
-                                <Button text>Logs</Button>
-                                <Button text>Outbox</Button>
-                                <Button text>People</Button>
-                            </div>
-                        </QuerySidebar>
-                    </div>
                     <div className={css.panelBody}>
                         <QueryMenuActions />
                         <QueryTable queryNumber={query.id} />

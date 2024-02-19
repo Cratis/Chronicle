@@ -21,7 +21,7 @@
     display: flex;
     gap: 5px;
     overflow: auto;
-    height: 100%;
+    height: 100vh;
     flex-grow: 1;
 }
 
@@ -111,4 +111,28 @@
 .activeMenuItem {
     color: var(--surface-900);
     background-color: var(--surface-c);
+}
+
+.sequenceList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 400px;
+
+    overflow: auto;
+}
+
+.sequenceListItem {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1rem;
+    cursor: pointer;
+    border-radius: 4px;
+    border-bottom: 1px solid var(--surface-border);
+    transition: background-color 0.2s ease-in-out;
+}
+
+.sequenceListItem:hover {
+    background: var(--shade700);
+    color: var(--shade000);
 }

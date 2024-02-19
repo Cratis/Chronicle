@@ -43,20 +43,19 @@ export const SelectTenant = ({ onSelected }: ISelectTenantProps) => {
             id: '7',
             name: 'Trondheim Kommunale Pensjonskasse'
         }
-
-        ];
+    ];
 
     return <div>
         <div className={'mb-2'}>
             <InputText value={search}
-                       placeholder={'Search for tenant'}
-                       onChange={(e) => {
-                           setSearch(e.target.value)
-                       }}/>
+                placeholder={'Search for tenant'}
+                onChange={(e) => {
+                    setSearch(e.target.value)
+                }} />
         </div>
         <ul className={css.tenantList}>
             {allTenants.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())).map((tenant) => {
-                return <TenantListItem tenant={tenant} onClick={() => onSelected(tenant)} key={tenant.id}/>;
+                return <TenantListItem tenant={tenant} onClick={() => onSelected(tenant)} key={tenant.id} />;
             })}
         </ul>
     </div>;

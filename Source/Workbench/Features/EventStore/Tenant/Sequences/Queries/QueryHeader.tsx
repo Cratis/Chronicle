@@ -2,7 +2,7 @@
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
 import { Button } from 'primereact/button';
-import css from '../Queries.module.css';
+import css from './Queries.module.css';
 import { ChangeEvent } from 'react';
 export interface QueryType {
     id: string;

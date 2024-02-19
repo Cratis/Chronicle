@@ -63,7 +63,7 @@ export const EventHistogram = (props: EventHistogramProps) => {
     const entries = useMockData(props.eventLog);
 
     const dates = entries?.data?.map((_: any) => {
-        return echarts.format.formatTime('yyyy-MM-dd', _.date);
+        return _.date;
     });
 
     const counts = entries?.data?.map((_: any) => {

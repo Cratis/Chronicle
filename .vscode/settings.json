@@ -85,6 +85,7 @@
         "Newtonsoft",
         "notnull",
         "Otlp",
+        "overlaypanel",
         "PII",
         "Pkcs",
         "primeicons",
@@ -95,6 +96,7 @@
         "Referer",
         "Remindable",
         "Swashbuckle",
+        "tabview",
         "tinycolor",
         "tsyringe",
         "typeparam",
@@ -103,6 +105,7 @@
         "upcaster",
         "upserted",
         "Upserting",
+        "usehooks",
         "Xunit"
     ],
     "dotnet.defaultSolution": "cratis.sln"

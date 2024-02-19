@@ -10,8 +10,7 @@ export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
     return (
         <Page
             title='Event Sequences'
-            mainClassName={'overflow-hidden flex flex-col h-full'}
-        >
+            mainClassName={'overflow-hidden flex flex-col h-full'}>
             <div className={'flex-1 overflow-hidden '}>
                 <Queries />
             </div>
