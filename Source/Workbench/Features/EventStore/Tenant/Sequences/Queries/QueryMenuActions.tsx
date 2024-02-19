@@ -6,7 +6,6 @@ import { Menubar } from 'primereact/menubar';
 import css from './Queries.module.css';
 import { useToggle } from 'usehooks-ts';
 import { MenuItem } from 'primereact/menuitem';
-import { Button } from 'primereact/button';
 import { useRef } from 'react';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { SequenceSelector } from './SequenceSelector';
@@ -18,19 +17,9 @@ export const QueryMenuActions = () => {
 
     const items: MenuItem[] = [
         {
-            label: 'Sequence',
+            label: 'Event log',
             icon: 'pi pi-list',
-            command: () => { },
-            template: () => (
-                <>
-                    <Button
-                        icon='pi pi-sequence'
-                        onClick={(e) => selectSequencePanelRef.current?.toggle(e)}>Sequence</Button>
-
-                    <OverlayPanel ref={selectSequencePanelRef}>
-                        <SequenceSelector />
-                    </OverlayPanel>
-                </>),
+            command: (e) => selectSequencePanelRef.current?.toggle(e.originalEvent),
         },
         {
             label: 'Run',
@@ -56,6 +45,10 @@ export const QueryMenuActions = () => {
                 <Menubar
                     model={items}
                 />
+                    <OverlayPanel ref={selectSequencePanelRef}>
+                        <SequenceSelector />
+                    </OverlayPanel>
+
             </div>
             {showTimeRange && <EventHistogram eventLog={''} />}
         </>
