@@ -28,3 +28,12 @@ body {
     color: var(--text-color);
     margin: 0;
 }
+
+.highlight {
+    background-color: var(--highlight-bg);
+    color: var(--highlight-text-color);
+}
+
+.contentBackground {
+    background-color: var(--surface-0);
+}

@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import css from './EventHistogram.module.css';
 import { useMockData } from './useMockData';
 import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts';
@@ -87,5 +86,5 @@ export const EventHistogram = (props: EventHistogramProps) => {
         return () => window.removeEventListener('resize', listener);
     }, []);
 
-    return <div className={css.eventSamplesContainer} ref={chartContainer} />;
+    return <div className="w-full h-20" ref={chartContainer} />;
 };

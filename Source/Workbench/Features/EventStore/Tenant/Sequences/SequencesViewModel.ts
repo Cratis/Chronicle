@@ -1,6 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+
+export type Query = {
+    name: string;
+};
+
+
 export class SequencesViewModel {
 
     constructor() {
@@ -28,5 +34,13 @@ export class SequencesViewModel {
 
         https://github.com/orgs/Cratis/projects/1?pane=issue&itemId=41367866
         */
+    }
+
+    get queries(): Query[] {
+        return [
+            { name: 'Query 1' },
+            { name: 'Query 2' },
+            { name: 'Query 3' }
+        ];
     }
 }

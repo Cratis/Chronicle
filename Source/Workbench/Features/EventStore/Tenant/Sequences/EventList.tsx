@@ -1,12 +1,11 @@
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 
-export interface QueryTableProps {
-    queryNumber: string;
+export interface EventListProps {
+    events: any[];
 }
 
-export const QueryTable = (props: QueryTableProps) => {
-    const { queryNumber } = props;
+export const EventList = (props: EventListProps) => {
 
     return (
         <>
@@ -16,10 +15,10 @@ export const QueryTable = (props: QueryTableProps) => {
                 scrollable
                 scrollHeight={'flex'}
                 selectionMode='single'
-                dataKey={queryNumber}
                 filterDisplay='menu'
-                emptyMessage='No data found'
-            >
+                emptyMessage='No events'
+                dataKey='id'
+                value={props.events}>
                 <Column field='sequenceId' header='Id' sortable />
                 <Column field='name' header='Name' sortable />
                 <Column field='type' header='Sequence' sortable />

@@ -3,7 +3,6 @@
 
 import { EventHistogram } from './Histogram/Histogram';
 import { Menubar } from 'primereact/menubar';
-import css from './Queries.module.css';
 import { useToggle } from 'usehooks-ts';
 import { MenuItem } from 'primereact/menuitem';
 import { useRef } from 'react';
@@ -11,7 +10,7 @@ import { OverlayPanel } from 'primereact/overlaypanel';
 import { SequenceSelector } from './SequenceSelector';
 
 
-export const QueryMenuActions = () => {
+export const QueryActions = () => {
     const [showTimeRange, toggleTimeRange] = useToggle(false);
     const selectSequencePanelRef = useRef<OverlayPanel>(null);
 
@@ -29,7 +28,7 @@ export const QueryMenuActions = () => {
         {
             label: 'Time range',
             icon: 'pi pi-chart-line',
-            className: showTimeRange ? css.activeMenuItem : '',
+            className: showTimeRange ? 'highlight' : '',
             command: () => toggleTimeRange(),
         },
         {
@@ -41,16 +40,15 @@ export const QueryMenuActions = () => {
 
     return (
         <>
-            <div className={css.actions}>
+            <div className="px-4 py-2">
                 <Menubar
-                    model={items}
-                />
+                    model={items} />
                     <OverlayPanel ref={selectSequencePanelRef}>
                         <SequenceSelector />
                     </OverlayPanel>
 
+                {showTimeRange && <EventHistogram eventLog={''} />}
             </div>
-            {showTimeRange && <EventHistogram eventLog={''} />}
         </>
     );
 };
