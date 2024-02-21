@@ -8,10 +8,9 @@ import { Button } from 'primereact/button';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Bookmark } from './Bookmark/Bookmark';
 import { TabMenu } from 'primereact/tabmenu';
-import { QueryActions } from './QueryActions';
-import { EventList } from './EventList';
 import { useRef } from 'react';
 import { MenuItem } from 'primereact/menuitem';
+import { Query } from './Query';
 
 export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
     const overlayPanelRef = useRef<OverlayPanel>(null);
@@ -21,33 +20,40 @@ export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
             title='Event Sequences'
             mainClassName={'overflow-hidden flex flex-col h-full'}>
 
-
             <div className="flex flex-col">
                 <div className="flex">
                     <div className="p-1">
                         <Button
+                            text
                             icon='pi pi-book'
                             onClick={(e) => overlayPanelRef.current?.toggle(e)}
+                        />
+                        <Button
+                            text
+                            icon='pi pi-plus'
+                            onClick={() => viewModel.addQuery()}
                         />
                         <OverlayPanel ref={overlayPanelRef}>
                             <Bookmark />
                         </OverlayPanel>
                     </div>
-                    <TabMenu className="pb-1" model={viewModel.queries.map(_ => {
-                        return {
-                            label: _.name
-                        } as MenuItem;
-                    })} />
+                    <TabMenu
+                        className="pb-1"
+
+                        onTabChange={(e) => viewModel.currentQuery = viewModel.queries[e.index]}
+                        model={viewModel.queries.map(_ => {
+                            return {
+                                label: _.name
+                            } as MenuItem;
+                        })} />
                 </div>
             </div>
 
             <div className="flex flex-col h-full contentBackground">
-                <QueryActions />
-                <div className={'flex-1 overflow-hidden mt-4'}>
-                    <EventList events={[]} />
-                </div>
+                {viewModel.currentQuery &&
+                    <Query query={viewModel.currentQuery} />
+                }
             </div>
-
         </Page>
     );
 });

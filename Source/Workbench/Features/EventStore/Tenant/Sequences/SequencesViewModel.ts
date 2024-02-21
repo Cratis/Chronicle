@@ -1,46 +1,37 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { observable } from 'mobx';
+import { injectable } from 'tsyringe';
+import { QueryDefinition } from './QueryDefinition';
 
-export type Query = {
-    name: string;
-};
-
-
+@injectable()
 export class SequencesViewModel {
 
+    private _queries: QueryDefinition[] = [];
+    private _currentQuery?: QueryDefinition;
+
     constructor() {
-        /*
-            - Top level component that holds the view and view model for the queries / tabs
-            - Component for the queryable event sequence
+        this._queries = observable.array([{
+            name: 'Query 1'
+        }] as QueryDefinition[]);
 
-            Generic components:
-
-            - Filters component (Collection of filter component)
-            - Filter component
-
-
-            - Filters component could have :
-                 - onFilterAdded -> add the filter to the queryable sequence view model
-                 - onFilterChanged -> modify the filter to the queryable sequence view model
-        */
-
-        /*
-        Filtering:
-
-        - eventType(s) -> event.metadata.type.id
-        - eventSourceId -> event.context.eventSourceId
-        - time range (from : to) -> event.context.occurred (we can probably wait with this till we have the data zoom from eCharts)
-
-        https://github.com/orgs/Cratis/projects/1?pane=issue&itemId=41367866
-        */
+        this._currentQuery = this._queries[0];
     }
 
-    get queries(): Query[] {
-        return [
-            { name: 'Query 1' },
-            { name: 'Query 2' },
-            { name: 'Query 3' }
-        ];
+    get queries(): QueryDefinition[] {
+        return this._queries;
+    }
+
+    get currentQuery(): QueryDefinition | undefined {
+        return this._currentQuery;
+    }
+
+    set currentQuery(query: QueryDefinition | undefined) {
+        this._currentQuery = query;
+    }
+
+    addQuery() {
+        this._queries.push({ name: 'New Query' });
     }
 }

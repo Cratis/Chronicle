@@ -1,16 +1,21 @@
-/* Copyright (c) Aksio Insurtech. All rights reserved.
-   Licensed under the MIT license. See LICENSE file in the project root for full license information. */
-
-import { EventHistogram } from './Histogram/Histogram';
+import { withViewModel } from 'MVVM/withViewModel';
+import { QueryViewModel } from './QueryViewModel';
+import { EventList } from './EventList';
+import { QueryDefinition } from './QueryDefinition';
 import { Menubar } from 'primereact/menubar';
-import { useToggle } from 'usehooks-ts';
+import { OverlayPanel } from 'primereact/overlaypanel';
+import { EventHistogram } from './Histogram/Histogram';
+import { SequenceSelector } from './SequenceSelector';
 import { MenuItem } from 'primereact/menuitem';
 import { useRef } from 'react';
-import { OverlayPanel } from 'primereact/overlaypanel';
-import { SequenceSelector } from './SequenceSelector';
+import { useToggle } from 'usehooks-ts';
+import { Button } from 'primereact/button';
 
+export interface QueryProps {
+    query: QueryDefinition;
+}
 
-export const QueryActions = () => {
+export const Query = withViewModel<QueryViewModel, QueryProps>(QueryViewModel, ({ viewModel }) => {
     const [showTimeRange, toggleTimeRange] = useToggle(false);
     const selectSequencePanelRef = useRef<OverlayPanel>(null);
 
@@ -34,12 +39,15 @@ export const QueryActions = () => {
         {
             label: 'Save',
             icon: 'pi pi-save',
-            command: () => { }
+            disabled: !viewModel.hasChanges,
+            command: () => viewModel.save()
         },
     ];
 
     return (
         <>
+            {viewModel.query.name}
+            <Button onClick={() => viewModel.changeSomething()}>Do Something</Button>
             <div className="px-4 py-2">
                 <Menubar
                     model={items} />
@@ -49,6 +57,10 @@ export const QueryActions = () => {
 
                 {showTimeRange && <EventHistogram eventLog={''} />}
             </div>
+
+            <div className={'flex-1 overflow-hidden mt-4'}>
+                <EventList events={[]} />
+            </div>
         </>
-    );
-};
+    )
+});
