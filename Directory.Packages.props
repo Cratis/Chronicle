@@ -14,7 +14,7 @@
     <PackageVersion Include="Aksio.Applications.CQRS.MongoDB" Version="$(ApplicationModel)" />
     <PackageVersion Include="Aksio.Applications.ProxyGenerator" Version="$(ApplicationModel)" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
-    <PackageVersion Include="mongodb.driver" Version="2.22.0" />
+    <PackageVersion Include="mongodb.driver" Version="2.23.2" />
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="OrleansTestKit" Version="4.0.0-beta.3" NoWarn="NU5104"/>
