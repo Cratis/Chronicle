@@ -3,7 +3,6 @@
 
 import { NodeTemplate } from './NodeTemplate';
 import { IBookmarkNode } from '../TestData';
-import css from '../Bookmark.module.css';
 import { Tree } from 'primereact/tree';
 
 export interface IBookmarkTreeProps {
@@ -52,11 +51,10 @@ export const BookmarkTree = (props: IBookmarkTreeProps) => {
     return (
         <Tree
             filter
+            className="w-full"
             value={nodes}
             filterMode='lenient'
-            contentClassName={css.content}
             filterPlaceholder='Search'
-            className={`${css.savedQuery}`}
             nodeTemplate={nodeTemplate}
             expandedKeys={expandedKeys}
             onToggle={(e) => setExpandedKeys(e.value)}

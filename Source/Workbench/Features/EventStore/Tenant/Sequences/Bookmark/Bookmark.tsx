@@ -19,19 +19,17 @@ export const Bookmark = () => {
     } = useBookmarkNodes();
 
     return (
-        <div>
-            <BookmarkTree
-                nodes={nodes}
-                editMode={editMode}
-                deleteNode={deleteNode}
-                exitEditMode={exitEditMode}
-                expandedKeys={expandedKeys}
-                addNewFolder={addNewFolder}
-                editingNodeKey={editingNodeKey}
-                setExpandedKeys={setExpandedKeys}
-                handleInputChange={handleInputChange}
-                handleInputKeyDown={handleInputKeyDown}
-            />
-        </div>
+        <BookmarkTree
+            nodes={nodes}
+            editMode={editMode}
+            deleteNode={deleteNode}
+            exitEditMode={exitEditMode}
+            expandedKeys={expandedKeys}
+            addNewFolder={addNewFolder}
+            editingNodeKey={editingNodeKey}
+            setExpandedKeys={setExpandedKeys}
+            handleInputChange={handleInputChange}
+            handleInputKeyDown={handleInputKeyDown}
+        />
     );
 };
