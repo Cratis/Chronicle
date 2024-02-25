@@ -77,7 +77,6 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                     globalFilterFields={['name', 'type', 'runningState']}
                     emptyMessage='No observers found'
                 >
-                    <Column field='observerId' header={strings.eventStore.tenants.observers.columns.id} sortable />
                     <Column field='name' header={strings.eventStore.tenants.observers.columns.name} sortable />
                     <Column field='type' header={strings.eventStore.tenants.observers.columns.observerType} sortable body={observerType} />
                     <Column

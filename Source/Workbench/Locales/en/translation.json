@@ -40,7 +40,6 @@
             "observers": {
                 "title": "Observers",
                 "columns": {
-                    "id": "Id",
                     "name": "Name",
                     "observerType": "Observer type",
                     "state": "State",
