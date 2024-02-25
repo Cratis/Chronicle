@@ -4,14 +4,12 @@
 import { useLayoutContext } from '../context/LayoutContext';
 import { Button } from 'primereact/button';
 import css from './TopBar.module.css';
-import { FaBars, FaDatabase } from 'react-icons/fa6';
-import { MdKeyboardArrowDown } from "react-icons/md";
+import { FaBars } from 'react-icons/fa6';
 import { Profile } from "./Profile";
 import { Notifications } from './Notifications';
 import { Connection } from './Connection';
 import { useParams } from 'react-router-dom';
-import { OverlayPanel } from 'primereact/overlaypanel';
-import { useRef } from 'react';
+import { EventStore } from './EventStore';
 
 type Params = {
     eventStoreId: string;
@@ -20,7 +18,7 @@ type Params = {
 
 export const TopBar = () => {
     const params = useParams() as Params;
-    const selectEventStorePanel = useRef<OverlayPanel>(null);
+
     const { toggleLeftSidebarOpen } = useLayoutContext();
 
     return (
@@ -35,19 +33,15 @@ export const TopBar = () => {
                         <FaBars />
                     </Button>
                 </div>
-                <div className={'flex-1 flex align-center justify-center'}>
-                    <div className="flex mx-24 h-16 justify-evenly items-center cursor-pointer" onClick={(e) => selectEventStorePanel.current?.toggle(e)}>
-
-                        <FaDatabase className='text-2xl' />
-                        <div className='font-extrabold text-2xl m-2'>{params.eventStoreId}</div>
-                        <MdKeyboardArrowDown className='text-2xl' />
-                    </div>
+                <div className="flex-1 flex align-center justify-center">
+                    <div className="font-extrabold text-2xl m-2">{params.eventStoreId}</div>
                 </div>
 
-                <OverlayPanel ref={selectEventStorePanel}>
-                </OverlayPanel>
             </div>
             <div className="flex-1 flex items-center justify-end px-5 gap-6">
+                <div>
+                    <EventStore />
+                </div>
                 <div>
                     <Connection />
                 </div>

@@ -23,7 +23,7 @@ export const TenantSelector = ({ onTenantSelected, ...rest }: ITenantSelectorPro
     const op = useRef<OverlayPanel>(null);
     const [tenant, setTenant] = useState<ITenant>({
         id: '1',
-        name: 'opensjon'
+        name: 'Drammen Kommunale Pensjonskasse'
     });
 
     const selectTenant = (tenant: ITenant) => {

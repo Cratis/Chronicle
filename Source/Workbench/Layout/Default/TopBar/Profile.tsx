@@ -30,8 +30,7 @@ export const Profile = () => {
                     icon={<icons.FaUser/>}
                     rounded
                     severity="info"
-                    className='p-button-rounded p-2'
-
+                    className="p-2"
                     onClick={(e) => overlayPanelRef.current?.toggle(e)}
                     aria-label="User"/>
 
