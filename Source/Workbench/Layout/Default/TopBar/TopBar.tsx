@@ -5,19 +5,12 @@ import { useLayoutContext } from '../context/LayoutContext';
 import { Button } from 'primereact/button';
 import css from './TopBar.module.css';
 import { FaBars } from 'react-icons/fa6';
-import { forwardRef } from 'react';
 import { Logo } from "./Logo";
 import { Profile } from "./Profile";
 import { Notifications } from './Notifications';
 import { Connection } from './Connection';
 
-export interface AppTopBarRef {
-    menubutton?: HTMLButtonElement | null;
-    topbarmenu?: HTMLDivElement | null;
-    topbarmenubutton?: HTMLButtonElement | null;
-}
-
-export const TopBar = forwardRef<AppTopBarRef>(() => {
+export const TopBar = () => {
     const { toggleLeftSidebarOpen } = useLayoutContext();
 
     return (
@@ -48,4 +41,4 @@ export const TopBar = forwardRef<AppTopBarRef>(() => {
             </div>
         </div>
     );
-});
+};
