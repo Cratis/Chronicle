@@ -54,7 +54,7 @@ export const Query = withViewModel<QueryViewModel, QueryProps>(QueryViewModel, (
                 {showTimeRange && <EventHistogram eventLog={''} />}
             </div>
 
-            <div className={'flex-1 overflow-hidden mt-4'}>
+            <div className={'flex-1 overflow-hidden'}>
                 <EventList events={[]} />
             </div>
         </>
