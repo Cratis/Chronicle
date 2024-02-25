@@ -77,19 +77,19 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                     globalFilterFields={['name', 'type', 'runningState']}
                     emptyMessage='No observers found'
                 >
-                    <Column field='observerId' header='Id' sortable />
-                    <Column field='name' header='Name' sortable />
-                    <Column field='type' header='ObserverType' sortable body={observerType} />
+                    <Column field='observerId' header={strings.eventStore.tenants.observers.columns.id} sortable />
+                    <Column field='name' header={strings.eventStore.tenants.observers.columns.name} sortable />
+                    <Column field='type' header={strings.eventStore.tenants.observers.columns.observerType} sortable body={observerType} />
                     <Column
                         field='nextEventSequenceNumber'
                         dataType='numeric'
-                        header='Next event sequence number'
+                        header={strings.eventStore.tenants.observers.columns.nextEventSequenceNumber}
                         sortable
                     />
                     <Column
                         {...ColumnFilterProps}
                         field='runningState'
-                        header='State'
+                        header={strings.eventStore.tenants.observers.columns.state}
                         sortable
                         body={(data: ObserverState) => getObserverRunningStateAsText(data.runningState)}
                         filterElement={ObserverRunningStateFilterTemplate}

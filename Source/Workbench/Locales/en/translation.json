@@ -38,7 +38,14 @@
                 "title": "Sequences"
             },
             "observers": {
-                "title": "Observers"
+                "title": "Observers",
+                "columns": {
+                    "id": "Id",
+                    "name": "Name",
+                    "observerType": "Observer type",
+                    "state": "State",
+                    "nextEventSequenceNumber": "Next event sequence number"
+                }
             },
             "faledPartitions": {
                 "title": "Failed partitions"
