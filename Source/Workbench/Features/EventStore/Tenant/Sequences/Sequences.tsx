@@ -32,10 +32,10 @@ export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
 
     return (
         <Page
-            title='Event Sequences'
+            title='Sequences'
             mainClassName={'overflow-hidden h-full'}>
 
-            <Allotment className="h-full panel" proportionalLayout={false}>
+            <Allotment className="h-full" proportionalLayout={false}>
                 <Allotment.Pane preferredSize="220px">
                     <Bookmark />
                 </Allotment.Pane>
@@ -46,7 +46,7 @@ export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
                             onTabChange={(e) => viewModel.currentQuery = viewModel.queries[e.index]}
                             model={menuItems} />
 
-                        <div className="flex flex-col h-full contentBackground">
+                        <div className="flex flex-col h-full">
                             {viewModel.currentQuery &&
                                 <Query query={viewModel.currentQuery} />
                             }
