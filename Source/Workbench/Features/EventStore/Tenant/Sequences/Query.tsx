@@ -9,7 +9,6 @@ import { SequenceSelector } from './SequenceSelector';
 import { MenuItem } from 'primereact/menuitem';
 import { useRef } from 'react';
 import { useToggle } from 'usehooks-ts';
-import { Button } from 'primereact/button';
 
 export interface QueryProps {
     query: QueryDefinition;
@@ -46,15 +45,12 @@ export const Query = withViewModel<QueryViewModel, QueryProps>(QueryViewModel, (
 
     return (
         <>
-            {viewModel.query.name}
-            <Button onClick={() => viewModel.changeSomething()}>Do Something</Button>
             <div className="px-4 py-2">
                 <Menubar
                     model={items} />
-                    <OverlayPanel ref={selectSequencePanelRef}>
-                        <SequenceSelector />
-                    </OverlayPanel>
-
+                <OverlayPanel ref={selectSequencePanelRef}>
+                    <SequenceSelector />
+                </OverlayPanel>
                 {showTimeRange && <EventHistogram eventLog={''} />}
             </div>
 

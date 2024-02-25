@@ -1,6 +1,8 @@
 /* Copyright (c) Aksio Insurtech. All rights reserved.
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
+@import url(allotment/dist/style.css);
+
 :root {
     font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
     line-height: 1.5;
@@ -13,6 +15,15 @@
     --sidebar-width: 280px;
     --sidebar-closed-width: calc(4.5rem + 2px);
     --footer-height: 0px;
+    --focus-border: var(--primary-color);
+}
+
+.sash {
+    color: var(--menu-text-color);
+}
+
+.sash-hover {
+    color: white;
 }
 
 body.light {
@@ -36,4 +47,11 @@ body {
 
 .contentBackground {
     background-color: var(--surface-0);
+}
+
+.panel {
+    background: var(--shade800);
+    border: 1px solid var(--shade600);
+    border-radius: var(--border-radius);
+    color: var(--menu-text-color);
 }

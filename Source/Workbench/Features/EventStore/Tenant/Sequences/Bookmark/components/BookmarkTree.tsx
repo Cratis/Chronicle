@@ -51,7 +51,7 @@ export const BookmarkTree = (props: IBookmarkTreeProps) => {
     return (
         <Tree
             filter
-            className="w-full"
+            className="h-full w-full"
             value={nodes}
             filterMode='lenient'
             filterPlaceholder='Search'

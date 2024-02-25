@@ -9,7 +9,7 @@ import { Bookmark } from './Bookmark/Bookmark';
 import { TabMenu } from 'primereact/tabmenu';
 import { MenuItem } from 'primereact/menuitem';
 import { Query } from './Query';
-import { Splitter, SplitterPanel } from 'primereact/splitter';
+import { Allotment } from 'allotment';
 
 export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
     const openQueries = viewModel.queries.map(_ => {
@@ -35,14 +35,12 @@ export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
             title='Event Sequences'
             mainClassName={'overflow-hidden h-full'}>
 
-            <Splitter className="h-full flex">
-                <SplitterPanel className="flex shrink" size={1}>
+            <Allotment className="h-full panel" proportionalLayout={false}>
+                <Allotment.Pane preferredSize="220px">
                     <Bookmark />
-                </SplitterPanel>
-                <SplitterPanel className="h-full w-full grow">
-                    <div className="flex flex-col w-full">
-
-
+                </Allotment.Pane>
+                <Allotment.Pane className="h-full">
+                    <div className="flex flex-col h-full w-full">
                         <TabMenu
                             className="pb-1"
                             onTabChange={(e) => viewModel.currentQuery = viewModel.queries[e.index]}
@@ -54,8 +52,8 @@ export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
                             }
                         </div>
                     </div>
-                </SplitterPanel>
-            </Splitter>
+                </Allotment.Pane>
+            </Allotment>
         </Page>
     );
 });
