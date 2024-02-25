@@ -45,15 +45,19 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const menuItems: MenuItem[] = [
         {
             label: 'Replay',
-            icon: <FaArrowsRotate className={'mr-2'}/>,
+            icon: <FaArrowsRotate className={'mr-2'} />,
 
         }
     ];
 
     return (
         <Page title='Observers' mainClassName={'overflow-hidden flex flex-col h-full'}>
-            <Menubar aria-label='Actions' model={menuItems} className={'my-4'}/>
-            <div className={'flex-1 overflow-hidden mt-4'}>
+
+            <div className="px-4 py-2">
+                <Menubar aria-label='Actions' model={menuItems} />
+            </div>
+
+            <div className={'flex-1 overflow-hidden'}>
                 <DataTable
 
                     value={viewModel.observers}
@@ -71,10 +75,10 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                     onFilter={(e) => setFilters(e.filters)}
                     globalFilterFields={['name', 'type', 'runningState']}
                     emptyMessage='No observers found'
-            >
-                    <Column field='observerId' header='Id' sortable/>
-                    <Column field='name' header='Name' sortable/>
-                    <Column field='type' header='ObserverType' sortable body={observerType}/>
+                >
+                    <Column field='observerId' header='Id' sortable />
+                    <Column field='name' header='Name' sortable />
+                    <Column field='type' header='ObserverType' sortable body={observerType} />
                     <Column
                         field='nextEventSequenceNumber'
                         dataType='numeric'
