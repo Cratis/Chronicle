@@ -13,7 +13,7 @@ export const Page = ({ title,mainClassName, children, ...rest }: PageProps) => {
     return (
         <div className='px-6 py-4 flex flex-col h-full' {...rest}>
             <h1 className='text-3xl mt-3 mb-4'>{title}</h1>
-            <main className={mainClassName ??'flex-1'}>
+            <main className={`panel ${mainClassName ??'flex-1'}`}>
                 {children}
             </main>
         </div>
