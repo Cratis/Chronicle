@@ -30,6 +30,21 @@
         "Tenant": {
             "Recommendations": {
                 "Title": "Recommendations"
+            },
+            "Jobs": {
+                "Title": "Jobs"
+            },
+            "Sequences": {
+                "Title": "Sequences"
+            },
+            "Observers": {
+                "Title": "Observers"
+            },
+            "FaledPartitions": {
+                "Title": "Failed partitions"
+            },
+            "Identities": {
+                "Title": "Identities"
             }
         }
     }
