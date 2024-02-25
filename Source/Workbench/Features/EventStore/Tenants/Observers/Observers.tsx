@@ -52,7 +52,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     ];
 
     return (
-        <Page title={strings.EventStore.Tenant.Observers.Title} mainClassName={'overflow-hidden flex flex-col h-full'}>
+        <Page title={strings.eventStore.tenants.observers.title} mainClassName={'overflow-hidden flex flex-col h-full'}>
 
             <div className="px-4 py-2">
                 <Menubar aria-label='Actions' model={menuItems} />

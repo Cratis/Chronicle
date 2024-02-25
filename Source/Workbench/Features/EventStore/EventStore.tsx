@@ -22,25 +22,25 @@ export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
-                { label: strings.MainMenu.Recommendations, url: 'tenant/:tenantId/recommendations', icon: mdIcons.MdInfo },
-                { label: strings.MainMenu.Jobs, url: 'tenant/:tenantId/jobs', icon: mdIcons.MdGroupWork },
-                { label: strings.MainMenu.Sequences, url: 'tenant/:tenantId/sequences', icon: mdIcons.MdDataArray },
-                { label: strings.MainMenu.Observers, url: 'tenant/:tenantId/observers', icon: mdIcons.MdMediation },
+                { label: strings.mainMenu.recommendations, url: 'tenant/:tenantId/recommendations', icon: mdIcons.MdInfo },
+                { label: strings.mainMenu.jobs, url: 'tenant/:tenantId/jobs', icon: mdIcons.MdGroupWork },
+                { label: strings.mainMenu.sequences, url: 'tenant/:tenantId/sequences', icon: mdIcons.MdDataArray },
+                { label: strings.mainMenu.observers, url: 'tenant/:tenantId/observers', icon: mdIcons.MdMediation },
                 {
-                    label: strings.MainMenu.FailedPartitions,
+                    label: strings.mainMenu.failedPartitions,
                     url: 'tenant/:tenantId/failed-partitions',
                     icon: mdIcons.MdErrorOutline
                 },
-                { label: strings.MainMenu.Identities, url: 'tenant/:tenantId/identities', icon: mdIcons.MdPeople },
+                { label: strings.mainMenu.identities, url: 'tenant/:tenantId/identities', icon: mdIcons.MdPeople },
             ]
         },
         {
-            label: strings.MainMenu.General.GroupLabel,
+            label: strings.mainMenu.general.groupLabel,
             items: [
-                { label: strings.MainMenu.General.Types, url: 'types', icon: mdIcons.MdDataObject },
-                { label: strings.MainMenu.General.Projections, url: 'projections', icon: mdIcons.MdMediation },
-                { label: strings.MainMenu.General.Sequences, url: 'sequences', icon: mdIcons.MdDataArray },
-                { label: strings.MainMenu.General.Sinks, url: 'sinks', icon: devIcons.DiDatabase }
+                { label: strings.mainMenu.general.types, url: 'types', icon: mdIcons.MdDataObject },
+                { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
+                { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
+                { label: strings.mainMenu.general.sinks, url: 'sinks', icon: devIcons.DiDatabase }
             ]
         }
     ];

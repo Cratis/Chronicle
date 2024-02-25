@@ -1,50 +1,50 @@
 {
-    "General": {
+    "general": {
     },
-    "Layout": {
-        "TopBar": {
-            "Profile": {
-                "MyAccount": "My account",
-                "Logout": "Logout",
-                "LightMode": "Light mode",
-                "DarkMode": "Dark mode"
+    "layout": {
+        "topBar": {
+            "profile": {
+                "myAccount": "My account",
+                "logout": "Logout",
+                "lightMode": "Light mode",
+                "darkMode": "Dark mode"
             }
         }
     },
-    "MainMenu": {
-        "Recommendations": "Recommendations",
-        "Jobs": "Jobs",
-        "Sequences": "Sequences",
-        "Observers": "Observers",
-        "FailedPartitions": "Failed partitions",
-        "Identities": "Identities",
-        "General": {
-            "GroupLabel": "General",
-            "Types": "Types",
-            "Projections": "Projections",
-            "Sequences": "Sequences",
-            "Sinks": "Sinks"
+    "mainMenu": {
+        "recommendations": "Recommendations",
+        "jobs": "Jobs",
+        "sequences": "Sequences",
+        "observers": "Observers",
+        "failedPartitions": "Failed partitions",
+        "identities": "Identities",
+        "general": {
+            "groupLabel": "General",
+            "types": "Types",
+            "projections": "Projections",
+            "sequences": "Sequences",
+            "sinks": "Sinks"
         }
     },
-    "EventStore": {
-        "Tenant": {
-            "Recommendations": {
-                "Title": "Recommendations"
+    "eventStore": {
+        "tenants": {
+            "recommendations": {
+                "title": "Recommendations"
             },
-            "Jobs": {
-                "Title": "Jobs"
+            "jobs": {
+                "title": "Jobs"
             },
-            "Sequences": {
-                "Title": "Sequences"
+            "sequences": {
+                "title": "Sequences"
             },
-            "Observers": {
-                "Title": "Observers"
+            "observers": {
+                "title": "Observers"
             },
-            "FaledPartitions": {
-                "Title": "Failed partitions"
+            "faledPartitions": {
+                "title": "Failed partitions"
             },
-            "Identities": {
-                "Title": "Identities"
+            "identities": {
+                "title": "Identities"
             }
         }
     }

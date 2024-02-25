@@ -38,11 +38,11 @@ export const Profile = () => {
 
                 <OverlayPanel ref={overlayPanelRef} className={css.overlayPanel}>
                     <ul className={css.profileItems}>
-                        <ProfileItem icon={<icons.FaUser/>} label={strings.Layout.TopBar.Profile.MyAccount} onClick={() => {
+                        <ProfileItem icon={<icons.FaUser/>} label={strings.layout.topBar.profile.myAccount} onClick={() => {
                         }}/>
                         {isDarkMode ?
-                            <ProfileItem icon={<icons.FaSun/>} label={strings.Layout.TopBar.Profile.LightMode} onClick={toggleDarkMode}/> :
-                            <ProfileItem icon={<icons.FaMoon/>} label={strings.Layout.TopBar.Profile.DarkMode} onClick={toggleDarkMode}/>}
+                            <ProfileItem icon={<icons.FaSun/>} label={strings.layout.topBar.profile.lightMode} onClick={toggleDarkMode}/> :
+                            <ProfileItem icon={<icons.FaMoon/>} label={strings.layout.topBar.profile.darkMode} onClick={toggleDarkMode}/>}
                     </ul>
                 </OverlayPanel>
             </div>
