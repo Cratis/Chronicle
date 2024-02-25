@@ -3,17 +3,17 @@
 
 import { DefaultLayout } from "../../Layout/Default/DefaultLayout";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { Sequences } from "./Tenant/Sequences/Sequences";
+import { Sequences } from "./Tenants/Sequences/Sequences";
 import { IMenuItemGroup } from "../../Layout/Default/Sidebar/MenuItem/MenuItem";
 import * as mdIcons from 'react-icons/md';
 import * as devIcons from 'react-icons/di';
 import { Types } from "./General/Types/Types";
-import { Observers } from "./Tenant/Observers/Observers";
+import { Observers } from "./Tenants/Observers/Observers";
 import { Projections } from "./General/Projections/Projections";
-import { FailedPartitions } from "./Tenant/FailedPartitions/FailedPartitions";
-import { Recommendations } from "./Tenant/Recommendations/Recommendations";
-import { Jobs } from './Tenant/Jobs/Jobs';
-import { Identities } from './Tenant/Identities/Identities';
+import { FailedPartitions } from "./Tenants/FailedPartitions/FailedPartitions";
+import { Recommendations } from "./Tenants/Recommendations/Recommendations";
+import { Jobs } from './Tenants/Jobs/Jobs';
+import { Identities } from './Tenants/Identities/Identities';
 import { Sequences as GeneralSequences } from './General/Sequences/Sequences';
 import { Sinks } from './General/Sinks/Sinks';
 import strings from 'Strings';
