@@ -50,7 +50,7 @@ body {
 }
 
 .panel {
-    background: var(--shade800);
+    background: var(--surface-card);
     border: 1px solid var(--shade600);
     border-radius: var(--border-radius);
     color: var(--menu-text-color);
