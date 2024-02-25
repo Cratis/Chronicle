@@ -18,6 +18,7 @@ import {
 import { Menubar } from 'primereact/menubar';
 import { MenuItem } from 'primereact/menuitem';
 import { FaArrowsRotate } from "react-icons/fa6";
+import strings from 'Strings';
 
 const observerType = (observer: ObserverState) => {
     switch (observer.type) {
@@ -51,7 +52,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     ];
 
     return (
-        <Page title='Observers' mainClassName={'overflow-hidden flex flex-col h-full'}>
+        <Page title={strings.EventStore.Tenant.Observers.Title} mainClassName={'overflow-hidden flex flex-col h-full'}>
 
             <div className="px-4 py-2">
                 <Menubar aria-label='Actions' model={menuItems} />
