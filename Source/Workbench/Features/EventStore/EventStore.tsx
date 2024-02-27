@@ -25,7 +25,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.recommendations, url: 'tenant/:tenantId/recommendations', icon: mdIcons.MdInfo },
                 { label: strings.mainMenu.jobs, url: 'tenant/:tenantId/jobs', icon: mdIcons.MdGroupWork },
                 { label: strings.mainMenu.sequences, url: 'tenant/:tenantId/sequences', icon: mdIcons.MdDataArray },
-                { label: strings.mainMenu.observers, url: 'tenant/:tenantId/observers', icon: mdIcons.MdMediation },
+                { label: strings.mainMenu.observers, url: 'tenant/:tenantId/observers', icon: mdIcons.MdAirlineStops },
                 {
                     label: strings.mainMenu.failedPartitions,
                     url: 'tenant/:tenantId/failed-partitions',
