@@ -25,7 +25,7 @@
     <PackageVersion Include="Azure.Data.Tables" Version="12.8.3" />
     <PackageVersion Include="FluentValidation" Version="11.5.2" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="$(Orleans)" />
@@ -43,7 +43,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.1" NoWarn="NU5104" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.1.0-rc.2" NoWarn="NU5104" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.7.1" NoWarn="NU5104" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.4.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.0.0-beta.10" NoWarn="NU5104" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.5.0-alpha.2" NoWarn="NU5104" />
     <PackageVersion Include="handlebars.net" Version="2.1.4" />
