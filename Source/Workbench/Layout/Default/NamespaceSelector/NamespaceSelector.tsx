@@ -8,6 +8,7 @@ import { OverlayPanel } from "primereact/overlaypanel";
 import { useLayoutContext } from "../context/LayoutContext";
 import { CurrentNamespace } from "./CurrentNamespace";
 import { InputText } from 'primereact/inputtext';
+import { ItemsList } from '../../../Components/ItemsList/ItemsList';
 
 export interface INamespaceSelectorProps extends React.HTMLAttributes<HTMLDivElement> {
     namespaces: string[];
@@ -46,14 +47,8 @@ export const NamespaceSelector = (props: INamespaceSelectorProps) => {
                                 setSearch(e.target.value)
                             }} />
                     </div>
-                    <ul className={css.namespaceList}>
-                        {filteredNamespaces.map((namespace) => {
-                            return (
-                                <li onClick={() => selectNamespace(namespace)} className={`p-2 ${css.namespaceListItem}`}>
-                                    {namespace}
-                                </li>)
-                        })}
-                    </ul>
+
+                    <ItemsList<string> items={filteredNamespaces} onItemClicked={selectNamespace} />
                 </div>
             </OverlayPanel>
         </div>);
