@@ -3,7 +3,7 @@
 
 
 import { withViewModel } from 'MVVM';
-import { LayoutContext, LayoutProvider } from './context/LayoutContext';
+import { LayoutContext } from './context/LayoutContext';
 import { generatePath, Outlet, useParams } from 'react-router-dom';
 import { NamespaceSelector } from './NamespaceSelector/NamespaceSelector';
 import { IMenuItemGroup } from './Sidebar/MenuItem/MenuItem';
@@ -14,65 +14,55 @@ import { TopBar } from './TopBar/TopBar';
 import { Footer } from './Footer';
 import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
 import { DefaultLayoutViewModel } from './DefaultLayoutViewModel';
+import { useContext } from 'react';
 
 interface IDefaultLayoutProps {
     leftMenuItems?: IMenuItemGroup[];
     leftMenuBasePath?: string;
 }
 
-export const DefaultLayout = withViewModel<DefaultLayoutViewModel, IDefaultLayoutProps>(DefaultLayoutViewModel, ({viewModel, props}) => {
+export const DefaultLayout = withViewModel<DefaultLayoutViewModel, IDefaultLayoutProps>(DefaultLayoutViewModel, ({ viewModel, props }) => {
     const params = useParams();
     const lmBasePath = generatePath(props.leftMenuBasePath ?? '', params);
+    const layoutContext = useContext(LayoutContext);
 
     return (
-        <LayoutProvider>
-            <LayoutContext.Consumer>
-                {(value) => (
-                    <>
-                        <div
-                            className={`${!value.layoutConfig.leftSidebarOpen
-                                    ? css.sidebarClosed
-                                    : ''
-                                } ${value.layoutConfig.leftSidebarHidden
-                                    ? css.sidebarHidden
-                                    : ''
-                                }`}
-                        >
-                            <header className={css.appHeader}>
-                                <TopBar />
-                            </header>
 
-                            {!value.layoutConfig.leftSidebarHidden && (
-                                <aside className={css.appLeftSidebar}>
-                                    <div className={css.sidebarContainer}>
-                                        <NamespaceSelector
-                                            namespaces={viewModel.namespaces}
-                                            currentNamespace={viewModel.currentNamespace}
-                                            onNamespaceSelected={(namespace) => viewModel.currentNamespace = namespace}
-                                        />
-                                        {props.leftMenuItems && (
-                                            <MenuProvider params={{ namespace: viewModel.currentNamespace }}>
-                                                <SidebarMenu
-                                                    items={props.leftMenuItems}
-                                                    basePath={lmBasePath}
-                                                />
-                                            </MenuProvider>
-                                        )}
-                                    </div>
-                                </aside>
-                            )}
-                            <main className={css.appOutlet}>
-                                <ErrorBoundary>
-                                    <Outlet />
-                                </ErrorBoundary>
-                            </main>
-                            <footer className={css.appFooter}>
-                                <Footer />
-                            </footer>
-                        </div>
-                    </>
-                )}
-            </LayoutContext.Consumer>
-        </LayoutProvider>
+        <div
+            className={`${!layoutContext.layoutConfig.leftSidebarOpen
+                ? css.sidebarClosed
+                : ''
+                }`}>
+            <header className={css.appHeader}>
+                <TopBar />
+            </header>
+
+            <aside className={css.appLeftSidebar}>
+                <div className={css.sidebarContainer}>
+                    <NamespaceSelector
+                        namespaces={viewModel.namespaces}
+                        currentNamespace={viewModel.currentNamespace}
+                        onNamespaceSelected={(namespace) => viewModel.currentNamespace = namespace}
+                    />
+                    {props.leftMenuItems && (
+                        <MenuProvider params={{ namespace: viewModel.currentNamespace }}>
+                            <SidebarMenu
+                                items={props.leftMenuItems}
+                                basePath={lmBasePath}
+                            />
+                        </MenuProvider>
+                    )}
+                </div>
+            </aside>
+
+            <main className={css.appOutlet}>
+                <ErrorBoundary>
+                    <Outlet />
+                </ErrorBoundary>
+            </main>
+            <footer className={css.appFooter}>
+                <Footer />
+            </footer>
+        </div>
     );
 });

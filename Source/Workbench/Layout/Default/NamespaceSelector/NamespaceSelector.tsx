@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import css from './NamespaceSelector.module.css';
 import { OverlayPanel } from "primereact/overlaypanel";
@@ -26,6 +26,8 @@ export const NamespaceSelector = (props: INamespaceSelectorProps) => {
         op?.current?.hide();
     }
 
+    const filteredNamespaces = useMemo(() => props.namespaces.filter((t) => t.toLowerCase().includes(search.toLowerCase())), [props.namespaces, search]);
+
     return (
         <div>
             <CurrentNamespace compact={!layoutConfig.leftSidebarOpen}
@@ -45,7 +47,7 @@ export const NamespaceSelector = (props: INamespaceSelectorProps) => {
                             }} />
                     </div>
                     <ul className={css.namespaceList}>
-                        {props.namespaces.filter((t) => t.toLowerCase().includes(search.toLowerCase())).map((namespace) => {
+                        {filteredNamespaces.map((namespace) => {
                             return (
                                 <li onClick={() => selectNamespace(namespace)} className={`p-2 ${css.namespaceListItem}`}>
                                     {namespace}

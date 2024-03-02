@@ -6,7 +6,6 @@ import { useLocalStorage } from "usehooks-ts";
 
 export interface ILayoutConfig {
     leftSidebarOpen: boolean;
-    leftSidebarHidden: boolean;
 }
 
 interface ILayoutContext {
@@ -15,21 +14,16 @@ interface ILayoutContext {
     toggleLeftSidebarOpen: () => void;
     openLeftSidebar: () => void;
     closeLeftSidebar: () => void;
-    hideLeftSidebar: () => void;
-    showLeftSidebar: () => void;
 }
 
 const defaultLayoutContext: ILayoutContext = {
     layoutConfig: {
         leftSidebarOpen: true,
-        leftSidebarHidden: false,
     },
     setLayoutConfig: () => null,
     toggleLeftSidebarOpen: () => null,
     openLeftSidebar: () => null,
     closeLeftSidebar: () => null,
-    hideLeftSidebar: () => null,
-    showLeftSidebar: () => null,
 };
 export const LayoutContext = createContext<ILayoutContext>(defaultLayoutContext);
 
@@ -65,18 +59,6 @@ export const LayoutProvider = (props: { children: ReactNode }) => {
             leftSidebarOpen: false,
         });
     };
-    const hideLeftSidebar = () => {
-        setLayoutConfig({
-            ...layoutConfig,
-            leftSidebarHidden: true,
-        });
-    };
-    const showLeftSidebar = () => {
-        setLayoutConfig({
-            ...layoutConfig,
-            leftSidebarHidden: false,
-        });
-    };
 
     return (
         <LayoutContext.Provider
@@ -85,11 +67,8 @@ export const LayoutProvider = (props: { children: ReactNode }) => {
                 setLayoutConfig,
                 toggleLeftSidebarOpen,
                 openLeftSidebar,
-                closeLeftSidebar,
-                hideLeftSidebar,
-                showLeftSidebar,
-            }}
-        >
+                closeLeftSidebar
+            }}>
             {props.children}
         </LayoutContext.Provider>
     );

@@ -6,19 +6,22 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { BlankLayout } from "./Layout/Blank/BlankLayout";
 import { Home } from "./Features/Home";
 import { EventStore } from "./Features/EventStore/EventStore";
+import { LayoutProvider } from './Layout/Default/context/LayoutContext';
 
 function App() {
     useTheme();
     return (
-        <BrowserRouter>
-            <Routes>
-                <Route path='/' element={<Navigate to={'/home'} />} />
-                <Route path='/home' element={<BlankLayout />}>
-                    <Route path={''} element={<Home />} />
-                </Route>
-                <Route path='/event-store/*' element={<EventStore />} />
-            </Routes>
-        </BrowserRouter>
+        <LayoutProvider>
+            <BrowserRouter>
+                <Routes>
+                    <Route path='/' element={<Navigate to={'/home'} />} />
+                    <Route path='/home' element={<BlankLayout />}>
+                        <Route path={''} element={<Home />} />
+                    </Route>
+                    <Route path='/event-store/*' element={<EventStore />} />
+                </Routes>
+            </BrowserRouter>
+        </LayoutProvider>
     );
 }
 
