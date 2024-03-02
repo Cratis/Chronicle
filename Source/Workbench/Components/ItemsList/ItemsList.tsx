@@ -8,7 +8,7 @@ export type ItemClicked<TItem> = (item: TItem) => void;
 export interface IItemsListProps<TItem> {
     items: TItem[];
     idProperty?: keyof TItem;
-    titleProperty?: keyof TItem;
+    nameProperty?: keyof TItem;
     onItemClicked?: ItemClicked<TItem>;
 }
 
@@ -21,9 +21,9 @@ export const ItemsList = <TItem extends {}>(props: IItemsListProps<TItem>) => {
         return (item as any).toString();
     }
 
-    const getTitle = (item: TItem):string => {
-        if (props.titleProperty) {
-            return (item[props.titleProperty] as any).toString();
+    const getName = (item: TItem):string => {
+        if (props.nameProperty) {
+            return (item[props.nameProperty] as any).toString();
         }
         return (item as any).toString();
     }
@@ -33,7 +33,7 @@ export const ItemsList = <TItem extends {}>(props: IItemsListProps<TItem>) => {
             {props.items.map((item) => {
                 return (
                     <li key={getKey(item)} onClick={() => props.onItemClicked?.(item)} className={`p-2 ${css.listItem}`}>
-                        {getTitle(item)}
+                        {getName(item)}
                     </li>)
             })}
         </ul>

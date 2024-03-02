@@ -2,8 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { InputText } from 'primereact/inputtext';
-import css from './Queries.module.css';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { ItemsList } from 'Components/ItemsList/ItemsList';
+
+type Sequence = {
+    id: string;
+    name: string;
+};
 
 export const SequenceSelector = () => {
     const [search, setSearch] = useState<string>('');
@@ -18,6 +23,8 @@ export const SequenceSelector = () => {
         }
     ];
 
+    const filteredSequences = useMemo(() => sequences.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())), [search]);
+
     return (
         <>
             <div className={'mb-2'}>
@@ -27,11 +34,8 @@ export const SequenceSelector = () => {
                         setSearch(e.target.value);
                     }} />
             </div>
-            <ul className={css.sequenceList}>
-                {sequences.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())).map((namespace) => {
-                    return <li className={`p-2 ${css.sequenceListItem}`}>{namespace.name}</li>
-                })}
-            </ul>
+
+            <ItemsList<Sequence> items={filteredSequences} idProperty='id' nameProperty='name' />
         </>
     );
 };
