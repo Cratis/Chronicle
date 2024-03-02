@@ -11,7 +11,7 @@ indent_size = 2
 
 [*.{cs,vb}]
 dotnet_analyzer_diagnostic.severity = warning
-file_header_template = Copyright (c) Aksio Insurtech. All rights reserved.\nLicensed under the MIT license. See LICENSE file in the project root for full license information.
+file_header_template = Copyright (c) Cratis. All rights reserved.\nLicensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #### .NET Conventions ####
 dotnet_sort_system_directives_first = true:error

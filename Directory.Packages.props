@@ -7,7 +7,7 @@
   <ItemGroup>
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.7" />
     <PackageVersion Include="docfx.console" Version="2.59.3" />
-    <PackageVersion Include="Aksio.Fundamentals" Version="1.6.1" />
+    <PackageVersion Include="Aksio.Fundamentals" Version="1.6.3" />
     <PackageVersion Include="Aksio.MongoDB" Version="1.4.6" />
     <PackageVersion Include="Aksio.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Aksio.Applications.CQRS" Version="$(ApplicationModel)" />
@@ -15,10 +15,10 @@
     <PackageVersion Include="Aksio.Applications.ProxyGenerator" Version="$(ApplicationModel)" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
     <PackageVersion Include="mongodb.driver" Version="2.24.0" />
-    <PackageVersion Include="NJsonSchema" Version="10.9.0" />
+    <PackageVersion Include="NJsonSchema" Version="11.0.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="OrleansTestKit" Version="4.0.0-beta.3" NoWarn="NU5104"/>
-    <PackageVersion Include="System.Data.SqlClient" Version="4.8.3" />
+    <PackageVersion Include="System.Data.SqlClient" Version="4.8.6" />
     <PackageVersion Include="System.Net.NameResolution" Version="4.3.0" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageVersion Include="automapper" Version="12.0.1" />
@@ -55,7 +55,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="7.0.4" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.376" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.5.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.82" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.145" />
     <!-- Specifications -->
     <PackageVersion Include="Aksio.Specifications" Version="2.0.1" />
     <PackageVersion Include="Testcontainers" Version="3.6.0" />
