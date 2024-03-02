@@ -16,10 +16,11 @@ export const MenuItemGroup = ({ group, basePath }: IMenuItemGroupProps) => {
         {group.label &&
             <div className={`${css.label} ${!layoutConfig.leftSidebarOpen && 'invisible'} mb-2`}>
                 {group.label}
-                </div>}
+            </div>}
+
         {group.items.map((item, index) => {
-                return <MenuItem key={index} item={item} basePath={basePath}/>
-            }
+            return <MenuItem key={index} item={item} basePath={basePath} />
+        }
         )}
     </>;
 }
