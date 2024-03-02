@@ -14,7 +14,7 @@ import { TopBar } from './TopBar/TopBar';
 import { Footer } from './Footer';
 import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
 import { DefaultLayoutViewModel } from './DefaultLayoutViewModel';
-import { useContext } from 'react';
+import { useContext, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface IDefaultLayoutProps {
@@ -28,6 +28,10 @@ export const DefaultLayout = withViewModel<DefaultLayoutViewModel, IDefaultLayou
     const layoutContext = useContext(LayoutContext);
     const navigate = useNavigate();
     const location = useLocation();
+
+    useEffect(() => {
+        viewModel.currentNamespace = params.namespace!;
+    }, [params]);
 
     const namespaceSelected = (namespace: string) => {
         viewModel.currentNamespace = namespace;
