@@ -5,7 +5,7 @@
     <Orleans>7.2.4</Orleans>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="BenchmarkDotNet" Version="0.13.7" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageVersion Include="docfx.console" Version="2.59.3" />
     <PackageVersion Include="Aksio.Fundamentals" Version="1.6.3" />
     <PackageVersion Include="Aksio.MongoDB" Version="1.4.6" />
