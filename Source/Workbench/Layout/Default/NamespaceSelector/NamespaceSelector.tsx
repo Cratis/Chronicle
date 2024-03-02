@@ -1,7 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+
 import css from './NamespaceSelector.module.css';
 import { OverlayPanel } from "primereact/overlaypanel";
 import { useLayoutContext } from "../context/LayoutContext";
@@ -9,35 +10,26 @@ import { CurrentNamespace } from "./CurrentNamespace";
 import { InputText } from 'primereact/inputtext';
 
 export interface INamespaceSelectorProps extends React.HTMLAttributes<HTMLDivElement> {
+    namespaces: string[];
+    currentNamespace: string;
     onNamespaceSelected: (namespace: string) => void;
 }
 
-export const NamespaceSelector = ({ onNamespaceSelected: onNamespaceSelected, ...rest }: INamespaceSelectorProps) => {
+export const NamespaceSelector = (props: INamespaceSelectorProps) => {
     const { layoutConfig } = useLayoutContext();
     const [search, setSearch] = useState<string>('');
 
     const op = useRef<OverlayPanel>(null);
-    const [namespace, setNamespace] = useState<string>("My-First-Namespace");
 
     const selectNamespace = (namespace: string) => {
-        setNamespace(namespace);
+        props.onNamespaceSelected(namespace);
         op?.current?.hide();
     }
 
-    useEffect(() => {
-        onNamespaceSelected(namespace);
-    }, [namespace]);
-
-    const allNamespaces: string[] = [
-        "My-First-Namespace",
-        "My-Second-Namespace",
-        "My-Third-Namespace"
-    ];
-
     return (
-        <div {...rest}>
+        <div>
             <CurrentNamespace compact={!layoutConfig.leftSidebarOpen}
-                namespace={namespace} onClick={(e) => {
+                namespace={props.currentNamespace} onClick={(e) => {
                     op?.current?.toggle(e, null)
                 }} />
 
@@ -53,7 +45,7 @@ export const NamespaceSelector = ({ onNamespaceSelected: onNamespaceSelected, ..
                             }} />
                     </div>
                     <ul className={css.namespaceList}>
-                        {allNamespaces.filter((t) => t.toLowerCase().includes(search.toLowerCase())).map((namespace) => {
+                        {props.namespaces.filter((t) => t.toLowerCase().includes(search.toLowerCase())).map((namespace) => {
                             return (
                                 <li onClick={() => selectNamespace(namespace)} className={`p-2 ${css.namespaceListItem}`}>
                                     {namespace}

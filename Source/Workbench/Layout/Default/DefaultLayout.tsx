@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+
+import { withViewModel } from 'MVVM';
 import { LayoutContext, LayoutProvider } from './context/LayoutContext';
 import { generatePath, Outlet, useParams } from 'react-router-dom';
 import { NamespaceSelector } from './NamespaceSelector/NamespaceSelector';
@@ -10,18 +12,17 @@ import { SidebarMenu } from './Sidebar/SidebarMenu';
 import css from './DefaultLayout.module.css';
 import { TopBar } from './TopBar/TopBar';
 import { Footer } from './Footer';
-import { useState } from 'react';
 import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
+import { DefaultLayoutViewModel } from './DefaultLayoutViewModel';
 
 interface IDefaultLayoutProps {
     leftMenuItems?: IMenuItemGroup[];
     leftMenuBasePath?: string;
 }
 
-export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayoutProps) {
+export const DefaultLayout = withViewModel<DefaultLayoutViewModel, IDefaultLayoutProps>(DefaultLayoutViewModel, ({viewModel, props}) => {
     const params = useParams();
-    const lmBasePath = generatePath(leftMenuBasePath ?? '', params);
-    const [namespace, setNamespace] = useState<string>('default');
+    const lmBasePath = generatePath(props.leftMenuBasePath ?? '', params);
 
     return (
         <LayoutProvider>
@@ -45,14 +46,14 @@ export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayou
                                 <aside className={css.appLeftSidebar}>
                                     <div className={css.sidebarContainer}>
                                         <NamespaceSelector
-                                            onNamespaceSelected={(namespace) =>
-                                                setNamespace(namespace)
-                                            }
+                                            namespaces={viewModel.namespaces}
+                                            currentNamespace={viewModel.currentNamespace}
+                                            onNamespaceSelected={(namespace) => viewModel.currentNamespace = namespace}
                                         />
-                                        {leftMenuItems && (
-                                            <MenuProvider params={{ namespace: namespace }}>
+                                        {props.leftMenuItems && (
+                                            <MenuProvider params={{ namespace: viewModel.currentNamespace }}>
                                                 <SidebarMenu
-                                                    items={leftMenuItems}
+                                                    items={props.leftMenuItems}
                                                     basePath={lmBasePath}
                                                 />
                                             </MenuProvider>
@@ -74,4 +75,4 @@ export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayou
             </LayoutContext.Consumer>
         </LayoutProvider>
     );
-}
+});

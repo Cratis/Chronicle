@@ -60,7 +60,6 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
 
             <div className={'flex-1 overflow-hidden'}>
                 <DataTable
-
                     value={viewModel.observers}
                     rows={100}
                     paginator
