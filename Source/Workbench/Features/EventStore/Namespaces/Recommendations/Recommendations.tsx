@@ -5,5 +5,5 @@ import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
 
 export const Recommendations = () => {
-    return <Page title={strings.eventStore.tenants.recommendations.title}/>;
+    return <Page title={strings.eventStore.namespaces.recommendations.title}/>;
 };

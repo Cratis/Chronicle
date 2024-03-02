@@ -1,19 +1,19 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ITenant } from "./TenantSelector";
+import { INamespace } from "./NamespaceSelector";
 import { InputText } from "primereact/inputtext";
 import { useState } from "react";
-import { TenantListItem } from "./TenantListItem";
-import css from "./TenantSelector.module.css";
+import { NamespaceListItem } from "./NamespaceListItem";
+import css from "./NamespaceSelector.module.css";
 
-interface ISelectTenantProps {
-    onSelected: (tenant: ITenant) => void;
+interface ISelectNamespaceProps {
+    onSelected: (namespace: INamespace) => void;
 }
 
-export const SelectTenant = ({ onSelected }: ISelectTenantProps) => {
+export const SelectNamespace = ({ onSelected }: ISelectNamespaceProps) => {
     const [search, setSearch] = useState<string>('');
-    const allTenants: ITenant[] = [
+    const allNamespaces: INamespace[] = [
         {
             id: '1',
             name: 'Drammen Kommunale Pensjonskasse'
@@ -48,14 +48,14 @@ export const SelectTenant = ({ onSelected }: ISelectTenantProps) => {
     return <div>
         <div className={'mb-2'}>
             <InputText value={search}
-                placeholder={'Search for tenant'}
+                placeholder={'Search for namespace'}
                 onChange={(e) => {
                     setSearch(e.target.value)
                 }} />
         </div>
-        <ul className={css.tenantList}>
-            {allTenants.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())).map((tenant) => {
-                return <TenantListItem tenant={tenant} onClick={() => onSelected(tenant)} key={tenant.id} />;
+        <ul className={css.namespaceList}>
+            {allNamespaces.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())).map((namespace) => {
+                return <NamespaceListItem namespace={namespace} onClick={() => onSelected(namespace)} key={namespace.id} />;
             })}
         </ul>
     </div>;

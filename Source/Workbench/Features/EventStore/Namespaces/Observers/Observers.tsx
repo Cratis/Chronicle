@@ -52,7 +52,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     ];
 
     return (
-        <Page title={strings.eventStore.tenants.observers.title} mainClassName={'overflow-hidden flex flex-col h-full'}>
+        <Page title={strings.eventStore.namespaces.observers.title} mainClassName={'overflow-hidden flex flex-col h-full'}>
 
             <div className="px-4 py-2">
                 <Menubar aria-label='Actions' model={menuItems} />
@@ -77,18 +77,18 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                     globalFilterFields={['name', 'type', 'runningState']}
                     emptyMessage='No observers found'
                 >
-                    <Column field='name' header={strings.eventStore.tenants.observers.columns.name} sortable />
-                    <Column field='type' header={strings.eventStore.tenants.observers.columns.observerType} sortable body={observerType} />
+                    <Column field='name' header={strings.eventStore.namespaces.observers.columns.name} sortable />
+                    <Column field='type' header={strings.eventStore.namespaces.observers.columns.observerType} sortable body={observerType} />
                     <Column
                         field='nextEventSequenceNumber'
                         dataType='numeric'
-                        header={strings.eventStore.tenants.observers.columns.nextEventSequenceNumber}
+                        header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
                         sortable
                     />
                     <Column
                         {...ColumnFilterProps}
                         field='runningState'
-                        header={strings.eventStore.tenants.observers.columns.state}
+                        header={strings.eventStore.namespaces.observers.columns.state}
                         sortable
                         body={(data: ObserverState) => getObserverRunningStateAsText(data.runningState)}
                         filterElement={ObserverRunningStateFilterTemplate}

@@ -27,7 +27,7 @@
         }
     },
     "eventStore": {
-        "tenants": {
+        "namespaces": {
             "recommendations": {
                 "title": "Recommendations"
             },

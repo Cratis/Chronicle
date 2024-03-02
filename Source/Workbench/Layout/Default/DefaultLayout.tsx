@@ -3,7 +3,7 @@
 
 import { LayoutContext, LayoutProvider } from './context/LayoutContext';
 import { generatePath, Outlet, useParams } from 'react-router-dom';
-import { TenantSelector } from './TenantSelector/TenantSelector';
+import { NamespaceSelector } from './NamespaceSelector/NamespaceSelector';
 import { IMenuItemGroup } from './Sidebar/MenuItem/MenuItem';
 import { MenuProvider } from './context/MenuContext';
 import { SidebarMenu } from './Sidebar/SidebarMenu';
@@ -21,7 +21,7 @@ interface IDefaultLayoutProps {
 export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayoutProps) {
     const params = useParams();
     const lmBasePath = generatePath(leftMenuBasePath ?? '', params);
-    const [tenantId, setTenantId] = useState<string>('default');
+    const [namespace, setNamespace] = useState<string>('default');
 
     return (
         <LayoutProvider>
@@ -44,13 +44,13 @@ export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayou
                             {!value.layoutConfig.leftSidebarHidden && (
                                 <aside className={css.appLeftSidebar}>
                                     <div className={css.sidebarContainer}>
-                                        <TenantSelector
-                                            onTenantSelected={(tenant) =>
-                                                setTenantId(tenant.id)
+                                        <NamespaceSelector
+                                            onNamespaceSelected={(namespace) =>
+                                                setNamespace(namespace.id)
                                             }
                                         />
                                         {leftMenuItems && (
-                                            <MenuProvider params={{ tenantId: tenantId }}>
+                                            <MenuProvider params={{ namespace: namespace }}>
                                                 <SidebarMenu
                                                     items={leftMenuItems}
                                                     basePath={lmBasePath}

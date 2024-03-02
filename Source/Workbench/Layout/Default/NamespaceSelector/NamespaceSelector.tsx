@@ -2,48 +2,48 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useEffect, useRef, useState } from "react";
-import css from './TenantSelector.module.css';
+import css from './NamespaceSelector.module.css';
 import { OverlayPanel } from "primereact/overlaypanel";
 import { useLayoutContext } from "../context/LayoutContext";
-import { CurrentTenant } from "./CurrentTenant";
-import { SelectTenant } from "./SelectTenant";
+import { CurrentNamespace } from "./CurrentNamespace";
+import { SelectNamespace } from "./SelectNamespace";
 
-export interface ITenant {
+export interface INamespace {
     id: string;
     name: string;
 }
 
-export interface ITenantSelectorProps extends React.HTMLAttributes<HTMLDivElement>{
-    onTenantSelected: (tenant: ITenant) => void;
+export interface INamespaceSelectorProps extends React.HTMLAttributes<HTMLDivElement>{
+    onNamespaceSelected: (namespace: INamespace) => void;
 }
 
-export const TenantSelector = ({ onTenantSelected, ...rest }: ITenantSelectorProps) => {
+export const NamespaceSelector = ({ onNamespaceSelected: onNamespaceSelected, ...rest }: INamespaceSelectorProps) => {
     const { layoutConfig } = useLayoutContext();
 
     const op = useRef<OverlayPanel>(null);
-    const [tenant, setTenant] = useState<ITenant>({
+    const [namespace, setNamespace] = useState<INamespace>({
         id: '1',
         name: 'Drammen Kommunale Pensjonskasse'
     });
 
-    const selectTenant = (tenant: ITenant) => {
-        setTenant(tenant);
+    const selectNamespace = (namespace: INamespace) => {
+        setNamespace(namespace);
         op?.current?.hide();
     }
 
     useEffect(() => {
-        onTenantSelected(tenant);
-    }, [tenant]);
+        onNamespaceSelected(namespace);
+    }, [namespace]);
     return (
         <div {...rest}>
-            <CurrentTenant compact={!layoutConfig.leftSidebarOpen}
-                           tenant={tenant} onClick={(e) => {
+            <CurrentNamespace compact={!layoutConfig.leftSidebarOpen}
+                           namespace={namespace} onClick={(e) => {
                 op?.current?.toggle(e, null)
             }}/>
 
             <OverlayPanel ref={op}
                           className={`${css.overlayPanel} ${layoutConfig.leftSidebarOpen ? css.openOverlayPanel : css.closedOverlayPanel}`}>
-                <SelectTenant onSelected={selectTenant}/>
+                <SelectNamespace onSelected={selectNamespace}/>
             </OverlayPanel>
         </div>);
 }

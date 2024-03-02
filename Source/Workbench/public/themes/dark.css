@@ -2,8 +2,8 @@
 
 @layer theme {
     :root {
-        --cratis-sidebar-tenant-bg: var(--shade500);
-        --cratis-sidebar-tenant-textColor: var(--shade000);
+        --cratis-sidebar-namespace-bg: var(--shade500);
+        --cratis-sidebar-space-textColor: var(--shade000);
         --cratis-sidebar-bg: var(--shade800);
         --cratis-sidebar-textColor: var(--shade000);
         --cratis-sidebar-menuitem-active-bg: var(--surface-c);

@@ -28,8 +28,8 @@ export const SequenceSelector = () => {
                     }} />
             </div>
             <ul className={css.sequenceList}>
-                {sequences.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())).map((tenant) => {
-                    return <li className={`p-2 ${css.sequenceListItem}`}>{tenant.name}</li>
+                {sequences.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())).map((namespace) => {
+                    return <li className={`p-2 ${css.sequenceListItem}`}>{namespace.name}</li>
                 })}
             </ul>
         </>

@@ -5,5 +5,5 @@ import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
 
 export const Jobs = () => {
-    return <Page title={strings.eventStore.tenants.jobs.title}/>;
+    return <Page title={strings.eventStore.namespaces.jobs.title}/>;
 };
