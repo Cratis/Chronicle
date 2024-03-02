@@ -15,16 +15,25 @@ import { Footer } from './Footer';
 import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
 import { DefaultLayoutViewModel } from './DefaultLayoutViewModel';
 import { useContext } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface IDefaultLayoutProps {
-    leftMenuItems?: IMenuItemGroup[];
-    leftMenuBasePath?: string;
+    menu?: IMenuItemGroup[];
+    basePath?: string;
 }
 
 export const DefaultLayout = withViewModel<DefaultLayoutViewModel, IDefaultLayoutProps>(DefaultLayoutViewModel, ({ viewModel, props }) => {
     const params = useParams();
-    const lmBasePath = generatePath(props.leftMenuBasePath ?? '', params);
+    const sidebarBasePath = generatePath(props.basePath ?? '', params);
     const layoutContext = useContext(LayoutContext);
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const namespaceSelected = (namespace: string) => {
+        viewModel.currentNamespace = namespace;
+        const newRoute = location.pathname.replace(params.namespace!, namespace);
+        navigate(newRoute);
+    }
 
     return (
 
@@ -42,13 +51,13 @@ export const DefaultLayout = withViewModel<DefaultLayoutViewModel, IDefaultLayou
                     <NamespaceSelector
                         namespaces={viewModel.namespaces}
                         currentNamespace={viewModel.currentNamespace}
-                        onNamespaceSelected={(namespace) => viewModel.currentNamespace = namespace}
+                        onNamespaceSelected={namespaceSelected}
                     />
-                    {props.leftMenuItems && (
+                    {props.menu && (
                         <MenuProvider params={{ namespace: viewModel.currentNamespace }}>
                             <SidebarMenu
-                                items={props.leftMenuItems}
-                                basePath={lmBasePath}
+                                items={props.menu}
+                                basePath={sidebarBasePath}
                             />
                         </MenuProvider>
                     )}

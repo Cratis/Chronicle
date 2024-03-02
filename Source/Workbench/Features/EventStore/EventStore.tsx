@@ -22,16 +22,16 @@ export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
-                { label: strings.mainMenu.recommendations, url: 'namespace/:namespace/recommendations', icon: mdIcons.MdInfo },
-                { label: strings.mainMenu.jobs, url: 'namespace/:namespace/jobs', icon: mdIcons.MdGroupWork },
-                { label: strings.mainMenu.sequences, url: 'namespace/:namespace/sequences', icon: mdIcons.MdDataArray },
-                { label: strings.mainMenu.observers, url: 'namespace/:namespace/observers', icon: mdIcons.MdAirlineStops },
+                { label: strings.mainMenu.recommendations, url: ':namespace/recommendations', icon: mdIcons.MdInfo },
+                { label: strings.mainMenu.jobs, url: ':namespace/jobs', icon: mdIcons.MdGroupWork },
+                { label: strings.mainMenu.sequences, url: ':namespace/sequences', icon: mdIcons.MdDataArray },
+                { label: strings.mainMenu.observers, url: ':namespace/observers', icon: mdIcons.MdAirlineStops },
                 {
                     label: strings.mainMenu.failedPartitions,
-                    url: 'namespace/:namespace/failed-partitions',
+                    url: ':namespace/failed-partitions',
                     icon: mdIcons.MdErrorOutline
                 },
-                { label: strings.mainMenu.identities, url: 'namespace/:namespace/identities', icon: mdIcons.MdPeople },
+                { label: strings.mainMenu.identities, url: ':namespace/identities', icon: mdIcons.MdPeople },
             ]
         },
         {
@@ -47,9 +47,9 @@ export const EventStore = () => {
     return (<>
         <Routes>
             <Route path=':eventStoreId'
-                   element={<DefaultLayout leftMenuItems={menuItems} leftMenuBasePath={'/event-store/:eventStoreId'}/>}>
+                   element={<DefaultLayout menu={menuItems} basePath={'/event-store/:eventStoreId'}/>}>
 
-                <Route path={'namespace/:namespace'}>
+                <Route path={':namespace'}>
                     <Route path={''} element={<Navigate to={'recommendations'}/>}/>
                     <Route path={'recommendations'} element={<Recommendations/>}/>
                     <Route path={'jobs'} element={<Jobs/>}/>
