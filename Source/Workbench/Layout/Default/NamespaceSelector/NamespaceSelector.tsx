@@ -6,27 +6,20 @@ import css from './NamespaceSelector.module.css';
 import { OverlayPanel } from "primereact/overlaypanel";
 import { useLayoutContext } from "../context/LayoutContext";
 import { CurrentNamespace } from "./CurrentNamespace";
-import { SelectNamespace } from "./SelectNamespace";
+import { InputText } from 'primereact/inputtext';
 
-export interface INamespace {
-    id: string;
-    name: string;
-}
-
-export interface INamespaceSelectorProps extends React.HTMLAttributes<HTMLDivElement>{
-    onNamespaceSelected: (namespace: INamespace) => void;
+export interface INamespaceSelectorProps extends React.HTMLAttributes<HTMLDivElement> {
+    onNamespaceSelected: (namespace: string) => void;
 }
 
 export const NamespaceSelector = ({ onNamespaceSelected: onNamespaceSelected, ...rest }: INamespaceSelectorProps) => {
     const { layoutConfig } = useLayoutContext();
+    const [search, setSearch] = useState<string>('');
 
     const op = useRef<OverlayPanel>(null);
-    const [namespace, setNamespace] = useState<INamespace>({
-        id: '1',
-        name: 'Drammen Kommunale Pensjonskasse'
-    });
+    const [namespace, setNamespace] = useState<string>("My-First-Namespace");
 
-    const selectNamespace = (namespace: INamespace) => {
+    const selectNamespace = (namespace: string) => {
         setNamespace(namespace);
         op?.current?.hide();
     }
@@ -34,16 +27,40 @@ export const NamespaceSelector = ({ onNamespaceSelected: onNamespaceSelected, ..
     useEffect(() => {
         onNamespaceSelected(namespace);
     }, [namespace]);
+
+    const allNamespaces: string[] = [
+        "My-First-Namespace",
+        "My-Second-Namespace",
+        "My-Third-Namespace"
+    ];
+
     return (
         <div {...rest}>
             <CurrentNamespace compact={!layoutConfig.leftSidebarOpen}
-                           namespace={namespace} onClick={(e) => {
-                op?.current?.toggle(e, null)
-            }}/>
+                namespace={namespace} onClick={(e) => {
+                    op?.current?.toggle(e, null)
+                }} />
 
             <OverlayPanel ref={op}
-                          className={`${css.overlayPanel} ${layoutConfig.leftSidebarOpen ? css.openOverlayPanel : css.closedOverlayPanel}`}>
-                <SelectNamespace onSelected={selectNamespace}/>
+                className={`${css.overlayPanel} ${layoutConfig.leftSidebarOpen ? css.openOverlayPanel : css.closedOverlayPanel}`}>
+
+                <div>
+                    <div className={'mb-2'}>
+                        <InputText value={search}
+                            placeholder={'Search for namespace'}
+                            onChange={(e) => {
+                                setSearch(e.target.value)
+                            }} />
+                    </div>
+                    <ul className={css.namespaceList}>
+                        {allNamespaces.filter((t) => t.toLowerCase().includes(search.toLowerCase())).map((namespace) => {
+                            return (
+                                <li onClick={() => selectNamespace(namespace)} className={`p-2 ${css.namespaceListItem}`}>
+                                    {namespace}
+                                </li>)
+                        })}
+                    </ul>
+                </div>
             </OverlayPanel>
         </div>);
 }

@@ -46,7 +46,7 @@ export function DefaultLayout({ leftMenuItems, leftMenuBasePath }: IDefaultLayou
                                     <div className={css.sidebarContainer}>
                                         <NamespaceSelector
                                             onNamespaceSelected={(namespace) =>
-                                                setNamespace(namespace.id)
+                                                setNamespace(namespace)
                                             }
                                         />
                                         {leftMenuItems && (

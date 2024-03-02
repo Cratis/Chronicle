@@ -3,12 +3,11 @@
 
 import css from "./NamespaceSelector.module.css";
 import { MdKeyboardArrowDown } from "react-icons/md";
-import { INamespace } from "./NamespaceSelector";
 import { HTMLAttributes, useEffect, useRef, useState } from "react";
 import { Tooltip } from "primereact/tooltip";
 
 export interface ICurrentNamespaceProps extends HTMLAttributes<HTMLDivElement> {
-    namespace: INamespace;
+    namespace: string;
     compact?: boolean;
 }
 
@@ -20,7 +19,7 @@ export const CurrentNamespace = ({ namespace: namespace, compact, ...rest }: ICu
         if (namespaceNameRef.current) {
             setIsEllipsisActive(namespaceNameRef.current.offsetWidth < namespaceNameRef.current.scrollWidth);
         }
-    }, [namespace.name]);
+    }, [namespace]);
 
     const getInitials = (name: string) => {
         const names = name.split(' ');
@@ -34,16 +33,16 @@ export const CurrentNamespace = ({ namespace: namespace, compact, ...rest }: ICu
         return <>
             <Tooltip target={`.${css.smallNamespaceWrapper}`}/>
             <div className={css.smallCurrentNamespace} {...rest} >
-                <div className={css.smallNamespaceWrapper} data-pr-tooltip={namespace.name}>
-                    <span className={css.namespaceName}>{getInitials(namespace.name)}</span>
+                <div className={css.smallNamespaceWrapper} data-pr-tooltip={namespace}>
+                    <span className={css.namespaceName}>{getInitials(namespace)}</span>
                 </div>
             </div>
         </>
     }
     return <>
         {isEllipsisActive && <Tooltip target={`.${css.currentNamespace}`}/>}
-        <div className={`${css.currentNamespace}`} {...rest} data-pr-tooltip={namespace.name}>
-            <span className={css.namespaceName} ref={namespaceNameRef}>{namespace.name}</span>
+        <div className={`${css.currentNamespace}`} {...rest} data-pr-tooltip={namespace}>
+            <span className={css.namespaceName} ref={namespaceNameRef}>{namespace}</span>
             <span><MdKeyboardArrowDown size={25}/></span>
         </div>
     </>;
