@@ -8,7 +8,7 @@ import { OverlayPanel } from "primereact/overlaypanel";
 import { useLayoutContext } from "../context/LayoutContext";
 import { CurrentNamespace } from "./CurrentNamespace";
 import { InputText } from 'primereact/inputtext';
-import { ItemsList } from '../../../Components/ItemsList/ItemsList';
+import { ItemsList } from 'Components/ItemsList/ItemsList';
 
 export interface INamespaceSelectorProps extends React.HTMLAttributes<HTMLDivElement> {
     namespaces: string[];
