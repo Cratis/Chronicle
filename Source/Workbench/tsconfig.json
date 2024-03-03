@@ -1,17 +1,67 @@
 {
-    "extends": "../../tsconfig.json",
     "compilerOptions": {
-        "baseUrl": ".",
-        "rootDir": ".",
+        "target": "ES2020",
+        "useDefineForClassFields": true,
+        "lib": [
+            "ES2020",
+            "DOM",
+            "DOM.Iterable"
+        ],
+        "module": "ESNext",
+        "skipLibCheck": true,
+        "moduleResolution": "bundler",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "noEmit": true,
+        "jsx": "react-jsx",
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "baseUrl": "./",
         "paths": {
             "API/*": [
                 "./API/*"
+            ],
+            "MVVM": [
+                "MVVM/index.ts"
+            ],
+            "MVVM/*": [
+                "MVVM/*"
+            ],
+            "Components/*": [
+                "Components/*"
+            ],
+            "Layout/*": [
+                "Layout/*"
+            ],
+            "Features/*": [
+                "Features/*"
+            ],
+            "Strings": [
+                "Strings"
             ]
-        },
+        }
     },
+    "include": [
+        "global.d.ts",
+        "API",
+        "Components",
+        "FakeData",
+        "Layout",
+        "MVVM",
+        "Utils",
+        "App.tsx",
+        "index.tsx",
+        "Features"
+    ],
     "exclude": [
-        "wwwroot",
-        "dist",
-        "**/for_*/**"
+    ],
+    "references": [
+        {
+            "path": "./tsconfig.node.json"
+        }
     ]
 }

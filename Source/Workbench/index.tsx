@@ -2,26 +2,29 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import 'reflect-metadata';
-import { createRoot } from 'react-dom/client';
+import { PrimeReactProvider } from 'primereact/api';
+import ReactDOM from 'react-dom/client';
+import 'primeicons/primeicons.css';
+import './Styles/tailwind.css';
+import './Styles/theme.css';
+import React from 'react';
+import App from "./App";
+import { configure as configureMobx } from 'mobx';
+import { Bindings } from './MVVM';
 
+import { FakeData } from './FakeData';
 
-import { App } from './App';
-import { BrowserRouter } from 'react-router-dom';
-import { CssBaseline, Paper, ThemeProvider } from '@mui/material';
-import { ModalProvider } from '@aksio/applications-mui';
+Bindings.initialize();
+FakeData.initialize();
 
-import { theme } from './theme';
+configureMobx({
+    enforceActions: 'never'
+});
 
-const root = createRoot(document.getElementById('root')!);
-root.render(
-    <BrowserRouter>
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <ModalProvider>
-                <Paper elevation={0} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <App />
-                </Paper>
-            </ModalProvider>
-        </ThemeProvider>
-    </BrowserRouter>
+ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+        <PrimeReactProvider value={{ ripple: true }}>
+            <App />
+        </PrimeReactProvider>
+    </React.StrictMode>
 );
