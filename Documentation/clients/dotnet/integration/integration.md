@@ -71,7 +71,7 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
 ### Model Projection
 
 To get to a comparable state we leverage projections. The projections are as any other projections in
-Aksio and leverages the projection engine found in [Cratis](https://github.com/cratis/cratis).
+Cratis and leverages the projection engine found in [Cratis](https://github.com/cratis/cratis).
 Its job is to describe how we go from events to a single model instance.
 The projection setup for integration is slightly different than for regular projections, as we're
 working concretely on instances.

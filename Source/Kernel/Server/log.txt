@@ -1,6 +1,6 @@
-Autofac.Core.DependencyResolutionException: An exception was thrown while activating Aksio.Cratis.Kernel.Engines.Compliance.JsonComplianceManager.\n
- ---> Autofac.Core.DependencyResolutionException: An exception was thrown while invoking the constructor 'Void .ctor(Aksio.Types.IInstancesOf`1[Aksio.Cratis.Kernel.Engines.Compliance.IJsonCompliancePropertyValueHandler])' on type 'JsonComplianceManager'.\n
- ---> Autofac.Core.DependencyResolutionException: An exception was thrown while activating Aksio.Cratis.Kernel.Engines.Compliance.GDPR.PIICompliancePropertyValueHandler.\n
+Autofac.Core.DependencyResolutionException: An exception was thrown while activating Cratis.Kernel.Engines.Compliance.JsonComplianceManager.\n
+ ---> Autofac.Core.DependencyResolutionException: An exception was thrown while invoking the constructor 'Void .ctor(Aksio.Types.IInstancesOf`1[Cratis.Kernel.Engines.Compliance.IJsonCompliancePropertyValueHandler])' on type 'JsonComplianceManager'.\n
+ ---> Autofac.Core.DependencyResolutionException: An exception was thrown while activating Cratis.Kernel.Engines.Compliance.GDPR.PIICompliancePropertyValueHandler.\n
  ---> Aksio.Execution.ExecutionContextNotSet: Execution context is not set\n
  at Aksio.Execution.ExecutionContextManager.GetCurrent()\n
  at Aksio.Applications.Autofac.SingletonPerMicroserviceComponentLifetime.FindScope(ISharingLifetimeScope mostNestedVisibleScope)\n
@@ -21,7 +21,7 @@ Autofac.Core.DependencyResolutionException: An exception was thrown while activa
  at Autofac.ResolutionExtensions.ResolveOptionalService(IComponentContext context, Service service, IEnumerable`1 parameters)\n
  at Aksio.Types.InstancesOf`1.GetEnumerator()+MoveNext()\n
  at System.Linq.Enumerable.ToDictionary[TSource,TKey,TElement](IEnumerable`1 source, Func`2 keySelector, Func`2 elementSelector, IEqualityComparer`1 comparer)\n
- at Aksio.Cratis.Kernel.Engines.Compliance.JsonComplianceManager..ctor(IInstancesOf`1 propertyValueHandlers)\n
+ at Cratis.Kernel.Engines.Compliance.JsonComplianceManager..ctor(IInstancesOf`1 propertyValueHandlers)\n
  at lambda_method21(Closure, Object[])\n
  at Autofac.Core.Activators.Reflection.BoundConstructor.Instantiate()\n
 

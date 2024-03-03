@@ -4,12 +4,12 @@ The event log is the primary event sequence in Cratis. It is the source of truth
 derive all other results from.
 
 Appending to it requires you to get a hold of the client representation of the event log and calling
-append on it. This is done by taking a dependency to `IEventLog` from the `Aksio.Cratis.Events` namespace.
+append on it. This is done by taking a dependency to `IEventLog` from the `Cratis.Events` namespace.
 
 Assuming you have an event as defined [here](./creating-an-event.md), you can do the following:
 
 ```csharp
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
 public class DebitAccounts
 {

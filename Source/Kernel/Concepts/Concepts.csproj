@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.Kernel.Concepts</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Kernel.Concepts</RootNamespace>
+        <AssemblyName>Cratis.Kernel.Concepts</AssemblyName>
+        <RootNamespace>Cratis.Kernel.Concepts</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

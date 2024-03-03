@@ -2,8 +2,8 @@
 
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
-        <AssemblyName>Aksio.Cratis.Kernel.Contracts</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Kernel.Contracts</RootNamespace>
+        <AssemblyName>Cratis.Kernel.Contracts</AssemblyName>
+        <RootNamespace>Cratis.Kernel.Contracts</RootNamespace>
         <NoWarn>$(NoWarn);CS8618</NoWarn>
     </PropertyGroup>
 

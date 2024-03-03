@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.Kernel.Services</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Kernel.Services</RootNamespace>
+        <AssemblyName>Cratis.Kernel.Services</AssemblyName>
+        <RootNamespace>Cratis.Kernel.Services</RootNamespace>
         <NoWarn>$(NoWarn);CS8618</NoWarn>
     </PropertyGroup>
 

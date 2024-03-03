@@ -25,7 +25,7 @@ services:
       - 27017:27017
 
   cratis:
-    image: aksioinsurtech/cratis:latest
+    image: cratis/cratis:latest
     ports:
       - 27017:27017
       - 8080:80
@@ -77,7 +77,7 @@ add the following:
         "MinimumLevel": {
             "Default": "Verbose",
             "Override": {
-                "Aksio": "Information",
+                "Cratis": "Information",
                 "Microsoft": "Warning",
                 "Microsoft.AspNetCore.HttpLogging": "Warning",
                 "Microsoft.Hosting.Lifetime": "Information",

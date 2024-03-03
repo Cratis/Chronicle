@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.Kernel.Projections.Specs</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Kernel.Projections</RootNamespace>
+        <AssemblyName>Cratis.Kernel.Projections.Specs</AssemblyName>
+        <RootNamespace>Cratis.Kernel.Projections</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

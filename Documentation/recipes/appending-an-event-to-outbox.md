@@ -5,14 +5,14 @@ to get right, so recommend looking at [projections](./projecting-to-outbox.md) f
 
 If appending directly is the correct approach for your use case, it is very similar to how
 the [appending to event log](./appending-an-event-to-event-log.md) works. You can do this anywhere you
-can take a dependency to the `IEventOutbox` type from the `Aksio.Cratis.Events` namespace.
+can take a dependency to the `IEventOutbox` type from the `Cratis.Events` namespace.
 For instance, that could be directly in your domain or in an observer that is reacting to private events.
 The latter would make it more decouple and is probably preferred from a systems maintenance perspective.
 
 Below is an example of
 
 ```csharp
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
 public class DebitAccountsBalance
 {

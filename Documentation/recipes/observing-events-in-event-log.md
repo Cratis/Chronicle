@@ -17,7 +17,7 @@ that recognizes two signatures:
 - `public Task <MethodName>(<EvenType> @event, EventContext context)`
 
 The latter signature includes the `EventContext` which gives you more details about the event,
-such as the unique identifier it was applied for (`EventSourceId`). This type is found in `Aksio.Cratis.Events.Store`.
+such as the unique identifier it was applied for (`EventSourceId`). This type is found in `Cratis.Events.Store`.
 
 In addition to this, the class itself needs to be adorned with an attribute telling the system
 it is an observer. The observers needs to be uniquely identified with a unique identifier.
@@ -27,8 +27,8 @@ of a [Guid](https://docs.microsoft.com/en-us/dotnet/api/system.guid?view=net-6.0
 The following is a sample of an observer:
 
 ```csharp
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Observation;
+using Cratis.EventSequences;
+using Cratis.Observation;
 
 [Observer("b195adfb-e743-4457-b295-5637368436e4")]
 public class DebitAccountObserver

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.Kernel.Grains</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Kernel.Grains</RootNamespace>
+        <AssemblyName>Cratis.Kernel.Grains</AssemblyName>
+        <RootNamespace>Cratis.Kernel.Grains</RootNamespace>
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
         <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\GeneratedFiles</CompilerGeneratedFilesOutputPath>
     </PropertyGroup>

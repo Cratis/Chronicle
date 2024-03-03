@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "Aksio.Cratis.Kernel.Server",
+    "title": "Cratis.Kernel.Server",
     "version": "1.0"
   },
   "paths": {
@@ -15,7 +15,7 @@
           {
             "name": "observerId",
             "in": "path",
-            "description": "The Aksio.Cratis.Observation.ObserverId of the observer it is for.",
+            "description": "The Cratis.Observation.ObserverId of the observer it is for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ObserverId"
@@ -23,7 +23,7 @@
           }
         ],
         "requestBody": {
-          "description": "The Aksio.Cratis.Events.AppendedEvent.",
+          "description": "The Cratis.Events.AppendedEvent.",
           "content": {
             "application/json": {
               "schema": {
@@ -59,7 +59,7 @@
           {
             "name": "microserviceId",
             "in": "path",
-            "description": "The Aksio.Cratis.Execution.MicroserviceId that is connecting.",
+            "description": "The Cratis.Execution.MicroserviceId that is connecting.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
@@ -92,7 +92,7 @@
           {
             "name": "microserviceId",
             "in": "path",
-            "description": "The Aksio.Cratis.Execution.MicroserviceId that is connecting.",
+            "description": "The Cratis.Execution.MicroserviceId that is connecting.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
@@ -109,7 +109,7 @@
           }
         ],
         "requestBody": {
-          "description": "Aksio.Cratis.Clients.ClientInformation to connect with.",
+          "description": "Cratis.Clients.ClientInformation to connect with.",
           "content": {
             "application/json": {
               "schema": {
@@ -391,7 +391,7 @@
           {
             "name": "microserviceId",
             "in": "path",
-            "description": "Aksio.Cratis.Execution.MicroserviceId to register for.",
+            "description": "Cratis.Execution.MicroserviceId to register for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
@@ -433,7 +433,7 @@
           {
             "name": "microserviceId",
             "in": "path",
-            "description": "The Aksio.Cratis.Execution.MicroserviceId to get event types for.",
+            "description": "The Cratis.Execution.MicroserviceId to get event types for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
@@ -483,7 +483,7 @@
           {
             "name": "microserviceId",
             "in": "query",
-            "description": "The Aksio.Cratis.Execution.MicroserviceId to get event type for.",
+            "description": "The Cratis.Execution.MicroserviceId to get event type for.",
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
             }
@@ -540,7 +540,7 @@
         ],
         "summary": "Add a microservice.",
         "requestBody": {
-          "description": "M:Aksio.Cratis.Kernel.Domain.Compliance.Microservices.Microservices.AddMicroservice(Aksio.Cratis.Kernel.Domain.Compliance.Microservices.AddMicroservice) payload.",
+          "description": "M:Cratis.Kernel.Domain.Compliance.Microservices.Microservices.AddMicroservice(Cratis.Kernel.Domain.Compliance.Microservices.AddMicroservice) payload.",
           "content": {
             "application/json": {
               "schema": {
@@ -615,7 +615,7 @@
           {
             "name": "microserviceId",
             "in": "path",
-            "description": "Aksio.Cratis.Execution.MicroserviceId for the microservice.",
+            "description": "Cratis.Execution.MicroserviceId for the microservice.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
@@ -656,7 +656,7 @@
           {
             "name": "microserviceId",
             "in": "path",
-            "description": "Aksio.Cratis.Execution.MicroserviceId to register for.",
+            "description": "Cratis.Execution.MicroserviceId to register for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
@@ -665,7 +665,7 @@
           {
             "name": "connectionId",
             "in": "path",
-            "description": "Aksio.Cratis.Clients.ConnectionId to register with.",
+            "description": "Cratis.Clients.ConnectionId to register with.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ConnectionId"
@@ -673,7 +673,7 @@
           }
         ],
         "requestBody": {
-          "description": "Collection of Aksio.Cratis.Observation.ClientObserverRegistration.",
+          "description": "Collection of Cratis.Observation.ClientObserverRegistration.",
           "content": {
             "application/json": {
               "schema": {
@@ -718,7 +718,7 @@
           {
             "name": "microserviceId",
             "in": "path",
-            "description": "Aksio.Cratis.Execution.MicroserviceId the observer is for.",
+            "description": "Cratis.Execution.MicroserviceId the observer is for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
@@ -727,7 +727,7 @@
           {
             "name": "tenantId",
             "in": "path",
-            "description": "Aksio.Cratis.Execution.TenantId the observer is for.",
+            "description": "Cratis.Execution.TenantId the observer is for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/TenantId"
@@ -736,7 +736,7 @@
           {
             "name": "observerId",
             "in": "path",
-            "description": "Aksio.Cratis.Observation.ObserverId to rewind.",
+            "description": "Cratis.Observation.ObserverId to rewind.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ObserverId"
@@ -760,7 +760,7 @@
           {
             "name": "microserviceId",
             "in": "path",
-            "description": "Aksio.Cratis.Execution.MicroserviceId the observers are for.",
+            "description": "Cratis.Execution.MicroserviceId the observers are for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
@@ -769,7 +769,7 @@
           {
             "name": "tenantId",
             "in": "path",
-            "description": "Aksio.Cratis.Execution.TenantId the observers are for.",
+            "description": "Cratis.Execution.TenantId the observers are for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/TenantId"
@@ -789,7 +789,7 @@
                       "$ref": "#/components/schemas/ObserverState"
                     }
                   },
-                  "description": "Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable."
+                  "description": "Represents an implementation of Cratis.Applications.Queries.IClientObservable."
                 }
               },
               "application/json": {
@@ -801,7 +801,7 @@
                       "$ref": "#/components/schemas/ObserverState"
                     }
                   },
-                  "description": "Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable."
+                  "description": "Represents an implementation of Cratis.Applications.Queries.IClientObservable."
                 }
               },
               "text/json": {
@@ -813,7 +813,7 @@
                       "$ref": "#/components/schemas/ObserverState"
                     }
                   },
-                  "description": "Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable."
+                  "description": "Represents an implementation of Cratis.Applications.Queries.IClientObservable."
                 }
               }
             }
@@ -828,7 +828,7 @@
         ],
         "summary": "Create and register a key.",
         "requestBody": {
-          "description": "M:Aksio.Cratis.Kernel.Domain.Compliance.GDPR.PII.CreateAndRegisterKeyFor(Aksio.Cratis.Kernel.Domain.Compliance.GDPR.CreateAndRegisterKeyFor) payload.",
+          "description": "M:Cratis.Kernel.Domain.Compliance.GDPR.PII.CreateAndRegisterKeyFor(Cratis.Kernel.Domain.Compliance.GDPR.CreateAndRegisterKeyFor) payload.",
           "content": {
             "application/json": {
               "schema": {
@@ -861,7 +861,7 @@
         ],
         "summary": "Delete PII for a person.",
         "requestBody": {
-          "description": "M:Aksio.Cratis.Kernel.Domain.Compliance.GDPR.PII.DeletePIIForPerson(Aksio.Cratis.Kernel.Domain.Compliance.GDPR.DeletePIIForPerson) payload.",
+          "description": "M:Cratis.Kernel.Domain.Compliance.GDPR.PII.DeletePIIForPerson(Cratis.Kernel.Domain.Compliance.GDPR.DeletePIIForPerson) payload.",
           "content": {
             "application/json": {
               "schema": {
@@ -906,7 +906,7 @@
                       "$ref": "#/components/schemas/Person"
                     }
                   },
-                  "description": "Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable."
+                  "description": "Represents an implementation of Cratis.Applications.Queries.IClientObservable."
                 }
               },
               "application/json": {
@@ -918,7 +918,7 @@
                       "$ref": "#/components/schemas/Person"
                     }
                   },
-                  "description": "Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable."
+                  "description": "Represents an implementation of Cratis.Applications.Queries.IClientObservable."
                 }
               },
               "text/json": {
@@ -930,7 +930,7 @@
                       "$ref": "#/components/schemas/Person"
                     }
                   },
-                  "description": "Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable."
+                  "description": "Represents an implementation of Cratis.Applications.Queries.IClientObservable."
                 }
               }
             }
@@ -997,7 +997,7 @@
           {
             "name": "microserviceId",
             "in": "path",
-            "description": "Aksio.Cratis.Execution.MicroserviceId to register for.",
+            "description": "Cratis.Execution.MicroserviceId to register for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
@@ -1039,7 +1039,7 @@
           {
             "name": "microserviceId",
             "in": "path",
-            "description": "The Aksio.Cratis.Execution.MicroserviceId to get projections for.",
+            "description": "The Cratis.Execution.MicroserviceId to get projections for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
@@ -1089,7 +1089,7 @@
           {
             "name": "microserviceId",
             "in": "path",
-            "description": "Aksio.Cratis.Execution.MicroserviceId to perform for.",
+            "description": "Cratis.Execution.MicroserviceId to perform for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
@@ -1098,7 +1098,7 @@
           {
             "name": "tenantId",
             "in": "path",
-            "description": "Aksio.Cratis.Execution.TenantId to perform for.",
+            "description": "Cratis.Execution.TenantId to perform for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/TenantId"
@@ -1106,7 +1106,7 @@
           }
         ],
         "requestBody": {
-          "description": "The details about the Aksio.Cratis.Kernel.Domain.Projections.ImmediateProjection.",
+          "description": "The details about the Cratis.Kernel.Domain.Projections.ImmediateProjection.",
           "content": {
             "application/json": {
               "schema": {
@@ -1159,7 +1159,7 @@
           {
             "name": "microserviceId",
             "in": "query",
-            "description": "The Aksio.Cratis.Execution.MicroserviceId to get projection collections for.",
+            "description": "The Cratis.Execution.MicroserviceId to get projection collections for.",
             "schema": {
               "$ref": "#/components/schemas/MicroserviceId"
             }
@@ -1225,7 +1225,7 @@
           {
             "name": "tenantId",
             "in": "path",
-            "description": "Aksio.Cratis.Execution.TenantId for the tenant to set for.",
+            "description": "Cratis.Execution.TenantId for the tenant to set for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/TenantId"
@@ -1267,7 +1267,7 @@
           {
             "name": "tenantId",
             "in": "path",
-            "description": "Aksio.Cratis.Execution.TenantId for the tenant to get for.",
+            "description": "Cratis.Execution.TenantId for the tenant to get for.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/TenantId"
@@ -1637,7 +1637,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Represents the generation of an Aksio.Cratis.Events.EventType."
+        "description": "Represents the generation of an Cratis.Events.EventType."
       },
       "EventHistogramEntry": {
         "type": "object",
@@ -1741,7 +1741,7 @@
           },
           "isSpecified": {
             "type": "boolean",
-            "description": "Check whether or not the Aksio.Cratis.Events.EventSourceId is specified.",
+            "description": "Check whether or not the Cratis.Events.EventSourceId is specified.",
             "readOnly": true
           }
         },
@@ -1882,7 +1882,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Defines a segment within a Aksio.Cratis.Properties.PropertyPath."
+        "description": "Defines a segment within a Cratis.Properties.PropertyPath."
       },
       "ImmediateProjection": {
         "type": "object",
@@ -1929,7 +1929,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Represents the result of an Aksio.Cratis.Kernel.Grains.Projections.IImmediateProjection."
+        "description": "Represents the result of an Cratis.Kernel.Grains.Projections.IImmediateProjection."
       },
       "JsonNode": {
         "type": "object",
@@ -2007,7 +2007,7 @@
           },
           "isSpecified": {
             "type": "boolean",
-            "description": "Check whether or not the Aksio.Cratis.Projections.ModelKey is specified.",
+            "description": "Check whether or not the Cratis.Projections.ModelKey is specified.",
             "readOnly": true
           }
         },
@@ -2398,7 +2398,7 @@
             "items": {
               "$ref": "#/components/schemas/EventTypeRegistration"
             },
-            "description": "Collection of Aksio.Cratis.Kernel.Domain.Projections.EventTypeRegistration.",
+            "description": "Collection of Cratis.Kernel.Domain.Projections.EventTypeRegistration.",
             "nullable": true
           }
         },
@@ -2413,7 +2413,7 @@
             "items": {
               "$ref": "#/components/schemas/ProjectionRegistration"
             },
-            "description": "Collection of Aksio.Cratis.Kernel.Domain.Projections.ProjectionRegistration.",
+            "description": "Collection of Cratis.Kernel.Domain.Projections.ProjectionRegistration.",
             "nullable": true
           }
         },
@@ -2455,14 +2455,14 @@
               "additionalProperties": {
                 "$ref": "#/components/schemas/StorageType"
               },
-              "description": "Represents the shared storage configuration for all <see cref=\"T:Aksio.Cratis.Configuration.StorageType\">storage types</see> within the system."
+              "description": "Represents the shared storage configuration for all <see cref=\"T:Cratis.Configuration.StorageType\">storage types</see> within the system."
             },
             "description": "The tenant specific configuration.",
             "nullable": true
           }
         },
         "additionalProperties": false,
-        "description": "Represents all storage configurations for all <see cref=\"T:Aksio.Cratis.Execution.MicroserviceId\">microservices</see> in the system."
+        "description": "Represents all storage configurations for all <see cref=\"T:Cratis.Execution.MicroserviceId\">microservices</see> in the system."
       },
       "StorageType": {
         "type": "object",

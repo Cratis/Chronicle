@@ -1,6 +1,6 @@
 # Contributing
 
-Before you start contributing, you should read our guidelines [here](https://github.com/aksio-insurtech/.github/blob/main/contributing.md).
+Before you start contributing, you should read our guidelines [here](https://github.com/cratis/.github/blob/main/contributing.md).
 
 ## Prerequisites
 
@@ -53,19 +53,16 @@ file and do the build / test run from within the IDE.
 ## Database
 
 Cratis is built using MongoDB as a storage engine. It leverages some features that require MongoDB be in cluster mode.
-For convenience running locally for development there is an [image](https://hub.docker.com/r/aksioinsurtech/mongodb)
+For convenience running locally for development there is an [image](https://hub.docker.com/r/cratis/mongodb)
 specifically set up with the features needed.
 
 ```shell
-docker run -p 27017:27017 aksioinsurtech/mongodb
+docker run -p 27017:27017 cratis/mongodb
 ```
 
 ## Backend
 
 The Cratis Kernel can be started by navigating your terminal to [/Source/Kernel/Server](../../Source/Kernel/Server)
-and run `dotnet run`.
-
-For running the Bank sample on top of this, navigate to [/Samples/Banking/Bank/Main](../../Samples/Banking/Bank/Main)
 and run `dotnet run`.
 
 If you're interested debugging through, there are a set VSCode launch configuration that can be used.
@@ -78,14 +75,9 @@ of the server and the bank sample.
 
 ### Frontend
 
-If you want to run the frontend of the bank sample in addition, you can start this by navigating your terminal to
-[/Samples/Banking/Bank/Web](../../Samples/Banking/Bank/Web) and then run `yarn start:dev`. This will start the
-WebPack devserver. You can then point your browser to [http://localhost:5100](http://localhost:5100).
-
 For the Kernel you can run the Workbench on top by navigating to the [./Source/Workbench](../../Source/Workbench) and
-then run `yarn start:dev`. You can then point your browser to [http://localhost:8080](http://localhost:8080).
+then run `yarn dev`. You can then point your browser to [http://localhost:9000](http://localhost:9000).
 
 ## Static Code Analysis
 
-All projects are built using the same static code analysis rules found [here](https://github.com/aksio-insurtech/Defaults).
-You can find the rule-sets [here](https://github.com/aksio-insurtech/Defaults/tree/main/Source/Defaults).
+All projects are built using the same static code analysis rules found at the root of the repository in a file called `.globalconfig`.

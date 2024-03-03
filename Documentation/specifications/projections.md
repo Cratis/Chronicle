@@ -71,7 +71,7 @@ async Task DebitAccountOpenedShouldProjectToExpectedProperties()
 
 ## Projection Specification For
 
-Building on top of the gherkin-ish type of approach in [Aksio Specifications](https://github.com/aksio-insurtech/Specifications),
+Building on top of the gherkin-ish type of approach in [Specifications](https://github.com/cratis/Specifications),
 there is a base class called `ProjectionSpecificationFor<>` that sets up and leverages the `ProjectionSpecificationContext<>`.
 This is exposed in a property called `context`.
 

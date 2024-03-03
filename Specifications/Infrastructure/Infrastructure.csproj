@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.Infrastructure.Specs</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Infrastructure</RootNamespace>
+        <AssemblyName>Cratis.Infrastructure.Specs</AssemblyName>
+        <RootNamespace>Cratis.Infrastructure</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

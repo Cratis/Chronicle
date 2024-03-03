@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.Kernel.Orleans.Specs</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Kernel.Orleans</RootNamespace>
+        <AssemblyName>Cratis.Kernel.Orleans.Specs</AssemblyName>
+        <RootNamespace>Cratis.Kernel.Orleans</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

@@ -1,6 +1,6 @@
-# Aksio Cratis
+# Cratis
 
-The goal of the Aksio Cratis project is to provide productivity platform in the event sourcing space.
+The goal of the Cratis project is to provide productivity platform in the event sourcing space.
 Built from the ground up it offers an event sourcing platform with tooling and an application development
 model aimed at solving common problems.
 

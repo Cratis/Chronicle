@@ -14,7 +14,7 @@ Out of the box there is a convention that includes the namespace in the model na
 When configuring the `ClientBuilder` you can use it in the following way
 
 ```csharp
-using Aksio.Cratis.Models;
+using Cratis.Models;
 
 clientBuilder.UseModelNameConvention(new NamespacedModelNameConvention());
 ```
@@ -37,8 +37,7 @@ string GetNameFor(Type type);
 ```
 
 ```csharp
-using Aksio.Cratis.Models;
-using Aksio.Strings;
+using Cratis.Models;
 using Humanizer;
 
 public class MyModelNameConvention : IModelNameConvention

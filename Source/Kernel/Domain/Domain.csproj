@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.Kernel.Domain</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Kernel.Domain</RootNamespace>
+        <AssemblyName>Cratis.Kernel.Domain</AssemblyName>
+        <RootNamespace>Cratis.Kernel.Domain</RootNamespace>
     </PropertyGroup>
 
     <Import Project="../ProxyGeneration.props"/>

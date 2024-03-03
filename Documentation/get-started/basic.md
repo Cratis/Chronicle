@@ -35,7 +35,7 @@ docker run -d \
     -p 8080:80 \
     -p 8081:81 \
     --add-host="host.docker.internal:host-gateway" \
-    aksioinsurtech/cratis:latest-development
+    cratis/cratis:latest-development
 ```
 
 This should yield something like the following:
@@ -46,7 +46,7 @@ e04e1c02819a96ae3f85a2b4579cb1cab8623625fc272ece857ef37397dcd322
 
 The **development** image of Cratis comes with a built in MongoDB instance.
 For production workloads you would typically use the regular image.
-All Cratis images can be found [here](https://hub.docker.com/r/aksioinsurtech/cratis).
+All Cratis images can be found [here](https://hub.docker.com/r/cratis/cratis).
 
 > Note: Cratis is as of version 9.4.3 using an HTTP based protocol. This requires the
 > Cratis server to be able to call the client using HTTP as well. Therefor we add the
@@ -69,7 +69,7 @@ dotnet new web
 You need to add the Cratis package, do so by running the following in the shell:
 
 ```shell
-dotnet add package Aksio.Cratis.AspNetCore
+dotnet add package Cratis.AspNetCore
 ```
 
 Open up the `Program.cs` file that was generated and change it to the following:
@@ -97,13 +97,13 @@ You should be seeing something like the following:
 
 ```shell
 Building...
-info: Aksio.Cratis.ClientBuilder[0]
+info: Cratis.ClientBuilder[0]
       Configuring Cratis client
-info: Aksio.Cratis.ClientBuilder[1]
+info: Cratis.ClientBuilder[1]
       Configuring services
-info: Aksio.Cratis.ClientBuilder[2]
+info: Cratis.ClientBuilder[2]
       Configuring compliance
-info: Aksio.Cratis.ClientBuilder[3]
+info: Cratis.ClientBuilder[3]
       Using single kernel client @ 'http://localhost:8080/'
 info: Microsoft.Hosting.Lifetime[14]
       Now listening on: http://localhost:5288
@@ -113,21 +113,21 @@ info: Microsoft.Hosting.Lifetime[0]
       Hosting environment: Development
 info: Microsoft.Hosting.Lifetime[0]
       Content root path: /Users/einari/Projects/Playground/CratisTutorial
-info: Aksio.Cratis.Connections.RestKernelConnection[14]
+info: Cratis.Connections.RestKernelConnection[14]
       Attempting to connect
-info: Aksio.Cratis.EventSequences.Outbox.OutboxProjectionsRegistrar[1]
+info: Cratis.EventSequences.Outbox.OutboxProjectionsRegistrar[1]
       Registering outbox projections
-info: Aksio.Cratis.Observation.ObserversRegistrar[0]
+info: Cratis.Observation.ObserversRegistrar[0]
       Registering observers
-info: Aksio.Cratis.Reducers.ReducersRegistrar[0]
+info: Cratis.Reducers.ReducersRegistrar[0]
       Registering reducers
-info: Aksio.Cratis.Projections.ProjectionsRegistrar[1]
+info: Cratis.Projections.ProjectionsRegistrar[1]
       Registering projections
-info: Aksio.Cratis.Schemas.SchemasConnectionLifecycleParticipant[1]
+info: Cratis.Schemas.SchemasConnectionLifecycleParticipant[1]
       Registering event types
-info: Aksio.Cratis.Connections.RestKernelConnection[11]
+info: Cratis.Connections.RestKernelConnection[11]
       Connected to Cratis Kernel
-info: Aksio.Cratis.Connections.RestKernelConnection[12]
+info: Cratis.Connections.RestKernelConnection[12]
       Setting up client ping
 ```
 
@@ -148,7 +148,7 @@ Lets add an event type called `ItemAddedToCart` by adding a file called `ItemAdd
 Add the following to it:
 
 ```csharp
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
 namespace ECommerce;
 
@@ -198,8 +198,8 @@ With the **read model** in place, we can move on to creating the actual reducer.
 Create a file called `CartReducer.cs` and add the following code to it:
 
 ```csharp
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Reducers;
+using Cratis.Events;
+using Cratis.Reducers;
 
 namespace ECommerce;
 
@@ -279,8 +279,8 @@ an instance of the `IEventLog`.
 Your entire `Program.cs` should now look like the following:
 
 ```csharp
-using Aksio.Cratis.Compliance.GDPR;
-using Aksio.Cratis.EventSequences;
+using Cratis.Compliance.GDPR;
+using Cratis.EventSequences;
 using ECommerce;
 
 var builder = WebApplication.CreateBuilder(args);

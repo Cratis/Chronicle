@@ -107,7 +107,7 @@ async Task SubsequentImportWithoutChangesShouldNotAppendAnyEvents()
 
 ## Adapter Specification For
 
-Building on top of the gherkin-ish type of approach in [Aksio Specifications](https://github.com/aksio-insurtech/Specifications),
+Building on top of the gherkin-ish type of approach in [Specifications](https://github.com/cratis/Specifications),
 there is a base class called `AdapterSpecificationFor<>` that sets up and leverages the `AdapterSpecificationContext<>`.
 This is exposed in a property called `context`.
 

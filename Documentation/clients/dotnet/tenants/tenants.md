@@ -18,7 +18,7 @@ The Cratis Kernel owns what tenants are configured. To get this information you 
 Below shows a simple ASP.NET controller that iterates all tenants and can then use the tenant identifier:
 
 ```csharp
-using Aksio.Cratis.Tenants;
+using Cratis.Tenants;
 
 [Route("/api/my-controller")]
 public class MyController : ControllerBase
@@ -45,8 +45,8 @@ Typically your code would probably want to delegate work to be done in the conte
 this can be accomplished by working with the execution context:
 
 ```csharp
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Tenants;
+using Cratis.Execution;
+using Cratis.Tenants;
 
 [Route("/api/my-controller")]
 public class MyController : ControllerBase
@@ -83,8 +83,8 @@ You can retrieve values by using the `ITenantConfiguration` interface and the `G
 key / value pairs for a specific tenant:
 
 ```csharp
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Tenants;
+using Cratis.Execution;
+using Cratis.Tenants;
 
 [Route("/api/my-controller")]
 public class MyController : ControllerBase

@@ -17,11 +17,11 @@ public record WithdrawalFromDebitAccountPerformed(double Amount);
 ````
 
 With a public event that communicates the balance, as defined [here](./creating-a-public-event.md)
-We can then drop in an implementation of `IOutboxProjections` from the `Aksio.Cratis.Events.Outbox`
+We can then drop in an implementation of `IOutboxProjections` from the `Cratis.Events.Outbox`
 namespace:
 
 ```csharp
-using Aksio.Cratis.Events.Outbox;
+using Cratis.Events.Outbox;
 
 public class DebitAccountsOutboxProjections : IOutboxProjections
 {

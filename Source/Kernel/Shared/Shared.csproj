@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
-        <AssemblyName>Aksio.Cratis.Kernel.Shared</AssemblyName>
-        <RootNamespace>Aksio.Cratis</RootNamespace>
+        <AssemblyName>Cratis.Kernel.Shared</AssemblyName>
+        <RootNamespace>Cratis</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

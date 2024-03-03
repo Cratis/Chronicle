@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.TestData</AssemblyName>
-        <RootNamespace>Aksio.Cratis.TestData</RootNamespace>
+        <AssemblyName>Cratis.TestData</AssemblyName>
+        <RootNamespace>Cratis.TestData</RootNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
         <OutputType>Exe</OutputType>
     </PropertyGroup>

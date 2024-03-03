@@ -1,5 +1,5 @@
 ---
-title: Aksio.Cratis.Kernel.Server v1.0
+title: Cratis.Kernel.Server v1.0
 language_tabs: []
 toc_footers: []
 includes: []
@@ -11,11 +11,11 @@ headingLevel: 2
 
 <!-- Generator: Widdershins v4.0.1 -->
 
-<h1 id="aksio-cratis-kernel-server">Aksio.Cratis.Kernel.Server v1.0</h1>
+<h1 id="cratis-kernel-server">Cratis.Kernel.Server v1.0</h1>
 
 > Scroll down for example requests and responses.
 
-<h1 id="aksio-cratis-kernel-server-clientobservers">ClientObservers</h1>
+<h1 id="cratis-kernel-server-clientobservers">ClientObservers</h1>
 
 ## post__.cratis_observers_{observerId}
 
@@ -75,8 +75,8 @@ headingLevel: 2
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|observerId|path|[ObserverId](#schemaobserverid)|true|The Aksio.Cratis.Observation.ObserverId of the observer it is for.|
-|body|body|[AppendedEvent](#schemaappendedevent)|false|The Aksio.Cratis.Events.AppendedEvent.|
+|observerId|path|[ObserverId](#schemaobserverid)|true|The Cratis.Observation.ObserverId of the observer it is for.|
+|body|body|[AppendedEvent](#schemaappendedevent)|false|The Cratis.Events.AppendedEvent.|
 
 <h3 id="post__.cratis_observers_{observerid}-responses">Responses</h3>
 
@@ -88,7 +88,7 @@ headingLevel: 2
 This operation does not require authentication
 </aside>
 
-<h1 id="aksio-cratis-kernel-server-connectedclients">ConnectedClients</h1>
+<h1 id="cratis-kernel-server-connectedclients">ConnectedClients</h1>
 
 ## post__api_clients_{microserviceId}_ping_{connectionId}
 
@@ -100,7 +100,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|The Aksio.Cratis.Execution.MicroserviceId that is connecting.|
+|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|The Cratis.Execution.MicroserviceId that is connecting.|
 |connectionId|path|[ConnectionId](#schemaconnectionid)|true|The unique identifier of the connection that is pinging.|
 
 <h3 id="post__api_clients_{microserviceid}_ping_{connectionid}-responses">Responses</h3>
@@ -132,9 +132,9 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|The Aksio.Cratis.Execution.MicroserviceId that is connecting.|
+|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|The Cratis.Execution.MicroserviceId that is connecting.|
 |connectionId|path|[ConnectionId](#schemaconnectionid)|true|The unique identifier of the connection.|
-|body|body|[ClientInformation](#schemaclientinformation)|false|Aksio.Cratis.Clients.ClientInformation to connect with.|
+|body|body|[ClientInformation](#schemaclientinformation)|false|Cratis.Clients.ClientInformation to connect with.|
 
 <h3 id="post__api_clients_{microserviceid}_connect_{connectionid}-responses">Responses</h3>
 
@@ -146,7 +146,7 @@ This operation does not require authentication
 This operation does not require authentication
 </aside>
 
-<h1 id="aksio-cratis-kernel-server-eventsequence">EventSequence</h1>
+<h1 id="cratis-kernel-server-eventsequence">EventSequence</h1>
 
 ## post__api_events_store_{microserviceId}_{tenantId}_sequence_{eventSequenceId}
 
@@ -303,13 +303,13 @@ Status Code **200**
 |»» type|[EventType](#schemaeventtype)|false|none|Represents the type of an event.|
 |»»» id|[EventTypeId](#schemaeventtypeid)|false|none|Represents the concept of the unique identifier of a type of event.|
 |»»»» value|string(uuid)|false|none|Gets or inits the underlying value for the instance.|
-|»»» generation|[EventGeneration](#schemaeventgeneration)|false|none|Represents the generation of an Aksio.Cratis.Events.EventType.|
+|»»» generation|[EventGeneration](#schemaeventgeneration)|false|none|Represents the generation of an Cratis.Events.EventType.|
 |»»»» value|integer(int32)|false|none|Gets or inits the underlying value for the instance.|
 |»»» isPublic|boolean|false|none|Whether or not the event type is considered a public event.|
 |» context|[EventContext](#schemaeventcontext)|false|none|Represents the context in which an event exists - typically what it was appended with.|
 |»» eventSourceId|[EventSourceId](#schemaeventsourceid)|false|none|Represents the unique identifier of an instance of an event source.|
 |»»» value|string¦null|false|none|Gets or inits the underlying value for the instance.|
-|»»» isSpecified|boolean|false|read-only|Check whether or not the Aksio.Cratis.Events.EventSourceId is specified.|
+|»»» isSpecified|boolean|false|read-only|Check whether or not the Cratis.Events.EventSourceId is specified.|
 |»» sequenceNumber|[EventSequenceNumber](#schemaeventsequencenumber)|false|none|Represents the sequence number within an event log for an event.|
 |»» occurred|string(date-time)|false|none|<see cref="T:System.DateTimeOffset">When</see> it occurred.|
 |»» validFrom|string(date-time)|false|none|<see cref="T:System.DateTimeOffset">When</see> event is considered valid from.|
@@ -393,7 +393,7 @@ Status Code **200**
 This operation does not require authentication
 </aside>
 
-<h1 id="aksio-cratis-kernel-server-eventsequences">EventSequences</h1>
+<h1 id="cratis-kernel-server-eventsequences">EventSequences</h1>
 
 ## get__api_events_store_sequences
 
@@ -438,7 +438,7 @@ Status Code **200**
 This operation does not require authentication
 </aside>
 
-<h1 id="aksio-cratis-kernel-server-eventtypes">EventTypes</h1>
+<h1 id="cratis-kernel-server-eventtypes">EventTypes</h1>
 
 ## post__api_events_store_{microserviceId}_types
 
@@ -478,7 +478,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Aksio.Cratis.Execution.MicroserviceId to register for.|
+|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Cratis.Execution.MicroserviceId to register for.|
 |body|body|[RegisterEventTypes](#schemaregistereventtypes)|false|The payload.|
 
 <h3 id="post__api_events_store_{microserviceid}_types-responses">Responses</h3>
@@ -501,7 +501,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|The Aksio.Cratis.Execution.MicroserviceId to get event types for.|
+|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|The Cratis.Execution.MicroserviceId to get event types for.|
 
 > Example responses
 
@@ -552,7 +552,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|query|[MicroserviceId](#schemamicroserviceid)|false|The Aksio.Cratis.Execution.MicroserviceId to get event type for.|
+|microserviceId|query|[MicroserviceId](#schemamicroserviceid)|false|The Cratis.Execution.MicroserviceId to get event type for.|
 |eventTypeId|path|[EventTypeId](#schemaeventtypeid)|true|Type to get for.|
 |microserviceId|path|string|true|none|
 
@@ -582,7 +582,7 @@ This operation does not require authentication
 This operation does not require authentication
 </aside>
 
-<h1 id="aksio-cratis-kernel-server-microservices">Microservices</h1>
+<h1 id="cratis-kernel-server-microservices">Microservices</h1>
 
 ## post__api_compliance_microservices
 
@@ -605,7 +605,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|body|body|[AddMicroservice](#schemaaddmicroservice)|false|M:Aksio.Cratis.Kernel.Domain.Compliance.Microservices.Microservices.AddMicroservice(Aksio.Cratis.Kernel.Domain.Compliance.Microservices.AddMicroservice) payload.|
+|body|body|[AddMicroservice](#schemaaddmicroservice)|false|M:Cratis.Kernel.Domain.Compliance.Microservices.Microservices.AddMicroservice(Cratis.Kernel.Domain.Compliance.Microservices.AddMicroservice) payload.|
 
 <h3 id="post__api_compliance_microservices-responses">Responses</h3>
 
@@ -673,7 +673,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Aksio.Cratis.Execution.MicroserviceId for the microservice.|
+|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Cratis.Execution.MicroserviceId for the microservice.|
 
 > Example responses
 
@@ -730,7 +730,7 @@ This operation does not require authentication
 This operation does not require authentication
 </aside>
 
-<h1 id="aksio-cratis-kernel-server-observers">Observers</h1>
+<h1 id="cratis-kernel-server-observers">Observers</h1>
 
 ## post__api_events_store_{microserviceId}_observers_register_{connectionId}
 
@@ -771,9 +771,9 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Aksio.Cratis.Execution.MicroserviceId to register for.|
-|connectionId|path|[ConnectionId](#schemaconnectionid)|true|Aksio.Cratis.Clients.ConnectionId to register with.|
-|body|body|[ClientObserverRegistration](#schemaclientobserverregistration)|false|Collection of Aksio.Cratis.Observation.ClientObserverRegistration.|
+|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Cratis.Execution.MicroserviceId to register for.|
+|connectionId|path|[ConnectionId](#schemaconnectionid)|true|Cratis.Clients.ConnectionId to register with.|
+|body|body|[ClientObserverRegistration](#schemaclientobserverregistration)|false|Collection of Cratis.Observation.ClientObserverRegistration.|
 
 <h3 id="post__api_events_store_{microserviceid}_observers_register_{connectionid}-responses">Responses</h3>
 
@@ -795,9 +795,9 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Aksio.Cratis.Execution.MicroserviceId the observer is for.|
-|tenantId|path|[TenantId](#schematenantid)|true|Aksio.Cratis.Execution.TenantId the observer is for.|
-|observerId|path|[ObserverId](#schemaobserverid)|true|Aksio.Cratis.Observation.ObserverId to rewind.|
+|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Cratis.Execution.MicroserviceId the observer is for.|
+|tenantId|path|[TenantId](#schematenantid)|true|Cratis.Execution.TenantId the observer is for.|
+|observerId|path|[ObserverId](#schemaobserverid)|true|Cratis.Observation.ObserverId to rewind.|
 
 <h3 id="post__api_events_store_{microserviceid}_observers_{observerid}_rewind-responses">Responses</h3>
 
@@ -819,8 +819,8 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Aksio.Cratis.Execution.MicroserviceId the observers are for.|
-|tenantId|path|[TenantId](#schematenantid)|true|Aksio.Cratis.Execution.TenantId the observers are for.|
+|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Cratis.Execution.MicroserviceId the observers are for.|
+|tenantId|path|[TenantId](#schematenantid)|true|Cratis.Execution.TenantId the observers are for.|
 
 > Example responses
 
@@ -914,7 +914,7 @@ This operation does not require authentication
 
 Status Code **200**
 
-*Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable.*
+*Represents an implementation of Cratis.Applications.Queries.IClientObservable.*
 
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
@@ -922,7 +922,7 @@ Status Code **200**
 |» eventTypes|[[EventType](#schemaeventtype)]¦null|false|none|Gets or sets the event types the observer is observing.|
 |»» id|[EventTypeId](#schemaeventtypeid)|false|none|Represents the concept of the unique identifier of a type of event.|
 |»»» value|string(uuid)|false|none|Gets or inits the underlying value for the instance.|
-|»» generation|[EventGeneration](#schemaeventgeneration)|false|none|Represents the generation of an Aksio.Cratis.Events.EventType.|
+|»» generation|[EventGeneration](#schemaeventgeneration)|false|none|Represents the generation of an Cratis.Events.EventType.|
 |»»» value|integer(int32)|false|none|Gets or inits the underlying value for the instance.|
 |»» isPublic|boolean|false|none|Whether or not the event type is considered a public event.|
 |» eventSequenceId|[EventSequenceId](#schemaeventsequenceid)|false|none|Represents the unique identifier of an event sequence.|
@@ -942,7 +942,7 @@ Status Code **200**
 |» failedPartitions|[[FailedObserverPartition](#schemafailedobserverpartition)]¦null|false|none|Gets or sets the failed partitions for the observer.|
 |»» eventSourceId|[EventSourceId](#schemaeventsourceid)|false|none|Represents the unique identifier of an instance of an event source.|
 |»»» value|string¦null|false|none|Gets or inits the underlying value for the instance.|
-|»»» isSpecified|boolean|false|read-only|Check whether or not the Aksio.Cratis.Events.EventSourceId is specified.|
+|»»» isSpecified|boolean|false|read-only|Check whether or not the Cratis.Events.EventSourceId is specified.|
 |»» sequenceNumber|[EventSequenceNumber](#schemaeventsequencenumber)|false|none|Represents the sequence number within an event log for an event.|
 |»» occurred|string(date-time)|false|none|Gets or sets the occurred time of the failure - if any.|
 |»» lastAttempt|string(date-time)|false|none|Gets or sets the occurred time of the failure - if any.|
@@ -982,7 +982,7 @@ Status Code **200**
 This operation does not require authentication
 </aside>
 
-<h1 id="aksio-cratis-kernel-server-pii">PII</h1>
+<h1 id="cratis-kernel-server-pii">PII</h1>
 
 ## post__api_compliance_gdpr_pii
 
@@ -1004,7 +1004,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|body|body|[CreateAndRegisterKeyFor](#schemacreateandregisterkeyfor)|false|M:Aksio.Cratis.Kernel.Domain.Compliance.GDPR.PII.CreateAndRegisterKeyFor(Aksio.Cratis.Kernel.Domain.Compliance.GDPR.CreateAndRegisterKeyFor) payload.|
+|body|body|[CreateAndRegisterKeyFor](#schemacreateandregisterkeyfor)|false|M:Cratis.Kernel.Domain.Compliance.GDPR.PII.CreateAndRegisterKeyFor(Cratis.Kernel.Domain.Compliance.GDPR.CreateAndRegisterKeyFor) payload.|
 
 <h3 id="post__api_compliance_gdpr_pii-responses">Responses</h3>
 
@@ -1036,7 +1036,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|body|body|[DeletePIIForPerson](#schemadeletepiiforperson)|false|M:Aksio.Cratis.Kernel.Domain.Compliance.GDPR.PII.DeletePIIForPerson(Aksio.Cratis.Kernel.Domain.Compliance.GDPR.DeletePIIForPerson) payload.|
+|body|body|[DeletePIIForPerson](#schemadeletepiiforperson)|false|M:Cratis.Kernel.Domain.Compliance.GDPR.PII.DeletePIIForPerson(Cratis.Kernel.Domain.Compliance.GDPR.DeletePIIForPerson) payload.|
 
 <h3 id="post__api_compliance_gdpr_pii_delete-responses">Responses</h3>
 
@@ -1048,7 +1048,7 @@ This operation does not require authentication
 This operation does not require authentication
 </aside>
 
-<h1 id="aksio-cratis-kernel-server-people">People</h1>
+<h1 id="cratis-kernel-server-people">People</h1>
 
 ## get__api_compliance_gdpr_people
 
@@ -1128,7 +1128,7 @@ This operation does not require authentication
 
 Status Code **200**
 
-*Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable.*
+*Represents an implementation of Cratis.Applications.Queries.IClientObservable.*
 
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
@@ -1289,7 +1289,7 @@ Status Code **200**
 This operation does not require authentication
 </aside>
 
-<h1 id="aksio-cratis-kernel-server-projections">Projections</h1>
+<h1 id="cratis-kernel-server-projections">Projections</h1>
 
 ## post__api_events_store_{microserviceId}_projections
 
@@ -1326,7 +1326,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Aksio.Cratis.Execution.MicroserviceId to register for.|
+|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Cratis.Execution.MicroserviceId to register for.|
 |body|body|[RegisterProjections](#schemaregisterprojections)|false|The registrations.|
 
 <h3 id="post__api_events_store_{microserviceid}_projections-responses">Responses</h3>
@@ -1349,7 +1349,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|The Aksio.Cratis.Execution.MicroserviceId to get projections for.|
+|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|The Cratis.Execution.MicroserviceId to get projections for.|
 
 > Example responses
 
@@ -1432,9 +1432,9 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Aksio.Cratis.Execution.MicroserviceId to perform for.|
-|tenantId|path|[TenantId](#schematenantid)|true|Aksio.Cratis.Execution.TenantId to perform for.|
-|body|body|[ImmediateProjection](#schemaimmediateprojection)|false|The details about the Aksio.Cratis.Kernel.Domain.Projections.ImmediateProjection.|
+|microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Cratis.Execution.MicroserviceId to perform for.|
+|tenantId|path|[TenantId](#schematenantid)|true|Cratis.Execution.TenantId to perform for.|
+|body|body|[ImmediateProjection](#schemaimmediateprojection)|false|The details about the Cratis.Kernel.Domain.Projections.ImmediateProjection.|
 
 > Example responses
 
@@ -1501,7 +1501,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|microserviceId|query|[MicroserviceId](#schemamicroserviceid)|false|The Aksio.Cratis.Execution.MicroserviceId to get projection collections for.|
+|microserviceId|query|[MicroserviceId](#schemamicroserviceid)|false|The Cratis.Execution.MicroserviceId to get projection collections for.|
 |projectionId|path|[ProjectionId](#schemaprojectionid)|true|Id of projection to get for.|
 |microserviceId|path|string|true|none|
 
@@ -1542,7 +1542,7 @@ Status Code **200**
 This operation does not require authentication
 </aside>
 
-<h1 id="aksio-cratis-kernel-server-tenantconfiguration">TenantConfiguration</h1>
+<h1 id="cratis-kernel-server-tenantconfiguration">TenantConfiguration</h1>
 
 ## post__api_configuration_tenants_{tenantId}
 
@@ -1563,7 +1563,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|tenantId|path|[TenantId](#schematenantid)|true|Aksio.Cratis.Execution.TenantId for the tenant to set for.|
+|tenantId|path|[TenantId](#schematenantid)|true|Cratis.Execution.TenantId for the tenant to set for.|
 |body|body|[StringStringKeyValuePair](#schemastringstringkeyvaluepair)|false|The key value pair to set.|
 
 <h3 id="post__api_configuration_tenants_{tenantid}-responses">Responses</h3>
@@ -1586,7 +1586,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|tenantId|path|[TenantId](#schematenantid)|true|Aksio.Cratis.Execution.TenantId for the tenant to get for.|
+|tenantId|path|[TenantId](#schematenantid)|true|Cratis.Execution.TenantId for the tenant to get for.|
 
 > Example responses
 
@@ -1621,7 +1621,7 @@ Status Code **200**
 This operation does not require authentication
 </aside>
 
-<h1 id="aksio-cratis-kernel-server-tenants">Tenants</h1>
+<h1 id="cratis-kernel-server-tenants">Tenants</h1>
 
 ## get__api_configuration_tenants
 
@@ -2240,7 +2240,7 @@ Represents the context in which an event exists - typically what it was appended
 
 ```
 
-Represents the generation of an Aksio.Cratis.Events.EventType.
+Represents the generation of an Cratis.Events.EventType.
 
 ### Properties
 
@@ -2428,7 +2428,7 @@ Represents the unique identifier of an instance of an event source.
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
 |value|string¦null|false|none|Gets or inits the underlying value for the instance.|
-|isSpecified|boolean|false|read-only|Check whether or not the Aksio.Cratis.Events.EventSourceId is specified.|
+|isSpecified|boolean|false|read-only|Check whether or not the Cratis.Events.EventSourceId is specified.|
 
 <h2 id="tocS_EventType">EventType</h2>
 <!-- backwards compatibility -->
@@ -2457,7 +2457,7 @@ Represents the type of an event.
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
 |id|[EventTypeId](#schemaeventtypeid)|false|none|Represents the concept of the unique identifier of a type of event.|
-|generation|[EventGeneration](#schemaeventgeneration)|false|none|Represents the generation of an Aksio.Cratis.Events.EventType.|
+|generation|[EventGeneration](#schemaeventgeneration)|false|none|Represents the generation of an Cratis.Events.EventType.|
 |isPublic|boolean|false|none|Whether or not the event type is considered a public event.|
 
 <h2 id="tocS_EventTypeId">EventTypeId</h2>
@@ -2623,7 +2623,7 @@ Represents the state used for failed observers.
 
 ```
 
-Defines a segment within a Aksio.Cratis.Properties.PropertyPath.
+Defines a segment within a Cratis.Properties.PropertyPath.
 
 ### Properties
 
@@ -2720,7 +2720,7 @@ Represents the payload for performing an immediate projection.
 
 ```
 
-Represents the result of an Aksio.Cratis.Kernel.Grains.Projections.IImmediateProjection.
+Represents the result of an Cratis.Kernel.Grains.Projections.IImmediateProjection.
 
 ### Properties
 
@@ -2879,7 +2879,7 @@ Represents the unique identifier of an instance of an event source.
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
 |value|string¦null|false|none|Gets or inits the underlying value for the instance.|
-|isSpecified|boolean|false|read-only|Check whether or not the Aksio.Cratis.Projections.ModelKey is specified.|
+|isSpecified|boolean|false|read-only|Check whether or not the Cratis.Projections.ModelKey is specified.|
 
 <h2 id="tocS_ModelName">ModelName</h2>
 <!-- backwards compatibility -->
@@ -3485,7 +3485,7 @@ Represents an encapsulation of a property in the system - used for accessing pro
 |---|---|---|---|---|
 |path|string¦null|false|none|Gets the full path of the property.|
 |segments|[[IPropertyPathSegment](#schemaipropertypathsegment)]¦null|false|read-only|Gets the segments the full property path consists of.|
-|lastSegment|[IPropertyPathSegment](#schemaipropertypathsegment)|false|none|Defines a segment within a Aksio.Cratis.Properties.PropertyPath.|
+|lastSegment|[IPropertyPathSegment](#schemaipropertypathsegment)|false|none|Defines a segment within a Cratis.Properties.PropertyPath.|
 |isRoot|boolean|false|read-only|Gets whether or not this is the root path.|
 |isSet|boolean|false|read-only|Gets whether or not the value is set.|
 
@@ -3560,7 +3560,7 @@ Payload for registering multiple event types.
 
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
-|types|[[EventTypeRegistration](#schemaeventtyperegistration)]¦null|false|none|Collection of Aksio.Cratis.Kernel.Domain.Projections.EventTypeRegistration.|
+|types|[[EventTypeRegistration](#schemaeventtyperegistration)]¦null|false|none|Collection of Cratis.Kernel.Domain.Projections.EventTypeRegistration.|
 
 <h2 id="tocS_RegisterProjections">RegisterProjections</h2>
 <!-- backwards compatibility -->
@@ -3599,7 +3599,7 @@ Represents the payload for registering projections.
 
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
-|projections|[[ProjectionRegistration](#schemaprojectionregistration)]¦null|false|none|Collection of Aksio.Cratis.Kernel.Domain.Projections.ProjectionRegistration.|
+|projections|[[ProjectionRegistration](#schemaprojectionregistration)]¦null|false|none|Collection of Cratis.Kernel.Domain.Projections.ProjectionRegistration.|
 
 <h2 id="tocS_SocialSecurityNumber">SocialSecurityNumber</h2>
 <!-- backwards compatibility -->
@@ -3668,7 +3668,7 @@ Represents the payload for registering projections.
 
 ```
 
-Represents all storage configurations for all <see cref="T:Aksio.Cratis.Execution.MicroserviceId">microservices</see> in the system.
+Represents all storage configurations for all <see cref="T:Cratis.Execution.MicroserviceId">microservices</see> in the system.
 
 ### Properties
 
@@ -3677,7 +3677,7 @@ Represents all storage configurations for all <see cref="T:Aksio.Cratis.Executio
 |shared|object¦null|false|none|The shared database connection configurations for the microservice.|
 |» **additionalProperties**|[StorageType](#schemastoragetype)|false|none|Represents the configuration for a specific shared storage type.|
 |tenants|object¦null|false|none|The tenant specific configuration.|
-|» **additionalProperties**|object|false|none|Represents the shared storage configuration for all <see cref="T:Aksio.Cratis.Configuration.StorageType">storage types</see> within the system.|
+|» **additionalProperties**|object|false|none|Represents the shared storage configuration for all <see cref="T:Cratis.Configuration.StorageType">storage types</see> within the system.|
 |»» **additionalProperties**|[StorageType](#schemastoragetype)|false|none|Represents the configuration for a specific shared storage type.|
 
 <h2 id="tocS_StorageType">StorageType</h2>

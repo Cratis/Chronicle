@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.Kernel.Grains.Specs</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Kernel.Grains</RootNamespace>
+        <AssemblyName>Cratis.Kernel.Grains.Specs</AssemblyName>
+        <RootNamespace>Cratis.Kernel.Grains</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

@@ -46,7 +46,7 @@ dotnet counters ps
 Find the process for the Kernel:
 
 ```shell
- 2483  Aksio.Cratis.Ke  /Source/Kernel/Server/bin/Debug/net6.0/Aksio.Cratis.Kernel.Server
+ 2483  Cratis.Ke  /Source/Kernel/Server/bin/Debug/net6.0/Cratis.Kernel.Server
 ```
 
 Then use the process id as parameter for the monitor:

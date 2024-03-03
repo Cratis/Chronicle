@@ -27,4 +27,4 @@ RUN ./copy-server-files.sh
 RUN rm appsettings.Development.json
 RUN rm ./cratis.json
 
-ENTRYPOINT ["./Aksio.Cratis.Kernel.Server"]
+ENTRYPOINT ["./Cratis.Kernel.Server"]

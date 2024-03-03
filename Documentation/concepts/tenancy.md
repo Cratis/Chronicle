@@ -1,6 +1,6 @@
 # Tenancy
 
-Aksio Cratis has been designed with the concept of multi-tenancy from the ground up.
+Cratis has been designed with the concept of multi-tenancy from the ground up.
 
 ## What is a tenant
 
@@ -14,7 +14,7 @@ but all their data segregated from each other.
 Rather than setting up a full unique environment per tenant, we want to share the expensive
 resources and scale these according to traffic. Compute cycles are the most expensive in
 any data-center, while storage is the cheapest. It makes sense from a monetary standpoint to
-then optimize for this scenario. With microservices being at the heart of Aksio, we can
+then optimize for this scenario. With microservices being at the heart of Cratis, we can
 control density of the services in a fine-grained manner as well - packing the most compute
 out of the virtual and physical machines they run on.
 

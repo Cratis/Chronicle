@@ -13,7 +13,7 @@ client and in fact one can be defining events outside of code, leveraging the RE
 API and in the future, other clients for other programming languages.
 
 With C# you define an event simply by creating a `record` and adorning it with the
-attribute `[EventType]` located in the `Aksio.Cratis.Events` namespace.
+attribute `[EventType]` located in the `Cratis.Events` namespace.
 The first and required parameter it takes on the attribute is the unique identifier in
 the form of a string representation of a [Guid](https://docs.microsoft.com/en-us/dotnet/api/system.guid?view=net-6.0).
 

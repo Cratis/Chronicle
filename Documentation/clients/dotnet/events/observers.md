@@ -5,7 +5,7 @@ By adding an attribute in front of the handler class, it will automatically be d
 the system will figure out which methods will be handling what events.
 
 ```csharp
-using Aksio.Cratis.Observation;
+using Cratis.Observation;
 
 [Observer("a5a55a35-1846-4386-b752-4d9a3da7aa10")]
 public class MyObserver
@@ -34,8 +34,8 @@ They are discovered automatically from their interface type and configured at st
 For instance, lets say you want to create a middleware that logs something before and after handle:
 
 ```csharp
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Observation;
+using Cratis.Events;
+using Cratis.Observation;
 
 public class MyObserverMiddleware : IObserverMiddleware
 {
