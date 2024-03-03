@@ -3,4 +3,9 @@
 
 namespace Aksio.Cratis.Kernel.Configuration;
 
+/// <summary>
+/// Represents the configuration of a tenant.
+/// </summary>
+/// <param name="Id">The unique identifier of the tenant.</param>
+/// <param name="Name">The name of the tenant.</param>
 public record TenantInfo(TenantId Id, string Name);

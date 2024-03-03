@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Integration;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Kernel.Contracts.Projections;
+using Aksio.Cratis.Models;
 
 namespace Aksio.Cratis.Specifications.Integration;
 

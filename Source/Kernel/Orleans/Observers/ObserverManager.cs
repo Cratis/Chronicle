@@ -8,6 +8,8 @@ using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Orleans.Observers;
 
+#pragma warning disable SA1402 // File may only contain a single type
+
 /// <summary>
 /// Represents a system that maintains a collection of observers.
 /// </summary>

@@ -3,8 +3,10 @@
 
 using System.Diagnostics;
 using Aksio.Cratis.Boot;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences.Inboxes;
 using Aksio.Cratis.Kernel.Configuration;
+using Aksio.Cratis.Kernel.Contracts.Events;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
@@ -12,6 +14,9 @@ using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Projections;
 using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Observation;
+using Aksio.Cratis.Schemas;
+using NJsonSchema;
+using IEventTypes = Aksio.Cratis.Events.IEventTypes;
 using IObservers = Aksio.Cratis.Kernel.Grains.Observation.IObservers;
 
 namespace Aksio.Cratis.Kernel.Server;
@@ -24,6 +29,8 @@ public class BootProcedure : IPerformBootProcedure
     readonly IServiceProvider _serviceProvider;
     readonly IGrainFactory _grainFactory;
     readonly KernelConfiguration _configuration;
+    readonly IEventTypes _eventTypes;
+    readonly IJsonSchemaGenerator _schemaGenerator;
     readonly ILogger<BootProcedure> _logger;
 
     /// <summary>
@@ -32,16 +39,22 @@ public class BootProcedure : IPerformBootProcedure
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting services.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
     /// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
+    /// <param name="eventTypes"><see cref="IEventTypes"/> for registering.</param>
+    /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="logger">Logger for logging.</param>
     public BootProcedure(
         IServiceProvider serviceProvider,
         IGrainFactory grainFactory,
         KernelConfiguration configuration,
+        IEventTypes eventTypes,
+        IJsonSchemaGenerator schemaGenerator,
         ILogger<BootProcedure> logger)
     {
         _serviceProvider = serviceProvider;
         _grainFactory = grainFactory;
         _configuration = configuration;
+        _eventTypes = eventTypes;
+        _schemaGenerator = schemaGenerator;
         _logger = logger;
     }
 
@@ -53,10 +66,12 @@ public class BootProcedure : IPerformBootProcedure
             var eventTypeRegistrations = _eventTypes.AllClrTypes.Select(_ =>
             {
                 var type = _;
-                return new EventTypeRegistration(
-                    _eventTypes.GetEventTypeFor(type)!,
-                    type.Name,
-                    JsonNode.Parse(_schemaGenerator.Generate(type).ToJson())!);
+                return new EventTypeRegistration
+                {
+                    Type = _eventTypes.GetEventTypeFor(type)!.ToContract(),
+                    FriendlyName = type.Name,
+                    Schema = _schemaGenerator.Generate(type).ToJson()
+                };
             });
 
             var storage = _serviceProvider.GetRequiredService<IStorage>();
@@ -69,9 +84,9 @@ public class BootProcedure : IPerformBootProcedure
 
                 foreach (var eventTypeRegistration in eventTypeRegistrations)
                 {
-                    var schema = await JsonSchema.FromJsonAsync(eventTypeRegistration.Schema.ToJsonString());
+                    var schema = await JsonSchema.FromJsonAsync(eventTypeRegistration.Schema);
                     await eventStoreStorage.EventTypes.Register(
-                        eventTypeRegistration.Type,
+                        eventTypeRegistration.Type.ToKernel(),
                         eventTypeRegistration.FriendlyName,
                         schema);
                 }

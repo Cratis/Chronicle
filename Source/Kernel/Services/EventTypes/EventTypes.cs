@@ -1,8 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Contracts.Events;
 using Aksio.Cratis.Kernel.Storage;
-using Microsoft.AspNetCore.Mvc;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Services.Events;
@@ -26,10 +27,10 @@ public class EventTypes : IEventTypes
     /// <inheritdoc/>
     public async Task Register(RegisterEventTypesRequest request)
     {
-        foreach (var eventType in payload.Types)
+        foreach (var eventType in request.Types)
         {
-            var schema = await JsonSchema.FromJsonAsync(eventType.Schema.ToJsonString());
-            await _storage.GetEventStore((string)microserviceId).EventTypes.Register(eventType.Type, eventType.FriendlyName, schema);
+            var schema = await JsonSchema.FromJsonAsync(eventType.Schema);
+            await _storage.GetEventStore(request.EventStoreName).EventTypes.Register(eventType.Type.ToKernel(), eventType.FriendlyName, schema);
         }
     }
 }

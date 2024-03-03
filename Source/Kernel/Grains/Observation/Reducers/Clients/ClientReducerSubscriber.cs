@@ -82,6 +82,8 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
+        await Task.CompletedTask;
+
         /*
         foreach (var @event in events)
         {

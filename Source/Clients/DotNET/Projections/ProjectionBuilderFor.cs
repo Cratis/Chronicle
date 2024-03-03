@@ -3,8 +3,8 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.EventTypes;
+using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Schemas;
 

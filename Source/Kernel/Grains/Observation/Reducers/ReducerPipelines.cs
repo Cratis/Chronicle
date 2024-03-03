@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Kernel.Storage.Sinks;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Observation.Reducers;
 using NJsonSchema;
 

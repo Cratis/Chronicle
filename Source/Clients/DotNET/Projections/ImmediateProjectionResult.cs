@@ -5,6 +5,8 @@ using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Projections;
 
+#pragma warning disable SA1402 // File may only contain a single type
+
 /// <summary>
 /// Represents the result of an immediate projection.
 /// </summary>

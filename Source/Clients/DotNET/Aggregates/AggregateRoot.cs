@@ -8,6 +8,8 @@ using Aksio.Cratis.EventSequences;
 
 namespace Aksio.Cratis.Aggregates;
 
+#pragma warning disable SA1402 // File may only contain a single type
+
 /// <summary>
 /// Represents an implementation of <see cref="IAggregateRoot"/>.
 /// </summary>

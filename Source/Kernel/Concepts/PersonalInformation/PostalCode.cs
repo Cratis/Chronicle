@@ -5,4 +5,8 @@ using Aksio.Cratis.Compliance.GDPR;
 
 namespace Aksio.Cratis.Kernel.Concepts.Compliance.PersonalInformation;
 
+/// <summary>
+/// Represents the concept of a postal code.
+/// </summary>
+/// <param name="Value">The actual string value.</param>
 public record PostalCode(string Value) : PIIConceptAs<string>(Value);

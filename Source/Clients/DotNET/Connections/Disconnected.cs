@@ -6,4 +6,5 @@ namespace Aksio.Cratis.Connections;
 /// <summary>
 /// Delegate for when the connection is disconnected.
 /// </summary>
+/// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
 public delegate Task Disconnected();

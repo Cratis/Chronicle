@@ -23,4 +23,4 @@ public record EventCompensation(
     IdentityId CausedBy,
     DateTimeOffset Occurred,
     DateTimeOffset ValidFrom,
-    Dictionary<EventGeneration, BsonDocument> Content);
+    IDictionary<EventGeneration, BsonDocument> Content);

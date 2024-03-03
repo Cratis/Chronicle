@@ -14,8 +14,8 @@ using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Kernel.Storage.Sinks;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Objects;
-using Aksio.Cratis.Projections;
 using Aksio.Cratis.Sinks;
 
 namespace Aksio.Cratis.Kernel.Grains.Sinks.Outbox;

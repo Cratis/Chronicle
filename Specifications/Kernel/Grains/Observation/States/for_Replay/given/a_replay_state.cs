@@ -9,6 +9,7 @@ using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Kernel.Storage.Jobs;
 using Aksio.Cratis.Kernel.Storage.Observation;
 using Microsoft.Extensions.Logging;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Replay.given;
 
@@ -50,6 +51,7 @@ public class a_replay_state : Specification
             new(MicroserviceId.Unspecified, TenantId.Development, EventSequenceId.Log),
             Enumerable.Empty<EventType>(),
             typeof(object),
+            SiloAddress.Zero,
             string.Empty);
 
         observer.Setup(_ => _.GetSubscription()).Returns(() => Task.FromResult(subscription));

@@ -8,8 +8,6 @@ using Aksio.Strings;
 
 namespace Aksio.Cratis.Kernel.Projections.Expressions.given;
 
-public record MyEvent(int Something, string SomethingElse);
-
 public class an_appended_event : Specification
 {
     protected AppendedEvent @event;

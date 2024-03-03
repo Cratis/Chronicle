@@ -10,6 +10,7 @@ using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Projections.Expressions.Keys;
 using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;

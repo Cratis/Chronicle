@@ -5,6 +5,18 @@ using Aksio.Cratis.Kernel.Concepts.Compliance.PersonalInformation;
 
 namespace Aksio.Cratis.Kernel.Read.Compliance.GDPR;
 
+/// <summary>
+/// Represents a person.
+/// </summary>
+/// <param name="Id">Unique identifier of the person.</param>
+/// <param name="SocialSecurityNumber"><see cref="SocialSecurityNumber"/> for the person.</param>
+/// <param name="FirstName"><see cref="FirstName"/> for the person.</param>
+/// <param name="LastName"><see cref="LastName"/> for the person.</param>
+/// <param name="Address"><see cref="Address"/> for the person.</param>
+/// <param name="City"><see cref="City"/> for the person.</param>
+/// <param name="PostalCode"><see cref="PostalCode"/> for the person.</param>
+/// <param name="Country"><see cref="Country"/> for the person.</param>
+/// <param name="PersonalInformation">Collection of any additional <see cref="PersonalInformation"/> for the person.</param>
 public record Person(
     PersonId Id,
     SocialSecurityNumber SocialSecurityNumber,

@@ -3,4 +3,9 @@
 
 namespace Aksio.Cratis.Kernel.Read.EventSequences;
 
+/// <summary>
+/// Represents information about an event sequence.
+/// </summary>
+/// <param name="Id">Identifier of the event sequence.</param>
+/// <param name="Name">Name of the sequence.</param>
 public record EventSequenceInformation(string Id, string Name);

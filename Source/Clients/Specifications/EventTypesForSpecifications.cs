@@ -26,15 +26,14 @@ public class EventTypesForSpecifications : IEventTypes
         _eventTypes = types.ToDictionary(_ => _, _ => _.GetEventType());
         _clrTypesByEventType = _eventTypes.ToDictionary(_ => _.Value.Id, _ => _.Key);
 
-        All = _eventTypes.Values.ToImmutableList();
         AllClrTypes = _clrTypesByEventType.Values.ToImmutableList();
     }
 
     /// <inheritdoc/>
-    public IImmutableList<EventType> All { get; }
+    public IImmutableList<Type> AllClrTypes { get; }
 
     /// <inheritdoc/>
-    public IImmutableList<Type> AllClrTypes { get; }
+    public Task Discover() => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Type GetClrTypeFor(EventTypeId eventTypeId) => _clrTypesByEventType[eventTypeId];
@@ -55,6 +54,9 @@ public class EventTypesForSpecifications : IEventTypes
         EnsureEventType(clrType);
         return _eventTypes.ContainsKey(clrType);
     }
+
+    /// <inheritdoc/>
+    public Task Register() => throw new NotImplementedException();
 
     void EnsureEventType(Type clrType)
     {

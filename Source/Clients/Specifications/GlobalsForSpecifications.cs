@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Schemas;
 using Aksio.Types;
 
 namespace Aksio.Cratis.Specifications;
@@ -16,7 +18,12 @@ public static class GlobalsForSpecifications
         ClientArtifactsProvider = new DefaultClientArtifactsProvider(
             new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
-        EventTypes = new Cratis.Events.EventTypes(ClientArtifactsProvider);
+        EventTypes = new Cratis.Events.EventTypes(
+            new NullEventStore(),
+            new JsonSchemaGenerator(new ComplianceMetadataResolver(
+                new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
+                new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>())),
+            ClientArtifactsProvider);
     }
 
     /// <summary>

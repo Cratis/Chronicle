@@ -3,6 +3,8 @@
 
 namespace Aksio.Cratis.Objects.for_ObjectExtensions;
 
+#pragma warning disable SA1649 // File name should match first type name
+
 public record TopLevel(FirstLevel? FirstLevel);
 public record FirstLevel(IEnumerable<SecondLevel>? SecondLevel, string SomeProperty);
 public record SecondLevel(string Identifier, ThirdLevel? ThirdLevel);

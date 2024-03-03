@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Client;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Contracts.EventSequences;
 
 namespace Aksio.Cratis.Aggregates.for_AggregateRootStateFactory.given;
 

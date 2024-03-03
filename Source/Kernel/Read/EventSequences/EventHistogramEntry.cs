@@ -3,4 +3,9 @@
 
 namespace Aksio.Cratis.Kernel.Read.EventSequences;
 
+/// <summary>
+/// Represents the entry in an event histogram.
+/// </summary>
+/// <param name="Date">Date of the sampling.</param>
+/// <param name="Count">Number of events.</param>
 public record EventHistogramEntry(DateTimeOffset Date, uint Count);

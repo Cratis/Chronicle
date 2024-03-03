@@ -25,7 +25,6 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientObserver"/> class.
     /// </summary>
-    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientObserver(
@@ -65,11 +64,5 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
         var key = new ObserverKey(_observerKey.MicroserviceId, _observerKey.TenantId, _observerKey.EventSequenceId);
         var observer = GrainFactory.GetGrain<IObserver>(id, key);
         observer.Unsubscribe();
-    }
-
-    async Task HandleConnectedClientsSubscription(object state)
-    {
-        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
-        await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
     }
 }

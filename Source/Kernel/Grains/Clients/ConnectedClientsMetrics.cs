@@ -21,7 +21,7 @@ public class ConnectedClientsMetrics : IConnectedClientsMetrics
     /// <param name="meter">Meter for the Kernel.</param>
     public ConnectedClientsMetrics(Meter meter)
     {
-        _connectedClients = meter.CreateObservableGauge($"cratis-connected-clients", () => _connectedClientsCount, description: "Number of connected clients");
+        _connectedClients = meter.CreateObservableGauge("cratis-connected-clients", () => _connectedClientsCount, description: "Number of connected clients");
     }
 
     /// <inheritdoc/>

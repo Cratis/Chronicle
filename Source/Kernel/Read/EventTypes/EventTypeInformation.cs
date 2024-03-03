@@ -3,4 +3,10 @@
 
 namespace Aksio.Cratis.Kernel.Read.EventTypes;
 
+/// <summary>
+/// Represents information about an event type.
+/// </summary>
+/// <param name="Identifier">The identifier of the event type.</param>
+/// <param name="Name">Name of the event type.</param>
+/// <param name="Generations">Number of generations.</param>
 public record EventTypeInformation(string Identifier, string Name, uint Generations);

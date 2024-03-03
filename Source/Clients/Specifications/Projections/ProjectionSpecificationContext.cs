@@ -8,6 +8,7 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
+using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Projections;
 using Aksio.Cratis.Kernel.Projections.Expressions;
@@ -19,7 +20,6 @@ using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Kernel.Storage.Sinks.InMemory;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Json;
@@ -78,7 +78,9 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
             new KeyExpressionResolvers(eventValueProviderExpressionResolvers),
             new ExpandoObjectConverter(typeFormats),
             new EventStoreNamespaceStorageForSpecifications(_eventSequenceStorage));
-        _projection = factory.CreateFrom(Definition).GetAwaiter().GetResult();
+
+        // TODO: Circle back to this when we have conversions from Kernel definition to Proto definition of a projection definition
+        _projection = factory.CreateFrom(null!).GetAwaiter().GetResult();
 
         var objectComparer = new ObjectComparer();
 

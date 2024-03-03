@@ -5,4 +5,8 @@ using Aksio.Cratis.Compliance.GDPR;
 
 namespace Aksio.Cratis.Kernel.Concepts.Compliance.PersonalInformation;
 
+/// <summary>
+/// Represents the concept of an address.
+/// </summary>
+/// <param name="Value">Value of the address.</param>
 public record Address(string Value) : PIIConceptAs<string>(Value);

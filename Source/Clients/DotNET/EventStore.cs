@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
@@ -62,7 +62,7 @@ public class EventStore : IEventStore
         EventStoreName = eventStoreName;
         TenantId = tenantId;
         Connection = connection;
-        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
+        EventTypes = new Events.EventTypes(this, schemaGenerator, clientArtifactsProvider);
 
         _eventSerializer = new EventSerializer(
             clientArtifactsProvider,

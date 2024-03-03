@@ -30,5 +30,5 @@ public record Event(
     DateTimeOffset Occurred,
     DateTimeOffset ValidFrom,
     EventSourceId EventSourceId,
-    Dictionary<string, BsonDocument> Content,
+    IDictionary<string, BsonDocument> Content,
     IEnumerable<EventCompensation> Compensations);

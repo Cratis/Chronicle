@@ -6,7 +6,7 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Storage.Sinks;
-using Aksio.Cratis.Projections;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Sinks;
 using MongoDB.Bson;
 using MongoDB.Driver;

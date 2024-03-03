@@ -3,4 +3,9 @@
 
 namespace Aksio.Cratis.Kernel.Read.Projections;
 
+/// <summary>
+/// Represents information about projection collections.
+/// </summary>
+/// <param name="Name">Name of projection.</param>
+/// <param name="DocumentCount">Count of documents.</param>
 public record ProjectionCollection(string Name, int DocumentCount);

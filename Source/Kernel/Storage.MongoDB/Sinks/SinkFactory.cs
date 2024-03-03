@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Kernel.Storage.Sinks;
-using Aksio.Cratis.Projections;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Sinks;
 

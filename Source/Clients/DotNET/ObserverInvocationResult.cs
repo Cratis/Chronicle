@@ -6,7 +6,7 @@ using Aksio.Cratis.Events;
 namespace Aksio.Cratis.Observation;
 
 /// <summary>
-/// Represents the result from <see cref="IClientObservers"/>.
+/// Represents the result from invoking an observer.
 /// </summary>
 /// <param name="LastSuccessfullyObservedEvent">The sequence number of the last successful observed event.</param>
 /// <param name="Exception">Optional exception if it was errored.</param>

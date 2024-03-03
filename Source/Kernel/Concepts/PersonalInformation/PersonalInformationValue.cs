@@ -5,4 +5,8 @@ using Aksio.Cratis.Compliance.GDPR;
 
 namespace Aksio.Cratis.Kernel.Concepts.Compliance.PersonalInformation;
 
+/// <summary>
+/// Represents the concept of a value holding personal information.
+/// </summary>
+/// <param name="Value">The actual string value.</param>
 public record PersonalInformationValue(string Value) : PIIConceptAs<string>(Value);

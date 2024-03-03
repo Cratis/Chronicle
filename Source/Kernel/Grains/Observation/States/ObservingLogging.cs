@@ -10,6 +10,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 
 #pragma warning disable SA1600 // Elements should be documented
 #pragma warning disable MA0048 // File name must match type name
+#pragma warning disable SA1402 // File may only contain a single type
 
 internal static partial class ObservingLogMessages
 {

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
+using Aksio.Cratis.Models;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Projections.Expressions.Keys.for_CompositeKeyExpressionResolver.given;
