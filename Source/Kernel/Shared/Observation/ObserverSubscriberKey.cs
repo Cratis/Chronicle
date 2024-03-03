@@ -14,8 +14,6 @@ namespace Cratis.Observation;
 /// <param name="EventSequenceId">The event sequence.</param>
 /// <param name="EventSourceId">The event source identifier - partition.</param>
 /// <param name="SiloAddress">The string representation of the address to the Orleans Silo the subscriber grain should be running on.</param>
-/// <param name="SourceMicroserviceId">Optional source Microservice identifier. Typically used for Inbox.</param>
-/// <param name="SourceTenantId">Optional source Tenant identifier. Typically used for Inbox.</param>
 /// <remarks>
 /// The silo address must match the silo that is typically hosting the actual receiver of events.
 /// This is to avoid network hops when sending events to an observer, e.g. a client.
@@ -25,9 +23,7 @@ public record ObserverSubscriberKey(
     TenantId TenantId,
     EventSequenceId EventSequenceId,
     EventSourceId EventSourceId,
-    string SiloAddress,
-    MicroserviceId? SourceMicroserviceId = default,
-    TenantId? SourceTenantId = default)
+    string SiloAddress)
 {
     /// <summary>
     /// Implicitly convert from <see cref="ObserverKey"/> to string.
@@ -38,11 +34,6 @@ public record ObserverSubscriberKey(
     /// <inheritdoc/>
     public override string ToString()
     {
-        if (SourceMicroserviceId is not null && SourceTenantId is not null)
-        {
-            return $"{MicroserviceId}+{TenantId}+{EventSequenceId}+{SiloAddress}+{SourceMicroserviceId}+{SourceTenantId}";
-        }
-
         return $"{MicroserviceId}+{TenantId}+{EventSequenceId}+{EventSourceId}+{SiloAddress}";
     }
 
@@ -60,15 +51,7 @@ public record ObserverSubscriberKey(
         var eventSourceId = (EventSourceId)elements[3];
         var siloAddress = elements[4];
 
-        MicroserviceId? sourceMicroserviceId = null;
-        TenantId? sourceTenantId = null;
-        if (elements.Length > 5)
-        {
-            sourceMicroserviceId = (MicroserviceId)elements[5];
-            sourceTenantId = (TenantId)elements[6];
-        }
-
-        return new(microserviceId, tenantId, eventSequenceId, eventSourceId, siloAddress, sourceMicroserviceId, sourceTenantId);
+        return new(microserviceId, tenantId, eventSequenceId, eventSourceId, siloAddress);
     }
 
     /// <summary>

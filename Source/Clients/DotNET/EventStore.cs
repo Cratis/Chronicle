@@ -77,15 +77,6 @@ public class EventStore : IEventStore
             causationManager,
             identityProvider);
 
-        EventOutbox = new EventOutbox(
-            eventStoreName,
-            @namespace,
-            connection,
-            EventTypes,
-            _eventSerializer,
-            causationManager,
-            identityProvider);
-
         Observers = new Observers(
             this,
             EventTypes,
@@ -121,9 +112,6 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IEventLog EventLog { get; }
-
-    /// <inheritdoc/>
-    public IEventOutbox EventOutbox { get; }
 
     /// <inheritdoc/>
     public IObservers Observers { get; }

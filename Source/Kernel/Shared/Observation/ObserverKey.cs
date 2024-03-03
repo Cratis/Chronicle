@@ -11,14 +11,10 @@ namespace Cratis.Observation;
 /// <param name="MicroserviceId">The Microservice identifier.</param>
 /// <param name="TenantId">The Tenant identifier.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
-/// <param name="SourceMicroserviceId">Optional source Microservice identifier. Typically used for Inbox.</param>
-/// <param name="SourceTenantId">Optional source Tenant identifier. Typically used for Inbox.</param>
 public record ObserverKey(
     MicroserviceId MicroserviceId,
     TenantId TenantId,
-    EventSequenceId EventSequenceId,
-    MicroserviceId? SourceMicroserviceId = default,
-    TenantId? SourceTenantId = default)
+    EventSequenceId EventSequenceId)
 {
     /// <summary>
     /// Gets the empty <see cref="ObserverKey"/>.
@@ -34,11 +30,6 @@ public record ObserverKey(
     /// <inheritdoc/>
     public override string ToString()
     {
-        if (SourceMicroserviceId is not null && SourceTenantId is not null)
-        {
-            return $"{MicroserviceId}+{TenantId}+{EventSequenceId}+{SourceMicroserviceId}+{SourceTenantId}";
-        }
-
         return $"{MicroserviceId}+{TenantId}+{EventSequenceId}";
     }
 
@@ -53,14 +44,7 @@ public record ObserverKey(
         var microserviceId = (MicroserviceId)elements[0];
         var tenantId = (TenantId)elements[1];
         var eventSequenceId = (EventSequenceId)elements[2];
-        MicroserviceId? sourceMicroserviceId = null;
-        TenantId? sourceTenantId = null;
-        if (elements.Length > 3)
-        {
-            sourceMicroserviceId = (MicroserviceId)elements[3];
-            sourceTenantId = (TenantId)elements[4];
-        }
 
-        return new(microserviceId, tenantId, eventSequenceId, sourceMicroserviceId, sourceTenantId);
+        return new(microserviceId, tenantId, eventSequenceId);
     }
 }

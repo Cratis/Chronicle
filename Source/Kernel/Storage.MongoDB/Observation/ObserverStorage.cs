@@ -120,9 +120,7 @@ public class ObserverStorage : IObserverStorage
         state.Handled,
         Enumerable.Empty<FailedPartition>());
 
-    string GetKeyFrom(ObserverId observerId, ObserverKey key) => key.SourceMicroserviceId is not null ?
-        $"{key.EventSequenceId} : {observerId} : {key.SourceMicroserviceId}" :
-        $"{key.EventSequenceId} : {observerId}";
+    string GetKeyFrom(ObserverId observerId, ObserverKey key) => $"{key.EventSequenceId} : {observerId}";
 
     FilterDefinition<ObserverState> GetKeyFilter(ObserverId observerId, ObserverKey key) =>
         Builders<ObserverState>.Filter.Eq(new StringFieldDefinition<ObserverState, string>("_id"), GetKeyFrom(observerId, key));

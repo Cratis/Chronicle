@@ -24,12 +24,7 @@ public enum ObserverType
     Projection = 2,
 
     /// <summary>
-    /// Inbox type of observer.
-    /// </summary>
-    Inbox = 3,
-
-    /// <summary>
     /// Reducer type of observer.
     /// </summary>
-    Reducer = 4
+    Reducer = 3
 }

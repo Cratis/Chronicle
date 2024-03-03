@@ -14,11 +14,10 @@ namespace Cratis.Specifications.Integration;
 /// </summary>
 /// <typeparam name="TModel">Type of model.</typeparam>
 /// <typeparam name="TExternalModel">Type of external model.</typeparam>
-public class AdapterSpecificationContext<TModel, TExternalModel> : IHaveEventLog, IHaveEventOutbox, IDisposable
+public class AdapterSpecificationContext<TModel, TExternalModel> : IHaveEventLog, IDisposable
 {
     readonly IImportOperations<TModel, TExternalModel> _importOperations;
     readonly ProjectionSpecificationContext<TModel> _projectionSpecificationContext;
-    readonly EventOutboxForSpecifications _outbox = new();
     int _eventCountBeforeImport;
 
     /// <summary>
@@ -39,7 +38,6 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IHaveEventLog
             mapper,
             objectComparer,
             EventLog,
-            EventOutbox,
             new NullCausationManager());
     }
 
@@ -47,13 +45,7 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IHaveEventLog
     public IEventLog EventLog => _projectionSpecificationContext.EventLog;
 
     /// <inheritdoc/>
-    public IEventOutbox EventOutbox => _outbox;
-
-    /// <inheritdoc/>
     public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _projectionSpecificationContext.AppendedEvents;
-
-    /// <inheritdoc/>
-    public IEnumerable<AppendedEventForSpecifications> AppendedEventsToOutbox => _outbox.AppendedEvents;
 
     /// <summary>
     /// Gets the <see cref="IAdapterProjectionFor{TModel}"/> used.

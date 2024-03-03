@@ -34,7 +34,7 @@ public static class Program
             .ConfigureCpuBoundWorkers()
             .UseMongoDB()
             .UseAksio(mvcOptions => mvcOptions.Filters.Add<KernelReadyResourceFilter>(0))
-            .UseCratis(_ => _.InKernel())
+            .UseCratis()
             .UseOrleans(_ => _
                 .UseCluster()
                 .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()

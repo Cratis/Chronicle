@@ -27,7 +27,6 @@ public class no_changes : all_dependencies_for<SomeEvent>
             mapper.Object,
             objects_comparer.Object,
             event_log.Object,
-            event_outbox.Object,
             causation_manager.Object);
     }
 }

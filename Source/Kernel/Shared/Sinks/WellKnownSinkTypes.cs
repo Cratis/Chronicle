@@ -22,9 +22,4 @@ public static class WellKnownSinkTypes
     /// Gets the identifier of the MongoDB projection sink.
     /// </summary>
     public static readonly SinkTypeId MongoDB = "22202c41-2be1-4547-9c00-f0b1f797fd75";
-
-    /// <summary>
-    /// Gets the identifier of the outbox event sequence sink.
-    /// </summary>
-    public static readonly SinkTypeId Outbox = "0b36103d-2f76-4a1f-a9f9-b9828aa017c1";
 }

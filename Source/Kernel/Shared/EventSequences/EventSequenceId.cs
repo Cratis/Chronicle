@@ -20,16 +20,6 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     public static readonly EventSequenceId Log = Guid.Empty;
 
     /// <summary>
-    /// The <see cref="EventSequenceId"/> representing the default outbox.
-    /// </summary>
-    public static readonly EventSequenceId Outbox = Guid.Parse("ae99de1e-b19f-4a33-a5c4-3908508ce59f");
-
-    /// <summary>
-    /// The <see cref="EventSequenceId"/> representing the default inbox.
-    /// </summary>
-    public static readonly EventSequenceId Inbox = Guid.Parse("2b608a79-77d2-4ccf-af43-4c37dee46592");
-
-    /// <summary>
     /// The name of the sequence representing the system sequence.
     /// </summary>
     /// <remarks>
@@ -38,7 +28,7 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     public const string System = "system";
 
     /// <summary>
-    /// The <see cref="EventSequenceId"/> representing the default inbox.
+    /// The <see cref="EventSequenceId"/> representing the system event sequence.
     /// </summary>
     public static readonly EventSequenceId SystemId = Guid.Parse("cf3612a4-48fe-462a-af3e-2bd9ad6f6825");
 
@@ -46,16 +36,6 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     /// Get whether or not this is the default log event sequence.
     /// </summary>
     public bool IsEventLog => this == Log;
-
-    /// <summary>
-    /// Get whether or not this is the default outbox event sequence.
-    /// </summary>
-    public bool IsOutbox => this == Outbox;
-
-    /// <summary>
-    /// Get whether or not this is the default outbox event sequence.
-    /// </summary>
-    public bool IsInbox => this == Inbox;
 
     /// <summary>
     /// Implicitly convert from a string representation of a <see cref="Guid"/> to <see cref="EventSequenceId"/>.

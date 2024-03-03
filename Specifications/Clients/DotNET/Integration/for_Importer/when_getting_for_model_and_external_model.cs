@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using AutoMapper;
 using Cratis.Auditing;
 using Cratis.Changes;
 using Cratis.EventSequences;
-using AutoMapper;
 
 namespace Cratis.Integration.for_Importer;
 
@@ -12,7 +12,6 @@ public class when_getting_for_model_and_external_model : Specification
 {
     Mock<IAdapters> adapters;
     Mock<IEventLog> event_log;
-    Mock<IEventOutbox> event_outbox;
     Mock<IAdapterFor<Model, ExternalModel>> adapter;
     Mock<IAdapterProjectionFor<Model>> projection;
     Mock<IMapper> mapper;
@@ -27,7 +26,6 @@ public class when_getting_for_model_and_external_model : Specification
     {
         adapters = new();
         event_log = new();
-        event_outbox = new();
         adapter = new();
         projection = new();
         mapper = new();
@@ -38,7 +36,7 @@ public class when_getting_for_model_and_external_model : Specification
         adapters.Setup(_ => _.GetMapperFor<Model, ExternalModel>()).Returns(mapper.Object);
 
         object_comparer = new();
-        importer = new(adapters.Object, object_comparer.Object, event_log.Object, event_outbox.Object, causation_manager.Object);
+        importer = new(adapters.Object, object_comparer.Object, event_log.Object, causation_manager.Object);
     }
 
     void Because() => operations = importer.For<Model, ExternalModel>();

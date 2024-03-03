@@ -15,7 +15,7 @@ public sealed class ReducerAttribute : Attribute
     /// Initializes a new instance of <see cref="ReducerAttribute"/>.
     /// </summary>
     /// <param name="reducerIdAsString"><see cref="ReducerId"/> represented as string. Must be a valid Guid.</param>
-    /// <param name="eventSequence">Optional the name of the event sequence to observe, this will take precedence over inbox.</param>
+    /// <param name="eventSequence">Optional the name of the event sequence to observe. Defaults to the event log.</param>
     /// <param name="isActive">Optional whether or not the reducer is active or not. If its passive, it won't run actively on the Kernel.</param>
     public ReducerAttribute(string reducerIdAsString, string? eventSequence = default, bool isActive = true)
     {

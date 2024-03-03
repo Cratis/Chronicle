@@ -6,7 +6,6 @@ using Aksio.Types;
 using Cratis.Aggregates;
 using Cratis.Compliance;
 using Cratis.Events;
-using Cratis.EventSequences.Outbox;
 using Cratis.Integration;
 using Cratis.Observation;
 using Cratis.Projections;
@@ -37,7 +36,6 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
         Adapters = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAdapterFor<,>)) && !_.IsGenericType).ToArray();
         Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
         ImmediateProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IImmediateProjectionFor<>))).ToArray();
-        OutboxProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IOutboxProjections))).ToArray();
         Observers = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<ObserverAttribute>()).ToArray();
         ObserverMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IObserverMiddleware))).ToArray();
         Reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
@@ -53,9 +51,6 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
 
     /// <inheritdoc/>
     public IEnumerable<Type> ImmediateProjections { get; }
-
-    /// <inheritdoc/>
-    public IEnumerable<Type> OutboxProjections { get; }
 
     /// <inheritdoc/>
     public IEnumerable<Type> Adapters { get; }

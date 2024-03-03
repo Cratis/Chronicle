@@ -40,11 +40,6 @@ public interface IEventStore
     IEventLog EventLog { get; }
 
     /// <summary>
-    /// Gets the <see cref="IEventOutbox"/> event sequence.
-    /// </summary>
-    IEventOutbox EventOutbox { get; }
-
-    /// <summary>
     /// Gets the <see cref="IObservers"/> for the event store.
     /// </summary>
     IObservers Observers { get; }

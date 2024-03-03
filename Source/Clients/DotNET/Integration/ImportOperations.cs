@@ -41,7 +41,6 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     readonly Subject<ImportContext<TModel, TExternalModel>> _importContexts;
     readonly IObjectComparer _objectComparer;
     readonly IEventSequence _eventLog;
-    readonly IEventSequence _eventOutbox;
     readonly ICausationManager _causationManager;
 
     /// <summary>
@@ -52,7 +51,6 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     /// <param name="mapper"><see cref="IMapper"/> to use for mapping between external model and model.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
     /// <param name="eventLog">The <see cref="IEventSequence"/> for appending private events.</param>
-    /// <param name="eventOutbox">The <see cref="IEventSequence"/> for appending public events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
     public ImportOperations(
         IAdapterFor<TModel, TExternalModel> adapter,
@@ -60,7 +58,6 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         IMapper mapper,
         IObjectComparer objectComparer,
         IEventSequence eventLog,
-        IEventSequence eventOutbox,
         ICausationManager causationManager)
     {
         Adapter = adapter;
@@ -70,7 +67,6 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         _importContexts = new();
         Adapter.DefineImport(new ImportBuilderFor<TModel, TExternalModel>(_importContexts));
         _eventLog = eventLog;
-        _eventOutbox = eventOutbox;
         _causationManager = causationManager;
     }
 
@@ -117,7 +113,6 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         var publicEventsToAppend = eventsToAppend.Where(_ => _.Event.GetType().GetCustomAttribute<EventTypeAttribute>()?.IsPublic ?? false).ToArray();
 
         if (publicEventsToAppend.Length == 0) return;
-        await _eventOutbox.AppendMany(eventSourceId!, publicEventsToAppend);
     }
 
     /// <inheritdoc/>

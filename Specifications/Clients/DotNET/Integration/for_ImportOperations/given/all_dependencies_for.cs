@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using AutoMapper;
 using Cratis.Auditing;
 using Cratis.Changes;
 using Cratis.EventSequences;
-using AutoMapper;
 
 namespace Cratis.Integration.for_ImportOperations.given;
 
@@ -15,7 +15,6 @@ public class all_dependencies_for<TEvent> : Specification
     protected Mock<IAdapterProjectionFor<Model>> projection;
     protected Mock<IMapper> mapper;
     protected Mock<IEventLog> event_log;
-    protected Mock<IEventOutbox> event_outbox;
     protected Mock<IObjectComparer> objects_comparer;
     protected Mock<ICausationManager> causation_manager;
 
@@ -30,7 +29,6 @@ public class all_dependencies_for<TEvent> : Specification
         projection = new();
         mapper = new();
         event_log = new();
-        event_outbox = new();
         objects_comparer = new();
         causation_manager = new();
 

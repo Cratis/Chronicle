@@ -56,9 +56,7 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
             request.ObserverKey.TenantId,
             request.ObserverKey.EventSequenceId,
             eventSourceId,
-            request.ObserverSubscription.SiloAddress.ToParsableString(),
-            request.ObserverKey.SourceMicroserviceId,
-            request.ObserverKey.SourceTenantId);
+            request.ObserverSubscription.SiloAddress.ToParsableString());
 
         _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, request.ObserverSubscription.ObserverId, key) as IObserverSubscriber)!;
 

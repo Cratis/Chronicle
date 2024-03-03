@@ -356,9 +356,7 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
                         _observerKey.TenantId,
                         _observerKey.EventSequenceId,
                         partition,
-                        _subscription.SiloAddress.ToParsableString(),
-                        _observerKey.SourceMicroserviceId,
-                        _observerKey.SourceTenantId);
+                        _subscription.SiloAddress.ToParsableString());
 
                     var firstEvent = events.First();
                     var lastEvent = events.Last();

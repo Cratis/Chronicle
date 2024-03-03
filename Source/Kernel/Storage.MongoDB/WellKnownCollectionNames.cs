@@ -14,16 +14,6 @@ public static class WellKnownCollectionNames
     public const string EventLog = "event-log";
 
     /// <summary>
-    /// The collection that holds <see cref="Event"/> for the outbox.
-    /// </summary>
-    public const string Outbox = "outbox";
-
-    /// <summary>
-    /// The collection that holds <see cref="Event"/> for the inbox.
-    /// </summary>
-    public const string Inbox = "inbox";
-
-    /// <summary>
     /// The collection that holds <see cref="Event"/> for the system.
     /// </summary>
     public const string System = "system";

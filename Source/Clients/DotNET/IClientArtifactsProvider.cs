@@ -24,11 +24,6 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> ImmediateProjections { get; }
 
     /// <summary>
-    /// Gets all the available outbox projection types.
-    /// </summary>
-    IEnumerable<Type> OutboxProjections { get; }
-
-    /// <summary>
     /// Gets all the available adapters types.
     /// </summary>
     IEnumerable<Type> Adapters { get; }

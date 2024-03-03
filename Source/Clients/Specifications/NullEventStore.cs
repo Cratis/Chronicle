@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Execution;
 using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.Observation;
@@ -19,7 +18,7 @@ public class NullEventStore : IEventStore
     public EventStoreName EventStoreName => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public TenantId TenantId => throw new NotImplementedException();
+    public EventStoreNamespaceName Namespace => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public ICratisConnection Connection => throw new NotImplementedException();
@@ -29,9 +28,6 @@ public class NullEventStore : IEventStore
 
     /// <inheritdoc/>
     public IEventLog EventLog => throw new NotImplementedException();
-
-    /// <inheritdoc/>
-    public IEventOutbox EventOutbox => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public IObservers Observers => throw new NotImplementedException();

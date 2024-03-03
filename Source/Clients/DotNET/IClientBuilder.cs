@@ -18,13 +18,6 @@ public interface IClientBuilder
     IServiceCollection Services { get; }
 
     /// <summary>
-    /// Instruct the builder that the client is multi tenanted.
-    /// </summary>
-    /// <returns>Builder for continuation.</returns>
-    /// <remarks>By default the client will be single tenanted.</remarks>
-    IClientBuilder MultiTenanted();
-
-    /// <summary>
     /// Configure for a specific microservice.
     /// </summary>
     /// <param name="microserviceId">The <see cref="MicroserviceId"/>.</param>
@@ -71,12 +64,6 @@ public interface IClientBuilder
     /// Example of this is when appending events, the version will be used in the event context and stored.
     /// </remarks>
     IClientBuilder WithMetadata(string key, string value);
-
-    /// <summary>
-    /// Instruct the builder that the client is within the kernel.
-    /// </summary>
-    /// <returns>Builder for continuation.</returns>
-    IClientBuilder InKernel();
 
     /// <summary>
     /// Specify what <see cref="IModelNameConvention"/> to use.

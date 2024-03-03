@@ -113,20 +113,9 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     string GetCollectionNameFor(EventSequenceId eventSequenceId)
     {
         var collectionName = WellKnownCollectionNames.EventLog;
-        if (!eventSequenceId.IsEventLog)
+        if (!eventSequenceId.IsEventLog && eventSequenceId == EventSequenceId.SystemId)
         {
-            if (eventSequenceId == EventSequenceId.SystemId)
-            {
-                collectionName = WellKnownCollectionNames.System;
-            }
-            else if (eventSequenceId.IsOutbox)
-            {
-                collectionName = WellKnownCollectionNames.Outbox;
-            }
-            else
-            {
-                collectionName = WellKnownCollectionNames.Inbox;
-            }
+            collectionName = WellKnownCollectionNames.System;
         }
 
         return collectionName;

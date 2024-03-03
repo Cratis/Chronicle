@@ -4,11 +4,9 @@
 using System.Diagnostics;
 using Cratis.Boot;
 using Cratis.Events;
-using Cratis.EventSequences.Inboxes;
 using Cratis.Kernel.Configuration;
 using Cratis.Kernel.Contracts.Events;
 using Cratis.Kernel.Grains.EventSequences;
-using Cratis.Kernel.Grains.EventSequences.Inbox;
 using Cratis.Kernel.Grains.EventSequences.Streaming;
 using Cratis.Kernel.Grains.Jobs;
 using Cratis.Kernel.Grains.Projections;
@@ -96,13 +94,6 @@ public class BootProcedure : IPerformBootProcedure
 
                 foreach (var (tenantId, _) in _configuration.Tenants)
                 {
-                    foreach (var outbox in microservice.Inbox.FromOutboxes)
-                    {
-                        var key = new InboxKey(tenantId, outbox.Microservice);
-                        var inbox = _grainFactory.GetGrain<IInbox>((MicroserviceId)microserviceId, key);
-                        await inbox.Start();
-                    }
-
                     _logger.RehydratingEventSequences(microserviceId, tenantId);
                     var stopwatch = Stopwatch.StartNew();
                     await _grainFactory.GetGrain<IEventSequences>(0, new EventSequencesKey(microserviceId, tenantId)).Rehydrate();

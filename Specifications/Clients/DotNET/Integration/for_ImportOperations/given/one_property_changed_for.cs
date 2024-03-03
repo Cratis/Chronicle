@@ -40,7 +40,6 @@ public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
             mapper.Object,
             objects_comparer.Object,
             event_log.Object,
-            event_outbox.Object,
             causation_manager.Object);
     }
 }

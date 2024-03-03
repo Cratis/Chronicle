@@ -21,9 +21,7 @@ public class EventSequences : ControllerBase
     {
         return Task.FromResult(new[]
         {
-            new EventSequenceInformation(EventSequenceId.Log.ToString(), "Log"),
-            new EventSequenceInformation(EventSequenceId.Inbox.ToString(), "Inbox"),
-            new EventSequenceInformation(EventSequenceId.Outbox.ToString(), "Outbox")
+            new EventSequenceInformation(EventSequenceId.Log.ToString(), "Log")
         }.AsEnumerable());
     }
 }

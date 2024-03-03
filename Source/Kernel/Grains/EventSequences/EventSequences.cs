@@ -39,8 +39,6 @@ public class EventSequences : Grain, IEventSequences
         var eventSequences = new[]
         {
             EventSequenceId.Log,
-            EventSequenceId.Inbox,
-            EventSequenceId.Outbox,
             EventSequenceId.System,
         };
 

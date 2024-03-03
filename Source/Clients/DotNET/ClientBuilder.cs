@@ -13,7 +13,6 @@ using Cratis.Compliance.GDPR;
 using Cratis.Configuration;
 using Cratis.Connections;
 using Cratis.Events;
-using Cratis.EventSequences.Outbox;
 using Cratis.Identities;
 using Cratis.Integration;
 using Cratis.Models;
@@ -47,8 +46,6 @@ public class ClientBuilder : IClientBuilder
 
     readonly OptionsBuilder<ClientOptions> _optionsBuilder;
     readonly Dictionary<string, string> _metadata = new();
-    bool _inKernel;
-    bool _isMultiTenanted;
     Type _identityProviderType;
 
     /// <summary>
@@ -83,10 +80,6 @@ public class ClientBuilder : IClientBuilder
     /// <inheritdoc/>
     public IClientBuilder ForMicroservice(MicroserviceId microserviceId, MicroserviceName microserviceName)
     {
-        ExecutionContextManager.SetGlobalMicroserviceId(microserviceId);
-        ExecutionContextManager.SetGlobalMicroserviceName(microserviceName);
-        ExecutionContextManager.SetCurrent(new ExecutionContext(microserviceId, TenantId.NotSet, CorrelationId.New(), _inKernel));
-
         _optionsBuilder.Configure(options =>
         {
             options.MicroserviceId = microserviceId;
@@ -114,22 +107,6 @@ public class ClientBuilder : IClientBuilder
     public IClientBuilder IdentifiedAs(string name)
     {
         _metadata[ProgramIdentifierMetadataKey] = name;
-        return this;
-    }
-
-    /// <inheritdoc/>
-    public IClientBuilder MultiTenanted()
-    {
-        _isMultiTenanted = true;
-        Services.Configure<ClientOptions>(options => options.IsMultiTenanted = true);
-        return this;
-    }
-
-    /// <inheritdoc/>
-    public IClientBuilder InKernel()
-    {
-        _inKernel = true;
-        ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
         return this;
     }
 
@@ -213,43 +190,6 @@ public class ClientBuilder : IClientBuilder
 
         clientArtifacts.ComplianceForTypesProviders.ForEach(_ => Services.AddTransient(_));
         clientArtifacts.ComplianceForPropertiesProviders.ForEach(_ => Services.AddTransient(_));
-
-        if (_inKernel)
-        {
-            _logger.UsingInsideKernelClient();
-            ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
-            ExecutionContextManager.SetKernelMode();
-        }
-        else if (options.Value.Kernel.AzureStorageCluster is not null)
-        {
-            _logger.UsingOrleansAzureStorageKernelClient();
-        }
-        else if (options.Value.Kernel.StaticCluster is not null)
-        {
-            _logger.UsingStaticClusterKernelClient();
-        }
-        else if (options.Value.Kernel.SingleKernel is not null)
-        {
-            _logger.UsingSingleKernelClient(options.Value.Kernel.SingleKernel.Endpoint);
-        }
-
-        // if (_isMultiTenanted)
-        // {
-        //     Services.AddTransient(sp =>
-        //     {
-        //         var tenantId = ExecutionContextManager.GetCurrent().TenantId;
-        //         return null!;
-        //     });
-        //     Services.AddTransient(sp =>
-        //     {
-        //         var tenantId = ExecutionContextManager.GetCurrent().TenantId;
-        //         return null!;
-        //     });
-        // }
-        // else
-        // {
-        //     Services.AddSingleton(TenantId.NotSet);
-        // }
     }
 
     void SetDefaultOptions()
