@@ -16,27 +16,21 @@ namespace Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a step in a replay job.
 /// </summary>
-public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>, IHandleEventsForPartition
+/// <remarks>
+/// Initializes a new instance of the <see cref="HandleEventsForPartition"/> class.
+/// </remarks>
+/// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
+/// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
+public class HandleEventsForPartition(
+    [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
+    IPersistentState<HandleEventsForPartitionState> state,
+    IStorage storage) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
-    readonly IStorage _storage;
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver? _observer;
     IObserverSubscriber? _subscriber;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="HandleEventsForPartition"/> class.
-    /// </summary>
-    /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
-    /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
-    public HandleEventsForPartition(
-        [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
-        IPersistentState<HandleEventsForPartitionState> state,
-        IStorage storage) : base(state)
-    {
-        _storage = storage;
-    }
 
     /// <inheritdoc/>
     public override Task Prepare(HandleEventsForPartitionArguments request)
@@ -165,5 +159,5 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
         return eventsToHandle;
     }
 
-    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _eventSequenceStorage ??= _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
+    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _eventSequenceStorage ??= storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
 }

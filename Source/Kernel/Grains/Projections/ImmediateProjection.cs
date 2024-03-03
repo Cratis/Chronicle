@@ -169,7 +169,7 @@ public class ImmediateProjection(
 
         if (projectionDefinition?.InitialModelState is not null)
         {
-            return _expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, projection.Model.Schema);
+            return expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, projection.Model.Schema);
         }
 
         return new ExpandoObject();

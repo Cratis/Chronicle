@@ -16,36 +16,22 @@ namespace Cratis.Kernel.Grains.Observation.States;
 /// <summary>
 /// Represents the observing state of an observer.
 /// </summary>
-public class Observing : BaseObserverState
+/// <remarks>
+/// Initializes a new instance of the <see cref="Observing"/> class.
+/// </remarks>
+/// <param name="streamProvider"><see cref="IStreamProvider"/> to use to work with streams.</param>
+/// <param name="microserviceId"><see cref="MicroserviceId"/> the state is for.</param>
+/// <param name="tenantId"><see cref="TenantId"/> the state is for.</param>
+/// <param name="eventSequenceId"><see cref="EventSequenceId"/> being observed.</param>
+/// <param name="logger">Logger for logging.</param>
+public class Observing(
+    IStreamProvider streamProvider,
+    MicroserviceId microserviceId,
+    TenantId tenantId,
+    EventSequenceId eventSequenceId,
+    ILogger<Observing> logger) : BaseObserverState
 {
-    readonly IStreamProvider _streamProvider;
-    readonly MicroserviceId _microserviceId;
-    readonly TenantId _tenantId;
-    readonly EventSequenceId _eventSequenceId;
-    readonly ILogger<Observing> _logger;
     StreamSubscriptionHandle<AppendedEvent>? _streamSubscription;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Observing"/> class.
-    /// </summary>
-    /// <param name="streamProvider"><see cref="IStreamProvider"/> to use to work with streams.</param>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> the state is for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the state is for.</param>
-    /// <param name="eventSequenceId"><see cref="EventSequenceId"/> being observed.</param>
-    /// <param name="logger">Logger for logging.</param>
-    public Observing(
-        IStreamProvider streamProvider,
-        MicroserviceId microserviceId,
-        TenantId tenantId,
-        EventSequenceId eventSequenceId,
-        ILogger<Observing> logger)
-    {
-        _streamProvider = streamProvider;
-        _microserviceId = microserviceId;
-        _tenantId = tenantId;
-        _eventSequenceId = eventSequenceId;
-        _logger = logger;
-    }
 
     /// <inheritdoc/>
     public override ObserverRunningState RunningState => ObserverRunningState.Active;
@@ -63,14 +49,14 @@ public class Observing : BaseObserverState
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        using var scope = _logger.BeginObservingScope(state, _microserviceId, _tenantId, _eventSequenceId);
-        _logger.Entering();
+        using var scope = logger.BeginObservingScope(state, microserviceId, tenantId, eventSequenceId);
+        logger.Entering();
 
-        var microserviceAndTenant = new MicroserviceAndTenant(_microserviceId, _tenantId);
-        var streamId = StreamId.Create(microserviceAndTenant, _eventSequenceId);
-        var stream = _streamProvider.GetStream<AppendedEvent>(streamId);
+        var microserviceAndTenant = new MicroserviceAndTenant(microserviceId, tenantId);
+        var streamId = StreamId.Create(microserviceAndTenant, eventSequenceId);
+        var stream = streamProvider.GetStream<AppendedEvent>(streamId);
 
-        _logger.SubscribingToStream(state.NextEventSequenceNumber);
+        logger.SubscribingToStream(state.NextEventSequenceNumber);
 
         _streamSubscription = await stream.SubscribeAsync(
             async (@event, _) => await Observer.Handle(@event.Context.EventSourceId, new[] { @event }),

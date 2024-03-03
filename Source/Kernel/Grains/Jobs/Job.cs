@@ -423,7 +423,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         var task = method.GetGenericMethodDefinition()
             .MakeGenericMethod(requestType, jobStep.ResultType)
-            .Invoke(null, new object[] { jobStepReference }.Concat(parameters).ToArray()) as Task;
+            .Invoke(null, [jobStepReference, .. parameters]) as Task;
 
         await task!;
     }
