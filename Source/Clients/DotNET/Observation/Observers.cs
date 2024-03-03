@@ -144,7 +144,7 @@ public class Observers : IObservers
         {
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStoreName = _eventStore.EventStoreName,
-            TenantId = _eventStore.TenantId,
+            Namespace = _eventStore.Namespace,
             EventSequenceId = handler.EventSequenceId.ToString(),
             ObserverId = handler.ObserverId.ToString(),
             ObserverName = handler.Name,

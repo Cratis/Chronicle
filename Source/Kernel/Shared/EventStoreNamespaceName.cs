@@ -10,6 +10,11 @@ namespace Cratis;
 public record EventStoreNamespaceName(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
+    /// Gets the default <see cref="EventStoreNamespaceName"/>.
+    /// </summary>
+    public static readonly EventStoreNamespaceName Default = "Default";
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="EventStoreNamespaceName"/>.
     /// </summary>
     /// <param name="value"><see cref="string"/> representation.</param>

@@ -25,10 +25,10 @@ public class RegisterObserver
     public string EventStoreName { get; set; }
 
     /// <summary>
-    /// Gets or sets the tenant identifier.
+    /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(3)]
-    public Guid TenantId { get; set; }
+    public string Namespace { get; set; }
 
     /// <summary>
     /// Gets or sets the event sequence identifier.

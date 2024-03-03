@@ -12,13 +12,13 @@ public interface ICratisClient
     /// Get an event store by name and optional tenant.
     /// </summary>
     /// <param name="name">Name of the event store to get.</param>
-    /// <param name="tenantId">Optional tenant identifier.</param>
+    /// <param name="namespace">Optional namespace.</param>
     /// <returns><see cref="IEventStore"/>.</returns>
     /// <remarks>
     /// If no tenant is specified, the default tenant will be used.
     /// In a single tenanted environment, the default tenant is what you'd be using.
     /// </remarks>
-    IEventStore GetEventStore(EventStoreName name, TenantId? tenantId = default);
+    IEventStore GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace = default);
 
     /// <summary>
     /// List all the event stores.

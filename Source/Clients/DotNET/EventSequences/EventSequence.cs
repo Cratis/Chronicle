@@ -14,7 +14,7 @@ namespace Cratis.EventSequences;
 public class EventSequence : IEventSequence
 {
     readonly EventStoreName _eventStoreName;
-    readonly TenantId _tenantId;
+    readonly EventStoreNamespaceName _namespace;
     readonly EventSequenceId _eventSequenceId;
     readonly ICratisConnection _connection;
     readonly IEventTypes _eventTypes;
@@ -26,7 +26,7 @@ public class EventSequence : IEventSequence
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
     /// </summary>
     /// <param name="eventStoreName">Name of the event store.</param>
-    /// <param name="tenantId">Tenant identifier for the event store.</param>
+    /// <param name="namespace">Namespace for the event store.</param>
     /// <param name="eventSequenceId">The identifier of the event sequence.</param>
     /// <param name="connection"><see cref="ICratisConnection"/> for working with the connection to Cratis Kernel.</param>
     /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
@@ -35,7 +35,7 @@ public class EventSequence : IEventSequence
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
     public EventSequence(
         EventStoreName eventStoreName,
-        TenantId tenantId,
+        EventStoreNamespaceName @namespace,
         EventSequenceId eventSequenceId,
         ICratisConnection connection,
         IEventTypes eventTypes,
@@ -44,7 +44,7 @@ public class EventSequence : IEventSequence
         IIdentityProvider identityProvider)
     {
         _eventStoreName = eventStoreName;
-        _tenantId = tenantId;
+        _namespace = @namespace;
         _eventSequenceId = eventSequenceId;
         _connection = connection;
         _eventTypes = eventTypes;
@@ -68,7 +68,7 @@ public class EventSequence : IEventSequence
         await _connection.Services.EventSequences.Append(new()
         {
             EventStoreName = _eventStoreName,
-            TenantId = _tenantId,
+            Namespace = _namespace,
             EventSequenceId = _eventSequenceId.ToString(),
             EventSourceId = eventSourceId,
             EventType = new()

@@ -21,7 +21,6 @@ namespace Cratis;
 public class EventStore : IEventStore
 {
     readonly EventStoreName _eventStoreName;
-    readonly TenantId _tenantId;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
     readonly IEventSerializer _eventSerializer;
@@ -31,7 +30,7 @@ public class EventStore : IEventStore
     /// Initializes a new instance of the <see cref="EventStore"/> class.
     /// </summary>
     /// <param name="eventStoreName">Name of the event store.</param>
-    /// <param name="tenantId">Tenant identifier for the event store.</param>
+    /// <param name="namespace">Namespace for the event store.</param>
     /// <param name="connection"><see cref="ICratisConnection"/> for working with the connection to Cratis Kernel.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
@@ -43,7 +42,7 @@ public class EventStore : IEventStore
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStore(
         EventStoreName eventStoreName,
-        TenantId tenantId,
+        EventStoreNamespaceName @namespace,
         ICratisConnection connection,
         IClientArtifactsProvider clientArtifactsProvider,
         ICausationManager causationManager,
@@ -56,11 +55,10 @@ public class EventStore : IEventStore
     {
         _logger = loggerFactory.CreateLogger<EventStore>();
         _eventStoreName = eventStoreName;
-        _tenantId = tenantId;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
         EventStoreName = eventStoreName;
-        TenantId = tenantId;
+        Namespace = @namespace;
         Connection = connection;
         EventTypes = new Events.EventTypes(this, schemaGenerator, clientArtifactsProvider);
 
@@ -72,7 +70,7 @@ public class EventStore : IEventStore
 
         EventLog = new EventLog(
             eventStoreName,
-            tenantId,
+            @namespace,
             connection,
             EventTypes,
             _eventSerializer,
@@ -81,7 +79,7 @@ public class EventStore : IEventStore
 
         EventOutbox = new EventOutbox(
             eventStoreName,
-            tenantId,
+            @namespace,
             connection,
             EventTypes,
             _eventSerializer,
@@ -113,7 +111,7 @@ public class EventStore : IEventStore
     public EventStoreName EventStoreName { get; }
 
     /// <inheritdoc/>
-    public TenantId TenantId { get; }
+    public EventStoreNamespaceName Namespace { get; }
 
     /// <inheritdoc/>
     public ICratisConnection Connection { get; }
@@ -160,7 +158,7 @@ public class EventStore : IEventStore
     public IEventSequence GetEventSequence(EventSequenceId id) =>
         new EventSequence(
             _eventStoreName,
-            _tenantId,
+            Namespace,
             id,
             Connection,
             EventTypes,

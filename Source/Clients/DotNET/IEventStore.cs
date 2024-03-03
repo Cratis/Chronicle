@@ -20,9 +20,9 @@ public interface IEventStore
     EventStoreName EventStoreName { get; }
 
     /// <summary>
-    /// Gets the <see cref="TenantId"/> for the event store.
+    /// Gets the namespace for the event store.
     /// </summary>
-    TenantId TenantId { get; }
+    EventStoreNamespaceName Namespace { get; }
 
     /// <summary>
     /// Gets the <see cref="ICratisConnection"/> used for the <see cref="IEventStore"/>.

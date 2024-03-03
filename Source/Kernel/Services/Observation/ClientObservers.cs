@@ -49,7 +49,7 @@ public class ClientObservers : IClientObservers
                 case RegisterObserver register:
                     var key = new ConnectedObserverKey(
                         register.EventStoreName,
-                        register.TenantId,
+                        register.Namespace,
                         register.EventSequenceId,
                         register.ConnectionId);
                     clientObserver = _grainFactory.GetGrain<IClientObserver>(Guid.Parse(register.ObserverId), keyExtension: key);

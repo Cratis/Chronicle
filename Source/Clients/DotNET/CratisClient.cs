@@ -68,10 +68,10 @@ public class CratisClient : ICratisClient, IDisposable
     }
 
     /// <inheritdoc/>
-    public IEventStore GetEventStore(EventStoreName name, TenantId? tenantId = null) =>
+    public IEventStore GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace = null) =>
         new EventStore(
             name,
-            tenantId ?? TenantId.NotSet,
+            @namespace ?? EventStoreNamespaceName.Default,
             _connection!,
             _options.ArtifactsProvider,
             _causationManager,

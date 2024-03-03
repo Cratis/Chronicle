@@ -16,7 +16,7 @@ public class EventOutbox : EventSequence, IEventOutbox
     /// Initializes a new instance of the <see cref="EventLog"/> class.
     /// </summary>
     /// <param name="eventStoreName">Name of the event store.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the sequence is for.</param>
+    /// <param name="namespace"><see cref="TenantId"/> the sequence is for.</param>
     /// <param name="connection"><see cref="ICratisConnection"/> for getting connections.</param>
     /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
@@ -24,14 +24,14 @@ public class EventOutbox : EventSequence, IEventOutbox
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
    public EventOutbox(
         EventStoreName eventStoreName,
-        TenantId tenantId,
+        EventStoreNamespaceName @namespace,
         ICratisConnection connection,
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
         ICausationManager causationManager,
         IIdentityProvider identityProvider) : base(
             eventStoreName,
-            tenantId,
+            @namespace,
             EventSequenceId.Outbox,
             connection,
             eventTypes,
