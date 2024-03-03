@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Aksio.Json;
 using Aksio.Types;
-using Cratis.Configuration;
 using Cratis.Identities;
 using Cratis.Models;
 using Microsoft.Extensions.Logging;
@@ -20,7 +19,6 @@ public class CratisOptions
     /// Initializes a new instance of the <see cref="CratisOptions"/> class.
     /// </summary>
     /// <param name="url"><see cref="CratisUrl"/> to use.</param>
-    /// <param name="kernelConnectivity"><see cref="KernelConnectivity"/> to use.</param>
     /// <param name="modelNameConvention">Optional <see cref="IModelNameConvention"/> to use.</param>
     /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/> to use. Will revert to default if not configured.</param>
     /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
@@ -30,7 +28,6 @@ public class CratisOptions
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> to use internally in client for logging.</param>
     public CratisOptions(
         CratisUrl url,
-        KernelConnectivity kernelConnectivity,
         IModelNameConvention? modelNameConvention = null,
         IIdentityProvider? identityProvider = null,
         JsonSerializerOptions? jsonSerializerOptions = null,
@@ -40,7 +37,6 @@ public class CratisOptions
         ILoggerFactory? loggerFactory = null)
     {
         Url = url;
-        KernelConnectivity = kernelConnectivity;
         ModelNameConvention = modelNameConvention ?? new DefaultModelNameConvention();
         IdentityProvider = identityProvider ?? new BaseIdentityProvider();
         JsonSerializerOptions = jsonSerializerOptions ?? Globals.JsonSerializerOptions;
@@ -69,11 +65,6 @@ public class CratisOptions
     /// Gets the <see cref="IServiceProvider"/> to use.
     /// </summary>
     public IServiceProvider ServiceProvider { get; init; }
-
-    /// <summary>
-    /// Gets the <see cref="KernelConnectivity"/> to use.
-    /// </summary>
-    public KernelConnectivity KernelConnectivity { get; init; }
 
     /// <summary>
     /// Gets the <see cref="IClientArtifactsProvider"/> to use.
@@ -107,5 +98,5 @@ public class CratisOptions
     /// </summary>
     /// <param name="url"><see cref="CratisUrl"/> to create from.</param>
     /// <returns>A new <see cref="CratisOptions"/>.</returns>
-    public static CratisOptions FromUrl(CratisUrl url) => new(url, KernelConnectivity.Default);
+    public static CratisOptions FromUrl(CratisUrl url) => new(url);
 }

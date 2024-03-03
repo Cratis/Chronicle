@@ -78,17 +78,6 @@ public class ClientBuilder : IClientBuilder
     public IServiceCollection Services { get; }
 
     /// <inheritdoc/>
-    public IClientBuilder ForMicroservice(MicroserviceId microserviceId, MicroserviceName microserviceName)
-    {
-        _optionsBuilder.Configure(options =>
-        {
-            options.MicroserviceId = microserviceId;
-            options.MicroserviceName = microserviceName;
-        });
-        return this;
-    }
-
-    /// <inheritdoc/>
     public IClientBuilder WithSoftwareVersion(string version, string commit)
     {
         _metadata[VersionMetadataKey] = version;
@@ -197,12 +186,6 @@ public class ClientBuilder : IClientBuilder
         _optionsBuilder
             .Configure(options =>
             {
-                options.MicroserviceId = MicroserviceId.Unspecified;
-                options.MicroserviceName = MicroserviceName.Unspecified;
-                options.Kernel = new()
-                {
-                    SingleKernel = new()
-                };
             });
     }
 }

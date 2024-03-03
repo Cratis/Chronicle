@@ -18,15 +18,6 @@ public interface IClientBuilder
     IServiceCollection Services { get; }
 
     /// <summary>
-    /// Configure for a specific microservice.
-    /// </summary>
-    /// <param name="microserviceId">The <see cref="MicroserviceId"/>.</param>
-    /// <param name="microserviceName">The <see cref="MicroserviceName"/>.</param>
-    /// <returns>The builder to build.</returns>
-    /// <remarks>By default the client will be for a non specific Microservice, indicating you're not building a microservice oriented system.</remarks>
-    IClientBuilder ForMicroservice(MicroserviceId microserviceId, MicroserviceName microserviceName);
-
-    /// <summary>
     /// Configure the version of the software running.
     /// </summary>
     /// <param name="version">The string representing the version of the running process.</param>
