@@ -3,8 +3,8 @@
 
 using System.Reflection;
 using Aksio.Collections;
-using Cratis.Compliance;
 using Aksio.Strings;
+using Cratis.Compliance;
 using NJsonSchema;
 using NJsonSchema.Generation;
 

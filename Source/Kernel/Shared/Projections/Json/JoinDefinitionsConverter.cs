@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Serialization;
+using Aksio.Json;
 using Cratis.Events;
 using Cratis.Projections.Definitions;
 using Cratis.Properties;
-using Aksio.Json;
 
 namespace Cratis.Projections.Json;
 

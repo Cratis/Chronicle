@@ -4,10 +4,10 @@
 using System.Linq.Expressions;
 using System.Reactive.Linq;
 using System.Reflection;
+using AutoMapper;
 using Cratis.Changes;
 using Cratis.Properties;
 using Cratis.Reflection;
-using AutoMapper;
 
 namespace Cratis.Integration;
 

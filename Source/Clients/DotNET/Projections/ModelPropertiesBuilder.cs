@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Aksio.Reflection;
 using Cratis.Events;
 using Cratis.Projections.Expressions;
 using Cratis.Properties;
 using Cratis.Reflection;
-using Aksio.Reflection;
 
 namespace Cratis.Projections;
 

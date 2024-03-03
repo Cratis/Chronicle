@@ -3,6 +3,9 @@
 
 using System.Dynamic;
 using System.Text;
+using Aksio.Json;
+using Aksio.Reflection;
+using Aksio.Types;
 using Cratis.Changes;
 using Cratis.Dynamic;
 using Cratis.Events;
@@ -11,9 +14,6 @@ using Cratis.Models;
 using Cratis.Reflection;
 using Cratis.Schemas;
 using Cratis.Sinks;
-using Aksio.Json;
-using Aksio.Reflection;
-using Aksio.Types;
 
 namespace Cratis.Kernel.Storage.Sinks.InMemory;
 

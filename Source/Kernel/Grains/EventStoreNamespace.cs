@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Types;
 using Cratis.Changes;
 using Cratis.Json;
 using Cratis.Kernel.Grains.Observation.Reducers;
@@ -13,7 +14,6 @@ using Cratis.Kernel.Projections.Expressions.Keys;
 using Cratis.Kernel.Storage;
 using Cratis.Kernel.Storage.Sinks;
 using Cratis.Schemas;
-using Aksio.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

@@ -5,12 +5,12 @@ using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Collections;
+using Aksio.Reflection;
 using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.Kernel.Contracts.Projections;
 using Cratis.Models;
 using Cratis.Schemas;
-using Aksio.Reflection;
 
 namespace Cratis.Projections;
 

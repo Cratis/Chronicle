@@ -3,7 +3,6 @@
 
 namespace Cratis.Kernel.Grains.Observation.Clients;
 
-
 /// <summary>
 /// Defines a client observer subscriber that will receive all events.
 /// </summary>

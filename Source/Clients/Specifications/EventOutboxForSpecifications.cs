@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Aksio.Types;
 using Cratis.Compliance;
 using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.Json;
 using Cratis.Schemas;
-using Aksio.Types;
 
 namespace Cratis.Specifications;
 

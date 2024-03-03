@@ -3,9 +3,9 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Aksio.Json;
 using Cratis.Projections.Definitions;
 using Cratis.Properties;
-using Aksio.Json;
 
 namespace Cratis.Projections.Json;
 

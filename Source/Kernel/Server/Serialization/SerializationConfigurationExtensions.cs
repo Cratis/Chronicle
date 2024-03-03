@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Aksio.Json;
 using Cratis.Json;
 using Cratis.Kernel.EventSequences;
 using Cratis.Kernel.Grains.Observation;
@@ -10,7 +11,6 @@ using Cratis.Kernel.Keys;
 using Cratis.Kernel.Storage.Jobs;
 using Cratis.Projections.Json;
 using Cratis.Properties;
-using Aksio.Json;
 using Orleans.Serialization;
 
 namespace Cratis.Kernel.Server.Serialization;

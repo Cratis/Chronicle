@@ -2,6 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Collections;
+using Aksio.Json;
+using Aksio.Tasks;
+using Aksio.Timers;
+using Aksio.Types;
 using Cratis.Aggregates;
 using Cratis.Auditing;
 using Cratis.Compliance;
@@ -20,10 +24,6 @@ using Cratis.Reducers;
 using Cratis.Rules;
 using Cratis.Schemas;
 using Cratis.Tenants;
-using Aksio.Json;
-using Aksio.Tasks;
-using Aksio.Timers;
-using Aksio.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -186,7 +186,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IEventTypes, Events.EventTypes>()
             .AddSingleton<IEventSerializer, EventSerializer>()
             .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-            .AddSingleton<ITypes>(Types.Types.Instance)
+            .AddSingleton<ITypes>(Types.Instance)
             .AddSingleton<ITaskFactory, TaskFactory>()
             .AddSingleton<ITimerFactory, TimerFactory>()
             .AddSingleton<IAdapters, Adapters>()

@@ -3,9 +3,9 @@
 
 using System.Reflection;
 using System.Text.Json;
+using Aksio.Strings;
 using Cratis.Models;
 using Cratis.Projections;
-using Aksio.Strings;
 
 namespace Cratis.Rules;
 

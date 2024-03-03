@@ -2,11 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Benchmark.Model;
 using Cratis.Dynamic;
 using Cratis.Events;
 using Cratis.Kernel.Grains.EventSequences;
-using Cratis.Schemas;
-using Benchmark.Model;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Benchmarks;

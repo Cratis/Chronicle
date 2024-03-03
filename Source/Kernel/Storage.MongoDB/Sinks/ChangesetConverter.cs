@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Reflection;
 using Cratis.Changes;
 using Cratis.Events;
 using Cratis.Kernel.Keys;
 using Cratis.Models;
 using Cratis.Properties;
 using Cratis.Schemas;
-using Aksio.Reflection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;

@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Types;
 using Cratis.Auditing;
 using Cratis.Compliance;
 using Cratis.Connections;
 using Cratis.Schemas;
-using Aksio.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis;
@@ -49,8 +49,8 @@ public class CratisClient : ICratisClient, IDisposable
         _options = options;
         _causationManager = new CausationManager();
         _complianceMetadataResolver = new ComplianceMetadataResolver(
-            new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, options.ServiceProvider),
-            new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, options.ServiceProvider));
+            new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Instance, options.ServiceProvider),
+            new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Instance, options.ServiceProvider));
         _jsonSchemaGenerator = new JsonSchemaGenerator(_complianceMetadataResolver);
         _connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
         _connection = new CratisConnection(

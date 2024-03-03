@@ -4,11 +4,11 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
+using Aksio.Reflection;
 using Cratis.Jobs;
 using Cratis.Kernel.Orleans.Observers;
 using Cratis.Kernel.Storage;
 using Cratis.Kernel.Storage.Jobs;
-using Aksio.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

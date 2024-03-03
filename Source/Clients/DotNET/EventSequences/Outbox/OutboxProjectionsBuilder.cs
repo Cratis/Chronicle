@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Aksio.Guids;
 using Cratis.Events;
 using Cratis.Kernel.Contracts.Projections;
 using Cratis.Kernel.Contracts.Projections.Outbox;
 using Cratis.Models;
 using Cratis.Projections;
 using Cratis.Schemas;
-using Aksio.Guids;
 
 namespace Cratis.EventSequences.Outbox;
 

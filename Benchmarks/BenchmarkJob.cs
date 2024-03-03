@@ -4,13 +4,13 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Aksio.Collections;
+using Aksio.MongoDB;
 using Cratis;
 using Cratis.Events;
 using Cratis.Kernel.Configuration;
 using Cratis.Kernel.Storage;
 using Cratis.Kernel.Storage.EventTypes;
 using Cratis.Schemas;
-using Aksio.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 

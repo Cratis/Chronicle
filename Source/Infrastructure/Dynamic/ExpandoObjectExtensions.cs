@@ -4,10 +4,10 @@
 using System.Collections;
 using System.Dynamic;
 using Aksio.Concepts;
-using Cratis.Objects;
-using Cratis.Properties;
 using Aksio.Reflection;
 using Aksio.Strings;
+using Cratis.Objects;
+using Cratis.Properties;
 
 namespace Cratis.Dynamic;
 

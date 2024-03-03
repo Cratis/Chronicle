@@ -3,12 +3,11 @@
 
 using System.Reactive.Subjects;
 using System.Reflection;
+using AutoMapper;
 using Cratis.Auditing;
 using Cratis.Changes;
 using Cratis.Events;
 using Cratis.EventSequences;
-using Cratis.Models;
-using AutoMapper;
 
 namespace Cratis.Integration;
 

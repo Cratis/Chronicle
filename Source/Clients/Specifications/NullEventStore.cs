@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Execution;
 using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.Observation;
 using Cratis.Projections;
 using Cratis.Reducers;
-using Aksio.Execution;
 
 namespace Cratis.Specifications;
 

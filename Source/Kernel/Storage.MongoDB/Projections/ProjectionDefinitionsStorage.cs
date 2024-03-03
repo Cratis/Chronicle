@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Aksio.MongoDB;
 using Cratis.Kernel.Storage.Projections;
 using Cratis.Projections.Definitions;
 using Cratis.Projections.Json;
-using Aksio.MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
 

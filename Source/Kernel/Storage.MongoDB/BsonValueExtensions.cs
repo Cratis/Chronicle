@@ -3,11 +3,11 @@
 
 using System.Collections;
 using System.Globalization;
-using Cratis.Reflection;
 using Aksio.MongoDB;
 using Aksio.Reflection;
 using Aksio.Strings;
 using Aksio.Types;
+using Cratis.Reflection;
 using MongoDB.Bson;
 using NJsonSchema;
 

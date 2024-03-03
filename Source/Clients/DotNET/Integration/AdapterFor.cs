@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using AutoMapper;
 using Cratis.Events;
 using Cratis.Projections;
-using AutoMapper;
 
 namespace Cratis.Integration;
 
