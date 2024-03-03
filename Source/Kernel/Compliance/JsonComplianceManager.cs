@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Json;
 using Aksio.Types;
 using Cratis.Compliance;
 using Cratis.Schemas;
@@ -35,7 +34,7 @@ public class JsonComplianceManager : IJsonComplianceManager
             return json;
         }
 
-        var result = json.DeepClone();
+        var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result, async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token));
         return result;
     }
@@ -48,8 +47,8 @@ public class JsonComplianceManager : IJsonComplianceManager
             return json;
         }
 
-        var result = json.DeepClone();
-        await HandleActionFor(schema, identifier, result, async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
+        var result = (json.DeepClone() as JsonObject)!;
+        await HandleActionFor(schema, identifier, result!, async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
         return result;
     }
 

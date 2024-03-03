@@ -16,7 +16,7 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
 {
     static readonly NoOpState<TStoredState> _noOpState = new();
 
-    IDictionary<Type, IState<TStoredState>> _states = new Dictionary<Type, IState<TStoredState>>();
+    Dictionary<Type, IState<TStoredState>> _states = new();
     IState<TStoredState> _currentState = _noOpState;
     bool _isTransitioning;
     bool _isLeaving;
