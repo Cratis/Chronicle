@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
@@ -8,6 +8,7 @@ using Aksio.Collections;
 using Aksio.Concepts;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
+using Aksio.Execution;
 using Aksio.Reflection;
 
 namespace Aksio.Cratis.Changes;
@@ -15,6 +16,7 @@ namespace Aksio.Cratis.Changes;
 /// <summary>
 /// Represents an implementation of <see cref="IObjectComparer"/>.
 /// </summary>
+[Singleton]
 public class ObjectComparer : IObjectComparer
 {
     /// <inheritdoc/>

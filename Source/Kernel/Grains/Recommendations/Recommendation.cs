@@ -1,6 +1,8 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Storage.Recommendations;
+using Aksio.Cratis.Recommendations;
 using Orleans.Providers;
 
 namespace Aksio.Cratis.Kernel.Grains.Recommendations;

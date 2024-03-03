@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
@@ -11,13 +11,11 @@ using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Engines.Observation.Reducers;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Observation.Reducers;
 using Aksio.Cratis.Properties;
-using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 
@@ -29,10 +27,8 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers.Clients;
 public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
 {
     readonly ILogger<ClientReducerSubscriber> _logger;
+    readonly IKernel _kernel;
     readonly IHttpClientFactory _httpClientFactory;
-    readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IReducerPipelineDefinitions> _reducerPipelineDefinitionsProvider;
-    readonly ProviderFor<IReducerPipelines> _reducerPipelinesProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
@@ -45,27 +41,21 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientReducerSubscriber"/> class.
     /// </summary>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
     /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> for connecting to the client.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="reducerPipelineDefinitionsProvider"><see cref="IReducerPipelineDefinitions"/> to get pipeline definitions from.</param>
-    /// <param name="reducerPipelinesProvider"><see cref="IReducerPipelines"/> for getting instances of <see cref="IReducerPipeline"/>.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and <see cref="ExpandoObject"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientReducerSubscriber(
-        ILogger<ClientReducerSubscriber> logger,
+        IKernel kernel,
         IHttpClientFactory httpClientFactory,
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IReducerPipelineDefinitions> reducerPipelineDefinitionsProvider,
-        ProviderFor<IReducerPipelines> reducerPipelinesProvider,
         IExpandoObjectConverter expandoObjectConverter,
-        JsonSerializerOptions jsonSerializerOptions)
+        JsonSerializerOptions jsonSerializerOptions,
+        ILogger<ClientReducerSubscriber> logger)
     {
         _logger = logger;
+        _kernel = kernel;
         _httpClientFactory = httpClientFactory;
-        _executionContextManager = executionContextManager;
-        _reducerPipelineDefinitionsProvider = reducerPipelineDefinitionsProvider;
-        _reducerPipelinesProvider = reducerPipelinesProvider;
         _expandoObjectConverter = expandoObjectConverter;
         _jsonSerializerOptions = jsonSerializerOptions;
     }
@@ -82,9 +72,11 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
         _tenantId = key.TenantId;
         _eventSequenceId = key.EventSequenceId;
 
-        _executionContextManager.Establish(_tenantId, _executionContextManager.Current.CorrelationId, _microserviceId);
-        var definition = await _reducerPipelineDefinitionsProvider().GetFor(_reducerId);
-        _pipeline = await _reducerPipelinesProvider().GetFor(definition);
+        var eventStore = _kernel.GetEventStore((string)_microserviceId);
+        var eventStoreNamespace = eventStore.GetNamespace(_tenantId);
+
+        var definition = await eventStore.ReducerPipelineDefinitions.GetFor(_reducerId);
+        _pipeline = await eventStoreNamespace.ReducerPipelines.GetFor(definition);
     }
 
     /// <inheritdoc/>

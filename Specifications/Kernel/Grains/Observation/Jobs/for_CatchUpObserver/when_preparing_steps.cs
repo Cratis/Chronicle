@@ -1,9 +1,10 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Keys;
+using Aksio.Cratis.Kernel.Storage.Keys;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;
@@ -17,7 +18,7 @@ public class when_preparing_steps : given.a_catchup_observer_and_a_request
     void Establish()
     {
         index = new();
-        indexes.Setup(_ => _.GetFor(((CatchUpObserverRequest)state_storage.State.Request).ObserverId, ((CatchUpObserverRequest)state_storage.State.Request).ObserverKey)).ReturnsAsync(index.Object);
+        observer_key_indexes.Setup(_ => _.GetFor(((CatchUpObserverRequest)state_storage.State.Request).ObserverId, ((CatchUpObserverRequest)state_storage.State.Request).ObserverKey)).ReturnsAsync(index.Object);
 
         keys = new[]
         {

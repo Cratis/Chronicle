@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
@@ -59,7 +59,7 @@ public abstract class TypeWithObjectPropertiesJsonConverter<TTarget> : JsonConve
                     var result = node.Deserialize(type, Globals.JsonSerializerOptions);
                     if (result is not null)
                     {
-                        foreach (var property in ObjectProperties)
+                        foreach (var property in ObjectProperties.Where(valuesPerProperty.ContainsKey))
                         {
                             var propertyValue = valuesPerProperty[property];
                             if (propertyValue is not null)

@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Auditing;
@@ -6,7 +6,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Events.EventSequences;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Microsoft.AspNetCore.Mvc;
 using EventRedacted = Aksio.Cratis.Kernel.Events.EventSequences.EventRedacted;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
@@ -22,7 +22,6 @@ namespace Aksio.Cratis.Kernel.Domain.EventSequences;
 public class EventSequence : ControllerBase
 {
     readonly IGrainFactory _grainFactory;
-    readonly IExecutionContextManager _executionContextManager;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
     readonly IEventSerializer _eventSerializer;
@@ -32,21 +31,18 @@ public class EventSequence : ControllerBase
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
     /// </summary>
     /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     /// <param name="causationManager">The <see cref="ICausationManager"/> for working with causation.</param>
     /// <param name="identityProvider">The <see cref="IIdentityProvider"/> for getting current identity.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
     public EventSequence(
         IGrainFactory grainFactory,
-        IExecutionContextManager executionContextManager,
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
         IEventSerializer eventSerializer,
         IEventTypes eventTypes)
     {
         _grainFactory = grainFactory;
-        _executionContextManager = executionContextManager;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
         _eventSerializer = eventSerializer;
@@ -71,7 +67,6 @@ public class EventSequence : ControllerBase
         var causation = eventToAppend.Causation ?? _causationManager.GetCurrentChain();
         var causedBy = eventToAppend.CausedBy ?? _identityProvider.GetCurrent();
 
-        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
         await eventSequence.Append(
             eventToAppend.EventSourceId,
@@ -100,7 +95,6 @@ public class EventSequence : ControllerBase
         var causation = eventsToAppend.Causation ?? _causationManager.GetCurrentChain();
         var causedBy = eventsToAppend.CausedBy ?? _identityProvider.GetCurrent();
 
-        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
         var events = eventsToAppend.Events.Select(_ => new Grains.EventSequences.EventToAppend(eventsToAppend.EventSourceId, _.EventType, _.Content, _.ValidFrom)).ToArray();
         await eventSequence.AppendMany(events, causation, causedBy);
@@ -123,7 +117,6 @@ public class EventSequence : ControllerBase
     {
         var causation = redaction.Causation ?? _causationManager.GetCurrentChain();
         var causedBy = redaction.CausedBy ?? _identityProvider.GetCurrent();
-        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, MicroserviceId.Kernel);
 
         var eventType = _eventTypes.GetEventTypeFor(typeof(EventRedacted));
         var @event = new EventRedacted(
@@ -160,8 +153,6 @@ public class EventSequence : ControllerBase
     {
         var causation = redaction.Causation ?? _causationManager.GetCurrentChain();
         var causedBy = redaction.CausedBy ?? _identityProvider.GetCurrent();
-
-        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, MicroserviceId.Kernel);
 
         var eventType = _eventTypes.GetEventTypeFor(typeof(EventsRedactedForEventSource));
         var @event = new EventsRedactedForEventSource(

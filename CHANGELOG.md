@@ -1,3 +1,34 @@
+# [v9.15.2] - 2024-1-14 [PR: #1065](https://github.com/aksio-insurtech/Cratis/pull/1065)
+
+### Fixed
+
+- Reorganization of storage related APIs. Moved into a specific Storage project, making it clearer to maintain and also when adding support for other storage engines.
+- Introducing EventStore and EventStoreNamespace as concepts, making it more flexible and not tied to concepts such as Microservice and Tenant.
+- Formalizing internal APIs for accessing Kernel, EventStore and EventStoreNamespace
+- Formalizing internal storage APIs for accessing EventStore and EventStoreNamespace 
+- Removing usage of execution context internally, making everything explicit (#265)
+- Removed an additional `[HttpGet]` that was added to the `GetRange()` API that was conflicting with the existing root `GET`, this caused the workbench to break when getting content of an event sequence.
+- Upgrading to latest version of `Aksio.MongoDB` with working support for throttling calls (connections) to the underlying database.
+- Limiting the number of `MongoClient` to one per server, making the throttling of connections be as expected.
+
+
+# [v9.15.1] - 2023-12-31 [PR: #1062](https://github.com/aksio-insurtech/Cratis/pull/1062)
+
+### Fixed
+
+- Build error
+
+# [v9.15.0] - 2023-12-29 [PR: #1060](https://github.com/aksio-insurtech/Cratis/pull/1060)
+
+## Summary
+
+Minor bugfix.
+
+### Fixed
+
+- Fixes `/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}/all` endpoint to have eventTypes actually be optional as it should.
+
+
 # [v9.14.19] - 2023-12-12 [PR: #1050](https://github.com/aksio-insurtech/Cratis/pull/1050)
 
 ### Fixed

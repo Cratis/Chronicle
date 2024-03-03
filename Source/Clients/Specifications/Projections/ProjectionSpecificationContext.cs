@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
@@ -8,14 +8,15 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Engines.Changes;
-using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Cratis.Kernel.Engines.Projections.Expressions;
-using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
-using Aksio.Cratis.Kernel.Engines.Projections.Expressions.Keys;
-using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
-using Aksio.Cratis.Kernel.Engines.Sinks.InMemory;
 using Aksio.Cratis.Kernel.Keys;
+using Aksio.Cratis.Kernel.Projections;
+using Aksio.Cratis.Kernel.Projections.Expressions;
+using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
+using Aksio.Cratis.Kernel.Projections.Expressions.Keys;
+using Aksio.Cratis.Kernel.Projections.Pipelines;
+using Aksio.Cratis.Kernel.Storage.Changes;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Aksio.Cratis.Kernel.Storage.Sinks.InMemory;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
@@ -70,17 +71,17 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
 
         var eventValueProviderExpressionResolvers = new EventValueProviderExpressionResolvers(typeFormats);
 
+        _eventSequenceStorage = new EventSequenceStorageForSpecifications(_eventLog);
         var factory = new ProjectionFactory(
             new ModelPropertyExpressionResolvers(eventValueProviderExpressionResolvers, typeFormats),
             new EventValueProviderExpressionResolvers(typeFormats),
             new KeyExpressionResolvers(eventValueProviderExpressionResolvers),
             new ExpandoObjectConverter(typeFormats),
-            new EventSequenceStorageProviderForSpecifications(_eventLog));
+            new EventStoreNamespaceStorageForSpecifications(_eventSequenceStorage));
         _projection = factory.CreateFrom(Definition).GetAwaiter().GetResult();
 
         var objectComparer = new ObjectComparer();
 
-        _eventSequenceStorage = new EventSequenceStorageProviderForSpecifications(_eventLog);
         _sink = new InMemorySink(_projection.Model, typeFormats);
         _pipeline = new ProjectionPipeline(
             _projection,
@@ -128,7 +129,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var key = new Key(modelId!, ArrayIndexers.NoIndexers);
         _sink.RemoveAnyExisting(key);
 
-        var cursor = await _eventSequenceStorage.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
+        var cursor = await _eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)

@@ -1,10 +1,9 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Applications.Queries;
 using Aksio.Cratis.Kernel.Observation;
-using Aksio.Cratis.Kernel.Persistence.Observation;
-using Aksio.DependencyInversion;
+using Aksio.Cratis.Kernel.Storage;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Aksio.Cratis.Kernel.Read.Observation;
@@ -15,20 +14,15 @@ namespace Aksio.Cratis.Kernel.Read.Observation;
 [Route("/api/events/store/{microserviceId}/{tenantId}/observers")]
 public class Observers : ControllerBase
 {
-    readonly ProviderFor<IObserverStorage> _observerStorageProvider;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
-    /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public Observers(
-        ProviderFor<IObserverStorage> observerStorageProvider,
-        IExecutionContextManager executionContextManager)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public Observers(IStorage storage)
     {
-        _observerStorageProvider = observerStorageProvider;
-        _executionContextManager = executionContextManager;
+        _storage = storage;
     }
 
     /// <summary>
@@ -40,12 +34,8 @@ public class Observers : ControllerBase
     [HttpGet]
     public Task<IEnumerable<ObserverInformation>> GetObservers(
         [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId)
-    {
-        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
-
-        return _observerStorageProvider().GetAllObservers();
-    }
+        [FromRoute] TenantId tenantId) =>
+         _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers.GetAllObservers();
 
     /// <summary>
     /// Get and observe all observers.
@@ -58,10 +48,9 @@ public class Observers : ControllerBase
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
-        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
-
         var clientObservable = new ClientObservable<IEnumerable<ObserverInformation>>();
-        var observable = _observerStorageProvider().ObserveAll();
+        var observers = _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers;
+        var observable = observers.ObserveAll();
         var subscription = observable.Subscribe(clientObservable.OnNext);
         clientObservable.ClientDisconnected = () =>
         {

@@ -1,11 +1,10 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Applications.Queries;
 using Aksio.Cratis.Kernel.Observation;
-using Aksio.Cratis.Kernel.Persistence.Observation;
+using Aksio.Cratis.Kernel.Storage;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Aksio.Cratis.Kernel.Read.Observation;
@@ -16,20 +15,15 @@ namespace Aksio.Cratis.Kernel.Read.Observation;
 [Route("/api/events/store/{microserviceId}/{tenantId}/failed-partitions")]
 public class FailedPartitions : ControllerBase
 {
-    readonly ProviderFor<IFailedPartitionsStorage> _failedPartitionsStateProvider;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
-    /// <param name="failedPartitionsStateProvider">Provider for <see cref="IFailedPartitionsStorage"/> for working with the state of observers.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public FailedPartitions(
-        ProviderFor<IFailedPartitionsStorage> failedPartitionsStateProvider,
-        IExecutionContextManager executionContextManager)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public FailedPartitions(IStorage storage)
     {
-        _failedPartitionsStateProvider = failedPartitionsStateProvider;
-        _executionContextManager = executionContextManager;
+        _storage = storage;
     }
 
     /// <summary>
@@ -45,12 +39,11 @@ public class FailedPartitions : ControllerBase
         [FromRoute] TenantId tenantId,
         [FromRoute] ObserverId? observerId = default)
     {
-        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
-
         observerId ??= ObserverId.Unspecified;
 
         var clientObservable = new ClientObservable<IEnumerable<FailedPartition>>();
-        var observable = _failedPartitionsStateProvider().ObserveAllFor(observerId);
+        var failedPartitions = _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).FailedPartitions;
+        var observable = failedPartitions.ObserveAllFor(observerId);
         var subscription = observable.Subscribe(clientObservable.OnNext);
         clientObservable.ClientDisconnected = () =>
         {

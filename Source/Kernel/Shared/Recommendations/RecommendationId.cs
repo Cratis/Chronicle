@@ -1,7 +1,7 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Kernel.Recommendations;
+namespace Aksio.Cratis.Recommendations;
 
 /// <summary>
 /// Represents the unique identifier of an recommendation.

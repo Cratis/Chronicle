@@ -1,10 +1,10 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Kernel.Persistence.Jobs;
-using Aksio.DependencyInversion;
-using Microsoft.Extensions.DependencyInjection;
+using Aksio.Cratis.Jobs;
+using Aksio.Cratis.Kernel.Storage;
+using Aksio.Cratis.Kernel.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
@@ -14,28 +14,23 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// </summary>
 public class JobsManager : Grain, IJobsManager
 {
-    readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IJobStorage> _jobStorageProvider;
-    readonly ProviderFor<IJobStepStorage> _jobStepStorageProvider;
+    readonly IStorage _storage;
     readonly ILogger<JobsManager> _logger;
+    IEventStoreNamespaceStorage? _namespaceStorage;
+    IJobStorage? _jobStorage;
+    IJobStepStorage? _jobStepStorage;
     JobsManagerKey _key = JobsManagerKey.NotSet;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobsManager"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="jobStorageProvider">Provider for <see cref="IJobStorage"/>.</param>
-    /// <param name="jobStepStorageProvider">Provider for <see cref="IJobStepStorage"/>.</param>
+    /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
     /// <param name="logger">Logger for logging.</param>
     public JobsManager(
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IJobStorage> jobStorageProvider,
-        ProviderFor<IJobStepStorage> jobStepStorageProvider,
+        IStorage storage,
         ILogger<JobsManager> logger)
     {
-        _executionContextManager = executionContextManager;
-        _jobStorageProvider = jobStorageProvider;
-        _jobStepStorageProvider = jobStepStorageProvider;
+        _storage = storage;
         _logger = logger;
     }
 
@@ -44,6 +39,11 @@ public class JobsManager : Grain, IJobsManager
     {
         this.GetPrimaryKeyLong(out var key);
         _key = key;
+
+        _namespaceStorage = _storage.GetEventStore((string)_key.MicroserviceId).GetNamespace(_key.TenantId);
+        _jobStorage = _namespaceStorage.Jobs;
+        _jobStepStorage = _namespaceStorage.JobSteps;
+
         return Task.CompletedTask;
     }
 
@@ -54,8 +54,7 @@ public class JobsManager : Grain, IJobsManager
 
         _logger.Rehydrating();
 
-        _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
-        var runningJobs = await _jobStorageProvider().GetJobs(JobStatus.Running, JobStatus.Preparing, JobStatus.PreparingSteps);
+        var runningJobs = await _jobStorage!.GetJobs(JobStatus.Running, JobStatus.Preparing, JobStatus.PreparingSteps);
         foreach (var runningJob in runningJobs)
         {
             var grainType = (Type)runningJob.Type;
@@ -73,7 +72,6 @@ public class JobsManager : Grain, IJobsManager
 
         _logger.StartingJob(jobId);
 
-        _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
         var job = GrainFactory.GetGrain<TJob>(
             jobId,
             new JobKey(
@@ -90,8 +88,7 @@ public class JobsManager : Grain, IJobsManager
 
         _logger.ResumingJob(jobId);
 
-        _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
-        var jobState = await _jobStorageProvider().GetJob(jobId);
+        var jobState = await _jobStorage!.GetJob(jobId);
         var job = (GrainFactory.GetGrain(jobState.Type, jobId, new JobKey(_key.MicroserviceId, _key.TenantId)) as IJob)!;
         await job.Resume();
     }
@@ -103,8 +100,7 @@ public class JobsManager : Grain, IJobsManager
 
         _logger.StoppingJob(jobId);
 
-        _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
-        var jobState = await _jobStorageProvider().GetJob(jobId);
+        var jobState = await _jobStorage!.GetJob(jobId);
         var job = (GrainFactory.GetGrain(jobState.Type, jobId, new JobKey(_key.MicroserviceId, _key.TenantId)) as IJob)!;
         await job.Stop();
     }
@@ -116,10 +112,9 @@ public class JobsManager : Grain, IJobsManager
 
         _logger.DeletingJob(jobId);
 
-        _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
         await Stop(jobId);
-        await _jobStepStorageProvider().RemoveAllForJob(jobId);
-        await _jobStorageProvider().Remove(jobId);
+        await _jobStepStorage!.RemoveAllForJob(jobId);
+        await _jobStorage!.Remove(jobId);
     }
 
     /// <inheritdoc/>
@@ -135,10 +130,6 @@ public class JobsManager : Grain, IJobsManager
     /// <inheritdoc/>
     public async Task<IImmutableList<JobState>> GetJobsOfType<TJob, TRequest>()
         where TJob : IJob<TRequest>
-        where TRequest : class
-    {
-        _executionContextManager.Establish(_key.TenantId, _executionContextManager.Current.CorrelationId, _key.MicroserviceId);
-        var storage = ServiceProvider.GetRequiredService<IJobStorage<JobState>>();
-        return await storage.GetJobs<TJob>();
-    }
+        where TRequest : class =>
+        await _namespaceStorage!.Jobs.GetJobs<TJob, JobState>();
 }

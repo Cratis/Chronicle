@@ -1,10 +1,11 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Aksio.Cratis.Jobs;
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Grains.Observation.States;
-using Aksio.Cratis.Kernel.Keys;
+using Aksio.Cratis.Kernel.Storage;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
@@ -13,15 +14,15 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// </summary>
 public class CatchUpObserver : Job<CatchUpObserverRequest, CatchUpObserverState>, ICatchUpObserver
 {
-    readonly IObserverKeyIndexes _observerKeyIndexes;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReplayObserver"/> class.
     /// </summary>
-    /// <param name="observerKeyIndexes"><see cref="IObserverKeyIndexes"/> for getting index for observer to replay.</param>
-    public CatchUpObserver(IObserverKeyIndexes observerKeyIndexes)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public CatchUpObserver(IStorage storage)
     {
-        _observerKeyIndexes = observerKeyIndexes;
+        _storage = storage;
     }
 
     /// <inheritdoc/>
@@ -59,7 +60,8 @@ public class CatchUpObserver : Job<CatchUpObserverRequest, CatchUpObserverState>
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
-        var index = await _observerKeyIndexes.GetFor(
+        var observerKeyIndexes = _storage.GetEventStore((string)JobKey.MicroserviceId).GetNamespace(JobKey.TenantId).ObserverKeyIndexes;
+        var index = await observerKeyIndexes.GetFor(
             request.ObserverId,
             request.ObserverKey);
 

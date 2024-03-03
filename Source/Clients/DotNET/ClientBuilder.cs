@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Collections;
@@ -183,7 +183,7 @@ public class ClientBuilder : IClientBuilder
             .AddTransient<IClientReducers, ClientReducers>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
             .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
-            .AddSingleton<IEventTypes, EventTypes>()
+            .AddSingleton<IEventTypes, Events.EventTypes>()
             .AddSingleton<IEventSerializer, EventSerializer>()
             .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
             .AddSingleton<ITypes>(Types.Types.Instance)

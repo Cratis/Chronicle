@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Projections.Specs</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Projections</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Kernel/Projections/Projections.csproj"/>
+        <ProjectReference Include="../../../Source/Clients/Specifications/Specifications.csproj"/>
+    </ItemGroup>
+
+</Project>

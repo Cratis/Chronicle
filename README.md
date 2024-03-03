@@ -7,9 +7,9 @@
 
 ## Builds
 
-[![C# Build](https://github.com/aksio-insurtech/Cratis/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/dotnet-build.yml)
-[![Publish](https://github.com/aksio-insurtech/Cratis/actions/workflows/publish.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/publish.yml)
-[![Documentation Site](https://github.com/aksio-insurtech/Cratis/actions/workflows/pages.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/pages.yml)
+[![C# Build](https://github.com/cratis/Cratis/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/dotnet-build.yml)
+[![Publish](https://github.com/cratis/Cratis/actions/workflows/publish.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/publish.yml)
+[![Documentation Site](https://github.com/cratis/Cratis/actions/workflows/pages.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/pages.yml)
 
 ## Statistics
 
@@ -78,4 +78,4 @@ around with the sample.
 ## Contributing / Running locally
 
 If you're looking to either contribute or dive into the code by building and running the Cratis Kernel locally,
-you can read more [here](./Documentation/contributing.md). You'll find issues to start with by going to [here](https://github.com/aksio-insurtech/Cratis/contribute).
+you can read more [here](./Documentation/contributing.md). You'll find issues to start with by going to [here](https://github.com/cratis/Cratis/contribute).

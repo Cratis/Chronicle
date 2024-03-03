@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Compliance;
@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Kernel.Grains.Compliance.GDPR;
 /// <summary>
 /// Represents a manager of PII in the system.
 /// </summary>
-public interface IPIIManager : IGrainWithGuidKey
+public interface IPIIManager : IGrainWithGuidCompoundKey
 {
     /// <summary>
     /// Creates a new encryption key and registers it for the specific identifier.

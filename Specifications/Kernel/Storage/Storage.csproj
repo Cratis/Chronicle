@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Storage.Specs</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Storage</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Kernel/Storage/Storage.csproj"/>
+        <ProjectReference Include="../../../Source/Clients/Specifications/Specifications.csproj"/>
+    </ItemGroup>
+
+</Project>

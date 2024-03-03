@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Client;
@@ -26,8 +26,6 @@ public class KernelFixtureWithClient : KernelFixture
 #pragma warning restore CA2000 // Dispose objects before losing scope
         webApp.UseCratis();
 
-        ExecutionContextManager = webApp.Services.GetService<IExecutionContextManager>();
-
         webApp.StartAsync(_cancellationTokenSource.Token);
         EventLog = webApp.Services.GetRequiredService<IEventLog>();
         Client = webApp.Services.GetRequiredService<IClient>();
@@ -36,12 +34,10 @@ public class KernelFixtureWithClient : KernelFixture
     }
 
     public IEventLog EventLog { get; }
-    public IExecutionContextManager ExecutionContextManager { get; }
     public IClient Client { get; }
 
     public override void Dispose()
     {
-        ExecutionContextManager.Establish(TenantId.Development, CorrelationId.New(), MicroserviceId.Unspecified);
         Client.Disconnect().GetAwaiter().GetResult();
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();

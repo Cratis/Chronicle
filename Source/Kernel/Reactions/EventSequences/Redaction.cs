@@ -1,10 +1,10 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Events.EventSequences;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
+using Aksio.Cratis.Kernel.Storage.EventSequences;
 using Aksio.Cratis.Observation;
 using EventRedacted = Aksio.Cratis.Kernel.Events.EventSequences.EventRedacted;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
@@ -18,17 +18,14 @@ namespace Aksio.Cratis.Kernel.Reactions.EventSequences;
 public class Redaction
 {
     readonly IGrainFactory _grainFactory;
-    readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Redaction"/> class.
     /// </summary>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing correct execution context.</param>
-    public Redaction(IGrainFactory grainFactory, IExecutionContextManager executionContextManager)
+    public Redaction(IGrainFactory grainFactory)
     {
         _grainFactory = grainFactory;
-        _executionContextManager = executionContextManager;
     }
 
     /// <summary>
@@ -39,7 +36,6 @@ public class Redaction
     /// <returns>Awaitable task.</returns>
     public async Task SingleEvent(EventRedacted @event, EventContext context)
     {
-        _executionContextManager.Establish(@event.TenantId, context.CorrelationId, @event.Microservice);
         var grain = _grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new EventSequenceKey(@event.Microservice, @event.TenantId));
         await grain.Redact(@event.SequenceNumber, @event.Reason, context.Causation, context.CausedBy);
     }
@@ -52,7 +48,6 @@ public class Redaction
     /// <returns>Awaitable task.</returns>
     public async Task ByEventSource(EventsRedactedForEventSource @event, EventContext context)
     {
-        _executionContextManager.Establish(@event.TenantId, context.CorrelationId, @event.Microservice);
         var grain = _grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new EventSequenceKey(@event.Microservice, @event.TenantId));
         await grain.Redact(@event.EventSourceId, @event.Reason, @event.EventTypes, context.Causation, context.CausedBy);
     }

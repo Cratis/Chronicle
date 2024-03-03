@@ -1,10 +1,8 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Contracts.Events;
-using Aksio.Cratis.Kernel.Schemas;
-using Aksio.DependencyInversion;
+using Aksio.Cratis.Kernel.Storage;
+using Microsoft.AspNetCore.Mvc;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Services.Events;
@@ -14,30 +12,24 @@ namespace Aksio.Cratis.Kernel.Services.Events;
 /// </summary>
 public class EventTypes : IEventTypes
 {
-    readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypes"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
-    /// <param name="schemaStoreProvider">Underlying <see cref="ISchemaStore"/>.</param>
-    public EventTypes(
-        IExecutionContextManager executionContextManager,
-        ProviderFor<ISchemaStore> schemaStoreProvider)
+    /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
+    public EventTypes(IStorage storage)
     {
-        _executionContextManager = executionContextManager;
-        _schemaStoreProvider = schemaStoreProvider;
+        _storage = storage;
     }
 
     /// <inheritdoc/>
     public async Task Register(RegisterEventTypesRequest request)
     {
-        _executionContextManager.Establish(request.EventStoreName);
-        foreach (var eventType in request.Types)
+        foreach (var eventType in payload.Types)
         {
-            var schema = await JsonSchema.FromJsonAsync(eventType.Schema);
-            await _schemaStoreProvider().Register(eventType.Type.ToKernel(), eventType.FriendlyName, schema);
+            var schema = await JsonSchema.FromJsonAsync(eventType.Schema.ToJsonString());
+            await _storage.GetEventStore((string)microserviceId).EventTypes.Register(eventType.Type, eventType.FriendlyName, schema);
         }
     }
 }

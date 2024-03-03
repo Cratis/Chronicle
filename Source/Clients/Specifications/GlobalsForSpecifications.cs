@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
@@ -16,7 +16,7 @@ public static class GlobalsForSpecifications
         ClientArtifactsProvider = new DefaultClientArtifactsProvider(
             new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
-        EventTypes = new EventTypes(ClientArtifactsProvider);
+        EventTypes = new Cratis.Events.EventTypes(ClientArtifactsProvider);
     }
 
     /// <summary>

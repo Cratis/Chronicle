@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Connections;
@@ -16,7 +16,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers.Clients;
 public class ClientReducer : Grain, IClientReducer, INotifyClientDisconnected
 {
     readonly ILogger<ClientReducer> _logger;
-    readonly IExecutionContextManager _executionContextManager;
     readonly ILocalSiloDetails _localSiloDetails;
     ObserverId? _reducerId;
     ObserverKey? _observerKey;
@@ -24,15 +23,12 @@ public class ClientReducer : Grain, IClientReducer, INotifyClientDisconnected
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientReducer"/>.
     /// </summary>
-    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientReducer(
-        IExecutionContextManager executionContextManager,
         ILocalSiloDetails localSiloDetails,
         ILogger<ClientReducer> logger)
     {
-        _executionContextManager = executionContextManager;
         _localSiloDetails = localSiloDetails;
         _logger = logger;
     }
@@ -49,7 +45,6 @@ public class ClientReducer : Grain, IClientReducer, INotifyClientDisconnected
     /// <inheritdoc/>
     public async Task Start(ObserverName name, ConnectionId connectionId, IEnumerable<EventTypeWithKeyExpression> eventTypes)
     {
-        _executionContextManager.Establish(_observerKey!.TenantId, CorrelationId.New(), _observerKey!.MicroserviceId);
         _logger.Starting(_observerKey!.MicroserviceId, _reducerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
         var observer = GrainFactory.GetGrain<IObserver>(_reducerId!, _observerKey!);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);

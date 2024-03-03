@@ -1,9 +1,9 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Serialization;
 using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Storage.Jobs;
 
 namespace Aksio.Cratis.Kernel.Server.Serialization;
 

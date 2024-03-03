@@ -21,7 +21,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Concepts", "Source\Kernel\C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Source\Kernel\Domain\Domain.csproj", "{C97E9194-7EE7-4174-8626-5C96AFA0B9B4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engines", "Source\Kernel\Engines\Engines.csproj", "{0DEE1B78-92D5-47BC-A919-29A59ADB3F2A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Projections", "Source\Kernel\Projections\Projections.csproj", "{0DEE1B78-92D5-47BC-A919-29A59ADB3F2A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Events", "Source\Kernel\Events\Events.csproj", "{C52DDC90-5510-4016-B759-BA0A5BEF32BE}"
 EndProject
@@ -29,7 +29,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grains", "Source\Kernel\Gra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grains.Interfaces", "Source\Kernel\Grains.Interfaces\Grains.Interfaces.csproj", "{6CF4E8F5-0676-4AB0-AD11-0959D58808EC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDB", "Source\Kernel\MongoDB\MongoDB.csproj", "{CE28CE1B-5042-4926-A411-7B33D21F0BB9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Storage.MongoDB", "Source\Kernel\Storage.MongoDB\Storage.MongoDB.csproj", "{CE28CE1B-5042-4926-A411-7B33D21F0BB9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans", "Source\Kernel\Orleans\Orleans.csproj", "{6880135B-1294-4772-9F71-AB9D2901737B}"
 EndProject
@@ -53,7 +53,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Specifications.Specs", "Spe
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Kernel", "Kernel", "{57F044DE-7383-42BB-A079-3F12DABCBA9C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engines", "Specifications\Kernel\Engines\Engines.csproj", "{C86797FA-4518-4479-A506-9955367A8AD8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Projections", "Specifications\Kernel\Projections\Projections.csproj", "{C86797FA-4518-4479-A506-9955367A8AD8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grains", "Specifications\Kernel\Grains\Grains.csproj", "{85B03B72-1B65-4F3F-AF36-843667B2E6DF}"
 EndProject
@@ -67,7 +67,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore", "Specification
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Specifications\Infrastructure\Infrastructure.csproj", "{7A418228-D4B6-49BF-AD26-7FA2FE82A578}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDB.Kernel", "Specifications\Kernel\MongoDB\MongoDB.csproj", "{663BAF26-8EA4-4D4D-9782-A96CF52D8491}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Storage.MongoDB", "Specifications\Kernel\Storage.MongoDB\Storage.MongoDB.csproj", "{663BAF26-8EA4-4D4D-9782-A96CF52D8491}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Source\Infrastructure\Infrastructure.csproj", "{180308E8-D5D4-4B5F-8558-FAA1B4246F70}"
 EndProject
@@ -81,13 +81,21 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Services", "Source\Kernel\S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grains.Interfaces", "Specifications\Kernel\Grains.Interfaces\Grains.Interfaces.csproj", "{9D12ECE0-763A-4743-98D5-561A348ADFD3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Persistence", "Source\Kernel\Persistence\Persistence.csproj", "{540799D7-A383-4DCD-B7F4-96FD4056D7A1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Storage", "Source\Kernel\Storage\Storage.csproj", "{540799D7-A383-4DCD-B7F4-96FD4056D7A1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Integration", "Integration", "{25011E0A-4967-4A8E-BCC7-48FE8F8453C4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kernel", "Specifications\Integration\Kernel\Kernel.csproj", "{1C757327-F744-41EB-8489-D8C34FB4B1AE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Roslyn.Extensions", "Source\Roslyn.Extensions\Roslyn.Extensions.csproj", "{4B9A23BE-CE65-4A84-8BC7-819B359DF779}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compliance", "Source\Kernel\Compliance\Compliance.csproj", "{55FC426B-B94E-45BB-B129-B8B041986001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Projections", "Specifications\Kernel\Projections\Projections.csproj", "{EB05ADEF-418B-4813-AE17-A6CAD303AE1E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Storage", "Specifications\Kernel\Storage\Storage.csproj", "{1BD95388-6A0C-49CC-88D9-6F9893D49632}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compliance", "Specifications\Kernel\Compliance\Compliance.csproj", "{664DAFCE-FA72-4954-8EE5-BB8EB62F5BD1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -242,6 +250,22 @@ Global
 		{4B9A23BE-CE65-4A84-8BC7-819B359DF779}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4B9A23BE-CE65-4A84-8BC7-819B359DF779}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4B9A23BE-CE65-4A84-8BC7-819B359DF779}.Release|Any CPU.Build.0 = Release|Any CPU
+		{55FC426B-B94E-45BB-B129-B8B041986001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55FC426B-B94E-45BB-B129-B8B041986001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55FC426B-B94E-45BB-B129-B8B041986001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55FC426B-B94E-45BB-B129-B8B041986001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB05ADEF-418B-4813-AE17-A6CAD303AE1E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB05ADEF-418B-4813-AE17-A6CAD303AE1E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB05ADEF-418B-4813-AE17-A6CAD303AE1E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB05ADEF-418B-4813-AE17-A6CAD303AE1E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BD95388-6A0C-49CC-88D9-6F9893D49632}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BD95388-6A0C-49CC-88D9-6F9893D49632}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BD95388-6A0C-49CC-88D9-6F9893D49632}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BD95388-6A0C-49CC-88D9-6F9893D49632}.Release|Any CPU.Build.0 = Release|Any CPU
+		{664DAFCE-FA72-4954-8EE5-BB8EB62F5BD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{664DAFCE-FA72-4954-8EE5-BB8EB62F5BD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{664DAFCE-FA72-4954-8EE5-BB8EB62F5BD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{664DAFCE-FA72-4954-8EE5-BB8EB62F5BD1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{F1A70D86-CE4A-443C-B4F9-EEFBC3E896F3} = {216800F4-7820-46A5-A3AD-4FCE82927B8D}
@@ -274,5 +298,6 @@ Global
 		{540799D7-A383-4DCD-B7F4-96FD4056D7A1} = {7AD8BE82-9E08-46FB-ADCB-7D788BAFD76D}
 		{1C757327-F744-41EB-8489-D8C34FB4B1AE} = {25011E0A-4967-4A8E-BCC7-48FE8F8453C4}
 		{4B9A23BE-CE65-4A84-8BC7-819B359DF779} = {216800F4-7820-46A5-A3AD-4FCE82927B8D}
+		{55FC426B-B94E-45BB-B129-B8B041986001} = {7AD8BE82-9E08-46FB-ADCB-7D788BAFD76D}
 	EndGlobalSection
 EndGlobal

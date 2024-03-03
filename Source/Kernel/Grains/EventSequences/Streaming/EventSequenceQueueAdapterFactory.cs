@@ -1,9 +1,7 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Identities;
-using Aksio.DependencyInversion;
+using Aksio.Cratis.Kernel.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
 
@@ -17,27 +15,23 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     readonly IQueueAdapterCache _cache;
     readonly IStreamQueueMapper _mapper;
     readonly string _name;
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly ProviderFor<IIdentityStore> _identityStoreProvider;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
     /// <param name="name">Name of stream.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
     /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
     public EventSequenceQueueAdapterFactory(
         string name,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        ProviderFor<IIdentityStore> identityStoreProvider,
+        IStorage storage,
         IEventSequenceCaches caches)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
         _cache = new EventSequenceQueueAdapterCache(caches);
         _name = name;
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
-        _identityStoreProvider = identityStoreProvider;
+        _storage = storage;
     }
 
     /// <summary>
@@ -50,13 +44,12 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     {
         return new(
             name,
-            serviceProvider.GetRequiredService<ProviderFor<IEventSequenceStorage>>(),
-            serviceProvider.GetRequiredService<ProviderFor<IIdentityStore>>(),
+            serviceProvider.GetRequiredService<IStorage>(),
             serviceProvider.GetRequiredService<IEventSequenceCaches>());
     }
 
     /// <inheritdoc/>
-    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _eventSequenceStorageProvider, _identityStoreProvider));
+    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _storage));
 
     /// <inheritdoc/>
     public Task<IStreamFailureHandler> GetDeliveryFailureHandler(QueueId queueId) => Task.FromResult<IStreamFailureHandler>(new NoOpStreamDeliveryFailureHandler());

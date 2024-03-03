@@ -1,11 +1,10 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Applications.Queries;
-using Aksio.Cratis.Kernel.Grains.Recommendations;
-using Aksio.Cratis.Kernel.Persistence.Recommendations;
-using Aksio.Cratis.Kernel.Recommendations;
-using Aksio.DependencyInversion;
+using Aksio.Cratis.Kernel.Storage;
+using Aksio.Cratis.Kernel.Storage.Recommendations;
+using Aksio.Cratis.Recommendations;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Aksio.Cratis.Kernel.Read.Recommendations;
@@ -16,20 +15,15 @@ namespace Aksio.Cratis.Kernel.Read.Recommendations;
 [Route("/api/events/store/{microserviceId}/{tenantId}/recommendations")]
 public class Recommendations : ControllerBase
 {
-    readonly ProviderFor<IRecommendationStorage> _recommendationStorageProvider;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly IStorage _storage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Recommendations"/> class.
     /// </summary>
-    /// <param name="recommendationStorageProvider">Provider for <see cref="IRecommendationStorage"/>.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public Recommendations(
-        ProviderFor<IRecommendationStorage> recommendationStorageProvider,
-        IExecutionContextManager executionContextManager)
+    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+    public Recommendations(IStorage storage)
     {
-        _recommendationStorageProvider = recommendationStorageProvider;
-        _executionContextManager = executionContextManager;
+        _storage = storage;
     }
 
     /// <summary>
@@ -43,8 +37,7 @@ public class Recommendations : ControllerBase
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
-        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
-        var recommendations = await _recommendationStorageProvider().GetRecommendations();
+        var recommendations = await _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations.GeAll();
         return Convert(recommendations);
     }
 
@@ -59,10 +52,9 @@ public class Recommendations : ControllerBase
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
-        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
-
         var clientObservable = new ClientObservable<IEnumerable<RecommendationInformation>>();
-        var observable = _recommendationStorageProvider().ObserveRecommendations();
+        var recommendations = _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations;
+        var observable = recommendations.ObserveRecommendations();
         var subscription = observable.Subscribe(recommendations => clientObservable.OnNext(Convert(recommendations)));
         clientObservable.ClientDisconnected = () =>
         {

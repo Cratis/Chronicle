@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Events.Accounts.Debit;
@@ -21,7 +21,6 @@ public class MoneyLaundering
 
     public async Task AccountOpened(DebitAccountOpened @event, EventContext context)
     {
-        throw new NotImplementedException();
         var count = await _immediateProjections.GetInstanceById<AccountsCounter>(context.EventSourceId);
         if (count.Model.Count > 42)
         {

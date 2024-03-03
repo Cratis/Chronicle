@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
@@ -49,6 +49,7 @@ public static class Program
                     options.Port = 8081;
                     options.HostSelf = true;
                 })
+                .ConfigureStorage()
                 .UseMongoDB()
                 .AddEventSequenceStreaming()
                 .AddExecutionContext())

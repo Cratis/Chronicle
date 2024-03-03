@@ -1,34 +1,34 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>1.5.5</ApplicationModel>
+    <ApplicationModel>1.5.9</ApplicationModel>
     <Orleans>7.2.4</Orleans>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="BenchmarkDotNet" Version="0.13.7" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageVersion Include="docfx.console" Version="2.59.3" />
-    <PackageVersion Include="Aksio.Fundamentals" Version="1.6.0" />
-    <PackageVersion Include="Aksio.MongoDB" Version="1.4.1" />
+    <PackageVersion Include="Aksio.Fundamentals" Version="1.6.3" />
+    <PackageVersion Include="Aksio.MongoDB" Version="1.4.6" />
     <PackageVersion Include="Aksio.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Aksio.Applications.CQRS" Version="$(ApplicationModel)" />
     <PackageVersion Include="Aksio.Applications.CQRS.MongoDB" Version="$(ApplicationModel)" />
     <PackageVersion Include="Aksio.Applications.ProxyGenerator" Version="$(ApplicationModel)" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
-    <PackageVersion Include="NJsonSchema" Version="10.9.0" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <PackageVersion Include="NJsonSchema" Version="11.0.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="protobuf-net.Grpc" Version="1.1.1" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.1.1" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.57.0" />
-    <PackageVersion Include="mongodb.driver" Version="2.22.0" />
+    <PackageVersion Include="mongodb.driver" Version="2.24.0" />
     <PackageVersion Include="OrleansTestKit" Version="4.0.0-beta.3" NoWarn="NU5104"/>
-    <PackageVersion Include="System.Data.SqlClient" Version="4.8.3" />
+    <PackageVersion Include="System.Data.SqlClient" Version="4.8.6" />
     <PackageVersion Include="System.Net.NameResolution" Version="4.3.0" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
-    <PackageVersion Include="automapper" Version="12.0.1" />
-    <PackageVersion Include="Azure.Data.Tables" Version="12.7.1" />
-    <PackageVersion Include="FluentValidation" Version="11.5.2" />
+    <PackageVersion Include="automapper" Version="13.0.1" />
+    <PackageVersion Include="Azure.Data.Tables" Version="12.8.3" />
+    <PackageVersion Include="FluentValidation" Version="11.9.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="$(Orleans)" />
@@ -43,25 +43,25 @@
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
     <PackageVersion Include="OrleansDashboard" Version="7.2.2" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.4.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.0.0-rc9.14" NoWarn="NU5104" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.1.0-rc.2" NoWarn="NU5104" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.0.0-rc9.14" NoWarn="NU5104" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.4.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.1" NoWarn="NU5104" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.7.0" NoWarn="NU5104" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.7.1" NoWarn="NU5104" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.0.0-beta.10" NoWarn="NU5104" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.5.0-alpha.2" NoWarn="NU5104" />
     <PackageVersion Include="handlebars.net" Version="2.1.4" />
     <!-- Roslyn-->
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.5.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.5.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" />
     <!-- Analysis -->
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" Version="4.5.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" Version="4.8.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="7.0.4" />
-    <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.376" NoWarn="NU5104" />
-    <PackageVersion Include="Roslynator.Analyzers" Version="4.5.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.82" />
+    <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="4.11.0" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.145" />
     <!-- Specifications -->
     <PackageVersion Include="Aksio.Specifications" Version="2.0.1" />
-    <PackageVersion Include="Testcontainers" Version="3.6.0" />
+    <PackageVersion Include="Testcontainers" Version="3.7.0" />
     <PackageVersion Include="xunit" Version="2.4.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.4.2" />
     <PackageVersion Include="moq" Version="4.18.4" />

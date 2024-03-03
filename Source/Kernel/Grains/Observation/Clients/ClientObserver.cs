@@ -1,4 +1,4 @@
-// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Connections;
@@ -18,7 +18,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
 {
     readonly ILogger<ClientObserver> _logger;
-    readonly IExecutionContextManager _executionContextManager;
     readonly ILocalSiloDetails _localSiloDetails;
     ObserverId? _observerId;
     ConnectedObserverKey? _observerKey;
@@ -30,11 +29,9 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
     /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientObserver(
-        IExecutionContextManager executionContextManager,
         ILocalSiloDetails localSiloDetails,
         ILogger<ClientObserver> logger)
     {
-        _executionContextManager = executionContextManager;
         _localSiloDetails = localSiloDetails;
         _logger = logger;
     }
@@ -51,7 +48,6 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
     /// <inheritdoc/>
     public async Task Start(ObserverName name, IEnumerable<EventType> eventTypes)
     {
-        _executionContextManager.Establish(_observerKey!.TenantId, CorrelationId.New(), _observerKey!.MicroserviceId);
         _logger.Starting(_observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
         var key = new ObserverKey(_observerKey.MicroserviceId, _observerKey.TenantId, _observerKey.EventSequenceId);
         var observer = GrainFactory.GetGrain<IObserver>(_observerId!, key);
