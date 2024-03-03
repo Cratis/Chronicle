@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Schemas;
+using Cratis.Dynamic;
+using Cratis.Events;
+using Cratis.Properties;
+using Cratis.Schemas;
 using Aksio.Types;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Projections;
+namespace Cratis.Kernel.Projections;
 
 /// <summary>
 /// Represents utilities for creating <see cref="PropertyMapper{Event, ExpandoObject}"/> for different scenarios.

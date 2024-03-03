@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Properties;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Projections.for_ProjectionExtensions.when_applying_from_filter;
+namespace Cratis.Kernel.Projections.for_ProjectionExtensions.when_applying_from_filter;
 
 public class when_projecting_to_root_property : given.an_observable_and_event_setup
 {

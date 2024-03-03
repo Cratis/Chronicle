@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Aksio.Cratis.Properties.for_PropertyPath;
+namespace Cratis.Properties.for_PropertyPath;
 
 public class and_it_is_on_the_third_level_but_hierarchy_is_not_present : Specification
 {

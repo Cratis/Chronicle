@@ -3,17 +3,17 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
-using Aksio.Cratis.Events.MongoDB.EventTypes;
-using Aksio.Cratis.Kernel.Compliance;
-using Aksio.Cratis.Kernel.Storage.EventTypes;
-using Aksio.Cratis.Kernel.Storage.Identities;
-using Aksio.Cratis.Kernel.Storage.MongoDB.Identities;
-using Aksio.Cratis.Kernel.Storage.MongoDB.Projections;
-using Aksio.Cratis.Kernel.Storage.Projections;
-using Aksio.Cratis.Projections.Json;
+using Cratis.Events.MongoDB.EventTypes;
+using Cratis.Kernel.Compliance;
+using Cratis.Kernel.Storage.EventTypes;
+using Cratis.Kernel.Storage.Identities;
+using Cratis.Kernel.Storage.MongoDB.Identities;
+using Cratis.Kernel.Storage.MongoDB.Projections;
+using Cratis.Kernel.Storage.Projections;
+using Cratis.Projections.Json;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreStorage"/> for MongoDB.

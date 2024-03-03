@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Kernel.Grains.Observation.Reducers;
-using Aksio.Cratis.Kernel.Grains.Projections.Definitions;
-using Aksio.Cratis.Kernel.Storage;
+using Cratis.Kernel.Grains.Observation.Reducers;
+using Cratis.Kernel.Grains.Projections.Definitions;
+using Cratis.Kernel.Storage;
 
-namespace Aksio.Cratis.Kernel.Grains;
+namespace Cratis.Kernel.Grains;
 
 /// <summary>
 /// Defines an <see cref="IEventStore"/>.

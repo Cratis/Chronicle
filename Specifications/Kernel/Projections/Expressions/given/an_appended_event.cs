@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Identities;
+using Cratis.Auditing;
+using Cratis.Identities;
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions.given;
+namespace Cratis.Kernel.Projections.Expressions.given;
 
 public class an_appended_event : Specification
 {

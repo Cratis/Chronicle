@@ -7,19 +7,19 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Commands;
-using Aksio.Cratis.Connections;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Grains.Clients;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Observation;
-using Aksio.Cratis.Observation.Reducers;
-using Aksio.Cratis.Properties;
+using Cratis.Connections;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Json;
+using Cratis.Kernel.Grains.Clients;
+using Cratis.Kernel.Keys;
+using Cratis.Observation;
+using Cratis.Observation.Reducers;
+using Cratis.Properties;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers.Clients;
+namespace Cratis.Kernel.Grains.Observation.Reducers.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientReducerSubscriber"/>.

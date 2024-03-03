@@ -3,7 +3,7 @@
 
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Changes.for_ObjectComparer;
+namespace Cratis.Changes.for_ObjectComparer;
 
 public class when_comparing_object_with_collections_with_known_element_type_that_have_null_value_in_left_but_values_in_right : given.an_object_comparer
 {

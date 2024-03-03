@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Projections;
+using Cratis.Projections;
 
-namespace Aksio.Cratis.Rules;
+namespace Cratis.Rules;
 
 /// <summary>
 /// Represents the unique identifier of a projection.

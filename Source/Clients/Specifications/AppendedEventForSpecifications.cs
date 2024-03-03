@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Specifications;
+namespace Cratis.Specifications;
 
 /// <summary>
 /// Represents a specialized version of <see cref="AppendedEvent"/> used in specifications.

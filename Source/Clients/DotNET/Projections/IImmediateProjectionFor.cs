@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Defines a system that can define an immediate projection.

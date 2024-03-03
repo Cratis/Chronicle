@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Projections.Scenarios.Projections;
-using Aksio.Cratis.Specifications.Integration;
+using Cratis.Kernel.Projections.Scenarios.Projections;
+using Cratis.Specifications.Integration;
 
-namespace Aksio.Cratis.Kernel.Projections.Scenarios.when_projecting_properties;
+namespace Cratis.Kernel.Projections.Scenarios.when_projecting_properties;
 
 public class subtracting_from_properties : ProjectionSpecificationFor<Model>
 {

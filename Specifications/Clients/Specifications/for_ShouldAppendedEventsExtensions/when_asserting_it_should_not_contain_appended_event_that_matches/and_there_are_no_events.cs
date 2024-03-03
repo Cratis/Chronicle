@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Specifications.when_asserting_it_should_not_contain_appended_event_that_matches;
+namespace Cratis.Specifications.when_asserting_it_should_not_contain_appended_event_that_matches;
 
 public class and_there_are_no_events : given.no_events
 {

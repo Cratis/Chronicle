@@ -1,19 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Aggregates;
-using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences.Outbox;
-using Aksio.Cratis.Integration;
-using Aksio.Cratis.Observation;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Reducers;
-using Aksio.Cratis.Rules;
+using Cratis.Aggregates;
+using Cratis.Compliance;
+using Cratis.Events;
+using Cratis.EventSequences.Outbox;
+using Cratis.Integration;
+using Cratis.Observation;
+using Cratis.Projections;
+using Cratis.Reducers;
+using Cratis.Rules;
 using Aksio.Reflection;
 using Aksio.Types;
 
-namespace Aksio.Cratis;
+namespace Cratis;
 
 /// <summary>
 /// Represents a default implementation of <see cref="IClientArtifactsProvider"/>.

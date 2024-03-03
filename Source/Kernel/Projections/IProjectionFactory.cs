@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Projections.Definitions;
+using Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Kernel.Projections;
+namespace Cratis.Kernel.Projections;
 
 /// <summary>
 /// Defines a factory for creating <see cref="IProjection"/>.

@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Properties;
+using Cratis.Dynamic;
+using Cratis.Events;
+using Cratis.Kernel.Keys;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Projections;
+namespace Cratis.Kernel.Projections;
 
 /// <summary>
 /// Represents utilities for creating <see cref="KeyResolvers"/> instances for providing values from <see cref="AppendedEvent">events</see>.

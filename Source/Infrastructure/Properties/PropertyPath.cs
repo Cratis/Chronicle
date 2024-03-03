@@ -6,12 +6,12 @@ using System.Dynamic;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Objects;
+using Cratis.Dynamic;
+using Cratis.Objects;
 using Aksio.Reflection;
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Properties;
+namespace Cratis.Properties;
 
 /// <summary>
 /// Represents an encapsulation of a property in the system - used for accessing properties on objects.

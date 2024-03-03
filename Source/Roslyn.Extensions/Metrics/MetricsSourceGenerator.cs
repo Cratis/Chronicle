@@ -25,8 +25,8 @@ public class MetricsSourceGenerator : ISourceGenerator
     {
         if (context.SyntaxReceiver is not MetricsSyntaxReceiver receiver) return;
 
-        var counterAttribute = context.Compilation.GetTypeByMetadataName("Aksio.Cratis.Metrics.CounterAttribute`1")!;
-        var measurementAttribute = context.Compilation.GetTypeByMetadataName("Aksio.Cratis.Metrics.MeasurementAttribute`1")!;
+        var counterAttribute = context.Compilation.GetTypeByMetadataName("Cratis.Metrics.CounterAttribute`1")!;
+        var measurementAttribute = context.Compilation.GetTypeByMetadataName("Cratis.Metrics.MeasurementAttribute`1")!;
         foreach (var candidate in receiver.Candidates)
         {
             var classDefinition = $"{candidate.Modifiers} class {candidate.Identifier.ValueText}";

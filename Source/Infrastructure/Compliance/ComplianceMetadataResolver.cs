@@ -4,7 +4,7 @@
 using System.Reflection;
 using Aksio.Types;
 
-namespace Aksio.Cratis.Compliance;
+namespace Cratis.Compliance;
 
 /// <summary>
 /// Represents an implementation of <see cref="IComplianceMetadataResolver"/>.

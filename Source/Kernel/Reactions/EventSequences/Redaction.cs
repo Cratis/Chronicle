@@ -1,15 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Events.EventSequences;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Observation;
-using EventRedacted = Aksio.Cratis.Kernel.Events.EventSequences.EventRedacted;
-using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Kernel.Events.EventSequences;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Observation;
+using EventRedacted = Cratis.Kernel.Events.EventSequences.EventRedacted;
+using IEventSequence = Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
-namespace Aksio.Cratis.Kernel.Reactions.EventSequences;
+namespace Cratis.Kernel.Reactions.EventSequences;
 
 /// <summary>
 /// Observes events related to redaction done on any <see cref="EventSequence"/> and reacts to them.

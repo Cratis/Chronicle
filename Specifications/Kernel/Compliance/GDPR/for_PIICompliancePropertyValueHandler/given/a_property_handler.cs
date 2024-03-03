@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
-using Aksio.Cratis.Kernel.Storage.Compliance;
+using Cratis.Kernel.Storage.Compliance;
 
-namespace Aksio.Cratis.Kernel.Compliance.GDPR.for_PIICompliancePropertyValueHandler.given;
+namespace Cratis.Kernel.Compliance.GDPR.for_PIICompliancePropertyValueHandler.given;
 
 public class a_property_handler : Specification
 {

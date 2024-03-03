@@ -2,19 +2,19 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
-using Aksio.Cratis.Connections;
-using Aksio.Cratis.Kernel.Contracts.Clients;
-using Aksio.Cratis.Kernel.Contracts.Events;
-using Aksio.Cratis.Kernel.Contracts.EventSequences;
-using Aksio.Cratis.Kernel.Contracts.Observation;
-using Aksio.Cratis.Tasks;
+using Cratis.Connections;
+using Cratis.Kernel.Contracts.Clients;
+using Cratis.Kernel.Contracts.Events;
+using Cratis.Kernel.Contracts.EventSequences;
+using Cratis.Kernel.Contracts.Observation;
+using Cratis.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Grpc.Net.Client.Configuration;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc.Client;
 
-namespace Aksio.Cratis;
+namespace Cratis;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICratisConnection"/>.

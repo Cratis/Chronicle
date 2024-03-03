@@ -3,7 +3,7 @@
 
 using System.Diagnostics.Metrics;
 
-namespace Aksio.Cratis.Kernel.Grains.Clients;
+namespace Cratis.Kernel.Grains.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClientsMetricsFactory"/>.

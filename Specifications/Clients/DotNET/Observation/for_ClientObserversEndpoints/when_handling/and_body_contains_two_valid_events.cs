@@ -4,10 +4,10 @@
 using System.Net;
 using System.Text.Json;
 using Aksio.Commands;
-using Aksio.Cratis.Specifications.Events;
+using Cratis.Specifications.Events;
 using Aksio.Json;
 
-namespace Aksio.Cratis.Observation.for_ClientObserversEndpoints.when_handling;
+namespace Cratis.Observation.for_ClientObserversEndpoints.when_handling;
 
 public class and_body_contains_two_valid_events : given.an_http_context_and_client_observers
 {

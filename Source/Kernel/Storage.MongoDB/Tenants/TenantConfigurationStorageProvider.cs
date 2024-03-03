@@ -5,7 +5,7 @@ using MongoDB.Driver;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Tenants;
+namespace Cratis.Kernel.Storage.MongoDB.Tenants;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling tenant configuration data.

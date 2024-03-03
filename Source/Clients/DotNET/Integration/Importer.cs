@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.EventSequences;
+using Cratis.Auditing;
+using Cratis.Changes;
+using Cratis.EventSequences;
 
-namespace Aksio.Cratis.Integration;
+namespace Cratis.Integration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IImporter"/>.

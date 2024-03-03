@@ -3,7 +3,7 @@
 
 using System.Diagnostics.Metrics;
 
-namespace Aksio.Cratis.Metrics;
+namespace Cratis.Metrics;
 
 /// <summary>
 /// Defines a scope for metrics.

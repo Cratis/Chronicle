@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Aksio.Cratis.Kernel.Contracts.Projections;
+namespace Cratis.Kernel.Contracts.Projections;
 
 /// <summary>
 /// Represents the definition of where to store results from a projection.

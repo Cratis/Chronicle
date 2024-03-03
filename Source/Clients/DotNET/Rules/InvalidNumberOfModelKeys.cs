@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Rules;
+namespace Cratis.Rules;
 
 /// <summary>
 /// Exception that gets thrown when there are an invalid number of model keys on a model. Only one is allowed.

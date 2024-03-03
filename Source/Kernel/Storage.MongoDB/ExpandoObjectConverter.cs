@@ -3,12 +3,12 @@
 
 using System.Collections;
 using System.Dynamic;
-using Aksio.Cratis.Reflection;
-using Aksio.Cratis.Schemas;
+using Cratis.Reflection;
+using Cratis.Schemas;
 using MongoDB.Bson;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IExpandoObjectConverter"/>.

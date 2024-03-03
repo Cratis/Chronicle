@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis;
-using Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
+using Cratis;
+using Cratis.Kernel.Grains.EventSequences.Streaming;
 using Orleans.Configuration;
 
 namespace Orleans.Hosting;

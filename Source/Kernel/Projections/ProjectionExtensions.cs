@@ -4,14 +4,14 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Properties;
+using Cratis.Changes;
+using Cratis.Dynamic;
+using Cratis.Events;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Properties;
 using Aksio.Reflection;
 
-namespace Aksio.Cratis.Kernel.Projections;
+namespace Cratis.Kernel.Projections;
 
 /// <summary>
 /// Extension methods for building up a projection.

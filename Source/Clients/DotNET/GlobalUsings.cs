@@ -8,5 +8,5 @@ global using Aksio.Execution;
 global using ExecutionContext = Aksio.Execution.ExecutionContext;
 
 using System.Runtime.CompilerServices;
-[assembly: InternalsVisibleTo("Aksio.Cratis.Specs")]
-[assembly: InternalsVisibleTo("Aksio.Cratis.Specifications")]
+[assembly: InternalsVisibleTo("Cratis.Specs")]
+[assembly: InternalsVisibleTo("Cratis.Specifications")]

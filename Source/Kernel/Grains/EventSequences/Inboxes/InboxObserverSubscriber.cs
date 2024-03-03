@@ -1,18 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.EventTypes;
-using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.EventTypes;
-using Aksio.Cratis.Observation;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.EventTypes;
+using Cratis.Json;
+using Cratis.Kernel.Grains.Observation;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.EventTypes;
+using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
+namespace Cratis.Kernel.Grains.EventSequences.Inbox;
 
 /// <summary>
 /// Represents an implementation of <see cref="IInboxObserverSubscriber"/>.

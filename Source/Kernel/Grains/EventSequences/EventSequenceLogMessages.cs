@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
+using Cratis.Events;
+using Cratis.EventSequences;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences;
+namespace Cratis.Kernel.Grains.EventSequences;
 
 /// <summary>
 /// Holds log messages for <see cref="EventSequence"/>.

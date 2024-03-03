@@ -3,7 +3,7 @@
 
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Kernel.Orleans.Execution;
+namespace Cratis.Kernel.Orleans.Execution;
 
 /// <summary>
 /// Represents an implementation of <see cref="IRequestContextManager"/>.

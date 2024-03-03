@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Sinks;
+using Cratis.Changes;
+using Cratis.Events;
+using Cratis.Kernel.Keys;
+using Cratis.Sinks;
 
-namespace Aksio.Cratis.Kernel.Storage.Sinks;
+namespace Cratis.Kernel.Storage.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> that does nothing.

@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Kernel.Projections.Pipelines;
-using Aksio.Cratis.Observation;
-using Aksio.Cratis.Projections;
+using Cratis.Events;
+using Cratis.Kernel.Grains.Observation;
+using Cratis.Kernel.Projections.Pipelines;
+using Cratis.Observation;
+using Cratis.Projections;
 
-namespace Aksio.Cratis.Kernel.Grains.Projections;
+namespace Cratis.Kernel.Grains.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionObserverSubscriber"/>.

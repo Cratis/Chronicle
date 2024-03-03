@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Options;
 
-namespace Aksio.Cratis.Net;
+namespace Cratis.Net;
 
 /// <summary>
 /// Represents an implementation of <see cref="ILoadBalancedHttpClientFactory"/>.

@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Connections;
+namespace Cratis.Connections;
 
 internal static partial class ConnectionLifecycleLogMessages
 {

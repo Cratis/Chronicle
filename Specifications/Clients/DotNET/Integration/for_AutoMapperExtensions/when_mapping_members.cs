@@ -3,7 +3,7 @@
 
 using AutoMapper;
 
-namespace Aksio.Cratis.Integration.for_AutoMapperExtensions;
+namespace Cratis.Integration.for_AutoMapperExtensions;
 
 public class when_mapping_members : Specification
 {

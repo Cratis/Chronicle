@@ -3,4 +3,4 @@
 
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Aksio.Cratis.Common.Specs")]
+[assembly: InternalsVisibleTo("Cratis.Common.Specs")]

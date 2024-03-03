@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.EventSequences;
-using Aksio.Cratis.Kernel.Orleans.Execution;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Kernel.EventSequences;
+using Cratis.Kernel.Orleans.Execution;
 using Orleans.Runtime;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
+namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Represents an implementation of <see cref="IQueueCacheCursor"/> for event sequences.

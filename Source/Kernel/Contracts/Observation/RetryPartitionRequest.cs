@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Aksio.Cratis.Kernel.Contracts.Observation;
+namespace Cratis.Kernel.Contracts.Observation;
 
 /// <summary>
 /// Represents the request for retrying a failed partition in an observer.

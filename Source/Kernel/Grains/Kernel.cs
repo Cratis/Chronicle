@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains;
+namespace Cratis.Kernel.Grains;
 
 /// <summary>
 /// Represents an implementation of <see cref="IKernel"/>.

@@ -3,10 +3,10 @@
 
 using System.Text;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Kernel.Storage.Compliance;
+using Cratis.Compliance;
+using Cratis.Kernel.Storage.Compliance;
 
-namespace Aksio.Cratis.Kernel.Compliance.GDPR;
+namespace Cratis.Kernel.Compliance.GDPR;
 
 /// <summary>
 /// Represents a <see cref="IJsonCompliancePropertyValueHandler"/> for handling PII.

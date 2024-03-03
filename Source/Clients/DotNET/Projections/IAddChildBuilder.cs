@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Defines a builder for building an add child operation, typically used in to a from expression.

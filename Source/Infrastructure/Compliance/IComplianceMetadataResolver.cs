@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Aksio.Cratis.Compliance;
+namespace Cratis.Compliance;
 
 /// <summary>
 /// Defines a resolver of <see cref="ComplianceMetadata"/> for types and properties.

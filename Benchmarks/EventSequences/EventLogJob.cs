@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.MongoDB;
+using Cratis.EventSequences;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
-using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
+using IEventSequence = Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
 namespace Benchmarks.EventSequences;
 

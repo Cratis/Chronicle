@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Identities;
+using Cratis.Identities;
 
-namespace Aksio.Cratis.Kernel.Storage.Identities;
+namespace Cratis.Kernel.Storage.Identities;
 
 /// <summary>
 /// Defines a system that manages <see cref="Identity">caused by</see> instances.

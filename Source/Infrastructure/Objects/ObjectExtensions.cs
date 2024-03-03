@@ -6,13 +6,13 @@ using System.Dynamic;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Concepts;
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Reflection;
+using Cratis.Dynamic;
+using Cratis.Properties;
+using Cratis.Reflection;
 using Aksio.Json;
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Objects;
+namespace Cratis.Objects;
 
 /// <summary>
 /// Extension methods for any object.

@@ -3,7 +3,7 @@
 
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Properties.for_PropertyPath;
+namespace Cratis.Properties.for_PropertyPath;
 
 public class when_adding_array_indexer : Specification
 {

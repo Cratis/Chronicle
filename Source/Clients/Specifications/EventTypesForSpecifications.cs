@@ -3,9 +3,9 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Specifications;
+namespace Cratis.Specifications;
 
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IEventTypes"/>.

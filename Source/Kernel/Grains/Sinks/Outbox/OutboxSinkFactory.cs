@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.Sinks;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Sinks;
+using Cratis.EventSequences;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.Sinks;
+using Cratis.Models;
+using Cratis.Sinks;
 
-namespace Aksio.Cratis.Kernel.Grains.Sinks.Outbox;
+namespace Cratis.Kernel.Grains.Sinks.Outbox;
 
 /// <summary>
 /// Represents a <see cref="ISinkFactory"/> for creating <see cref="OutboxSink"/> instances.

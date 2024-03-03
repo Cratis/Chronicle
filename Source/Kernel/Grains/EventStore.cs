@@ -3,14 +3,14 @@
 
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using Aksio.Cratis.Kernel.Grains.Observation.Reducers;
-using Aksio.Cratis.Kernel.Grains.Projections.Definitions;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Projections.Json;
+using Cratis.Kernel.Grains.Observation.Reducers;
+using Cratis.Kernel.Grains.Projections.Definitions;
+using Cratis.Kernel.Storage;
+using Cratis.Projections.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains;
+namespace Cratis.Kernel.Grains;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStore"/>.

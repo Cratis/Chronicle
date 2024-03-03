@@ -3,11 +3,11 @@
 
 #pragma warning disable SA1600
 
-using Aksio.Cratis.Kernel.Grains.Clients;
+using Cratis.Kernel.Grains.Clients;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
-namespace Aksio.Cratis.Kernel.Server;
+namespace Cratis.Kernel.Server;
 
 public class Startup
 {

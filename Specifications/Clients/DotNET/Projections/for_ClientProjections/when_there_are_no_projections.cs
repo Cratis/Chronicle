@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Projections.Definitions;
+using Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Projections.for_ClientProjections;
+namespace Cratis.Projections.for_ClientProjections;
 
 public class when_there_are_no_projections : given.client_projections_without_any_definitions
 {

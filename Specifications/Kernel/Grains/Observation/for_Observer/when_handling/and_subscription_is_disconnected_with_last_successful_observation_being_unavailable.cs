@@ -3,7 +3,7 @@
 
 using Orleans.TestKit;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
+namespace Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
 public class and_subscription_is_disconnected_with_last_successful_observation_being_unavailable : given.an_observer_with_subscription_for_specific_event_type
 {

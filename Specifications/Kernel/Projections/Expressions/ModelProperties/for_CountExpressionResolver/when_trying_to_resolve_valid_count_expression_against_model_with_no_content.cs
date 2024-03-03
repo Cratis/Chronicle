@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Schemas;
+using Cratis.Auditing;
+using Cratis.Identities;
+using Cratis.Properties;
+using Cratis.Schemas;
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions.ModelProperties.for_CountExpressionResolver;
+namespace Cratis.Kernel.Projections.Expressions.ModelProperties.for_CountExpressionResolver;
 
 public class when_trying_to_resolve_valid_count_expression_against_model_with_no_content : Specification
 {

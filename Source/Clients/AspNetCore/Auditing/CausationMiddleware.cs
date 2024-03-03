@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Collections;
-using Aksio.Cratis.Auditing;
+using Cratis.Auditing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
-namespace Aksio.Cratis.AspNetCore.Auditing;
+namespace Cratis.AspNetCore.Auditing;
 
 /// <summary>
 /// Represents a middleware for adding causation from ASP.NET requests.

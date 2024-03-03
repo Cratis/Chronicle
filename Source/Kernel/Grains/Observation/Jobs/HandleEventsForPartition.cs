@@ -1,17 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.Jobs;
-using Aksio.Cratis.Observation;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Jobs;
+using Cratis.Kernel.Grains.Jobs;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.Jobs;
+using Cratis.Observation;
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
+namespace Cratis.Kernel.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents a step in a replay job.

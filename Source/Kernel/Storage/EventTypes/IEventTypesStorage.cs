@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventTypes;
+using Cratis.Events;
+using Cratis.EventTypes;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Storage.EventTypes;
+namespace Cratis.Kernel.Storage.EventTypes;
 
 /// <summary>
 /// Defines the store for event schemas.

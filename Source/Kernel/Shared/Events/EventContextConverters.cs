@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Identities;
+using Cratis.Auditing;
+using Cratis.Identities;
 
-namespace Aksio.Cratis.Events;
+namespace Cratis.Events;
 
 /// <summary>
 /// Converter methods for <see cref="EventContext"/>.

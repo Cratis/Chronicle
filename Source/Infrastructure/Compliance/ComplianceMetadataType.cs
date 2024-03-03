@@ -3,7 +3,7 @@
 
 using Aksio.Concepts;
 
-namespace Aksio.Cratis.Compliance;
+namespace Cratis.Compliance;
 
 /// <summary>
 /// Represents a type of compliance metadata.

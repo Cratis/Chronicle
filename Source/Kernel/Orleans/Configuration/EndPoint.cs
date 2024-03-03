@@ -3,7 +3,7 @@
 
 using System.Net;
 
-namespace Aksio.Cratis.Kernel.Orleans.Configuration;
+namespace Cratis.Kernel.Orleans.Configuration;
 
 /// <summary>
 /// Represents the configuration of an <see cref="IPEndPoint"/>.

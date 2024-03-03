@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Observation;
-using Aksio.Cratis.Properties;
+using Cratis.EventSequences;
+using Cratis.Kernel.Grains.Observation;
+using Cratis.Kernel.Keys;
+using Cratis.Observation;
+using Cratis.Properties;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Aksio.Cratis.Kernel.Domain.Observation;
+namespace Cratis.Kernel.Domain.Observation;
 
 /// <summary>
 /// Represents the API for working with observers.

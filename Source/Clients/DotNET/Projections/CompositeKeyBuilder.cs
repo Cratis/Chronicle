@@ -3,10 +3,10 @@
 
 using System.Linq.Expressions;
 using System.Text;
-using Aksio.Cratis.Reflection;
+using Cratis.Reflection;
 using Aksio.Reflection;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICompositeKeyBuilder{TKeyType, TEvent}"/>.

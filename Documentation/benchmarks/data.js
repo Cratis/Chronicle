@@ -1,6 +1,6 @@
 window.BENCHMARK_DATA = {
   "lastUpdate": 1701352901341,
-  "repoUrl": "https://github.com/aksio-insurtech/Cratis",
+  "repoUrl": "https://github.com/Cratis/Cratis",
   "entries": {
     "Cratis Benchmarks": [
       {
@@ -18,7 +18,7 @@ window.BENCHMARK_DATA = {
           "id": "e35158a4b43872a908e855f8a79e0c3f43bef60a",
           "message": "Actually skipping the fetch for main",
           "timestamp": "2023-09-05T09:50:10Z",
-          "url": "https://github.com/aksio-insurtech/Cratis/commit/e35158a4b43872a908e855f8a79e0c3f43bef60a"
+          "url": "https://github.com/Cratis/Cratis/commit/e35158a4b43872a908e855f8a79e0c3f43bef60a"
         },
         "date": 1693908072248,
         "tool": "benchmarkdotnet",
@@ -138,7 +138,7 @@ window.BENCHMARK_DATA = {
           "message": "Merge pull request #942 from woksin/initial-partition-failed\n\nInitial partition failed",
           "timestamp": "2023-09-10T08:23:12+02:00",
           "tree_id": "574cce8e20f7b13de2a1db9ddf57f80acad127ef",
-          "url": "https://github.com/aksio-insurtech/Cratis/commit/fd4a70c8f664c3dba9db93762249c933b17a022d"
+          "url": "https://github.com/Cratis/Cratis/commit/fd4a70c8f664c3dba9db93762249c933b17a022d"
         },
         "date": 1694327408560,
         "tool": "benchmarkdotnet",
@@ -256,7 +256,7 @@ window.BENCHMARK_DATA = {
           "id": "cc9845a94cdfa8b23d6db8a22e5bf8c04fc7ca91",
           "message": "Update README.md",
           "timestamp": "2023-09-18T12:01:05Z",
-          "url": "https://github.com/aksio-insurtech/Cratis/commit/cc9845a94cdfa8b23d6db8a22e5bf8c04fc7ca91"
+          "url": "https://github.com/Cratis/Cratis/commit/cc9845a94cdfa8b23d6db8a22e5bf8c04fc7ca91"
         },
         "date": 1695039165066,
         "tool": "benchmarkdotnet",
@@ -376,7 +376,7 @@ window.BENCHMARK_DATA = {
           "message": "Merge pull request #968 from aksio-insurtech:fix/graceful-identities\n\nFallback to NotSet or Unknown for identity, instead of throwing an exception",
           "timestamp": "2023-09-25T15:07:46+02:00",
           "tree_id": "b596bc57c3e3828043a9b7db1b03bafe8090c567",
-          "url": "https://github.com/aksio-insurtech/Cratis/commit/a52634d4b467aba99af52f38eb8188d0075e5f28"
+          "url": "https://github.com/Cratis/Cratis/commit/a52634d4b467aba99af52f38eb8188d0075e5f28"
         },
         "date": 1695647729070,
         "tool": "benchmarkdotnet",
@@ -496,7 +496,7 @@ window.BENCHMARK_DATA = {
           "message": "Merge pull request #994 from aksio-insurtech:fix/workers\n\nChanging stop to do nothing if there is nothing to stop. + do not write its state - it can be stale",
           "timestamp": "2023-10-22T12:22:38+02:00",
           "tree_id": "9e4f03feae766b6c953e6c2158a231edc0d613b6",
-          "url": "https://github.com/aksio-insurtech/Cratis/commit/5166ac6e99b3ebfb664acb5382b0a9efd1d94bb2"
+          "url": "https://github.com/Cratis/Cratis/commit/5166ac6e99b3ebfb664acb5382b0a9efd1d94bb2"
         },
         "date": 1697970605344,
         "tool": "benchmarkdotnet",
@@ -616,7 +616,7 @@ window.BENCHMARK_DATA = {
           "message": "Merge pull request #998 from aksio-insurtech:fix/immediate-projections\n\nFixing so that if there are no event types for an immediate projection, we return empty result",
           "timestamp": "2023-10-26T18:11:23+02:00",
           "tree_id": "ce904291c54253985df83a81c598303a1ca10673",
-          "url": "https://github.com/aksio-insurtech/Cratis/commit/d4d9bf1225528f670d00a8d95d5de5dcb25151c2"
+          "url": "https://github.com/Cratis/Cratis/commit/d4d9bf1225528f670d00a8d95d5de5dcb25151c2"
         },
         "date": 1698337231834,
         "tool": "benchmarkdotnet",
@@ -736,7 +736,7 @@ window.BENCHMARK_DATA = {
           "message": "Merge pull request #1003 from aksio-insurtech:fix/projection-specs\n\nFixing GetById() to start with a fresh model - so you can call it multiple times safely",
           "timestamp": "2023-10-31T09:42:32+01:00",
           "tree_id": "893456e64105e54b52d916b1d27d3b6ae63bb202",
-          "url": "https://github.com/aksio-insurtech/Cratis/commit/0156cab3c20ecd0d191e3a9093dc2ad0343d665a"
+          "url": "https://github.com/Cratis/Cratis/commit/0156cab3c20ecd0d191e3a9093dc2ad0343d665a"
         },
         "date": 1698742303763,
         "tool": "benchmarkdotnet",
@@ -856,7 +856,7 @@ window.BENCHMARK_DATA = {
           "message": "Merge pull request #1015 from aksio-insurtech:feature/aggreate-root\n\nFeature/aggreate-root",
           "timestamp": "2023-11-15T14:39:34+01:00",
           "tree_id": "726e7e5dead50fd671db53efb9854d1cfee64159",
-          "url": "https://github.com/aksio-insurtech/Cratis/commit/4f0e58b769009ea48520e613989c502f65e5629e"
+          "url": "https://github.com/Cratis/Cratis/commit/4f0e58b769009ea48520e613989c502f65e5629e"
         },
         "date": 1700055928691,
         "tool": "benchmarkdotnet",
@@ -976,7 +976,7 @@ window.BENCHMARK_DATA = {
           "message": "Merge pull request #1021 from aksio-insurtech:fix/nullable-support\n\nFix/nullable-support",
           "timestamp": "2023-11-24T16:26:07+01:00",
           "tree_id": "1407f17638f46984df8ebdd17e86056315fad7e0",
-          "url": "https://github.com/aksio-insurtech/Cratis/commit/7b19f9e3072eb9f4395c399fbf8b84393a4840c7"
+          "url": "https://github.com/Cratis/Cratis/commit/7b19f9e3072eb9f4395c399fbf8b84393a4840c7"
         },
         "date": 1700839876829,
         "tool": "benchmarkdotnet",
@@ -1096,7 +1096,7 @@ window.BENCHMARK_DATA = {
           "message": "Merge pull request #1024 from aksio-insurtech:fix/sequences-binding\n\nFix/sequences-binding",
           "timestamp": "2023-11-30T14:56:05+01:00",
           "tree_id": "58a00af0f65264bac921c82fdc7e69e866d9c1f4",
-          "url": "https://github.com/aksio-insurtech/Cratis/commit/c51f98d9bd77bc98cfec3c209fadb86ac3e1c499"
+          "url": "https://github.com/Cratis/Cratis/commit/c51f98d9bd77bc98cfec3c209fadb86ac3e1c499"
         },
         "date": 1701352901232,
         "tool": "benchmarkdotnet",

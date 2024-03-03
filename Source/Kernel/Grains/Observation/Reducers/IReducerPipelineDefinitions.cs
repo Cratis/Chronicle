@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Observation.Reducers;
+using Cratis.Observation.Reducers;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers;
+namespace Cratis.Kernel.Grains.Observation.Reducers;
 
 /// <summary>
 /// Defines a system for working with <see cref="ReducerDefinition"/>.

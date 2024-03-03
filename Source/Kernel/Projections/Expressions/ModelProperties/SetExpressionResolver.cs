@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
-using Aksio.Cratis.Properties;
+using Cratis.Events;
+using Cratis.Kernel.Projections.Expressions.EventValues;
+using Cratis.Properties;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions.ModelProperties;
+namespace Cratis.Kernel.Projections.Expressions.ModelProperties;
 
 /// <summary>
 /// Represents a <see cref="IModelPropertyExpressionResolver"/> for setting a property on a model with the value for a property based event value expressions.

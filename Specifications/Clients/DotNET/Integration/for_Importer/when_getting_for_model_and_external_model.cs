@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.EventSequences;
+using Cratis.Auditing;
+using Cratis.Changes;
+using Cratis.EventSequences;
 using AutoMapper;
 
-namespace Aksio.Cratis.Integration.for_Importer;
+namespace Cratis.Integration.for_Importer;
 
 public class when_getting_for_model_and_external_model : Specification
 {

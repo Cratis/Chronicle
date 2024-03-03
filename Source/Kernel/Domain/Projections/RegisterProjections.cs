@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Kernel.Domain.Projections;
+namespace Cratis.Kernel.Domain.Projections;
 
 /// <summary>
 /// Represents the payload for registering projections.

@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions;
+namespace Cratis.Dynamic.for_ExpandoObjectExtensions;
 
 public class when_overwriting_object_with_other : Specification
 {

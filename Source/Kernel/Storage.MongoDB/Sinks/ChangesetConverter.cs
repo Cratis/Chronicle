@@ -2,18 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Schemas;
+using Cratis.Changes;
+using Cratis.Events;
+using Cratis.Kernel.Keys;
+using Cratis.Models;
+using Cratis.Properties;
+using Cratis.Schemas;
 using Aksio.Reflection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Kernel.Storage.MongoDB.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChangesetConverter"/>.

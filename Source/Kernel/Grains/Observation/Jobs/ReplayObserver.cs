@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Grains.Observation.States;
-using Aksio.Cratis.Kernel.Storage;
+using Cratis.Events;
+using Cratis.Jobs;
+using Cratis.Kernel.Grains.Jobs;
+using Cratis.Kernel.Grains.Observation.States;
+using Cratis.Kernel.Storage;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
+namespace Cratis.Kernel.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents a job for replaying an observer.

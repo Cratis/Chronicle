@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Aksio.Cratis.Kernel.Contracts.Projections;
+namespace Cratis.Kernel.Contracts.Projections;
 
 /// <summary>
 /// Represents the definition for a collection of property actions to perform for all events in the projection.

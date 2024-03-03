@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Contracts.Projections;
-using Aksio.Cratis.Models;
+using Cratis.Kernel.Contracts.Projections;
+using Cratis.Models;
 
-namespace Aksio.Cratis.Integration;
+namespace Cratis.Integration;
 
 /// <summary>
 /// Defines a projection for an adapter for a specific model.

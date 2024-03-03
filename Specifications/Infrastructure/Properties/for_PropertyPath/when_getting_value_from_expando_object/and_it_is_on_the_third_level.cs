@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Dynamic;
+using Cratis.Dynamic;
 
-namespace Aksio.Cratis.Properties.for_PropertyPath;
+namespace Cratis.Properties.for_PropertyPath;
 
 public class and_it_is_on_the_third_level : Specification
 {

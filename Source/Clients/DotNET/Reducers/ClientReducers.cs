@@ -3,10 +3,10 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Reducers;
+namespace Cratis.Reducers;
 
 /// <summary>
 /// Represents the endpoint called for receiving events from the kernel.

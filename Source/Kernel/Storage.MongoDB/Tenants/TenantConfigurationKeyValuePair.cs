@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Tenants;
+namespace Cratis.Kernel.Storage.MongoDB.Tenants;
 
 /// <summary>
 /// Represents the key / value pair for tenant configuration.

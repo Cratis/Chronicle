@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventTypes;
+using Cratis.EventTypes;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace Aksio.Cratis.Events.MongoDB.EventTypes;
+namespace Cratis.Events.MongoDB.EventTypes;
 
 /// <summary>
 /// Represents the <see cref="EventTypeSchema"/> for MongoDB storage purpose.

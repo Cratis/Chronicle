@@ -3,7 +3,7 @@
 
 using ProtoBuf.Grpc.Configuration;
 
-namespace Aksio.Cratis.Kernel.Contracts.EventSequences;
+namespace Cratis.Kernel.Contracts.EventSequences;
 
 /// <summary>
 /// Defines the contract for working with event sequences.

@@ -3,7 +3,7 @@
 
 using Orleans.Placement;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Placement;
+namespace Cratis.Kernel.Grains.Observation.Placement;
 
 /// <summary>
 /// Attribute to mark a grain as using the <see cref="ConnectedObserverPlacementStrategy"/>.

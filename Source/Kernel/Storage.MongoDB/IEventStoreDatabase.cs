@@ -3,7 +3,7 @@
 
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Defines the common database for event store that goes across all tenants within a microservice.

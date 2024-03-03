@@ -3,7 +3,7 @@
 
 using ProtoBuf.Grpc.Configuration;
 
-namespace Aksio.Cratis.Kernel.Contracts.Events;
+namespace Cratis.Kernel.Contracts.Events;
 
 /// <summary>
 /// Defines the service contract for working with event types.

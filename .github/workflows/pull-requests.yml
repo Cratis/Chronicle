@@ -2,7 +2,7 @@ name: PR Prerelase
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
-  NUGET_SOURCE: https://nuget.pkg.github.com/aksio-insurtech/index.json
+  NUGET_SOURCE: https://nuget.pkg.github.com/cratis/index.json
   DOTNET_VERSION: "7.0.305"
   KERNEL_CACHE: "kernel-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
@@ -30,10 +30,7 @@ jobs:
 
       - name: Release
         id: release
-        uses: aksio-insurtech/release-action@v1
-        with:
-          user-name: "Aksio Build"
-          user-email: "build@aksio.no"
+        uses: cratis/release-action@v1
 
   kernel:
     if: needs.release.outputs.publish == 'true'
@@ -132,7 +129,7 @@ jobs:
         run: dotnet build --configuration Debug
 
       - name: Add GitHub Package Registry to NuGet
-        run: dotnet nuget add source --name github --username aksio-insurtech --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
+        run: dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
 
       - name: Create NuGet packages
         run: dotnet pack --no-build --configuration Debug -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
@@ -146,8 +143,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           message: |
-            NuGet packages for this PR, e.g. Aksio.Cratis:
-            https://github.com/aksio-insurtech/Cratis/packages/1655206?version=${{ needs.release.outputs.version }}
+            NuGet packages for this PR, e.g. Cratis:
+            https://github.com/Cratis/Cratis/packages/1655206?version=${{ needs.release.outputs.version }}
           allow-repeats: false
 
   publish-npm-packages:
@@ -241,7 +238,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
+            ghcr.io/cratis/cratis:${{ needs.release.outputs.version }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
             ENTRYPOINT=pr_entrypoint.sh
@@ -253,7 +250,7 @@ jobs:
         with:
           message: |
             Docker Image for this PR:
-            https://ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
+            https://ghcr.io/cratis/cratis:${{ needs.release.outputs.version }}
 
-            docker run ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
+            docker run ghcr.io/cratis/cratis:${{ needs.release.outputs.version }}
           allow-repeats: false

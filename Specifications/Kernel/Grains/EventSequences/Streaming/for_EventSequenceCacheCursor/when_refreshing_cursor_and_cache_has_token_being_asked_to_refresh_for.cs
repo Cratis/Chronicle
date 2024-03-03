@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.EventSequences;
+using Cratis.Kernel.EventSequences;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceQueueCacheCursor;
+namespace Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceQueueCacheCursor;
 
 public class when_refreshing_cursor_and_cache_has_token_being_asked_to_refresh_for : given.a_cursor_and_an_empty_cache
 {

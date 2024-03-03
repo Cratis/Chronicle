@@ -3,7 +3,7 @@
 
 using NJsonSchema;
 
-namespace Aksio.Cratis.Rules.for_RulesProjections.given;
+namespace Cratis.Rules.for_RulesProjections.given;
 
 public class two_rules_with_projections : all_dependencies
 {

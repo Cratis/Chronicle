@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Models;
+using Cratis.EventSequences;
+using Cratis.Models;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Represents the compound key for an immediate projection.

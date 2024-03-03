@@ -4,7 +4,7 @@
 using MongoDB.Bson;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Extension methods for working with <see cref="BsonDocument"/>.

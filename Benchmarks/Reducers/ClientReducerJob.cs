@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Kernel.Storage.MongoDB;
-using Aksio.Cratis.Observation;
+using Cratis.Kernel.Grains.Observation;
+using Cratis.Kernel.Storage.MongoDB;
+using Cratis.Observation;
 using Benchmark.Model;
 
 namespace Benchmarks.Reducers;

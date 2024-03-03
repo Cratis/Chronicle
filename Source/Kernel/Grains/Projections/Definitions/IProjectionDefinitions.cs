@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Definitions;
+using Cratis.Projections;
+using Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Kernel.Grains.Projections.Definitions;
+namespace Cratis.Kernel.Grains.Projections.Definitions;
 
 /// <summary>
 /// Defines a system for working with <see cref="ProjectionDefinition">projection definitions</see>.

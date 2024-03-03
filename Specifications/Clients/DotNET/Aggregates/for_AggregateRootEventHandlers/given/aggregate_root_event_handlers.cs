@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Specifications;
+using Cratis.Specifications;
 
-namespace Aksio.Cratis.Aggregates.for_AggregateRootEventHandlers.given;
+namespace Cratis.Aggregates.for_AggregateRootEventHandlers.given;
 
 public class aggregate_root_event_handlers : Specification
 {

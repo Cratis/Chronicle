@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Compliance.GDPR;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Compliance.GDPR.Events;
+using Cratis.Compliance.GDPR;
+using Cratis.EventSequences;
+using Cratis.Kernel.Compliance.GDPR.Events;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Aksio.Cratis.Kernel.Domain.Compliance.GDPR;
+namespace Cratis.Kernel.Domain.Compliance.GDPR;
 
 /// <summary>
 /// Represents the domain API for PII.

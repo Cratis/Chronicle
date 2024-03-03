@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Specifications;
+using Cratis.Specifications;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Observation.for_ObserverInvoker.given;
+namespace Cratis.Observation.for_ObserverInvoker.given;
 
 public class an_observer_invoker_for<TObserver> : Specification
 {

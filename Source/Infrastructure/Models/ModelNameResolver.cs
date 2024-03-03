@@ -4,7 +4,7 @@
 using System.Reflection;
 using Aksio.Reflection;
 
-namespace Aksio.Cratis.Models;
+namespace Cratis.Models;
 
 /// <summary>
 /// Represents an implementation of <see cref="IModelNameConvention"/>.

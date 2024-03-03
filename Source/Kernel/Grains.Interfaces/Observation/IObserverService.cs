@@ -3,7 +3,7 @@
 
 using Orleans.Services;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation;
+namespace Cratis.Kernel.Grains.Observation;
 
 /// <summary>
 /// Defines a service that lives in each silo and can be called to notify about replay state changes for observers.

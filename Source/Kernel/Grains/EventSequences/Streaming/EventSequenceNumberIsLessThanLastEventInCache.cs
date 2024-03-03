@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
+namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Exception that gets thrown when an event sequence number is older than the last event in the cache.

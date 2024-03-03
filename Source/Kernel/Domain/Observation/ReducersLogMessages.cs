@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Domain.Observation;
+namespace Cratis.Kernel.Domain.Observation;
 
 internal static partial class ReducersLogMessages
 {

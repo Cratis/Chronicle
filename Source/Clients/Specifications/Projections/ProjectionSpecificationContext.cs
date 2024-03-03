@@ -2,31 +2,31 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Contracts.Projections;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Projections;
-using Aksio.Cratis.Kernel.Projections.Expressions;
-using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
-using Aksio.Cratis.Kernel.Projections.Expressions.Keys;
-using Aksio.Cratis.Kernel.Projections.Pipelines;
-using Aksio.Cratis.Kernel.Storage.Changes;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.Sinks.InMemory;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Schemas;
+using Cratis.Changes;
+using Cratis.Compliance;
+using Cratis.Dynamic;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Json;
+using Cratis.Kernel.Contracts.Projections;
+using Cratis.Kernel.Keys;
+using Cratis.Kernel.Projections;
+using Cratis.Kernel.Projections.Expressions;
+using Cratis.Kernel.Projections.Expressions.EventValues;
+using Cratis.Kernel.Projections.Expressions.Keys;
+using Cratis.Kernel.Projections.Pipelines;
+using Cratis.Kernel.Storage.Changes;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.Sinks.InMemory;
+using Cratis.Models;
+using Cratis.Projections;
+using Cratis.Properties;
+using Cratis.Schemas;
 using Aksio.Json;
 using Aksio.Reflection;
 using Aksio.Types;
 
-namespace Aksio.Cratis.Specifications.Integration;
+namespace Cratis.Specifications.Integration;
 
 /// <summary>
 /// Represents the context for specifications for a projection.

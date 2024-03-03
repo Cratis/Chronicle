@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Projections;
+using Cratis.Events;
+using Cratis.Projections;
 
-namespace Aksio.Cratis.Observation.Reducers;
+namespace Cratis.Observation.Reducers;
 
 /// <summary>
 /// Represents the definition of an event type with key.

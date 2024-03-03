@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Boot;
+namespace Cratis.Boot;
 
 internal static partial class BootProceduresLogMessages
 {

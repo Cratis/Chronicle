@@ -1,15 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Kernel.Grains.Recommendations;
-using Aksio.Cratis.Kernel.Storage.Observation;
+using Cratis.Kernel.Grains.EventSequences;
+using Cratis.Kernel.Grains.Jobs;
+using Cratis.Kernel.Grains.Observation;
+using Cratis.Kernel.Grains.Recommendations;
+using Cratis.Kernel.Storage.Observation;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Aksio.Cratis.Kernel.Server;
+namespace Cratis.Kernel.Server;
 
 /// <summary>
 /// Extension methods for configuring storage for the Kernel.

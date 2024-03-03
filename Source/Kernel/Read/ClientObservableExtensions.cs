@@ -3,7 +3,7 @@
 
 using Aksio.Applications.Queries;
 
-namespace Aksio.Cratis.Kernel.Read;
+namespace Cratis.Kernel.Read;
 
 /// <summary>
 /// Extension methods for working with <see cref="ClientObservable{T}"/>.

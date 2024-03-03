@@ -3,7 +3,7 @@
 
 using NJsonSchema;
 
-namespace Aksio.Cratis.Schemas.for_JsonSchemaExtensions;
+namespace Cratis.Schemas.for_JsonSchemaExtensions;
 
 public class when_getting_target_type_for_enum_type : given.a_json_schema_generator
 {

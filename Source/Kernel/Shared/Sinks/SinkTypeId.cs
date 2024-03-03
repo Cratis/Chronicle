@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Sinks;
+namespace Cratis.Sinks;
 
 /// <summary>
 /// Represents the unique identifier of a type of sink.

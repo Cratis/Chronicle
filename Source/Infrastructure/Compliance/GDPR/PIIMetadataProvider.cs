@@ -4,7 +4,7 @@
 using System.Reflection;
 using Aksio.Reflection;
 
-namespace Aksio.Cratis.Compliance.GDPR;
+namespace Cratis.Compliance.GDPR;
 
 /// <summary>
 /// Represents a metadata provider for PII.

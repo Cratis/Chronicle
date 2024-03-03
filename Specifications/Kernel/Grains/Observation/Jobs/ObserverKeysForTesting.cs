@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Storage.Keys;
+using Cratis.Kernel.Keys;
+using Cratis.Kernel.Storage.Keys;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
+namespace Cratis.Kernel.Grains.Observation.Jobs;
 
 public class ObserverKeysForTesting : IObserverKeys
 {

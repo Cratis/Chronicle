@@ -3,7 +3,7 @@
 
 using AutoMapper;
 
-namespace Aksio.Cratis.Integration;
+namespace Cratis.Integration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAdapterMapperFactory"/>.

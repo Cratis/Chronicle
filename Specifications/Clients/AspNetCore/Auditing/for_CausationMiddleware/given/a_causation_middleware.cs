@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Auditing;
+using Cratis.Auditing;
 using Microsoft.AspNetCore.Http;
 
-namespace Aksio.Cratis.AspNetCore.Auditing.for_CausationMiddleware.given;
+namespace Cratis.AspNetCore.Auditing.for_CausationMiddleware.given;
 
 public class a_causation_middleware : Specification
 {

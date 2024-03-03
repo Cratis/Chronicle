@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 
-namespace Aksio.Cratis.Rules.for_Rules.given;
+namespace Cratis.Rules.for_Rules.given;
 
 public class all_dependencies : Specification
 {

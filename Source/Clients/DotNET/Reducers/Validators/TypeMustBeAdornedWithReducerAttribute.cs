@@ -3,7 +3,7 @@
 
 using Aksio.Reflection;
 
-namespace Aksio.Cratis.Reducers.Validators;
+namespace Cratis.Reducers.Validators;
 
 /// <summary>
 /// Exception that gets thrown when a type is not adorned with the <see cref="ReducerAttribute"/>.

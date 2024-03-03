@@ -3,12 +3,12 @@
 
 using System.Collections.Immutable;
 using Aksio.Collections;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Kernel.Storage.Identities;
+using Cratis.Identities;
+using Cratis.Kernel.Storage.Identities;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Identities;
+namespace Cratis.Kernel.Storage.MongoDB.Identities;
 
 /// <summary>
 /// Represents an implementation of <see cref="IIdentityStorage"/> using MongoDB.

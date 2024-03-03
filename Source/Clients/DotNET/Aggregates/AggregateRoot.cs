@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.EventSequences;
 
-namespace Aksio.Cratis.Aggregates;
+namespace Cratis.Aggregates;
 
 #pragma warning disable SA1402 // File may only contain a single type
 

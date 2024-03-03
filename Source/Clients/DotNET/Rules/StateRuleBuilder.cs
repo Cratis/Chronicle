@@ -4,7 +4,7 @@
 using FluentValidation;
 using FluentValidation.Validators;
 
-namespace Aksio.Cratis.Rules;
+namespace Cratis.Rules;
 
 /// <summary>
 /// Represents an implementation of <see cref="IStateRuleBuilder{TState, TCommand, TProperty}"/>.

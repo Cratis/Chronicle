@@ -3,14 +3,14 @@
 
 using System.Collections;
 using System.Dynamic;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Schemas;
+using Cratis.Events;
+using Cratis.Properties;
+using Cratis.Schemas;
 using Aksio.Reflection;
 using Aksio.Types;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
+namespace Cratis.Kernel.Projections.Expressions.EventValues;
 
 /// <summary>
 /// Represents an implementation of <see cref="IModelPropertyExpressionResolvers"/>.

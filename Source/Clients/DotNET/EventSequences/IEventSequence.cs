@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.EventSequences;
+namespace Cratis.EventSequences;
 
 /// <summary>
 /// Defines the client event sequence.

@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Orleans.StateMachines;
-using Aksio.Cratis.Kernel.Storage.Observation;
-using Aksio.Cratis.Observation;
+using Cratis.Events;
+using Cratis.Kernel.Keys;
+using Cratis.Kernel.Orleans.StateMachines;
+using Cratis.Kernel.Storage.Observation;
+using Cratis.Observation;
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation;
+namespace Cratis.Kernel.Grains.Observation;
 
 /// <summary>
 /// Defines an observer in the system.

@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Sinks;
+using Cratis.Models;
+using Cratis.Sinks;
 using Aksio.Types;
 
-namespace Aksio.Cratis.Kernel.Storage.Sinks;
+namespace Cratis.Kernel.Storage.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISinkFactory"/>.

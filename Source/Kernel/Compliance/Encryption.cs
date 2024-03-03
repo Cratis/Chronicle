@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Cryptography;
-using Aksio.Cratis.Kernel.Storage.Compliance;
+using Cratis.Kernel.Storage.Compliance;
 
-namespace Aksio.Cratis.Kernel.Compliance;
+namespace Cratis.Kernel.Compliance;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEncryption"/>.

@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Schemas;
+using Cratis.Compliance;
+using Cratis.Schemas;
 using Aksio.Json;
 using Aksio.Types;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Compliance;
+namespace Cratis.Kernel.Compliance;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJsonComplianceManager"/>.

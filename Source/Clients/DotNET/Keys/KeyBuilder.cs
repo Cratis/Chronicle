@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Keys;
+namespace Cratis.Keys;
 
 /// <summary>
 /// Represents an implementation of <see cref="IKeyBuilder{TEvent}"/>.

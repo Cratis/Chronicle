@@ -1,15 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.EventSequences;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Kernel.EventSequences;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.EventSequences;
 using Orleans.Runtime;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
+namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Represents an implementation of <see cref="IQueueAdapter"/> for MongoDB event log.

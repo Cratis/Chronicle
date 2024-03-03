@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Properties;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions;
+namespace Cratis.Integration.for_ImportBuilderExtensions;
 
 public class when_filtering_on_properties_and_next_value_matches_one_property : given.a_change_on_one_property
 {

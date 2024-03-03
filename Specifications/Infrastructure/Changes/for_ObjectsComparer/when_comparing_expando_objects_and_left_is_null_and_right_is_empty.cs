@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Aksio.Cratis.Changes.for_ObjectComparer;
+namespace Cratis.Changes.for_ObjectComparer;
 
 public class when_comparing_expando_objects_and_left_is_null_and_right_is_empty : given.an_object_comparer
 {

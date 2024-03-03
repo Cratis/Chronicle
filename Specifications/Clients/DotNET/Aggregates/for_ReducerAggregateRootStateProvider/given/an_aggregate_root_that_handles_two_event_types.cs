@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 
-namespace Aksio.Cratis.Aggregates.for_ReducerAggregateRootStateProvider.given;
+namespace Cratis.Aggregates.for_ReducerAggregateRootStateProvider.given;
 
 public class an_aggregate_root_that_handles_two_event_types : a_reducer_aggregate_root_state_provider
 {

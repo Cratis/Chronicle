@@ -2,16 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Storage.Sinks;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Sinks;
+using Cratis.Changes;
+using Cratis.Events;
+using Cratis.Kernel.Keys;
+using Cratis.Kernel.Storage.Sinks;
+using Cratis.Models;
+using Cratis.Sinks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Kernel.Storage.MongoDB.Sinks;
 
 #pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
 

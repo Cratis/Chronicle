@@ -3,12 +3,12 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.Identities;
+using Cratis.Kernel.Storage.EventSequences;
 
-namespace Aksio.Cratis.Specifications;
+namespace Cratis.Specifications;
 
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IEventSequenceStorage"/>.

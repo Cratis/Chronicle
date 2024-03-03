@@ -3,7 +3,7 @@
 
 using Xunit.Sdk;
 
-namespace Aksio.Cratis.Specifications.when_asserting_it_should_not_contain_appended_event_that_matches;
+namespace Cratis.Specifications.when_asserting_it_should_not_contain_appended_event_that_matches;
 
 public class and_there_is_a_matching_event : given.no_events
 {

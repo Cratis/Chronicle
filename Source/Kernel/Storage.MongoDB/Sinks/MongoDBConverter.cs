@@ -4,16 +4,16 @@
 using System.Collections;
 using System.Dynamic;
 using System.Text;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Schemas;
+using Cratis.Kernel.Keys;
+using Cratis.Models;
+using Cratis.Properties;
+using Cratis.Schemas;
 using Aksio.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Kernel.Storage.MongoDB.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="IMongoDBConverter"/>.

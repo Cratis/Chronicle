@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Identities;
+using Cratis.Identities;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.given;
+namespace Cratis.Kernel.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.given;
 
 public class two_identities_without_subject_registered : all_dependencies
 {

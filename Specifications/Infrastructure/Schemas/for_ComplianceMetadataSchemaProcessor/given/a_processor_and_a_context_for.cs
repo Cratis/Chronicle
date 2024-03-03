@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Compliance;
+using Cratis.Compliance;
 using Namotion.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
-namespace Aksio.Cratis.Schemas.for_ComplianceMetadataSchemaProcessor.given;
+namespace Cratis.Schemas.for_ComplianceMetadataSchemaProcessor.given;
 
 public class a_processor_and_a_context_for<T> : Specification
     where T : new()

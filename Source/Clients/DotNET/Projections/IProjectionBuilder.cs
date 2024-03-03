@@ -3,7 +3,7 @@
 
 using System.Linq.Expressions;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Defines the based builder for building out projections.

@@ -2,25 +2,25 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
-using Aksio.Cratis.Kernel.Grains.Observation.States;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Observation;
-using Aksio.Cratis.Kernel.Orleans.StateMachines;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.Observation;
-using Aksio.Cratis.Metrics;
-using Aksio.Cratis.Observation;
+using Cratis.Events;
+using Cratis.Jobs;
+using Cratis.Kernel.Grains.EventSequences;
+using Cratis.Kernel.Grains.Jobs;
+using Cratis.Kernel.Grains.Observation.Jobs;
+using Cratis.Kernel.Grains.Observation.States;
+using Cratis.Kernel.Keys;
+using Cratis.Kernel.Observation;
+using Cratis.Kernel.Orleans.StateMachines;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.Observation;
+using Cratis.Metrics;
+using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Runtime;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation;
+namespace Cratis.Kernel.Grains.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IObserver"/>.

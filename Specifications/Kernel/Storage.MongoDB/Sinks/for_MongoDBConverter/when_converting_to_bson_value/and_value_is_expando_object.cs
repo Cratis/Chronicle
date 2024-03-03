@@ -4,7 +4,7 @@
 using System.Dynamic;
 using MongoDB.Bson;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Sinks.for_MongoDBConverter.when_converting_to_bson_value;
+namespace Cratis.Kernel.Storage.MongoDB.Sinks.for_MongoDBConverter.when_converting_to_bson_value;
 
 public class and_value_is_expando_object : given.a_mongodb_converter
 {

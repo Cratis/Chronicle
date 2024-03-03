@@ -3,7 +3,7 @@
 
 
 
-namespace Aksio.Cratis.Kernel.Orleans.StateMachines.when_activating;
+namespace Cratis.Kernel.Orleans.StateMachines.when_activating;
 
 public class with_known_initial_state_type : given.a_state_machine
 {

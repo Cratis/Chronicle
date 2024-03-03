@@ -3,12 +3,12 @@
 
 #pragma warning disable IDE0060
 
-using Aksio.Cratis.Compliance.GDPR;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Compliance.GDPR.Events;
-using Aksio.Cratis.Observation;
+using Cratis.Compliance.GDPR;
+using Cratis.Events;
+using Cratis.Kernel.Compliance.GDPR.Events;
+using Cratis.Observation;
 
-namespace Aksio.Cratis.Kernel.Reactions.Compliance.GDPR;
+namespace Cratis.Kernel.Reactions.Compliance.GDPR;
 
 /// <summary>
 /// Represents an observer for personal information.

@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Properties;
+using Cratis.Events;
+using Cratis.Kernel.Keys;
+using Cratis.Properties;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Keys;
+namespace Cratis.Kernel.Storage.MongoDB.Keys;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAsyncEnumerator{T}"/> for MongoDB.

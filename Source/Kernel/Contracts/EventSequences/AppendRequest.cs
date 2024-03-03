@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Contracts.Auditing;
-using Aksio.Cratis.Kernel.Contracts.Events;
-using Aksio.Cratis.Kernel.Contracts.Identities;
-using Aksio.Cratis.Kernel.Contracts.Primitives;
+using Cratis.Kernel.Contracts.Auditing;
+using Cratis.Kernel.Contracts.Events;
+using Cratis.Kernel.Contracts.Identities;
+using Cratis.Kernel.Contracts.Primitives;
 using ProtoBuf;
 
-namespace Aksio.Cratis.Kernel.Contracts.EventSequences;
+namespace Cratis.Kernel.Contracts.EventSequences;
 
 /// <summary>
 /// Represents the payload for appending an event.

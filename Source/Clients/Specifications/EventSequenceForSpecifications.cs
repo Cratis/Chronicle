@@ -5,15 +5,15 @@ using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Json;
-using Aksio.Cratis.Schemas;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.Identities;
+using Cratis.Json;
+using Cratis.Schemas;
 using Aksio.Execution;
 using Aksio.Json;
 
-namespace Aksio.Cratis.Specifications;
+namespace Cratis.Specifications;
 
 /// <summary>
 /// Represents an event sequence for working in-memory.

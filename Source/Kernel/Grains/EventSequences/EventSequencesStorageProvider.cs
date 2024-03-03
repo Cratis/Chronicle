@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.EventTypes;
+using Cratis.Events;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.EventTypes;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences;
+namespace Cratis.Kernel.Grains.EventSequences;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling event sequence state storage.

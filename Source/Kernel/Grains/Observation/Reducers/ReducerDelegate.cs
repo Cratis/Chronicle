@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers;
+namespace Cratis.Kernel.Grains.Observation.Reducers;
 
 /// <summary>
 /// Represents the reducer delegate.

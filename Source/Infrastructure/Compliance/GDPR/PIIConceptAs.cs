@@ -3,7 +3,7 @@
 
 using Aksio.Concepts;
 
-namespace Aksio.Cratis.Compliance.GDPR;
+namespace Cratis.Compliance.GDPR;
 
 /// <summary>
 /// Represents a <see cref="ConceptAs{T}"/> that holds PII according to the definition of GDPR.

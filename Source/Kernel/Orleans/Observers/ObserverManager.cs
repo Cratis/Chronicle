@@ -6,7 +6,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Kernel.Orleans.Observers;
+namespace Cratis.Kernel.Orleans.Observers;
 
 #pragma warning disable SA1402 // File may only contain a single type
 

@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Storage.Changes;
+using Cratis.Changes;
+using Cratis.Events;
+using Cratis.Kernel.Storage.Changes;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Projections;
+namespace Cratis.Kernel.Storage.MongoDB.Projections;
 
 /// <summary>
 /// Represents a <see cref="IChangesetStorage"/> for storing changesets in MongoDB.

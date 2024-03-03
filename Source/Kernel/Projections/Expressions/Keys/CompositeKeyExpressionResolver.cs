@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.RegularExpressions;
-using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Schemas;
+using Cratis.Kernel.Projections.Expressions.EventValues;
+using Cratis.Properties;
+using Cratis.Schemas;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions.Keys;
+namespace Cratis.Kernel.Projections.Expressions.Keys;
 
 /// <summary>
 /// Represents an implementation of <see cref="IKeyExpressionResolver"/> for composite key expressions.

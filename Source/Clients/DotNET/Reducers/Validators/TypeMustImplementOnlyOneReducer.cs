@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Reducers.Validators;
+namespace Cratis.Reducers.Validators;
 
 /// <summary>
 /// Exception that gets thrown when a type implements more than one <see cref="IReducerFor{T}"/>.

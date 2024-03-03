@@ -3,7 +3,7 @@
 
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Properties.for_PropertyPath;
+namespace Cratis.Properties.for_PropertyPath;
 
 public class when_creating_complex_path_with_nested_properties_and_array_indexers : Specification
 {

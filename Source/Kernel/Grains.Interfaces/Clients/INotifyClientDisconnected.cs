@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Connections;
+using Cratis.Connections;
 
-namespace Aksio.Cratis.Kernel.Grains.Clients;
+namespace Cratis.Kernel.Grains.Clients;
 
 /// <summary>
 /// Defines a system for observing when a client is disconnected.

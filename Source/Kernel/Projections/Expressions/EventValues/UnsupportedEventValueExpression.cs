@@ -3,7 +3,7 @@
 
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
+namespace Cratis.Kernel.Projections.Expressions.EventValues;
 
 /// <summary>
 /// Exception that gets thrown when an event value expression is not supported.

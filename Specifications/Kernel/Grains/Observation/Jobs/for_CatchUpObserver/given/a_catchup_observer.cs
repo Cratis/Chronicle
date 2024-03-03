@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.Keys;
+using Cratis.Jobs;
+using Cratis.Kernel.Grains.Jobs;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.Keys;
 using Orleans.Core;
 using Orleans.TestKit;
-using IStorage = Aksio.Cratis.Kernel.Storage.IStorage;
+using IStorage = Cratis.Kernel.Storage.IStorage;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver.given;
+namespace Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver.given;
 
 public class a_catchup_observer : Specification
 {

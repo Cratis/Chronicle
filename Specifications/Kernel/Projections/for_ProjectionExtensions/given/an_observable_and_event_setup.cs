@@ -3,12 +3,12 @@
 
 using System.Dynamic;
 using System.Reactive.Subjects;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Properties;
+using Cratis.Auditing;
+using Cratis.Changes;
+using Cratis.Identities;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Projections.for_ProjectionExtensions.given;
+namespace Cratis.Kernel.Projections.for_ProjectionExtensions.given;
 
 public class an_observable_and_event_setup : Specification
 {

@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using Aksio.Cratis;
-using Aksio.Cratis.Client;
-using Aksio.Cratis.Configuration;
+using Cratis;
+using Cratis.Client;
+using Cratis.Configuration;
 using Aksio.Execution;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;

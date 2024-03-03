@@ -3,12 +3,12 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Identities;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.Identities;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Cratis.Kernel.EventSequences;
 
 /// <summary>
 /// Extension methods for <see cref="StreamSequenceToken"/>.

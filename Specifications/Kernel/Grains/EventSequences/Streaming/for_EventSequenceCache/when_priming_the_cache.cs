@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.EventSequences;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCache;
+namespace Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCache;
 
 public class when_priming_the_cache : given.an_event_sequence_cache
 {

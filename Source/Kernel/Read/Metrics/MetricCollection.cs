@@ -4,7 +4,7 @@
 using System.Collections;
 using OpenTelemetry.Metrics;
 
-namespace Aksio.Cratis.Kernel.Read.Metrics;
+namespace Cratis.Kernel.Read.Metrics;
 
 /// <summary>
 /// Represents a collection for <see cref="Metric"/>.

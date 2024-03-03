@@ -1,15 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
-using Aksio.Cratis.Kernel.Projections;
-using Aksio.Cratis.Kernel.Projections.Pipelines;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Definitions;
+using Cratis.Kernel.Grains.Projections.Pipelines;
+using Cratis.Kernel.Projections;
+using Cratis.Kernel.Projections.Pipelines;
+using Cratis.Projections;
+using Cratis.Projections.Definitions;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
+using EngineProjection = Cratis.Kernel.Projections.IProjection;
 
-namespace Aksio.Cratis.Kernel.Grains.Projections;
+namespace Cratis.Kernel.Grains.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionManager"/>.

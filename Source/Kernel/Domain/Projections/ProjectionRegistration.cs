@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Projections.Definitions;
+using Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Kernel.Domain.Projections;
+namespace Cratis.Kernel.Domain.Projections;
 
 /// <summary>
 /// Represents a single projection registration.

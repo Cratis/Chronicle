@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Integration;
-using Aksio.Cratis.Rules;
+using Cratis.Integration;
+using Cratis.Rules;
 
-namespace Aksio.Cratis.Projections.for_ClientProjections.given;
+namespace Cratis.Projections.for_ClientProjections.given;
 
 public class all_dependencies : Specification
 {

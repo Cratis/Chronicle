@@ -3,7 +3,7 @@
 
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Kernel.Orleans.Execution.for_ExecutionContextIncomingCallFilter;
+namespace Cratis.Kernel.Orleans.Execution.for_ExecutionContextIncomingCallFilter;
 
 public class when_invoked_with_all_values_present : Specification
 {

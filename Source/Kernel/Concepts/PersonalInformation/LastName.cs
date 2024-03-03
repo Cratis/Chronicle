@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Compliance.GDPR;
+using Cratis.Compliance.GDPR;
 
-namespace Aksio.Cratis.Kernel.Concepts.Compliance.PersonalInformation;
+namespace Cratis.Kernel.Concepts.Compliance.PersonalInformation;
 
 /// <summary>
 /// Represents the concept of a last name of a person.

@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Schemas;
+using Cratis.Schemas;
 using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.for_ExpandoObjectConverter.given;
+namespace Cratis.Kernel.Storage.MongoDB.for_ExpandoObjectConverter.given;
 
 public class an_expando_object_converter : Specification
 {

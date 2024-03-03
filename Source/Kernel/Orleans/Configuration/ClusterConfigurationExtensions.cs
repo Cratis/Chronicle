@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Aksio.Cratis.Kernel.Orleans.Configuration;
+namespace Cratis.Kernel.Orleans.Configuration;
 
 /// <summary>
 /// Extension methods for working with <see cref="Cluster"/> config.

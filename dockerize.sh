@@ -14,8 +14,8 @@ yarn build
 popd
 
 # Build images
-docker build -t aksioinsurtech/cratis -f ./Docker/Production/Dockerfile .
-docker build -t aksioinsurtech/cratis:development -f ./Docker/Development/Dockerfile .
+docker build -t cratis/cratis -f ./Docker/Production/Dockerfile .
+docker build -t cratis/cratis:development -f ./Docker/Development/Dockerfile .
 
 # For building multiple CPU architectures (PS: this automatically pushes to Docker Hub):
-#docker buildx build -t aksioinsurtech/cratis:development -f ./Docker/Development/Dockerfile --platform linux/amd64,linux/arm64 --push .
+#docker buildx build -t cratis/cratis:development -f ./Docker/Development/Dockerfile --platform linux/amd64,linux/arm64 --push .

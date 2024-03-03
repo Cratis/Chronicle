@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions.EventValues.for_EventContextPropertyExpressionResolver;
+namespace Cratis.Kernel.Projections.Expressions.EventValues.for_EventContextPropertyExpressionResolver;
 
 public class when_trying_to_resolve_valid_event_context_expression : given.an_appended_event
 {

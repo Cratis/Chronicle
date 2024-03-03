@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Aggregates.for_AggregateRoot.when_applying;
+namespace Cratis.Aggregates.for_AggregateRoot.when_applying;
 
 public class an_invalid_event : given.a_stateless_aggregate_root
 {

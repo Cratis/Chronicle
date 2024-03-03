@@ -2,28 +2,28 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.EventTypes;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Compliance;
-using Aksio.Cratis.Kernel.EventSequences;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.EventTypes;
-using Aksio.Cratis.Kernel.Storage.Identities;
-using Aksio.Cratis.Kernel.Storage.Observation;
-using Aksio.Cratis.Metrics;
-using Aksio.Cratis.Observation;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.EventTypes;
+using Cratis.Identities;
+using Cratis.Json;
+using Cratis.Kernel.Compliance;
+using Cratis.Kernel.EventSequences;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.EventTypes;
+using Cratis.Kernel.Storage.Identities;
+using Cratis.Kernel.Storage.Observation;
+using Cratis.Metrics;
+using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Runtime;
 using Orleans.Streams;
-using IObserver = Aksio.Cratis.Kernel.Grains.Observation.IObserver;
+using IObserver = Cratis.Kernel.Grains.Observation.IObserver;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences;
+namespace Cratis.Kernel.Grains.EventSequences;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequence"/>.

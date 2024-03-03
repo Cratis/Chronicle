@@ -2,18 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Observation;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Reducers;
-using Aksio.Cratis.Schemas;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Identities;
+using Cratis.Models;
+using Cratis.Observation;
+using Cratis.Projections;
+using Cratis.Reducers;
+using Cratis.Schemas;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis;
+namespace Cratis;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStore"/>.

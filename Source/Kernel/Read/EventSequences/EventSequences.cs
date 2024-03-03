@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
+using Cratis.EventSequences;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Aksio.Cratis.Kernel.Read.EventSequences;
+namespace Cratis.Kernel.Read.EventSequences;
 
 /// <summary>
 /// Represents the API for working with event logs.

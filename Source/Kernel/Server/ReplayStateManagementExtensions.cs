@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.Observation;
+using Cratis.Kernel.Grains.Observation;
 
 #pragma warning disable SA1600
-namespace Aksio.Cratis.Kernel.Server;
+namespace Cratis.Kernel.Server;
 
 /// <summary>
 /// Extension methods for replay state management initialization.

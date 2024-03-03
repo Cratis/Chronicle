@@ -3,9 +3,9 @@
 
 #nullable enable
 
-using Aksio.Cratis.Observation.Reducers;
+using Cratis.Observation.Reducers;
 
-namespace Aksio.Cratis.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method.with_nullable_enabled;
+namespace Cratis.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method.with_nullable_enabled;
 
 public class and_signature_is_a_valid_synchronous_method_with_context_and_a_forth_parameter : Specification
 {

@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Identities;
+using Cratis.Auditing;
+using Cratis.Identities;
 
-namespace Aksio.Cratis.Events;
+namespace Cratis.Events;
 
 /// <summary>
 /// Represents the context in which an event exists - typically what it was appended with.

@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.EventSequences;
+using Cratis.Kernel.EventSequences;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Observing;
+namespace Cratis.Kernel.Grains.Observation.States.for_Observing;
 
 public class when_entering : given.an_observing_state
 {

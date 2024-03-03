@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 
-namespace Aksio.Cratis.Auditing;
+namespace Cratis.Auditing;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICausationManager"/>.

@@ -4,7 +4,7 @@
 using Aksio.Collections;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Aksio.Cratis.Observation;
+namespace Cratis.Observation;
 
 /// <summary>
 /// Extension methods for configuring observers.

@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Models;
+using Cratis.Identities;
+using Cratis.Models;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Aksio.Cratis;
+namespace Cratis;
 
 /// <summary>
 /// Defines a builder for building client ready for use.

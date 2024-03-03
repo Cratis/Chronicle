@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Properties;
+using Cratis.Auditing;
+using Cratis.Changes;
+using Cratis.Identities;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Projections.for_Projection;
+namespace Cratis.Kernel.Projections.for_Projection;
 
 public class when_next_event_is_not_of_interest : given.a_projection
 {

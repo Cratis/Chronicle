@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Schemas;
+using Cratis.Dynamic;
+using Cratis.Events;
+using Cratis.Kernel.Grains.EventSequences;
+using Cratis.Schemas;
 using Benchmark.Model;
 using Microsoft.Extensions.DependencyInjection;
 

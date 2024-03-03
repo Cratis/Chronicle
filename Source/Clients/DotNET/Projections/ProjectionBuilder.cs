@@ -5,18 +5,18 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Contracts.Projections;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Reflection;
-using Aksio.Cratis.Schemas;
+using Cratis.Events;
+using Cratis.Kernel.Contracts.Projections;
+using Cratis.Models;
+using Cratis.Properties;
+using Cratis.Reflection;
+using Cratis.Schemas;
 using Aksio.Reflection;
 using Aksio.Strings;
 using Humanizer;
-using EventType = Aksio.Cratis.Kernel.Contracts.Events.EventType;
+using EventType = Cratis.Kernel.Contracts.Events.EventType;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Represents a base projection builder.

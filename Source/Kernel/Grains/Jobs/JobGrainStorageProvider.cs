@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.Jobs;
+using Cratis.Jobs;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.Jobs;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Aksio.Cratis.Kernel.Grains.Jobs;
+namespace Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling job state storage.

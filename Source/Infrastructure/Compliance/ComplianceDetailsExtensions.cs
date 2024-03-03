@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Aksio.Cratis.Compliance;
+namespace Cratis.Compliance;
 
 /// <summary>
 /// Extension methods for providing compliance details.

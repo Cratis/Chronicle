@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel;
+namespace Cratis.Kernel;
 
 public class NullLoggerFactory : ILoggerFactory
 {

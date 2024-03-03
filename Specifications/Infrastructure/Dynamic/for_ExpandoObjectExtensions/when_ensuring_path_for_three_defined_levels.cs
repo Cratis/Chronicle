@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Properties;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions;
+namespace Cratis.Dynamic.for_ExpandoObjectExtensions;
 
 public class when_ensuring_path_for_three_defined_levels : Specification
 {

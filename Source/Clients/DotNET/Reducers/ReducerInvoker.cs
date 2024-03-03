@@ -3,10 +3,10 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Aksio.Cratis.Reducers;
+namespace Cratis.Reducers;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReducerInvoker"/>.

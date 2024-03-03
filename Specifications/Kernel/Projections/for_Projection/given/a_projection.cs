@@ -4,7 +4,7 @@
 using System.Dynamic;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Projections.for_Projection.given;
+namespace Cratis.Kernel.Projections.for_Projection.given;
 
 public class a_projection : Specification
 {

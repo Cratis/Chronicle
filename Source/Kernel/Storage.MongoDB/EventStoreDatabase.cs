@@ -4,9 +4,9 @@
 using System.Collections.Concurrent;
 using Aksio.MongoDB;
 using MongoDB.Driver;
-using StorageConfiguration = Aksio.Cratis.Kernel.Configuration.Storage;
+using StorageConfiguration = Cratis.Kernel.Configuration.Storage;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreDatabase"/>.

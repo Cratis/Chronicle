@@ -3,7 +3,7 @@
 
 using System.Linq.Expressions;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Defines a builder for building a composite key with a specific type.

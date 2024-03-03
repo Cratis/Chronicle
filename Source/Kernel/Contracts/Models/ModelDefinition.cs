@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Aksio.Cratis.Kernel.Contracts.Models;
+namespace Cratis.Kernel.Contracts.Models;
 
 /// <summary>
 /// Represents the definition of a model.

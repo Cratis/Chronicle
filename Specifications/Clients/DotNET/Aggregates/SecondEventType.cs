@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Aggregates;
+namespace Cratis.Aggregates;
 
 [EventType(EventTypeId)]
 public record SecondEventType(string Something)

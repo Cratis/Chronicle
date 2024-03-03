@@ -1,23 +1,23 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Grains.Observation.Reducers;
-using Aksio.Cratis.Kernel.Grains.Projections;
-using Aksio.Cratis.Kernel.Grains.Projections.Pipelines;
-using Aksio.Cratis.Kernel.Projections;
-using Aksio.Cratis.Kernel.Projections.Expressions;
-using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
-using Aksio.Cratis.Kernel.Projections.Expressions.Keys;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.Sinks;
-using Aksio.Cratis.Schemas;
+using Cratis.Changes;
+using Cratis.Json;
+using Cratis.Kernel.Grains.Observation.Reducers;
+using Cratis.Kernel.Grains.Projections;
+using Cratis.Kernel.Grains.Projections.Pipelines;
+using Cratis.Kernel.Projections;
+using Cratis.Kernel.Projections.Expressions;
+using Cratis.Kernel.Projections.Expressions.EventValues;
+using Cratis.Kernel.Projections.Expressions.Keys;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.Sinks;
+using Cratis.Schemas;
 using Aksio.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains;
+namespace Cratis.Kernel.Grains;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreNamespace"/>.

@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Projections.Pipelines;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Definitions;
-using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
+using Cratis.Kernel.Projections.Pipelines;
+using Cratis.Projections;
+using Cratis.Projections.Definitions;
+using EngineProjection = Cratis.Kernel.Projections.IProjection;
 
-namespace Aksio.Cratis.Kernel.Grains.Projections;
+namespace Cratis.Kernel.Grains.Projections;
 
 /// <summary>
 /// Defines a system that is responsible for supervises projections in the system.

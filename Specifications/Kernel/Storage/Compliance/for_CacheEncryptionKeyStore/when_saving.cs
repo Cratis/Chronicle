@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Compliance;
+using Cratis.Compliance;
 
-namespace Aksio.Cratis.Kernel.Storage.Compliance.for_CacheEncryptionKeyStore;
+namespace Cratis.Kernel.Storage.Compliance.for_CacheEncryptionKeyStore;
 
 public class when_saving : given.a_cache_encryption_key_store
 {

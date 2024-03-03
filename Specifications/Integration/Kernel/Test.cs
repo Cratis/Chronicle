@@ -8,7 +8,7 @@ using System.Reactive.Subjects;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel;
+namespace Cratis.Kernel;
 
 [Collection(GlobalCollection.Name)]
 public class Test : KernelTest

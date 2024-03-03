@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Events;
+using Cratis.Changes;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.Storage.Changes;
+namespace Cratis.Kernel.Storage.Changes;
 
 /// <summary>
 /// Defines the storage mechanism for changesets. Typically used for debugging purposes to see what changes has occurred.

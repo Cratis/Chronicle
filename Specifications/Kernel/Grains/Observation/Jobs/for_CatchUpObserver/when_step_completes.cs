@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.Jobs;
+using Cratis.Kernel.Grains.Jobs;
 using Orleans.TestKit;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;
+namespace Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;
 
 public class when_step_completes : given.a_catchup_observer_and_a_request
 {

@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Projections;
+using Cratis.Projections;
 
-namespace Aksio.Cratis.Kernel.Projections;
+namespace Cratis.Kernel.Projections;
 
 /// <summary>
 /// Exception that gets thrown when a projection is missing.

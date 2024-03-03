@@ -3,7 +3,7 @@
 
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.given;
+namespace Cratis.Kernel.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.given;
 
 public class all_dependencies : Specification
 {

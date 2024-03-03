@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Kernel.Compliance;
-using Aksio.Cratis.Projections.Json;
+using Cratis.Kernel.Compliance;
+using Cratis.Projections.Json;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IStorage"/> for MongoDB.

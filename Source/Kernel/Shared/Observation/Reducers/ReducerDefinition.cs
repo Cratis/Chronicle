@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Sinks;
+using Cratis.EventSequences;
+using Cratis.Projections.Definitions;
+using Cratis.Sinks;
 
-namespace Aksio.Cratis.Observation.Reducers;
+namespace Cratis.Observation.Reducers;
 
 /// <summary>
 /// Represents the registration of a single client observer.

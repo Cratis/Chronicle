@@ -4,7 +4,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
-namespace Aksio.Cratis.AspNetCore.Auditing.for_CausationMiddleware.given;
+namespace Cratis.AspNetCore.Auditing.for_CausationMiddleware.given;
 
 public class a_causation_middleware_with_required_properties_present : a_causation_middleware
 {

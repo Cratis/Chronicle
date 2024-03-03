@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Contracts.Projections;
+using Cratis.Kernel.Contracts.Projections;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IFromBuilder{TModel, TEvent}"/>.

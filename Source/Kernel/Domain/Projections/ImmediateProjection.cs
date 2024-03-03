@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Projections;
+using Cratis.EventSequences;
+using Cratis.Models;
+using Cratis.Projections;
 
-namespace Aksio.Cratis.Kernel.Domain.Projections;
+namespace Cratis.Kernel.Domain.Projections;
 
 /// <summary>
 /// Represents the payload for performing an immediate projection.

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Kernel.Grains.Workers;
+namespace Cratis.Kernel.Grains.Workers;
 
 /// <summary>
 /// Exception that gets thrown when the maximum concurrency level is invalid.

@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Identities;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.Identities;
 using Orleans.Concurrency;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences;
+namespace Cratis.Kernel.Grains.EventSequences;
 
 /// <summary>
 /// Defines the event sequence.

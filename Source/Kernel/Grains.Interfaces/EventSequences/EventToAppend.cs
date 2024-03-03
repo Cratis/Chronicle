@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences;
+namespace Cratis.Kernel.Grains.EventSequences;
 
 /// <summary>
 /// Represents the payload for appending an event.

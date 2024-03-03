@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Properties;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Dynamic;
+namespace Cratis.Dynamic;
 
 /// <summary>
 /// Exception that gets thrown when a <see cref="IPropertyPathSegment">segment</see> within a <see cref="PropertyPath"/> is not an ExpandoObject.

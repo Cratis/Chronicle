@@ -5,7 +5,7 @@ using System.Dynamic;
 using System.Text.Json.Nodes;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Json;
+namespace Cratis.Json;
 
 /// <summary>
 /// Defines a converter that can convert between a <see cref="JsonObject"/> and a <see cref="ExpandoObject"/> with a <see cref="JsonSchema"/> holding the type information.

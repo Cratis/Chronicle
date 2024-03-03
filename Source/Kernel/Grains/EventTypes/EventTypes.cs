@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Storage.EventTypes;
-using Aksio.Cratis.Schemas;
+using Cratis.Events;
+using Cratis.Kernel.Storage.EventTypes;
+using Cratis.Schemas;
 using Aksio.DependencyInversion;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Grains.EventTypes;
+namespace Cratis.Kernel.Grains.EventTypes;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypes"/>.

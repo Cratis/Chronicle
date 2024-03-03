@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
-using Aksio.Cratis.Connections;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Contracts.Observation;
-using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Kernel.Grains.Observation.Clients;
-using Aksio.Cratis.Observation;
+using Cratis.Connections;
+using Cratis.Events;
+using Cratis.Kernel.Contracts.Observation;
+using Cratis.Kernel.Grains.Observation;
+using Cratis.Kernel.Grains.Observation.Clients;
+using Cratis.Observation;
 using ProtoBuf.Grpc;
 
-namespace Aksio.Cratis.Kernel.Services.Observation;
+namespace Cratis.Kernel.Services.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientObservers"/>.

@@ -3,7 +3,7 @@
 
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Defines a manager of <see cref="IMongoClient"/> instances.

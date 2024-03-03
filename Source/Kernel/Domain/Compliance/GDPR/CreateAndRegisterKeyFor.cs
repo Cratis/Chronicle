@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Compliance;
+using Cratis.Compliance;
 
-namespace Aksio.Cratis.Kernel.Domain.Compliance.GDPR;
+namespace Cratis.Kernel.Domain.Compliance.GDPR;
 
 /// <summary>
 /// Encapsulation representing the creation and registration of a key for a specific identifier.

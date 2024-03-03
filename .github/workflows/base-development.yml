@@ -43,10 +43,8 @@ jobs:
 
       - name: Release
         id: release
-        uses: aksio-insurtech/release-action@v1
+        uses: cratis/release-action@v1
         with:
-          user-name: "Aksio Build"
-          user-email: "build@aksio.no"
           version: ${{ github.event.inputs.version }}
           release-notes: ${{ github.event.inputs.release-notes }}
 
@@ -83,7 +81,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            aksioinsurtech/cratis-base:${{ needs.release.outputs.version }}
-            aksioinsurtech/cratis-base:latest
+            cratis/cratis-base:${{ needs.release.outputs.version }}
+            cratis/cratis-base:latest
           build-args: |
             VERSION=${{ needs.release.outputs.version }}

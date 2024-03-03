@@ -3,17 +3,17 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.EventSequences;
-using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Storage.Jobs;
-using Aksio.Cratis.Projections.Json;
-using Aksio.Cratis.Properties;
+using Cratis.Json;
+using Cratis.Kernel.EventSequences;
+using Cratis.Kernel.Grains.Observation;
+using Cratis.Kernel.Keys;
+using Cratis.Kernel.Storage.Jobs;
+using Cratis.Projections.Json;
+using Cratis.Properties;
 using Aksio.Json;
 using Orleans.Serialization;
 
-namespace Aksio.Cratis.Kernel.Server.Serialization;
+namespace Cratis.Kernel.Server.Serialization;
 
 /// <summary>
 /// Extension methods for configuring serialization.

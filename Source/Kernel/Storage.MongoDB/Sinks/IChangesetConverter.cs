@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Keys;
+using Cratis.Changes;
+using Cratis.Events;
+using Cratis.Kernel.Keys;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Kernel.Storage.MongoDB.Sinks;
 
 /// <summary>
 /// Defines a system that can convert a <see cref="IChangeset{TEvent, TState}"/> to a <see cref="UpdateDefinition{TDocument}"/> for MongoDB.

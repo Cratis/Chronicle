@@ -4,12 +4,12 @@
 using System.Collections;
 using System.Dynamic;
 using Aksio.Concepts;
-using Aksio.Cratis.Objects;
-using Aksio.Cratis.Properties;
+using Cratis.Objects;
+using Cratis.Properties;
 using Aksio.Reflection;
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Dynamic;
+namespace Cratis.Dynamic;
 
 /// <summary>
 /// Extension methods for working with <see cref="ExpandoObject"/>.

@@ -3,7 +3,7 @@
 
 using AutoMapper;
 
-namespace Aksio.Cratis.Integration;
+namespace Cratis.Integration;
 
 /// <summary>
 /// Defines a factory for creating <see cref="IMapper"/> instances.

@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Schemas;
+using Cratis.Compliance;
+using Cratis.Events;
+using Cratis.Schemas;
 using Aksio.Types;
 
-namespace Aksio.Cratis.Specifications;
+namespace Cratis.Specifications;
 
 /// <summary>
 /// Holds the global instances used for testing.

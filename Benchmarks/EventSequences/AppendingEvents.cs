@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
+using Cratis.Identities;
+using Cratis.Kernel.Grains.EventSequences;
 
 namespace Benchmarks.EventSequences;
 

@@ -3,11 +3,11 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Properties;
+using Cratis.Projections.Definitions;
+using Cratis.Properties;
 using Aksio.Json;
 
-namespace Aksio.Cratis.Projections.Json;
+namespace Cratis.Projections.Json;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJsonProjectionSerializer"/>.

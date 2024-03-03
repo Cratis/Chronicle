@@ -3,14 +3,14 @@
 
 using System.Reactive.Subjects;
 using System.Reflection;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Models;
+using Cratis.Auditing;
+using Cratis.Changes;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Models;
 using AutoMapper;
 
-namespace Aksio.Cratis.Integration;
+namespace Cratis.Integration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IImportOperations{TModel, TExternalModel}"/>.

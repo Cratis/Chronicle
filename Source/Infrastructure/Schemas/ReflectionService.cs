@@ -6,7 +6,7 @@ using Namotion.Reflection;
 using Newtonsoft.Json;
 using NJsonSchema.Generation;
 
-namespace Aksio.Cratis.Schemas;
+namespace Cratis.Schemas;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReflectionService"/> for supporting correct type description creation.

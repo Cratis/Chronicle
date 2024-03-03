@@ -3,7 +3,7 @@
 
 using Aksio.Concepts;
 
-namespace Aksio.Cratis.Kernel.Projections.Scenarios.Concepts;
+namespace Cratis.Kernel.Projections.Scenarios.Concepts;
 
 public record EnumWithValuesConcept(EnumWithValues Value) : ConceptAs<EnumWithValues>(Value)
 {

@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Properties;
+using Cratis.Changes;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Integration.for_ImportOperations.given;
+namespace Cratis.Integration.for_ImportOperations.given;
 
 public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
 {

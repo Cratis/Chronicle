@@ -2,16 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.Observation;
-using Aksio.Cratis.Observation;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.Observation;
+using Cratis.Observation;
 using Microsoft.AspNetCore.Mvc;
-using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
+using IEventSequence = Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
-namespace Aksio.Cratis.Kernel.Read.EventSequences;
+namespace Cratis.Kernel.Read.EventSequences;
 
 /// <summary>
 /// Represents the API for working with the event log.

@@ -1,19 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Kernel.Grains.Observation.States;
-using Aksio.Cratis.Kernel.Grains.Recommendations;
-using Aksio.Cratis.Kernel.Observation.Replaying;
-using Aksio.Cratis.Observation;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Definitions;
+using Cratis.EventSequences;
+using Cratis.Kernel.Configuration;
+using Cratis.Kernel.Grains.Observation.States;
+using Cratis.Kernel.Grains.Recommendations;
+using Cratis.Kernel.Observation.Replaying;
+using Cratis.Observation;
+using Cratis.Projections;
+using Cratis.Projections.Definitions;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
 using Orleans.Concurrency;
 
-namespace Aksio.Cratis.Kernel.Grains.Projections;
+namespace Cratis.Kernel.Grains.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjections"/>.

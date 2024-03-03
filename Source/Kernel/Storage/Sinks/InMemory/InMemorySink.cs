@@ -3,19 +3,19 @@
 
 using System.Dynamic;
 using System.Text;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Reflection;
-using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Sinks;
+using Cratis.Changes;
+using Cratis.Dynamic;
+using Cratis.Events;
+using Cratis.Kernel.Keys;
+using Cratis.Models;
+using Cratis.Reflection;
+using Cratis.Schemas;
+using Cratis.Sinks;
 using Aksio.Json;
 using Aksio.Reflection;
 using Aksio.Types;
 
-namespace Aksio.Cratis.Kernel.Storage.Sinks.InMemory;
+namespace Cratis.Kernel.Storage.Sinks.InMemory;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> for working with projections in memory.

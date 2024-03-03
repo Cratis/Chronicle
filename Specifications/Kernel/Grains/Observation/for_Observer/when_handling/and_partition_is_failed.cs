@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Observation;
+using Cratis.Kernel.Observation;
 using Orleans.TestKit;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
+namespace Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
 public class and_partition_is_failed : given.an_observer_with_subscription_for_specific_event_type
 {

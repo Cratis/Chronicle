@@ -4,7 +4,7 @@
 using FluentValidation;
 using FluentValidation.Results;
 
-namespace Aksio.Cratis.Rules.for_Rules.for_RulesModelValidator.given;
+namespace Cratis.Rules.for_Rules.for_RulesModelValidator.given;
 
 public class two_rule_sets : Specification
 {

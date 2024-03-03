@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Aggregates.for_AggregateRootEventHandlers;
+namespace Cratis.Aggregates.for_AggregateRootEventHandlers;
 
 public class when_handling : given.aggregate_root_event_handlers
 {

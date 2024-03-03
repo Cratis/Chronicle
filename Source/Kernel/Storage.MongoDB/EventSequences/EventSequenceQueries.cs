@@ -3,7 +3,7 @@
 
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.EventSequences;
+namespace Cratis.Kernel.Storage.MongoDB.EventSequences;
 
 /// <summary>
 /// Extension methods for querying events.

@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Aggregates;
+namespace Cratis.Aggregates;
 
 /// <summary>
 /// Defines a system that can handle events for an <see cref="IAggregateRoot"/>.

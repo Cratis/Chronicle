@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 #pragma warning disable SA1600
-namespace Aksio.Cratis.Kernel.Server;
+namespace Cratis.Kernel.Server;
 
 /// <summary>
 /// Represents a <see cref="IResourceFilter"/> for filtering out requests until the Kernel is ready.

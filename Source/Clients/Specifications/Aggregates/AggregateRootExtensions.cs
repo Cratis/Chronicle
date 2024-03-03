@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Aggregates;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Specifications.Auditing;
-using Aksio.Cratis.Specifications.Events;
+using Cratis.Aggregates;
+using Cratis.Events;
+using Cratis.Specifications.Auditing;
+using Cratis.Specifications.Events;
 
-namespace Aksio.Cratis.Specifications.Aggregates;
+namespace Cratis.Specifications.Aggregates;
 
 /// <summary>
 /// Extension methods for testing with <see cref="AggregateRoot"/>.

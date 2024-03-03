@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Reminders;
+namespace Cratis.Kernel.Storage.MongoDB.Reminders;
 
 /// <summary>
 /// Holds log messages for <see cref="ReminderTable"/>.

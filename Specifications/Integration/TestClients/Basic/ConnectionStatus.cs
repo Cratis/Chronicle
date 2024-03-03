@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
-using Aksio.Cratis.Connections;
+using Cratis.Connections;
 using Aksio.Execution;
-using Aksio.Cratis.EventSequences;
+using Cratis.EventSequences;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Basic;

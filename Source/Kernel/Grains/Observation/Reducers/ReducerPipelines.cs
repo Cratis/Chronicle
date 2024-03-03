@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Kernel.Storage.Sinks;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Observation.Reducers;
+using Cratis.Changes;
+using Cratis.Kernel.Storage.Sinks;
+using Cratis.Models;
+using Cratis.Observation.Reducers;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers;
+namespace Cratis.Kernel.Grains.Observation.Reducers;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReducerPipelines"/>.

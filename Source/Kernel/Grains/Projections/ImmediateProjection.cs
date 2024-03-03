@@ -2,22 +2,22 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Projections;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Properties;
+using Cratis.Changes;
+using Cratis.Dynamic;
+using Cratis.Events;
+using Cratis.Json;
+using Cratis.Kernel.Grains.EventSequences;
+using Cratis.Kernel.Keys;
+using Cratis.Kernel.Projections;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Projections;
+using Cratis.Projections.Definitions;
+using Cratis.Properties;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
+using EngineProjection = Cratis.Kernel.Projections.IProjection;
 
-namespace Aksio.Cratis.Kernel.Grains.Projections;
+namespace Cratis.Kernel.Grains.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IImmediateProjection"/>.

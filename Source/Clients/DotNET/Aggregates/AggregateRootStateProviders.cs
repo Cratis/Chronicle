@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Reducers;
+using Cratis.Projections;
+using Cratis.Reducers;
 
-namespace Aksio.Cratis.Aggregates;
+namespace Cratis.Aggregates;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAggregateRootStateProviders"/>.

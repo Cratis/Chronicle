@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Specifications.when_asserting_it_should_contain_appended_event_that_matches_and_specific_number_of_times;
+namespace Cratis.Specifications.when_asserting_it_should_contain_appended_event_that_matches_and_specific_number_of_times;
 
 public class and_there_is_a_matching_event : given.no_events
 {

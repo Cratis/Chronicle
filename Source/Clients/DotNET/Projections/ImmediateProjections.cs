@@ -5,14 +5,14 @@ using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Collections;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Contracts.Projections;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Schemas;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Kernel.Contracts.Projections;
+using Cratis.Models;
+using Cratis.Schemas;
 using Aksio.Reflection;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IImmediateProjections"/>.

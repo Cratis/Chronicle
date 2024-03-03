@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Observation.Reducers;
+using Cratis.Observation.Reducers;
 
-namespace Aksio.Cratis.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method;
+namespace Cratis.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method;
 
 public class and_method_is_not_reducer_method : Specification
 {

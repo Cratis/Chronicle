@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Projections;
+using Cratis.Models;
+using Cratis.Projections;
 
-namespace Aksio.Cratis.Kernel.Read.Projections;
+namespace Cratis.Kernel.Read.Projections;
 
 /// <summary>
 /// Represents a projection.

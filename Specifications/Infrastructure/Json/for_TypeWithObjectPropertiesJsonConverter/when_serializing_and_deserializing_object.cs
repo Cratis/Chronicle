@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 
-namespace Aksio.Cratis.Json.for_TypeWithObjectPropertiesJsonConverter;
+namespace Cratis.Json.for_TypeWithObjectPropertiesJsonConverter;
 
 public class when_serializing_and_deserializing_object : Specification
 {

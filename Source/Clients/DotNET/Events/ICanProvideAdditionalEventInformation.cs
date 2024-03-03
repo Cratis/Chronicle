@@ -3,7 +3,7 @@
 
 using System.Text.Json.Nodes;
 
-namespace Aksio.Cratis.Events;
+namespace Cratis.Events;
 
 /// <summary>
 /// Defines something that can provide metadata to all events being appended.

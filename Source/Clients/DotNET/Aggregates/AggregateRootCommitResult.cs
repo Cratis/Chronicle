@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 
-namespace Aksio.Cratis.Aggregates;
+namespace Cratis.Aggregates;
 
 /// <summary>
 /// Represents the result of committing an <see cref="IAggregateRoot"/>.

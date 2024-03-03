@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Contracts.Events;
+using Cratis.Kernel.Contracts.Events;
 
 using ProtoBuf;
 
-namespace Aksio.Cratis.Kernel.Contracts.Observation.Reducers;
+namespace Cratis.Kernel.Contracts.Observation.Reducers;
 
 /// <summary>
 /// Represents the definition of an event type with key.

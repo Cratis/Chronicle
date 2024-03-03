@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Identities;
+using Cratis.Auditing;
+using Cratis.Identities;
 
-namespace Aksio.Cratis.Kernel.Projections.for_EventValueProviders;
+namespace Cratis.Kernel.Projections.for_EventValueProviders;
 
 public class when_accessing_event_source_id : Specification
 {

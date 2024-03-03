@@ -4,12 +4,12 @@
 using System.Linq.Expressions;
 using System.Reactive.Linq;
 using System.Reflection;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Reflection;
+using Cratis.Changes;
+using Cratis.Properties;
+using Cratis.Reflection;
 using AutoMapper;
 
-namespace Aksio.Cratis.Integration;
+namespace Cratis.Integration;
 
 /// <summary>
 /// Extension methods for building on the <see cref="IImportBuilderFor{TModel, TExternalModel}"/>.

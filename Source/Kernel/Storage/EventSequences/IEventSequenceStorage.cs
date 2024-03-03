@@ -3,11 +3,11 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Identities;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.Identities;
 
-namespace Aksio.Cratis.Kernel.Storage.EventSequences;
+namespace Cratis.Kernel.Storage.EventSequences;
 
 /// <summary>
 /// Defines a storage provider for the event sequence.

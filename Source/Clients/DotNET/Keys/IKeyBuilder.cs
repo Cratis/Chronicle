@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Projections;
+using Cratis.Events;
+using Cratis.Projections;
 
-namespace Aksio.Cratis.Keys;
+namespace Cratis.Keys;
 
 /// <summary>
 /// Defines a key builder for a specific event.

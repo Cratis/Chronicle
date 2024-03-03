@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Storage.Sinks;
-using Aksio.Cratis.Models;
+using Cratis.Changes;
+using Cratis.Events;
+using Cratis.Kernel.Storage.Sinks;
+using Cratis.Models;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers;
+namespace Cratis.Kernel.Grains.Observation.Reducers;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReducerPipeline"/>.

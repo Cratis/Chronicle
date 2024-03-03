@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Projections;
+using Cratis.Projections;
 
-namespace Aksio.Cratis.EventSequences.Outbox;
+namespace Cratis.EventSequences.Outbox;
 
 /// <summary>
 /// Defines a system that is capable of defining projections from the event log to the event outbox.

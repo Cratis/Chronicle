@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Configuration;
+using Cratis.EventSequences;
+using Cratis.Kernel.Configuration;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
+namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequenceCaches"/>.

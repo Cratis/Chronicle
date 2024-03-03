@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Observation;
+namespace Cratis.Observation;
 
 internal static partial class ObserverInvokerLogMessages
 {

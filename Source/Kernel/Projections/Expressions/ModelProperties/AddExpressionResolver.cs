@@ -3,12 +3,12 @@
 
 using System.Dynamic;
 using System.Text.RegularExpressions;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
-using Aksio.Cratis.Properties;
+using Cratis.Events;
+using Cratis.Kernel.Projections.Expressions.EventValues;
+using Cratis.Properties;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions.ModelProperties;
+namespace Cratis.Kernel.Projections.Expressions.ModelProperties;
 
 /// <summary>
 /// Represents a <see cref="IModelPropertyExpressionResolver"/> for adding value on a model with the value for a property on the content of an <see cref="AppendedEvent"/>.

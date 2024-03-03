@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Connections;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Observation;
+using Cratis.Connections;
+using Cratis.Events;
+using Cratis.Observation;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
+namespace Cratis.Kernel.Grains.Observation.Clients;
 
 /// <summary>
 /// Defines a system that acts as an in-memory mediator between the actual client connected and an observer subscriber.

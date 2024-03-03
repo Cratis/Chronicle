@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Json;
-using Aksio.Cratis.Schemas;
+using Cratis.Compliance;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Json;
+using Cratis.Schemas;
 using Aksio.Types;
 
-namespace Aksio.Cratis.Specifications;
+namespace Cratis.Specifications;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventLog"/> for specifications.

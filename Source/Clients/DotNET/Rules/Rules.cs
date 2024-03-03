@@ -3,11 +3,11 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Projections;
+using Cratis.Models;
+using Cratis.Projections;
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Rules;
+namespace Cratis.Rules;
 
 /// <summary>
 /// Represents an implementation of <see cref="IRules"/>.

@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains.Clients;
+namespace Cratis.Kernel.Grains.Clients;
 
 /// <summary>
 /// Holds log messages for <see cref="ConnectedClients"/>.

@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Aksio.Cratis.Kernel.Contracts.EventSequences;
+namespace Cratis.Kernel.Contracts.EventSequences;
 
 #pragma warning disable MA0036
 

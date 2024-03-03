@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Contracts.Primitives;
+using Cratis.Kernel.Contracts.Primitives;
 using ProtoBuf;
 
-namespace Aksio.Cratis.Kernel.Contracts.Auditing;
+namespace Cratis.Kernel.Contracts.Auditing;
 
 /// <summary>
 /// Represents the payload for causation.

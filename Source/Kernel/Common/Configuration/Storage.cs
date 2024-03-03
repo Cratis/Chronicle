@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Configuration;
-using Aksio.Cratis.Configuration;
+using Cratis.Configuration;
 
-namespace Aksio.Cratis.Kernel.Configuration;
+namespace Cratis.Kernel.Configuration;
 
 /// <summary>
 /// Represents the storage configuration for all microservices.

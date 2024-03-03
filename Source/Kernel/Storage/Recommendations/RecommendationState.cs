@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Recommendations;
+using Cratis.Recommendations;
 
-namespace Aksio.Cratis.Kernel.Storage.Recommendations;
+namespace Cratis.Kernel.Storage.Recommendations;
 
 /// <summary>
 /// Holds the state of a recommendation.

@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Observation.Reducers;
+namespace Cratis.Observation.Reducers;
 
 /// <summary>
 /// Represents the result of a reduce operation.

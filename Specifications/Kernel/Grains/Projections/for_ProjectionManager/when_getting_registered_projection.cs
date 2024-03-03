@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
+using EngineProjection = Cratis.Kernel.Projections.IProjection;
 
-namespace Aksio.Cratis.Kernel.Grains.Projections.for_ProjectionManager;
+namespace Cratis.Kernel.Grains.Projections.for_ProjectionManager;
 
 public class when_getting_registered_projection : given.a_projection_manager_with_one_registered_projection
 {

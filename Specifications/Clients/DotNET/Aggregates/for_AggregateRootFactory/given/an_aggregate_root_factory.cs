@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Contracts.EventSequences;
+using Cratis.Auditing;
+using Cratis.EventSequences;
+using Cratis.Kernel.Contracts.EventSequences;
 
-namespace Aksio.Cratis.Aggregates.for_AggregateRootStateFactory.given;
+namespace Cratis.Aggregates.for_AggregateRootStateFactory.given;
 
 public class an_aggregate_root_factory : Specification
 {

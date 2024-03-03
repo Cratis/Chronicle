@@ -3,7 +3,7 @@
 
 using Aksio.Configuration;
 
-namespace Aksio.Cratis.Kernel.Orleans.Configuration;
+namespace Cratis.Kernel.Orleans.Configuration;
 
 /// <summary>
 /// Represents the cluster configuration.

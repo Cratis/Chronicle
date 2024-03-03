@@ -3,7 +3,7 @@
 
 using System.Text.Json.Nodes;
 
-namespace Aksio.Cratis.Kernel.Compliance.for_JsonComplianceManager;
+namespace Cratis.Kernel.Compliance.for_JsonComplianceManager;
 
 public class when_applying_with_applicable_value_handler : given.a_value_handler_and_a_type_with_one_property
 {

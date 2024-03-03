@@ -3,7 +3,7 @@
 
 using Aksio.Collections;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCache;
+namespace Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCache;
 
 public class when_getting_event_it_has : given.an_event_sequence_cache
 {

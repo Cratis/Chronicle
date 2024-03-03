@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Grains.Jobs;
+using Cratis.Jobs;
+using Cratis.Kernel.Grains.Jobs;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Aksio.Cratis.Kernel.Domain.Jobs;
+namespace Cratis.Kernel.Domain.Jobs;
 
 /// <summary>
 /// Represents the API for working with jobs.

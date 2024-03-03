@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Integration;
+using Cratis.Integration;
 using Aksio.Specifications;
 
-namespace Aksio.Cratis.Specifications.Integration;
+namespace Cratis.Specifications.Integration;
 
 /// <summary>
 /// Represents a specialized <see cref="Specification"/> for specifying behaviors of adapters.

@@ -3,13 +3,13 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Kernel.Contracts.EventSequences;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Identities;
+using Cratis.Kernel.Contracts.EventSequences;
 
-namespace Aksio.Cratis.Kernel.Services.EventSequences;
+namespace Cratis.Kernel.Services.EventSequences;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequences"/>.

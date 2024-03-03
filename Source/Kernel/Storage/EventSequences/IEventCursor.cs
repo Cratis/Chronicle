@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.Storage.EventSequences;
+namespace Cratis.Kernel.Storage.EventSequences;
 
 /// <summary>
 /// Defines a cursor API for walking through events.

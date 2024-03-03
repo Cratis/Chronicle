@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Aksio.Cratis.Kernel.Contracts.Clients;
+namespace Cratis.Kernel.Contracts.Clients;
 
 /// <summary>
 /// The request for keeping the connection alive - sent by the client.

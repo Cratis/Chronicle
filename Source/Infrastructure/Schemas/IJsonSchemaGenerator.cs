@@ -3,7 +3,7 @@
 
 using NJsonSchema;
 
-namespace Aksio.Cratis.Schemas;
+namespace Cratis.Schemas;
 
 /// <summary>
 /// Defines a generator that can generate <see cref="JsonSchema"/>.

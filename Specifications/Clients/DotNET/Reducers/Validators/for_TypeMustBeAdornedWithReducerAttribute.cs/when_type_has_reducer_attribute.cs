@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Reducers.Validators.for_TypeMustBeAdornedWithReducerAttribute;
+namespace Cratis.Reducers.Validators.for_TypeMustBeAdornedWithReducerAttribute;
 
 public class when_type_has_reducer_attribute : Specification
 {

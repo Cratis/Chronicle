@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Kernel.Projections.Pipelines;
-using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Properties;
-using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
+using Cratis.Kernel.Projections.Pipelines;
+using Cratis.Projections.Definitions;
+using Cratis.Properties;
+using EngineProjection = Cratis.Kernel.Projections.IProjection;
 
-namespace Aksio.Cratis.Kernel.Grains.Projections.for_ProjectionManager.given;
+namespace Cratis.Kernel.Grains.Projections.for_ProjectionManager.given;
 
 public class a_projection_manager_with_one_registered_projection : a_projection_manager_without_any_projections
 {

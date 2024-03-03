@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Connections;
-using Aksio.Cratis.Observation;
-using Aksio.Cratis.Observation.Reducers;
+using Cratis.Connections;
+using Cratis.Observation;
+using Cratis.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers.Clients;
+namespace Cratis.Kernel.Grains.Observation.Reducers.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientReducers"/>.

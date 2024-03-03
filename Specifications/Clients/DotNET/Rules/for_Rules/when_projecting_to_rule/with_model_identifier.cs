@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Properties;
+using Cratis.Properties;
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Rules.for_Rules.when_projecting_to_rule;
+namespace Cratis.Rules.for_Rules.when_projecting_to_rule;
 
 public class with_model_identifier : given.no_rules
 {

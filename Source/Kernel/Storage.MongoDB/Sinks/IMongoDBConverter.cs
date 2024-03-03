@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Properties;
+using Cratis.Kernel.Keys;
+using Cratis.Properties;
 using MongoDB.Bson;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Kernel.Storage.MongoDB.Sinks;
 
 /// <summary>
 /// Defines a system that can convert to MongoDB from properties and values.

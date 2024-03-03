@@ -3,9 +3,9 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Storage.MongoDB;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Kernel.Storage.MongoDB;
 using Aksio.Execution;
 using Aksio.MongoDB;
 using Aksio.Json;
@@ -13,7 +13,7 @@ using Events.Accounts.Debit;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.TestData;
+namespace Cratis.TestData;
 
 static class Program
 {

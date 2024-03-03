@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Aksio.Cratis.Compliance;
+namespace Cratis.Compliance;
 
 /// <summary>
 /// Exception that gets thrown when where is no <see cref="ComplianceMetadata"/> associated with a property.

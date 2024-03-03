@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Observation.for_ClientObserversEndpoints.when_handling.given;
+namespace Cratis.Observation.for_ClientObserversEndpoints.when_handling.given;
 
 public class an_http_context_and_client_observers : Cratis.given.an_http_context
 {

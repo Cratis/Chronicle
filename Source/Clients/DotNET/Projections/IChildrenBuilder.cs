@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Aksio.Cratis.Kernel.Contracts.Projections;
-using Aksio.Cratis.Properties;
+using Cratis.Kernel.Contracts.Projections;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Defines the builder for building out a child relationship on a model.

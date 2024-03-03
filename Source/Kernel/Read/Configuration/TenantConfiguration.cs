@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
+using Cratis.Kernel.Grains.Configuration.Tenants;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Aksio.Cratis.Kernel.Read.Configuration.Tenants;
+namespace Cratis.Kernel.Read.Configuration.Tenants;
 
 /// <summary>
 /// Represents the API for working with configuration related to specific tenants.

@@ -2,16 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.EventSequences;
-using Aksio.Cratis.Kernel.Storage.Observation;
-using Aksio.Cratis.Observation;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Kernel.EventSequences;
+using Cratis.Kernel.Storage.Observation;
+using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.States;
+namespace Cratis.Kernel.Grains.Observation.States;
 
 /// <summary>
 /// Represents the observing state of an observer.

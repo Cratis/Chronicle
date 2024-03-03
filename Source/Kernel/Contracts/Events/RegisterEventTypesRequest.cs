@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Aksio.Cratis.Kernel.Contracts.Events;
+namespace Cratis.Kernel.Contracts.Events;
 
 /// <summary>
 /// Represents a request for registering a collection of event types to an event store.

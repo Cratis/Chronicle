@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
 #pragma warning disable SA1600, IDE0060
 
-namespace Aksio.Cratis.Kernel.Domain.EventSequences;
+namespace Cratis.Kernel.Domain.EventSequences;
 
 /// <summary>
 /// Represents the payload for appending an event.

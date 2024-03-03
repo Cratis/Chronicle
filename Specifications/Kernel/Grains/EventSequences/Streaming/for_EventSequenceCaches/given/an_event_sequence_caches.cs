@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Configuration;
+using Cratis.Kernel.Storage.EventSequences;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCaches.given;
+namespace Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCaches.given;
 
 public class an_event_sequence_caches : Specification
 {

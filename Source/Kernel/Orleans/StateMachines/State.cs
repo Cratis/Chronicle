@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 
-namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
+namespace Cratis.Kernel.Orleans.StateMachines;
 
 /// <summary>
 /// Represents an implementation of <see cref="IState{TStoredState}"/>.

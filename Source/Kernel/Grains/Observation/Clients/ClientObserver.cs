@@ -1,15 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Connections;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Grains.Clients;
-using Aksio.Cratis.Observation;
+using Cratis.Connections;
+using Cratis.Events;
+using Cratis.Kernel.Grains.Clients;
+using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Placement;
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
+namespace Cratis.Kernel.Grains.Observation.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientObserver"/>.

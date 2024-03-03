@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Properties;
+using Cratis.Events;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Keys;
+namespace Cratis.Kernel.Keys;
 
 /// <summary>
 /// Represents the key coming from an event.

@@ -4,7 +4,7 @@
 using Aksio.Strings;
 using Humanizer;
 
-namespace Aksio.Cratis.Models;
+namespace Cratis.Models;
 
 /// <summary>
 /// Represents an implementation of <see cref="IModelNameConvention"/> that uses the namespace of the model type as a prefix.

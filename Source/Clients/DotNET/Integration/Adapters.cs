@@ -3,10 +3,10 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
-using Aksio.Cratis.Kernel.Contracts.Projections;
+using Cratis.Kernel.Contracts.Projections;
 using AutoMapper;
 
-namespace Aksio.Cratis.Integration;
+namespace Cratis.Integration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAdapters"/>.

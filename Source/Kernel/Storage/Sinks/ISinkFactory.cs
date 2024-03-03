@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Sinks;
+using Cratis.Models;
+using Cratis.Sinks;
 
-namespace Aksio.Cratis.Kernel.Storage.Sinks;
+namespace Cratis.Kernel.Storage.Sinks;
 
 /// <summary>
 /// Defines a factory that can create instances of <see cref="ISink"/> for a specific <see cref="SinkTypeId"/>.

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.AspNetCore.Auditing.for_CausationMiddleware;
+namespace Cratis.AspNetCore.Auditing.for_CausationMiddleware;
 
 public class when_invoking_with_all_header_values_present : given.a_causation_middleware_with_required_properties_present
 {

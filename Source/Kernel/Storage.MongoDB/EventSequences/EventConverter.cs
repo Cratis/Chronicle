@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Compliance;
-using Aksio.Cratis.Kernel.Storage.EventTypes;
-using Aksio.Cratis.Kernel.Storage.Identities;
+using Cratis.Events;
+using Cratis.Kernel.Compliance;
+using Cratis.Kernel.Storage.EventTypes;
+using Cratis.Kernel.Storage.Identities;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventConverter"/>.

@@ -3,7 +3,7 @@
 
 using Aksio.Reflection;
 
-namespace Aksio.Cratis.Observation;
+namespace Cratis.Observation;
 
 /// <summary>
 /// Extension methods for working with observers and type discovery.

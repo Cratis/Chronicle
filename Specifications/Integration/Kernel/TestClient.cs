@@ -5,7 +5,7 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
 
-namespace Aksio.Cratis.Kernel;
+namespace Cratis.Kernel;
 
 public class TestClient
 {

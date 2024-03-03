@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Connections;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Observation;
+using Cratis.Connections;
+using Cratis.EventSequences;
+using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers.Clients;
+namespace Cratis.Kernel.Grains.Observation.Reducers.Clients;
 
 internal static partial class ClientReducerLogMessages
 {

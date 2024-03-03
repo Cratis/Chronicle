@@ -1,15 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Connections;
-using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Kernel.Grains.Clients;
-using Aksio.Cratis.Kernel.Grains.Observation.Reducers.Clients;
-using Aksio.Cratis.Observation.Reducers;
+using Cratis.Connections;
+using Cratis.Kernel.Configuration;
+using Cratis.Kernel.Grains.Clients;
+using Cratis.Kernel.Grains.Observation.Reducers.Clients;
+using Cratis.Observation.Reducers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Domain.Observation;
+namespace Cratis.Kernel.Domain.Observation;
 
 /// <summary>
 /// Represents the API for working with observers.

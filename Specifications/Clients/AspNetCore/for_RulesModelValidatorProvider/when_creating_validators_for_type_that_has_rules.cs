@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Rules;
+using Cratis.Rules;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
-namespace Aksio.Cratis.AspNetCore.Rules.for_RulesModelValidatorProvider;
+namespace Cratis.AspNetCore.Rules.for_RulesModelValidatorProvider;
 
 public class when_creating_validators_for_type_that_has_rules : given.one_rule_for_type
 {

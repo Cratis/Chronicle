@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Storage.Keys;
-using Aksio.Cratis.Properties;
+using Cratis.Kernel.Grains.Jobs;
+using Cratis.Kernel.Keys;
+using Cratis.Kernel.Storage.Keys;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;
+namespace Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;
 
 public class when_preparing_steps : given.a_catchup_observer_and_a_request
 {

@@ -3,7 +3,7 @@
 
 using System.Diagnostics.Metrics;
 
-namespace Aksio.Cratis.Metrics;
+namespace Cratis.Metrics;
 
 /// <summary>
 /// Represents a typed <see cref="Meter"/>.

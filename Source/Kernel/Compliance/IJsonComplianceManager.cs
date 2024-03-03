@@ -4,7 +4,7 @@
 using System.Text.Json.Nodes;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Compliance;
+namespace Cratis.Kernel.Compliance;
 
 /// <summary>
 /// Defines a Json serializer that is compliance aware.

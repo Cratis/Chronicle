@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Storage.Compliance;
+using Cratis.Kernel.Storage.Compliance;
 using MongoDB.Bson.Serialization;
 
-namespace Aksio.Cratis.Compliance.MongoDB;
+namespace Cratis.Compliance.MongoDB;
 
 /// <summary>
 /// Represents a <see cref="IBsonSerializer{T}"/> for handling serialization of <see cref="EncryptionKey"/>.

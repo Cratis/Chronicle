@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Events.MongoDB.EventTypes;
+namespace Cratis.Events.MongoDB.EventTypes;
 
 internal static partial class EventTypesStorageLogMessages
 {

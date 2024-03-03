@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Aksio.Cratis.Projections;
+using Cratis.Projections;
 using FluentValidation;
 using FluentValidation.Results;
 
-namespace Aksio.Cratis.Rules;
+namespace Cratis.Rules;
 
 /// <summary>
 /// Represents a <see cref="AbstractValidator{T}"/> for business rules related to a command.

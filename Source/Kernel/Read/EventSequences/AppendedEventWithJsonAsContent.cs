@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.Read.EventSequences;
+namespace Cratis.Kernel.Read.EventSequences;
 
 /// <summary>
 /// Represents an event that has been appended to an event log with the content as JSON.

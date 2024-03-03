@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
-using Aksio.Cratis.Kernel.Projections.Expressions.ModelProperties;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Schemas;
+using Cratis.Events;
+using Cratis.Kernel.Projections.Expressions.EventValues;
+using Cratis.Kernel.Projections.Expressions.ModelProperties;
+using Cratis.Properties;
+using Cratis.Schemas;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions;
+namespace Cratis.Kernel.Projections.Expressions;
 
 /// <summary>
 /// Represents an implementation of <see cref="IModelPropertyExpressionResolvers"/>.

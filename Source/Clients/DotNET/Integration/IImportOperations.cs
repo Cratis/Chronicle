@@ -3,7 +3,7 @@
 
 using AutoMapper;
 
-namespace Aksio.Cratis.Integration;
+namespace Cratis.Integration;
 
 /// <summary>
 /// Defines import operations that can be performed.

@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
-using Aksio.Cratis.Kernel.Storage.Jobs;
-using Aksio.Cratis.Kernel.Storage.Observation;
-using Aksio.Cratis.Observation;
+using Cratis.Jobs;
+using Cratis.Kernel.Grains.Jobs;
+using Cratis.Kernel.Grains.Observation.Jobs;
+using Cratis.Kernel.Storage.Jobs;
+using Cratis.Kernel.Storage.Observation;
+using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.States;
+namespace Cratis.Kernel.Grains.Observation.States;
 
 /// <summary>
 /// Represents the catch up state of an observer.

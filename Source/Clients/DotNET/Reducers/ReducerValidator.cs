@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Reducers.Validators;
+using Cratis.Reducers.Validators;
 
-namespace Aksio.Cratis.Reducers;
+namespace Cratis.Reducers;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReducerValidator"/>.

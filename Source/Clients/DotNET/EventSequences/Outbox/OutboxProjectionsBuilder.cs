@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Contracts.Projections;
-using Aksio.Cratis.Kernel.Contracts.Projections.Outbox;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Schemas;
+using Cratis.Events;
+using Cratis.Kernel.Contracts.Projections;
+using Cratis.Kernel.Contracts.Projections.Outbox;
+using Cratis.Models;
+using Cratis.Projections;
+using Cratis.Schemas;
 using Aksio.Guids;
 
-namespace Aksio.Cratis.EventSequences.Outbox;
+namespace Cratis.EventSequences.Outbox;
 
 /// <summary>
 /// Represents an implementation of <see cref="IOutboxProjectionsBuilder"/>.

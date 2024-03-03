@@ -3,7 +3,7 @@
 
 using Aksio.Configuration;
 
-namespace Aksio.Cratis.Kernel.Configuration;
+namespace Cratis.Kernel.Configuration;
 
 /// <summary>
 /// Represents all the configured microservices.

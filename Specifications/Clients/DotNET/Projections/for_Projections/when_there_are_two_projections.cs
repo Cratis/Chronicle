@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Projections.Definitions;
+using Cratis.Projections.Definitions;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Projections.for_Projections;
+namespace Cratis.Projections.for_Projections;
 
 public class when_there_are_two_projections : given.all_dependencies
 {

@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Identities;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.Identities;
 
 #pragma warning disable SA1600, IDE0060
 
-namespace Aksio.Cratis.Kernel.Domain.EventSequences;
+namespace Cratis.Kernel.Domain.EventSequences;
 
 /// <summary>
 /// Represents the payload for appending many events.

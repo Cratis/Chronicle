@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Net.for_LoadBalancedHttpClientFactory.given;
+namespace Cratis.Net.for_LoadBalancedHttpClientFactory.given;
 
 public class a_load_balanced_http_client_factory : Specification
 {

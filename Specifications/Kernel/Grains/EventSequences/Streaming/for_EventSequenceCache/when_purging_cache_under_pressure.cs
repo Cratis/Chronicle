@@ -3,7 +3,7 @@
 
 using Aksio.Collections;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCache;
+namespace Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCache;
 
 public class when_purging_cache_under_pressure : given.an_event_sequence_cache
 {

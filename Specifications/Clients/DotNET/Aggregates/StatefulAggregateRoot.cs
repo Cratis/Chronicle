@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 
-namespace Aksio.Cratis.Aggregates;
+namespace Cratis.Aggregates;
 
 public class StatefulAggregateRoot : AggregateRoot<StateForAggregateRoot>
 {

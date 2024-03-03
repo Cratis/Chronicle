@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Applications.Queries;
-using Aksio.Cratis.Kernel.Observation;
-using Aksio.Cratis.Kernel.Storage;
+using Cratis.Kernel.Observation;
+using Cratis.Kernel.Storage;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Aksio.Cratis.Kernel.Read.Observation;
+namespace Cratis.Kernel.Read.Observation;
 
 /// <summary>
 /// Represents the API for working with observers.

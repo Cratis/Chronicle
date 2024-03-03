@@ -4,12 +4,12 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Properties;
+using Cratis.Events;
+using Cratis.Models;
+using Cratis.Projections;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Projections;
+namespace Cratis.Kernel.Projections;
 
 /// <summary>
 /// Represents the implementation of <see cref="IProjection"/>.

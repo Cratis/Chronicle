@@ -1,16 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.Changes;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.Jobs;
-using Aksio.Cratis.Kernel.Storage.Keys;
-using Aksio.Cratis.Kernel.Storage.Observation;
-using Aksio.Cratis.Kernel.Storage.Recommendations;
+using Cratis.EventSequences;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.Changes;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.Jobs;
+using Cratis.Kernel.Storage.Keys;
+using Cratis.Kernel.Storage.Observation;
+using Cratis.Kernel.Storage.Recommendations;
 
-namespace Aksio.Cratis.Specifications;
+namespace Cratis.Specifications;
 
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IEventStoreNamespaceStorage"/>.

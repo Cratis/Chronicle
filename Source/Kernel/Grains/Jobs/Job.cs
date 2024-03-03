@@ -4,10 +4,10 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Orleans.Observers;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.Jobs;
+using Cratis.Jobs;
+using Cratis.Kernel.Orleans.Observers;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.Jobs;
 using Aksio.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.Providers;
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Kernel.Grains.Jobs;
+namespace Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJob{TRequest}"/>.

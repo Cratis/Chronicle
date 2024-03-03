@@ -4,7 +4,7 @@
 using ProtoBuf.Grpc;
 using ProtoBuf.Grpc.Configuration;
 
-namespace Aksio.Cratis.Kernel.Contracts.Clients;
+namespace Cratis.Kernel.Contracts.Clients;
 
 /// <summary>
 /// Defines a system that manages client connections to Cratis.

@@ -4,7 +4,7 @@
 using Aksio.Strings;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Schemas.for_JsonSchemaExtensions;
+namespace Cratis.Schemas.for_JsonSchemaExtensions;
 
 public class when_getting_flattened_properties_for_class_without_inheritance : given.a_json_schema_generator
 {

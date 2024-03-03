@@ -3,7 +3,7 @@
 
 using System.Net;
 
-namespace Aksio.Cratis.Observation.for_ClientObserversEndpoints.when_handling;
+namespace Cratis.Observation.for_ClientObserversEndpoints.when_handling;
 
 public class and_body_is_empty : Cratis.given.an_http_context
 {

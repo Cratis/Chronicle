@@ -3,15 +3,15 @@
 
 using System.Linq.Expressions;
 using System.Text.Json;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Contracts.Projections;
-using Aksio.Cratis.Projections.Expressions;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Reflection;
-using Aksio.Cratis.Schemas;
-using EventType = Aksio.Cratis.Kernel.Contracts.Events.EventType;
+using Cratis.Events;
+using Cratis.Kernel.Contracts.Projections;
+using Cratis.Projections.Expressions;
+using Cratis.Properties;
+using Cratis.Reflection;
+using Cratis.Schemas;
+using EventType = Cratis.Kernel.Contracts.Events.EventType;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChildrenBuilder{TModel, TChildModel}"/>.

@@ -3,7 +3,7 @@
 
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Changes.for_ObjectComparer.when_comparing_object_with_dictionary_with_string_type;
+namespace Cratis.Changes.for_ObjectComparer.when_comparing_object_with_dictionary_with_string_type;
 
 public class and_key_is_the_same_but_class_object_is_different : given.an_object_comparer
 {

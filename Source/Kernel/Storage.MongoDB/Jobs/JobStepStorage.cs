@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Storage.Jobs;
-using Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
+using Cratis.Jobs;
+using Cratis.Kernel.Storage.Jobs;
+using Cratis.Kernel.Storage.MongoDB.Observation;
 using Aksio.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Jobs;
+namespace Cratis.Kernel.Storage.MongoDB.Jobs;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJobStorage"/> for MongoDB.

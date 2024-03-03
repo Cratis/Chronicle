@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Aksio.Cratis.Kernel.Read.Projections;
+namespace Cratis.Kernel.Read.Projections;
 
 /// <summary>
 /// Represents the API for projections.

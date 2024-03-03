@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Integration;
-using Aksio.Cratis.Kernel.Contracts.Projections;
-using Aksio.Cratis.Rules;
+using Cratis.Integration;
+using Cratis.Kernel.Contracts.Projections;
+using Cratis.Rules;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientProjections"/>.

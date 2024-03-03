@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Recommendations;
+using Cratis.Recommendations;
 
-namespace Aksio.Cratis.Kernel.Storage.Recommendations;
+namespace Cratis.Kernel.Storage.Recommendations;
 
 /// <summary>
 /// Defines the storage for <see cref="RecommendationState"/>.

@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Properties;
+using Cratis.Properties;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Schemas;
+namespace Cratis.Schemas;
 
 /// <summary>
 /// Extension methods for <see cref="JsonSchema"/>.

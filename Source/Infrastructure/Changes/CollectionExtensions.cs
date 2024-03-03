@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Objects;
-using Aksio.Cratis.Properties;
+using Cratis.Dynamic;
+using Cratis.Objects;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Changes;
+namespace Cratis.Changes;
 
 /// <summary>
 /// Extension methods for working with collections.

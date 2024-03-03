@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Events;
+using Cratis.Dynamic;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Specifications.Events;
+namespace Cratis.Specifications.Events;
 
 /// <summary>
 /// Represents a factory for creating <see cref="AppendedEvent"/> instances.

@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
+namespace Cratis.Kernel.Orleans.StateMachines;
 
 /// <summary>
 /// Represents a base implementation of <see cref="IStateMachine{TStoredState}"/>.

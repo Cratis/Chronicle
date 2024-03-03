@@ -137,10 +137,8 @@ jobs:
 
       - name: Release
         id: release
-        uses: aksio-insurtech/release-action@v1
+        uses: cratis/release-action@v1
         with:
-          user-name: "Aksio Build"
-          user-email: "build@aksio.no"
           version: ${{ github.event.inputs.version }}
           release-notes: ${{ github.event.inputs.release-notes }}
 
@@ -221,8 +219,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            aksioinsurtech/cratis:${{ needs.release.outputs.version }}
-            aksioinsurtech/cratis:latest
+            cratis/cratis:${{ needs.release.outputs.version }}
+            cratis/cratis:latest
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 
@@ -264,8 +262,8 @@ jobs:
           file: ./Docker/Workbench/Dockerfile
           push: true
           tags: |
-            aksioinsurtech/cratis:${{ needs.release.outputs.version }}-workbench
-            aksioinsurtech/cratis:latest-workbench
+            cratis/cratis:${{ needs.release.outputs.version }}-workbench
+            cratis/cratis:latest-workbench
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 
@@ -320,7 +318,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            aksioinsurtech/cratis:${{ needs.release.outputs.version }}-development
-            aksioinsurtech/cratis:latest-development
+            cratis/cratis:${{ needs.release.outputs.version }}-development
+            cratis/cratis:latest-development
           build-args: |
             VERSION=${{ needs.release.outputs.version }}

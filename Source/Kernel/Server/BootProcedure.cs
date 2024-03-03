@@ -2,24 +2,24 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
-using Aksio.Cratis.Boot;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences.Inboxes;
-using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Kernel.Contracts.Events;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
-using Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
-using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Grains.Projections;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Observation;
-using Aksio.Cratis.Schemas;
+using Cratis.Boot;
+using Cratis.Events;
+using Cratis.EventSequences.Inboxes;
+using Cratis.Kernel.Configuration;
+using Cratis.Kernel.Contracts.Events;
+using Cratis.Kernel.Grains.EventSequences;
+using Cratis.Kernel.Grains.EventSequences.Inbox;
+using Cratis.Kernel.Grains.EventSequences.Streaming;
+using Cratis.Kernel.Grains.Jobs;
+using Cratis.Kernel.Grains.Projections;
+using Cratis.Kernel.Storage;
+using Cratis.Observation;
+using Cratis.Schemas;
 using NJsonSchema;
-using IEventTypes = Aksio.Cratis.Events.IEventTypes;
-using IObservers = Aksio.Cratis.Kernel.Grains.Observation.IObservers;
+using IEventTypes = Cratis.Events.IEventTypes;
+using IObservers = Cratis.Kernel.Grains.Observation.IObservers;
 
-namespace Aksio.Cratis.Kernel.Server;
+namespace Cratis.Kernel.Server;
 
 /// <summary>
 /// Represents a <see cref="IPerformBootProcedure"/> for the event store.

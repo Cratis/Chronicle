@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Aksio.Cratis.Reflection;
+namespace Cratis.Reflection;
 
 /// <summary>
 /// Extension methods for <see cref="Type"/>.

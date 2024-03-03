@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
-using Aksio.Cratis.Kernel.Storage.Recommendations;
-using Aksio.Cratis.Recommendations;
+using Cratis.Kernel.Storage.MongoDB.Observation;
+using Cratis.Kernel.Storage.Recommendations;
+using Cratis.Recommendations;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Recommendations;
+namespace Cratis.Kernel.Storage.MongoDB.Recommendations;
 
 /// <summary>
 /// Represents an implementation of <see cref="IRecommendationStorage"/> for MongoDB.

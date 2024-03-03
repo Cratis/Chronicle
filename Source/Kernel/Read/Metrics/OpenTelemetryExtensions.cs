@@ -15,7 +15,7 @@ public static class OpenTelemetryExtensions
     /// <returns><see cref="MeterProviderBuilder"/> for continuation.</returns>
     public static MeterProviderBuilder AddInMemoryObservableMetrics(this MeterProviderBuilder builder) =>
         builder.AddInMemoryExporter(
-            Aksio.Cratis.Kernel.Read.Metrics.Metrics._metrics,
+            Cratis.Kernel.Read.Metrics.Metrics._metrics,
             options =>
             {
                 options.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 1000;

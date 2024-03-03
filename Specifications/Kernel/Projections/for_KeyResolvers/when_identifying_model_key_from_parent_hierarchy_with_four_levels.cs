@@ -1,15 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Properties;
+using Cratis.Auditing;
+using Cratis.Dynamic;
+using Cratis.EventSequences;
+using Cratis.Identities;
+using Cratis.Kernel.Keys;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Projections.for_KeyResolvers;
+namespace Cratis.Kernel.Projections.for_KeyResolvers;
 
 public class when_identifying_model_key_from_parent_hierarchy_with_four_levels : Specification
 {

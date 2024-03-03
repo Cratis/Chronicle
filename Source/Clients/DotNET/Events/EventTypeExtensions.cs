@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Aksio.Cratis.Events;
+namespace Cratis.Events;
 
 /// <summary>
 /// Extension methods for working with <see cref="EventType"/> and <see cref="Type"/> .

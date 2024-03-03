@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Properties;
+using Cratis.Auditing;
+using Cratis.Identities;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Projections.for_PropertyMappers;
+namespace Cratis.Kernel.Projections.for_PropertyMappers;
 
 public class when_adding_to_a_deep_nested_property_without_existing_value_from_an_event_value_provider : Specification
 {

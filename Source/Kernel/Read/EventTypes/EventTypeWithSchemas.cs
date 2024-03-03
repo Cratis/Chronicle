@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 
-namespace Aksio.Cratis.Kernel.Read.EventTypes;
+namespace Cratis.Kernel.Read.EventTypes;
 
 /// <summary>
 /// Represents an event type with all its schemas.

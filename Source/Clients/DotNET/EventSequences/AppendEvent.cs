@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Identities;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.Identities;
 
-namespace Aksio.Cratis.EventSequences;
+namespace Cratis.EventSequences;
 
 /// <summary>
 /// Represents the payload for appending an event.

@@ -1,26 +1,26 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Compliance;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Projections;
-using Aksio.Cratis.Kernel.Projections.Expressions;
-using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
-using Aksio.Cratis.Kernel.Projections.Expressions.Keys;
-using Aksio.Cratis.Kernel.Projections.Pipelines;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Kernel.Storage.Changes;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.Sinks;
-using Aksio.Cratis.Kernel.Storage.Sinks.InMemory;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Schemas;
+using Cratis.Changes;
+using Cratis.Compliance;
+using Cratis.EventSequences;
+using Cratis.Json;
+using Cratis.Kernel.Projections;
+using Cratis.Kernel.Projections.Expressions;
+using Cratis.Kernel.Projections.Expressions.EventValues;
+using Cratis.Kernel.Projections.Expressions.Keys;
+using Cratis.Kernel.Projections.Pipelines;
+using Cratis.Kernel.Storage;
+using Cratis.Kernel.Storage.Changes;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.Sinks;
+using Cratis.Kernel.Storage.Sinks.InMemory;
+using Cratis.Models;
+using Cratis.Schemas;
 using Aksio.Json;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Events.Projections.for_ProjectionScenarios.given;
+namespace Cratis.Events.Projections.for_ProjectionScenarios.given;
 
 public abstract class a_projection_pipeline_for<TModel> : Specification
 {

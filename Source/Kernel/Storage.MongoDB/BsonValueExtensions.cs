@@ -3,7 +3,7 @@
 
 using System.Collections;
 using System.Globalization;
-using Aksio.Cratis.Reflection;
+using Cratis.Reflection;
 using Aksio.MongoDB;
 using Aksio.Reflection;
 using Aksio.Strings;
@@ -11,7 +11,7 @@ using Aksio.Types;
 using MongoDB.Bson;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Extension methods for working with <see cref="BsonValue"/>.

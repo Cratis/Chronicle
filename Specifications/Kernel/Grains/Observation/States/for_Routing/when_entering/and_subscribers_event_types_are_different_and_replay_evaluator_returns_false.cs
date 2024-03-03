@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Orleans.StateMachines;
-using Aksio.Cratis.Kernel.Storage.Observation;
+using Cratis.Kernel.Orleans.StateMachines;
+using Cratis.Kernel.Storage.Observation;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Routing.when_entering;
+namespace Cratis.Kernel.Grains.Observation.States.for_Routing.when_entering;
 
 public class and_subscribers_event_types_are_different_and_replay_evaluator_returns_false : given.a_routing_state_and_event_types_that_are_different_from_subscription
 {

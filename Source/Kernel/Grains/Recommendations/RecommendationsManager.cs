@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Recommendations;
+using Cratis.Kernel.Storage;
+using Cratis.Recommendations;
 
-namespace Aksio.Cratis.Kernel.Grains.Recommendations;
+namespace Cratis.Kernel.Grains.Recommendations;
 
 /// <summary>
 /// Represents an implementation of <see cref="IRecommendationsManager"/> that has a result.

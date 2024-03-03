@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Grains.Workers;
-using Aksio.Cratis.Kernel.Storage.Jobs;
+using Cratis.Jobs;
+using Cratis.Kernel.Grains.Workers;
+using Cratis.Kernel.Storage.Jobs;
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Kernel.Grains.Jobs;
+namespace Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJobStep{TRequest, TResult}"/>.

@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Kernel.Contracts.Projections;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Projections;
+using Cratis.Kernel.Contracts.Projections;
+using Cratis.Models;
+using Cratis.Projections;
 
-namespace Aksio.Cratis.Integration;
+namespace Cratis.Integration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAdapterProjectionFor{TModel}"/>.

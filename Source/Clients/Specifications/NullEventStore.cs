@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Observation;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Reducers;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Observation;
+using Cratis.Projections;
+using Cratis.Reducers;
 using Aksio.Execution;
 
-namespace Aksio.Cratis.Specifications;
+namespace Cratis.Specifications;
 
 /// <summary>
 /// Represents a null implementation of <see cref="IEventStore"/> that does nothing.

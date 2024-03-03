@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Conventions;
+namespace Cratis.Conventions;
 
 /// <summary>
 /// Extension methods for working with event handler methods.

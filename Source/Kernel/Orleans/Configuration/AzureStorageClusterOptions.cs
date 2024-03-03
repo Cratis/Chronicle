@@ -3,7 +3,7 @@
 
 using Orleans.Clustering.AzureStorage;
 
-namespace Aksio.Cratis.Kernel.Orleans.Configuration;
+namespace Cratis.Kernel.Orleans.Configuration;
 
 /// <summary>
 /// Represents the options for the Azure Storage clustering.

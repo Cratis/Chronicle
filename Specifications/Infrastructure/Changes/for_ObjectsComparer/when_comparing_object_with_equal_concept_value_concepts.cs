@@ -3,7 +3,7 @@
 
 using Aksio.Concepts;
 
-namespace Aksio.Cratis.Changes.for_ObjectComparer;
+namespace Cratis.Changes.for_ObjectComparer;
 
 public class when_comparing_object_with_equal_concept_value_concepts : given.an_object_comparer
 {

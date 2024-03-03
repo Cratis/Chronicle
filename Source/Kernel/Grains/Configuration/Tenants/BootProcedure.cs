@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Boot;
-using Aksio.Cratis.Kernel.Configuration;
+using Cratis.Boot;
+using Cratis.Kernel.Configuration;
 
-namespace Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
+namespace Cratis.Kernel.Grains.Configuration.Tenants;
 
 /// <summary>
 /// Represents a <see cref="IPerformBootProcedure"/> for tenant configuration.

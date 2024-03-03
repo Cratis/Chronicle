@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis;
+using Cratis;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Extensions.Hosting;
 
 /// <summary>
-/// Extensions for using Aksio.Cratis in an application.
+/// Extensions for using Cratis in an application.
 /// </summary>
 public static class HostBuilderExtensions
 {

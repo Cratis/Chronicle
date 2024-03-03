@@ -5,7 +5,7 @@ using Aksio.Collections;
 using Aksio.Types;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Boot;
+namespace Cratis.Boot;
 
 /// <summary>
 /// Represents an implementation of <see cref="IBootProcedures"/>.

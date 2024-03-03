@@ -3,9 +3,9 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Aksio.Cratis.Properties;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Keys;
+namespace Cratis.Kernel.Keys;
 
 /// <summary>
 /// Represents a <see cref="JsonConverter{T}"/>  that can convert <see cref="Key"/>.

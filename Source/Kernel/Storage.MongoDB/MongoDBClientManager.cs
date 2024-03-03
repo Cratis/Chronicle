@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using Aksio.MongoDB;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IMongoDBClientManager"/>.

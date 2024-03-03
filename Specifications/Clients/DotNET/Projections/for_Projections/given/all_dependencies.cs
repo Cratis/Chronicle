@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Schemas;
+using Cratis.Models;
+using Cratis.Schemas;
 
-namespace Aksio.Cratis.Projections.for_Projections.given;
+namespace Cratis.Projections.for_Projections.given;
 
 public class all_dependencies : Specification
 {

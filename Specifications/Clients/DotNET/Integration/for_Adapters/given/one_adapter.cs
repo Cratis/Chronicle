@@ -3,7 +3,7 @@
 
 using AutoMapper;
 
-namespace Aksio.Cratis.Integration.for_Adapters.given;
+namespace Cratis.Integration.for_Adapters.given;
 
 public class one_adapter : all_dependencies
 {

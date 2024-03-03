@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Reducers;
+using Cratis.Reducers;
 
-namespace Aksio.Cratis.Aggregates.for_AggregateRootStateProviders.given;
+namespace Cratis.Aggregates.for_AggregateRootStateProviders.given;
 
 public class an_aggregate_root_state_manager : Specification
 {

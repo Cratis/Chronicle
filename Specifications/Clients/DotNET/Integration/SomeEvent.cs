@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Integration;
+namespace Cratis.Integration;
 
 [EventType(EventTypeId)]
 public record SomeEvent(int SomeInteger, string SomeString)

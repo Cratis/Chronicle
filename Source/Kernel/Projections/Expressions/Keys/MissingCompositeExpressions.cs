@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Properties;
+using Cratis.Projections;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions.Keys;
+namespace Cratis.Kernel.Projections.Expressions.Keys;
 
 /// <summary>
 /// Exception that gets thrown when a composite key property mapping expression is invalid.

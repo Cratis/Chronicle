@@ -3,7 +3,7 @@
 Cratis is an open source event sourcing platform focused on making event sourcing as simple as your average CRUD
 application whether you're building a monolith or a microservice solution. Leveraging MongoDB as storage engine.
 
-You can find the source code over at [GitHub](https://github.com/aksio-insurtech/cratis).
+You can find the source code over at [GitHub](https://github.com/Cratis/Cratis).
 
 Cratis consists of more than just an event store and a client, it also offers an optional application model that
 simplifies development with concepts like [CQRS](https://en.wikipedia.org/wiki/Command%E2%80%93query_separation#Command_Query_Responsibility_Segregation).

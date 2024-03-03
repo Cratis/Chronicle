@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.Cratis;
-using Aksio.Cratis.Configuration;
+using Cratis;
+using Cratis.Configuration;
 using Aksio.Execution;
 using Aksio.MongoDB;
 using Microsoft.Extensions.Logging;

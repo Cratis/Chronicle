@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Properties;
+using Cratis.Events;
+using Cratis.Properties;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions;
+namespace Cratis.Kernel.Projections.Expressions;
 
 /// <summary>
 /// Defines a system for resolving a model property expression. It represents known expression resolvers in the system.

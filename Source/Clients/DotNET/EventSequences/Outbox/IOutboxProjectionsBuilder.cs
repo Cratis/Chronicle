@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Contracts.Projections.Outbox;
-using Aksio.Cratis.Projections;
+using Cratis.Kernel.Contracts.Projections.Outbox;
+using Cratis.Projections;
 
-namespace Aksio.Cratis.EventSequences.Outbox;
+namespace Cratis.EventSequences.Outbox;
 
 /// <summary>
 /// Defines the builder of projections for events to outbox.

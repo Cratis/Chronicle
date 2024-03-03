@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Configuration;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Models;
+using Cratis.Configuration;
+using Cratis.Identities;
+using Cratis.Models;
 using Aksio.Json;
 using Aksio.Types;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis;
+namespace Cratis;
 
 /// <summary>
 /// Represents the settings for connecting to Cratis.

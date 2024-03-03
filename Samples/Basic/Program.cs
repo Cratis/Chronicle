@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
-using Aksio.Cratis;
-using Aksio.Cratis.Configuration;
+using Cratis;
+using Cratis.Configuration;
 using Basic;
 using Microsoft.Extensions.Logging;
 

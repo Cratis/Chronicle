@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Properties;
+using Cratis.Events;
+using Cratis.Properties;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
+namespace Cratis.Kernel.Projections.Expressions.EventValues;
 
 /// <summary>
 /// Defines a system for resolving a event value provider expression. It represents known expression resolvers in the system.

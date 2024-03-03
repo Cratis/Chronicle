@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCaches;
+namespace Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCaches;
 
 public class when_purging_with_one_cache_under_pressure : given.two_event_sequence_caches
 {

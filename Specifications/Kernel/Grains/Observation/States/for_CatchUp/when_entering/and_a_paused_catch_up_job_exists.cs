@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
-using Aksio.Cratis.Kernel.Storage.Jobs;
+using Cratis.Jobs;
+using Cratis.Kernel.Grains.Observation.Jobs;
+using Cratis.Kernel.Storage.Jobs;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_CatchUp.when_entering;
+namespace Cratis.Kernel.Grains.Observation.States.for_CatchUp.when_entering;
 
 public class and_a_paused_catch_up_job_exists : given.a_catch_up_state
 {

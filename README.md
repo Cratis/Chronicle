@@ -1,15 +1,15 @@
-# Aksio Cratis
+# Cratis
 
 ## Packages / Deployables
 
-[![Nuget](https://img.shields.io/nuget/v/Aksio.Cratis?logo=nuget)](http://nuget.org/packages/aksio.cratis)
-[![Docker](https://img.shields.io/docker/v/aksioinsurtech/cratis?label=Cratis%20Kernel&logo=docker&sort=semver)](https://hub.docker.com/r/aksioinsurtech/cratis)
+[![Nuget](https://img.shields.io/nuget/v/Cratis?logo=nuget)](http://nuget.org/packages/cratis)
+[![Docker](https://img.shields.io/docker/v/cratis/cratis?label=Cratis%20Kernel&logo=docker&sort=semver)](https://hub.docker.com/r/cratis/cratis)
 
 ## Builds
 
-[![C# Build](https://github.com/cratis/Cratis/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/dotnet-build.yml)
-[![Publish](https://github.com/cratis/Cratis/actions/workflows/publish.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/publish.yml)
-[![Documentation Site](https://github.com/cratis/Cratis/actions/workflows/pages.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/pages.yml)
+[![C# Build](https://github.com/cratis/Cratis/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/Cratis/Cratis/actions/workflows/dotnet-build.yml)
+[![Publish](https://github.com/cratis/Cratis/actions/workflows/publish.yml/badge.svg)](https://github.com/Cratis/Cratis/actions/workflows/publish.yml)
+[![Documentation Site](https://github.com/cratis/Cratis/actions/workflows/pages.yml/badge.svg)](https://github.com/Cratis/Cratis/actions/workflows/pages.yml)
 
 ## Statistics
 
@@ -22,13 +22,13 @@ It provides the core server, referred to as the **Kernel** with a client SDK to 
 built into it.
 
 Read the documentation on our site [https://cratis.io](https://cratis.io) for all the details.
-For general guidance on the core values and principles we @ Aksio use, read more [here](https://github.com/aksio-insurtech/Home/blob/main/profile/README.md).
+For general guidance on the core values and principles we @ use, read more [here](https://github.com/Cratis/.github/blob/main/profile/README.md).
 
 If you want to jump into building this repository and possibly contributing, please refer to [contributing](./Documentation/contributing.md).
 
 ## Opening in VSCode online
 
-If you prefer to browse the code in VSCode, you can do so by clicking [here](https://vscode.dev/github/aksio-insurtech/Cratis).
+If you prefer to browse the code in VSCode, you can do so by clicking [here](https://vscode.dev/github/cratis/Cratis).
 
 ## Running the samples
 

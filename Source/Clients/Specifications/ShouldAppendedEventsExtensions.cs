@@ -5,7 +5,7 @@ using Aksio.Specifications;
 using Moq;
 using Xunit;
 
-namespace Aksio.Cratis.Specifications;
+namespace Cratis.Specifications;
 
 /// <summary>
 /// Holds extension methods for fluent "Should*" assertions related to enumerable of <see cref="AppendedEventForSpecifications"/>.

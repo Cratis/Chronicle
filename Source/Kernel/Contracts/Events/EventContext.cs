@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Contracts.Auditing;
-using Aksio.Cratis.Kernel.Contracts.Identities;
-using Aksio.Cratis.Kernel.Contracts.Primitives;
+using Cratis.Kernel.Contracts.Auditing;
+using Cratis.Kernel.Contracts.Identities;
+using Cratis.Kernel.Contracts.Primitives;
 using ProtoBuf;
 
-namespace Aksio.Cratis.Kernel.Contracts.Events;
+namespace Cratis.Kernel.Contracts.Events;
 
 /// <summary>
 /// Represents the context in which an event exists - typically what it was appended with.

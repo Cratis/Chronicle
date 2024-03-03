@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.Cratis.Observation.Reducers;
+using Cratis.Observation.Reducers;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers;
+namespace Cratis.Kernel.Grains.Observation.Reducers;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReducerPipelineDefinitions"/>.

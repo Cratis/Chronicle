@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Compliance;
+using Cratis.Compliance;
 using Aksio.Execution;
 using Aksio.Strings;
 using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
-namespace Aksio.Cratis.Schemas;
+namespace Cratis.Schemas;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJsonSchemaGenerator"/>.

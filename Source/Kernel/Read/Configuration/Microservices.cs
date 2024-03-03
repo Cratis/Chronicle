@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Configuration;
-using Aksio.Cratis.Kernel.Configuration;
+using Cratis.Configuration;
+using Cratis.Kernel.Configuration;
 using Microsoft.AspNetCore.Mvc;
-using ApiMicroservice = Aksio.Cratis.Kernel.Read.Configuration.Microservices.Microservice;
+using ApiMicroservice = Cratis.Kernel.Read.Configuration.Microservices.Microservice;
 
-namespace Aksio.Cratis.Kernel.Read.Configuration.Microservices;
+namespace Cratis.Kernel.Read.Configuration.Microservices;
 
 /// <summary>
 /// Represents the API for working with the configuration of the kernel.

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Observation.for_ObserverHandler.given;
+namespace Cratis.Observation.for_ObserverHandler.given;
 
 public class an_observer_handler : all_dependencies
 {

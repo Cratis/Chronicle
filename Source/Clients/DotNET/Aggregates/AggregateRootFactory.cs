@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.EventSequences;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Aksio.Cratis.Aggregates;
+namespace Cratis.Aggregates;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAggregateRootFactory"/>.

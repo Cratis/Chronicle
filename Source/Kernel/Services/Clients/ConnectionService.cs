@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Aksio.Cratis.Kernel.Contracts.Clients;
-using Aksio.Cratis.Kernel.Grains.Clients;
+using Cratis.Kernel.Contracts.Clients;
+using Cratis.Kernel.Grains.Clients;
 using ProtoBuf.Grpc;
 
-namespace Aksio.Cratis.Kernel.Services.Clients;
+namespace Cratis.Kernel.Services.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IConnectionService"/>.

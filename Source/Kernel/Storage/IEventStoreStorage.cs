@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Storage.EventTypes;
-using Aksio.Cratis.Kernel.Storage.Identities;
-using Aksio.Cratis.Kernel.Storage.Projections;
+using Cratis.Kernel.Storage.EventTypes;
+using Cratis.Kernel.Storage.Identities;
+using Cratis.Kernel.Storage.Projections;
 
-namespace Aksio.Cratis.Kernel.Storage;
+namespace Cratis.Kernel.Storage;
 
 /// <summary>
 /// Defines the shared storage for an event store.

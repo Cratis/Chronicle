@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Projections.Expressions.EventValues;
-using Aksio.Cratis.Properties;
+using Cratis.EventSequences;
+using Cratis.Kernel.Projections.Expressions.EventValues;
+using Cratis.Properties;
 using Aksio.Strings;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.Projections.Expressions.ModelProperties.for_AddExpressionResolver;
+namespace Cratis.Kernel.Projections.Expressions.ModelProperties.for_AddExpressionResolver;
 
 public class when_trying_to_resolve_valid_add_expression_against_model_and_event : given.an_appended_event
 {

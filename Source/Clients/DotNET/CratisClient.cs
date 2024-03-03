@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Connections;
-using Aksio.Cratis.Schemas;
+using Cratis.Auditing;
+using Cratis.Compliance;
+using Cratis.Connections;
+using Cratis.Schemas;
 using Aksio.Types;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis;
+namespace Cratis;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICratisClient"/>.

@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
+using Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.Observation.Replaying;
+namespace Cratis.Kernel.Observation.Replaying;
 
 /// <summary>
 /// Represents a reason for a replay candidate when event types have changed.

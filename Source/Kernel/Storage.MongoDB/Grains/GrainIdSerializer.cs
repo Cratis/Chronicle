@@ -4,7 +4,7 @@
 using MongoDB.Bson.Serialization;
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Grains;
+namespace Cratis.Kernel.Storage.MongoDB.Grains;
 
 /// <summary>
 /// Represents a <see cref="IBsonSerializer{T}"/> for handling serialization of <see cref="GrainId"/>.

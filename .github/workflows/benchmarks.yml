@@ -26,7 +26,7 @@ jobs:
           dotnet-version: "7.0.x"
 
       - name: Run Mongo container
-        run: docker run -p 27017:27017 -d aksioinsurtech/mongodb
+        run: docker run -p 27017:27017 -d cratis/mongodb
 
       - name: Run Benchmarks
         working-directory: ./Benchmarks

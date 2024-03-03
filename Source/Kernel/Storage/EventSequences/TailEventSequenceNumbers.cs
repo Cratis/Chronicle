@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
+using Cratis.Events;
+using Cratis.EventSequences;
 
-namespace Aksio.Cratis.Kernel.Storage.EventSequences;
+namespace Cratis.Kernel.Storage.EventSequences;
 
 /// <summary>
 /// Represents the tail sequence numbers.

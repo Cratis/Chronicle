@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.EventSequences;
+namespace Cratis.EventSequences;
 
 /// <summary>
 /// Represents the unique identifier of an event sequence.
@@ -33,7 +33,7 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     /// The name of the sequence representing the system sequence.
     /// </summary>
     /// <remarks>
-    /// This is represented as a string name, as part of the transition away from GUIDs representing sequences to strings: https://github.com/aksio-insurtech/Cratis/issues/921.
+    /// This is represented as a string name, as part of the transition away from GUIDs representing sequences to strings: https://github.com/Cratis/Cratis/issues/921.
     /// </remarks>
     public const string System = "system";
 
@@ -63,7 +63,7 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     /// <param name="id"><see cref="Guid"/> to convert from.</param>
     public static implicit operator EventSequenceId(string id)
     {
-        // TODO: We're doing this explicit check for well-known type "system" until we have completed the transition from GUIDs to strings: https://github.com/aksio-insurtech/Cratis/issues/921
+        // TODO: We're doing this explicit check for well-known type "system" until we have completed the transition from GUIDs to strings: https://github.com/Cratis/Cratis/issues/921
         if (id == System) return SystemId;
         return new(Guid.Parse(id));
     }

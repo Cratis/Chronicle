@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Reducers;
+namespace Cratis.Reducers;
 
 /// <summary>
 /// Log messages for <see cref="ClientReducers"/>.

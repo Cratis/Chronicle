@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Compliance;
+using Cratis.Compliance;
 
-namespace Aksio.Cratis.Kernel.Storage.Compliance;
+namespace Cratis.Kernel.Storage.Compliance;
 
 /// <summary>
 /// Exception that gets thrown when an <see cref="EncryptionKey"/> is missing.

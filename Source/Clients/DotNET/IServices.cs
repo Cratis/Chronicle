@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Contracts.Events;
-using Aksio.Cratis.Kernel.Contracts.EventSequences;
-using Aksio.Cratis.Kernel.Contracts.Observation;
+using Cratis.Kernel.Contracts.Events;
+using Cratis.Kernel.Contracts.EventSequences;
+using Cratis.Kernel.Contracts.Observation;
 
-namespace Aksio.Cratis;
+namespace Cratis;
 
 /// <summary>
 /// Defines all the Kernel services available.

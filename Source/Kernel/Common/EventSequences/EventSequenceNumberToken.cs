@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
+using Cratis.Events;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Cratis.Kernel.EventSequences;
 
 /// <summary>
 /// Stream sequence token that tracks sequence number and event index.

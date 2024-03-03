@@ -2,24 +2,24 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Collections;
-using Aksio.Cratis.Aggregates;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Compliance.GDPR;
-using Aksio.Cratis.Configuration;
-using Aksio.Cratis.Connections;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences.Outbox;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Integration;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Net;
-using Aksio.Cratis.Observation;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Reducers;
-using Aksio.Cratis.Rules;
-using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Tenants;
+using Cratis.Aggregates;
+using Cratis.Auditing;
+using Cratis.Compliance;
+using Cratis.Compliance.GDPR;
+using Cratis.Configuration;
+using Cratis.Connections;
+using Cratis.Events;
+using Cratis.EventSequences.Outbox;
+using Cratis.Identities;
+using Cratis.Integration;
+using Cratis.Models;
+using Cratis.Net;
+using Cratis.Observation;
+using Cratis.Projections;
+using Cratis.Reducers;
+using Cratis.Rules;
+using Cratis.Schemas;
+using Cratis.Tenants;
 using Aksio.Json;
 using Aksio.Tasks;
 using Aksio.Timers;
@@ -29,7 +29,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TaskFactory = Aksio.Tasks.TaskFactory;
 
-namespace Aksio.Cratis;
+namespace Cratis;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientBuilder"/>.

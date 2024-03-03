@@ -1,19 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Kernel.Events.EventSequences;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Identities;
+using Cratis.Kernel.Events.EventSequences;
+using Cratis.Kernel.Storage.EventSequences;
 using Microsoft.AspNetCore.Mvc;
-using EventRedacted = Aksio.Cratis.Kernel.Events.EventSequences.EventRedacted;
-using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
+using EventRedacted = Cratis.Kernel.Events.EventSequences.EventRedacted;
+using IEventSequence = Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
 #pragma warning disable SA1600, IDE0060
 
-namespace Aksio.Cratis.Kernel.Domain.EventSequences;
+namespace Cratis.Kernel.Domain.EventSequences;
 
 /// <summary>
 /// Represents the API for working with the event log.

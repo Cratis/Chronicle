@@ -3,12 +3,12 @@
 
 using System.Globalization;
 using System.Linq.Expressions;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Projections.Expressions;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Reflection;
+using Cratis.Events;
+using Cratis.Projections.Expressions;
+using Cratis.Properties;
+using Cratis.Reflection;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISetBuilder{TModel, TEvent, TProperty, TParentBuilder}"/>.

@@ -4,10 +4,10 @@
 
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Identities;
+using Cratis.Auditing;
+using Cratis.Identities;
 
-namespace Aksio.Cratis.EventSequences.for_EventSequence.when_appending;
+namespace Cratis.EventSequences.for_EventSequence.when_appending;
 
 public class known_event : given.an_event_sequence
 {

@@ -3,7 +3,7 @@
 
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Changes.for_ObjectComparer;
+namespace Cratis.Changes.for_ObjectComparer;
 
 public class when_comparing_object_with_comparable_that_are_not_equal : given.an_object_comparer
 {

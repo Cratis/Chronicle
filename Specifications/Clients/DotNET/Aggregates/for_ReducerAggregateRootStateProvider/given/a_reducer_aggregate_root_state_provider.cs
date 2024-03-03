@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Reducers;
+using Cratis.EventSequences;
+using Cratis.Reducers;
 
-namespace Aksio.Cratis.Aggregates.for_ReducerAggregateRootStateProvider.given;
+namespace Cratis.Aggregates.for_ReducerAggregateRootStateProvider.given;
 
 public class a_reducer_aggregate_root_state_provider : Specification
 {

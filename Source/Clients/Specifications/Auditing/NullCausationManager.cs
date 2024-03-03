@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Auditing;
+using Cratis.Auditing;
 
-namespace Aksio.Cratis.Specifications.Auditing;
+namespace Cratis.Specifications.Auditing;
 
 /// <summary>
 /// Represents a null implementation of <see cref="ICausationManager"/>.

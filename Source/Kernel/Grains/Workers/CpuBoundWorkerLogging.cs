@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains.Workers;
+namespace Cratis.Kernel.Grains.Workers;
 
 #pragma warning disable MA0048 // File name must match type name
 

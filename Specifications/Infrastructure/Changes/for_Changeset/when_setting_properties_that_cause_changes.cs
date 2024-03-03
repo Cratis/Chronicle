@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Properties;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Changes.for_Changeset;
+namespace Cratis.Changes.for_Changeset;
 
 public class when_setting_properties_that_cause_changes : Specification
 {

@@ -3,7 +3,7 @@
 
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Kernel.Orleans.Execution;
+namespace Cratis.Kernel.Orleans.Execution;
 
 /// <summary>
 /// Represents an Orleans <see cref="IIncomingGrainCallFilter">grain call filter</see> that establishes

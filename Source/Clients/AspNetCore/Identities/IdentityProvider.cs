@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Identities;
+using Cratis.Identities;
 using Microsoft.AspNetCore.Http;
 
-namespace Aksio.Cratis.AspNetCore.Identities;
+namespace Cratis.AspNetCore.Identities;
 
 /// <summary>
 /// Represents an implementation of <see cref="IIdentityProvider"/> for ASP.NET.

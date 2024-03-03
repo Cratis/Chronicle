@@ -5,7 +5,7 @@ using Aksio.Applications.Queries;
 using Microsoft.AspNetCore.Mvc;
 using OpenTelemetry.Metrics;
 
-namespace Aksio.Cratis.Kernel.Read.Metrics;
+namespace Cratis.Kernel.Read.Metrics;
 
 /// <summary>
 /// Represents the API for working with metrics.

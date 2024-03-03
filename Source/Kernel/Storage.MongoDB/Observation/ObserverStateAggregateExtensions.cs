@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Observation;
-using Aksio.Cratis.Kernel.Storage.Observation;
+using Cratis.Kernel.Observation;
+using Cratis.Kernel.Storage.Observation;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB.Observation;
+namespace Cratis.Kernel.Storage.MongoDB.Observation;
 
 /// <summary>
 /// Extension methods for aggregation related to <see cref="ObserverState"/>.

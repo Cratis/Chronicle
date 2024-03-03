@@ -4,14 +4,14 @@
 using System.Reactive.Subjects;
 using System.Reflection;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Kernel.Contracts.Observation;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.Identities;
+using Cratis.Kernel.Contracts.Observation;
 using Microsoft.Extensions.Logging;
-using ObserverInformation = Aksio.Cratis.Kernel.Observation.ObserverInformation;
+using ObserverInformation = Cratis.Kernel.Observation.ObserverInformation;
 
-namespace Aksio.Cratis.Observation;
+namespace Cratis.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IObservers"/>.

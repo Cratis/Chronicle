@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions;
+namespace Cratis.Dynamic.for_ExpandoObjectExtensions;
 
 public class when_cloning_a_nested_object : Specification
 {

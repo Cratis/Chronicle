@@ -4,7 +4,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 
-namespace Aksio.Cratis.Kernel.Compliance.GDPR.for_PIICompliancePropertyValueHandler;
+namespace Cratis.Kernel.Compliance.GDPR.for_PIICompliancePropertyValueHandler;
 
 public class when_applying : given.a_property_handler
 {

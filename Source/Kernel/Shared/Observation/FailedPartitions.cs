@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Keys;
+using Cratis.Events;
+using Cratis.Kernel.Keys;
 
-namespace Aksio.Cratis.Kernel.Observation;
+namespace Cratis.Kernel.Observation;
 
 /// <summary>
 /// Represents the state of all failed partitions within an observer.

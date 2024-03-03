@@ -3,7 +3,7 @@
 
 using Orleans.TestKit;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.given;
+namespace Cratis.Kernel.Grains.Observation.for_Observer.given;
 
 public class an_observer_with_subscription_for_specific_event_type : an_observer
 {

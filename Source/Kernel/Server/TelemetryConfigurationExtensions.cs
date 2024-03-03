@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
-using Aksio.Cratis.Kernel.Orleans.Configuration;
-using Aksio.Cratis.Metrics;
+using Cratis.Kernel.Orleans.Configuration;
+using Cratis.Metrics;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;

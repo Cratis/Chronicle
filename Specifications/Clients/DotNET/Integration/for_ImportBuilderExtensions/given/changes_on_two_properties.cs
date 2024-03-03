@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Changes;
+using Cratis.Changes;
 
-namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions.given;
+namespace Cratis.Integration.for_ImportBuilderExtensions.given;
 
 public class changes_on_two_properties : no_changes
 {

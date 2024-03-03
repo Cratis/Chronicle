@@ -4,7 +4,7 @@
 using Aksio.MongoDB;
 using MongoDB.Bson.Serialization;
 
-namespace Aksio.Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
 /// Represents a class map for <see cref="Event"/>.

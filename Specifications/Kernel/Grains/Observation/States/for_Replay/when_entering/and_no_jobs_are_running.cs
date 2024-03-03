@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
+using Cratis.Jobs;
+using Cratis.Kernel.Grains.Observation.Jobs;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Replay.when_entering;
+namespace Cratis.Kernel.Grains.Observation.States.for_Replay.when_entering;
 
 public class and_no_jobs_are_running : given.a_replay_state
 {

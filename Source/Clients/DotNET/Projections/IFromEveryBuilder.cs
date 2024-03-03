@@ -3,7 +3,7 @@
 
 using System.Linq.Expressions;
 
-namespace Aksio.Cratis.Projections;
+namespace Cratis.Projections;
 
 /// <summary>
 /// Defines the builder for building properties that can be set by all events.

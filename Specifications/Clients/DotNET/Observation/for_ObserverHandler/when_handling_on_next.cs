@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Identities;
+using Cratis.Auditing;
+using Cratis.Identities;
 
-namespace Aksio.Cratis.Observation.for_ObserverHandler;
+namespace Cratis.Observation.for_ObserverHandler;
 
 public record SomeEvent(string Property);
 

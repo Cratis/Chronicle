@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
+using Cratis.EventSequences;
 
-namespace Aksio.Cratis.Observation;
+namespace Cratis.Observation;
 
 /// <summary>
 /// Attribute used to adorn classes to tell Cratis that the class is an observer.

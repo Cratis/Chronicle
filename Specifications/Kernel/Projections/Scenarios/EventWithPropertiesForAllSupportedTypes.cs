@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Projections.Scenarios.Concepts;
+using Cratis.Kernel.Projections.Scenarios.Concepts;
 
-namespace Aksio.Cratis.Kernel.Projections.Scenarios;
+namespace Cratis.Kernel.Projections.Scenarios;
 
 [EventType("990e339a-eb22-4945-905e-1c8d948d517b")]
 public record EventWithPropertiesForAllSupportedTypes(

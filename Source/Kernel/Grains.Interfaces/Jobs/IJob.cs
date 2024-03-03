@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Jobs;
+using Cratis.Jobs;
 
-namespace Aksio.Cratis.Kernel.Grains.Jobs;
+namespace Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
 /// Represents a job that typically runs as long running with <see cref="IJobStep{TRequest, TResult}"/>.

@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Aksio.Cratis.Properties;
+namespace Cratis.Properties;
 
 /// <summary>
 /// Represents the delegate of an operation that maps data from a source into a target object.

@@ -4,11 +4,11 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Aksio.Cratis.Reflection;
+using Cratis.Reflection;
 using Aksio.Json;
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Json;
+namespace Cratis.Json;
 
 /// <summary>
 /// Represents a <see cref="JsonConverter{T}"/> that can convert types with properties that are of type object.

@@ -3,7 +3,7 @@
 
 using Orleans.TestKit;
 
-namespace Aksio.Cratis.Kernel.Orleans.StateMachines.when_transitioning;
+namespace Cratis.Kernel.Orleans.StateMachines.when_transitioning;
 
 public class and_state_can_be_transitioned_to : given.a_state_machine_with_well_known_states
 {

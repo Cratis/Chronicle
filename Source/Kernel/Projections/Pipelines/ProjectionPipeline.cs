@@ -2,19 +2,19 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Storage.Changes;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.Sinks;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Schemas;
+using Cratis.Changes;
+using Cratis.Events;
+using Cratis.Kernel.Keys;
+using Cratis.Kernel.Storage.Changes;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.Sinks;
+using Cratis.Properties;
+using Cratis.Schemas;
 using Aksio.Types;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Aksio.Cratis.Kernel.Projections.IProjection;
+using EngineProjection = Cratis.Kernel.Projections.IProjection;
 
-namespace Aksio.Cratis.Kernel.Projections.Pipelines;
+namespace Cratis.Kernel.Projections.Pipelines;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionPipeline"/>.

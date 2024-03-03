@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Identities;
+using Cratis.Auditing;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.Identities;
 
-namespace Aksio.Cratis.Observation;
+namespace Cratis.Observation;
 
 /// <summary>
 /// Represents a handler of observers.

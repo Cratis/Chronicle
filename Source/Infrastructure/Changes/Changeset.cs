@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Objects;
-using Aksio.Cratis.Properties;
+using Cratis.Objects;
+using Cratis.Properties;
 
-namespace Aksio.Cratis.Changes;
+namespace Cratis.Changes;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChangeset{TSource, TTarget}"/>.

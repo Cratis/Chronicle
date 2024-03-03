@@ -3,7 +3,7 @@
 
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceQueueCacheCursor.when_moving_next;
+namespace Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceQueueCacheCursor.when_moving_next;
 
 public class and_current_is_not_set_and_cache_does_not_have_event_but_source_has : given.a_cursor_and_an_empty_cache
 {

@@ -3,13 +3,13 @@
 
 using System.Globalization;
 using Aksio.Applications.Autofac;
-using Aksio.Cratis.Kernel.Grains.Observation.Placement;
-using Aksio.Cratis.Kernel.Server.Serialization;
+using Cratis.Kernel.Grains.Observation.Placement;
+using Cratis.Kernel.Server.Serialization;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 
 #pragma warning disable SA1600
-namespace Aksio.Cratis.Kernel.Server;
+namespace Cratis.Kernel.Server;
 
 public static class Program
 {

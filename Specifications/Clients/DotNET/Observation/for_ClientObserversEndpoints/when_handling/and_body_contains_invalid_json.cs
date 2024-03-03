@@ -4,7 +4,7 @@
 using System.Net;
 using System.Text;
 
-namespace Aksio.Cratis.Observation.for_ClientObserversEndpoints.when_handling;
+namespace Cratis.Observation.for_ClientObserversEndpoints.when_handling;
 
 public class and_body_contains_invalid_json : Cratis.given.an_http_context
 {

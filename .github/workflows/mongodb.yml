@@ -22,10 +22,7 @@ jobs:
 
       - name: Release
         id: release
-        uses: aksio-insurtech/release-action@v1
-        with:
-          user-name: "Aksio Build"
-          user-email: "build@aksio.no"
+        uses: cratis/release-action@v1
 
   publish-docker:
     if: needs.release.outputs.publish == 'true'

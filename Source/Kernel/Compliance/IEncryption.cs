@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.Storage.Compliance;
+using Cratis.Kernel.Storage.Compliance;
 
-namespace Aksio.Cratis.Kernel.Compliance;
+namespace Cratis.Kernel.Compliance;
 
 /// <summary>
 /// Defines a system for working with encryption.

@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Specifications;
+using Cratis.Specifications;
 
-namespace Aksio.Cratis.Reducers.for_ReducerInvoker.given;
+namespace Cratis.Reducers.for_ReducerInvoker.given;
 
 public class a_reducer_invoker_for<TReducer> : Specification
     where TReducer : class, new()

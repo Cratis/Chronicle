@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Serialization;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Properties;
+using Cratis.Events;
+using Cratis.Projections.Definitions;
+using Cratis.Properties;
 using Aksio.Json;
 
-namespace Aksio.Cratis.Projections.Json;
+namespace Cratis.Projections.Json;
 
 /// <summary>
 /// Represents a <see cref="JsonConverter"/> that can convert to a dictionary of <see cref="PropertyPath"/> and <see cref="JoinDefinition"/>.

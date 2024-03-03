@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventTypes;
-using Aksio.Cratis.Schemas;
+using Cratis.EventTypes;
+using Cratis.Schemas;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Events.MongoDB.EventTypes;
+namespace Cratis.Events.MongoDB.EventTypes;
 
 /// <summary>
 /// Extension methods for working with <see cref="EventTypeSchema"/>.

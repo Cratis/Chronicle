@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-using Aksio.Cratis.Jobs;
-using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
-using Aksio.Cratis.Kernel.Storage;
-using Aksio.Cratis.Observation;
+using Cratis.Events;
+using Cratis.Jobs;
+using Cratis.Kernel.Grains.Jobs;
+using Cratis.Kernel.Grains.Observation.Jobs;
+using Cratis.Kernel.Storage;
+using Cratis.Observation;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation;
+namespace Cratis.Kernel.Grains.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IObservers"/>.

@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Observation;
+using Cratis.Observation;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
+namespace Cratis.Kernel.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents the request for a <see cref="IReplayObserver"/>.

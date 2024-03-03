@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Changes.for_ObjectComparer;
+namespace Cratis.Changes.for_ObjectComparer;
 
 public class when_comparing_object_with_generic_comparable_that_are_equal : given.an_object_comparer
 {

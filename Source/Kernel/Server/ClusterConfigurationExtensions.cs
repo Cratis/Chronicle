@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
-using Aksio.Cratis.Kernel.Orleans.Configuration;
-using Aksio.Cratis.Kernel.Server;
+using Cratis.Kernel.Orleans.Configuration;
+using Cratis.Kernel.Server;
 using Orleans.Configuration;
 using Orleans.Providers.Streams.Common;
 

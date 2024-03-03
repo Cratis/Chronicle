@@ -3,22 +3,22 @@
 
 using System.Dynamic;
 using System.Text.Json;
-using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Changes;
-using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.EventTypes;
-using Aksio.Cratis.Identities;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Storage.EventSequences;
-using Aksio.Cratis.Kernel.Storage.Sinks;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Objects;
-using Aksio.Cratis.Sinks;
+using Cratis.Auditing;
+using Cratis.Changes;
+using Cratis.Dynamic;
+using Cratis.Events;
+using Cratis.EventSequences;
+using Cratis.EventTypes;
+using Cratis.Identities;
+using Cratis.Kernel.Grains.EventSequences;
+using Cratis.Kernel.Keys;
+using Cratis.Kernel.Storage.EventSequences;
+using Cratis.Kernel.Storage.Sinks;
+using Cratis.Models;
+using Cratis.Objects;
+using Cratis.Sinks;
 
-namespace Aksio.Cratis.Kernel.Grains.Sinks.Outbox;
+namespace Cratis.Kernel.Grains.Sinks.Outbox;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> for projecting to the event outbox, MongoDB based.

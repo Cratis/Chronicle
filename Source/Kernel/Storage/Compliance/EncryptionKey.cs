@@ -3,7 +3,7 @@
 
 #pragma warning disable CA1819
 
-namespace Aksio.Cratis.Kernel.Storage.Compliance;
+namespace Cratis.Kernel.Storage.Compliance;
 
 /// <summary>
 /// Represents a key used in encryption.

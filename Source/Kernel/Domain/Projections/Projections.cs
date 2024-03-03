@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Kernel.Grains.Projections;
-using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Projections.Json;
+using Cratis.Kernel.Grains.Projections;
+using Cratis.Projections;
+using Cratis.Projections.Definitions;
+using Cratis.Projections.Json;
 using Microsoft.AspNetCore.Mvc;
-using ImmediateProjectionResult = Aksio.Cratis.Kernel.Grains.Projections.ImmediateProjectionResult;
-using IProjections = Aksio.Cratis.Kernel.Grains.Projections.IProjections;
+using ImmediateProjectionResult = Cratis.Kernel.Grains.Projections.ImmediateProjectionResult;
+using IProjections = Cratis.Kernel.Grains.Projections.IProjections;
 
-namespace Aksio.Cratis.Kernel.Domain.Projections;
+namespace Cratis.Kernel.Domain.Projections;
 
 /// <summary>
 /// Represents the API for projections.

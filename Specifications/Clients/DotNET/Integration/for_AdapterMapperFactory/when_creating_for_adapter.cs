@@ -3,7 +3,7 @@
 
 using AutoMapper;
 
-namespace Aksio.Cratis.Integration.for_AdapterMapperFactory;
+namespace Cratis.Integration.for_AdapterMapperFactory;
 
 public class when_creating_for_adapter : Specification
 {

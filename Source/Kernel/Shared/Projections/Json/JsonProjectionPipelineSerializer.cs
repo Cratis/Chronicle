@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Projections.Definitions;
+using Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Projections.Json;
+namespace Cratis.Projections.Json;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJsonProjectionSerializer"/>.
