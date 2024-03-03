@@ -18,28 +18,23 @@ namespace Cratis.Projections;
 /// </summary>
 /// <typeparam name="TParentModel">Parent model type.</typeparam>
 /// <typeparam name="TChildModel">Child model type.</typeparam>
-public class ChildrenBuilder<TParentModel, TChildModel> :
+/// <remarks>
+/// /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
+/// </remarks>
+/// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
+/// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
+/// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
+public class ChildrenBuilder<TParentModel, TChildModel>(
+    IEventTypes eventTypes,
+    IJsonSchemaGenerator schemaGenerator,
+    JsonSerializerOptions jsonSerializerOptions) :
     ProjectionBuilder<TChildModel,
-    IChildrenBuilder<TParentModel, TChildModel>>,
+    IChildrenBuilder<TParentModel, TChildModel>>(eventTypes, schemaGenerator, jsonSerializerOptions),
     IChildrenBuilder<TParentModel, TChildModel>
 {
     PropertyPath _identifiedBy = PropertyPath.NotSet;
     EventType? _fromEventPropertyEventType;
     IEventValueExpression? _fromEventPropertyExpression;
-
-    /// <summary>
-    /// /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
-    /// </summary>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
-    /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
-    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
-    public ChildrenBuilder(
-        IEventTypes eventTypes,
-        IJsonSchemaGenerator schemaGenerator,
-        JsonSerializerOptions jsonSerializerOptions)
-        : base(eventTypes, schemaGenerator, jsonSerializerOptions)
-    {
-    }
 
     /// <inheritdoc/>
     public IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy(PropertyPath propertyPath)
@@ -72,7 +67,7 @@ public class ChildrenBuilder<TParentModel, TChildModel> :
             Model = new()
             {
                 Name = _modelName,
-                Schema = _schemaGenerator.Generate(typeof(TChildModel)).ToJson()
+                Schema = schemaGenerator.Generate(typeof(TChildModel)).ToJson()
             },
             InitialModelState = _initialValues.ToJsonString(),
             From = _fromDefinitions,

@@ -4,8 +4,6 @@
         <RootNamespace>Cratis.Kernel.Read</RootNamespace>
     </PropertyGroup>
 
-    <Import Project="../ProxyGeneration.props"/>
-
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
         <PackageReference Include="OpenTelemetry.Exporter.InMemory" />

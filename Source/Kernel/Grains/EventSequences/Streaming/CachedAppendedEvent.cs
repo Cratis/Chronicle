@@ -9,26 +9,20 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 /// <summary>
 /// Represents a cached appended event.
 /// </summary>
-public class CachedAppendedEvent
+/// <remarks>
+/// Initializes a new instance of the <see cref="CachedAppendedEvent"/> class.
+/// </remarks>
+/// <param name="event">The <see cref="AppendedEvent"/> to cache.</param>
+/// <param name="next">The next <see cref="CachedAppendedEvent"/> in the chain.</param>
+public class CachedAppendedEvent(AppendedEvent @event, CachedAppendedEvent? next = null)
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CachedAppendedEvent"/> class.
-    /// </summary>
-    /// <param name="event">The <see cref="AppendedEvent"/> to cache.</param>
-    /// <param name="next">The next <see cref="CachedAppendedEvent"/> in the chain.</param>
-    public CachedAppendedEvent(AppendedEvent @event, CachedAppendedEvent? next = null)
-    {
-        Event = @event;
-        Next = next;
-    }
-
     /// <summary>
     /// Gets the <see cref="AppendedEvent"/> that is cached.
     /// </summary>
-    public AppendedEvent Event { get; }
+    public AppendedEvent Event { get; } = @event;
 
     /// <summary>
     /// Gets the next <see cref="CachedAppendedEvent"/> in the chain.
     /// </summary>
-    public CachedAppendedEvent? Next { get; set; }
+    public CachedAppendedEvent? Next { get; set; } = next;
 }

@@ -11,25 +11,18 @@ namespace Cratis.Kernel.Services.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IConnectionService"/>.
 /// </summary>
-public class ConnectionService : IConnectionService
+/// <remarks>
+/// Initializes a new instance of the <see cref="ConnectionService"/> class.
+/// </remarks>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
+public class ConnectionService(IGrainFactory grainFactory) : IConnectionService
 {
-    readonly IGrainFactory _grainFactory;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConnectionService"/> class.
-    /// </summary>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
-    public ConnectionService(IGrainFactory grainFactory)
-    {
-        _grainFactory = grainFactory;
-    }
-
     /// <inheritdoc/>
     public IObservable<ConnectionKeepAlive> Connect(
         ConnectRequest request,
         CallContext context = default)
     {
-        var connectedClients = _grainFactory.GetGrain<IConnectedClients>(0);
+        var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
         connectedClients.OnClientConnected(
             request.ConnectionId,
             request.ClientVersion,
@@ -63,7 +56,7 @@ public class ConnectionService : IConnectionService
     /// <inheritdoc/>
     public void ConnectionKeepAlive(ConnectionKeepAlive keepAlive)
     {
-        var connectedClients = _grainFactory.GetGrain<IConnectedClients>(0);
+        var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
         connectedClients.OnClientPing(keepAlive.ConnectionId).GetAwaiter().GetResult();
     }
 }

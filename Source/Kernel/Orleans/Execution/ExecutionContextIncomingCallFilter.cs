@@ -9,20 +9,12 @@ namespace Cratis.Kernel.Orleans.Execution;
 /// Represents an Orleans <see cref="IIncomingGrainCallFilter">grain call filter</see> that establishes
 /// the correct <see cref="ExecutionContext"/> based on values on the request context.
 /// </summary>
-public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
+/// <remarks>
+/// Initializes a new instance of the <see cref="ExecutionContextIncomingCallFilter"/> class.
+/// </remarks>
+/// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
+public class ExecutionContextIncomingCallFilter(IExecutionContextManager executionContextManager) : IIncomingGrainCallFilter
 {
-    readonly IExecutionContextManager _executionContextManager;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ExecutionContextIncomingCallFilter"/> class.
-    /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-    public ExecutionContextIncomingCallFilter(
-        IExecutionContextManager executionContextManager)
-    {
-        _executionContextManager = executionContextManager;
-    }
-
     /// <summary>
     /// Try to resolve execution context from the request context.
     /// </summary>
@@ -55,7 +47,7 @@ public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
     {
         if (TryResolveExecutionContext(out var executionContext))
         {
-            _executionContextManager.Set(executionContext);
+            executionContextManager.Set(executionContext);
         }
 
         await context.Invoke();

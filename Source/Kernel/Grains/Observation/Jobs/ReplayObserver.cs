@@ -13,19 +13,12 @@ namespace Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a job for replaying an observer.
 /// </summary>
-public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, IReplayObserver
+/// <remarks>
+/// Initializes a new instance of the <see cref="ReplayObserver"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, ReplayObserverState>, IReplayObserver
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReplayObserver"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public ReplayObserver(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
@@ -58,7 +51,7 @@ public class ReplayObserver : Job<ReplayObserverRequest, ReplayObserverState>, I
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverRequest request)
     {
-        var observerKeyIndexes = _storage.GetEventStore((string)JobKey.MicroserviceId).GetNamespace(JobKey.TenantId).ObserverKeyIndexes;
+        var observerKeyIndexes = storage.GetEventStore((string)JobKey.MicroserviceId).GetNamespace(JobKey.TenantId).ObserverKeyIndexes;
         var index = await observerKeyIndexes.GetFor(
             request.ObserverId,
             request.ObserverKey);

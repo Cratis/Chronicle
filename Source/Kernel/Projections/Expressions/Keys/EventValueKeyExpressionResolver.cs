@@ -11,18 +11,14 @@ namespace Cratis.Kernel.Projections.Expressions.Keys;
 /// <summary>
 /// Represents a <see cref="IKeyExpressionResolver"/> for resolving keys based on regular event value expressions.
 /// </summary>
-public class EventValueKeyExpressionResolver : IKeyExpressionResolver
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventValueKeyExpressionResolver"/> class.
+/// </remarks>
+/// <param name="resolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event values.</param>
+public class EventValueKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers) : IKeyExpressionResolver
 {
-    readonly IEventValueProviderExpressionResolvers _resolvers;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventValueKeyExpressionResolver"/> class.
-    /// </summary>
-    /// <param name="resolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event values.</param>
-    public EventValueKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers) => _resolvers = resolvers;
-
     /// <inheritdoc/>
-    public bool CanResolve(string expression) => _resolvers.CanResolve(expression);
+    public bool CanResolve(string expression) => resolvers.CanResolve(expression);
 
     /// <inheritdoc/>
     public KeyResolver Resolve(IProjection projection, string expression, PropertyPath identifiedByProperty)
@@ -32,6 +28,6 @@ public class EventValueKeyExpressionResolver : IKeyExpressionResolver
         {
             Type = JsonObjectType.String
         };
-        return KeyResolvers.FromEventValueProvider(_resolvers.Resolve(schemaProperty, expression));
+        return KeyResolvers.FromEventValueProvider(resolvers.Resolve(schemaProperty, expression));
     }
 }

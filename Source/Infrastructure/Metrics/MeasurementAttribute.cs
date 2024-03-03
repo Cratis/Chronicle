@@ -7,27 +7,21 @@ namespace Cratis.Metrics;
 /// Attribute for marking a method as a measurement for the metrics code generator.
 /// </summary>
 /// <typeparam name="T">Type of counter.</typeparam>
+/// <remarks>
+/// Initializes a new instance of <see cref="MeasurementAttribute{T}"/>.
+/// </remarks>
+/// <param name="name">Name of the counter.</param>
+/// <param name="description">Description of the counter.</param>
 [AttributeUsage(AttributeTargets.Method)]
-public sealed class MeasurementAttribute<T> : Attribute
+public sealed class MeasurementAttribute<T>(string name, string description) : Attribute
 {
-    /// <summary>
-    /// Initializes a new instance of <see cref="MeasurementAttribute{T}"/>.
-    /// </summary>
-    /// <param name="name">Name of the counter.</param>
-    /// <param name="description">Description of the counter.</param>
-    public MeasurementAttribute(string name, string description)
-    {
-        Name = name;
-        Description = description;
-    }
-
     /// <summary>
     /// Gets the name of the counter.
     /// </summary>
-    public string Name { get; }
+    public string Name { get; } = name;
 
     /// <summary>
     /// Gets the description of the counter.
     /// </summary>
-    public string Description { get; }
+    public string Description { get; } = description;
 }

@@ -23,5 +23,5 @@ public class StaticClusterOptions
     /// <summary>
     /// Gets the <see cref="EndPoint"/> configurations for all Orleans silos running.
     /// </summary>
-    public EndPoint[] Gateways { get; init; } = Array.Empty<EndPoint>();
+    public EndPoint[] Gateways { get; init; } = [];
 }

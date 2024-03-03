@@ -9,22 +9,15 @@ namespace Cratis.Projections.Json;
 /// <summary>
 /// Represents an implementation of <see cref="IJsonProjectionSerializer"/>.
 /// </summary>
-public class JsonProjectionPipelineSerializer : IJsonProjectionPipelineSerializer
+/// <remarks>
+/// Initializes a new instance of the <see cref="JsonProjectionPipelineSerializer"/>.
+/// </remarks>
+/// <param name="serializerOptions">The common <see creF="JsonSerializerOptions"/>.</param>
+public class JsonProjectionPipelineSerializer(JsonSerializerOptions serializerOptions) : IJsonProjectionPipelineSerializer
 {
-    readonly JsonSerializerOptions _serializerOptions;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JsonProjectionPipelineSerializer"/>.
-    /// </summary>
-    /// <param name="serializerOptions">The common <see creF="JsonSerializerOptions"/>.</param>
-    public JsonProjectionPipelineSerializer(JsonSerializerOptions serializerOptions)
-    {
-        _serializerOptions = serializerOptions;
-    }
+    /// <inheritdoc/>
+    public string Serialize(ProjectionPipelineDefinition definition) => JsonSerializer.Serialize(definition, serializerOptions);
 
     /// <inheritdoc/>
-    public string Serialize(ProjectionPipelineDefinition definition) => JsonSerializer.Serialize(definition, _serializerOptions);
-
-    /// <inheritdoc/>
-    public ProjectionPipelineDefinition Deserialize(string json) => JsonSerializer.Deserialize<ProjectionPipelineDefinition>(json, _serializerOptions)!;
+    public ProjectionPipelineDefinition Deserialize(string json) => JsonSerializer.Deserialize<ProjectionPipelineDefinition>(json, serializerOptions)!;
 }

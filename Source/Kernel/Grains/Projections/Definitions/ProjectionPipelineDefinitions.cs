@@ -10,21 +10,15 @@ namespace Cratis.Kernel.Grains.Projections.Definitions;
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionPipelineDefinitions"/>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ProjectionDefinition"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IProjectionPipelineDefinitionsStorage"/> for stored definitions.</param>
 [SingletonPerMicroservice]
-public class ProjectionPipelineDefinitions : IProjectionPipelineDefinitions
+public class ProjectionPipelineDefinitions(
+    IProjectionPipelineDefinitionsStorage storage) : IProjectionPipelineDefinitions
 {
-    readonly IProjectionPipelineDefinitionsStorage _storage;
-    readonly Dictionary<ProjectionId, ProjectionPipelineDefinition> _definitions = new();
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ProjectionDefinition"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IProjectionPipelineDefinitionsStorage"/> for stored definitions.</param>
-    public ProjectionPipelineDefinitions(
-        IProjectionPipelineDefinitionsStorage storage)
-    {
-        _storage = storage;
-    }
+    readonly Dictionary<ProjectionId, ProjectionPipelineDefinition> _definitions = [];
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionPipelineDefinition>> GetAll()
@@ -52,7 +46,7 @@ public class ProjectionPipelineDefinitions : IProjectionPipelineDefinitions
     public async Task Register(ProjectionPipelineDefinition definition)
     {
         _definitions[definition.ProjectionId] = definition;
-        await _storage.Save(definition);
+        await storage.Save(definition);
     }
 
     async Task PopulateIfMissing(ProjectionId projectionId)
@@ -73,7 +67,7 @@ public class ProjectionPipelineDefinitions : IProjectionPipelineDefinitions
 
     async Task Populate()
     {
-        var definitions = await _storage.GetAll();
+        var definitions = await storage.GetAll();
         foreach (var definition in definitions)
         {
             _definitions[definition.ProjectionId] = definition;

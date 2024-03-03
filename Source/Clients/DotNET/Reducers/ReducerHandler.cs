@@ -10,67 +10,53 @@ namespace Cratis.Reducers;
 /// <summary>
 /// Represents an implementation of <see cref="IReducerHandler"/>.
 /// </summary>
-public class ReducerHandler : IReducerHandler
+/// <remarks>
+/// Initializes a new instance of the <see cref="ReducerHandler"/> class.
+/// </remarks>
+/// <param name="reducerId">The identifier of the reducer.</param>
+/// <param name="name">The name of the reducer.</param>
+/// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the reducer is for.</param>
+/// <param name="invoker">The actual invoker.</param>
+/// <param name="eventSerializer">The event serializer to use.</param>
+/// <param name="isActive">Whether or not reducer should be actively running on the Kernel.</param>
+public class ReducerHandler(
+    ReducerId reducerId,
+    ObserverName name,
+    EventSequenceId eventSequenceId,
+    IReducerInvoker invoker,
+    IEventSerializer eventSerializer,
+    bool isActive) : IReducerHandler
 {
-    readonly IReducerInvoker _reducerInvoker;
-    readonly IEventSerializer _eventSerializer;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReducerHandler"/> class.
-    /// </summary>
-    /// <param name="reducerId">The identifier of the reducer.</param>
-    /// <param name="name">The name of the reducer.</param>
-    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the reducer is for.</param>
-    /// <param name="invoker">The actual invoker.</param>
-    /// <param name="eventSerializer">The event serializer to use.</param>
-    /// <param name="isActive">Whether or not reducer should be actively running on the Kernel.</param>
-    public ReducerHandler(
-        ReducerId reducerId,
-        ObserverName name,
-        EventSequenceId eventSequenceId,
-        IReducerInvoker invoker,
-        IEventSerializer eventSerializer,
-        bool isActive)
-    {
-        ReducerId = reducerId;
-        Name = name;
-        EventSequenceId = eventSequenceId;
-        _reducerInvoker = invoker;
-        _eventSerializer = eventSerializer;
-        IsActive = isActive;
-        Invoker = invoker;
-    }
+    /// <inheritdoc/>
+    public ReducerId ReducerId { get; } = reducerId;
 
     /// <inheritdoc/>
-    public ReducerId ReducerId { get; }
+    public ObserverName Name { get; } = name;
 
     /// <inheritdoc/>
-    public ObserverName Name { get; }
+    public EventSequenceId EventSequenceId { get; } = eventSequenceId;
 
     /// <inheritdoc/>
-    public EventSequenceId EventSequenceId { get; }
+    public IEnumerable<EventType> EventTypes => invoker.EventTypes;
 
     /// <inheritdoc/>
-    public IEnumerable<EventType> EventTypes => _reducerInvoker.EventTypes;
+    public Type ReadModelType => invoker.ReadModelType;
 
     /// <inheritdoc/>
-    public Type ReadModelType => _reducerInvoker.ReadModelType;
+    public bool IsActive { get; } = isActive;
 
     /// <inheritdoc/>
-    public bool IsActive { get; }
-
-    /// <inheritdoc/>
-    public IReducerInvoker Invoker { get; }
+    public IReducerInvoker Invoker => invoker;
 
     /// <inheritdoc/>
     public async Task<InternalReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial)
     {
         var tasks = events.Select(async @event =>
         {
-            var content = await _eventSerializer.Deserialize(@event);
+            var content = await eventSerializer.Deserialize(@event);
             return new EventAndContext(content, @event.Context);
         });
         var eventAndContexts = await Task.WhenAll(tasks.ToArray()!);
-        return await _reducerInvoker.Invoke(eventAndContexts, initial);
+        return await invoker.Invoke(eventAndContexts, initial);
     }
 }

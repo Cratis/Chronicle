@@ -6,20 +6,13 @@ namespace Cratis.Net;
 /// <summary>
 /// Represents an implementation of <see cref="ILoadBalancer"/>.
 /// </summary>
-public class LoadBalancer : ILoadBalancer
+/// <remarks>
+/// Initializes a new instance of the <see cref="LoadBalancer"/> class.
+/// </remarks>
+/// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> to use for the <see cref="ILoadBalancedHttpClientFactory"/>.</param>
+public class LoadBalancer(IHttpClientFactory httpClientFactory) : ILoadBalancer
 {
-    readonly IHttpClientFactory _httpClientFactory;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LoadBalancer"/> class.
-    /// </summary>
-    /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> to use for the <see cref="ILoadBalancedHttpClientFactory"/>.</param>
-    public LoadBalancer(IHttpClientFactory httpClientFactory)
-    {
-        _httpClientFactory = httpClientFactory;
-    }
-
     /// <inheritdoc/>
     public ILoadBalancedHttpClientFactory CreateHttpClientFactory(ILoadBalancerStrategy strategy)
-        => new LoadBalancedHttpClientFactory(strategy, _httpClientFactory);
+        => new LoadBalancedHttpClientFactory(strategy, httpClientFactory);
 }

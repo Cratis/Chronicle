@@ -6,17 +6,12 @@ namespace Cratis.Reducers;
 /// <summary>
 /// Exception that gets thrown when an observer does not exist.
 /// </summary>
-public class ReducerDoesNotExist : Exception
+/// <remarks>
+/// Initializes a new instance of <see cref="ReducerDoesNotExist"/>.
+/// </remarks>
+/// <param name="reducer">The invalid <see cref="ReducerId"/>.</param>
+public class ReducerDoesNotExist(ReducerId reducer) : Exception($"Observer with id '{reducer}' does not exist")
 {
-    /// <summary>
-    /// Initializes a new instance of <see cref="ReducerDoesNotExist"/>.
-    /// </summary>
-    /// <param name="reducer">The invalid <see cref="ReducerId"/>.</param>
-    public ReducerDoesNotExist(ReducerId reducer)
-        : base($"Observer with id '{reducer}' does not exist")
-    {
-    }
-
     /// <summary>
     /// Throw if the observer does not exist.
     /// </summary>

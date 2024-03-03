@@ -22,35 +22,22 @@ namespace Cratis.Kernel.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionFactory"/>.
 /// </summary>
-public class ProjectionFactory : IProjectionFactory
+/// <remarks>
+/// Initializes a new instance of the <see cref="ProjectionFactory"/> class.
+/// </remarks>
+/// <param name="propertyMapperExpressionResolvers"><see cref="IModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
+/// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving expressions for accessing values on events.</param>
+/// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
+/// <param name="storage"><see cref="IEventStoreNamespaceStorage"/> for accessing underlying storage for the specific namespace.</param>
+public class ProjectionFactory(
+    IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
+    IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers,
+    IKeyExpressionResolvers keyExpressionResolvers,
+    IExpandoObjectConverter expandoObjectConverter,
+    IEventStoreNamespaceStorage storage) : IProjectionFactory
 {
-    readonly IModelPropertyExpressionResolvers _propertyMapperExpressionResolvers;
-    readonly IEventValueProviderExpressionResolvers _eventValueProviderExpressionResolvers;
-    readonly IKeyExpressionResolvers _keyExpressionResolvers;
-    readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly IEventSequenceStorage _eventSequenceStorage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ProjectionFactory"/> class.
-    /// </summary>
-    /// <param name="propertyMapperExpressionResolvers"><see cref="IModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
-    /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving expressions for accessing values on events.</param>
-    /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
-    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
-    /// <param name="storage"><see cref="IEventStoreNamespaceStorage"/> for accessing underlying storage for the specific namespace.</param>
-    public ProjectionFactory(
-        IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
-        IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers,
-        IKeyExpressionResolvers keyExpressionResolvers,
-        IExpandoObjectConverter expandoObjectConverter,
-        IEventStoreNamespaceStorage storage)
-    {
-        _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
-        _eventValueProviderExpressionResolvers = eventValueProviderExpressionResolvers;
-        _keyExpressionResolvers = keyExpressionResolvers;
-        _expandoObjectConverter = expandoObjectConverter;
-        _eventSequenceStorage = storage.GetEventSequence(EventSequenceId.Log);
-    }
+    readonly IEventSequenceStorage _eventSequenceStorage = storage.GetEventSequence(EventSequenceId.Log);
 
     /// <inheritdoc/>
     public Task<IProjection> CreateFrom(ProjectionDefinition definition) =>
@@ -88,7 +75,7 @@ public class ProjectionFactory : IProjectionFactory
         ExpandoObject initialState;
         if (projectionDefinition.InitialModelState is not null)
         {
-            initialState = _expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
+            initialState = expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
         }
         else
         {
@@ -117,7 +104,7 @@ public class ProjectionFactory : IProjectionFactory
                 Format = projection.Model.Schema.Format
             };
 
-            var valueProvider = _eventValueProviderExpressionResolvers.Resolve(schemaProperty!, projectionDefinition.FromEventProperty.PropertyExpression);
+            var valueProvider = eventValueProviderExpressionResolvers.Resolve(schemaProperty!, projectionDefinition.FromEventProperty.PropertyExpression);
             projection.Event
                 .WhereEventTypeEquals(projectionDefinition.FromEventProperty.Event)
                 .AddChildFromEventProperty(childrenAccessorProperty, valueProvider);
@@ -219,7 +206,7 @@ public class ProjectionFactory : IProjectionFactory
             };
         }
 
-        return _propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty!, expression);
+        return propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty!, expression);
     }
 
     void ResolveEventsForProjection(IProjection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
@@ -279,9 +266,9 @@ public class ProjectionFactory : IProjectionFactory
 
     KeyResolver GetKeyResolverFor(IProjection projection, PropertyExpression? key, PropertyPath actualIdentifiedByProperty)
     {
-        if (key is not null && key.Value.Length != 0 && _keyExpressionResolvers.CanResolve(key))
+        if (key is not null && key.Value.Length != 0 && keyExpressionResolvers.CanResolve(key))
         {
-            return _keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty);
+            return keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty);
         }
 
         return KeyResolvers.FromEventSourceId;

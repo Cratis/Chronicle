@@ -10,7 +10,14 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequenceCache"/>.
 /// </summary>
-public class EventSequenceCache : IEventSequenceCache
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequenceCache"/> class.
+/// </remarks>
+/// <param name="eventSequenceStorage">Provider for <see cref="IEventSequenceStorage"/> for working with the event store.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+public class EventSequenceCache(
+    IEventSequenceStorage eventSequenceStorage,
+    ILogger<EventSequenceCache> logger) : IEventSequenceCache
 {
     /// <summary>
     /// The maximum number of events to keep in the cache.
@@ -33,28 +40,12 @@ public class EventSequenceCache : IEventSequenceCache
     public const int NumberOfEventsToFetch = 100;
 
 #pragma warning disable CA1051, SA1600, MA0016 // Elements should be documented + concrete type should not be used + visible instance fields.
-    protected readonly Dictionary<EventSequenceNumber, CachedAppendedEvent> _eventsBySequenceNumber = new();
+    protected readonly Dictionary<EventSequenceNumber, CachedAppendedEvent> _eventsBySequenceNumber = [];
     protected CachedAppendedEvent? _head;
     protected CachedAppendedEvent? _tail;
 #pragma warning restore SA1600
 
     readonly object _lock = new();
-    readonly IEventSequenceStorage _eventSequenceStorage;
-    readonly ILogger<EventSequenceCache> _logger;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequenceCache"/> class.
-    /// </summary>
-    /// <param name="eventSequenceStorage">Provider for <see cref="IEventSequenceStorage"/> for working with the event store.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public EventSequenceCache(
-        IEventSequenceStorage eventSequenceStorage,
-        ILogger<EventSequenceCache> logger)
-    {
-        _eventsBySequenceNumber = new();
-        _eventSequenceStorage = eventSequenceStorage;
-        _logger = logger;
-    }
 
     /// <inheritdoc/>
     public int Count => _eventsBySequenceNumber.Count;
@@ -91,9 +82,9 @@ public class EventSequenceCache : IEventSequenceCache
         }
 
         var to = from + NumberOfEventsToFetch;
-        _logger.Priming(from, to);
+        logger.Priming(from, to);
 
-        var eventCursor = _eventSequenceStorage.GetRange(from, to).GetAwaiter().GetResult();
+        var eventCursor = eventSequenceStorage.GetRange(from, to).GetAwaiter().GetResult();
 
         lock (_lock)
         {
@@ -144,7 +135,7 @@ public class EventSequenceCache : IEventSequenceCache
     /// <inheritdoc/>
     public async Task PrimeWithTailWindow()
     {
-        var tail = await _eventSequenceStorage.GetTailSequenceNumber();
+        var tail = await eventSequenceStorage.GetTailSequenceNumber();
         tail -= NumberOfEventsToFetch;
         if ((long)tail.Value < 0) tail = 0;
         Prime(tail);

@@ -28,13 +28,13 @@ public class ModelPropertyExpressionResolvers : IModelPropertyExpressionResolver
     {
         _eventValueProviderExpressionResolvers = eventValueProviderExpressionResolvers;
 
-        _resolvers = new IModelPropertyExpressionResolver[]
-            {
+        _resolvers =
+            [
                 new AddExpressionResolver(_eventValueProviderExpressionResolvers),
                 new SubtractExpressionResolver(_eventValueProviderExpressionResolvers),
                 new CountExpressionResolver(typeFormats),
                 new SetExpressionResolver(_eventValueProviderExpressionResolvers)
-            };
+            ];
     }
 
     /// <inheritdoc/>

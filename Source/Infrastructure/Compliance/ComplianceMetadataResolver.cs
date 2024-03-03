@@ -9,23 +9,17 @@ namespace Cratis.Compliance;
 /// <summary>
 /// Represents an implementation of <see cref="IComplianceMetadataResolver"/>.
 /// </summary>
-public class ComplianceMetadataResolver : IComplianceMetadataResolver
+/// <remarks>
+/// Initializes a new instance of the <see cref="ComplianceMetadataResolver"/>.
+/// </remarks>
+/// <param name="typeProviders">Type providers.</param>
+/// <param name="propertyProviders">Property providers.</param>
+public class ComplianceMetadataResolver(
+    IInstancesOf<ICanProvideComplianceMetadataForType> typeProviders,
+    IInstancesOf<ICanProvideComplianceMetadataForProperty> propertyProviders) : IComplianceMetadataResolver
 {
-    readonly IEnumerable<ICanProvideComplianceMetadataForType> _typeProviders;
-    readonly IEnumerable<ICanProvideComplianceMetadataForProperty> _propertyProviders;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ComplianceMetadataResolver"/>.
-    /// </summary>
-    /// <param name="typeProviders">Type providers.</param>
-    /// <param name="propertyProviders">Property providers.</param>
-    public ComplianceMetadataResolver(
-        IInstancesOf<ICanProvideComplianceMetadataForType> typeProviders,
-        IInstancesOf<ICanProvideComplianceMetadataForProperty> propertyProviders)
-    {
-        _typeProviders = typeProviders.ToArray();
-        _propertyProviders = propertyProviders.ToArray();
-    }
+    readonly IEnumerable<ICanProvideComplianceMetadataForType> _typeProviders = typeProviders.ToArray();
+    readonly IEnumerable<ICanProvideComplianceMetadataForProperty> _propertyProviders = propertyProviders.ToArray();
 
     /// <inheritdoc/>
     public bool HasMetadataFor(Type type) => _typeProviders.Any(_ => _.CanProvide(type));

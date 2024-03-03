@@ -9,24 +9,18 @@ namespace Cratis.Metrics;
 /// Represents a scope for metrics.
 /// </summary>
 /// <typeparam name="T">Type the scope is for.</typeparam>
-public class MeterScope<T> : IMeterScope<T>
+/// <remarks>
+/// Initializes a new instance of the <see cref="MeterScope{T}"/> class.
+/// </remarks>
+/// <param name="meter">The <see cref="IMeter{T}"/> the scope is for.</param>
+/// <param name="tags">Tags associated with the scope.</param>
+public class MeterScope<T>(IMeter<T> meter, IDictionary<string, object> tags) : IMeterScope<T>
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MeterScope{T}"/> class.
-    /// </summary>
-    /// <param name="meter">The <see cref="IMeter{T}"/> the scope is for.</param>
-    /// <param name="tags">Tags associated with the scope.</param>
-    public MeterScope(IMeter<T> meter, IDictionary<string, object> tags)
-    {
-        Meter = meter.ActualMeter;
-        Tags = tags;
-    }
+    /// <inheritdoc/>
+    public Meter Meter { get; } = meter.ActualMeter;
 
     /// <inheritdoc/>
-    public Meter Meter { get; }
-
-    /// <inheritdoc/>
-    public IDictionary<string, object> Tags { get; }
+    public IDictionary<string, object> Tags { get; } = tags;
 
     /// <inheritdoc/>
     public void Dispose()

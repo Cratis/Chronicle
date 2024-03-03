@@ -12,8 +12,8 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 /// </summary>
 public class EventSequenceQueueAdapterReceiver : IQueueAdapterReceiver
 {
-    readonly List<IBatchContainer> _eventBatches = new();
-    readonly List<IBatchContainer> _empty = new();
+    readonly List<IBatchContainer> _eventBatches = [];
+    readonly List<IBatchContainer> _empty = [];
 
     /// <inheritdoc/>
     public Task<IList<IBatchContainer>> GetQueueMessagesAsync(int maxCount)

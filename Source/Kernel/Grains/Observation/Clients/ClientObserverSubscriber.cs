@@ -19,28 +19,20 @@ namespace Cratis.Kernel.Grains.Observation.Clients;
 /// and not perform a network hop. The <see cref="ObserverKey"/> contains a <see cref="ConnectionId"/> which
 /// will make the observer unique per connection, helping us to achieve this.
 /// </remarks>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ClientObserverSubscriber"/> class.
+/// </remarks>
+/// <param name="observerMediator"><see cref="IObserverMediator"/> for notifying actual clients.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [ConnectedObserverPlacement]
-public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
+public class ClientObserverSubscriber(
+    IObserverMediator observerMediator,
+    ILogger<ClientObserverSubscriber> logger) : Grain, IClientObserverSubscriber
 {
-    readonly IObserverMediator _observerMediator;
-    readonly ILogger<ClientObserverSubscriber> _logger;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
     ObserverId _observerId = ObserverId.Unspecified;
     TenantId _tenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ClientObserverSubscriber"/> class.
-    /// </summary>
-    /// <param name="observerMediator"><see cref="IObserverMediator"/> for notifying actual clients.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public ClientObserverSubscriber(
-        IObserverMediator observerMediator,
-        ILogger<ClientObserverSubscriber> logger)
-    {
-        _observerMediator = observerMediator;
-        _logger = logger;
-    }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -59,7 +51,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
     {
         foreach (var @event in events)
         {
-            _logger.EventReceived(
+            logger.EventReceived(
                 _observerId,
                 _microserviceId,
                 _tenantId,
@@ -75,7 +67,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
         var tcs = new TaskCompletionSource<ObserverSubscriberResult>();
         try
         {
-            _observerMediator.OnNext(
+            observerMediator.OnNext(
                 _observerId,
                 connectedClient.ConnectionId,
                 events,

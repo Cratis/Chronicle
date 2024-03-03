@@ -9,17 +9,12 @@ namespace Cratis.Metrics;
 /// Represents a typed <see cref="Meter"/>.
 /// </summary>
 /// <typeparam name="T">Type the meter is for.</typeparam>
-public class Meter<T> : IMeter<T>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Meter{T}"/> class.
+/// </remarks>
+/// <param name="meter">The actual meter being used.</param>
+public class Meter<T>(Meter meter) : IMeter<T>
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Meter{T}"/> class.
-    /// </summary>
-    /// <param name="meter">The actual meter being used.</param>
-    public Meter(Meter meter)
-    {
-        ActualMeter = meter;
-    }
-
     /// <inheritdoc/>
-    public Meter ActualMeter { get; }
+    public Meter ActualMeter { get; } = meter;
 }

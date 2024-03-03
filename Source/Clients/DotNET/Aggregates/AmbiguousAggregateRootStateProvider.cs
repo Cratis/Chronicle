@@ -6,14 +6,10 @@ namespace Cratis.Aggregates;
 /// <summary>
 /// Exception that gets thrown when there is an ambiguous state provider for a stateful aggregate root.
 /// </summary>
-public class AmbiguousAggregateRootStateProvider : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="AmbiguousAggregateRootStateProvider"/> class.
+/// </remarks>
+/// <param name="type">Aggregate root type that has an ambiguous state provider.</param>
+public class AmbiguousAggregateRootStateProvider(Type type) : Exception($"Ambiguous aggregate root state provider for {type.FullName}. You should either implement a reducer or an immediate projection for the state for this type, not both")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AmbiguousAggregateRootStateProvider"/> class.
-    /// </summary>
-    /// <param name="type">Aggregate root type that has an ambiguous state provider.</param>
-    public AmbiguousAggregateRootStateProvider(Type type)
-        : base($"Ambiguous aggregate root state provider for {type.FullName}. You should either implement a reducer or an immediate projection for the state for this type, not both")
-    {
-    }
 }

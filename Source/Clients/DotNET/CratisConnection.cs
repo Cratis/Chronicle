@@ -35,7 +35,7 @@ public class CratisConnection : ICratisConnection
     /// <summary>
     /// Initializes a new instance of the <see cref="CratisConnection"/> class.
     /// </summary>
-    /// <param name="options"><see cref="CratisOptions"/> </param>
+    /// <param name="options"><see cref="CratisOptions"/>.</param>
     /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
     /// <param name="tasks"><see cref="ITasks"/> to create tasks with.</param>
     /// <param name="logger">Logger for logging.</param>

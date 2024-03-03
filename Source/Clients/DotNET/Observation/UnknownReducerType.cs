@@ -6,14 +6,10 @@ namespace Cratis.Observation;
 /// <summary>
 /// Exception that gets thrown when a type is not a reducer.
 /// </summary>
-public class UnknownReducerType : Exception
+/// <remarks>
+/// Initializes a new instance of <see cref="UnknownReducerType"/>.
+/// </remarks>
+/// <param name="type">The Type that is not an reducer.</param>
+public class UnknownReducerType(Type type) : Exception($"Type '{type}' is not a known reducer")
 {
-    /// <summary>
-    /// Initializes a new instance of <see cref="UnknownReducerType"/>.
-    /// </summary>
-    /// <param name="type">The Type that is not an reducer.</param>
-    public UnknownReducerType(Type type)
-        : base($"Type '{type}' is not a known reducer")
-    {
-    }
 }

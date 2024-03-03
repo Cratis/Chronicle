@@ -11,26 +11,19 @@ namespace Cratis.Kernel.Services.Events;
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypes"/>.
 /// </summary>
-public class EventTypes : IEventTypes
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventTypes"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
+public class EventTypes(IStorage storage) : IEventTypes
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventTypes"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
-    public EventTypes(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <inheritdoc/>
     public async Task Register(RegisterEventTypesRequest request)
     {
         foreach (var eventType in request.Types)
         {
             var schema = await JsonSchema.FromJsonAsync(eventType.Schema);
-            await _storage.GetEventStore(request.EventStoreName).EventTypes.Register(eventType.Type.ToKernel(), eventType.FriendlyName, schema);
+            await storage.GetEventStore(request.EventStoreName).EventTypes.Register(eventType.Type.ToKernel(), eventType.FriendlyName, schema);
         }
     }
 }

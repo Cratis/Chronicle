@@ -8,6 +8,4 @@ namespace Cratis.Kernel.Grains.Projections;
 /// <summary>
 /// Defines a specialized <see cref="IObserverSubscriber"/> for projections.
 /// </summary>
-public interface IProjectionObserverSubscriber : IObserverSubscriber
-{
-}
+public interface IProjectionObserverSubscriber : IObserverSubscriber;

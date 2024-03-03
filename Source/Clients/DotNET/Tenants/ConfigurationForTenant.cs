@@ -6,13 +6,10 @@ namespace Cratis.Tenants;
 /// <summary>
 /// Represents all configuration key/values for a tenant.
 /// </summary>
-public class ConfigurationForTenant : Dictionary<string, string>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ConfigurationForTenant"/> class.
+/// </remarks>
+/// <param name="dictionary">Dictionary to initialize it from.</param>
+public class ConfigurationForTenant(IDictionary<string, string> dictionary) : Dictionary<string, string>(dictionary)
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConfigurationForTenant"/> class.
-    /// </summary>
-    /// <param name="dictionary">Dictionary to initialize it from.</param>
-    public ConfigurationForTenant(IDictionary<string, string> dictionary) : base(dictionary)
-    {
-    }
 }

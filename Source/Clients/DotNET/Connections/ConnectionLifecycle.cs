@@ -8,20 +8,12 @@ namespace Cratis.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IConnectionLifecycle"/>.
 /// </summary>
-public class ConnectionLifecycle : IConnectionLifecycle
+/// <remarks>
+/// Initializes a new instance of the <see cref="ConnectionLifecycle"/>.
+/// </remarks>
+/// <param name="logger">Logger for logging.</param>
+public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnectionLifecycle
 {
-    readonly ILogger<ConnectionLifecycle> _logger;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConnectionLifecycle"/>.
-    /// </summary>
-    /// <param name="logger">Logger for logging.</param>
-    public ConnectionLifecycle(ILogger<ConnectionLifecycle> logger)
-    {
-        _logger = logger;
-        ConnectionId = ConnectionId.New();
-    }
-
     /// <summary>
     /// Adds or removes event handlers for when the connection is connected.
     /// </summary>
@@ -36,14 +28,14 @@ public class ConnectionLifecycle : IConnectionLifecycle
     public bool IsConnected { get; private set; }
 
     /// <inheritdoc/>
-    public ConnectionId ConnectionId { get; private set; }
+    public ConnectionId ConnectionId { get; private set; } = ConnectionId.New();
 
     /// <inheritdoc/>
     public async Task Connected()
     {
         IsConnected = true;
 
-        _logger.Connected();
+        logger.Connected();
 
         var tasks = OnConnected.GetInvocationList().Select(_ => Task.Run(async () =>
         {
@@ -53,7 +45,7 @@ public class ConnectionLifecycle : IConnectionLifecycle
             }
             catch (Exception ex)
             {
-                _logger.FailureDuringConnected(ex);
+                logger.FailureDuringConnected(ex);
             }
         })).ToArray();
 
@@ -65,7 +57,7 @@ public class ConnectionLifecycle : IConnectionLifecycle
     {
         IsConnected = false;
 
-        _logger.Disconnected();
+        logger.Disconnected();
 
         var tasks = OnDisconnected.GetInvocationList().Select(_ => Task.Run(async () =>
         {
@@ -75,7 +67,7 @@ public class ConnectionLifecycle : IConnectionLifecycle
             }
             catch (Exception ex)
             {
-                _logger.FailureDuringDisconnected(ex);
+                logger.FailureDuringDisconnected(ex);
             }
         })).ToArray();
 

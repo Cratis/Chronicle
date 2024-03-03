@@ -22,49 +22,34 @@ namespace Cratis.Kernel.Grains.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IImmediateProjection"/>.
 /// </summary>
-public class ImmediateProjection : Grain, IImmediateProjection
+/// <remarks>
+/// Initializes a new instance of the <see cref="ImmediateProjection"/> class.
+/// </remarks>
+/// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+/// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
+/// <param name="logger">Logger for logging.</param>
+public class ImmediateProjection(
+    IKernel kernel,
+    IStorage storage,
+    IObjectComparer objectComparer,
+    IExpandoObjectConverter expandoObjectConverter,
+    ILogger<ImmediateProjection> logger) : Grain, IImmediateProjection
 {
-    readonly IKernel _kernel;
-    readonly IStorage _storage;
-    readonly IObjectComparer _objectComparer;
-    readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly ILogger<ImmediateProjection> _logger;
     IEventSequenceStorage? _eventSequenceStorage;
     ImmediateProjectionKey? _projectionKey;
-    EventSequenceNumber _lastHandledEventSequenceNumber;
+    EventSequenceNumber _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
     ExpandoObject? _initialState;
     ProjectionId _projectionId = ProjectionId.NotSet;
     DateTimeOffset _lastUpdated = DateTimeOffset.MinValue;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ImmediateProjection"/> class.
-    /// </summary>
-    /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
-    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
-    /// <param name="logger">Logger for logging.</param>
-    public ImmediateProjection(
-        IKernel kernel,
-        IStorage storage,
-        IObjectComparer objectComparer,
-        IExpandoObjectConverter expandoObjectConverter,
-        ILogger<ImmediateProjection> logger)
-    {
-        _kernel = kernel;
-        _storage = storage;
-        _objectComparer = objectComparer;
-        _expandoObjectConverter = expandoObjectConverter;
-        _logger = logger;
-        _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
-    }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _projectionId = this.GetPrimaryKey(out var keyAsString);
         _projectionKey = ImmediateProjectionKey.Parse(keyAsString);
-        _eventSequenceStorage = _storage
+        _eventSequenceStorage = storage
                                     .GetEventStore((string)_projectionKey.MicroserviceId)
                                     .GetNamespace(_projectionKey.TenantId)
                                     .GetEventSequence(_projectionKey.EventSequenceId);
@@ -75,13 +60,13 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// <inheritdoc/>
     public async Task<ImmediateProjectionResult> GetModelInstance()
     {
-        using var scope = _logger.BeginImmediateProjectionScope(_projectionId, _projectionKey!);
+        using var scope = logger.BeginImmediateProjectionScope(_projectionId, _projectionKey!);
 
-        _logger.GettingModelInstance();
+        logger.GettingModelInstance();
 
         try
         {
-            var eventStore = _kernel.GetEventStore((string)_projectionKey!.MicroserviceId);
+            var eventStore = kernel.GetEventStore((string)_projectionKey!.MicroserviceId);
             var @namespace = eventStore.GetNamespace(_projectionKey!.TenantId);
 
             var projectionChanged = false;
@@ -101,14 +86,14 @@ public class ImmediateProjection : Grain, IImmediateProjection
             var tail = await eventSequence.GetTailSequenceNumberForEventTypes(projection.EventTypes);
             if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null && !projectionChanged)
             {
-                _logger.UsingCachedModelInstance();
-                var initialStateAsJson = _expandoObjectConverter.ToJsonObject(_initialState, projection.Model.Schema);
+                logger.UsingCachedModelInstance();
+                var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, projection.Model.Schema);
                 return new(initialStateAsJson, Enumerable.Empty<PropertyPath>(), 0);
             }
 
             if (!projection.EventTypes.Any())
             {
-                _logger.NoEventTypes();
+                logger.NoEventTypes();
                 return ImmediateProjectionResult.Empty;
             }
 
@@ -134,12 +119,12 @@ public class ImmediateProjection : Grain, IImmediateProjection
             }
 
             _initialState = state;
-            var jsonObject = _expandoObjectConverter.ToJsonObject(state, projection.Model.Schema);
+            var jsonObject = expandoObjectConverter.ToJsonObject(state, projection.Model.Schema);
             return new(jsonObject, affectedProperties, projectedEventsCount);
         }
         catch (Exception ex)
         {
-            _logger.FailedGettingModelInstance(ex);
+            logger.FailedGettingModelInstance(ex);
             return ImmediateProjectionResult.Empty;
         }
     }
@@ -147,24 +132,24 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// <inheritdoc/>
     public async Task<ImmediateProjectionResult> GetCurrentModelInstanceWithAdditionalEventsApplied(IEnumerable<EventToApply> events)
     {
-        var @namespace = _kernel.GetEventStore((string)_projectionKey!.MicroserviceId).GetNamespace(_projectionKey!.TenantId);
+        var @namespace = kernel.GetEventStore((string)_projectionKey!.MicroserviceId).GetNamespace(_projectionKey!.TenantId);
 
         var projection = @namespace.ProjectionManager.Get(_projectionId);
         var affectedProperties = new HashSet<PropertyPath>();
 
-        var eventTypesStorage = _storage.GetEventStore((string)_projectionKey!.MicroserviceId).EventTypes;
+        var eventTypesStorage = storage.GetEventStore((string)_projectionKey!.MicroserviceId).EventTypes;
         var eventsToApplyTasks = events.Select(async _ =>
         {
             var eventSchema = await eventTypesStorage.GetFor(_.EventType.Id, _.EventType.Generation);
             return AppendedEvent.EmptyWithEventType(_.EventType) with
             {
-                Content = _expandoObjectConverter.ToExpandoObject(_.Content, eventSchema.Schema)
+                Content = expandoObjectConverter.ToExpandoObject(_.Content, eventSchema.Schema)
             };
         }).ToArray();
         var eventsToApply = await Task.WhenAll(eventsToApplyTasks);
         var initialState = _initialState ?? new ExpandoObject();
         var result = await HandleEvents(projection, affectedProperties, initialState, eventsToApply);
-        var jsonObject = _expandoObjectConverter.ToJsonObject(result.State, projection.Model.Schema);
+        var jsonObject = expandoObjectConverter.ToJsonObject(result.State, projection.Model.Schema);
         return new(jsonObject, affectedProperties, result.ProjectedEventsCount);
     }
 
@@ -197,7 +182,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
 
         foreach (var @event in events)
         {
-            var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, @event, state);
+            var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
             var keyResolver = projection.GetKeyResolverFor(@event.Metadata.Type);
             var key = await keyResolver(_eventSequenceStorage!, @event);
             var context = new ProjectionEventContext(key, @event, changeset);

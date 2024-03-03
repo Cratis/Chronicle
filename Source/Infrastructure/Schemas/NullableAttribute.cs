@@ -7,6 +7,4 @@ namespace Cratis.Schemas;
 /// Represents an attribute for marking a type as nullable.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface)]
-public sealed class NullableAttribute : Attribute
-{
-}
+public sealed class NullableAttribute : Attribute;

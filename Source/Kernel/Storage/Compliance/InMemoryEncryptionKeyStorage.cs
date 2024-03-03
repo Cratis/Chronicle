@@ -11,7 +11,7 @@ namespace Cratis.Kernel.Storage.Compliance;
 [Singleton]
 public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
 {
-    readonly Dictionary<Key, EncryptionKey> _keys = new();
+    readonly Dictionary<Key, EncryptionKey> _keys = [];
 
     /// <inheritdoc/>
     public Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)

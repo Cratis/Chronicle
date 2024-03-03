@@ -15,32 +15,19 @@ namespace Cratis.Kernel.Grains.Observation.States;
 /// <summary>
 /// Represents the catch up state of an observer.
 /// </summary>
-public class CatchUp : BaseObserverState
+/// <remarks>
+/// Initializes a new instance of the <see cref="CatchUp"/> class.
+/// </remarks>
+/// <param name="observerId">The <see cref="ObserverId"/> for the observer.</param>
+/// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
+/// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
+/// <param name="logger">Logger for logging.</param>
+public class CatchUp(
+    ObserverId observerId,
+    ObserverKey observerKey,
+    IJobsManager jobsManager,
+    ILogger<CatchUp> logger) : BaseObserverState
 {
-    readonly ObserverId _observerId;
-    readonly ObserverKey _observerKey;
-    readonly IJobsManager _jobsManager;
-    readonly ILogger<CatchUp> _logger;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CatchUp"/> class.
-    /// </summary>
-    /// <param name="observerId">The <see cref="ObserverId"/> for the observer.</param>
-    /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
-    /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
-    /// <param name="logger">Logger for logging.</param>
-    public CatchUp(
-        ObserverId observerId,
-        ObserverKey observerKey,
-        IJobsManager jobsManager,
-        ILogger<CatchUp> logger)
-    {
-        _observerId = observerId;
-        _observerKey = observerKey;
-        _jobsManager = jobsManager;
-        _logger = logger;
-    }
-
     /// <inheritdoc/>
     public override ObserverRunningState RunningState => ObserverRunningState.CatchingUp;
 
@@ -56,15 +43,15 @@ public class CatchUp : BaseObserverState
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        using var scope = _logger.BeginCatchUpScope(state.ObserverId, _observerKey);
+        using var scope = logger.BeginCatchUpScope(state.ObserverId, observerKey);
 
         var subscription = await Observer.GetSubscription();
 
-        var jobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
+        var jobs = await jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
         var jobsForThisObserver = jobs.Where(IsJobForThisObserver);
         if (jobs.Any(_ => _.Status == JobStatus.Running))
         {
-            _logger.FinishingExistingCatchUpJob();
+            logger.FinishingExistingCatchUpJob();
             return state;
         }
 
@@ -72,17 +59,17 @@ public class CatchUp : BaseObserverState
 
         if (pausedJob is not null)
         {
-            _logger.ResumingCatchUpJob();
-            await _jobsManager.Resume(pausedJob.Id);
+            logger.ResumingCatchUpJob();
+            await jobsManager.Resume(pausedJob.Id);
         }
         else
         {
-            _logger.StartCatchUpJob(state.NextEventSequenceNumber);
-            await _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(
+            logger.StartCatchUpJob(state.NextEventSequenceNumber);
+            await jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(
                 JobId.New(),
                 new CatchUpObserverRequest(
                     state.ObserverId,
-                    _observerKey,
+                    observerKey,
                     subscription,
                     state.NextEventSequenceNumber,
                     state.EventTypes));
@@ -98,6 +85,6 @@ public class CatchUp : BaseObserverState
     }
 
     bool IsJobForThisObserver(JobState jobState) =>
-        ((ReplayObserverRequest)jobState.Request).ObserverId == _observerId &&
-        ((ReplayObserverRequest)jobState.Request).ObserverKey == _observerKey;
+        ((ReplayObserverRequest)jobState.Request).ObserverId == observerId &&
+        ((ReplayObserverRequest)jobState.Request).ObserverKey == observerKey;
 }

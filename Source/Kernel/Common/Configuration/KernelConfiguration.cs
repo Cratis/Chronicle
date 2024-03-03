@@ -15,12 +15,12 @@ public class KernelConfiguration : IPerformPostBindOperations
     /// <summary>
     /// Gets the <see cref="Tenants"/> configuration.
     /// </summary>
-    public Tenants Tenants { get; init; } = new();
+    public Tenants Tenants { get; init; } = [];
 
     /// <summary>
     /// Gets the <see cref="Microservice"/> configuration.
     /// </summary>
-    public Microservices Microservices { get; init; } = new();
+    public Microservices Microservices { get; init; } = [];
 
     /// <summary>
     /// Gets the <see cref="Cluster"/> configuration.

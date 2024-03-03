@@ -6,14 +6,10 @@ namespace Orleans;
 /// <summary>
 /// Exception that gets thrown when a grain name is invalid for a job.
 /// </summary>
-public class InvalidGrainName : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="InvalidGrainName"/> class.
+/// </remarks>
+/// <param name="grainType">Violating grain type.</param>
+public class InvalidGrainName(Type grainType) : Exception($"Grain type '{grainType.Name}' is invalid. No interface for the grain was matched. It should follow the convention of `IFoo` -> `Foo`.")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="InvalidGrainName"/> class.
-    /// </summary>
-    /// <param name="grainType">Violating grain type.</param>
-    public InvalidGrainName(Type grainType)
-        : base($"Grain type '{grainType.Name}' is invalid. No interface for the grain was matched. It should follow the convention of `IFoo` -> `Foo`.")
-    {
-    }
 }

@@ -11,7 +11,7 @@ namespace Cratis.Kernel.Observation;
 /// </summary>
 public class FailedPartition
 {
-    List<FailedPartitionAttempt> _attempts = new();
+    List<FailedPartitionAttempt> _attempts = [];
 
     /// <summary>
     /// Unique identifier of the failed partition.

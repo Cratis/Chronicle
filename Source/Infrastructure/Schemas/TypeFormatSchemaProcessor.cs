@@ -8,22 +8,18 @@ namespace Cratis.Schemas;
 /// <summary>
 /// Represents an implementation of <see cref="ISchemaProcessor"/> for adding format information.
 /// </summary>
-public class TypeFormatSchemaProcessor : ISchemaProcessor
+/// <remarks>
+/// Initializes a new instance of the <see cref="TypeFormatSchemaProcessor"/> class.
+/// </remarks>
+/// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving type formats.</param>
+public class TypeFormatSchemaProcessor(ITypeFormats typeFormats) : ISchemaProcessor
 {
-    readonly ITypeFormats _typeFormats;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TypeFormatSchemaProcessor"/> class.
-    /// </summary>
-    /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving type formats.</param>
-    public TypeFormatSchemaProcessor(ITypeFormats typeFormats) => _typeFormats = typeFormats;
-
     /// <inheritdoc/>
     public void Process(SchemaProcessorContext context)
     {
-        if (!_typeFormats.IsKnown(context.ContextualType.Type)) return;
+        if (!typeFormats.IsKnown(context.ContextualType.Type)) return;
 
-        context.Schema.Format = _typeFormats.GetFormatForType(context.ContextualType.Type);
+        context.Schema.Format = typeFormats.GetFormatForType(context.ContextualType.Type);
 
         if (context.ContextualType.Attributes.OfType<NullableAttribute>().Any() ||
             (context.ContextualType.Parent is not null &&

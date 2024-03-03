@@ -6,13 +6,10 @@ namespace Cratis.Events;
 /// <summary>
 /// Exception that gets thrown when a type is not an event type.
 /// </summary>
-public class TypeIsNotAnEventType : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="TypeIsNotAnEventType"/> class.
+/// </remarks>
+/// <param name="type">Type that is not an event type.</param>
+public class TypeIsNotAnEventType(Type type) : Exception($"Type '{type.AssemblyQualifiedName}' is not an event type")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TypeIsNotAnEventType"/> class.
-    /// </summary>
-    /// <param name="type">Type that is not an event type.</param>
-    public TypeIsNotAnEventType(Type type) : base($"Type '{type.AssemblyQualifiedName}' is not an event type")
-    {
-    }
 }

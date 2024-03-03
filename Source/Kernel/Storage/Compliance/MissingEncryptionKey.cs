@@ -8,13 +8,10 @@ namespace Cratis.Kernel.Storage.Compliance;
 /// <summary>
 /// Exception that gets thrown when an <see cref="EncryptionKey"/> is missing.
 /// </summary>
-public class MissingEncryptionKey : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="MissingEncryptionKey"/> class.
+/// </remarks>
+/// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> that is missing.</param>
+public class MissingEncryptionKey(EncryptionKeyIdentifier identifier) : Exception($"Missing encryption key for identifier '{identifier}'")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MissingEncryptionKey"/> class.
-    /// </summary>
-    /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> that is missing.</param>
-    public MissingEncryptionKey(EncryptionKeyIdentifier identifier) : base($"Missing encryption key for identifier '{identifier}'")
-    {
-    }
 }

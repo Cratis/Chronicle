@@ -6,14 +6,10 @@ namespace Cratis.Recommendations;
 /// <summary>
 /// Exception that gets thrown when an unknown <see cref="RecommendationType"/> is encountered.
 /// </summary>
-public class UnknownClrTypeForRecommendationType : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="UnknownClrTypeForRecommendationType"/> class.
+/// </remarks>
+/// <param name="type"><see cref="RecommendationType"/> that has an invalid type identifier.</param>
+public class UnknownClrTypeForRecommendationType(RecommendationType type) : Exception($"Unknown operation type '{type}'")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="UnknownClrTypeForRecommendationType"/> class.
-    /// </summary>
-    /// <param name="type"><see cref="RecommendationType"/> that has an invalid type identifier.</param>
-    public UnknownClrTypeForRecommendationType(RecommendationType type)
-        : base($"Unknown operation type '{type}'")
-    {
-    }
 }

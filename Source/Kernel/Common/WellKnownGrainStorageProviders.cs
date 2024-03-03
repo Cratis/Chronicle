@@ -24,11 +24,6 @@ public static class WellKnownGrainStorageProviders
     public const string FailedPartitions = "failed-partitions";
 
     /// <summary>
-    /// The name of the storage provider used for tenant configuration.
-    /// </summary>
-    public const string TenantConfiguration = "tenant-configuration";
-
-    /// <summary>
     /// THe name of the storage provider used for jobs.
     /// </summary>
     public const string Jobs = "jobs";

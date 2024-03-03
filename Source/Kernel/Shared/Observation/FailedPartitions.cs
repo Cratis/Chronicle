@@ -11,8 +11,8 @@ namespace Cratis.Kernel.Observation;
 /// </summary>
 public class FailedPartitions
 {
-    readonly List<FailedPartition> _resolvedPartitions = new();
-    List<FailedPartition> _partitions = new();
+    readonly List<FailedPartition> _resolvedPartitions = [];
+    List<FailedPartition> _partitions = [];
 
     /// <summary>
     /// Gets or sets the failed partitions for the observer.

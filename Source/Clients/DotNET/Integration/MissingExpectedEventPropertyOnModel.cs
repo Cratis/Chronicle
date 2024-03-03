@@ -6,16 +6,12 @@ namespace Cratis.Integration;
 /// <summary>
 /// Exception that gets thrown when an expected property on an event does not exist on a model during convention based mapping.
 /// </summary>
-public class MissingExpectedEventPropertyOnModel : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="MissingExpectedEventPropertyOnModel"/> class.
+/// </remarks>
+/// <param name="eventType">Type of event.</param>
+/// <param name="modelType">Type of model.</param>
+/// <param name="property">Name of property.</param>
+public class MissingExpectedEventPropertyOnModel(Type eventType, Type modelType, string property) : Exception($"Expected property '{property}' on event '{eventType.FullName}' does not exist on '{modelType.FullName}'")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MissingExpectedEventPropertyOnModel"/> class.
-    /// </summary>
-    /// <param name="eventType">Type of event.</param>
-    /// <param name="modelType">Type of model.</param>
-    /// <param name="property">Name of property.</param>
-    public MissingExpectedEventPropertyOnModel(Type eventType, Type modelType, string property)
-        : base($"Expected property '{property}' on event '{eventType.FullName}' does not exist on '{modelType.FullName}'")
-    {
-    }
 }

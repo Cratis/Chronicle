@@ -17,5 +17,5 @@ public record ImmediateProjectionResult(JsonObject Model, IEnumerable<PropertyPa
     /// <summary>
     /// Represents an empty <see cref="ImmediateProjectionResult"/>.
     /// </summary>
-    public static readonly ImmediateProjectionResult Empty = new(new JsonObject(), Array.Empty<PropertyPath>(), 0);
+    public static readonly ImmediateProjectionResult Empty = new([], Array.Empty<PropertyPath>(), 0);
 }

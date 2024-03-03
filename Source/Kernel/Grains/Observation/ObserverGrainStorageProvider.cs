@@ -12,19 +12,12 @@ namespace Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling observer state storage.
 /// </summary>
-public class ObserverGrainStorageProvider : IGrainStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="ObserverGrainStorageProvider"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+public class ObserverGrainStorageProvider(IStorage storage) : IGrainStorage
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverGrainStorageProvider"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public ObserverGrainStorageProvider(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
 
@@ -35,7 +28,7 @@ public class ObserverGrainStorageProvider : IGrainStorage
         var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var observers = _storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).Observers;
+        var observers = storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).Observers;
         actualGrainState.State = await observers.GetState(observerId, observerKey);
     }
 
@@ -46,7 +39,7 @@ public class ObserverGrainStorageProvider : IGrainStorage
         var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var observers = _storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).Observers;
+        var observers = storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).Observers;
         await observers.SaveState(observerId, observerKey, actualGrainState.State);
     }
 }

@@ -9,22 +9,17 @@ namespace Cratis.Kernel.Projections.Expressions.Keys;
 /// <summary>
 /// Represents an implementation of <see cref="IModelPropertyExpressionResolvers"/>.
 /// </summary>
-public class KeyExpressionResolvers : IKeyExpressionResolvers
+/// <remarks>
+/// Initializes a new instance of the <see cref="KeyExpressionResolvers"/> class.
+/// </remarks>
+/// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event value expressions.</param>
+public class KeyExpressionResolvers(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers) : IKeyExpressionResolvers
 {
-    readonly IKeyExpressionResolver[] _resolvers;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="KeyExpressionResolvers"/> class.
-    /// </summary>
-    /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event value expressions.</param>
-    public KeyExpressionResolvers(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers)
-    {
-        _resolvers = new IKeyExpressionResolver[]
-        {
+    readonly IKeyExpressionResolver[] _resolvers =
+        [
             new CompositeKeyExpressionResolver(eventValueProviderExpressionResolvers),
             new EventValueKeyExpressionResolver(eventValueProviderExpressionResolvers)
-        };
-    }
+        ];
 
     /// <inheritdoc/>
     public bool CanResolve(string expression) => _resolvers.Any(_ => _.CanResolve(expression));

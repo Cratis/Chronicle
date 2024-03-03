@@ -8,13 +8,10 @@ namespace Cratis.Kernel.Storage.Sinks;
 /// <summary>
 /// Exception that gets thrown when an unknown <see cref="ISink"/> is used.
 /// </summary>
-public class UnknownSink : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="UnknownSink"/> class.
+/// </remarks>
+/// <param name="typeId">The unknown <see cref="SinkTypeId"/>.</param>
+public class UnknownSink(SinkTypeId typeId) : Exception($"Projection sink type of '{typeId}' is unknown.")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="UnknownSink"/> class.
-    /// </summary>
-    /// <param name="typeId">The unknown <see cref="SinkTypeId"/>.</param>
-    public UnknownSink(SinkTypeId typeId) : base($"Projection sink type of '{typeId}' is unknown.")
-    {
-    }
 }

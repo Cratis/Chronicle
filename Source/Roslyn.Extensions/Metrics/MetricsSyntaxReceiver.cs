@@ -12,13 +12,13 @@ namespace Roslyn.Extensions.Metrics;
 /// </summary>
 public class MetricsSyntaxReceiver : ISyntaxReceiver
 {
-    static readonly string[] _metricsAttributes = new[]
-    {
+    static readonly string[] _metricsAttributes =
+    [
         "Counter",
         "Measurement"
-    };
+    ];
 
-    readonly List<ClassDeclarationSyntax> _candidates = new();
+    readonly List<ClassDeclarationSyntax> _candidates = [];
 
     /// <summary>
     /// Gets the candidates for code generation.

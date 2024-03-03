@@ -12,19 +12,12 @@ namespace Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a job for catching up an observer.
 /// </summary>
-public class CatchUpObserver : Job<CatchUpObserverRequest, CatchUpObserverState>, ICatchUpObserver
+/// <remarks>
+/// Initializes a new instance of the <see cref="ReplayObserver"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, CatchUpObserverState>, ICatchUpObserver
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReplayObserver"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public CatchUpObserver(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <inheritdoc/>
     protected override bool RemoveAfterCompleted => true;
 
@@ -60,7 +53,7 @@ public class CatchUpObserver : Job<CatchUpObserverRequest, CatchUpObserverState>
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
-        var observerKeyIndexes = _storage.GetEventStore((string)JobKey.MicroserviceId).GetNamespace(JobKey.TenantId).ObserverKeyIndexes;
+        var observerKeyIndexes = storage.GetEventStore((string)JobKey.MicroserviceId).GetNamespace(JobKey.TenantId).ObserverKeyIndexes;
         var index = await observerKeyIndexes.GetFor(
             request.ObserverId,
             request.ObserverKey);

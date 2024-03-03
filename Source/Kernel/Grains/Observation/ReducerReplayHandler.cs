@@ -8,26 +8,19 @@ namespace Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="ICanHandleReplayForObserver"/> for reducers.
 /// </summary>
-public class ReducerReplayHandler : ICanHandleReplayForObserver
+/// <remarks>
+/// Initializes a new instance of the <see cref="ReducerReplayHandler"/> class.
+/// </remarks>
+/// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
+public class ReducerReplayHandler(IKernel kernel) : ICanHandleReplayForObserver
 {
-    readonly IKernel _kernel;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReducerReplayHandler"/> class.
-    /// </summary>
-    /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
-    public ReducerReplayHandler(IKernel kernel)
-    {
-        _kernel = kernel;
-    }
-
     /// <inheritdoc/>
     public Task<bool> CanHandle(ObserverDetails observerDetails) => Task.FromResult(observerDetails.Type == ObserverType.Reducer);
 
     /// <inheritdoc/>
     public async Task BeginReplayFor(ObserverDetails observerDetails)
     {
-        var eventStore = _kernel.GetEventStore((string)observerDetails.Key.MicroserviceId);
+        var eventStore = kernel.GetEventStore((string)observerDetails.Key.MicroserviceId);
         var @namespace = eventStore.GetNamespace(observerDetails.Key.TenantId);
 
         if (await eventStore.ReducerPipelineDefinitions.HasFor(observerDetails.Identifier))
@@ -41,7 +34,7 @@ public class ReducerReplayHandler : ICanHandleReplayForObserver
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails)
     {
-        var eventStore = _kernel.GetEventStore((string)observerDetails.Key.MicroserviceId);
+        var eventStore = kernel.GetEventStore((string)observerDetails.Key.MicroserviceId);
         var @namespace = eventStore.GetNamespace(observerDetails.Key.TenantId);
 
         if (await eventStore.ReducerPipelineDefinitions.HasFor(observerDetails.Identifier))

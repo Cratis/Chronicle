@@ -12,23 +12,16 @@ namespace Cratis.Kernel.Projections.Expressions.ModelProperties;
 /// <summary>
 /// Represents a <see cref="IModelPropertyExpressionResolver"/> for setting a property on a model with the value for a property based event value expressions.
 /// </summary>
-public class SetExpressionResolver : IModelPropertyExpressionResolver
+/// <remarks>
+/// Initializes a new instance of the <see cref="AddExpressionResolver"/> class.
+/// </remarks>
+/// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving.</param>
+public class SetExpressionResolver(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers) : IModelPropertyExpressionResolver
 {
-    readonly IEventValueProviderExpressionResolvers _eventValueProviderExpressionResolvers;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AddExpressionResolver"/> class.
-    /// </summary>
-    /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving.</param>
-    public SetExpressionResolver(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers)
-    {
-        _eventValueProviderExpressionResolvers = eventValueProviderExpressionResolvers;
-    }
-
     /// <inheritdoc/>
-    public bool CanResolve(PropertyPath targetProperty, string expression) => _eventValueProviderExpressionResolvers.CanResolve(expression);
+    public bool CanResolve(PropertyPath targetProperty, string expression) => eventValueProviderExpressionResolvers.CanResolve(expression);
 
     /// <inheritdoc/>
     public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression) =>
-        PropertyMappers.FromEventValueProvider(targetProperty, _eventValueProviderExpressionResolvers.Resolve(targetPropertySchema, expression));
+        PropertyMappers.FromEventValueProvider(targetProperty, eventValueProviderExpressionResolvers.Resolve(targetPropertySchema, expression));
 }

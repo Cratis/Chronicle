@@ -9,13 +9,10 @@ namespace Cratis.Kernel.Grains.Projections.Definitions;
 /// <summary>
 /// Exception that gets thrown when a <see cref="ProjectionPipelineDefinition"/> is missing in the system.
 /// </summary>
-public class MissingProjectionPipelineDefinition : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="MissingProjectionPipelineDefinition"/> class.
+/// </remarks>
+/// <param name="identifier"><see cref="ProjectionId"/> of the missing identifier.</param>
+public class MissingProjectionPipelineDefinition(ProjectionId identifier) : Exception($"Missing projection pipeline definition for projection with id '{identifier}'")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MissingProjectionPipelineDefinition"/> class.
-    /// </summary>
-    /// <param name="identifier"><see cref="ProjectionId"/> of the missing identifier.</param>
-    public MissingProjectionPipelineDefinition(ProjectionId identifier) : base($"Missing projection pipeline definition for projection with id '{identifier}'")
-    {
-    }
 }

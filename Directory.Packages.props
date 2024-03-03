@@ -12,7 +12,6 @@
     <PackageVersion Include="Aksio.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Aksio.Applications.CQRS" Version="$(ApplicationModel)" />
     <PackageVersion Include="Aksio.Applications.CQRS.MongoDB" Version="$(ApplicationModel)" />
-    <PackageVersion Include="Aksio.Applications.ProxyGenerator" Version="$(ApplicationModel)" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
@@ -51,8 +50,8 @@
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.5.0-alpha.2" NoWarn="NU5104" />
     <PackageVersion Include="handlebars.net" Version="2.1.4" />
     <!-- Roslyn-->
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.9.2" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.9.2" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" />
     <!-- Analysis -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" Version="4.8.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />

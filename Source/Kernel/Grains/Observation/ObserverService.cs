@@ -11,27 +11,21 @@ namespace Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IObserverService"/>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ObserverService"/> class.
+/// </remarks>
+/// <param name="grainId">The <see cref="GrainId"/> for the service.</param>
+/// <param name="silo">The <see cref="Silo"/> the service belongs to.</param>
+/// <param name="replayHandlers">All instances of <see cref="ICanHandleReplayForObserver"/>.</param>
+/// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [Reentrant]
-public class ObserverService : GrainService, IObserverService
+public class ObserverService(
+    GrainId grainId,
+    Silo silo,
+    IInstancesOf<ICanHandleReplayForObserver> replayHandlers,
+    ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IObserverService
 {
-    readonly IInstancesOf<ICanHandleReplayForObserver> _replayHandlers;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverService"/> class.
-    /// </summary>
-    /// <param name="grainId">The <see cref="GrainId"/> for the service.</param>
-    /// <param name="silo">The <see cref="Silo"/> the service belongs to.</param>
-    /// <param name="replayHandlers">All instances of <see cref="ICanHandleReplayForObserver"/>.</param>
-    /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-    public ObserverService(
-        GrainId grainId,
-        Silo silo,
-        IInstancesOf<ICanHandleReplayForObserver> replayHandlers,
-        ILoggerFactory loggerFactory)
-        : base(grainId, silo, loggerFactory)
-    {
-        _replayHandlers = replayHandlers;
-    }
+    readonly IInstancesOf<ICanHandleReplayForObserver> _replayHandlers = replayHandlers;
 
     /// <inheritdoc/>
     public override Task Init(IServiceProvider serviceProvider) =>

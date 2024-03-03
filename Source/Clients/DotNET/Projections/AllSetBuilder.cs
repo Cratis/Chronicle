@@ -14,37 +14,30 @@ namespace Cratis.Projections;
 /// </summary>
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
-public class AllSetBuilder<TModel, TParentBuilder> : IAllSetBuilder<TModel, TParentBuilder>
+/// <remarks>
+/// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
+/// </remarks>
+/// <param name="parent">Parent builder.</param>
+/// <param name="targetProperty">Target property we're building for.</param>
+public class AllSetBuilder<TModel, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty) : IAllSetBuilder<TModel, TParentBuilder>
 {
-    readonly TParentBuilder _parent;
     IEventValueExpression? _expression;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
-    /// </summary>
-    /// <param name="parent">Parent builder.</param>
-    /// <param name="targetProperty">Target property we're building for.</param>
-    public AllSetBuilder(TParentBuilder parent, PropertyPath targetProperty)
-    {
-        _parent = parent;
-        TargetProperty = targetProperty;
-    }
-
     /// <inheritdoc/>
-    public PropertyPath TargetProperty { get; }
+    public PropertyPath TargetProperty { get; } = targetProperty;
 
     /// <inheritdoc/>
     public TParentBuilder ToEventSourceId()
     {
         _expression = new EventSourceIdExpression();
-        return _parent;
+        return parent;
     }
 
     /// <inheritdoc/>
     public TParentBuilder ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor)
     {
         _expression = new EventContextPropertyExpression(eventContextPropertyAccessor.GetPropertyPath());
-        return _parent;
+        return parent;
     }
 
     /// <inheritdoc/>

@@ -4,8 +4,6 @@
         <RootNamespace>Cratis.Kernel.Domain</RootNamespace>
     </PropertyGroup>
 
-    <Import Project="../ProxyGeneration.props"/>
-
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 	</ItemGroup>

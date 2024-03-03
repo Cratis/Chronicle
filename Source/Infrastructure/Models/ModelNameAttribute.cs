@@ -6,20 +6,15 @@ namespace Cratis.Models;
 /// <summary>
 /// Attribute that can be adorned a model type as metadata to indicate the actual name of the model.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ModelNameAttribute"/> class.
+/// </remarks>
+/// <param name="name">Name of the model.</param>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-public sealed class ModelNameAttribute : Attribute
+public sealed class ModelNameAttribute(string name) : Attribute
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ModelNameAttribute"/> class.
-    /// </summary>
-    /// <param name="name">Name of the model.</param>
-    public ModelNameAttribute(string name)
-    {
-        Name = name;
-    }
-
     /// <summary>
     /// Gets the name of the model.
     /// </summary>
-    public string Name { get; }
+    public string Name { get; } = name;
 }

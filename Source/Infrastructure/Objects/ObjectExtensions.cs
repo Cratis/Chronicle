@@ -180,7 +180,7 @@ public static class ObjectExtensions
             if (constructor is not null)
             {
                 arguments.AddRange(constructor.GetParameters().Select(_ => CreateInstanceOf(_.ParameterType)));
-                return constructor.Invoke(arguments.ToArray());
+                return constructor.Invoke([.. arguments]);
             }
         }
 

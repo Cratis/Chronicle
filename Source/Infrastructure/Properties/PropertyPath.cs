@@ -42,7 +42,7 @@ public class PropertyPath
     public static readonly PropertyPath NotSet = NotSetValue;
 
     static Regex? _arrayIndexRegex;
-    readonly IPropertyPathSegment[] _segments = Array.Empty<IPropertyPathSegment>();
+    readonly IPropertyPathSegment[] _segments = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PropertyPath"/> class.

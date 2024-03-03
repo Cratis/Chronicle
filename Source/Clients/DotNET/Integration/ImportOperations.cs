@@ -102,7 +102,7 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
             changeset.Add(new PropertiesChanged<TModel>(mappedInstance, differences));
         }
 
-        var context = new ImportContext<TModel, TExternalModel>(initialProjectionResult, changeset, new EventsToAppend());
+        var context = new ImportContext<TModel, TExternalModel>(initialProjectionResult, changeset, []);
         _importContexts.OnNext(context);
 
         if (!context.Events.Any()) return;

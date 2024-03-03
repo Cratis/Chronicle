@@ -11,33 +11,24 @@ namespace Cratis.Changes;
 /// </summary>
 /// <typeparam name="TSource">Type of the source object we are working from.</typeparam>
 /// <typeparam name="TTarget">Type of target object we are applying changes to.</typeparam>
-public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
+/// <remarks>
+/// Initializes a new instance of <see cref="Changeset{TSource, TTarget}"/>.
+/// </remarks>
+/// <param name="comparer"><see cref="IObjectComparer"/> to compare objects with.</param>
+/// <param name="incoming"><see cref="Incoming"/> that the <see cref="Changeset{TSource, TTarget}"/> is for.</param>
+/// <param name="initialState">The initial state before any changes are applied.</param>
+public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incoming, TTarget initialState) : IChangeset<TSource, TTarget>
 {
-    readonly List<Change> _changes = new();
-    readonly IObjectComparer _comparer;
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="Changeset{TSource, TTarget}"/>.
-    /// </summary>
-    /// <param name="comparer"><see cref="IObjectComparer"/> to compare objects with.</param>
-    /// <param name="incoming"><see cref="Incoming"/> that the <see cref="Changeset{TSource, TTarget}"/> is for.</param>
-    /// <param name="initialState">The initial state before any changes are applied.</param>
-    public Changeset(IObjectComparer comparer, TSource incoming, TTarget initialState)
-    {
-        _comparer = comparer;
-        Incoming = incoming;
-        InitialState = initialState;
-        CurrentState = initialState;
-    }
+    readonly List<Change> _changes = [];
 
     /// <inheritdoc/>
-    public TSource Incoming { get; }
+    public TSource Incoming { get; } = incoming;
 
     /// <inheritdoc/>
-    public TTarget InitialState { get; }
+    public TTarget InitialState { get; } = initialState;
 
     /// <inheritdoc/>
-    public TTarget CurrentState { get; private set; }
+    public TTarget CurrentState { get; private set; } = initialState;
 
     /// <inheritdoc/>
     public IEnumerable<Change> Changes => _changes;
@@ -57,7 +48,7 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
         var workingState = CurrentState.Clone()!;
         SetProperties(workingState, propertyMappers, arrayIndexers);
 
-        if (!_comparer.Equals(CurrentState, workingState, out var differences))
+        if (!comparer.Equals(CurrentState, workingState, out var differences))
         {
             Add(new PropertiesChanged<TTarget>(workingState, differences));
         }
@@ -69,7 +60,7 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     public IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers)
     {
         var workingState = InitialState.Clone()!;
-        var changeset = new Changeset<TSource, TTarget>(_comparer, Incoming, workingState);
+        var changeset = new Changeset<TSource, TTarget>(comparer, Incoming, workingState);
         Add(new Joined(workingState, key, onProperty, arrayIndexers, changeset.Changes));
         CurrentState = workingState;
         return changeset;
@@ -79,7 +70,7 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     public IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers)
     {
         var workingState = CurrentState.Clone()!;
-        var changeset = new Changeset<TSource, TTarget>(_comparer, incoming, workingState);
+        var changeset = new Changeset<TSource, TTarget>(comparer, incoming, workingState);
         Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, changeset.Changes));
         CurrentState = workingState;
         return changeset;

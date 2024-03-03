@@ -6,13 +6,10 @@ namespace Cratis.Kernel.Contracts.Primitives;
 /// <summary>
 /// Exception that gets thrown when no value is set for a OneOf construct.
 /// </summary>
-public class NoValueSetForOneOf : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="NoValueSetForOneOf"/> class.
+/// </remarks>
+/// <param name="types">Types for the one of.</param>
+public class NoValueSetForOneOf(params Type[] types) : Exception($"No value set for OneOf<{string.Join(", ", types.Select(_ => _.Name))}>")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="NoValueSetForOneOf"/> class.
-    /// </summary>
-    /// <param name="types">Types for the one of.</param>
-    public NoValueSetForOneOf(params Type[] types) : base($"No value set for OneOf<{string.Join(", ", types.Select(_ => _.Name))}>")
-    {
-    }
 }

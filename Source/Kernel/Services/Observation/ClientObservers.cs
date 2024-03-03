@@ -15,24 +15,15 @@ namespace Cratis.Kernel.Services.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IClientObservers"/>.
 /// </summary>
-public class ClientObservers : IClientObservers
+/// <remarks>
+/// Initializes a new instance of the <see cref="Observers"/> class.
+/// </remarks>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
+/// <param name="observerMediator"><see cref="IObserverMediator"/> for observing actual events as they are made available.</param>
+public class ClientObservers(
+    IGrainFactory grainFactory,
+    IObserverMediator observerMediator) : IClientObservers
 {
-    readonly IGrainFactory _grainFactory;
-    readonly IObserverMediator _observerMediator;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Observers"/> class.
-    /// </summary>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-    /// <param name="observerMediator"><see cref="IObserverMediator"/> for observing actual events as they are made available.</param>
-    public ClientObservers(
-        IGrainFactory grainFactory,
-        IObserverMediator observerMediator)
-    {
-        _grainFactory = grainFactory;
-        _observerMediator = observerMediator;
-    }
-
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ObserverClientMessage> messages, CallContext context = default)
     {
@@ -52,7 +43,7 @@ public class ClientObservers : IClientObservers
                         register.Namespace,
                         register.EventSequenceId,
                         register.ConnectionId);
-                    clientObserver = _grainFactory.GetGrain<IClientObserver>(Guid.Parse(register.ObserverId), keyExtension: key);
+                    clientObserver = grainFactory.GetGrain<IClientObserver>(Guid.Parse(register.ObserverId), keyExtension: key);
                     clientObserver.Start(register.ObserverName, register.EventTypes.Select(_ => _.ToKernel()).ToArray());
 
                     registrationTcs.SetResult(register);
@@ -89,7 +80,7 @@ public class ClientObservers : IClientObservers
                 observerId = registration.ObserverId;
 
                 eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>();
-                _observerMediator.Subscribe(
+                observerMediator.Subscribe(
                     registration.ObserverId,
                     registration.ConnectionId,
                     (events, tcs) =>
@@ -113,13 +104,13 @@ public class ClientObservers : IClientObservers
             }
             catch (OperationCanceledException)
             {
-                _observerMediator.Disconnected(observerId, connectionId);
+                observerMediator.Disconnected(observerId, connectionId);
                 observationResultTcs?.SetResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable));
                 observer.OnCompleted();
             }
             catch (Exception ex)
             {
-                _observerMediator.Disconnected(observerId, connectionId);
+                observerMediator.Disconnected(observerId, connectionId);
                 observationResultTcs?.SetResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable));
                 observer.OnError(ex);
             }

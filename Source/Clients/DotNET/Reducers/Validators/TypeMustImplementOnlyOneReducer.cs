@@ -6,16 +6,12 @@ namespace Cratis.Reducers.Validators;
 /// <summary>
 /// Exception that gets thrown when a type implements more than one <see cref="IReducerFor{T}"/>.
 /// </summary>
-public class TypeMustImplementOnlyOneReducer : Exception
+/// <remarks>
+/// Initializes a new instance of <see cref="TypeMustImplementOnlyOneReducer"/>.
+/// </remarks>
+/// <param name="type">Violating type.</param>
+public class TypeMustImplementOnlyOneReducer(Type type) : Exception($"Type '{type.AssemblyQualifiedName}' implements more than one `IReducerFor<>` interface")
 {
-    /// <summary>
-    /// Initializes a new instance of <see cref="TypeMustImplementOnlyOneReducer"/>.
-    /// </summary>
-    /// <param name="type">Violating type.</param>
-    public TypeMustImplementOnlyOneReducer(Type type) : base($"Type '{type.AssemblyQualifiedName}' implements more than one `IReducerFor<>` interface")
-    {
-    }
-
     /// <summary>
     /// Throw if the type implements more than one <see cref="IReducerFor{T}"/>.
     /// </summary>

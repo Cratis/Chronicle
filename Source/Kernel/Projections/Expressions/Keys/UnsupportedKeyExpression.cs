@@ -6,13 +6,10 @@ namespace Cratis.Kernel.Projections.Expressions.Keys;
 /// <summary>
 /// Exception that gets thrown when an event value expression is not supported.
 /// </summary>
-public class UnsupportedKeyExpression : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="UnsupportedModelPropertyExpression"/> class.
+/// </remarks>
+/// <param name="expression">The unsupported expression.</param>
+public class UnsupportedKeyExpression(string expression) : Exception($"Unknown key expression '{expression}'")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="UnsupportedModelPropertyExpression"/> class.
-    /// </summary>
-    /// <param name="expression">The unsupported expression.</param>
-    public UnsupportedKeyExpression(string expression) : base($"Unknown key expression '{expression}'")
-    {
-    }
 }

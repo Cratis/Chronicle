@@ -20,7 +20,7 @@ public class CausationManager : ICausationManager
     /// <inheritdoc/>
     public IImmutableList<Causation> GetCurrentChain()
     {
-        _current.Value ??= new();
+        _current.Value ??= [];
         if (_current.Value.Count == 0)
         {
             _current.Value.Add(_root);
@@ -32,7 +32,7 @@ public class CausationManager : ICausationManager
     /// <inheritdoc/>
     public void Add(CausationType type, IDictionary<string, string> properties)
     {
-        _current.Value ??= new();
+        _current.Value ??= [];
         if (_current.Value.Count == 0)
         {
             _current.Value.Add(_root);

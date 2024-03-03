@@ -16,17 +16,12 @@ namespace Cratis.Json;
 /// <summary>
 /// Represents an implementation of <see cref="IExpandoObjectConverter"/>.
 /// </summary>
-public class ExpandoObjectConverter : IExpandoObjectConverter
+/// <remarks>
+/// Initializes a new instance of the <see cref="ExpandoObjectConverter"/> class.
+/// </remarks>
+/// <param name="typeFormats"><see cref="ITypeFormats"/> for mapping type formats in a schema.</param>
+public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectConverter
 {
-    readonly ITypeFormats _typeFormats;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ExpandoObjectConverter"/> class.
-    /// </summary>
-    /// <param name="typeFormats"><see cref="ITypeFormats"/> for mapping type formats in a schema.</param>
-    public ExpandoObjectConverter(ITypeFormats typeFormats) =>
-        _typeFormats = typeFormats;
-
     /// <inheritdoc/>
     public JsonObject ToJsonObject(ExpandoObject expandoObject, JsonSchema schema)
     {
@@ -51,7 +46,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
             if (value is null)
             {
-                var defaultValue = property.GetDefaultValue(_typeFormats);
+                var defaultValue = property.GetDefaultValue(typeFormats);
                 if (defaultValue is not null)
                 {
                     value = defaultValue.ToJsonValue();
@@ -93,7 +88,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 }
             }
 
-            value ??= property.GetDefaultValue(_typeFormats);
+            value ??= property.GetDefaultValue(typeFormats);
             expandoObjectAsDictionary[name] = value;
         }
 
@@ -121,10 +116,10 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             {
                 items.Add(ConvertToJsonNode(item, schemaProperty.Item.Reference ?? schemaProperty.Item));
             }
-            return new JsonArray(items.ToArray());
+            return new JsonArray([.. items]);
         }
 
-        if (_typeFormats.IsKnown(schemaProperty.Format))
+        if (typeFormats.IsKnown(schemaProperty.Format))
         {
             return ConvertToJsonValueBasedOnSchemaType(value, schemaProperty);
         }
@@ -151,7 +146,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return array.Select(_ => ConvertFromJsonNode(_!, schemaProperty.Item)).ToArray();
         }
 
-        if (_typeFormats.IsKnown(schemaProperty.Format))
+        if (typeFormats.IsKnown(schemaProperty.Format))
         {
             return ConvertJsonValueToSchemaType(jsonNode, schemaProperty);
         }
@@ -318,7 +313,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
     object? ConvertJsonValueToSchemaType(JsonNode jsonNode, JsonSchema schemaProperty)
     {
-        var targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
+        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format);
         return jsonNode.AsValue().ToTargetTypeValue(targetType);
     }
 
@@ -329,7 +324,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return null;
         }
 
-        var targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
+        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format);
         input = TypeConversion.Convert(targetType, input);
         return input.ToJsonValue();
     }

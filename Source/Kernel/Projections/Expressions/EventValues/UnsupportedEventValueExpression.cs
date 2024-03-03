@@ -8,14 +8,11 @@ namespace Cratis.Kernel.Projections.Expressions.EventValues;
 /// <summary>
 /// Exception that gets thrown when an event value expression is not supported.
 /// </summary>
-public class UnsupportedEventValueExpression : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="UnsupportedModelPropertyExpression"/> class.
+/// </remarks>
+/// <param name="property">The property that has unsupported expression.</param>
+/// <param name="expression">The unsupported expression.</param>
+public class UnsupportedEventValueExpression(JsonSchemaProperty property, string expression) : Exception($"Unknown event value expression '{expression}' for property '{property.Name}'")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="UnsupportedModelPropertyExpression"/> class.
-    /// </summary>
-    /// <param name="property">The property that has unsupported expression.</param>
-    /// <param name="expression">The unsupported expression.</param>
-    public UnsupportedEventValueExpression(JsonSchemaProperty property, string expression) : base($"Unknown event value expression '{expression}' for property '{property.Name}'")
-    {
-    }
 }

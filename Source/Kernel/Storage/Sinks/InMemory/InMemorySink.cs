@@ -20,26 +20,18 @@ namespace Cratis.Kernel.Storage.Sinks.InMemory;
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> for working with projections in memory.
 /// </summary>
-public class InMemorySink : ISink, IDisposable
+/// <remarks>
+/// Initializes a new instance of the <see cref="InMemorySink"/> class.
+/// </remarks>
+/// <param name="model">The target <see cref="Model"/>.</param>
+/// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
+public class InMemorySink(
+    Model model,
+    ITypeFormats typeFormats) : ISink, IDisposable
 {
-    readonly Dictionary<object, ExpandoObject> _collection = new();
-    readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
-    readonly Model _model;
-    readonly ITypeFormats _typeFormats;
+    readonly Dictionary<object, ExpandoObject> _collection = [];
+    readonly Dictionary<object, ExpandoObject> _rewindCollection = [];
     bool _isReplaying;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="InMemorySink"/> class.
-    /// </summary>
-    /// <param name="model">The target <see cref="Model"/>.</param>
-    /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
-    public InMemorySink(
-        Model model,
-        ITypeFormats typeFormats)
-    {
-        _model = model;
-        _typeFormats = typeFormats;
-    }
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
@@ -134,7 +126,7 @@ public class InMemorySink : ISink, IDisposable
             return stringBuilder.ToString();
         }
 
-        var targetType = _model.Schema.GetTargetTypeForPropertyPath("id", _typeFormats);
+        var targetType = model.Schema.GetTargetTypeForPropertyPath("id", typeFormats);
         if (targetType is not null)
         {
             return TypeConversion.Convert(targetType, key.Value);

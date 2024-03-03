@@ -11,21 +11,15 @@ namespace Cratis.Kernel.Compliance.GDPR;
 /// <summary>
 /// Represents a <see cref="IJsonCompliancePropertyValueHandler"/> for handling PII.
 /// </summary>
-public class PIICompliancePropertyValueHandler : IJsonCompliancePropertyValueHandler
+/// <remarks>
+/// Initializes a new instance of the <see cref="PIICompliancePropertyValueHandler"/>.
+/// </remarks>
+/// <param name="encryptionKeyStore"><see cref="IEncryptionKeyStorage"/> to use for keys.</param>
+/// <param name="encryption"><see cref="IEncryption"/> for performing encryption/decryption.</param>
+public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionKeyStore, IEncryption encryption) : IJsonCompliancePropertyValueHandler
 {
-    readonly IEncryptionKeyStorage _encryptionKeyStore;
-    readonly IEncryption _encryption;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PIICompliancePropertyValueHandler"/>.
-    /// </summary>
-    /// <param name="encryptionKeyStore"><see cref="IEncryptionKeyStorage"/> to use for keys.</param>
-    /// <param name="encryption"><see cref="IEncryption"/> for performing encryption/decryption.</param>
-    public PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionKeyStore, IEncryption encryption)
-    {
-        _encryptionKeyStore = encryptionKeyStore;
-        _encryption = encryption;
-    }
+    readonly IEncryptionKeyStorage _encryptionKeyStore = encryptionKeyStore;
+    readonly IEncryption _encryption = encryption;
 
     /// <inheritdoc/>
     public ComplianceMetadataType Type => ComplianceMetadataType.PII;

@@ -6,17 +6,12 @@ namespace Cratis.Observation;
 /// <summary>
 /// Exception that gets thrown when an observer does not exist.
 /// </summary>
-public class ObserverDoesNotExist : Exception
+/// <remarks>
+/// Initializes a new instance of <see cref="ObserverDoesNotExist"/>.
+/// </remarks>
+/// <param name="observerId">The invalid <see cref="ObserverId"/>.</param>
+public class ObserverDoesNotExist(ObserverId observerId) : Exception($"Observer with id '{observerId}' does not exist")
 {
-    /// <summary>
-    /// Initializes a new instance of <see cref="ObserverDoesNotExist"/>.
-    /// </summary>
-    /// <param name="observerId">The invalid <see cref="ObserverId"/>.</param>
-    public ObserverDoesNotExist(ObserverId observerId)
-        : base($"Observer with id '{observerId}' does not exist")
-    {
-    }
-
     /// <summary>
     /// Throw if the observer does not exist.
     /// </summary>

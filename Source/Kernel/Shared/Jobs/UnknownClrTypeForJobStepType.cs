@@ -6,14 +6,10 @@ namespace Cratis.Jobs;
 /// <summary>
 /// Exception that gets thrown when an unknown <see cref="JobType"/> is encountered.
 /// </summary>
-public class UnknownClrTypeForJobStepType : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="UnknownClrTypeForJobStepType"/> class.
+/// </remarks>
+/// <param name="type"><see cref="JobType"/> that has an invalid type identifier.</param>
+public class UnknownClrTypeForJobStepType(JobStepType type) : Exception($"Unknown job step type '{type}'")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="UnknownClrTypeForJobStepType"/> class.
-    /// </summary>
-    /// <param name="type"><see cref="JobType"/> that has an invalid type identifier.</param>
-    public UnknownClrTypeForJobStepType(JobStepType type)
-        : base($"Unknown job step type '{type}'")
-    {
-    }
 }

@@ -8,25 +8,18 @@ namespace Cratis.Kernel.Storage.Compliance;
 /// <summary>
 /// Represents a composite <see cref="IEncryptionKeyStorage"/>.
 /// </summary>
-public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="CompositeEncryptionKeyStorage"/>.
+/// </remarks>
+/// <param name="inner">Inner collection of <see cref="IEncryptionKeyStorage"/>.</param>
+public class CompositeEncryptionKeyStorage(params IEncryptionKeyStorage[] inner) : IEncryptionKeyStorage
 {
-    readonly IEncryptionKeyStorage[] _inner;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CompositeEncryptionKeyStorage"/>.
-    /// </summary>
-    /// <param name="inner">Inner collection of <see cref="IEncryptionKeyStorage"/>.</param>
-    public CompositeEncryptionKeyStorage(params IEncryptionKeyStorage[] inner)
-    {
-        _inner = inner;
-    }
-
     /// <inheritdoc/>
     public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         IEncryptionKeyStorage? store = default;
 
-        foreach (var innerStore in _inner)
+        foreach (var innerStore in inner)
         {
             if (await innerStore.HasFor(eventStore, eventStoreNamespace, identifier))
             {
@@ -37,7 +30,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage
         if (store != default)
         {
             var key = await store.GetFor(eventStore, eventStoreNamespace, identifier);
-            foreach (var storeToSaveIn in _inner.Where(_ => _ != store))
+            foreach (var storeToSaveIn in inner.Where(_ => _ != store))
             {
                 await storeToSaveIn.SaveFor(eventStore, eventStoreNamespace, identifier, key);
             }
@@ -51,7 +44,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage
     /// <inheritdoc/>
     public async Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
-        foreach (var innerStore in _inner)
+        foreach (var innerStore in inner)
         {
             if (await innerStore.HasFor(eventStore, eventStoreNamespace, identifier))
             {
@@ -65,7 +58,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage
     /// <inheritdoc/>
     public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
-        foreach (var innerStore in _inner)
+        foreach (var innerStore in inner)
         {
             await innerStore.SaveFor(eventStore, eventStoreNamespace, identifier, key);
         }
@@ -74,7 +67,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage
     /// <inheritdoc/>
     public async Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
-        foreach (var innerStore in _inner)
+        foreach (var innerStore in inner)
         {
             await innerStore.DeleteFor(eventStore, eventStoreNamespace, identifier);
         }

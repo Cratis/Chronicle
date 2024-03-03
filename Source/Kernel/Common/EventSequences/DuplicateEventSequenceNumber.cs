@@ -9,17 +9,13 @@ namespace Cratis.Kernel.EventSequences;
 /// <summary>
 /// Exception that gets thrown when a duplicate sequence number is detected.
 /// </summary>
-public class DuplicateEventSequenceNumber : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="DuplicateEventSequenceNumber"/> class.
+/// </remarks>
+/// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> that is duplicate.</param>
+/// <param name="eventSequenceId">For which <see cref="EventSequenceId"/> the event was attempted appended to.</param>
+public class DuplicateEventSequenceNumber(
+    EventSequenceNumber sequenceNumber,
+    EventSequenceId eventSequenceId) : Exception($"Duplicate sequence number: {sequenceNumber} when appending to event sequence: {eventSequenceId}. Will retry with new sequence number.")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DuplicateEventSequenceNumber"/> class.
-    /// </summary>
-    /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> that is duplicate.</param>
-    /// <param name="eventSequenceId">For which <see cref="EventSequenceId"/> the event was attempted appended to.</param>
-    public DuplicateEventSequenceNumber(
-        EventSequenceNumber sequenceNumber,
-        EventSequenceId eventSequenceId)
-        : base($"Duplicate sequence number: {sequenceNumber} when appending to event sequence: {eventSequenceId}. Will retry with new sequence number.")
-    {
-    }
 }

@@ -8,16 +8,12 @@ namespace Cratis.Kernel.Grains.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClientsMetricsFactory"/>.
 /// </summary>
-public class ConnectedClientsMetricsFactory : IConnectedClientsMetricsFactory
+/// <remarks>
+/// Initializes a new instance of <see cref="ConnectedClientsMetricsFactory"/>.
+/// </remarks>
+/// <param name="meter">Meter for the Kernel.</param>
+public class ConnectedClientsMetricsFactory(Meter meter) : IConnectedClientsMetricsFactory
 {
-    readonly Meter _meter;
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="ConnectedClientsMetricsFactory"/>.
-    /// </summary>
-    /// <param name="meter">Meter for the Kernel.</param>
-    public ConnectedClientsMetricsFactory(Meter meter) => _meter = meter;
-
     /// <inheritdoc/>
-    public IConnectedClientsMetrics Create() => new ConnectedClientsMetrics(_meter);
+    public IConnectedClientsMetrics Create() => new ConnectedClientsMetrics(meter);
 }

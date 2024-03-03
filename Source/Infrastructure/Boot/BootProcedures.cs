@@ -10,28 +10,19 @@ namespace Cratis.Boot;
 /// <summary>
 /// Represents an implementation of <see cref="IBootProcedures"/>.
 /// </summary>
-public class BootProcedures : IBootProcedures
+/// <remarks>
+/// Initializes a new instance of <see cref="BootProcedures"/>.
+/// </remarks>
+/// <param name="procedures"><see cref="IInstancesOf{T}"/> <see cref="IPerformBootProcedure"/>.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+public class BootProcedures(
+    IInstancesOf<IPerformBootProcedure> procedures,
+    ILogger<BootProcedures> logger) : IBootProcedures
 {
-    readonly IInstancesOf<IPerformBootProcedure> _procedures;
-    readonly ILogger<BootProcedures> _logger;
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="BootProcedures"/>.
-    /// </summary>
-    /// <param name="procedures"><see cref="IInstancesOf{T}"/> <see cref="IPerformBootProcedure"/>.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public BootProcedures(
-        IInstancesOf<IPerformBootProcedure> procedures,
-        ILogger<BootProcedures> logger)
-    {
-        _procedures = procedures;
-        _logger = logger;
-    }
-
     /// <inheritdoc/>
     public void Perform()
     {
-        _logger.PerformingBootProcedures();
-        _procedures.ForEach(_ => _.Perform());
+        logger.PerformingBootProcedures();
+        procedures.ForEach(_ => _.Perform());
     }
 }

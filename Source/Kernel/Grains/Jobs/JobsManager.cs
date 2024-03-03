@@ -12,27 +12,19 @@ namespace Cratis.Kernel.Grains.Jobs;
 /// <summary>
 /// Represents an implementation of <see cref="IJobsManager"/>.
 /// </summary>
-public class JobsManager : Grain, IJobsManager
+/// <remarks>
+/// Initializes a new instance of the <see cref="JobsManager"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
+/// <param name="logger">Logger for logging.</param>
+public class JobsManager(
+    IStorage storage,
+    ILogger<JobsManager> logger) : Grain, IJobsManager
 {
-    readonly IStorage _storage;
-    readonly ILogger<JobsManager> _logger;
     IEventStoreNamespaceStorage? _namespaceStorage;
     IJobStorage? _jobStorage;
     IJobStepStorage? _jobStepStorage;
     JobsManagerKey _key = JobsManagerKey.NotSet;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JobsManager"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
-    /// <param name="logger">Logger for logging.</param>
-    public JobsManager(
-        IStorage storage,
-        ILogger<JobsManager> logger)
-    {
-        _storage = storage;
-        _logger = logger;
-    }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -40,7 +32,7 @@ public class JobsManager : Grain, IJobsManager
         this.GetPrimaryKeyLong(out var key);
         _key = key;
 
-        _namespaceStorage = _storage.GetEventStore((string)_key.MicroserviceId).GetNamespace(_key.TenantId);
+        _namespaceStorage = storage.GetEventStore((string)_key.MicroserviceId).GetNamespace(_key.TenantId);
         _jobStorage = _namespaceStorage.Jobs;
         _jobStepStorage = _namespaceStorage.JobSteps;
 
@@ -50,9 +42,9 @@ public class JobsManager : Grain, IJobsManager
     /// <inheritdoc/>
     public async Task Rehydrate()
     {
-        using var scope = _logger.BeginJobsManagerScope(_key);
+        using var scope = logger.BeginJobsManagerScope(_key);
 
-        _logger.Rehydrating();
+        logger.Rehydrating();
 
         var runningJobs = await _jobStorage!.GetJobs(JobStatus.Running, JobStatus.Preparing, JobStatus.PreparingSteps);
         foreach (var runningJob in runningJobs)
@@ -68,9 +60,9 @@ public class JobsManager : Grain, IJobsManager
         where TJob : IJob<TRequest>
         where TRequest : class
     {
-        using var scope = _logger.BeginJobsManagerScope(_key);
+        using var scope = logger.BeginJobsManagerScope(_key);
 
-        _logger.StartingJob(jobId);
+        logger.StartingJob(jobId);
 
         var job = GrainFactory.GetGrain<TJob>(
             jobId,
@@ -84,9 +76,9 @@ public class JobsManager : Grain, IJobsManager
     /// <inheritdoc/>
     public async Task Resume(JobId jobId)
     {
-        using var scope = _logger.BeginJobsManagerScope(_key);
+        using var scope = logger.BeginJobsManagerScope(_key);
 
-        _logger.ResumingJob(jobId);
+        logger.ResumingJob(jobId);
 
         var jobState = await _jobStorage!.GetJob(jobId);
         var job = (GrainFactory.GetGrain(jobState.Type, jobId, new JobKey(_key.MicroserviceId, _key.TenantId)) as IJob)!;
@@ -96,9 +88,9 @@ public class JobsManager : Grain, IJobsManager
     /// <inheritdoc/>
     public async Task Stop(JobId jobId)
     {
-        using var scope = _logger.BeginJobsManagerScope(_key);
+        using var scope = logger.BeginJobsManagerScope(_key);
 
-        _logger.StoppingJob(jobId);
+        logger.StoppingJob(jobId);
 
         var jobState = await _jobStorage!.GetJob(jobId);
         var job = (GrainFactory.GetGrain(jobState.Type, jobId, new JobKey(_key.MicroserviceId, _key.TenantId)) as IJob)!;
@@ -108,9 +100,9 @@ public class JobsManager : Grain, IJobsManager
     /// <inheritdoc/>
     public async Task Delete(JobId jobId)
     {
-        using var scope = _logger.BeginJobsManagerScope(_key);
+        using var scope = logger.BeginJobsManagerScope(_key);
 
-        _logger.DeletingJob(jobId);
+        logger.DeletingJob(jobId);
 
         await Stop(jobId);
         await _jobStepStorage!.RemoveAllForJob(jobId);
@@ -120,9 +112,9 @@ public class JobsManager : Grain, IJobsManager
     /// <inheritdoc/>
     public Task OnCompleted(JobId jobId, JobStatus status)
     {
-        using var scope = _logger.BeginJobsManagerScope(_key);
+        using var scope = logger.BeginJobsManagerScope(_key);
 
-        _logger.JobCompleted(jobId, status);
+        logger.JobCompleted(jobId, status);
 
         return Task.CompletedTask;
     }

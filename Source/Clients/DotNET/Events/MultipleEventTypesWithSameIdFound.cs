@@ -6,14 +6,10 @@ namespace Cratis.Events;
 /// <summary>
 /// Exception that gets thrown when multiple event types with the same id is found.
 /// </summary>
-public class MultipleEventTypesWithSameIdFound : Exception
+/// <remarks>
+/// Initializes a new instance of <see cref="MultipleEventTypesWithSameIdFound"/>.
+/// </remarks>
+/// <param name="types">The CLR types.</param>
+public class MultipleEventTypesWithSameIdFound(IEnumerable<Type> types) : Exception($"Multiple event types with the same id found: {string.Join(", ", types.Select(_ => _.FullName))}")
 {
-    /// <summary>
-    /// Initializes a new instance of <see cref="MultipleEventTypesWithSameIdFound"/>.
-    /// </summary>
-    /// <param name="types">The CLR types.</param>
-    public MultipleEventTypesWithSameIdFound(IEnumerable<Type> types)
-        : base($"Multiple event types with the same id found: {string.Join(", ", types.Select(_ => _.FullName))}")
-    {
-    }
 }

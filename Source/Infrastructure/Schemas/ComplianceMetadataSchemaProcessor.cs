@@ -13,34 +13,27 @@ namespace Cratis.Schemas;
 /// <summary>
 /// Represents an implementation of <see cref="ISchemaProcessor"/> for handling compliance metadata.
 /// </summary>
-public class ComplianceMetadataSchemaProcessor : ISchemaProcessor
+/// <remarks>
+/// Initializes a new instance of the <see cref="ComplianceMetadataSchemaProcessor"/> class.
+/// </remarks>
+/// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata.</param>
+public class ComplianceMetadataSchemaProcessor(IComplianceMetadataResolver metadataResolver) : ISchemaProcessor
 {
-    readonly IComplianceMetadataResolver _metadataResolver;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ComplianceMetadataSchemaProcessor"/> class.
-    /// </summary>
-    /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata.</param>
-    public ComplianceMetadataSchemaProcessor(IComplianceMetadataResolver metadataResolver)
-    {
-        _metadataResolver = metadataResolver;
-    }
-
     /// <inheritdoc/>
     public void Process(SchemaProcessorContext context)
     {
-        if (_metadataResolver.HasMetadataFor(context.ContextualType.Type))
+        if (metadataResolver.HasMetadataFor(context.ContextualType.Type))
         {
-            AddMetadataToSchema(context.Schema, _metadataResolver.GetMetadataFor(context.ContextualType.Type));
+            AddMetadataToSchema(context.Schema, metadataResolver.GetMetadataFor(context.ContextualType.Type));
         }
 
         foreach (var (key, property) in context.Schema.Properties)
         {
             var propertyName = key.ToPascalCase();
             var clrProperty = context.ContextualType.Type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-            if (clrProperty != default && _metadataResolver.HasMetadataFor(clrProperty))
+            if (clrProperty != default && metadataResolver.HasMetadataFor(clrProperty))
             {
-                AddMetadataToSchema(property, _metadataResolver.GetMetadataFor(clrProperty));
+                AddMetadataToSchema(property, metadataResolver.GetMetadataFor(clrProperty));
             }
         }
     }

@@ -24,41 +24,28 @@ namespace Cratis.Kernel.Grains.Observation.Reducers.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IClientReducerSubscriber"/>.
 /// </summary>
-public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
+/// <remarks>
+/// Initializes a new instance of the <see cref="ClientReducerSubscriber"/> class.
+/// </remarks>
+/// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
+/// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> for connecting to the client.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and <see cref="ExpandoObject"/>.</param>
+/// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+public class ClientReducerSubscriber(
+    IKernel kernel,
+    IHttpClientFactory httpClientFactory,
+    IExpandoObjectConverter expandoObjectConverter,
+    JsonSerializerOptions jsonSerializerOptions,
+    ILogger<ClientReducerSubscriber> logger) : Grain, IClientReducerSubscriber
 {
-    readonly ILogger<ClientReducerSubscriber> _logger;
-    readonly IKernel _kernel;
-    readonly IHttpClientFactory _httpClientFactory;
-    readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly JsonSerializerOptions _jsonSerializerOptions;
+    readonly IKernel _kernel = kernel;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
     ReducerId _reducerId = ObserverId.Unspecified;
     TenantId _tenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IConnectedClients? _connectedClients;
     IReducerPipeline? _pipeline;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ClientReducerSubscriber"/> class.
-    /// </summary>
-    /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
-    /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> for connecting to the client.</param>
-    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and <see cref="ExpandoObject"/>.</param>
-    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public ClientReducerSubscriber(
-        IKernel kernel,
-        IHttpClientFactory httpClientFactory,
-        IExpandoObjectConverter expandoObjectConverter,
-        JsonSerializerOptions jsonSerializerOptions,
-        ILogger<ClientReducerSubscriber> logger)
-    {
-        _logger = logger;
-        _kernel = kernel;
-        _httpClientFactory = httpClientFactory;
-        _expandoObjectConverter = expandoObjectConverter;
-        _jsonSerializerOptions = jsonSerializerOptions;
-    }
 
     IConnectedClients ConnectedClientsGrain => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(0);
 

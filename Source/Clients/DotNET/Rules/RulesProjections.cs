@@ -50,7 +50,7 @@ public class RulesProjections : IRulesProjections
         _projectionDefinitionsPerRuleId = clientArtifacts.Rules.Select(ruleType =>
         {
             var rule = serviceProvider.GetService(ruleType);
-            return (createProjectionMethod!.MakeGenericMethod(ruleType).Invoke(this, new[] { rule }) as ProjectionDefinition)!;
+            return (createProjectionMethod!.MakeGenericMethod(ruleType).Invoke(this, [rule]) as ProjectionDefinition)!;
         }).ToDictionary(_ => (RuleId)_.Identifier, _ => _);
 
         Definitions = _projectionDefinitionsPerRuleId.Values.ToImmutableList();

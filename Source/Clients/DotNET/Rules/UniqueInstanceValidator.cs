@@ -12,20 +12,13 @@ namespace Cratis.Rules;
 /// </summary>
 /// <typeparam name="T">Type of object.</typeparam>
 /// <typeparam name="TProperty">Type of property.</typeparam>
-public class UniqueInstanceValidator<T, TProperty> : PropertyValidator<T, TProperty>
+/// <remarks>
+/// Initializes a new instance of the <see cref="UniqueInstanceValidator{T, TProperty}"/> class.
+/// </remarks>
+/// <param name="getValue">Func for getting the value to check for uniqueness with.</param>
+public class UniqueInstanceValidator<T, TProperty>(Func<object, object> getValue) : PropertyValidator<T, TProperty>
     where TProperty : IEnumerable
 {
-    readonly Func<object, object> _getValue;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="UniqueInstanceValidator{T, TProperty}"/> class.
-    /// </summary>
-    /// <param name="getValue">Func for getting the value to check for uniqueness with.</param>
-    public UniqueInstanceValidator(Func<object, object> getValue)
-    {
-        _getValue = getValue;
-    }
-
     /// <inheritdoc/>
     public override string Name => nameof(UniqueInstanceValidator<T, TProperty>);
 
@@ -34,7 +27,7 @@ public class UniqueInstanceValidator<T, TProperty> : PropertyValidator<T, TPrope
     {
         var parent = (context as IValidationContext)!.ParentContext;
 
-        var valueToCheck = _getValue(parent.InstanceToValidate);
+        var valueToCheck = getValue(parent.InstanceToValidate);
         foreach (var element in value)
         {
             if (element.Equals(valueToCheck))

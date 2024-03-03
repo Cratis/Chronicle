@@ -8,33 +8,26 @@ namespace Cratis.Changes;
 /// <summary>
 /// Represents a value difference in a property of an object.
 /// </summary>
-public class PropertyDifference
+/// <remarks>
+/// Initializes a new instance of the <see cref="PropertyDifference"/> class.
+/// </remarks>
+/// <param name="propertyPath">Raw difference.</param>
+/// <param name="original">Original value.</param>
+/// <param name="changed">Changed value.</param>
+public class PropertyDifference(PropertyPath propertyPath, object? original, object? changed)
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PropertyDifference"/> class.
-    /// </summary>
-    /// <param name="propertyPath">Raw difference.</param>
-    /// <param name="original">Original value.</param>
-    /// <param name="changed">Changed value.</param>
-    public PropertyDifference(PropertyPath propertyPath, object? original, object? changed)
-    {
-        PropertyPath = propertyPath;
-        Original = original;
-        Changed = changed;
-    }
-
     /// <summary>
     /// Gets the full member path to the property that has changed.
     /// </summary>
-    public PropertyPath PropertyPath { get; }
+    public PropertyPath PropertyPath { get; } = propertyPath;
 
     /// <summary>
     /// Gets the original value - possibly default.
     /// </summary>
-    public object? Original { get; }
+    public object? Original { get; } = original;
 
     /// <summary>
     /// Gets the changed value - possibly default.
     /// </summary>
-    public object? Changed { get; }
+    public object? Changed { get; } = changed;
 }

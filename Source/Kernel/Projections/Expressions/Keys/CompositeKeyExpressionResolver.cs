@@ -12,17 +12,13 @@ namespace Cratis.Kernel.Projections.Expressions.Keys;
 /// <summary>
 /// Represents an implementation of <see cref="IKeyExpressionResolver"/> for composite key expressions.
 /// </summary>
-public class CompositeKeyExpressionResolver : IKeyExpressionResolver
+/// <remarks>
+/// Initializes a new instance of the <see cref="CompositeKeyExpressionResolver"/> class.
+/// </remarks>
+/// <param name="resolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event values.</param>
+public class CompositeKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers) : IKeyExpressionResolver
 {
     static readonly Regex _regularExpression = new("\\$composite\\((?<expressions>[\\w=$\\({\\)., ]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
-
-    readonly IEventValueProviderExpressionResolvers _resolvers;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CompositeKeyExpressionResolver"/> class.
-    /// </summary>
-    /// <param name="resolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event values.</param>
-    public CompositeKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers) => _resolvers = resolvers;
 
     /// <inheritdoc/>
     public bool CanResolve(string expression) => _regularExpression.Match(expression).Success;
@@ -57,7 +53,7 @@ public class CompositeKeyExpressionResolver : IKeyExpressionResolver
             return new
             {
                 Property = new PropertyPath(keyValue[0]),
-                KeyResolver = _resolvers.Resolve(schemaProperty, keyValue[1])
+                KeyResolver = resolvers.Resolve(schemaProperty, keyValue[1])
             };
         }).ToDictionary(_ => _.Property, _ => _.KeyResolver);
 

@@ -8,13 +8,10 @@ namespace Cratis.Kernel.Projections;
 /// <summary>
 /// Exception that gets thrown when a projection is missing.
 /// </summary>
-public class MissingProjection : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="MissingProjection"/> class.
+/// </remarks>
+/// <param name="id">The <see cref="ProjectionId"/> for the missing projection.</param>
+public class MissingProjection(ProjectionId id) : Exception($"Missing projection with id {id.Value}")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MissingProjection"/> class.
-    /// </summary>
-    /// <param name="id">The <see cref="ProjectionId"/> for the missing projection.</param>
-    public MissingProjection(ProjectionId id) : base($"Missing projection with id {id.Value}")
-    {
-    }
 }

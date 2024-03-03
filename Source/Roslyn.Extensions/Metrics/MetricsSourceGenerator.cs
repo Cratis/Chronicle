@@ -14,11 +14,11 @@ namespace Roslyn.Extensions.Metrics;
 [Generator]
 public class MetricsSourceGenerator : ISourceGenerator
 {
-    static readonly string[] _systemUsings = new[]
-    {
+    static readonly string[] _systemUsings =
+    [
         "System.Diagnostics",
         "System.Diagnostics.Metrics"
-    };
+    ];
 
     /// <inheritdoc/>
     public void Execute(GeneratorExecutionContext context)
@@ -98,7 +98,7 @@ public class MetricsSourceGenerator : ISourceGenerator
 
         for (; ; )
         {
-            usings.AddRange(current.DescendantNodes().OfType<UsingDirectiveSyntax>().Select(_ => _.Name.ToString()));
+            usings.AddRange(current.DescendantNodes().OfType<UsingDirectiveSyntax>().Select(_ => _.Name?.ToString() ?? string.Empty));
             if (current is CompilationUnitSyntax)
             {
                 break;

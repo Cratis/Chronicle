@@ -14,32 +14,21 @@ namespace Cratis.Kernel.Grains.Observation.States;
 /// <summary>
 /// Represents the state for resuming replay of an observer.
 /// </summary>
-public class ResumeReplay : BaseObserverState
+/// <remarks>
+/// Initializes a new instance of the <see cref="CatchUp"/> class.
+/// </remarks>
+/// <param name="observerId">The <see cref="ObserverId"/> for the observer.</param>
+/// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
+/// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
+/// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
+public class ResumeReplay(
+    ObserverId observerId,
+    ObserverKey observerKey,
+    IObserverServiceClient replayStateServiceClient,
+    IJobsManager jobsManager) : BaseObserverState
 {
-    readonly ObserverId _observerId;
-    readonly ObserverKey _observerKey;
-    readonly IObserverServiceClient _replayStateServiceClient;
-    readonly IJobsManager _jobsManager;
+    readonly IJobsManager _jobsManager = jobsManager;
     bool _replayStarted;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CatchUp"/> class.
-    /// </summary>
-    /// <param name="observerId">The <see cref="ObserverId"/> for the observer.</param>
-    /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
-    /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
-    /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
-    public ResumeReplay(
-        ObserverId observerId,
-        ObserverKey observerKey,
-        IObserverServiceClient replayStateServiceClient,
-        IJobsManager jobsManager)
-    {
-        _observerId = observerId;
-        _observerKey = observerKey;
-        _replayStateServiceClient = replayStateServiceClient;
-        _jobsManager = jobsManager;
-    }
 
     /// <inheritdoc/>
     public override ObserverRunningState RunningState => ObserverRunningState.Replaying;
@@ -65,7 +54,7 @@ public class ResumeReplay : BaseObserverState
         }
 
         _replayStarted = true;
-        await _replayStateServiceClient.BeginReplayFor(new(state.ObserverId, _observerKey, state.Type));
+        await replayStateServiceClient.BeginReplayFor(new(state.ObserverId, observerKey, state.Type));
 
         var pausedJob = jobsForThisObserver.FirstOrDefault(_ => _.Status == JobStatus.Paused);
         if (pausedJob is not null)
@@ -81,13 +70,13 @@ public class ResumeReplay : BaseObserverState
     {
         if (_replayStarted)
         {
-            await _replayStateServiceClient.EndReplayFor(new(state.ObserverId, _observerKey, state.Type));
+            await replayStateServiceClient.EndReplayFor(new(state.ObserverId, observerKey, state.Type));
             _replayStarted = false;
         }
         return state;
     }
 
     bool IsJobForThisObserver(JobState jobState) =>
-        ((ReplayObserverRequest)jobState.Request).ObserverId == _observerId &&
-        ((ReplayObserverRequest)jobState.Request).ObserverKey == _observerKey;
+        ((ReplayObserverRequest)jobState.Request).ObserverId == observerId &&
+        ((ReplayObserverRequest)jobState.Request).ObserverKey == observerKey;
 }

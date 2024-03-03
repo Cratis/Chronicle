@@ -6,16 +6,12 @@ namespace Cratis.Reducers.Validators;
 /// <summary>
 /// Exception that gets thrown when a type does not implement <see cref="IReducerFor{T}"/>.
 /// </summary>
-public class TypeMustImplementReducer : Exception
+/// <remarks>
+/// Initializes a new instance of <see cref="TypeMustImplementReducer"/>.
+/// </remarks>
+/// <param name="type">Violating type.</param>
+public class TypeMustImplementReducer(Type type) : Exception($"Type '{type.AssemblyQualifiedName}' does not implement `IReducerFor<>` interface")
 {
-    /// <summary>
-    /// Initializes a new instance of <see cref="TypeMustImplementReducer"/>.
-    /// </summary>
-    /// <param name="type">Violating type.</param>
-    public TypeMustImplementReducer(Type type) : base($"Type '{type.AssemblyQualifiedName}' does not implement `IReducerFor<>` interface")
-    {
-    }
-
     /// <summary>
     /// Throw if the type does not implement <see cref="IReducerFor{T}"/>.
     /// </summary>

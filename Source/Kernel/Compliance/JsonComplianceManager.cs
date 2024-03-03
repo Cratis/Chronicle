@@ -12,19 +12,14 @@ namespace Cratis.Kernel.Compliance;
 /// <summary>
 /// Represents an implementation of <see cref="IJsonComplianceManager"/>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="JsonComplianceManager"/> class.
+/// </remarks>
+/// <param name="propertyValueHandlers">Instances of <see cref="IJsonCompliancePropertyValueHandler"/>.</param>
 [Singleton]
-public class JsonComplianceManager : IJsonComplianceManager
+public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHandler> propertyValueHandlers) : IJsonComplianceManager
 {
-    readonly Dictionary<ComplianceMetadataType, IJsonCompliancePropertyValueHandler> _propertyValueHandlers;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JsonComplianceManager"/> class.
-    /// </summary>
-    /// <param name="propertyValueHandlers">Instances of <see cref="IJsonCompliancePropertyValueHandler"/>.</param>
-    public JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHandler> propertyValueHandlers)
-    {
-        _propertyValueHandlers = propertyValueHandlers.ToDictionary(_ => _.Type, _ => _);
-    }
+    readonly Dictionary<ComplianceMetadataType, IJsonCompliancePropertyValueHandler> _propertyValueHandlers = propertyValueHandlers.ToDictionary(_ => _.Type, _ => _);
 
     /// <inheritdoc/>
     public async Task<JsonObject> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)

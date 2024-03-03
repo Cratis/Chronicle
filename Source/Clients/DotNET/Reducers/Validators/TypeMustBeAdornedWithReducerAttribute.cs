@@ -8,16 +8,12 @@ namespace Cratis.Reducers.Validators;
 /// <summary>
 /// Exception that gets thrown when a type is not adorned with the <see cref="ReducerAttribute"/>.
 /// </summary>
-public class TypeMustBeAdornedWithReducerAttribute : Exception
+/// <remarks>
+/// Initializes a new instance of <see cref="TypeMustBeAdornedWithReducerAttribute"/>.
+/// </remarks>
+/// <param name="type">Violating type.</param>
+public class TypeMustBeAdornedWithReducerAttribute(Type type) : Exception($"Type '{type.AssemblyQualifiedName}' must be adorned with a `[Reducer]` attribute")
 {
-    /// <summary>
-    /// Initializes a new instance of <see cref="TypeMustBeAdornedWithReducerAttribute"/>.
-    /// </summary>
-    /// <param name="type">Violating type.</param>
-    public TypeMustBeAdornedWithReducerAttribute(Type type) : base($"Type '{type.AssemblyQualifiedName}' must be adorned with a `[Reducer]` attribute")
-    {
-    }
-
     /// <summary>
     /// Throw if the type is not adorned with the <see cref="ReducerAttribute"/>.
     /// </summary>

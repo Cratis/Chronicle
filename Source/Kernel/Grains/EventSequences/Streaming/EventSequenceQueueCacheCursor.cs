@@ -13,36 +13,23 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 /// <summary>
 /// Represents an implementation of <see cref="IQueueCacheCursor"/> for event sequences.
 /// </summary>
-public class EventSequenceQueueCacheCursor : IQueueCacheCursor
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/> class.
+/// </remarks>
+/// <param name="cache">The <see cref="IEventSequenceCache"/> to use by the cursor.</param>
+/// <param name="microserviceId">The <see cref="MicroserviceId"/> the cursor is for.</param>
+/// <param name="tenantId">The <see cref="TenantId"/> the cursor is for.</param>
+/// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the cursor is for.</param>
+/// <param name="from">The from <see cref="EventSequenceNumber"/>.</param>
+public class EventSequenceQueueCacheCursor(
+    IEventSequenceCache cache,
+    MicroserviceId microserviceId,
+    TenantId tenantId,
+    EventSequenceId eventSequenceId,
+    EventSequenceNumber from) : IQueueCacheCursor
 {
-    readonly IEventSequenceCache _cache;
-    readonly MicroserviceId _microserviceId;
-    readonly TenantId _tenantId;
-    readonly EventSequenceId _eventSequenceId;
     CachedAppendedEvent? _current;
     EventSequenceNumber _currentSequenceNumber;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/> class.
-    /// </summary>
-    /// <param name="cache">The <see cref="IEventSequenceCache"/> to use by the cursor.</param>
-    /// <param name="microserviceId">The <see cref="MicroserviceId"/> the cursor is for.</param>
-    /// <param name="tenantId">The <see cref="TenantId"/> the cursor is for.</param>
-    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the cursor is for.</param>
-    /// <param name="from">The from <see cref="EventSequenceNumber"/>.</param>
-    public EventSequenceQueueCacheCursor(
-        IEventSequenceCache cache,
-        MicroserviceId microserviceId,
-        TenantId tenantId,
-        EventSequenceId eventSequenceId,
-        EventSequenceNumber from)
-    {
-        _cache = cache;
-        _microserviceId = microserviceId;
-        _tenantId = tenantId;
-        _eventSequenceId = eventSequenceId;
-        _currentSequenceNumber = from;
-    }
 
     /// <inheritdoc/>
     public void Dispose()
@@ -62,16 +49,16 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
 
             var @event = _current.Event;
             var streamId = StreamId.Create(
-                new MicroserviceAndTenant(_microserviceId, _tenantId),
-                _eventSequenceId.Value.ToString());
+                new MicroserviceAndTenant(microserviceId, tenantId),
+                eventSequenceId.Value.ToString());
 
             return new EventSequenceBatchContainer(
                 new[] { @event },
                 streamId,
                 new Dictionary<string, object>
                 {
-                    { RequestContextKeys.MicroserviceId, _microserviceId },
-                    { RequestContextKeys.TenantId, _tenantId },
+                    { RequestContextKeys.MicroserviceId, microserviceId },
+                    { RequestContextKeys.TenantId, tenantId },
                     { RequestContextKeys.CorrelationId, @event.Context.CorrelationId }
                 });
         }
@@ -110,9 +97,9 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
             return;
         }
 
-        if (!_cache.HasEvent((ulong)token.SequenceNumber))
+        if (!cache.HasEvent((ulong)token.SequenceNumber))
         {
-            _cache.Prime((ulong)token.SequenceNumber);
+            cache.Prime((ulong)token.SequenceNumber);
         }
     }
 
@@ -123,14 +110,14 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
 
     CachedAppendedEvent? TryToGetFromCache(EventSequenceNumber sequenceNumber)
     {
-        if (!_cache.HasEvent(sequenceNumber))
+        if (!cache.HasEvent(sequenceNumber))
         {
-            _cache.Prime(sequenceNumber);
+            cache.Prime(sequenceNumber);
         }
 
-        if (_cache.HasEvent(sequenceNumber))
+        if (cache.HasEvent(sequenceNumber))
         {
-            return _cache.GetEvent(sequenceNumber);
+            return cache.GetEvent(sequenceNumber);
         }
 
         return null;

@@ -6,14 +6,10 @@ namespace Cratis.Observation;
 /// <summary>
 /// Exception that gets thrown when a type is not an observer.
 /// </summary>
-public class UnknownObserverType : Exception
+/// <remarks>
+/// Initializes a new instance of <see cref="UnknownObserverType"/>.
+/// </remarks>
+/// <param name="type">The Type that is not an observer.</param>
+public class UnknownObserverType(Type type) : Exception($"Type '{type}' is not a known observer")
 {
-    /// <summary>
-    /// Initializes a new instance of <see cref="UnknownObserverType"/>.
-    /// </summary>
-    /// <param name="type">The Type that is not an observer.</param>
-    public UnknownObserverType(Type type)
-        : base($"Type '{type}' is not a known observer")
-    {
-    }
 }

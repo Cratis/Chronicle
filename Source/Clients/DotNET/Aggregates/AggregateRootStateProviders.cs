@@ -9,24 +9,15 @@ namespace Cratis.Aggregates;
 /// <summary>
 /// Represents an implementation of <see cref="IAggregateRootStateProviders"/>.
 /// </summary>
-public class AggregateRootStateProviders : IAggregateRootStateProviders
+/// <remarks>
+/// Initializes a new instance of the <see cref="AggregateRootStateProviders"/> class.
+/// </remarks>
+/// <param name="reducersRegistrar">All the reducers in the system.</param>
+/// <param name="immediateProjections"><see cref="IImmediateProjections"/> to possibly get state from.</param>
+public class AggregateRootStateProviders(
+    IReducersRegistrar reducersRegistrar,
+    IImmediateProjections immediateProjections) : IAggregateRootStateProviders
 {
-    readonly IReducersRegistrar _reducersRegistrar;
-    readonly IImmediateProjections _immediateProjections;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AggregateRootStateProviders"/> class.
-    /// </summary>
-    /// <param name="reducersRegistrar">All the reducers in the system.</param>
-    /// <param name="immediateProjections"><see cref="IImmediateProjections"/> to possibly get state from.</param>
-    public AggregateRootStateProviders(
-        IReducersRegistrar reducersRegistrar,
-        IImmediateProjections immediateProjections)
-    {
-        _reducersRegistrar = reducersRegistrar;
-        _immediateProjections = immediateProjections;
-    }
-
     /// <inheritdoc/>
     public Task<IAggregateRootStateProvider> CreateFor(AggregateRoot aggregateRoot)
     {
@@ -35,8 +26,8 @@ public class AggregateRootStateProviders : IAggregateRootStateProviders
             return Task.FromResult<IAggregateRootStateProvider>(NullAggregateRootStateProvider.Instance);
         }
 
-        var hasReducer = _reducersRegistrar.HasReducerFor(aggregateRoot.StateType);
-        var hasProjection = _immediateProjections.HasProjectionFor(aggregateRoot.StateType);
+        var hasReducer = reducersRegistrar.HasReducerFor(aggregateRoot.StateType);
+        var hasProjection = immediateProjections.HasProjectionFor(aggregateRoot.StateType);
 
         if (!hasReducer && !hasProjection)
         {
@@ -50,10 +41,10 @@ public class AggregateRootStateProviders : IAggregateRootStateProviders
 
         if (hasReducer)
         {
-            var reducer = _reducersRegistrar.GetForModelType(aggregateRoot.StateType);
+            var reducer = reducersRegistrar.GetForModelType(aggregateRoot.StateType);
             return Task.FromResult<IAggregateRootStateProvider>(new ReducerAggregateRootStateProvider(aggregateRoot, reducer));
         }
 
-        return Task.FromResult<IAggregateRootStateProvider>(new ProjectionAggregateRootStateProvider(aggregateRoot, _immediateProjections));
+        return Task.FromResult<IAggregateRootStateProvider>(new ProjectionAggregateRootStateProvider(aggregateRoot, immediateProjections));
     }
 }

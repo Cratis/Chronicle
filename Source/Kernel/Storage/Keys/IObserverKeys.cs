@@ -8,6 +8,4 @@ namespace Cratis.Kernel.Storage.Keys;
 /// <summary>
 /// Defines an async enumerable for working with keys.
 /// </summary>
-public interface IObserverKeys : IAsyncEnumerable<Key>
-{
-}
+public interface IObserverKeys : IAsyncEnumerable<Key>;

@@ -6,13 +6,10 @@ namespace Cratis.Events;
 /// <summary>
 /// Exception that gets thrown when a type should be marked with the <see cref="EventTypeAttribute"/>.
 /// </summary>
-public class MissingEventTypeAttribute : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="MissingEventTypeAttribute"/> class.
+/// </remarks>
+/// <param name="type">Type that is missing the attribute.</param>
+public class MissingEventTypeAttribute(Type type) : Exception($"Type '{type.FullName}' is missing the [EventType(\"<Guid>\")] attribute.")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MissingEventTypeAttribute"/> class.
-    /// </summary>
-    /// <param name="type">Type that is missing the attribute.</param>
-    public MissingEventTypeAttribute(Type type) : base($"Type '{type.FullName}' is missing the [EventType(\"<Guid>\")] attribute.")
-    {
-    }
 }

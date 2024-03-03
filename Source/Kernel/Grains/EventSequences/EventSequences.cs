@@ -10,19 +10,13 @@ namespace Cratis.Kernel.Grains.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequences"/>.
 /// </summary>
-public class EventSequences : Grain, IEventSequences
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequences"/> class.
+/// </remarks>
+/// <param name="logger">Logger for logging.</param>
+public class EventSequences(ILogger<EventSequences> logger) : Grain, IEventSequences
 {
-    readonly ILogger<EventSequences> _logger;
     EventSequencesKey _key = EventSequencesKey.NotSet;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequences"/> class.
-    /// </summary>
-    /// <param name="logger">Logger for logging.</param>
-    public EventSequences(ILogger<EventSequences> logger)
-    {
-        _logger = logger;
-    }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -52,7 +46,7 @@ public class EventSequences : Grain, IEventSequences
             }
             catch (Exception ex)
             {
-                _logger.FailedRehydratingEventSequence(eventSequence, _key.MicroserviceId, _key.TenantId, ex);
+                logger.FailedRehydratingEventSequence(eventSequence, _key.MicroserviceId, _key.TenantId, ex);
             }
         }
     }

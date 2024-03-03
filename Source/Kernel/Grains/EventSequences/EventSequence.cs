@@ -28,15 +28,24 @@ namespace Cratis.Kernel.Grains.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequence"/>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of <see cref="EventSequence"/>.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
+/// <param name="meter">The meter to use for metrics.</param>
+/// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+/// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
+/// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
-public class EventSequence : Grain<EventSequenceState>, IEventSequence
+public class EventSequence(
+    IStorage storage,
+    IMeter<EventSequence> meter,
+    IExecutionContextManager executionContextManager,
+    IJsonComplianceManager jsonComplianceManagerProvider,
+    IExpandoObjectConverter expandoObjectConverter,
+    ILogger<EventSequence> logger) : Grain<EventSequenceState>, IEventSequence
 {
-    readonly IStorage _storage;
-    readonly IMeter<EventSequence> _meter;
-    readonly IExecutionContextManager _executionContextManager;
-    readonly IJsonComplianceManager _jsonComplianceManagerProvider;
-    readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly ILogger<EventSequence> _logger;
     IEventSequenceStorage? _eventSequenceStorage;
     IEventTypesStorage? _eventTypesStorage;
     IIdentityStorage? _identityStorage;
@@ -46,35 +55,10 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     IAsyncStream<AppendedEvent>? _stream;
     IMeterScope<EventSequence>? _metrics;
 
-    /// <summary>
-    /// Initializes a new instance of <see cref="EventSequence"/>.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
-    /// <param name="meter">The meter to use for metrics.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
-    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
-    /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
-    public EventSequence(
-        IStorage storage,
-        IMeter<EventSequence> meter,
-        IExecutionContextManager executionContextManager,
-        IJsonComplianceManager jsonComplianceManagerProvider,
-        IExpandoObjectConverter expandoObjectConverter,
-        ILogger<EventSequence> logger)
-    {
-        _storage = storage;
-        _meter = meter;
-        _executionContextManager = executionContextManager;
-        _jsonComplianceManagerProvider = jsonComplianceManagerProvider;
-        _expandoObjectConverter = expandoObjectConverter;
-        _logger = logger;
-    }
-
-    IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= _storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetNamespace(_eventSequenceKey.TenantId).GetEventSequence(_eventSequenceId);
-    IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= _storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).EventTypes;
-    IIdentityStorage IdentityStorage => _identityStorage ??= _storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).Identities;
-    IObserverStorage ObserverStorage => _observerStorage ??= _storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetNamespace(_eventSequenceKey.TenantId).Observers;
+    IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetNamespace(_eventSequenceKey.TenantId).GetEventSequence(_eventSequenceId);
+    IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).EventTypes;
+    IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).Identities;
+    IObserverStorage ObserverStorage => _observerStorage ??= storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetNamespace(_eventSequenceKey.TenantId).Observers;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -84,7 +68,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         var streamId = StreamId.Create(_eventSequenceKey, (Guid)_eventSequenceId);
         var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _stream = streamProvider.GetStream<AppendedEvent>(streamId);
-        _metrics = _meter.BeginEventSequenceScope(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId);
+        _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId);
 
         await base.OnActivateAsync(cancellationToken);
     }
@@ -131,15 +115,15 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         var result = EventSequenceNumber.Unavailable;
         try
         {
-            _logger.GettingNextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>());
+            logger.GettingNextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>());
             result = await EventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(sequenceNumber, eventTypes, eventSourceId);
         }
         catch (Exception ex)
         {
-            _logger.FailedGettingNextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), ex);
+            logger.FailedGettingNextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), ex);
         }
 
-        _logger.NextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), result);
+        logger.NextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), result);
 
         return result;
     }
@@ -159,7 +143,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         {
             var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
             eventName = eventSchema.Schema.GetDisplayName();
-            _logger.Appending(
+            logger.Appending(
                 _eventSequenceKey.MicroserviceId,
                 _eventSequenceKey.TenantId,
                 _eventSequenceId,
@@ -168,9 +152,9 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                 eventSourceId,
                 State.SequenceNumber);
 
-            var compliantEvent = await _jsonComplianceManagerProvider.Apply((string)_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, eventSchema.Schema, eventSourceId, content);
+            var compliantEvent = await jsonComplianceManagerProvider.Apply((string)_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, eventSchema.Schema, eventSourceId, content);
 
-            var compliantEventAsExpandoObject = _expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
+            var compliantEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
 
             var appending = true;
             while (appending)
@@ -185,7 +169,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                             DateTimeOffset.UtcNow,
                             validFrom ?? DateTimeOffset.MinValue,
                             _eventSequenceKey.TenantId,
-                            _executionContextManager.Current.CorrelationId,
+                            executionContextManager.Current.CorrelationId,
                             causation,
                             causedBy),
                         compliantEventAsExpandoObject);
@@ -210,7 +194,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         catch (UnableToAppendToEventSequence ex)
         {
             _metrics?.FailedAppending(eventSourceId, eventName);
-            _logger.FailedAppending(
+            logger.FailedAppending(
                 _eventSequenceKey.MicroserviceId,
                 _eventSequenceKey.TenantId,
                 eventType,
@@ -223,7 +207,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         }
         catch (Exception ex)
         {
-            _logger.ErrorAppending(
+            logger.ErrorAppending(
                 _eventSequenceKey.MicroserviceId,
                 _eventSequenceKey.TenantId,
                 _eventSequenceId,
@@ -268,7 +252,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         Identity causedBy,
         DateTimeOffset? validFrom = default)
     {
-        _logger.Compensating(
+        logger.Compensating(
             _eventSequenceKey.MicroserviceId,
             _eventSequenceKey.TenantId,
             eventType,
@@ -285,7 +269,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
-        _logger.Redacting(
+        logger.Redacting(
             _eventSequenceKey.MicroserviceId,
             _eventSequenceKey.TenantId,
             _eventSequenceId,
@@ -308,7 +292,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
-        _logger.RedactingMultiple(
+        logger.RedactingMultiple(
             _eventSequenceKey.MicroserviceId,
             _eventSequenceKey.TenantId,
             _eventSequenceId,

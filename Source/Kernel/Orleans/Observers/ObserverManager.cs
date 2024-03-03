@@ -17,18 +17,15 @@ namespace Cratis.Kernel.Orleans.Observers;
 /// <remarks>
 /// This is based on (copied with style adaptations) from the Orleans codebase.
 /// </remarks>
-public class ObserverManager<TObserver> : ObserverManager<IAddressable, TObserver>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ObserverManager{TObserver}"/> class.
+/// </remarks>
+/// <param name="expiration">The expiration for subscribers.</param>
+/// <param name="logger">Logger to use for logging.</param>
+/// <param name="loggerPrefix">Logger prefix.</param>
+public class ObserverManager<TObserver>(TimeSpan expiration, ILogger logger, string loggerPrefix) : ObserverManager<IAddressable, TObserver>(expiration, logger, loggerPrefix)
     where TObserver : notnull
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverManager{TObserver}"/> class.
-    /// </summary>
-    /// <param name="expiration">The expiration for subscribers.</param>
-    /// <param name="logger">Logger to use for logging.</param>
-    /// <param name="loggerPrefix">Logger prefix.</param>
-    public ObserverManager(TimeSpan expiration, ILogger logger, string loggerPrefix) : base(expiration, logger, loggerPrefix)
-    {
-    }
 }
 
 /// <summary>
@@ -36,39 +33,27 @@ public class ObserverManager<TObserver> : ObserverManager<IAddressable, TObserve
 /// </summary>
 /// <typeparam name="TAddress">The address type.</typeparam>
 /// <typeparam name="TObserver">The observer type.</typeparam>
-public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ObserverManager{TAddress,TObserver}"/> class.
+/// </remarks>
+/// <param name="expiration">The expiration for subscribers.</param>
+/// <param name="logger">Logger to use for logging.</param>
+/// <param name="loggerPrefix">Logger prefix.</param>
+public class ObserverManager<TAddress, TObserver>(TimeSpan expiration, ILogger logger, string loggerPrefix) : IEnumerable<TObserver>
     where TAddress : notnull
     where TObserver : notnull
 {
-    readonly string _loggerPrefix;
-
     readonly ConcurrentDictionary<TAddress, ObserverEntry> _observers = new();
-
-    readonly ILogger _logger;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverManager{TAddress,TObserver}"/> class.
-    /// </summary>
-    /// <param name="expiration">The expiration for subscribers.</param>
-    /// <param name="logger">Logger to use for logging.</param>
-    /// <param name="loggerPrefix">Logger prefix.</param>
-    public ObserverManager(TimeSpan expiration, ILogger logger, string loggerPrefix)
-    {
-        ExpirationDuration = expiration;
-        _logger = logger;
-        _loggerPrefix = loggerPrefix;
-        GetDateTime = () => DateTime.UtcNow;
-    }
 
     /// <summary>
     /// Gets or sets the delegate used to get the date and time, for expiry.
     /// </summary>
-    public Func<DateTime> GetDateTime { get; set; }
+    public Func<DateTime> GetDateTime { get; set; } = () => DateTime.UtcNow;
 
     /// <summary>
     /// Gets or sets the expiration time span, after which observers are lazily removed.
     /// </summary>
-    public TimeSpan ExpirationDuration { get; set; }
+    public TimeSpan ExpirationDuration { get; set; } = expiration;
 
     /// <summary>
     /// Gets the number of observers.
@@ -102,17 +87,17 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
         {
             entry.LastSeen = now;
             entry.Observer = observer;
-            if (_logger.IsEnabled(LogLevel.Debug))
+            if (logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.UpdatingEntry(_loggerPrefix, address, observer, _observers.Count);
+                logger.UpdatingEntry(loggerPrefix, address, observer, _observers.Count);
             }
         }
         else
         {
             _observers[address] = new ObserverEntry(observer, now);
-            if (_logger.IsEnabled(LogLevel.Debug))
+            if (logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.AddingEntry(_loggerPrefix, address, observer, _observers.Count);
+                logger.AddingEntry(loggerPrefix, address, observer, _observers.Count);
             }
         }
     }
@@ -123,7 +108,7 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
     /// <param name="subscriber">The observer.</param>
     public void Unsubscribe(TAddress subscriber)
     {
-        _logger.RemovingEntry(_loggerPrefix, subscriber, _observers.Count);
+        logger.RemovingEntry(loggerPrefix, subscriber, _observers.Count);
         _observers.TryRemove(subscriber, out var _);
     }
 
@@ -142,7 +127,7 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
             if (observer.Value.LastSeen + ExpirationDuration < now)
             {
                 // Expired observers will be removed.
-                defunct ??= new List<TAddress>();
+                defunct ??= [];
                 defunct.Add(observer.Key);
                 continue;
             }
@@ -160,7 +145,7 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
             catch (Exception)
             {
                 // Failing observers are considered defunct and will be removed..
-                defunct ??= new List<TAddress>();
+                defunct ??= [];
                 defunct.Add(observer.Key);
             }
         }
@@ -171,9 +156,9 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
             foreach (var observer in defunct)
             {
                 _observers.TryRemove(observer, out var _);
-                if (_logger.IsEnabled(LogLevel.Debug))
+                if (logger.IsEnabled(LogLevel.Debug))
                 {
-                    _logger.RemovingDefunctEntry(_loggerPrefix, observer, _observers.Count);
+                    logger.RemovingDefunctEntry(loggerPrefix, observer, _observers.Count);
                 }
             }
         }
@@ -193,7 +178,7 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
             if (observer.Value.LastSeen + ExpirationDuration < now)
             {
                 // Expired observers will be removed.
-                defunct ??= new List<TAddress>();
+                defunct ??= [];
                 defunct.Add(observer.Key);
                 continue;
             }
@@ -211,7 +196,7 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
             catch (Exception)
             {
                 // Failing observers are considered defunct and will be removed..
-                defunct ??= new List<TAddress>();
+                defunct ??= [];
                 defunct.Add(observer.Key);
             }
         }
@@ -222,9 +207,9 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
             foreach (var observer in defunct)
             {
                 _observers.TryRemove(observer, out var _);
-                if (_logger.IsEnabled(LogLevel.Debug))
+                if (logger.IsEnabled(LogLevel.Debug))
                 {
-                    _logger.RemovingDefunctEntry(_loggerPrefix, observer, _observers.Count);
+                    logger.RemovingDefunctEntry(loggerPrefix, observer, _observers.Count);
                 }
             }
         }
@@ -242,7 +227,7 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
             if (observer.Value.LastSeen + ExpirationDuration < now)
             {
                 // Expired observers will be removed.
-                defunct ??= new List<TAddress>();
+                defunct ??= [];
                 defunct.Add(observer.Key);
             }
         }
@@ -250,7 +235,7 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
         // Remove defunct observers.
         if (defunct?.Count > 0)
         {
-            _logger.RemovingDefunctEntries(_loggerPrefix, defunct.Count);
+            logger.RemovingDefunctEntries(loggerPrefix, defunct.Count);
             foreach (var observer in defunct)
             {
                 _observers.TryRemove(observer, out var _);
@@ -270,15 +255,9 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
         return GetEnumerator();
     }
 
-    sealed class ObserverEntry
+    sealed class ObserverEntry(TObserver observer, DateTime lastSeen)
     {
-        public ObserverEntry(TObserver observer, DateTime lastSeen)
-        {
-            Observer = observer;
-            LastSeen = lastSeen;
-        }
-
-        public TObserver Observer { get; set; }
-        public DateTime LastSeen { get; set; }
+        public TObserver Observer { get; set; } = observer;
+        public DateTime LastSeen { get; set; } = lastSeen;
     }
 }

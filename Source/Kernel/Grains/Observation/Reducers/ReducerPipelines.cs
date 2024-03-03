@@ -13,25 +13,17 @@ namespace Cratis.Kernel.Grains.Observation.Reducers;
 /// <summary>
 /// Represents an implementation of <see cref="IReducerPipelines"/>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ReducerPipelines"/> class.
+/// </remarks>
+/// <param name="sinks"><see cref="ISinks"/> in the system.</param>
+/// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 [SingletonPerMicroserviceAndTenant]
-public class ReducerPipelines : IReducerPipelines
+public class ReducerPipelines(
+    ISinks sinks,
+    IObjectComparer objectComparer) : IReducerPipelines
 {
-    readonly ISinks _sinks;
-    readonly IObjectComparer _objectComparer;
     readonly ConcurrentDictionary<ReducerId, IReducerPipeline> _pipelines = new();
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReducerPipelines"/> class.
-    /// </summary>
-    /// <param name="projectionSinks"><see cref="ISinks"/> in the system.</param>
-    /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
-    public ReducerPipelines(
-        ISinks projectionSinks,
-        IObjectComparer objectComparer)
-    {
-        _sinks = projectionSinks;
-        _objectComparer = objectComparer;
-    }
 
     /// <inheritdoc/>
     public async Task<IReducerPipeline> GetFor(ReducerDefinition definition)
@@ -48,7 +40,7 @@ public class ReducerPipelines : IReducerPipelines
     {
         var readModelSchema = await JsonSchema.FromJsonAsync(definition.ReadModel.Schema);
         var readModel = new Model(definition.ReadModel.Name, readModelSchema);
-        var sink = _sinks.GetFor(definition.SinkTypeId, readModel);
-        return new ReducerPipeline(readModel, sink, _objectComparer);
+        var sink = sinks.GetFor(definition.SinkTypeId, readModel);
+        return new ReducerPipeline(readModel, sink, objectComparer);
     }
 }

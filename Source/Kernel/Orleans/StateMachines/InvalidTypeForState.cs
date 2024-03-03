@@ -6,17 +6,12 @@ namespace Cratis.Kernel.Orleans.StateMachines;
 /// <summary>
 /// Exception that gets thrown when a type is not a valid type for a state.
 /// </summary>
-public class InvalidTypeForState : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="InvalidTypeForState"/> class.
+/// </remarks>
+/// <param name="type">Type that is invalid.</param>
+public class InvalidTypeForState(Type type) : Exception($"Type '{type.FullName}' is not a valid type for a state. States must inherit from '{typeof(IState<>).FullName}'")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="InvalidTypeForState"/> class.
-    /// </summary>
-    /// <param name="type">Type that is invalid.</param>
-    public InvalidTypeForState(Type type)
-        : base($"Type '{type.FullName}' is not a valid type for a state. States must inherit from '{typeof(IState<>).FullName}'")
-    {
-    }
-
     /// <summary>
     /// Throw if the type is invalid.
     /// </summary>

@@ -20,7 +20,7 @@ public class Storage
     /// <summary>
     /// The storage configuration for all microservices.
     /// </summary>
-    public StorageForMicroservices Microservices { get; set; } = new();
+    public StorageForMicroservices Microservices { get; set; } = [];
 
     /// <summary>
     /// Configure the Kernel as a Microservice.
@@ -34,7 +34,7 @@ public class Storage
             {
                 ["eventStore"] = Cluster,
             },
-            Tenants = new()
+            Tenants = []
         };
 
         // We add unspecified for supporting single tenant scenarios
@@ -45,7 +45,7 @@ public class Storage
                 ["readModels"] = Cluster,
                 ["eventStore"] = Cluster,
             },
-            Tenants = new()
+            Tenants = []
         };
 
         foreach (var microservice in Microservices)

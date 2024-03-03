@@ -12,23 +12,16 @@ namespace Cratis.Kernel.Grains.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionObserverSubscriber"/>.
 /// </summary>
-public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
+/// <remarks>
+/// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
+/// </remarks>
+/// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
+public class ProjectionObserverSubscriber(IKernel kernel) : Grain, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
-    readonly IKernel _kernel;
-    ProjectionId _projectionId;
+    ProjectionId _projectionId = ProjectionId.NotSet;
     IProjectionPipeline? _pipeline;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
     TenantId _tenantId = TenantId.NotSet;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
-    /// </summary>
-    /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
-    public ProjectionObserverSubscriber(IKernel kernel)
-    {
-        _projectionId = ProjectionId.NotSet;
-        _kernel = kernel;
-    }
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -80,7 +73,7 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
 
     void HandleDefinitionsAndInstances()
     {
-        var projectionManager = _kernel.GetEventStore((string)_microserviceId).GetNamespace(_tenantId).ProjectionManager;
+        var projectionManager = kernel.GetEventStore((string)_microserviceId).GetNamespace(_tenantId).ProjectionManager;
         _pipeline = projectionManager.GetPipeline(_projectionId);
     }
 }

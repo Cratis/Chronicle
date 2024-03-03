@@ -6,16 +6,12 @@ namespace Cratis.Kernel.Storage.Jobs;
 /// <summary>
 /// Exception that gets thrown when a type is not a <see cref="JobState"/>.
 /// </summary>
-public class InvalidJobStateType : Exception
+/// <remarks>
+/// Initializes a new instance of the <see cref="InvalidJobStateType"/> class.
+/// </remarks>
+/// <param name="type">Type that is invalid.</param>
+public class InvalidJobStateType(Type type) : Exception($"Type '{type.FullName}' is not a JobState")
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="InvalidJobStateType"/> class.
-    /// </summary>
-    /// <param name="type">Type that is invalid.</param>
-    public InvalidJobStateType(Type type) : base($"Type '{type.FullName}' is not a JobState")
-    {
-    }
-
     /// <summary>
     /// Throw if the type does not derive from <see cref="JobState"/>.
     /// </summary>

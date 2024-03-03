@@ -15,25 +15,19 @@ namespace Cratis.Kernel.Projections.Expressions.EventValues;
 /// <summary>
 /// Represents an implementation of <see cref="IModelPropertyExpressionResolvers"/>.
 /// </summary>
-public class EventValueProviderExpressionResolvers : IEventValueProviderExpressionResolvers
+/// <remarks>
+/// Initializes a new instance of the <see cref="ITypeFormats"/> class.
+/// </remarks>
+/// <param name="typeFormats"><see cref="ITypeFormats"/> for finding target types.</param>
+public class EventValueProviderExpressionResolvers(ITypeFormats typeFormats) : IEventValueProviderExpressionResolvers
 {
-    readonly IEventValueProviderExpressionResolver[] _resolvers = new IEventValueProviderExpressionResolver[]
-    {
+    readonly IEventValueProviderExpressionResolver[] _resolvers =
+    [
         new EventSourceIdExpressionResolver(),
         new EventContextPropertyExpressionResolver(),
         new EventContentExpressionResolver(),
         new ValueExpressionResolver()
-    };
-    readonly ITypeFormats _typeFormats;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ITypeFormats"/> class.
-    /// </summary>
-    /// <param name="typeFormats"><see cref="ITypeFormats"/> for finding target types.</param>
-    public EventValueProviderExpressionResolvers(ITypeFormats typeFormats)
-    {
-        _typeFormats = typeFormats;
-    }
+    ];
 
     /// <inheritdoc/>
     public bool CanResolve(string expression) => _resolvers.Any(_ => _.CanResolve(expression));
@@ -76,7 +70,7 @@ public class EventValueProviderExpressionResolvers : IEventValueProviderExpressi
             return expandoObject;
         }
 
-        var targetType = schemaProperty.GetTargetTypeForJsonSchemaProperty(_typeFormats);
+        var targetType = schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats);
         if (targetType is not null)
         {
             return TypeConversion.Convert(targetType, input);

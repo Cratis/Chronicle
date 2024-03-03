@@ -13,25 +13,17 @@ namespace Cratis.Kernel.Grains.Observation.Reducers.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IClientReducer"/>.
 /// </summary>
-public class ClientReducer : Grain, IClientReducer, INotifyClientDisconnected
+/// <remarks>
+/// Initializes a new instance of the <see cref="ClientReducer"/>.
+/// </remarks>
+/// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+public class ClientReducer(
+    ILocalSiloDetails localSiloDetails,
+    ILogger<ClientReducer> logger) : Grain, IClientReducer, INotifyClientDisconnected
 {
-    readonly ILogger<ClientReducer> _logger;
-    readonly ILocalSiloDetails _localSiloDetails;
     ObserverId? _reducerId;
     ObserverKey? _observerKey;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ClientReducer"/>.
-    /// </summary>
-    /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public ClientReducer(
-        ILocalSiloDetails localSiloDetails,
-        ILogger<ClientReducer> logger)
-    {
-        _localSiloDetails = localSiloDetails;
-        _logger = logger;
-    }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -55,14 +47,14 @@ public class ClientReducer : Grain, IClientReducer, INotifyClientDisconnected
             name,
             ObserverType.Reducer,
             eventTypes.Select(_ => _.EventType).ToArray(),
-            _localSiloDetails.SiloAddress,
+            localSiloDetails.SiloAddress,
             connectedClient);
     }
 
     /// <inheritdoc/>
     public void OnClientDisconnected(ConnectedClient client)
     {
-        _logger.ClientDisconnected(client.ConnectionId, _observerKey!.MicroserviceId, _reducerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
+        logger.ClientDisconnected(client.ConnectionId, _observerKey!.MicroserviceId, _reducerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
         var id = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverKey.Parse(keyAsString);
         var observer = GrainFactory.GetGrain<IObserver>(id, key);

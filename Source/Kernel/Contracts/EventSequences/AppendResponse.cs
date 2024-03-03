@@ -11,6 +11,4 @@ namespace Cratis.Kernel.Contracts.EventSequences;
 /// Represents the response from appending an event.
 /// </summary>
 [ProtoContract]
-public class AppendResponse
-{
-}
+public class AppendResponse;

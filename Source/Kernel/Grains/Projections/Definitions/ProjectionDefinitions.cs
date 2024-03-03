@@ -11,25 +11,17 @@ namespace Cratis.Kernel.Grains.Projections.Definitions;
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionDefinitions"/>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ProjectionDefinition"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IProjectionDefinitionsStorage"/> for stored definitions.</param>
+/// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serialization.</param>
 [SingletonPerMicroservice]
-public class ProjectionDefinitions : IProjectionDefinitions
+public class ProjectionDefinitions(
+    IProjectionDefinitionsStorage storage,
+    IJsonProjectionSerializer projectionSerializer) : IProjectionDefinitions
 {
-    readonly IProjectionDefinitionsStorage _storage;
-    readonly IJsonProjectionSerializer _projectionSerializer;
-    readonly Dictionary<ProjectionId, ProjectionDefinition> _definitions = new();
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ProjectionDefinition"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IProjectionDefinitionsStorage"/> for stored definitions.</param>
-    /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serialization.</param>
-    public ProjectionDefinitions(
-        IProjectionDefinitionsStorage storage,
-        IJsonProjectionSerializer projectionSerializer)
-    {
-        _storage = storage;
-        _projectionSerializer = projectionSerializer;
-    }
+    readonly Dictionary<ProjectionId, ProjectionDefinition> _definitions = [];
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()
@@ -42,12 +34,12 @@ public class ProjectionDefinitions : IProjectionDefinitions
     public async Task<(bool Found, ProjectionDefinition? Projection)> TryGetFor(ProjectionId projectionId)
     {
         await PopulateIfMissing(projectionId);
-        if (!_definitions.ContainsKey(projectionId))
+        if (!_definitions.TryGetValue(projectionId, out var value))
         {
             return (false, null);
         }
 
-        return (true, _definitions[projectionId]);
+        return (true, value);
     }
 
     /// <inheritdoc/>
@@ -63,15 +55,15 @@ public class ProjectionDefinitions : IProjectionDefinitions
     public async Task<(bool IsNew, bool HasChanged)> IsNewOrChanged(ProjectionDefinition projectionDefinition)
     {
         await PopulateIfMissing(projectionDefinition.Identifier);
-        if (!_definitions.ContainsKey(projectionDefinition.Identifier))
+        if (!_definitions.TryGetValue(projectionDefinition.Identifier, out var value))
         {
             return (true, false);
         }
 
         var incoming = projectionDefinition with { LastUpdated = null };
-        var existing = _definitions[projectionDefinition.Identifier] with { LastUpdated = null };
-        var incomingJson = _projectionSerializer.Serialize(incoming);
-        var existingJson = _projectionSerializer.Serialize(existing);
+        var existing = value with { LastUpdated = null };
+        var incomingJson = projectionSerializer.Serialize(incoming);
+        var existingJson = projectionSerializer.Serialize(existing);
         var incomingAsJsonString = incomingJson.ToJsonString();
         var existingAsJsonString = existingJson.ToJsonString();
         var changed = !incomingAsJsonString.Equals(existingAsJsonString);
@@ -96,7 +88,7 @@ public class ProjectionDefinitions : IProjectionDefinitions
 
     async Task Populate()
     {
-        var definitions = await _storage.GetAll();
+        var definitions = await storage.GetAll();
         foreach (var definition in definitions)
         {
             _definitions[definition.Identifier] = definition;

@@ -24,7 +24,7 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
 #pragma warning disable CA1051 // Visible instance fields
 #pragma warning disable SA1600 // Elements should be documented
 #pragma warning disable SA1629, CA1002, MA0016 // Return abstract
-    protected readonly List<IPropertyExpressionBuilder> _propertyExpressions = new();
+    protected readonly List<IPropertyExpressionBuilder> _propertyExpressions = [];
     protected IKeyBuilder _parentKey = new KeyBuilder(new NoExpression());
     protected IKeyBuilder _key = new KeyBuilder(new EventSourceIdExpression());
 #pragma warning restore CA1629, CA1002, MA0016 // Return abstract

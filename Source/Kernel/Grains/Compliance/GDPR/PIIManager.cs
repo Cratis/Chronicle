@@ -10,30 +10,21 @@ namespace Cratis.Kernel.Grains.Compliance.GDPR;
 /// <summary>
 /// Represents a manager of PII in the system.
 /// </summary>
-public class PIIManager : Grain, IPIIManager
+/// <remarks>
+/// Initializes a new instance of the <see cref="PIIManager"/> class.
+/// </remarks>
+/// <param name="encryption"><see cref="IEncryption"/> system.</param>
+/// <param name="keyStore">The <see cref="IEncryptionKeyStorage"/>.</param>
+public class PIIManager(IEncryption encryption, IEncryptionKeyStorage keyStore) : Grain, IPIIManager
 {
-    readonly IEncryption _encryption;
-    readonly IEncryptionKeyStorage _keyStore;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PIIManager"/> class.
-    /// </summary>
-    /// <param name="encryption"><see cref="IEncryption"/> system.</param>
-    /// <param name="keyStore">The <see cref="IEncryptionKeyStorage"/>.</param>
-    public PIIManager(IEncryption encryption, IEncryptionKeyStorage keyStore)
-    {
-        _encryption = encryption;
-        _keyStore = keyStore;
-    }
-
     /// <inheritdoc/>
     public async Task CreateAndRegisterKeyFor(EncryptionKeyIdentifier identifier)
     {
         _ = this.GetPrimaryKey(out var primaryKeyExtension);
         var primaryKey = (PIIManagerKey)primaryKeyExtension;
 
-        var key = _encryption.GenerateKey();
-        await _keyStore.SaveFor((string)primaryKey.MicroserviceId, primaryKey.TenantId, identifier, key);
+        var key = encryption.GenerateKey();
+        await keyStore.SaveFor((string)primaryKey.MicroserviceId, primaryKey.TenantId, identifier, key);
     }
 
     /// <inheritdoc/>
@@ -42,6 +33,6 @@ public class PIIManager : Grain, IPIIManager
         _ = this.GetPrimaryKey(out var primaryKeyExtension);
         var primaryKey = (PIIManagerKey)primaryKeyExtension;
 
-        await _keyStore.DeleteFor((string)primaryKey.MicroserviceId, primaryKey.TenantId, identifier);
+        await keyStore.DeleteFor((string)primaryKey.MicroserviceId, primaryKey.TenantId, identifier);
     }
 }

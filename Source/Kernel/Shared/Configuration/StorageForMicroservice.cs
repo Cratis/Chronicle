@@ -11,10 +11,10 @@ public class StorageForMicroservice
     /// <summary>
     /// The shared database connection configurations for the microservice.
     /// </summary>
-    public StorageTypes Shared { get; init; } = new();
+    public StorageTypes Shared { get; init; } = [];
 
     /// <summary>
     /// The tenant specific configuration.
     /// </summary>
-    public StorageForTenants Tenants { get; init; } = new();
+    public StorageForTenants Tenants { get; init; } = [];
 }

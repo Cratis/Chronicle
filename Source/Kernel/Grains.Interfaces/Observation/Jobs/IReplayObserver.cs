@@ -8,6 +8,4 @@ namespace Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Defines the job for replaying an observer.
 /// </summary>
-public interface IReplayObserver : IJob<ReplayObserverRequest>
-{
-}
+public interface IReplayObserver : IJob<ReplayObserverRequest>;

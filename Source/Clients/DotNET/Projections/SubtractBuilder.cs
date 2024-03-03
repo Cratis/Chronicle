@@ -14,31 +14,24 @@ namespace Cratis.Projections;
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
-public class SubtractBuilder<TModel, TEvent, TProperty, TParentBuilder> : ISubtractBuilder<TModel, TEvent, TProperty, TParentBuilder>
+/// <remarks>
+/// /// Initializes a new instance of the <see cref="SubtractBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
+/// </remarks>
+/// <param name="parent">Parent builder.</param>
+/// <param name="targetProperty">Target property we're building for.</param>
+public class SubtractBuilder<TModel, TEvent, TProperty, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty) : ISubtractBuilder<TModel, TEvent, TProperty, TParentBuilder>
     where TParentBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TParentBuilder>
 {
-    readonly TParentBuilder _parent;
     string _expression = string.Empty;
 
-    /// <summary>
-    /// /// Initializes a new instance of the <see cref="SubtractBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
-    /// </summary>
-    /// <param name="parent">Parent builder.</param>
-    /// <param name="targetProperty">Target property we're building for.</param>
-    public SubtractBuilder(TParentBuilder parent, PropertyPath targetProperty)
-    {
-        _parent = parent;
-        TargetProperty = targetProperty;
-    }
-
     /// <inheritdoc/>
-    public PropertyPath TargetProperty { get; }
+    public PropertyPath TargetProperty { get; } = targetProperty;
 
     /// <inheritdoc/>
     public TParentBuilder With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
         _expression = $"$subtract({eventPropertyAccessor.GetPropertyPath()})";
-        return _parent;
+        return parent;
     }
 
     /// <inheritdoc/>

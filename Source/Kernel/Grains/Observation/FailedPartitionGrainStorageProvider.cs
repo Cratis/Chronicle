@@ -11,19 +11,12 @@ namespace Cratis.Kernel.Storage.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling <see cref="FailedPartition" /> storage.
 /// </summary>
-public class FailedPartitionGrainStorageProvider : IGrainStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="FailedPartitionGrainStorageProvider"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+public class FailedPartitionGrainStorageProvider(IStorage storage) : IGrainStorage
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="FailedPartitionGrainStorageProvider"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public FailedPartitionGrainStorageProvider(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
 
@@ -34,7 +27,7 @@ public class FailedPartitionGrainStorageProvider : IGrainStorage
         var observerId = grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var failedPartitions = _storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).FailedPartitions;
+        var failedPartitions = storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).FailedPartitions;
         actualGrainState.State = await failedPartitions.GetFor(observerId);
     }
 
@@ -45,7 +38,7 @@ public class FailedPartitionGrainStorageProvider : IGrainStorage
         var observerId = grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var failedPartitions = _storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).FailedPartitions;
+        var failedPartitions = storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).FailedPartitions;
         foreach (var failedPartition in actualGrainState.State.Partitions)
         {
             failedPartition.ObserverId = observerId;

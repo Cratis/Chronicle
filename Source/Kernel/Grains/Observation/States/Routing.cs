@@ -13,35 +13,22 @@ namespace Cratis.Kernel.Grains.Observation.States;
 /// <summary>
 /// Represents the subscribing state of an observer.
 /// </summary>
-public class Routing : BaseObserverState
+/// <remarks>
+/// Initializes a new instance of the <see cref="Routing"/> class.
+/// </remarks>
+/// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
+/// <param name="replayEvaluator"><see cref="IReplayEvaluator"/> for evaluating replays.</param>
+/// <param name="eventSequence"><see cref="IEventSequence"/> provider.</param>
+/// <param name="logger">Logger for logging.</param>
+public class Routing(
+    ObserverKey observerKey,
+    IReplayEvaluator replayEvaluator,
+    IEventSequence eventSequence,
+    ILogger<Routing> logger) : BaseObserverState
 {
-    readonly ObserverKey _observerKey;
-    readonly IReplayEvaluator _replayEvaluator;
-    readonly IEventSequence _eventSequence;
-    readonly ILogger<Routing> _logger;
-    ObserverSubscription _subscription;
+    ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     EventSequenceNumber _tailEventSequenceNumber = EventSequenceNumber.Unavailable;
     EventSequenceNumber _tailEventSequenceNumberForEventTypes = EventSequenceNumber.Unavailable;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Routing"/> class.
-    /// </summary>
-    /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
-    /// <param name="replayEvaluator"><see cref="IReplayEvaluator"/> for evaluating replays.</param>
-    /// <param name="eventSequence"><see cref="IEventSequence"/> provider.</param>
-    /// <param name="logger">Logger for logging.</param>
-    public Routing(
-        ObserverKey observerKey,
-        IReplayEvaluator replayEvaluator,
-        IEventSequence eventSequence,
-        ILogger<Routing> logger)
-    {
-        _observerKey = observerKey;
-        _replayEvaluator = replayEvaluator;
-        _eventSequence = eventSequence;
-        _logger = logger;
-        _subscription = ObserverSubscription.Unsubscribed;
-    }
 
     /// <inheritdoc/>
     public override ObserverRunningState RunningState => ObserverRunningState.Routing;
@@ -60,15 +47,15 @@ public class Routing : BaseObserverState
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        using var logScope = _logger.BeginRoutingScope(state.ObserverId, _observerKey);
+        using var logScope = logger.BeginRoutingScope(state.ObserverId, observerKey);
         _subscription = await Observer.GetSubscription();
 
-        _logger.Entering();
+        logger.Entering();
 
-        _tailEventSequenceNumber = await _eventSequence.GetTailSequenceNumber();
-        _tailEventSequenceNumberForEventTypes = await _eventSequence.GetTailSequenceNumberForEventTypes(_subscription.EventTypes.ToList());
+        _tailEventSequenceNumber = await eventSequence.GetTailSequenceNumber();
+        _tailEventSequenceNumberForEventTypes = await eventSequence.GetTailSequenceNumberForEventTypes(_subscription.EventTypes.ToList());
 
-        _logger.TailEventSequenceNumbers(_tailEventSequenceNumber, _tailEventSequenceNumberForEventTypes);
+        logger.TailEventSequenceNumbers(_tailEventSequenceNumber, _tailEventSequenceNumberForEventTypes);
 
         return await EvaluateState(state);
     }
@@ -88,14 +75,14 @@ public class Routing : BaseObserverState
     {
         if (IsIndexing(state))
         {
-            _logger.Indexing();
+            logger.Indexing();
             await StateMachine.TransitionTo<Indexing>();
             return state;
         }
 
         if (!_subscription.IsSubscribed)
         {
-            _logger.NotSubscribed();
+            logger.NotSubscribed();
             await StateMachine.TransitionTo<Disconnected>();
             return state;
         }
@@ -104,33 +91,33 @@ public class Routing : BaseObserverState
         {
             if (CanFastForward(state))
             {
-                _logger.FastForwarding();
+                logger.FastForwarding();
                 state = state with { NextEventSequenceNumber = _tailEventSequenceNumber.Next() };
                 return await EvaluateState(state);
             }
 
-            _logger.CatchingUp();
+            logger.CatchingUp();
             await StateMachine.TransitionTo<CatchUp>();
         }
         else if (state.RunningState == ObserverRunningState.Replaying)
         {
-            _logger.Replaying();
+            logger.Replaying();
             await StateMachine.TransitionTo<ResumeReplay>();
         }
-        else if (await _replayEvaluator.Evaluate(new(
+        else if (await replayEvaluator.Evaluate(new(
             state.ObserverId,
-            _observerKey,
+            observerKey,
             state,
             _subscription,
             _tailEventSequenceNumber,
             _tailEventSequenceNumberForEventTypes)))
         {
-            _logger.NeedsToReplay();
+            logger.NeedsToReplay();
             await StateMachine.TransitionTo<Replay>();
         }
         else
         {
-            _logger.Observing();
+            logger.Observing();
             await StateMachine.TransitionTo<Observing>();
         }
 
