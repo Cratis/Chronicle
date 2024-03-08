@@ -11,37 +11,28 @@ namespace Cratis.Kernel.Grains.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClients"/>.
 /// </summary>
-public class ConnectedClients : Grain, IConnectedClients
+/// <remarks>
+/// Initializes a new instance of the <see cref="ConnectedClients"/> class.
+/// </remarks>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="metricsFactory"><see cref="IConnectedClientsMetricsFactory"/> for creating metrics.</param>
+public class ConnectedClients(
+    ILogger<ConnectedClients> logger,
+    IConnectedClientsMetricsFactory metricsFactory) : Grain, IConnectedClients
 {
     /// <summary>
     /// Gets the name of the HTTP client for connected clients.
     /// </summary>
     public const string ConnectedClientsHttpClient = "connected-clients";
 
-    readonly IList<ConnectedClient> _clients = new List<ConnectedClient>();
-    readonly ILogger<ConnectedClients> _logger;
-    readonly IConnectedClientsMetricsFactory _metricsFactory;
-    readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers;
+    readonly List<ConnectedClient> _clients = [];
+    readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger, "ClientDisconnectedObservers");
     IConnectedClientsMetrics? _metrics;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
-    /// </summary>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    /// <param name="metricsFactory"><see cref="IConnectedClientsMetricsFactory"/> for creating metrics.</param>
-    public ConnectedClients(
-        ILogger<ConnectedClients> logger,
-        IConnectedClientsMetricsFactory metricsFactory)
-    {
-        _logger = logger;
-        _metricsFactory = metricsFactory;
-        _clientDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger, "ClientDisconnectedObservers");
-    }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _metrics = _metricsFactory.Create();
+        _metrics = metricsFactory.Create();
         RegisterTimer(ReviseConnectedClients, null!, TimeSpan.Zero, TimeSpan.FromSeconds(1));
 
         return Task.CompletedTask;
@@ -55,7 +46,7 @@ public class ConnectedClients : Grain, IConnectedClients
     {
         var microserviceId = (MicroserviceId)this.GetPrimaryKey();
 
-        _logger.ClientConnected(connectionId);
+        logger.ClientConnected(connectionId);
 
         _clients.Where(_ => _.ConnectionId == connectionId).ToList().ForEach(_ => _clients.Remove(_));
         _clients.Add(new ConnectedClient
@@ -73,9 +64,9 @@ public class ConnectedClients : Grain, IConnectedClients
     /// <inheritdoc/>
     public Task OnClientDisconnected(ConnectionId connectionId, string reason)
     {
-        _logger.ClientDisconnected(connectionId, reason);
+        logger.ClientDisconnected(connectionId, reason);
 
-        var client = _clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
+        var client = _clients.Find(_ => _.ConnectionId == connectionId);
         if (client is not null)
         {
             _clients.Remove(client);
@@ -89,7 +80,7 @@ public class ConnectedClients : Grain, IConnectedClients
     /// <inheritdoc/>
     public Task<bool> OnClientPing(ConnectionId connectionId)
     {
-        var client = _clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
+        var client = _clients.Find(_ => _.ConnectionId == connectionId);
         if (client is not null)
         {
             client.LastSeen = DateTimeOffset.UtcNow;
@@ -117,7 +108,7 @@ public class ConnectedClients : Grain, IConnectedClients
     }
 
     /// <inheritdoc/>
-    public Task<bool> IsConnected(ConnectionId connectionId) => Task.FromResult(_clients.Any(_ => _.ConnectionId == connectionId));
+    public Task<bool> IsConnected(ConnectionId connectionId) => Task.FromResult(_clients.Exists(_ => _.ConnectionId == connectionId));
 
     /// <inheritdoc/>
     public Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId) => Task.FromResult(_clients.First(_ => _.ConnectionId == connectionId));

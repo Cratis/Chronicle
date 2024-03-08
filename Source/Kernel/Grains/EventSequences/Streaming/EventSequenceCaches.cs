@@ -10,25 +10,17 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequenceCaches"/>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequenceCaches"/> class.
+/// </remarks>
+/// <param name="eventSequenceCacheFactory"><see cref="IEventSequenceCacheFactory"/> for creating <see cref="IEventSequenceCache"/> instances.</param>
+/// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
 [Singleton]
-public class EventSequenceCaches : IEventSequenceCaches
+public class EventSequenceCaches(
+    IEventSequenceCacheFactory eventSequenceCacheFactory,
+    KernelConfiguration configuration) : IEventSequenceCaches
 {
     readonly ConcurrentDictionary<(MicroserviceId, TenantId, EventSequenceId), IEventSequenceCache> _caches = new();
-    readonly IEventSequenceCacheFactory _eventSequenceCacheFactory;
-    readonly KernelConfiguration _configuration;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequenceCaches"/> class.
-    /// </summary>
-    /// <param name="eventSequenceCacheFactory"><see cref="IEventSequenceCacheFactory"/> for creating <see cref="IEventSequenceCache"/> instances.</param>
-    /// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
-    public EventSequenceCaches(
-        IEventSequenceCacheFactory eventSequenceCacheFactory,
-        KernelConfiguration configuration)
-    {
-        _eventSequenceCacheFactory = eventSequenceCacheFactory;
-        _configuration = configuration;
-    }
 
     /// <inheritdoc/>
     public IEventSequenceCache GetFor(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId)
@@ -36,7 +28,7 @@ public class EventSequenceCaches : IEventSequenceCaches
         var key = (microserviceId, tenantId, eventSequenceId);
         if (!_caches.TryGetValue(key, out var cache))
         {
-            cache = _eventSequenceCacheFactory.Create(microserviceId, tenantId, eventSequenceId);
+            cache = eventSequenceCacheFactory.Create(microserviceId, tenantId, eventSequenceId);
             _caches.TryAdd(key, cache);
         }
 
@@ -49,12 +41,12 @@ public class EventSequenceCaches : IEventSequenceCaches
     /// <inheritdoc/>
     public async Task PrimeAll()
     {
-        foreach (var (microserviceId, microservice) in _configuration.Microservices)
+        foreach (var (microserviceId, microservice) in configuration.Microservices)
         {
-            foreach (var (tenantId, _) in _configuration.Tenants)
+            foreach (var (tenantId, _) in configuration.Tenants)
             {
-                if (!_configuration.Storage.Microservices.ContainsKey(microserviceId) ||
-                    !_configuration.Storage.Microservices.Get(microserviceId).Tenants.ContainsKey(tenantId))
+                if (!configuration.Storage.Microservices.ContainsKey(microserviceId) ||
+                    !configuration.Storage.Microservices.Get(microserviceId).Tenants.ContainsKey(tenantId))
                 {
                     continue;
                 }
