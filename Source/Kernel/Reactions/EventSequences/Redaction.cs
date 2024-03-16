@@ -14,20 +14,13 @@ namespace Cratis.Kernel.Reactions.EventSequences;
 /// <summary>
 /// Observes events related to redaction done on any <see cref="EventSequence"/> and reacts to them.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Redaction"/> class.
+/// </remarks>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
 [Observer("341c5a8b-b3a0-49ff-9b26-6339fa53dc3b", eventSequence: EventSequenceId.System)]
-public class Redaction
+public class Redaction(IGrainFactory grainFactory)
 {
-    readonly IGrainFactory _grainFactory;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Redaction"/> class.
-    /// </summary>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    public Redaction(IGrainFactory grainFactory)
-    {
-        _grainFactory = grainFactory;
-    }
-
     /// <summary>
     /// Redact a single event.
     /// </summary>
@@ -36,7 +29,7 @@ public class Redaction
     /// <returns>Awaitable task.</returns>
     public async Task SingleEvent(EventRedacted @event, EventContext context)
     {
-        var grain = _grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new EventSequenceKey(@event.Microservice, @event.TenantId));
+        var grain = grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new EventSequenceKey(@event.Microservice, @event.TenantId));
         await grain.Redact(@event.SequenceNumber, @event.Reason, context.Causation, context.CausedBy);
     }
 
@@ -48,7 +41,7 @@ public class Redaction
     /// <returns>Awaitable task.</returns>
     public async Task ByEventSource(EventsRedactedForEventSource @event, EventContext context)
     {
-        var grain = _grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new EventSequenceKey(@event.Microservice, @event.TenantId));
+        var grain = grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new EventSequenceKey(@event.Microservice, @event.TenantId));
         await grain.Redact(@event.EventSourceId, @event.Reason, @event.EventTypes, context.Causation, context.CausedBy);
     }
 }

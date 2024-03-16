@@ -10,20 +10,13 @@ namespace Cratis.Kernel.Domain.Recommendations;
 /// <summary>
 /// Represents the API for working with recommendations.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Recommendations"/> class.
+/// </remarks>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
 [Route("/api/events/store/{microserviceId}/{tenantId}/recommendations")]
-public class Recommendations : ControllerBase
+public class Recommendations(IGrainFactory grainFactory) : ControllerBase
 {
-    readonly IGrainFactory _grainFactory;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Recommendations"/> class.
-    /// </summary>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    public Recommendations(IGrainFactory grainFactory)
-    {
-        _grainFactory = grainFactory;
-    }
-
     /// <summary>
     /// Perform a recommendation.
     /// </summary>
@@ -57,5 +50,5 @@ public class Recommendations : ControllerBase
     }
 
     IRecommendationsManager GetRecommendationsManager(MicroserviceId microserviceId, TenantId tenantId) =>
-        _grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(microserviceId, tenantId));
+        grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(microserviceId, tenantId));
 }

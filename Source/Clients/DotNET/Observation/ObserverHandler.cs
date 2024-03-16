@@ -11,7 +11,20 @@ namespace Cratis.Observation;
 /// <summary>
 /// Represents a handler of observers.
 /// </summary>
-public class ObserverHandler
+/// <remarks>
+/// Initializes a new instance of the <see cref="ObserverHandler"/>.
+/// </remarks>
+/// <param name="observerId">Unique identifier.</param>
+/// <param name="name">Name of the observer.</param>
+/// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the observer is for.</param>
+/// <param name="observerInvoker">The actual invoker.</param>
+/// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
+public class ObserverHandler(
+    ObserverId observerId,
+    ObserverName name,
+    EventSequenceId eventSequenceId,
+    IObserverInvoker observerInvoker,
+    ICausationManager causationManager)
 {
     /// <summary>
     /// The observer id causation property.
@@ -43,50 +56,25 @@ public class ObserverHandler
     /// </summary>
     public static readonly CausationType CausationType = new("Client Observer");
 
-    readonly IObserverInvoker _observerInvoker;
-    readonly ICausationManager _causationManager;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverHandler"/>.
-    /// </summary>
-    /// <param name="observerId">Unique identifier.</param>
-    /// <param name="name">Name of the observer.</param>
-    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the observer is for.</param>
-    /// <param name="observerInvoker">The actual invoker.</param>
-    /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
-    public ObserverHandler(
-        ObserverId observerId,
-        ObserverName name,
-        EventSequenceId eventSequenceId,
-        IObserverInvoker observerInvoker,
-        ICausationManager causationManager)
-    {
-        ObserverId = observerId;
-        Name = name;
-        EventSequenceId = eventSequenceId;
-        _observerInvoker = observerInvoker;
-        _causationManager = causationManager;
-    }
-
     /// <summary>
     /// Gets the unique identifier of the observer.
     /// </summary>
-    public ObserverId ObserverId { get; }
+    public ObserverId ObserverId { get; } = observerId;
 
     /// <summary>
     /// Gets the name of the observer.
     /// </summary>
-    public ObserverName Name { get; }
+    public ObserverName Name { get; } = name;
 
     /// <summary>
     /// Gets the event log for the observer.
     /// </summary>
-    public EventSequenceId EventSequenceId { get; }
+    public EventSequenceId EventSequenceId { get; } = eventSequenceId;
 
     /// <summary>
     /// Gets the event types for the observer.
     /// </summary>
-    public IEnumerable<EventType> EventTypes => _observerInvoker.EventTypes;
+    public IEnumerable<EventType> EventTypes => observerInvoker.EventTypes;
 
     /// <summary>
     /// Handle next event.
@@ -99,7 +87,7 @@ public class ObserverHandler
     {
         BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
 
-        _causationManager.Add(CausationType, new Dictionary<string, string>
+        causationManager.Add(CausationType, new Dictionary<string, string>
         {
             { CausationObserverIdProperty, ObserverId.ToString() },
             { CausationEventTypeIdProperty, metadata.Type.Id.ToString() },
@@ -108,7 +96,7 @@ public class ObserverHandler
             { CausationEventSequenceNumberProperty, metadata.SequenceNumber.ToString() }
         });
 
-        await _observerInvoker.Invoke(content, context);
+        await observerInvoker.Invoke(content, context);
 
         BaseIdentityProvider.ClearCurrentIdentity();
     }

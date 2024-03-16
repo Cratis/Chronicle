@@ -11,19 +11,14 @@ namespace Cratis.Projections;
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
-public class CountBuilder<TModel, TEvent, TProperty> : IPropertyExpressionBuilder
+/// <remarks>
+/// Initializes a new instance of the <see cref="CountBuilder{TModel, TEvent, TProperty}"/> class.
+/// </remarks>
+/// <param name="targetProperty">Target property we're building for.</param>
+public class CountBuilder<TModel, TEvent, TProperty>(PropertyPath targetProperty) : IPropertyExpressionBuilder
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CountBuilder{TModel, TEvent, TProperty}"/> class.
-    /// </summary>
-    /// <param name="targetProperty">Target property we're building for.</param>
-    public CountBuilder(PropertyPath targetProperty)
-    {
-        TargetProperty = targetProperty;
-    }
-
     /// <inheritdoc/>
-    public PropertyPath TargetProperty { get; }
+    public PropertyPath TargetProperty { get; } = targetProperty;
 
     /// <inheritdoc/>
     public string Build() => "$count()";

@@ -11,30 +11,21 @@ namespace Cratis.Kernel.Domain.Compliance.GDPR;
 /// <summary>
 /// Represents the domain API for PII.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="PII"/> class.
+/// </remarks>
+/// <param name="eventLog"><see cref="IEventLog"/> for appending to.</param>
+/// <param name="piiManager"><see cref="IPIIManager"/> for key management.</param>
 [Route("/api/compliance/gdpr/pii")]
-public class PII : ControllerBase
+public class PII(IEventLog eventLog, IPIIManager piiManager) : ControllerBase
 {
-    readonly IEventLog _eventLog;
-    readonly IPIIManager _piiManager;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PII"/> class.
-    /// </summary>
-    /// <param name="eventLog"><see cref="IEventLog"/> for appending to.</param>
-    /// <param name="piiManager"><see cref="IPIIManager"/> for key management.</param>
-    public PII(IEventLog eventLog, IPIIManager piiManager)
-    {
-        _eventLog = eventLog;
-        _piiManager = piiManager;
-    }
-
     /// <summary>
     /// Create and register a key.
     /// </summary>
     /// <param name="command"><see cref="CreateAndRegisterKeyFor"/> payload.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost]
-    public Task CreateAndRegisterKeyFor([FromBody] CreateAndRegisterKeyFor command) => _piiManager.CreateAndRegisterKeyFor(command.Identifier);
+    public Task CreateAndRegisterKeyFor([FromBody] CreateAndRegisterKeyFor command) => piiManager.CreateAndRegisterKeyFor(command.Identifier);
 
     /// <summary>
     /// Delete PII for a person.
@@ -42,5 +33,5 @@ public class PII : ControllerBase
     /// <param name="command"><see cref="DeletePIIForPerson"/> payload.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("delete")]
-    public Task DeletePIIForPerson([FromBody] DeletePIIForPerson command) => _eventLog.Append(command.PersonId, new PersonalInformationForPersonDeleted());
+    public Task DeletePIIForPerson([FromBody] DeletePIIForPerson command) => eventLog.Append(command.PersonId, new PersonalInformationForPersonDeleted());
 }

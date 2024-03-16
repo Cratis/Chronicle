@@ -6,14 +6,9 @@ namespace Cratis.Kernel.Grains.Workers;
 /// <summary>
 /// Exception that gets thrown when the maximum concurrency level is invalid.
 /// </summary>
-public class InvalidMaximumConcurrencyLevel : Exception
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="InvalidMaximumConcurrencyLevel"/> class.
-    /// </summary>
-    /// <param name="maxDegreeOfParallelism">The degree of parallelism configured.</param>
-    public InvalidMaximumConcurrencyLevel(int maxDegreeOfParallelism)
-        : base($"Invalid maximum concurrency level: {maxDegreeOfParallelism}. Must be at least 1.")
-    {
-    }
-}
+/// <remarks>
+/// Initializes a new instance of the <see cref="InvalidMaximumConcurrencyLevel"/> class.
+/// </remarks>
+/// <param name="maxDegreeOfParallelism">The degree of parallelism configured.</param>
+public class InvalidMaximumConcurrencyLevel(int maxDegreeOfParallelism)
+    : Exception($"Invalid maximum concurrency level: {maxDegreeOfParallelism}. Must be at least 1.");

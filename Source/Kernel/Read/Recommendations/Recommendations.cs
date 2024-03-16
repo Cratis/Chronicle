@@ -12,20 +12,13 @@ namespace Cratis.Kernel.Read.Recommendations;
 /// <summary>
 /// Represents the API for working with recommendations.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Recommendations"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 [Route("/api/events/store/{microserviceId}/{tenantId}/recommendations")]
-public class Recommendations : ControllerBase
+public class Recommendations(IStorage storage) : ControllerBase
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Recommendations"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public Recommendations(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <summary>
     /// Get all observers.
     /// </summary>
@@ -37,7 +30,7 @@ public class Recommendations : ControllerBase
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
-        var recommendations = await _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations.GeAll();
+        var recommendations = await storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations.GeAll();
         return Convert(recommendations);
     }
 
@@ -53,7 +46,7 @@ public class Recommendations : ControllerBase
         [FromRoute] TenantId tenantId)
     {
         var clientObservable = new ClientObservable<IEnumerable<RecommendationInformation>>();
-        var recommendations = _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations;
+        var recommendations = storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations;
         var observable = recommendations.ObserveRecommendations();
         var subscription = observable.Subscribe(recommendations => clientObservable.OnNext(Convert(recommendations)));
         clientObservable.ClientDisconnected = () =>
@@ -68,6 +61,6 @@ public class Recommendations : ControllerBase
         return Task.FromResult(clientObservable);
     }
 
-    IEnumerable<RecommendationInformation> Convert(IEnumerable<RecommendationState> recommendations) =>
+    RecommendationInformation[] Convert(IEnumerable<RecommendationState> recommendations) =>
          recommendations.Select(_ => new RecommendationInformation(_.Id, _.Name, _.Description, _.Type, _.Occurred)).ToArray();
 }

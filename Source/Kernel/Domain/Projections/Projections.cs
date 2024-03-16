@@ -15,29 +15,18 @@ namespace Cratis.Kernel.Domain.Projections;
 /// <summary>
 /// Represents the API for projections.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Projections"/> class.
+/// </remarks>
+/// <param name="grainFactory">Orleans <see cref="IGrainFactory"/>.</param>
+/// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for deserializing projections.</param>
+/// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
 [Route("/api/events/store/{microserviceId}/projections")]
-public class Projections : ControllerBase
+public class Projections(
+    IGrainFactory grainFactory,
+    IJsonProjectionSerializer projectionSerializer,
+    JsonSerializerOptions jsonSerializerOptions) : ControllerBase
 {
-    readonly IGrainFactory _grainFactory;
-    readonly IJsonProjectionSerializer _projectionSerializer;
-    readonly JsonSerializerOptions _jsonSerializerOptions;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Projections"/> class.
-    /// </summary>
-    /// <param name="grainFactory">Orleans <see cref="IGrainFactory"/>.</param>
-    /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for deserializing projections.</param>
-    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
-    public Projections(
-        IGrainFactory grainFactory,
-        IJsonProjectionSerializer projectionSerializer,
-        JsonSerializerOptions jsonSerializerOptions)
-    {
-        _grainFactory = grainFactory;
-        _projectionSerializer = projectionSerializer;
-        _jsonSerializerOptions = jsonSerializerOptions;
-    }
-
     /// <summary>
     /// Register projections with pipelines.
     /// </summary>
@@ -49,11 +38,11 @@ public class Projections : ControllerBase
         [FromRoute] MicroserviceId microserviceId,
         [FromBody] RegisterProjections payload)
     {
-        var projections = _grainFactory.GetGrain<IProjections>(0);
+        var projections = grainFactory.GetGrain<IProjections>(0);
         var projectionsAndPipelines = payload.Projections.Select(_ =>
             new ProjectionAndPipeline(
-                _projectionSerializer.Deserialize(_.Projection),
-                _.Pipeline.Deserialize<ProjectionPipelineDefinition>(_jsonSerializerOptions)!)).ToArray();
+                projectionSerializer.Deserialize(_.Projection),
+                _.Pipeline.Deserialize<ProjectionPipelineDefinition>(jsonSerializerOptions)!)).ToArray();
 
         await projections.Register(microserviceId, projectionsAndPipelines);
     }
@@ -77,7 +66,7 @@ public class Projections : ControllerBase
             immediateProjection.EventSequenceId,
             immediateProjection.ModelKey);
 
-        var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
+        var projection = grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
         return await projection.GetModelInstance();
     }
 
@@ -103,7 +92,7 @@ public class Projections : ControllerBase
             immediateProjection.ModelKey,
             correlationId);
 
-        var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
+        var projection = grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
         return await projection.GetModelInstance();
     }
 
@@ -129,7 +118,7 @@ public class Projections : ControllerBase
             immediateProjection.ModelKey,
             correlationId);
 
-        var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
+        var projection = grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
         return await projection.GetCurrentModelInstanceWithAdditionalEventsApplied(immediateProjection.Events);
     }
 
@@ -155,7 +144,7 @@ public class Projections : ControllerBase
             immediateProjection.ModelKey,
             correlationId);
 
-        var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
+        var projection = grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
         await projection.Dehydrate();
     }
 }

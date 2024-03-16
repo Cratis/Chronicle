@@ -12,19 +12,12 @@ namespace Cratis.Kernel.Grains.Jobs;
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling job state storage.
 /// </summary>
-public class JobStepGrainStorageProvider : IGrainStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="JobStepGrainStorageProvider"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JobStepGrainStorageProvider"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public JobStepGrainStorageProvider(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
@@ -40,8 +33,8 @@ public class JobStepGrainStorageProvider : IGrainStorage
         if (grainId.TryGetGuidKey(out var jobStepId, out var keyExtension))
         {
             var key = (JobStepKey)keyExtension!;
-            var storage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
-            var state = await storage.Read<T>(key.JobId, jobStepId);
+            var @namespace = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
+            var state = await @namespace.Read<T>(key.JobId, jobStepId);
             if (state is not null)
             {
                 grainState.State = state;
@@ -57,25 +50,25 @@ public class JobStepGrainStorageProvider : IGrainStorage
         if (grainId.TryGetGuidKey(out var jobStepId, out var keyExtension))
         {
             var key = (JobStepKey)keyExtension!;
-            var storage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
+            var @namespace = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
 
             var actualState = (grainState.State as JobStepState)!;
 
             switch (GetStatus(actualState))
             {
                 case JobStepStatus.Failed:
-                    await storage.MoveToFailed(key.JobId, jobStepId, grainState.State);
+                    await @namespace.MoveToFailed(key.JobId, jobStepId, grainState.State);
                     break;
 
                 case JobStepStatus.Stopped:
                 case JobStepStatus.Succeeded:
-                    await storage.Remove(key.JobId, jobStepId);
+                    await @namespace.Remove(key.JobId, jobStepId);
                     break;
 
                 case JobStepStatus.Paused:
                 case JobStepStatus.Running:
                 case JobStepStatus.Scheduled:
-                    await storage.Save(key.JobId, jobStepId, grainState.State);
+                    await @namespace.Save(key.JobId, jobStepId, grainState.State);
                     break;
             }
         }

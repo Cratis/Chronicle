@@ -45,7 +45,7 @@ public class ClientBuilder : IClientBuilder
     const string ProgramIdentifierMetadataKey = "programIdentifier";
 
     readonly OptionsBuilder<ClientOptions> _optionsBuilder;
-    readonly Dictionary<string, string> _metadata = new();
+    readonly Dictionary<string, string> _metadata = [];
     Type _identityProviderType;
 
     /// <summary>

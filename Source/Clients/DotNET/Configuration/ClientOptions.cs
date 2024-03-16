@@ -6,6 +6,4 @@ namespace Cratis.Configuration;
 /// <summary>
 /// Represents the client configuration.
 /// </summary>
-public class ClientOptions
-{
-}
+public class ClientOptions;

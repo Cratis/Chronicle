@@ -14,20 +14,13 @@ namespace Cratis.Kernel.Storage.MongoDB.Jobs;
 /// <summary>
 /// Represents an implementation of <see cref="IJobStorage"/> for MongoDB.
 /// </summary>
-public class JobStorage : IJobStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="JobStorage"/> class.
+/// </remarks>
+/// <param name="database"><see cref="IEventStoreNamespaceDatabase"/> for persistence.</param>
+public class JobStorage(IEventStoreNamespaceDatabase database) : IJobStorage
 {
-    readonly IEventStoreNamespaceDatabase _database;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JobStorage"/> class.
-    /// </summary>
-    /// <param name="database"><see cref="IEventStoreNamespaceDatabase"/> for persistence.</param>
-    public JobStorage(IEventStoreNamespaceDatabase database)
-    {
-        _database = database;
-    }
-
-    IMongoCollection<JobState> Collection => _database.GetCollection<JobState>(WellKnownCollectionNames.Jobs);
+    IMongoCollection<JobState> Collection => database.GetCollection<JobState>(WellKnownCollectionNames.Jobs);
 
     /// <inheritdoc/>
     public async Task<JobState> GetJob(JobId jobId)
@@ -96,7 +89,7 @@ public class JobStorage : IJobStorage
 
     FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid id) => Builders<TDocument>.Filter.Eq(new StringFieldDefinition<TDocument, Guid>("_id"), id);
 
-    IMongoCollection<TJobState> GetTypedCollection<TJobState>() => _database.GetCollection<TJobState>(WellKnownCollectionNames.Jobs);
+    IMongoCollection<TJobState> GetTypedCollection<TJobState>() => database.GetCollection<TJobState>(WellKnownCollectionNames.Jobs);
 
     async Task<List<JobState>> GetJobsRaw(params JobStatus[] statuses)
     {

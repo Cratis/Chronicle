@@ -11,6 +11,8 @@ namespace Cratis.Kernel.Storage.MongoDB.Observation;
 /// </summary>
 public static class MongoCollectionExtensions
 {
+    static readonly string[] _mongoDBOperations = ["insert", "replace", "update", "delete"];
+
     /// <summary>
     /// Observe a collection for changes.
     /// </summary>
@@ -31,7 +33,7 @@ public static class MongoCollectionExtensions
         var observable = new BehaviorSubject<IEnumerable<TResult>>(initialItems);
         var operationTypeFilter = Builders<ChangeStreamDocument<TDocument>>.Filter.In(
             new StringFieldDefinition<ChangeStreamDocument<TDocument>, string>("operationType"),
-            new[] { "insert", "replace", "update", "delete" });
+            _mongoDBOperations);
 
         var actualFilter = filter is not null ?
                             Builders<ChangeStreamDocument<TDocument>>.Filter.And(operationTypeFilter, filter) :

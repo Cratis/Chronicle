@@ -33,7 +33,7 @@ public class AggregateRoot : IAggregateRoot
     /// <summary>
     /// Cratis Internal: The uncommitted events for the aggregate root.
     /// </summary>
-    internal readonly List<object> _uncommittedEvents = new();
+    internal readonly List<object> _uncommittedEvents = [];
 
     /// <summary>
     /// Cratis Internal: The event handlers for the aggregate root.

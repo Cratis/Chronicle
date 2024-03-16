@@ -13,19 +13,12 @@ namespace Cratis.Kernel.Grains.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling event sequence state storage.
 /// </summary>
-public class EventSequencesStorageProvider : IGrainStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequencesStorageProvider"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
+public class EventSequencesStorageProvider(IStorage storage) : IGrainStorage
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequencesStorageProvider"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
-    public EventSequencesStorageProvider(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
 
@@ -36,8 +29,8 @@ public class EventSequencesStorageProvider : IGrainStorage
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
         var key = EventSequenceKey.Parse(keyAsString!);
 
-        var eventTypesStorage = _storage.GetEventStore((string)key.MicroserviceId).EventTypes;
-        var eventSequenceStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).GetEventSequence(eventSequenceId);
+        var eventTypesStorage = storage.GetEventStore((string)key.MicroserviceId).EventTypes;
+        var eventSequenceStorage = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).GetEventSequence(eventSequenceId);
         actualGrainState.State = await eventSequenceStorage.GetState();
         await HandleTailSequenceNumbersForEventTypes(eventTypesStorage, eventSequenceStorage, actualGrainState);
     }
@@ -48,7 +41,7 @@ public class EventSequencesStorageProvider : IGrainStorage
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
         var key = EventSequenceKey.Parse(keyAsString!);
         var eventSequenceState = (grainState.State as EventSequenceState)!;
-        var eventSequenceStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).GetEventSequence(eventSequenceId);
+        var eventSequenceStorage = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).GetEventSequence(eventSequenceId);
         await eventSequenceStorage.SaveState(eventSequenceState);
     }
 

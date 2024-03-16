@@ -13,17 +13,12 @@ namespace Cratis.Kernel.Storage.MongoDB;
 /// <summary>
 /// Represents an implementation of <see cref="IExpandoObjectConverter"/>.
 /// </summary>
-public class ExpandoObjectConverter : IExpandoObjectConverter
+/// <remarks>
+/// Initializes a new instance of the <see cref="ExpandoObjectConverter"/> class.
+/// </remarks>
+/// <param name="typeFormats"><see cref="ITypeFormats"/> for mapping type formats in a schema.</param>
+public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectConverter
 {
-    readonly ITypeFormats _typeFormats;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ExpandoObjectConverter"/> class.
-    /// </summary>
-    /// <param name="typeFormats"><see cref="ITypeFormats"/> for mapping type formats in a schema.</param>
-    public ExpandoObjectConverter(ITypeFormats typeFormats) =>
-        _typeFormats = typeFormats;
-
     /// <inheritdoc/>
     public BsonDocument ToBsonDocument(ExpandoObject expandoObject, JsonSchema schema)
     {
@@ -106,7 +101,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return new BsonArray(items);
         }
 
-        if (_typeFormats.IsKnown(schemaProperty.Format))
+        if (typeFormats.IsKnown(schemaProperty.Format))
         {
             return ConvertToBsonValueBasedOnSchemaType(value, schemaProperty);
         }
@@ -135,14 +130,14 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return array.Select(_ => ConvertFromBsonValue(_, schemaProperty)).ToArray();
         }
 
-        if (_typeFormats.IsKnown(schemaProperty.Format))
+        if (typeFormats.IsKnown(schemaProperty.Format))
         {
-            return bsonValue.ToTargetType(_typeFormats.GetTypeForFormat(schemaProperty.Format));
+            return bsonValue.ToTargetType(typeFormats.GetTypeForFormat(schemaProperty.Format));
         }
         return ConvertBsonValueFromUnknownFormat(bsonValue, schemaProperty);
     }
 
-    IDictionary<object, object> ToDictionary(BsonDocument childDocument)
+    Dictionary<object, object> ToDictionary(BsonDocument childDocument)
     {
         var dictionary = new Dictionary<object, object>();
         foreach (var element in childDocument.Elements)
@@ -271,7 +266,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
     BsonValue ConvertToBsonValueBasedOnSchemaType(object? input, JsonSchema schemaProperty)
     {
-        var targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
+        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format);
         return input.ToBsonValue(targetType);
     }
 

@@ -9,34 +9,23 @@ namespace Cratis.Kernel.Grains.Observation.States;
 /// <summary>
 /// Represents an implementation of <see cref="IReplayEvaluator"/>.
 /// </summary>
-public class ReplayEvaluator : IReplayEvaluator
+/// <remarks>
+/// Initializes a new instance of the <see cref="ReplayEvaluator"/> class.
+/// </remarks>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
+/// <param name="microserviceId">The <see cref="MicroserviceId"/> the evaluator is for.</param>
+/// <param name="tenantId">The <see cref="TenantId"/> the evaluator is for.</param>
+public class ReplayEvaluator(
+    IGrainFactory grainFactory,
+    MicroserviceId microserviceId,
+    TenantId tenantId) : IReplayEvaluator
 {
-    readonly IGrainFactory _grainFactory;
-    readonly MicroserviceId _microserviceId;
-    readonly TenantId _tenantId;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReplayEvaluator"/> class.
-    /// </summary>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    /// <param name="microserviceId">The <see cref="MicroserviceId"/> the evaluator is for.</param>
-    /// <param name="tenantId">The <see cref="TenantId"/> the evaluator is for.</param>
-    public ReplayEvaluator(
-        IGrainFactory grainFactory,
-        MicroserviceId microserviceId,
-        TenantId tenantId)
-    {
-        _grainFactory = grainFactory;
-        _microserviceId = microserviceId;
-        _tenantId = tenantId;
-    }
-
     /// <inheritdoc/>
     public async Task<bool> Evaluate(ReplayEvaluationContext context)
     {
         if (NeedsToReplay(context))
         {
-            var recommendationsManager = _grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(_microserviceId, _tenantId));
+            var recommendationsManager = grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(microserviceId, tenantId));
             await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
                 "Event types has changed.",
                 new ReplayCandidateRequest

@@ -9,20 +9,13 @@ namespace Cratis.Kernel.Read.Projections;
 /// <summary>
 /// Represents the API for projections.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Projections"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 [Route("/api/events/store/{microserviceId}/projections")]
-public class Projections : ControllerBase
+public class Projections(IStorage storage) : ControllerBase
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Projections"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public Projections(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <summary>
     /// Gets all projections.
     /// </summary>
@@ -31,7 +24,7 @@ public class Projections : ControllerBase
     [HttpGet]
     public async Task<IEnumerable<Projection>> AllProjections([FromRoute] MicroserviceId microserviceId)
     {
-        var projections = await _storage.GetEventStore((string)microserviceId).Projections.GetAll();
+        var projections = await storage.GetEventStore((string)microserviceId).Projections.GetAll();
         return projections.Select(_ => new Projection(
             _.Identifier,
             _.Name,

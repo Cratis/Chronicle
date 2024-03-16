@@ -22,61 +22,44 @@ namespace Cratis.Kernel.Server;
 /// <summary>
 /// Represents a <see cref="IPerformBootProcedure"/> for the event store.
 /// </summary>
-public class BootProcedure : IPerformBootProcedure
+/// <remarks>
+/// Initializes a new instance of the <see cref="BootProcedure"/> class.
+/// </remarks>
+/// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting services.</param>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
+/// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
+/// <param name="eventTypes"><see cref="IEventTypes"/> for registering.</param>
+/// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
+/// <param name="logger">Logger for logging.</param>
+public class BootProcedure(
+    IServiceProvider serviceProvider,
+    IGrainFactory grainFactory,
+    KernelConfiguration configuration,
+    IEventTypes eventTypes,
+    IJsonSchemaGenerator schemaGenerator,
+    ILogger<BootProcedure> logger) : IPerformBootProcedure
 {
-    readonly IServiceProvider _serviceProvider;
-    readonly IGrainFactory _grainFactory;
-    readonly KernelConfiguration _configuration;
-    readonly IEventTypes _eventTypes;
-    readonly IJsonSchemaGenerator _schemaGenerator;
-    readonly ILogger<BootProcedure> _logger;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="BootProcedure"/> class.
-    /// </summary>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting services.</param>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    /// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> for registering.</param>
-    /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
-    /// <param name="logger">Logger for logging.</param>
-    public BootProcedure(
-        IServiceProvider serviceProvider,
-        IGrainFactory grainFactory,
-        KernelConfiguration configuration,
-        IEventTypes eventTypes,
-        IJsonSchemaGenerator schemaGenerator,
-        ILogger<BootProcedure> logger)
-    {
-        _serviceProvider = serviceProvider;
-        _grainFactory = grainFactory;
-        _configuration = configuration;
-        _eventTypes = eventTypes;
-        _schemaGenerator = schemaGenerator;
-        _logger = logger;
-    }
-
     /// <inheritdoc/>
     public void Perform()
     {
         Task.Run(async () =>
         {
-            var eventTypeRegistrations = _eventTypes.AllClrTypes.Select(_ =>
+            var eventTypeRegistrations = eventTypes.AllClrTypes.Select(_ =>
             {
                 var type = _;
                 return new EventTypeRegistration
                 {
-                    Type = _eventTypes.GetEventTypeFor(type)!.ToContract(),
+                    Type = eventTypes.GetEventTypeFor(type)!.ToContract(),
                     FriendlyName = type.Name,
-                    Schema = _schemaGenerator.Generate(type).ToJson()
+                    Schema = schemaGenerator.Generate(type).ToJson()
                 };
             });
 
-            var storage = _serviceProvider.GetRequiredService<IStorage>();
+            var storage = serviceProvider.GetRequiredService<IStorage>();
 
-            foreach (var (microserviceId, microservice) in _configuration.Microservices)
+            foreach (var (microserviceId, microservice) in configuration.Microservices)
             {
-                _logger.PopulateSchemaStore();
+                logger.PopulateSchemaStore();
                 var eventStoreStorage = storage.GetEventStore(microserviceId);
                 await eventStoreStorage.EventTypes.Populate();
 
@@ -89,31 +72,31 @@ public class BootProcedure : IPerformBootProcedure
                         schema);
                 }
 
-                _logger.PopulateIdentityStore();
+                logger.PopulateIdentityStore();
                 await eventStoreStorage.Identities.Populate();
 
-                foreach (var (tenantId, _) in _configuration.Tenants)
+                foreach (var (tenantId, _) in configuration.Tenants)
                 {
-                    _logger.RehydratingEventSequences(microserviceId, tenantId);
+                    logger.RehydratingEventSequences(microserviceId, tenantId);
                     var stopwatch = Stopwatch.StartNew();
-                    await _grainFactory.GetGrain<IEventSequences>(0, new EventSequencesKey(microserviceId, tenantId)).Rehydrate();
+                    await grainFactory.GetGrain<IEventSequences>(0, new EventSequencesKey(microserviceId, tenantId)).Rehydrate();
                     stopwatch.Stop();
-                    _logger.RehydratedEventSequences(microserviceId, tenantId, stopwatch.Elapsed);
+                    logger.RehydratedEventSequences(microserviceId, tenantId, stopwatch.Elapsed);
 
-                    _logger.RehydrateJobs(microserviceId, tenantId);
-                    await _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(microserviceId, tenantId)).Rehydrate();
+                    logger.RehydrateJobs(microserviceId, tenantId);
+                    await grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(microserviceId, tenantId)).Rehydrate();
 
-                    _logger.RehydrateObservers(microserviceId, tenantId);
-                    await _grainFactory.GetGrain<IObservers>(0, new ObserversKey(microserviceId, tenantId)).Rehydrate();
+                    logger.RehydrateObservers(microserviceId, tenantId);
+                    await grainFactory.GetGrain<IObservers>(0, new ObserversKey(microserviceId, tenantId)).Rehydrate();
                 }
             }
 
-            _logger.RehydrateProjections();
-            var projections = _grainFactory.GetGrain<IProjections>(0);
+            logger.RehydrateProjections();
+            var projections = grainFactory.GetGrain<IProjections>(0);
             await projections.Rehydrate();
 
-            _logger.PrimingEventSequenceCaches();
-            var eventSequenceCaches = _serviceProvider.GetRequiredService<IEventSequenceCaches>()!;
+            logger.PrimingEventSequenceCaches();
+            var eventSequenceCaches = serviceProvider.GetRequiredService<IEventSequenceCaches>()!;
             await eventSequenceCaches.PrimeAll();
         }).Wait();
     }

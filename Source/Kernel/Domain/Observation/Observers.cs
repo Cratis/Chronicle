@@ -13,20 +13,13 @@ namespace Cratis.Kernel.Domain.Observation;
 /// <summary>
 /// Represents the API for working with observers.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Observers"/> class.
+/// </remarks>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
 [Route("/api/events/store/{microserviceId}/observers")]
-public class Observers : ControllerBase
+public class Observers(IGrainFactory grainFactory) : ControllerBase
 {
-    readonly IGrainFactory _grainFactory;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Observers"/> class.
-    /// </summary>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    public Observers(IGrainFactory grainFactory)
-    {
-        _grainFactory = grainFactory;
-    }
-
     /// <summary>
     /// Rewind a specific observer for a microservice and tenant.
     /// </summary>
@@ -40,7 +33,7 @@ public class Observers : ControllerBase
         [FromRoute] TenantId tenantId,
         [FromRoute] ObserverId observerId)
     {
-        var observer = _grainFactory.GetGrain<IObserver>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
+        var observer = grainFactory.GetGrain<IObserver>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
         await observer.Replay();
     }
 
@@ -59,7 +52,7 @@ public class Observers : ControllerBase
         [FromRoute] ObserverId observerId,
         [FromRoute] string partition)
     {
-        var observer = _grainFactory.GetGrain<IObserver>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
+        var observer = grainFactory.GetGrain<IObserver>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
         await observer.TryRecoverFailedPartition(new Key(partition, ArrayIndexers.NoIndexers));
     }
 
@@ -78,7 +71,7 @@ public class Observers : ControllerBase
         [FromRoute] ObserverId observerId,
         [FromRoute] string partition)
     {
-        var observer = _grainFactory.GetGrain<IObserver>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
+        var observer = grainFactory.GetGrain<IObserver>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
         await observer.ReplayPartition(new Key(partition, ArrayIndexers.NoIndexers));
     }
 }

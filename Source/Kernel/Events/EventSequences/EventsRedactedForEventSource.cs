@@ -10,7 +10,7 @@ namespace Cratis.Kernel.Events.EventSequences;
 /// The event that occurs when a collection of events are redacted based on their <see cref="EventSourceId"/>.
 /// </summary>
 /// <param name="Microservice">The <see cref="MicroserviceId"/> the event was redacted for.</param>
-/// <param name="TenantId">The <see cref="Execution.TenantId"/> the event was redacted for.</param>
+/// <param name="TenantId">The <see cref="TenantId"/> the event was redacted for.</param>
 /// <param name="Sequence"><see cref="EventSequenceId"/> the event was in.</param>
 /// <param name="EventSourceId"><see cref="EventSourceId"/> representing the events that was redacted.</param>
 /// <param name="EventTypes">Collection of <see cref="EventType"/> to redact.</param>

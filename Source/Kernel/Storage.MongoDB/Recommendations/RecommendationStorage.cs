@@ -12,20 +12,13 @@ namespace Cratis.Kernel.Storage.MongoDB.Recommendations;
 /// <summary>
 /// Represents an implementation of <see cref="IRecommendationStorage"/> for MongoDB.
 /// </summary>
-public class RecommendationStorage : IRecommendationStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="RecommendationStorage"/> class.
+/// </remarks>
+/// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
+public class RecommendationStorage(IEventStoreNamespaceDatabase database) : IRecommendationStorage
 {
-    readonly IEventStoreNamespaceDatabase _database;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RecommendationStorage"/> class.
-    /// </summary>
-    /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
-    public RecommendationStorage(IEventStoreNamespaceDatabase database)
-    {
-        _database = database;
-    }
-
-    IMongoCollection<RecommendationState> Collection => _database.GetCollection<RecommendationState>(WellKnownCollectionNames.Recommendations);
+    IMongoCollection<RecommendationState> Collection => database.GetCollection<RecommendationState>(WellKnownCollectionNames.Recommendations);
 
     /// <inheritdoc/>
     public async Task<RecommendationState?> Get(RecommendationId recommendationId)

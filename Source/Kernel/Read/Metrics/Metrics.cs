@@ -16,7 +16,7 @@ public class Metrics : ControllerBase
     /// <summary>
     /// Gets the internal collection of metrics.
     /// </summary>
-    internal static MetricCollection _metrics = new();
+    internal static MetricCollection _metrics = [];
 
     /// <summary>
     /// Observe all metrics.

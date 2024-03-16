@@ -14,29 +14,18 @@ namespace Cratis.Kernel.Domain.Observation;
 /// <summary>
 /// Represents the API for working with observers.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Observers"/> class.
+/// </remarks>
+/// <param name="configuration">The Kernel configuration.</param>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [Route("/api/events/store/{microserviceId}/reducers")]
-public class Reducers : ControllerBase
+public class Reducers(
+    KernelConfiguration configuration,
+    IGrainFactory grainFactory,
+    ILogger<Reducers> logger) : ControllerBase
 {
-    readonly KernelConfiguration _configuration;
-    readonly IGrainFactory _grainFactory;
-    readonly ILogger<Reducers> _logger;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Observers"/> class.
-    /// </summary>
-    /// <param name="configuration">The Kernel configuration.</param>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public Reducers(
-        KernelConfiguration configuration,
-        IGrainFactory grainFactory,
-        ILogger<Reducers> logger)
-    {
-        _configuration = configuration;
-        _grainFactory = grainFactory;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Register client observers for a specific microservice and unique connection.
     /// </summary>
@@ -50,15 +39,15 @@ public class Reducers : ControllerBase
         [FromRoute] ConnectionId connectionId,
         [FromBody] IEnumerable<ReducerDefinition> definitions)
     {
-        _logger.RegisterReducers();
+        logger.RegisterReducers();
 
         _ = Task.Run(async () =>
         {
-            var connectedClients = _grainFactory.GetGrain<IConnectedClients>(0);
+            var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
             var client = await connectedClients.GetConnectedClient(connectionId);
-            var tenants = _configuration.Tenants.GetTenantIds();
+            var tenants = configuration.Tenants.GetTenantIds();
 
-            var reducers = _grainFactory.GetGrain<IClientReducers>(microserviceId);
+            var reducers = grainFactory.GetGrain<IClientReducers>(microserviceId);
             await reducers.Register(connectionId, definitions, tenants);
         });
 

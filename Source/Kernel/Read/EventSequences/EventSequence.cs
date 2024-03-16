@@ -16,29 +16,18 @@ namespace Cratis.Kernel.Read.EventSequences;
 /// <summary>
 /// Represents the API for working with the event log.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequence"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
+/// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
+/// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 [Route("/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}")]
-public class EventSequence : ControllerBase
+public class EventSequence(
+    IStorage storage,
+    IGrainFactory grainFactory,
+    JsonSerializerOptions jsonSerializerOptions) : ControllerBase
 {
-    readonly IStorage _storage;
-    readonly IGrainFactory _grainFactory;
-    readonly JsonSerializerOptions _jsonSerializerOptions;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequence"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
-    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
-    public EventSequence(
-        IStorage storage,
-        IGrainFactory grainFactory,
-        JsonSerializerOptions jsonSerializerOptions)
-    {
-        _storage = storage;
-        _grainFactory = grainFactory;
-        _jsonSerializerOptions = jsonSerializerOptions;
-    }
-
     /// <summary>
     /// Get the head sequence number.
     /// </summary>
@@ -136,7 +125,7 @@ public class EventSequence : ControllerBase
             result.AddRange(cursor.Current.Select(_ => new AppendedEventWithJsonAsContent(
                 _.Metadata,
                 _.Context,
-                JsonSerializer.SerializeToNode(_.Content, _jsonSerializerOptions)!)));
+                JsonSerializer.SerializeToNode(_.Content, jsonSerializerOptions)!)));
         }
         return new(result, tail);
     }
@@ -184,7 +173,7 @@ public class EventSequence : ControllerBase
             result.AddRange(cursor.Current.Select(_ => new AppendedEventWithJsonAsContent(
                 _.Metadata,
                 _.Context,
-                JsonSerializer.SerializeToNode(_.Content, _jsonSerializerOptions)!)));
+                JsonSerializer.SerializeToNode(_.Content, jsonSerializerOptions)!)));
         }
         return new(result, tail);
     }
@@ -218,7 +207,7 @@ public class EventSequence : ControllerBase
             result.AddRange(cursor.Current.Select(_ => new AppendedEventWithJsonAsContent(
                 _.Metadata,
                 _.Context,
-                JsonSerializer.SerializeToNode(_.Content, _jsonSerializerOptions)!)));
+                JsonSerializer.SerializeToNode(_.Content, jsonSerializerOptions)!)));
         }
         return result;
     }
@@ -230,8 +219,8 @@ public class EventSequence : ControllerBase
     [HttpGet("histogram")]
     public Task<IEnumerable<EventHistogramEntry>> Histogram(/*[FromRoute] EventSequenceId eventSequenceId*/) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
 
-    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
-    IObserverStorage GetObserverStorage(MicroserviceId microserviceId, TenantId tenantId) => _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers;
+    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
+    IObserverStorage GetObserverStorage(MicroserviceId microserviceId, TenantId tenantId) => storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers;
     IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
-        _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new EventSequenceKey(microserviceId, tenantId));
+        grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new EventSequenceKey(microserviceId, tenantId));
 }

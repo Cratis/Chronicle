@@ -27,7 +27,7 @@ public class ImmediateProjections : IImmediateProjections
     readonly IJsonSchemaGenerator _schemaGenerator;
     readonly IExecutionContextManager _executionContextManager;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly List<ProjectionDefinition> _definitions = new();
+    readonly List<ProjectionDefinition> _definitions = [];
     readonly IDictionary<Type, ProjectionDefinition> _definitionsByModelType = new Dictionary<Type, ProjectionDefinition>();
 
     /// <summary>

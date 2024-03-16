@@ -9,25 +9,18 @@ namespace Cratis.Kernel.Read.Configuration.Tenants;
 /// <summary>
 /// Represents the API for working with tenants.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Microservices"/> class.
+/// </remarks>
+/// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
 [Route("/api/configuration/tenants")]
-public class Tenants : ControllerBase
+public class Tenants(KernelConfiguration configuration) : ControllerBase
 {
-    readonly KernelConfiguration _configuration;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Microservices"/> class.
-    /// </summary>
-    /// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
-    public Tenants(KernelConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
-
     /// <summary>
     /// Get all the tenants.
     /// </summary>
     /// <returns>Collection of <see cref="TenantInfo"/>.</returns>
     [HttpGet]
     public Task<IEnumerable<TenantInfo>> AllTenants() =>
-       Task.FromResult(_configuration.Tenants.Select(_ => new TenantInfo(_.Key, _.Value.Name)).ToArray().AsEnumerable());
+       Task.FromResult(configuration.Tenants.Select(_ => new TenantInfo(_.Key, _.Value.Name)).ToArray().AsEnumerable());
 }

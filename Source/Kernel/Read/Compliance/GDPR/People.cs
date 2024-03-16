@@ -11,23 +11,19 @@ namespace Cratis.Kernel.Read.Compliance.GDPR;
 /// <summary>
 /// Represents the API for working with people.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="People"/> class.
+/// </remarks>
+/// <param name="collection">Mongo collection.</param>
 [Route("/api/compliance/gdpr/people")]
-public class People : ControllerBase
+public class People(IMongoCollection<Person> collection) : ControllerBase
 {
-    readonly IMongoCollection<Person> _collection;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="People"/> class.
-    /// </summary>
-    /// <param name="collection">Mongo collection.</param>
-    public People(IMongoCollection<Person> collection) => _collection = collection;
-
     /// <summary>
     /// Get all people.
     /// </summary>
     /// <returns>Client observable of a collection of <see cref="Person">people</see>.</returns>
     [HttpGet]
-    public Task<ClientObservable<IEnumerable<Person>>> AllPeople() => _collection.Observe();
+    public Task<ClientObservable<IEnumerable<Person>>> AllPeople() => collection.Observe();
 
     /// <summary>
     /// Search for people by an arbitrary string.
@@ -38,7 +34,7 @@ public class People : ControllerBase
     public async Task<IEnumerable<Person>> SearchForPeople([FromQuery] string query)
     {
         var filter = Builders<Person>.Filter.Text(query, new TextSearchOptions { CaseSensitive = false, DiacriticSensitive = false });
-        var result = await _collection.FindAsync(filter);
+        var result = await collection.FindAsync(filter);
         return result.ToList();
     }
 }

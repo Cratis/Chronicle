@@ -12,20 +12,13 @@ namespace Cratis.Kernel.Read.Jobs;
 /// <summary>
 /// Represents the API for working with jobs.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Jobs"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 [Route("/api/events/store/{microserviceId}/{tenantId}/jobs")]
-public class Jobs : ControllerBase
+public class Jobs(IStorage storage) : ControllerBase
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Jobs"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public Jobs(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <summary>
     /// Observes all jobs for a specific microservice.
     /// </summary>
@@ -36,7 +29,7 @@ public class Jobs : ControllerBase
     public ClientObservable<IEnumerable<JobState>> AllJobs(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId) =>
-        _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Jobs.ObserveJobs().ToClientObservable();
+        storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Jobs.ObserveJobs().ToClientObservable();
 
     /// <summary>
     /// Observes all job steps for a specific job and microservice.
@@ -50,5 +43,5 @@ public class Jobs : ControllerBase
         [FromRoute] JobId jobId,
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId) =>
-        _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).JobSteps.ObserveForJob(jobId).ToClientObservable();
+        storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).JobSteps.ObserveForJob(jobId).ToClientObservable();
 }

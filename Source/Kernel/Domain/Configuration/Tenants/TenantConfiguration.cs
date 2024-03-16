@@ -9,20 +9,13 @@ namespace Cratis.Kernel.Domain.Configuration.Tenants;
 /// <summary>
 /// Represents the API for working with configuration related to specific tenants.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="TenantConfiguration"/> class.
+/// </remarks>
+/// <param name="grainFactory">Orleans <see cref="IGrainFactory"/>.</param>
 [Route("/api/configuration/tenants/{tenantId}")]
-public class TenantConfiguration : ControllerBase
+public class TenantConfiguration(IGrainFactory grainFactory) : ControllerBase
 {
-    readonly IGrainFactory _grainFactory;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TenantConfiguration"/> class.
-    /// </summary>
-    /// <param name="grainFactory">Orleans <see cref="IGrainFactory"/>.</param>
-    public TenantConfiguration(IGrainFactory grainFactory)
-    {
-        _grainFactory = grainFactory;
-    }
-
     /// <summary>
     /// Set a key/value pair configuration for a specific tenant.
     /// </summary>
@@ -34,7 +27,7 @@ public class TenantConfiguration : ControllerBase
         [FromRoute] TenantId tenantId,
         [FromBody] KeyValuePair<string, string> keyValuePair)
     {
-        var tenantConfiguration = _grainFactory.GetGrain<ITenantConfiguration>(tenantId);
+        var tenantConfiguration = grainFactory.GetGrain<ITenantConfiguration>(tenantId);
         await tenantConfiguration.Set(keyValuePair.Key, keyValuePair.Value);
     }
 }

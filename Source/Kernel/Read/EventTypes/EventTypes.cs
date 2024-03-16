@@ -12,20 +12,13 @@ namespace Cratis.Kernel.Read.EventTypes;
 /// <summary>
 /// Represents the API for working with event types.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventTypes"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 [Route("/api/events/store/{microserviceId}/types")]
-public class EventTypes : ControllerBase
+public class EventTypes(IStorage storage) : ControllerBase
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventTypes"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public EventTypes(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <summary>
     /// Gets all event types.
     /// </summary>
@@ -34,7 +27,7 @@ public class EventTypes : ControllerBase
     [HttpGet]
     public async Task<IEnumerable<EventTypeInformation>> AllEventTypes([FromRoute] MicroserviceId microserviceId)
     {
-        var eventTypes = await _storage.GetEventStore((string)microserviceId).EventTypes.GetLatestForAllEventTypes();
+        var eventTypes = await storage.GetEventStore((string)microserviceId).EventTypes.GetLatestForAllEventTypes();
         return eventTypes.Select(_ =>
             new EventTypeInformation(
                 _.Type.Id.ToString(),
@@ -53,7 +46,7 @@ public class EventTypes : ControllerBase
         [FromQuery] MicroserviceId microserviceId,
         [FromRoute] EventTypeId eventTypeId)
     {
-        var schemas = await _storage.GetEventStore((string)microserviceId).EventTypes.GetAllGenerationsForEventType(new(eventTypeId, 1));
+        var schemas = await storage.GetEventStore((string)microserviceId).EventTypes.GetAllGenerationsForEventType(new(eventTypeId, 1));
         return schemas.Select(_ => JsonDocument.Parse(_.Schema.ToJson()));
     }
 
@@ -65,7 +58,7 @@ public class EventTypes : ControllerBase
     [HttpGet("schemas")]
     public async Task<IEnumerable<EventTypeWithSchemas>> AllEventTypesWithSchemas([FromRoute] MicroserviceId microserviceId)
     {
-        var schemas = await _storage.GetEventStore((string)microserviceId).EventTypes.GetLatestForAllEventTypes();
+        var schemas = await storage.GetEventStore((string)microserviceId).EventTypes.GetLatestForAllEventTypes();
 
         return schemas.Select(_ =>
             new EventTypeWithSchemas(

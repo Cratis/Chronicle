@@ -8,6 +8,4 @@ namespace Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Defines the job for retrying a failed partition for an observer.
 /// </summary>
-public interface IReplayObserverPartition : IJob<ReplayObserverPartitionRequest>
-{
-}
+public interface IReplayObserverPartition : IJob<ReplayObserverPartitionRequest>;

@@ -13,17 +13,13 @@ namespace Cratis.Kernel.Reactions.Compliance.GDPR;
 /// <summary>
 /// Represents an observer for personal information.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="PersonalInformation"/> class.
+/// </remarks>
+/// <param name="piiManager"><see cref="IPIIManager"/> for working with PII.</param>
 [Observer("f0ef19ad-2ea4-4b8e-b93a-a23d176abcfe")]
-public class PersonalInformation
+public class PersonalInformation(IPIIManager piiManager)
 {
-    readonly IPIIManager _piiManager;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PersonalInformation"/> class.
-    /// </summary>
-    /// <param name="piiManager"><see cref="IPIIManager"/> for working with PII.</param>
-    public PersonalInformation(IPIIManager piiManager) => _piiManager = piiManager;
-
     /// <summary>
     /// Handles what needs to happen when personal information is deleted for a person.
     /// </summary>
@@ -42,5 +38,5 @@ public class PersonalInformation
     /// <param name="event">The event.</param>
     /// <param name="context">The context for the event.</param>
     /// <returns>Awaitable task.</returns>
-    public Task PersonalInformationDeleted(PersonalInformationForPersonDeleted @event, EventContext context) => _piiManager.DeleteEncryptionKeyFor(context.EventSourceId.Value);
+    public Task PersonalInformationDeleted(PersonalInformationForPersonDeleted @event, EventContext context) => piiManager.DeleteEncryptionKeyFor(context.EventSourceId.Value);
 }

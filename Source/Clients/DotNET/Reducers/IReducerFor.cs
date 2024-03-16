@@ -7,6 +7,4 @@ namespace Cratis.Reducers;
 /// Defines a reducer.
 /// </summary>
 /// <typeparam name="TTarget">Type of target the reducer is for.</typeparam>
-public interface IReducerFor<TTarget>
-{
-}
+public interface IReducerFor<TTarget>;

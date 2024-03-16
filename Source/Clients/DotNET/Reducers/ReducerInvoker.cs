@@ -14,7 +14,7 @@ namespace Cratis.Reducers;
 public class ReducerInvoker : IReducerInvoker
 {
     static readonly MethodInfo _getResultMethod = typeof(ReducerInvoker).GetMethod(nameof(GetResult), BindingFlags.Instance | BindingFlags.NonPublic)!;
-    readonly Dictionary<Type, MethodInfo> _methodsByEventType = new();
+    readonly Dictionary<Type, MethodInfo> _methodsByEventType = [];
     readonly IServiceProvider _serviceProvider;
     readonly Type _targetType;
 

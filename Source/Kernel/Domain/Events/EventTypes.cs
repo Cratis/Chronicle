@@ -9,20 +9,13 @@ namespace Cratis.Kernel.Domain.Events;
 /// <summary>
 /// Represents the API for working with event types.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventTypes"/> class.
+/// </remarks>
+/// <param name="eventTypes"><see cref="IEventTypes"/> service for actual registration.</param>
 [Route("/api/events/store/{eventStoreName}/types")]
-public class EventTypes : Controller
+public class EventTypes(IEventTypes eventTypes) : Controller
 {
-    readonly IEventTypes _eventTypes;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventTypes"/> class.
-    /// </summary>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> service for actual registration.</param>
-    public EventTypes(IEventTypes eventTypes)
-    {
-        _eventTypes = eventTypes;
-    }
-
     /// <summary>
     /// Register schemas.
     /// </summary>
@@ -33,7 +26,7 @@ public class EventTypes : Controller
     public Task Register(
         [FromRoute] EventStoreName eventStoreName,
         [FromBody] RegisterEventTypes payload) =>
-            _eventTypes.Register(new RegisterEventTypesRequest
+            eventTypes.Register(new RegisterEventTypesRequest
             {
                 EventStoreName = eventStoreName,
                 Types = payload.Types.ToList()

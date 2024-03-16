@@ -13,27 +13,19 @@ namespace Cratis.Rules;
 /// <summary>
 /// Represents a <see cref="ObjectModelValidator"/> for <see cref="RulesFor{TSelf, TCommand}"/>.
 /// </summary>
-public class RuleModelValidator : IModelValidator
+/// <remarks>
+/// Initializes a new instance of the <see cref="RuleModelValidator"/> class.
+/// </remarks>
+/// <param name="ruleSets">The actual collection of <see cref="IRule">business rules</see>.</param>
+/// <param name="rules">The <see cref="IRules"/>.</param>
+public class RuleModelValidator(
+    IEnumerable<IRule> ruleSets,
+    IRules rules) : IModelValidator
 {
-    readonly IRules _rules;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RuleModelValidator"/> class.
-    /// </summary>
-    /// <param name="ruleSets">The actual collection of <see cref="IRule">business rules</see>.</param>
-    /// <param name="rules">The <see cref="IRules"/>.</param>
-    public RuleModelValidator(
-        IEnumerable<IRule> ruleSets,
-        IRules rules)
-    {
-        RuleSets = ruleSets;
-        _rules = rules;
-    }
-
     /// <summary>
     /// Gets the rule sets for the validator.
     /// </summary>
-    public IEnumerable<IRule> RuleSets { get; }
+    public IEnumerable<IRule> RuleSets { get; } = ruleSets;
 
     /// <inheritdoc/>
     public IEnumerable<ModelValidationResult> Validate(ModelValidationContext context)
@@ -45,7 +37,7 @@ public class RuleModelValidator : IModelValidator
 
             var modelIdentifier = GetModelIdentifierIfAny(context, type);
 
-            _rules.ProjectTo(rule, modelIdentifier);
+            rules.ProjectTo(rule, modelIdentifier);
             var validationContextType = typeof(ValidationContext<>).MakeGenericType(context.ModelMetadata.ModelType);
             var validationContext = Activator.CreateInstance(validationContextType, new object[] { context.Model! }) as IValidationContext;
             var result = (rule as IValidator)!.Validate(validationContext);

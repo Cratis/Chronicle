@@ -18,37 +18,22 @@ namespace Cratis.Kernel.Storage.MongoDB.Sinks;
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> for working with projections in MongoDB.
 /// </summary>
-public class Sink : ISink
+/// <remarks>
+/// Initializes a new instance of the <see cref="Sink"/> class.
+/// </remarks>
+/// <param name="model">The <see cref="Model"/> the sink is for.</param>
+/// <param name="converter"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
+/// <param name="collections">Provider for <see cref="ISinkCollections"/> to use.</param>
+/// <param name="changesetConverter">Provider for <see cref="IChangesetConverter"/> for converting changesets.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+public class Sink(
+    Model model,
+    IMongoDBConverter converter,
+    ISinkCollections collections,
+    IChangesetConverter changesetConverter,
+    IExpandoObjectConverter expandoObjectConverter) : ISink
 {
-    readonly Model _model;
-    readonly IMongoDBConverter _converter;
-    readonly ISinkCollections _collections;
-    readonly IChangesetConverter _changesetConverter;
-    readonly IExpandoObjectConverter _expandoObjectConverter;
-
     bool _isReplaying;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Sink"/> class.
-    /// </summary>
-    /// <param name="model">The <see cref="Model"/> the sink is for.</param>
-    /// <param name="converterProvider"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
-    /// <param name="collections">Provider for <see cref="ISinkCollections"/> to use.</param>
-    /// <param name="changesetConverter">Provider for <see cref="IChangesetConverter"/> for converting changesets.</param>
-    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
-    public Sink(
-        Model model,
-        IMongoDBConverter converterProvider,
-        ISinkCollections collections,
-        IChangesetConverter changesetConverter,
-        IExpandoObjectConverter expandoObjectConverter)
-    {
-        _expandoObjectConverter = expandoObjectConverter;
-        _model = model;
-        _converter = converterProvider;
-        _collections = collections;
-        _changesetConverter = changesetConverter;
-    }
 
     /// <inheritdoc/>
     public SinkTypeName Name => "MongoDB";
@@ -56,16 +41,16 @@ public class Sink : ISink
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
-    IMongoCollection<BsonDocument> Collection => _collections.GetCollection();
+    IMongoCollection<BsonDocument> Collection => collections.GetCollection();
 
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
-        var result = await Collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", _converter.ToBsonValue(key)));
+        var result = await Collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key)));
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
-            return _expandoObjectConverter.ToExpandoObject(instance, _model.Schema);
+            return expandoObjectConverter.ToExpandoObject(instance, model.Schema);
         }
 
         return default;
@@ -74,7 +59,7 @@ public class Sink : ISink
     /// <inheritdoc/>
     public async Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
     {
-        var filter = Builders<BsonDocument>.Filter.Eq("_id", _converter.ToBsonValue(key));
+        var filter = Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
 
         if (changeset.HasBeenRemoved())
         {
@@ -82,7 +67,7 @@ public class Sink : ISink
             return;
         }
 
-        var converted = await _changesetConverter.ToUpdateDefinition(key, changeset, _isReplaying);
+        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, _isReplaying);
 
         if (!converted.hasChanges) return;
 
@@ -97,19 +82,19 @@ public class Sink : ISink
     }
 
     /// <inheritdoc/>
-    public Task PrepareInitialRun() => _collections.PrepareInitialRun();
+    public Task PrepareInitialRun() => collections.PrepareInitialRun();
 
     /// <inheritdoc/>
     public async Task BeginReplay()
     {
         _isReplaying = true;
-        await _collections.BeginReplay();
+        await collections.BeginReplay();
     }
 
     /// <inheritdoc/>
     public async Task EndReplay()
     {
-        await _collections.EndReplay();
+        await collections.EndReplay();
         _isReplaying = true;
     }
 }

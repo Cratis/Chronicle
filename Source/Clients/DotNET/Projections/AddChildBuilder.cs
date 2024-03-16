@@ -14,61 +14,52 @@ namespace Cratis.Projections;
 /// <typeparam name="TParentModel">Parent model type.</typeparam>
 /// <typeparam name="TChildModel">Child model type.</typeparam>
 /// <typeparam name="TEvent">Type of the event.</typeparam>
-public class AddChildBuilder<TParentModel, TChildModel, TEvent> : IAddChildBuilder<TChildModel, TEvent>
+/// <remarks>
+/// Initializes a new instance of the <see cref="AddChildBuilder{TParentModel, TChildModel, TEvent}"/> class.
+/// </remarks>
+/// <param name="childrenBuilder">The children builder to use internally.</param>
+/// <param name="fromBuilder">The <see cref="IFromBuilder{TModel, TEvent}"/> to build the internals of the child relationship.</param>
+public class AddChildBuilder<TParentModel, TChildModel, TEvent>(IChildrenBuilder<TParentModel, TChildModel> childrenBuilder, IFromBuilder<TChildModel, TEvent> fromBuilder) : IAddChildBuilder<TChildModel, TEvent>
 {
-    readonly IChildrenBuilder<TParentModel, TChildModel> _childrenBuilder;
-    readonly IFromBuilder<TChildModel, TEvent> _fromBuilder;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AddChildBuilder{TParentModel, TChildModel, TEvent}"/> class.
-    /// </summary>
-    /// <param name="childrenBuilder">The children builder to use internally.</param>
-    /// <param name="fromBuilder">The <see cref="IFromBuilder{TModel, TEvent}"/> to build the internals of the child relationship.</param>
-    public AddChildBuilder(IChildrenBuilder<TParentModel, TChildModel> childrenBuilder, IFromBuilder<TChildModel, TEvent> fromBuilder)
-    {
-        _childrenBuilder = childrenBuilder;
-        _fromBuilder = fromBuilder;
-    }
-
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        _fromBuilder!.UsingKey(keyAccessor);
+        fromBuilder!.UsingKey(keyAccessor);
         return this;
     }
 
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor)
     {
-        _fromBuilder!.UsingKeyFromContext(keyAccessor);
+        fromBuilder!.UsingKeyFromContext(keyAccessor);
         return this;
     }
 
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        _fromBuilder!.UsingParentKey(keyAccessor);
+        fromBuilder!.UsingParentKey(keyAccessor);
         return this;
     }
 
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
     {
-        _fromBuilder!.UsingParentCompositeKey(builderCallback);
+        fromBuilder!.UsingParentCompositeKey(builderCallback);
         return this;
     }
 
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingParentKeyFromContext<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        _fromBuilder!.UsingParentKeyFromContext(keyAccessor);
+        fromBuilder!.UsingParentKeyFromContext(keyAccessor);
         return this;
     }
 
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> IdentifiedBy<TProperty>(Expression<Func<TChildModel, TProperty>> propertyExpression)
     {
-        _childrenBuilder.IdentifiedBy(propertyExpression);
+        childrenBuilder.IdentifiedBy(propertyExpression);
         return this;
     }
 
@@ -79,7 +70,7 @@ public class AddChildBuilder<TParentModel, TChildModel, TEvent> : IAddChildBuild
         foreach (var property in typeof(TChildModel).GetProperties())
         {
             var propertyPath = new PropertyPath(property.Name);
-            _fromBuilder!.Set(propertyPath).To(childProperty + propertyPath);
+            fromBuilder!.Set(propertyPath).To(childProperty + propertyPath);
         }
 
         return this;

@@ -11,28 +11,19 @@ namespace Cratis.Kernel.Storage.MongoDB.Keys;
 /// <summary>
 /// Represents an implementation of <see cref="IObserverKeyIndex"/> for MongoDB.
 /// </summary>
-public class EventSourceKeyIndex : IObserverKeyIndex
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSourceKeyIndex"/> class.
+/// </remarks>
+/// <param name="collection"><see cref="IMongoCollection{T}"/> for the events.</param>
+/// <param name="eventTypes">Collection of <see cref="EventType"/> the index is for.</param>
+public class EventSourceKeyIndex(IMongoCollection<Event> collection, IEnumerable<EventType> eventTypes) : IObserverKeyIndex
 {
-    readonly IMongoCollection<Event> _collection;
-    readonly IEnumerable<EventType> _eventTypes;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSourceKeyIndex"/> class.
-    /// </summary>
-    /// <param name="collection"><see cref="IMongoCollection{T}"/> for the events.</param>
-    /// <param name="eventTypes">Collection of <see cref="EventType"/> the index is for.</param>
-    public EventSourceKeyIndex(IMongoCollection<Event> collection, IEnumerable<EventType> eventTypes)
-    {
-        _collection = collection;
-        _eventTypes = eventTypes;
-    }
-
     /// <inheritdoc/>
     public Task Add(Key key) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public IObserverKeys GetKeys(EventSequenceNumber fromEventSequenceNumber) =>
-       new ObserverKeys(_collection, fromEventSequenceNumber, _eventTypes);
+       new ObserverKeys(collection, fromEventSequenceNumber, eventTypes);
 
     /// <inheritdoc/>
     public Task Rebuild() => Task.CompletedTask;

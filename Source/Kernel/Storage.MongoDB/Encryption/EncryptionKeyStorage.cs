@@ -10,19 +10,12 @@ namespace Cratis.Compliance.MongoDB;
 /// <summary>
 /// Represents an implementation of <see cref="IEncryptionKeyStorage"/> for MongoDB.
 /// </summary>
-public class EncryptionKeyStorage : IEncryptionKeyStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="EncryptionKeyStorage"/> class.
+/// </remarks>
+/// <param name="database"><see cref="IEventStoreDatabase"/> to use for accessing database.</param>
+public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
 {
-    readonly IDatabase _database;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EncryptionKeyStorage"/> class.
-    /// </summary>
-    /// <param name="database"><see cref="IEventStoreDatabase"/> to use for accessing database.</param>
-    public EncryptionKeyStorage(IDatabase database)
-    {
-        _database = database;
-    }
-
     /// <inheritdoc/>
     public async Task SaveFor(
         EventStoreName eventStore,
@@ -74,7 +67,7 @@ public class EncryptionKeyStorage : IEncryptionKeyStorage
 
     IMongoCollection<EncryptionKeyForIdentifier> GetCollection(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace)
     {
-        var database = _database.GetEventStoreDatabase(eventStore).GetNamespaceDatabase(eventStoreNamespace);
-        return database.GetCollection<EncryptionKeyForIdentifier>("encryption-keys");
+        var eventStoreDatabase = database.GetEventStoreDatabase(eventStore).GetNamespaceDatabase(eventStoreNamespace);
+        return eventStoreDatabase.GetCollection<EncryptionKeyForIdentifier>("encryption-keys");
     }
 }

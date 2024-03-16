@@ -10,20 +10,13 @@ namespace Cratis.Kernel.Domain.Jobs;
 /// <summary>
 /// Represents the API for working with jobs.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Jobs"/> class.
+/// </remarks>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> to work with grains.</param>
 [Route("/api/events/store/{microserviceId}/{tenantId}/jobs")]
-public class Jobs : ControllerBase
+public class Jobs(IGrainFactory grainFactory) : ControllerBase
 {
-    readonly IGrainFactory _grainFactory;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Jobs"/> class.
-    /// </summary>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> to work with grains.</param>
-    public Jobs(IGrainFactory grainFactory)
-    {
-        _grainFactory = grainFactory;
-    }
-
     /// <summary>
     /// Stop a specific job.
     /// </summary>
@@ -37,7 +30,7 @@ public class Jobs : ControllerBase
         [FromRoute] TenantId tenantId,
         [FromRoute] JobId jobId)
     {
-        var jobsManager = _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(microserviceId, tenantId));
+        var jobsManager = grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(microserviceId, tenantId));
         await jobsManager.Resume(jobId);
     }
 
@@ -54,7 +47,7 @@ public class Jobs : ControllerBase
         [FromRoute] TenantId tenantId,
         [FromRoute] JobId jobId)
     {
-        var jobsManager = _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(microserviceId, tenantId));
+        var jobsManager = grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(microserviceId, tenantId));
         await jobsManager.Stop(jobId);
     }
 
@@ -71,7 +64,7 @@ public class Jobs : ControllerBase
         [FromRoute] TenantId tenantId,
         [FromRoute] JobId jobId)
     {
-        var jobsManager = _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(microserviceId, tenantId));
+        var jobsManager = grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(microserviceId, tenantId));
         await jobsManager.Delete(jobId);
     }
 }

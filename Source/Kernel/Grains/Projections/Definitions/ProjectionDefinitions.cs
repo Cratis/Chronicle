@@ -48,7 +48,7 @@ public class ProjectionDefinitions(
         definition = definition with { LastUpdated = DateTimeOffset.UtcNow };
         _definitions[definition.Identifier] = definition;
 
-        await _storage.Save(definition);
+        await storage.Save(definition);
     }
 
     /// <inheritdoc/>

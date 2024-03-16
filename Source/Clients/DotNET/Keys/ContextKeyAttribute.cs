@@ -6,20 +6,15 @@ namespace Cratis.Keys;
 /// <summary>
 /// Represents metadata for defining which property on the event to use as key.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="KeyAttribute"/> class.
+/// </remarks>
+/// <param name="property">Property to use.</param>
 [AttributeUsage(AttributeTargets.Method)]
-public sealed class ContextKeyAttribute : Attribute
+public sealed class ContextKeyAttribute(string property) : Attribute
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="KeyAttribute"/> class.
-    /// </summary>
-    /// <param name="property">Property to use.</param>
-    public ContextKeyAttribute(string property)
-    {
-        Property = property;
-    }
-
     /// <summary>
     /// Gets the property to use as key.
     /// </summary>
-    public string Property { get; }
+    public string Property { get; } = property;
 }

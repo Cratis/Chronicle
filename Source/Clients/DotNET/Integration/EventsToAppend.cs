@@ -10,7 +10,7 @@ namespace Cratis.Integration;
 /// </summary>
 public class EventsToAppend : IEnumerable<EventToAppend>
 {
-    readonly List<EventToAppend> _events = new();
+    readonly List<EventToAppend> _events = [];
 
     /// <summary>
     /// Add an event.

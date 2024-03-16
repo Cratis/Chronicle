@@ -13,31 +13,23 @@ namespace Cratis.Kernel.Storage.MongoDB.Identities;
 /// <summary>
 /// Represents an implementation of <see cref="IIdentityStorage"/> using MongoDB.
 /// </summary>
-public class IdentityStorage : IIdentityStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="IdentityStorage"/> class.
+/// </remarks>
+/// <param name="database">The cluster database.</param>
+/// <param name="logger">Logger for logging.</param>
+public class IdentityStorage(
+    IDatabase database,
+    ILogger<IdentityStorage> logger) : IIdentityStorage
 {
-    readonly IDatabase _database;
-    readonly ILogger<IdentityStorage> _logger;
-    Dictionary<IdentityId, Identity> _identitiesByIdentityId = new();
-    Dictionary<string, IdentityId> _identityIdsBySubject = new();
-    Dictionary<string, IdentityId> _identityIdsByUserName = new();
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="IdentityStorage"/> class.
-    /// </summary>
-    /// <param name="database">The cluster database.</param>
-    /// <param name="logger">Logger for logging.</param>
-    public IdentityStorage(
-        IDatabase database,
-        ILogger<IdentityStorage> logger)
-    {
-        _database = database;
-        _logger = logger;
-    }
+    Dictionary<IdentityId, Identity> _identitiesByIdentityId = [];
+    Dictionary<string, IdentityId> _identityIdsBySubject = [];
+    Dictionary<string, IdentityId> _identityIdsByUserName = [];
 
     /// <inheritdoc/>
     public async Task Populate()
     {
-        _logger.Populating();
+        logger.Populating();
 
         var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var allIdentities = await result.ToListAsync().ConfigureAwait(false);
@@ -46,7 +38,7 @@ public class IdentityStorage : IIdentityStorage
                                     .Where(_ => !string.IsNullOrEmpty(_.Value.Subject))
                                     .ToDictionary(_ => _.Value.Subject, _ => _.Key);
         _identityIdsByUserName = _identitiesByIdentityId.ToDictionary(_ => _.Value.UserName.ToLowerInvariant(), _ => _.Key);
-        _identityIdsByUserName.ForEach(_ => _logger.IdentityRegisteredByUserName(_.Key, _.Value));
+        _identityIdsByUserName.ForEach(_ => logger.IdentityRegisteredByUserName(_.Key, _.Value));
     }
 
     /// <inheritdoc/>
@@ -124,26 +116,26 @@ public class IdentityStorage : IIdentityStorage
     bool TryGetSingleFor(Identity identity, out IdentityId identityId)
     {
         var userName = identity.UserName.ToLowerInvariant();
-        _logger.TryingToGetSingleFor(identity.UserName, identity.Subject);
+        logger.TryingToGetSingleFor(identity.UserName, identity.Subject);
 
-        if (!string.IsNullOrEmpty(identity.Subject) && _identityIdsBySubject.ContainsKey(identity.Subject))
+        if (!string.IsNullOrEmpty(identity.Subject) && _identityIdsBySubject.TryGetValue(identity.Subject, out var identityIdBySubject))
         {
-            identityId = _identityIdsBySubject[identity.Subject];
-            _logger.UserFoundBySubject(identity.Subject, identityId);
+            identityId = identityIdBySubject;
+            logger.UserFoundBySubject(identity.Subject, identityId);
             return true;
         }
 
-        if (!string.IsNullOrEmpty(identity.UserName) && _identityIdsByUserName.ContainsKey(userName))
+        if (!string.IsNullOrEmpty(identity.UserName) && _identityIdsByUserName.TryGetValue(userName, out var identityIdByUserName))
         {
-            identityId = _identityIdsByUserName[userName];
-            _logger.UserFoundByName(identity.UserName, identityId);
+            identityId = identityIdByUserName;
+            logger.UserFoundByName(identity.UserName, identityId);
             return true;
         }
         identityId = Guid.Empty;
-        _logger.UserNotFound(identity.UserName, identity.Subject);
+        logger.UserNotFound(identity.UserName, identity.Subject);
 
         return false;
     }
 
-    IMongoCollection<MongoDBIdentity> GetCollection() => _database.GetCollection<MongoDBIdentity>(WellKnownCollectionNames.Identities);
+    IMongoCollection<MongoDBIdentity> GetCollection() => database.GetCollection<MongoDBIdentity>(WellKnownCollectionNames.Identities);
 }

@@ -16,7 +16,7 @@ namespace Cratis.Rules;
 public abstract class RulesFor<TSelf, TCommand> : AbstractValidator<TCommand>, IRule
     where TSelf : RulesFor<TSelf, TCommand>
 {
-    readonly InlineValidator<TSelf> _selfValidator = new();
+    readonly InlineValidator<TSelf> _selfValidator = [];
 
     /// <summary>
     /// Gets the unique identifier for the business rules.

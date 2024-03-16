@@ -14,22 +14,15 @@ namespace Cratis.Kernel.Storage.MongoDB.Jobs;
 /// <summary>
 /// Represents an implementation of <see cref="IJobStorage"/> for MongoDB.
 /// </summary>
-public class JobStepStorage : IJobStepStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="JobStorage"/> class.
+/// </remarks>
+/// <param name="database"><see cref="IEventStoreNamespaceDatabase"/> for persistence.</param>
+public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepStorage
 {
-    readonly IEventStoreNamespaceDatabase _database;
+    IMongoCollection<JobStepState> Collection => database.GetCollection<JobStepState>(WellKnownCollectionNames.JobSteps);
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JobStorage"/> class.
-    /// </summary>
-    /// <param name="database"><see cref="IEventStoreNamespaceDatabase"/> for persistence.</param>
-    public JobStepStorage(IEventStoreNamespaceDatabase database)
-    {
-        _database = database;
-    }
-
-    IMongoCollection<JobStepState> Collection => _database.GetCollection<JobStepState>(WellKnownCollectionNames.JobSteps);
-
-    IMongoCollection<JobStepState> FailedCollection => _database.GetCollection<JobStepState>(WellKnownCollectionNames.FailedJobSteps);
+    IMongoCollection<JobStepState> FailedCollection => database.GetCollection<JobStepState>(WellKnownCollectionNames.FailedJobSteps);
 
     /// <inheritdoc/>
     public async Task RemoveAllForJob(JobId jobId)
@@ -141,9 +134,9 @@ public class JobStepStorage : IJobStepStorage
         await GetTypedCollection<TJobStepState>().DeleteOneAsync(GetIdFilter<TJobStepState>(jobId, jobStepId)).ConfigureAwait(false);
     }
 
-    IMongoCollection<TJobStepState> GetTypedCollection<TJobStepState>() => _database.GetCollection<TJobStepState>(WellKnownCollectionNames.JobSteps);
+    IMongoCollection<TJobStepState> GetTypedCollection<TJobStepState>() => database.GetCollection<TJobStepState>(WellKnownCollectionNames.JobSteps);
 
-    IMongoCollection<TJobStepState> GetTypedFailedCollection<TJobStepState>() => _database.GetCollection<TJobStepState>(WellKnownCollectionNames.FailedJobSteps);
+    IMongoCollection<TJobStepState> GetTypedFailedCollection<TJobStepState>() => database.GetCollection<TJobStepState>(WellKnownCollectionNames.FailedJobSteps);
 
     FilterDefinition<TDocument> GetJobIdFilter<TDocument>(Guid jobId, string prefix = "") =>
         Builders<TDocument>.Filter.Eq(

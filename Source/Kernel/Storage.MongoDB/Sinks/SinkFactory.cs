@@ -12,28 +12,17 @@ namespace Cratis.Kernel.Storage.MongoDB.Sinks;
 /// <summary>
 /// Represents an implementation of <see cref="ISinkFactory"/>.
 /// </summary>
-public class SinkFactory : ISinkFactory
+/// <remarks>
+/// /// Initializes a new instance of the <see cref="SinkFactory"/> class.
+/// </remarks>
+/// <param name="database"><see cref="IDatabase"/> for accessing MongoDB.</param>
+/// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+public class SinkFactory(
+    IDatabase database,
+    ITypeFormats typeFormats,
+    IExpandoObjectConverter expandoObjectConverter) : ISinkFactory
 {
-    readonly IDatabase _database;
-    readonly ITypeFormats _typeFormats;
-    readonly IExpandoObjectConverter _expandoObjectConverter;
-
-    /// <summary>
-    /// /// Initializes a new instance of the <see cref="SinkFactory"/> class.
-    /// </summary>
-    /// <param name="database"><see cref="IDatabase"/> for accessing MongoDB.</param>
-    /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
-    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
-    public SinkFactory(
-        IDatabase database,
-        ITypeFormats typeFormats,
-        IExpandoObjectConverter expandoObjectConverter)
-    {
-        _database = database;
-        _typeFormats = typeFormats;
-        _expandoObjectConverter = expandoObjectConverter;
-    }
-
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
@@ -41,24 +30,24 @@ public class SinkFactory : ISinkFactory
     public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, Model model)
     {
         var mongoDBConverter = new MongoDBConverter(
-            _expandoObjectConverter,
-            _typeFormats,
+            expandoObjectConverter,
+            typeFormats,
             model);
 
         var mongoDBSinkCollections = new SinkCollections(
             model,
-            _database.GetReadModelDatabase(eventStore, @namespace));
+            database.GetReadModelDatabase(eventStore, @namespace));
         var mongoDBChangesetConverter = new ChangesetConverter(
             model,
             mongoDBConverter,
             mongoDBSinkCollections,
-            _expandoObjectConverter);
+            expandoObjectConverter);
 
         return new Sink(
             model,
             mongoDBConverter,
             mongoDBSinkCollections,
             mongoDBChangesetConverter,
-            _expandoObjectConverter);
+            expandoObjectConverter);
     }
 }

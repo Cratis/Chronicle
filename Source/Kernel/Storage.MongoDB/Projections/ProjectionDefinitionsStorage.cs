@@ -14,25 +14,16 @@ namespace Cratis.Kernel.Storage.MongoDB.Projections;
 /// <summary>
 /// Represents a <see cref="IProjectionDefinitionsStorage"/> for projection definitions in MongoDB.
 /// </summary>
-public class ProjectionDefinitionsStorage : IProjectionDefinitionsStorage
+/// <remarks>
+/// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
+/// </remarks>
+/// <param name="eventStoreDatabase">The <see cref="IEventStoreDatabase"/>.</param>
+/// <param name="projectionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
+public class ProjectionDefinitionsStorage(
+    IEventStoreDatabase eventStoreDatabase,
+    IJsonProjectionSerializer projectionSerializer) : IProjectionDefinitionsStorage
 {
-    readonly IEventStoreDatabase _eventStoreDatabase;
-    readonly IJsonProjectionSerializer _projectionSerializer;
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
-    /// </summary>
-    /// <param name="sharedDatabase">The <see cref="IEventStoreDatabase"/>.</param>
-    /// <param name="projectionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
-    public ProjectionDefinitionsStorage(
-        IEventStoreDatabase sharedDatabase,
-        IJsonProjectionSerializer projectionSerializer)
-    {
-        _eventStoreDatabase = sharedDatabase;
-        _projectionSerializer = projectionSerializer;
-    }
-
-    IMongoCollection<BsonDocument> Collection => _eventStoreDatabase.GetCollection<BsonDocument>("projection-definitions");
+    IMongoCollection<BsonDocument> Collection => eventStoreDatabase.GetCollection<BsonDocument>("projection-definitions");
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()
@@ -43,14 +34,14 @@ public class ProjectionDefinitionsStorage : IProjectionDefinitionsStorage
         {
             _.Remove("_id");
             var definitionAsJson = _.ToJson();
-            return _projectionSerializer.Deserialize(JsonNode.Parse(definitionAsJson)!);
+            return projectionSerializer.Deserialize(JsonNode.Parse(definitionAsJson)!);
         }).ToArray();
     }
 
     /// <inheritdoc/>
     public async Task Save(ProjectionDefinition definition)
     {
-        var json = _projectionSerializer.Serialize(definition);
+        var json = projectionSerializer.Serialize(definition);
         var document = BsonDocument.Parse(json.ToJsonString());
         var id = new BsonBinaryData(definition.Identifier.Value, GuidRepresentation.Standard);
         document["_id"] = id;

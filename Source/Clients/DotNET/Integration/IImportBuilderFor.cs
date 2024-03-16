@@ -8,6 +8,4 @@ namespace Cratis.Integration;
 /// </summary>
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TExternalModel">The type of the external model.</typeparam>
-public interface IImportBuilderFor<TModel, TExternalModel> : IObservable<ImportContext<TModel, TExternalModel>>
-{
-}
+public interface IImportBuilderFor<TModel, TExternalModel> : IObservable<ImportContext<TModel, TExternalModel>>;

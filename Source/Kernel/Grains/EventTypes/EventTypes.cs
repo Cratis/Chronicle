@@ -12,24 +12,17 @@ namespace Cratis.Kernel.Grains.EventTypes;
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypes"/>.
 /// </summary>
-public class EventTypes : Grain, IEventTypes
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventTypes"/> class.
+/// </remarks>
+/// <param name="underlyingSchemaStore"><see cref="IEventTypesStorage"/> underlying event types storage.</param>
+public class EventTypes(ProviderFor<IEventTypesStorage> underlyingSchemaStore) : Grain, IEventTypes
 {
-    readonly ProviderFor<IEventTypesStorage> _underlyingSchemaStore;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventTypes"/> class.
-    /// </summary>
-    /// <param name="underlyingSchemaStore"><see cref="IEventTypesStorage"/> underlying event types storage.</param>
-    public EventTypes(ProviderFor<IEventTypesStorage> underlyingSchemaStore)
-    {
-        _underlyingSchemaStore = underlyingSchemaStore;
-    }
-
     /// <inheritdoc/>
     public async Task Register(EventType type, string friendlyName, string schema)
     {
         var jsonSchema = await JsonSchema.FromJsonAsync(schema);
         jsonSchema.EnsureComplianceMetadata();
-        await _underlyingSchemaStore().Register(type, friendlyName, jsonSchema);
+        await underlyingSchemaStore().Register(type, friendlyName, jsonSchema);
     }
 }

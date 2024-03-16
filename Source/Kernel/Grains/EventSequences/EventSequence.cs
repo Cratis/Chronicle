@@ -85,7 +85,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumberForEventTypes(IEnumerable<EventType> eventTypes)
     {
-        _logger.GettingTailSequenceNumberForEventTypes(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, eventTypes);
+        logger.GettingTailSequenceNumberForEventTypes(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, eventTypes);
 
         var sequenceNumber = EventSequenceNumber.Unavailable;
         try
@@ -98,11 +98,11 @@ public class EventSequence(
         }
         catch (Exception ex)
         {
-            _logger.FailedGettingTailSequenceNumberForEventTypes(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, eventTypes, ex);
+            logger.FailedGettingTailSequenceNumberForEventTypes(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, eventTypes, ex);
         }
 
         sequenceNumber ??= EventSequenceNumber.Unavailable;
-        _logger.ResultForGettingTailSequenceNumberForEventTypes(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, eventTypes, sequenceNumber);
+        logger.ResultForGettingTailSequenceNumberForEventTypes(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, eventTypes, sequenceNumber);
         return Task.FromResult(sequenceNumber);
     }
 

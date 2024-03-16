@@ -77,7 +77,7 @@ public class Replay(
             JobId.New(),
             new ReplayObserverRequest(
                 state.ObserverId,
-                _observerKey,
+                observerKey,
                 subscription,
                 state.EventTypes));
         return state with { Handled = EventCount.Zero };

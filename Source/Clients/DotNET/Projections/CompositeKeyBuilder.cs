@@ -15,7 +15,7 @@ namespace Cratis.Projections;
 /// <typeparam name="TEvent">Event to build from.</typeparam>
 public class CompositeKeyBuilder<TKeyType, TEvent> : ICompositeKeyBuilder<TKeyType, TEvent>
 {
-    readonly List<IPropertyExpressionBuilder> _propertyExpressions = new();
+    readonly List<IPropertyExpressionBuilder> _propertyExpressions = [];
 
     /// <inheritdoc/>
     public ISetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>> Set<TProperty>(Expression<Func<TKeyType, TProperty>> modelPropertyAccessor)

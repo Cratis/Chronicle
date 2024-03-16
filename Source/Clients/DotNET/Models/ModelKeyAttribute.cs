@@ -7,6 +7,4 @@ namespace Cratis.Models;
 /// Attribute that is used to provide metadata about a property or parameter being the <see cref="ModelKey"/>.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter)]
-public sealed class ModelKeyAttribute : Attribute
-{
-}
+public sealed class ModelKeyAttribute : Attribute;

@@ -12,20 +12,13 @@ namespace Cratis.Kernel.Read.Observation;
 /// <summary>
 /// Represents the API for getting failed partitions.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Observers"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 [Route("/api/events/store/{microserviceId}/{tenantId}/failed-partitions")]
-public class FailedPartitions : ControllerBase
+public class FailedPartitions(IStorage storage) : ControllerBase
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Observers"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public FailedPartitions(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <summary>
     /// Gets all failed partitions.
     /// </summary>
@@ -42,7 +35,7 @@ public class FailedPartitions : ControllerBase
         observerId ??= ObserverId.Unspecified;
 
         var clientObservable = new ClientObservable<IEnumerable<FailedPartition>>();
-        var failedPartitions = _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).FailedPartitions;
+        var failedPartitions = storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).FailedPartitions;
         var observable = failedPartitions.ObserveAllFor(observerId);
         var subscription = observable.Subscribe(clientObservable.OnNext);
         clientObservable.ClientDisconnected = () =>

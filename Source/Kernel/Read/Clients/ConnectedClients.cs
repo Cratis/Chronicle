@@ -11,20 +11,13 @@ namespace Read.Clients;
 /// <summary>
 /// Represents the API for querying connected clients.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ConnectedClients"/> class.
+/// </remarks>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
 [Route("/api/clients")]
-public class ConnectedClients : Controller
+public class ConnectedClients(IGrainFactory grainFactory) : Controller
 {
-    readonly IGrainFactory _grainFactory;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
-    /// </summary>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    public ConnectedClients(IGrainFactory grainFactory)
-    {
-        _grainFactory = grainFactory;
-    }
-
     /// <summary>
     /// Get and observe all connected clients for a specific microservice.
     /// </summary>
@@ -33,7 +26,7 @@ public class ConnectedClients : Controller
     public ClientObservable<IEnumerable<ConnectedClient>> AllConnectedClients()
     {
         var clientObservable = new ClientObservable<IEnumerable<ConnectedClient>>();
-        var connectedClients = _grainFactory.GetGrain<IConnectedClients>(0);
+        var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
         #pragma warning disable CA2000 // Call System.IDisposable.Dispose on object created by 'new CancellationTokenSource()' - it is disposed when the client disconnects
         var cancellationTokenSource = new CancellationTokenSource();
 

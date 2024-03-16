@@ -10,38 +10,25 @@ namespace Cratis.Integration;
 /// <summary>
 /// Represents an implementation of <see cref="IImporter"/>.
 /// </summary>
-public class Importer : IImporter
+/// <remarks>
+/// Initializes a new instance of the <see cref="Importer"/> class.
+/// </remarks>
+/// <param name="adapters"><see cref="IAdapters"/> for getting <see cref="AdapterFor{TModel, TExternalModel}"/> instances.</param>
+/// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
+/// <param name="eventLog"><see cref="IEventSequence"/> for appending events.</param>
+/// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
+public class Importer(
+    IAdapters adapters,
+    IObjectComparer objectComparer,
+    IEventLog eventLog,
+    ICausationManager causationManager) : IImporter
 {
-    readonly IObjectComparer _objectComparer;
-    readonly IAdapters _adapters;
-    readonly IEventLog _eventLog;
-    readonly ICausationManager _causationManager;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Importer"/> class.
-    /// </summary>
-    /// <param name="adapters"><see cref="IAdapters"/> for getting <see cref="AdapterFor{TModel, TExternalModel}"/> instances.</param>
-    /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
-    /// <param name="eventLog"><see cref="IEventSequence"/> for appending events.</param>
-    /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
-    public Importer(
-        IAdapters adapters,
-        IObjectComparer objectComparer,
-        IEventLog eventLog,
-        ICausationManager causationManager)
-    {
-        _objectComparer = objectComparer;
-        _adapters = adapters;
-        _eventLog = eventLog;
-        _causationManager = causationManager;
-    }
-
     /// <inheritdoc/>
     public IImportOperations<TModel, TExternalModel> For<TModel, TExternalModel>()
     {
-        var adapter = _adapters.GetFor<TModel, TExternalModel>();
-        var projection = _adapters.GetProjectionFor<TModel, TExternalModel>();
-        var mapper = _adapters.GetMapperFor<TModel, TExternalModel>();
-        return new ImportOperations<TModel, TExternalModel>(adapter, projection, mapper, _objectComparer, _eventLog, _causationManager);
+        var adapter = adapters.GetFor<TModel, TExternalModel>();
+        var projection = adapters.GetProjectionFor<TModel, TExternalModel>();
+        var mapper = adapters.GetMapperFor<TModel, TExternalModel>();
+        return new ImportOperations<TModel, TExternalModel>(adapter, projection, mapper, objectComparer, eventLog, causationManager);
     }
 }

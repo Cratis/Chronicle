@@ -14,20 +14,13 @@ namespace Cratis.Kernel.Storage.MongoDB.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IObserverStorage"/> for MongoDB.
 /// </summary>
-public class ObserverStorage : IObserverStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="ObserverStorage"/> class.
+/// </remarks>
+/// <param name="database"><see cref="IEventStoreNamespaceDatabase"/>.</param>
+public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverStorage
 {
-    readonly IEventStoreNamespaceDatabase _database;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverStorage"/> class.
-    /// </summary>
-    /// <param name="database"><see cref="IEventStoreNamespaceDatabase"/>.</param>
-    public ObserverStorage(IEventStoreNamespaceDatabase database)
-    {
-        _database = database;
-    }
-
-    IMongoCollection<ObserverState> Collection => _database.GetObserverStateCollection();
+    IMongoCollection<ObserverState> Collection => database.GetObserverStateCollection();
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<ObserverInformation>> ObserveAll()
