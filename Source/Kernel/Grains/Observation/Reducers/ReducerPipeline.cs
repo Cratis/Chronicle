@@ -12,31 +12,22 @@ namespace Cratis.Kernel.Grains.Observation.Reducers;
 /// <summary>
 /// Represents an implementation of <see cref="IReducerPipeline"/>.
 /// </summary>
-public class ReducerPipeline : IReducerPipeline
+/// <remarks>
+/// Initializes a new instance of the <see cref="ReducerPipeline"/> class.
+/// </remarks>
+/// <param name="readModel">The <see cref="Model"/> the sink is for.</param>
+/// <param name="sink"><see cref="ISink"/> to use in pipeline.</param>
+/// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
+public class ReducerPipeline(
+    Model readModel,
+    ISink sink,
+    IObjectComparer objectComparer) : IReducerPipeline
 {
-    readonly IObjectComparer _objectComparer;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReducerPipeline"/> class.
-    /// </summary>
-    /// <param name="readModel">The <see cref="Model"/> the sink is for.</param>
-    /// <param name="sink"><see cref="ISink"/> to use in pipeline.</param>
-    /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
-    public ReducerPipeline(
-        Model readModel,
-        ISink sink,
-        IObjectComparer objectComparer)
-    {
-        ReadModel = readModel;
-        Sink = sink;
-        _objectComparer = objectComparer;
-    }
+    /// <inheritdoc/>
+    public Model ReadModel { get; } = readModel;
 
     /// <inheritdoc/>
-    public Model ReadModel { get; }
-
-    /// <inheritdoc/>
-    public ISink Sink { get; }
+    public ISink Sink { get; } = sink;
 
     /// <inheritdoc/>
     public Task BeginReplay() => Sink.BeginReplay();
@@ -51,8 +42,8 @@ public class ReducerPipeline : IReducerPipeline
 
         var reduced = await reducer(context.Events, initial);
 
-        var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, context.Events.First(), initial ?? new ExpandoObject());
-        if (!_objectComparer.Equals(initial, reduced, out var differences))
+        var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, context.Events.First(), initial ?? new ExpandoObject());
+        if (!objectComparer.Equals(initial, reduced, out var differences))
         {
             changeset.Add(new PropertiesChanged<ExpandoObject>(null!, differences));
         }

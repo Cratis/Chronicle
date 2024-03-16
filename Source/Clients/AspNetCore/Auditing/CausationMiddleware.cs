@@ -11,7 +11,12 @@ namespace Cratis.AspNetCore.Auditing;
 /// <summary>
 /// Represents a middleware for adding causation from ASP.NET requests.
 /// </summary>
-public class CausationMiddleware
+/// <remarks>
+/// Initializes a new instance of the <see cref="CausationMiddleware"/> class.
+/// </remarks>
+/// <param name="causationManager">The <see cref="ICausationManager"/> to use.</param>
+/// <param name="next">The next middleware.</param>
+public class CausationMiddleware(ICausationManager causationManager, RequestDelegate next)
 {
     /// <summary>
     /// The causation property for the route.
@@ -63,20 +68,6 @@ public class CausationMiddleware
     /// </summary>
     public static readonly CausationType CausationType = new("ASP.NET Request");
 
-    readonly RequestDelegate _next;
-    readonly ICausationManager _causationManager;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CausationMiddleware"/> class.
-    /// </summary>
-    /// <param name="causationManager">The <see cref="ICausationManager"/> to use.</param>
-    /// <param name="next">The next middleware.</param>
-    public CausationMiddleware(ICausationManager causationManager, RequestDelegate next)
-    {
-        _next = next;
-        _causationManager = causationManager;
-    }
-
     /// <summary>
     /// Invoke the middleware.
     /// </summary>
@@ -107,9 +98,9 @@ public class CausationMiddleware
             }
 
             context.Request.RouteValues.ForEach(_ => properties.Add($"{CausationRouteValuePrefix}:{_.Key}", _.Value?.ToString() ?? string.Empty));
-            _causationManager.Add(CausationType, properties);
+            causationManager.Add(CausationType, properties);
         }
 
-        await _next(context);
+        await next(context);
     }
 }

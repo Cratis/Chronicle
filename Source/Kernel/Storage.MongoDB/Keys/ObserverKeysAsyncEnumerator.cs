@@ -17,7 +17,7 @@ namespace Cratis.Kernel.Storage.MongoDB.Keys;
 /// <param name="cursor">The inner <see cref="IAsyncCursor{T}"/>.</param>
 public class ObserverKeysAsyncEnumerator(IAsyncCursor<EventSourceId> cursor) : IAsyncEnumerator<Key>
 {
-    Key? _current = default;
+    Key? _current;
     Queue<Key>? _queue;
 
     /// <inheritdoc/>

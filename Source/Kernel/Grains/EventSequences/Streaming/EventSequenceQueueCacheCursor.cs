@@ -29,7 +29,7 @@ public class EventSequenceQueueCacheCursor(
     EventSequenceNumber from) : IQueueCacheCursor
 {
     CachedAppendedEvent? _current;
-    EventSequenceNumber _currentSequenceNumber;
+    EventSequenceNumber _currentSequenceNumber = from;
 
     /// <inheritdoc/>
     public void Dispose()

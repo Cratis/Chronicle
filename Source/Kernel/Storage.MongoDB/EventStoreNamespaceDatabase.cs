@@ -15,7 +15,7 @@ namespace Cratis.Kernel.Storage.MongoDB;
 public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 {
     readonly IMongoDatabase _database;
-    readonly HashSet<EventSequenceId> _indexedEventSequences = new();
+    readonly HashSet<EventSequenceId> _indexedEventSequences = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreNamespaceDatabase"/> class.

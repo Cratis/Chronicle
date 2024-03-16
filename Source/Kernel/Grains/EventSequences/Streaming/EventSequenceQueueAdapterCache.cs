@@ -8,22 +8,15 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 /// <summary>
 /// Represents an implementation of <see cref="IQueueAdapterCache"/> for MongoDB event log.
 /// </summary>
-public class EventSequenceQueueAdapterCache : IQueueAdapterCache
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequenceQueueAdapterCache"/> class.
+/// </remarks>
+/// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
+public class EventSequenceQueueAdapterCache(IEventSequenceCaches caches) : IQueueAdapterCache
 {
-    readonly IEventSequenceCaches _caches;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequenceQueueAdapterCache"/> class.
-    /// </summary>
-    /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
-    public EventSequenceQueueAdapterCache(IEventSequenceCaches caches)
-    {
-        _caches = caches;
-    }
-
     /// <inheritdoc/>
     public IQueueCache CreateQueueCache(QueueId queueId)
     {
-        return new EventSequenceQueueCache(_caches);
+        return new EventSequenceQueueCache(caches);
     }
 }
