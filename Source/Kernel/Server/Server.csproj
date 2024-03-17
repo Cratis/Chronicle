@@ -5,7 +5,7 @@
         <RootNamespace>Cratis.Kernel.Server</RootNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
-        <ServerGarbageCollection>false</ServerGarbageCollection>
+        <ServerGarbageCollection>true</ServerGarbageCollection>
     </PropertyGroup>
 
     <!-- 3rd party package references -->
@@ -45,5 +45,6 @@
     <ItemGroup>
         <ProjectReference Include="..\Contracts\Contracts.csproj" />
         <ProjectReference Include="..\Services\Services.csproj" />
+        <ProjectReference Include="..\..\MongoDB\MongoDB.csproj" />
     </ItemGroup>
 </Project>
