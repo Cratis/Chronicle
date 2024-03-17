@@ -10,7 +10,6 @@
 
     <!-- 3rd party package references -->
     <ItemGroup>
-        <PackageReference Include="Aksio.Applications" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="OrleansDashboard" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
@@ -20,6 +19,14 @@
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
         <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
         <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
+        <PackageReference Include="serilog" />
+        <PackageReference Include="Serilog.AspNetCore" />
+        <PackageReference Include="Serilog.Exceptions" />
+        <PackageReference Include="Serilog.Extensions.Logging" />
+        <PackageReference Include="Serilog.Settings.Configuration" />
+        <PackageReference Include="Serilog.Sinks.Console" />
+        <PackageReference Include="Serilog.Sinks.PeriodicBatching" />
+        <PackageReference Include="Serilog.Sinks.Seq" />
     </ItemGroup>
 
     <ItemGroup>
