@@ -49,7 +49,7 @@ public class EventSequenceQueueAdapter(
         {
             var eventSequenceId = (EventSequenceId)streamId.GetKeyAsString();
             var eventSequenceKey = (EventSequenceKey)streamNamespace;
-            var eventStore = storage.GetEventStore((string)eventSequenceKey.EventStore);
+            var eventStore = storage.GetEventStore(eventSequenceKey.EventStore);
             var eventSequenceStorage = eventStore.GetNamespace(eventSequenceKey.Namespace).GetEventSequence(eventSequenceId);
 
             events = events.ToArray();

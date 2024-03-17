@@ -21,5 +21,5 @@ public class EventSequenceCacheFactory(
 {
     /// <inheritdoc/>
     public IEventSequenceCache Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
-        new EventSequenceCache(storage.GetEventStore((string)eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId), logger);
+        new EventSequenceCache(storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId), logger);
 }

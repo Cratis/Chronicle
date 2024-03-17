@@ -43,5 +43,5 @@ public class Jobs(IStorage storage) : ControllerBase
         [FromRoute] JobId jobId,
         [FromRoute] EventStoreName eventStore,
         [FromRoute] EventStoreNamespaceName @namespace) =>
-        storage.GetEventStore((string)eventStore).GetNamespace(@namespace).JobSteps.ObserveForJob(jobId).ToClientObservable();
+        storage.GetEventStore(eventStore).GetNamespace(@namespace).JobSteps.ObserveForJob(jobId).ToClientObservable();
 }

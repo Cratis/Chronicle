@@ -73,7 +73,7 @@ public class ProjectionObserverSubscriber(IKernel kernel) : Grain, IProjectionOb
 
     void HandleDefinitionsAndInstances()
     {
-        var projectionManager = kernel.GetEventStore((string)_eventStore).GetNamespace(_namespace).ProjectionManager;
+        var projectionManager = kernel.GetEventStore(_eventStore).GetNamespace(_namespace).ProjectionManager;
         _pipeline = projectionManager.GetPipeline(_projectionId);
     }
 }

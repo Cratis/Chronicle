@@ -59,7 +59,7 @@ public class ClientReducerSubscriber(
         _namespace = key.Namespace;
         _eventSequenceId = key.EventSequenceId;
 
-        var eventStore = _kernel.GetEventStore((string)_eventStore);
+        var eventStore = _kernel.GetEventStore(_eventStore);
         var eventStoreNamespace = eventStore.GetNamespace(_namespace);
 
         var definition = await eventStore.ReducerPipelineDefinitions.GetFor(_reducerId);

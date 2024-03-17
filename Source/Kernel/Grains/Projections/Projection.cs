@@ -63,7 +63,7 @@ public class Projection(
     /// <inheritdoc/>
     public async Task RefreshDefinition()
     {
-        var eventStore = kernel.GetEventStore((string)_eventStore!);
+        var eventStore = kernel.GetEventStore(_eventStore!);
         var eventStoreNamespace = eventStore.GetNamespace(_namespace!);
 
         var (_, projectionDefinition) = await eventStore.ProjectionDefinitions.TryGetFor(_projectionId);

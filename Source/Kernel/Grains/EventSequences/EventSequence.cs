@@ -53,10 +53,10 @@ public class EventSequence(
     IAsyncStream<AppendedEvent>? _stream;
     IMeterScope<EventSequence>? _metrics;
 
-    IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore((string)_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
-    IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore((string)_eventSequenceKey.EventStore).EventTypes;
-    IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore((string)_eventSequenceKey.EventStore).Identities;
-    IObserverStorage ObserverStorage => _observerStorage ??= storage.GetEventStore((string)_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Observers;
+    IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
+    IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
+    IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).Identities;
+    IObserverStorage ObserverStorage => _observerStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Observers;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -150,7 +150,7 @@ public class EventSequence(
                 eventSourceId,
                 State.SequenceNumber);
 
-            var compliantEvent = await jsonComplianceManagerProvider.Apply((string)_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
+            var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
 
             var compliantEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
 

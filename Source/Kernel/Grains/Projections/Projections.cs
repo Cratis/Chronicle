@@ -57,7 +57,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
 
         // foreach (var microserviceId in _microservices.GetMicroserviceIds())
         // {
-        //     var eventStore = _kernel.GetEventStore((string)microserviceId);
+        //     var eventStore = _kernel.GetEventStore(microserviceId);
         //     var projectionPipelineDefinitions = await eventStore.ProjectionPipelineDefinitions.GetAll();
         //     foreach (var pipeline in projectionPipelineDefinitions)
         //     {
@@ -83,7 +83,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     {
         var channelId = ChannelId.Create(WellKnownBroadcastChannelNames.ProjectionChanged, Guid.Empty);
         var channelWriter = _projectionChangedChannel.GetChannelWriter<ProjectionChanged>(channelId);
-        var eventStoreInstance = _kernel.GetEventStore((string)eventStore);
+        var eventStoreInstance = _kernel.GetEventStore(eventStore);
 
         foreach (var registration in registrations)
         {
