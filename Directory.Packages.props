@@ -21,7 +21,7 @@
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.1.1" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.57.0" />
     <PackageVersion Include="mongodb.driver" Version="2.24.0" />
-    <PackageVersion Include="OrleansTestKit" Version="4.0.0-beta.3" NoWarn="NU5104" />
+    <PackageVersion Include="OrleansTestKit" Version="8.0.0" NoWarn="NU5104" />
     <PackageVersion Include="serilog" Version="3.1.1" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.8.6" />
     <PackageVersion Include="System.Net.NameResolution" Version="4.3.0" />
@@ -30,7 +30,7 @@
     <PackageVersion Include="automapper" Version="13.0.1" />
     <PackageVersion Include="Azure.Data.Tables" Version="12.8.3" />
     <PackageVersion Include="FluentValidation" Version="11.9.0" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
@@ -67,7 +67,7 @@
     <PackageVersion Include="Testcontainers" Version="3.7.0" />
     <PackageVersion Include="xunit" Version="2.4.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.4.2" />
-    <PackageVersion Include="moq" Version="4.18.4" />
+    <PackageVersion Include="moq" Version="4.20.70" />
     <PackageVersion Include="Microsoft.NET.Test.SDK" Version="16.10.0" />
   </ItemGroup>
 </Project>
