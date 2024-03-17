@@ -33,7 +33,6 @@ namespace Cratis.Kernel.Grains.EventSequences;
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
 /// <param name="meter">The meter to use for metrics.</param>
-/// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
 /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
@@ -41,7 +40,6 @@ namespace Cratis.Kernel.Grains.EventSequences;
 public class EventSequence(
     IStorage storage,
     IMeter<EventSequence> meter,
-    IExecutionContextManager executionContextManager,
     IJsonComplianceManager jsonComplianceManagerProvider,
     IExpandoObjectConverter expandoObjectConverter,
     ILogger<EventSequence> logger) : Grain<EventSequenceState>, IEventSequence
@@ -169,7 +167,7 @@ public class EventSequence(
                             DateTimeOffset.UtcNow,
                             validFrom ?? DateTimeOffset.MinValue,
                             _eventSequenceKey.TenantId,
-                            executionContextManager.Current.CorrelationId,
+                            CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
                             causation,
                             causedBy),
                         compliantEventAsExpandoObject);

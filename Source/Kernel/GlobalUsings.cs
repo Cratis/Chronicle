@@ -5,4 +5,3 @@
 
 global using Aksio.Concepts;
 global using Aksio.Execution;
-global using ExecutionContext = Aksio.Execution.ExecutionContext;

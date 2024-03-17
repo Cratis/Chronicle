@@ -34,7 +34,6 @@ namespace Cratis.Kernel.Storage.MongoDB.EventSequences;
 /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-/// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting the execution context.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class EventSequenceStorage(
     EventStoreName eventStore,
@@ -45,7 +44,6 @@ public class EventSequenceStorage(
     IEventTypesStorage eventTypesStorage,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    IExecutionContextManager executionContextManager,
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
 {
     /// <inheritdoc/>
@@ -114,7 +112,7 @@ public class EventSequenceStorage(
                 @namespace);
             var @event = new Event(
                 sequenceNumber,
-                executionContextManager.Current.CorrelationId,
+                CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
                 causation,
                 causedByChain,
                 eventType.Id,
@@ -541,12 +539,11 @@ public class EventSequenceStorage(
         IEnumerable<IdentityId> causedById,
         DateTimeOffset occurred)
     {
-        var executionContext = executionContextManager.Current;
         var content = new RedactionEventContent(
             reason,
             @event.Metadata.Type.Id,
             occurred,
-            executionContext.CorrelationId,
+            CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
             causation,
             causedById);
 

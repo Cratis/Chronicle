@@ -52,7 +52,7 @@ public record EventContext(
             occurred ?? DateTimeOffset.Now,
             validFrom ?? DateTimeOffset.MinValue,
             TenantId.Development,
-            CorrelationId.New(),
+            CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
             ImmutableList<Causation>.Empty,
             Identity.NotSet);
     }

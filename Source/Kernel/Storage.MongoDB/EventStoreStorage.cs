@@ -29,7 +29,6 @@ namespace Cratis.Kernel.Storage.MongoDB;
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.ExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-/// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting the execution context.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class EventStoreStorage(
     EventStoreName eventStore,
@@ -40,7 +39,6 @@ public class EventStoreStorage(
     IJsonComplianceManager complianceManager,
     Json.ExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    IExecutionContextManager executionContextManager,
     ILoggerFactory loggerFactory) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
@@ -85,7 +83,6 @@ public class EventStoreStorage(
                 EventTypes,
                 expandoObjectConverter,
                 jsonSerializerOptions,
-                executionContextManager,
                 loggerFactory);
     }
 }

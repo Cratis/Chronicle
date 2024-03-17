@@ -20,7 +20,6 @@ namespace Cratis.Kernel.Storage.MongoDB;
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.ExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-/// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting the execution context.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class Storage(
     IDatabase database,
@@ -29,7 +28,6 @@ public class Storage(
     IJsonComplianceManager complianceManager,
     Json.ExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    IExecutionContextManager executionContextManager,
     ILoggerFactory loggerFactory) : IStorage
 {
     readonly Dictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
@@ -51,7 +49,6 @@ public class Storage(
             complianceManager,
             expandoObjectConverter,
             jsonSerializerOptions,
-            executionContextManager,
             loggerFactory);
     }
 }

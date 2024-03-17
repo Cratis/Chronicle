@@ -33,7 +33,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     readonly IEventTypesStorage _eventTypesStorage;
     readonly Json.ExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IExecutionContextManager _executionContextManager;
     readonly ILoggerFactory _loggerFactory;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequenceStorage> _eventSequences = new();
 
@@ -47,7 +46,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting the execution context.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStoreNamespaceStorage(
         EventStoreName eventStore,
@@ -57,7 +55,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         IEventTypesStorage eventTypesStorage,
         Json.ExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
-        IExecutionContextManager executionContextManager,
         ILoggerFactory loggerFactory)
     {
         _eventStore = eventStore;
@@ -67,7 +64,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         _eventTypesStorage = eventTypesStorage;
         _expandoObjectConverter = expandoObjectConverter;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _executionContextManager = executionContextManager;
         _loggerFactory = loggerFactory;
         Changesets = new ChangesetStorage();
         Jobs = new JobStorage(eventStoreNamespaceDatabase);
@@ -116,7 +112,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             _eventTypesStorage,
             _expandoObjectConverter,
             _jsonSerializerOptions,
-            _executionContextManager,
             _loggerFactory.CreateLogger<EventSequenceStorage>());
         _eventSequences[eventSequenceId] = eventSequenceStorage;
 
