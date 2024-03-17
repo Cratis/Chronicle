@@ -112,13 +112,8 @@ public class Observers : IObservers
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetAllObservers()
     {
-        // var tenantId = _executionContextManager.Current.TenantId;
-        // var microserviceId = _executionContextManager.Current.MicroserviceId;
-        // var route = $"/api/events/store/{microserviceId}/{tenantId}/observers";
-        // var result = await _connection.PerformQuery<IEnumerable<ObserverInformation>>(route);
-        // return result.Data;
         await Task.CompletedTask;
-        return null!;
+        return Enumerable.Empty<ObserverInformation>();
     }
 
     /// <inheritdoc/>

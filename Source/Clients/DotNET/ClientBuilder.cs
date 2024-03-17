@@ -22,7 +22,6 @@ using Cratis.Projections;
 using Cratis.Reducers;
 using Cratis.Rules;
 using Cratis.Schemas;
-using Cratis.Tenants;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -162,7 +161,6 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IImmediateProjections, ImmediateProjections>()
             .AddSingleton<ILoadBalancerStrategy, RoundRobinLoadBalancerStrategy>()
             .AddSingleton<ILoadBalancedHttpClientFactory, LoadBalancedHttpClientFactory>()
-            .AddSingleton<ITenantConfiguration, TenantConfiguration>()
             .AddSingleton<IProjections, Projections.Projections>()
             .AddSingleton<IClientProjections, ClientProjections>()
             .AddSingleton<IRulesProjections, RulesProjections>()

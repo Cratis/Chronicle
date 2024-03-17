@@ -21,7 +21,6 @@ public class ReducersRegistrar : IReducersRegistrar
 {
     readonly IEnumerable<Type> _aggregateRootStateTypes;
     readonly IDictionary<Type, IReducerHandler> _handlers;
-    readonly IExecutionContextManager _executionContextManager;
     readonly IModelNameResolver _modelNameResolver;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly ILogger<ReducersRegistrar> _logger;
@@ -29,7 +28,6 @@ public class ReducersRegistrar : IReducersRegistrar
     /// <summary>
     /// Initializes a new instance of <see cref="ReducersRegistrar"/>.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
     /// <param name="reducerValidator"><see cref="IReducerValidator"/> for validating reducer types.</param>
@@ -39,7 +37,6 @@ public class ReducersRegistrar : IReducersRegistrar
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ReducersRegistrar(
-        IExecutionContextManager executionContextManager,
         IClientArtifactsProvider clientArtifacts,
         IServiceProvider serviceProvider,
         IReducerValidator reducerValidator,
@@ -76,7 +73,6 @@ public class ReducersRegistrar : IReducersRegistrar
                                         eventSerializer,
                                         ShouldReducerBeActive(readModelType, reducer)) as IReducerHandler;
                                 });
-        _executionContextManager = executionContextManager;
         _modelNameResolver = modelNameResolver;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _logger = logger;
@@ -127,9 +123,7 @@ public class ReducersRegistrar : IReducersRegistrar
                 reducerHandler.EventSequenceId);
         }
 
-        var microserviceId = _executionContextManager.Current.MicroserviceId;
-        // var route = $"/api/events/store/{microserviceId}/reducers/register/{_connection.ConnectionId}";
-
+        // var route = $"/api/events/store/{eventStore}/reducers/register/{_connection.ConnectionId}";
         var registrations = _handlers.Values.Select(_ => new ReducerDefinition()
         {
             ReducerId = _.ReducerId,

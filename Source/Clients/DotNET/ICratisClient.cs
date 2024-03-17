@@ -9,14 +9,13 @@ namespace Cratis;
 public interface ICratisClient
 {
     /// <summary>
-    /// Get an event store by name and optional tenant.
+    /// Get an event store by name and optional namespace.
     /// </summary>
     /// <param name="name">Name of the event store to get.</param>
     /// <param name="namespace">Optional namespace.</param>
     /// <returns><see cref="IEventStore"/>.</returns>
     /// <remarks>
-    /// If no tenant is specified, the default tenant will be used.
-    /// In a single tenanted environment, the default tenant is what you'd be using.
+    /// If no namespace is specified, the default namespace will be used.
     /// </remarks>
     IEventStore GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace = default);
 
