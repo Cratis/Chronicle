@@ -4,7 +4,6 @@
 using System.Collections.Immutable;
 using System.Dynamic;
 using System.Text.Json;
-using Aksio.Strings;
 using Cratis.Auditing;
 using Cratis.Events;
 using Cratis.EventSequences;
@@ -12,6 +11,7 @@ using Cratis.Identities;
 using Cratis.Kernel.EventSequences;
 using Cratis.Kernel.Storage.EventSequences;
 using Cratis.Kernel.Storage.EventTypes;
+using Cratis.Strings;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;

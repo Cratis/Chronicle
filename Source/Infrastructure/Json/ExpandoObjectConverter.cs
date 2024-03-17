@@ -5,10 +5,9 @@ using System.Collections;
 using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Json;
-using Aksio.Types;
 using Cratis.Reflection;
 using Cratis.Schemas;
+using Cratis.Types;
 using NJsonSchema;
 
 namespace Cratis.Json;

@@ -5,7 +5,6 @@ using System.Globalization;
 using Aksio.Applications.Autofac;
 using Cratis.Kernel.Grains.Observation.Placement;
 using Cratis.Kernel.Server.Serialization;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 
 #pragma warning disable SA1600
@@ -33,15 +32,11 @@ public static class Program
          Host.CreateDefaultBuilder(args)
             .ConfigureCpuBoundWorkers()
             .UseMongoDB()
-            .UseCratis()
             .UseOrleans(_ => _
-                .UseCluster()
                 .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
-                .UseStreamCaching()
                 .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
                 .ConfigureSerialization()
                 .AddReplayStateManagement()
-                .UseTelemetry()
                 .UseDashboard(options =>
                 {
                     options.Host = "*";
@@ -50,15 +45,7 @@ public static class Program
                 })
                 .ConfigureStorage()
                 .UseMongoDB()
-                .AddEventSequenceStreaming())
-            .ConfigureWebHostDefaults(_ => _
-                .ConfigureKestrel(options =>
-                {
-                    options.ListenAnyIP(8080, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
-                    options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
-                    options.Limits.Http2.MaxStreamsPerConnection = 100;
-                })
-                .UseStartup<Startup>());
+                .AddEventSequenceStreaming());
 
     static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
     {

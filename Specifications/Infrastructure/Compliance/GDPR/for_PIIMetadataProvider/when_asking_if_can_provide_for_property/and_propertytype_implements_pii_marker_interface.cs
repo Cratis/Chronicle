@@ -7,7 +7,7 @@ namespace Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_asking_if_can_prov
 
 public class and_propertytype_implements_pii_marker_interface : given.a_provider
 {
-    class MyType : IHoldPII { }
+    class MyType : IHoldPII;
 
     class MyClass
     {

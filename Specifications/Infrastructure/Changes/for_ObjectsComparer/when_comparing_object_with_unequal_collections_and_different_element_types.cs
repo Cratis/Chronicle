@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
-using Aksio.Strings;
+using Cratis.Strings;
 
 namespace Cratis.Changes.for_ObjectComparer;
 

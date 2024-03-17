@@ -3,7 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Properties;
-using Aksio.Strings;
+using Cratis.Strings;
 
 namespace Cratis.Rules.for_Rules.when_projecting_to_rule;
 

@@ -10,8 +10,8 @@ public class and_there_are_none : Specification
 
     void Establish() =>
         resolver = new(
-            new KnownInstancesOf<ICanProvideComplianceMetadataForType>(Array.Empty<ICanProvideComplianceMetadataForType>()),
-            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>(Array.Empty<ICanProvideComplianceMetadataForProperty>())
+            new KnownInstancesOf<ICanProvideComplianceMetadataForType>([]),
+            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([])
         );
 
     void Because() => result = Catch.Exception(() => resolver.GetMetadataFor(typeof(object)));

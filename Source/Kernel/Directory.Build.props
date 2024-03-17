@@ -11,4 +11,8 @@
     <ItemGroup>
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>
     </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="$(MSBuildThisFileDirectory)../Infrastructure/Infrastructure.csproj" />
+    </ItemGroup>
 </Project>

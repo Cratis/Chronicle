@@ -4,12 +4,12 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using Aksio.Reflection;
 using Cratis.Changes;
 using Cratis.Dynamic;
 using Cratis.Events;
 using Cratis.Kernel.Storage.EventSequences;
 using Cratis.Properties;
+using Cratis.Reflection;
 
 namespace Cratis.Kernel.Projections;
 

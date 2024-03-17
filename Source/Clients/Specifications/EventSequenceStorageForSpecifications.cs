@@ -13,23 +13,16 @@ namespace Cratis.Specifications;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IEventSequenceStorage"/>.
 /// </summary>
-public class EventSequenceStorageForSpecifications : IEventSequenceStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequenceStorageForSpecifications"/> class.
+/// </remarks>
+/// <param name="eventLog">The <see creF="EventLogForSpecifications"/>.</param>
+public class EventSequenceStorageForSpecifications(EventLogForSpecifications eventLog) : IEventSequenceStorage
 {
-    readonly EventLogForSpecifications _eventLog;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequenceStorageForSpecifications"/> class.
-    /// </summary>
-    /// <param name="eventLog">The <see creF="EventLogForSpecifications"/>.</param>
-    public EventSequenceStorageForSpecifications(EventLogForSpecifications eventLog)
-    {
-        _eventLog = eventLog;
-    }
-
     /// <inheritdoc/>
     public Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = null, IEnumerable<EventType>? eventTypes = null, CancellationToken cancellationToken = default)
     {
-        var query = _eventLog.AppendedEvents.Where(_ => _.Metadata.SequenceNumber >= sequenceNumber);
+        var query = eventLog.AppendedEvents.Where(_ => _.Metadata.SequenceNumber >= sequenceNumber);
         if (eventSourceId is not null)
         {
             query = query.Where(_ => _.Context.EventSourceId == eventSourceId);
@@ -46,7 +39,7 @@ public class EventSequenceStorageForSpecifications : IEventSequenceStorage
     /// <inheritdoc/>
     public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = null, IEnumerable<EventType>? eventTypes = null, CancellationToken cancellationToken = default)
     {
-        var query = _eventLog.AppendedEvents.Where(_ => _.Metadata.SequenceNumber >= start && _.Metadata.SequenceNumber <= end);
+        var query = eventLog.AppendedEvents.Where(_ => _.Metadata.SequenceNumber >= start && _.Metadata.SequenceNumber <= end);
         if (eventSourceId is not null)
         {
             query = query.Where(_ => _.Context.EventSourceId == eventSourceId);
@@ -61,10 +54,10 @@ public class EventSequenceStorageForSpecifications : IEventSequenceStorage
     }
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetHeadSequenceNumber(IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null) => Task.FromResult(_eventLog.AppendedEvents.First().Metadata.SequenceNumber);
+    public Task<EventSequenceNumber> GetHeadSequenceNumber(IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null) => Task.FromResult(eventLog.AppendedEvents.First().Metadata.SequenceNumber);
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetTailSequenceNumber(IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null) => Task.FromResult(_eventLog.AppendedEvents.Last().Metadata.SequenceNumber);
+    public Task<EventSequenceNumber> GetTailSequenceNumber(IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null) => Task.FromResult(eventLog.AppendedEvents.Last().Metadata.SequenceNumber);
 
     /// <inheritdoc/>
     public Task<IImmutableDictionary<EventType, EventSequenceNumber>> GetTailSequenceNumbersForEventTypes(IEnumerable<EventType> eventTypes) => Task.FromResult<IImmutableDictionary<EventType, EventSequenceNumber>>(ImmutableDictionary<EventType, EventSequenceNumber>.Empty);
@@ -72,7 +65,7 @@ public class EventSequenceStorageForSpecifications : IEventSequenceStorage
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null)
     {
-        var query = _eventLog.AppendedEvents.Where(_ => _.Metadata.SequenceNumber >= sequenceNumber);
+        var query = eventLog.AppendedEvents.Where(_ => _.Metadata.SequenceNumber >= sequenceNumber);
         if (eventSourceId is not null)
         {
             query = query.Where(_ => _.Context.EventSourceId == eventSourceId);
@@ -89,21 +82,21 @@ public class EventSequenceStorageForSpecifications : IEventSequenceStorage
     /// <inheritdoc/>
     public Task<AppendedEvent> GetLastInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId)
     {
-        var lastInstance = _eventLog.AppendedEvents.Where(_ => _.Metadata.Type.Id == eventTypeId && _.Context.EventSourceId == eventSourceId).OrderByDescending(_ => _.Metadata.SequenceNumber).First();
+        var lastInstance = eventLog.AppendedEvents.Where(_ => _.Metadata.Type.Id == eventTypeId && _.Context.EventSourceId == eventSourceId).OrderByDescending(_ => _.Metadata.SequenceNumber).First();
         return Task.FromResult(new AppendedEvent(lastInstance.Metadata, lastInstance.Context, lastInstance.Content));
     }
 
     /// <inheritdoc/>
     public Task<AppendedEvent> GetLastInstanceOfAny(EventSourceId eventSourceId, IEnumerable<EventTypeId> eventTypes)
     {
-        var lastInstance = _eventLog.AppendedEvents.Where(_ => eventTypes.Any(et => et == _.Metadata.Type.Id) && _.Context.EventSourceId == eventSourceId).OrderByDescending(_ => _.Metadata.SequenceNumber).First();
+        var lastInstance = eventLog.AppendedEvents.Where(_ => eventTypes.Any(et => et == _.Metadata.Type.Id) && _.Context.EventSourceId == eventSourceId).OrderByDescending(_ => _.Metadata.SequenceNumber).First();
         return Task.FromResult(new AppendedEvent(lastInstance.Metadata, lastInstance.Context, lastInstance.Content));
     }
 
     /// <inheritdoc/>
     public Task<bool> HasInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId)
     {
-        var count = _eventLog.AppendedEvents.Count(_ => _.Metadata.Type.Id == eventTypeId && _.Context.EventSourceId == eventSourceId);
+        var count = eventLog.AppendedEvents.Count(_ => _.Metadata.Type.Id == eventTypeId && _.Context.EventSourceId == eventSourceId);
         return Task.FromResult(count > 0);
     }
 

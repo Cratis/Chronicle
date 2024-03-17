@@ -3,7 +3,7 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Aksio.Json;
+using Cratis.Json;
 using Cratis.EventSequences;
 using Cratis.Kernel.Keys;
 using Cratis.Kernel.Observation;

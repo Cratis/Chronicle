@@ -1,14 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Configuration;
-
 namespace Cratis.Kernel.Configuration;
 
 /// <summary>
 /// Represents the storage configuration.
 /// </summary>
-[Configuration]
 public class Storage
 {
     /// <summary>

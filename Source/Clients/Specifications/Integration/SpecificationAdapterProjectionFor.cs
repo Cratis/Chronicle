@@ -11,18 +11,13 @@ namespace Cratis.Specifications.Integration;
 /// Represents a <see cref="IAdapterProjectionFor{T}"/> for in-memory purpose.
 /// </summary>
 /// <typeparam name="TModel">Type of model.</typeparam>
-public class SpecificationAdapterProjectionFor<TModel> : IAdapterProjectionFor<TModel>, IDisposable
+/// <remarks>
+/// Initializes a new instance of the <see cref="SpecificationAdapterProjectionFor{TModel}"/> class.
+/// </remarks>
+/// <param name="context"><see cref="ProjectionSpecificationContext{TModel}"/> for working with the projection.</param>
+public class SpecificationAdapterProjectionFor<TModel>(ProjectionSpecificationContext<TModel> context) : IAdapterProjectionFor<TModel>, IDisposable
 {
-    readonly ProjectionSpecificationContext<TModel> _context;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SpecificationAdapterProjectionFor{TModel}"/> class.
-    /// </summary>
-    /// <param name="context"><see cref="ProjectionSpecificationContext{TModel}"/> for working with the projection.</param>
-    public SpecificationAdapterProjectionFor(ProjectionSpecificationContext<TModel> context)
-    {
-        _context = context;
-    }
+    readonly ProjectionSpecificationContext<TModel> _context = context;
 
     /// <inheritdoc/>
     public ProjectionDefinition Definition => _context.Definition;

@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Aksio.Reflection;
 using Cratis.Aggregates;
 using Cratis.Events;
 using Cratis.Kernel.Contracts.Observation.Reducers;
 using Cratis.Models;
 using Cratis.Observation;
+using Cratis.Reflection;
 using Cratis.Schemas;
 using Cratis.Sinks;
 using Microsoft.Extensions.Logging;

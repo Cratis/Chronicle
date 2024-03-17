@@ -5,7 +5,7 @@ using System.Net;
 using System.Text.Json;
 using Aksio.Commands;
 using Cratis.Specifications.Events;
-using Aksio.Json;
+using Cratis.Json;
 
 namespace Cratis.Observation.for_ClientObserversEndpoints.when_handling;
 

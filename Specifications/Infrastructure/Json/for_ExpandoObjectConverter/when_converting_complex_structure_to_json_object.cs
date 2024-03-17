@@ -4,7 +4,7 @@
 using System.Dynamic;
 using System.Globalization;
 using System.Text.Json.Nodes;
-using Aksio.Json;
+using Cratis.Json;
 
 namespace Cratis.Json.for_ExpandoObjectConverter;
 

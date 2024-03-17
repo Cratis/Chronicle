@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Cratis.Auditing;
 using Cratis.Identities;
-using Aksio.Strings;
+using Cratis.Strings;
 
 namespace Cratis.Kernel.Projections.Expressions.given;
 

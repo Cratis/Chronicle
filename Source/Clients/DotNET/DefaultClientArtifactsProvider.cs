@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Reflection;
-using Aksio.Types;
+using Cratis.Reflection;
+using Cratis.Types;
 using Cratis.Aggregates;
 using Cratis.Compliance;
 using Cratis.Events;

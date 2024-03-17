@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Kernel.Read</AssemblyName>
+        <RootNamespace>Cratis.Kernel.Read</RootNamespace>
+    </PropertyGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aksio.Applications.CQRS" />
+        <PackageReference Include="Aksio.Applications.CQRS.MongoDB" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Common/Common.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
+        <ProjectReference Include="../Events/Events.csproj" />
+        <ProjectReference Include="../Projections/Projections.csproj"/>
+        <ProjectReference Include="../Grains/Grains.csproj" />
+        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
+        <ProjectReference Include="../Storage/Storage.csproj" />
+        <ProjectReference Include="../../Clients/DotNET/DotNET.csproj"/>
+    </ItemGroup>
+</Project>

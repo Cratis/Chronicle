@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Compliance;
-using Aksio.Strings;
+using Cratis.Strings;
 
 namespace Cratis.Schemas.for_ComplianceMetadataSchemaProcessor;
 

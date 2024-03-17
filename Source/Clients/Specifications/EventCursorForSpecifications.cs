@@ -9,18 +9,16 @@ namespace Cratis.Specifications;
 /// <summary>
 /// Represents an <see cref="IEventCursor"/> for specifications.
 /// </summary>
-public class EventCursorForSpecifications : IEventCursor
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventCursorForSpecifications"/> class.
+/// </remarks>
+/// <param name="all">All events.</param>
+public class EventCursorForSpecifications(IEnumerable<AppendedEvent> all) : IEventCursor
 {
     bool _moveNext = true;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventCursorForSpecifications"/> class.
-    /// </summary>
-    /// <param name="all">All events.</param>
-    public EventCursorForSpecifications(IEnumerable<AppendedEvent> all) => Current = all;
-
     /// <inheritdoc/>
-    public IEnumerable<AppendedEvent> Current { get; }
+    public IEnumerable<AppendedEvent> Current { get; } = all;
 
     /// <inheritdoc/>
     public void Dispose()

@@ -5,9 +5,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aksio.Fundamentals" />
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="humanizer" />
+        <PackageReference Include="Microsoft.Extensions.DependencyModel" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
         <PackageReference Include="NJsonSchema" />
         <PackageReference Include="Newtonsoft.Json" />
-
     </ItemGroup>
 </Project>

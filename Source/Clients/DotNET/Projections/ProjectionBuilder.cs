@@ -5,14 +5,13 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Reflection;
-using Aksio.Strings;
 using Cratis.Events;
 using Cratis.Kernel.Contracts.Projections;
 using Cratis.Models;
 using Cratis.Properties;
 using Cratis.Reflection;
 using Cratis.Schemas;
+using Cratis.Strings;
 using Humanizer;
 using EventType = Cratis.Kernel.Contracts.Events.EventType;
 

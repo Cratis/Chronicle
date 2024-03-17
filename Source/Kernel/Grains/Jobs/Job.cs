@@ -4,11 +4,11 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
-using Aksio.Reflection;
 using Cratis.Jobs;
 using Cratis.Kernel.Orleans.Observers;
 using Cratis.Kernel.Storage;
 using Cratis.Kernel.Storage.Jobs;
+using Cratis.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -27,7 +27,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     where TRequest : class
     where TJobState : JobState
 {
-    IDictionary<JobStepId, JobStepGrainAndRequest> _jobStepGrains = new Dictionary<JobStepId, JobStepGrainAndRequest>();
+    Dictionary<JobStepId, JobStepGrainAndRequest> _jobStepGrains = [];
     ObserverManager<IJobObserver>? _observers;
     bool _isRunning;
     IDisposable? _subscriptionTimer;

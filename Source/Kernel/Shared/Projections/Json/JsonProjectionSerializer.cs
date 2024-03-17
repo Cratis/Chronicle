@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Json;
+using Cratis.Json;
 using Cratis.Projections.Definitions;
 using Cratis.Properties;
 

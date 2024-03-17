@@ -4,9 +4,8 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Execution;
-using Aksio.Json;
 using Cratis.Events;
+using Cratis.Execution;
 using Cratis.Identities;
 using Cratis.Json;
 using Cratis.Schemas;
@@ -25,7 +24,7 @@ public class EventSequenceForSpecifications(
     IExpandoObjectConverter expandoObjectConverter,
     IJsonSchemaGenerator schemaGenerator)
 {
-    readonly List<AppendedEventForSpecifications> _appendedEvents = new();
+    readonly List<AppendedEventForSpecifications> _appendedEvents = [];
     EventSequenceNumber _sequenceNumber = EventSequenceNumber.First;
 
     /// <summary>

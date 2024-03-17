@@ -6,7 +6,7 @@ namespace Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_asking_if_can_prov
 public class and_type_is_adorned_with_pii_attribute : given.a_provider
 {
     [PII]
-    class MyType { }
+    class MyType;
 
     bool result;
     void Because() => result = provider.CanProvide(typeof(MyType));

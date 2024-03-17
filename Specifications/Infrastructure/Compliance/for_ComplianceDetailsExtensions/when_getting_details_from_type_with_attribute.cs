@@ -8,7 +8,7 @@ public class when_getting_details_from_type_with_attribute : Specification
     const string details = "This is the details";
 
     [ComplianceDetails(details)]
-    class TheType { }
+    class TheType;
 
     string result;
 

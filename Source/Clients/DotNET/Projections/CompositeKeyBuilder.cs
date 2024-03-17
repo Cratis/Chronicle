@@ -3,7 +3,6 @@
 
 using System.Linq.Expressions;
 using System.Text;
-using Aksio.Reflection;
 using Cratis.Reflection;
 
 namespace Cratis.Projections;

@@ -1,13 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Collections;
-using Aksio.Json;
 using Aksio.Tasks;
 using Aksio.Timers;
-using Aksio.Types;
 using Cratis.Aggregates;
 using Cratis.Auditing;
+using Cratis.Collections;
 using Cratis.Compliance;
 using Cratis.Compliance.GDPR;
 using Cratis.Configuration;
@@ -15,6 +13,7 @@ using Cratis.Connections;
 using Cratis.Events;
 using Cratis.Identities;
 using Cratis.Integration;
+using Cratis.Json;
 using Cratis.Models;
 using Cratis.Net;
 using Cratis.Observation;
@@ -22,6 +21,7 @@ using Cratis.Projections;
 using Cratis.Reducers;
 using Cratis.Rules;
 using Cratis.Schemas;
+using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -150,8 +150,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
             .AddSingleton<IEventTypes, Events.EventTypes>()
             .AddSingleton<IEventSerializer, EventSerializer>()
-            .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-            .AddSingleton<ITypes>(Types.Instance)
+            .AddSingleton<ITypes>(Types.Types.Instance)
             .AddSingleton<ITaskFactory, TaskFactory>()
             .AddSingleton<ITimerFactory, TimerFactory>()
             .AddSingleton<IAdapters, Adapters>()
