@@ -17,15 +17,15 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 public class EventSequenceCaches(
     IEventSequenceCacheFactory eventSequenceCacheFactory) : IEventSequenceCaches
 {
-    readonly ConcurrentDictionary<(MicroserviceId, TenantId, EventSequenceId), IEventSequenceCache> _caches = new();
+    readonly ConcurrentDictionary<(EventStoreName, EventStoreNamespaceName, EventSequenceId), IEventSequenceCache> _caches = new();
 
     /// <inheritdoc/>
-    public IEventSequenceCache GetFor(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId)
+    public IEventSequenceCache GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId)
     {
-        var key = (microserviceId, tenantId, eventSequenceId);
+        var key = (eventStore, @namespace, eventSequenceId);
         if (!_caches.TryGetValue(key, out var cache))
         {
-            cache = eventSequenceCacheFactory.Create(microserviceId, tenantId, eventSequenceId);
+            cache = eventSequenceCacheFactory.Create(eventStore, @namespace, eventSequenceId);
             _caches.TryAdd(key, cache);
         }
 

@@ -26,14 +26,14 @@ internal static class ObservingScopes
     internal static IDisposable? BeginObservingScope(
         this ILogger<Observing> logger,
         ObserverState state,
-        MicroserviceId microserviceId,
-        TenantId tenantId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         EventSequenceId eventSequenceId) =>
         logger.BeginScope(new Dictionary<string, object>
         {
             ["ObserverId"] = state.ObserverId,
-            ["MicroserviceId"] = microserviceId,
-            ["TenantId"] = tenantId,
+            ["EventStore"] = eventStore,
+            ["Namespace"] = @namespace,
             ["EventSequenceId"] = eventSequenceId
         });
 }

@@ -53,7 +53,7 @@ public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, Cat
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
-        var observerKeyIndexes = storage.GetEventStore((string)JobKey.MicroserviceId).GetNamespace(JobKey.TenantId).ObserverKeyIndexes;
+        var observerKeyIndexes = storage.GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
         var index = await observerKeyIndexes.GetFor(
             request.ObserverId,
             request.ObserverKey);

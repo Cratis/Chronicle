@@ -11,7 +11,7 @@ namespace Cratis.Kernel.Storage.Keys;
 public interface IObserverKeyIndexes
 {
     /// <summary>
-    /// Get the key index for a specific observer, event sequence, microservice and tenant.
+    /// Get the key index for a specific observer, event sequence, event store and namespace.
     /// </summary>
     /// <param name="observerId"><see cref="ObserverId"/> the index is for.</param>
     /// <param name="observerKey"><see cref="ObserverKey"/> for the observer.</param>

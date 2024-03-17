@@ -92,7 +92,8 @@ public class AggregateRoot : IAggregateRoot
 
         if (!IsStateful)
         {
-            EventHandlers.Handle(this, new[] { new EventAndContext(@event, EventContext.From(EventSourceId, EventSequenceNumber.Unavailable)) }).GetAwaiter().GetResult();
+            // TODO: We should have the correct event store and namespace, this should be injected into the aggregate root.
+            EventHandlers.Handle(this, new[] { new EventAndContext(@event, EventContext.From(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSourceId, EventSequenceNumber.Unavailable)) }).GetAwaiter().GetResult();
         }
     }
 

@@ -21,7 +21,7 @@ namespace Cratis.Kernel.Domain.Projections;
 /// <param name="grainFactory">Orleans <see cref="IGrainFactory"/>.</param>
 /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for deserializing projections.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
-[Route("/api/events/store/{microserviceId}/projections")]
+[Route("/api/events/store/{eventStore}/projections")]
 public class Projections(
     IGrainFactory grainFactory,
     IJsonProjectionSerializer projectionSerializer,
@@ -30,12 +30,12 @@ public class Projections(
     /// <summary>
     /// Register projections with pipelines.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to register for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to register for.</param>
     /// <param name="payload">The registrations.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost]
     public async Task RegisterProjections(
-        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] EventStoreName eventStore,
         [FromBody] RegisterProjections payload)
     {
         var projections = grainFactory.GetGrain<IProjections>(0);
@@ -44,25 +44,25 @@ public class Projections(
                 projectionSerializer.Deserialize(_.Projection),
                 _.Pipeline.Deserialize<ProjectionPipelineDefinition>(jsonSerializerOptions)!)).ToArray();
 
-        await projections.Register(microserviceId, projectionsAndPipelines);
+        await projections.Register(eventStore, projectionsAndPipelines);
     }
 
     /// <summary>
     /// Perform an immediate projection.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to perform for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> to perform for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to perform for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to perform for.</param>
     /// <param name="immediateProjection">The details about the <see cref="ImmediateProjection"/>.</param>
     /// <returns><see cref="ImmediateProjectionResult"/>.</returns>
-    [HttpPost("immediate/{tenantId}")]
+    [HttpPost("immediate/{namespace}")]
     public async Task<ImmediateProjectionResult> Immediate(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromBody] ImmediateProjection immediateProjection)
     {
         var key = new ImmediateProjectionKey(
-            microserviceId,
-            tenantId,
+            eventStore,
+            @namespace,
             immediateProjection.EventSequenceId,
             immediateProjection.ModelKey);
 
@@ -73,21 +73,21 @@ public class Projections(
     /// <summary>
     /// Perform an immediate projection for a specific session based on the current correlation id.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to perform for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> to perform for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to perform for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to perform for.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> identifying the session.</param>
     /// <param name="immediateProjection">The details about the <see cref="ImmediateProjection"/>.</param>
     /// <returns><see cref="ImmediateProjectionResult"/>.</returns>
-    [HttpPost("immediate/{tenantId}/session/{correlationId}")]
+    [HttpPost("immediate/{namespace}/session/{correlationId}")]
     public async Task<ImmediateProjectionResult> ImmediateForSession(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] CorrelationId correlationId,
         [FromBody] ImmediateProjection immediateProjection)
     {
         var key = new ImmediateProjectionKey(
-            microserviceId,
-            tenantId,
+            eventStore,
+            @namespace,
             immediateProjection.EventSequenceId,
             immediateProjection.ModelKey,
             correlationId);
@@ -99,21 +99,21 @@ public class Projections(
     /// <summary>
     /// Apply additional events to an immediate projection in session, assuming it already exists with state.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to perform for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> to perform for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to apply for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to apply for.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> identifying the session.</param>
     /// <param name="immediateProjection">The details about the <see cref="ImmediateProjectionWithEventsToApply"/>.</param>
     /// <returns><see cref="ImmediateProjectionResult"/>.</returns>
-    [HttpPost("immediate/{tenantId}/session/{correlationId}/with-events")]
+    [HttpPost("immediate/{namespace}/session/{correlationId}/with-events")]
     public async Task<ImmediateProjectionResult> ImmediateForSessionWithEvents(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] CorrelationId correlationId,
         [FromBody] ImmediateProjectionWithEventsToApply immediateProjection)
     {
         var key = new ImmediateProjectionKey(
-            microserviceId,
-            tenantId,
+            eventStore,
+            @namespace,
             immediateProjection.EventSequenceId,
             immediateProjection.ModelKey,
             correlationId);
@@ -125,21 +125,21 @@ public class Projections(
     /// <summary>
     /// Apply additional events to an immediate projection in session, assuming it already exists with state.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to perform for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> to perform for.</param>
+    /// <param name="eventStore"><see cref="EventStore"/> to dehydrate from.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to dehydrate from.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> identifying the session.</param>
     /// <param name="immediateProjection">The details about the <see cref="ImmediateProjectionWithEventsToApply"/>.</param>
     /// <returns><see cref="ImmediateProjectionResult"/>.</returns>
-    [HttpPost("immediate/{tenantId}/session/{correlationId}/dehydrate")]
+    [HttpPost("immediate/{namespace}/session/{correlationId}/dehydrate")]
     public async Task Dehydrate(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] CorrelationId correlationId,
         [FromBody] ImmediateProjection immediateProjection)
     {
         var key = new ImmediateProjectionKey(
-            microserviceId,
-            tenantId,
+            eventStore,
+            @namespace,
             immediateProjection.EventSequenceId,
             immediateProjection.ModelKey,
             correlationId);

@@ -43,8 +43,8 @@ public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsM
     async Task<IRecommendation> GetGrainFor(RecommendationId recommendationId)
     {
         var key = GetRecommendationKey();
-        var recommendationStorage = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Recommendations;
-        var recommendationState = await recommendationStorage.Get(recommendationId) ?? throw new UnknownRecommendation(key.MicroserviceId, key.TenantId, recommendationId);
+        var recommendationStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Recommendations;
+        var recommendationState = await recommendationStorage.Get(recommendationId) ?? throw new UnknownRecommendation(key.EventStore, key.Namespace, recommendationId);
         var recommendationType = (Type)recommendationState.Type;
         return GrainFactory.GetGrain(recommendationType, recommendationId, keyExtension: GetRecommendationKey()).AsReference<IRecommendation>();
     }
@@ -53,6 +53,6 @@ public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsM
     {
         this.GetPrimaryKey(out var keyAsString);
         var key = (RecommendationsManagerKey)keyAsString;
-        return new RecommendationKey(key.MicroserviceId, key.TenantId);
+        return new RecommendationKey(key.EventStore, key.Namespace);
     }
 }

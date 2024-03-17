@@ -11,10 +11,10 @@ namespace Cratis.Kernel.Grains.Recommendations;
 /// <remarks>
 /// Initializes a new instance of the <see cref="UnknownRecommendation"/> class.
 /// </remarks>
-/// <param name="microserviceId">The <see cref="MicroserviceId"/> the recommendation wasn't found in.</param>
-/// <param name="tenantId">The <see cref="TenantId"/> the recommendation wasn't found for.</param>
+/// <param name="eventStore">The <see cref="EventStoreName"/> the recommendation wasn't found in.</param>
+/// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the recommendation wasn't found for.</param>
 /// <param name="recommendationId">The <see cref="RecommendationId"/> that wasn't found.</param>
 public class UnknownRecommendation(
-    MicroserviceId microserviceId,
-    TenantId tenantId,
-    RecommendationId recommendationId) : Exception($"Unknown recommendation with id {recommendationId} for tenant {tenantId} in microservice {microserviceId}");
+    EventStoreName eventStore,
+    EventStoreNamespaceName @namespace,
+    RecommendationId recommendationId) : Exception($"Unknown recommendation with id {recommendationId} for namespace {@namespace} in event store {eventStore}");

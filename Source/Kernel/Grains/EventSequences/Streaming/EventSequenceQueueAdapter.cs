@@ -49,8 +49,8 @@ public class EventSequenceQueueAdapter(
         {
             var eventSequenceId = (EventSequenceId)streamId.GetKeyAsString();
             var eventSequenceKey = (EventSequenceKey)streamNamespace;
-            var eventStore = storage.GetEventStore((string)eventSequenceKey.MicroserviceId);
-            var eventSequenceStorage = eventStore.GetNamespace(eventSequenceKey.TenantId).GetEventSequence(eventSequenceId);
+            var eventStore = storage.GetEventStore((string)eventSequenceKey.EventStore);
+            var eventSequenceStorage = eventStore.GetNamespace(eventSequenceKey.Namespace).GetEventSequence(eventSequenceId);
 
             events = events.ToArray();
             var appendedEvents = new List<AppendedEvent>();
@@ -78,8 +78,8 @@ public class EventSequenceQueueAdapter(
 
                     throw new UnableToAppendToEventSequence(
                         eventSequenceId,
-                        eventSequenceKey.MicroserviceId,
-                        eventSequenceKey.TenantId,
+                        eventSequenceKey.EventStore,
+                        eventSequenceKey.Namespace,
                         appendedEvent.Metadata.SequenceNumber,
                         appendedEvent.Context.EventSourceId,
                         ex);

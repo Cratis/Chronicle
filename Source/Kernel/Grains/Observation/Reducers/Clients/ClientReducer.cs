@@ -37,7 +37,7 @@ public class ClientReducer(
     /// <inheritdoc/>
     public async Task Start(ObserverName name, ConnectionId connectionId, IEnumerable<EventTypeWithKeyExpression> eventTypes)
     {
-        logger.Starting(_observerKey!.MicroserviceId, _reducerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
+        logger.Starting(_observerKey!.EventStore, _reducerId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
         var observer = GrainFactory.GetGrain<IObserver>(_reducerId!, _observerKey!);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
 
@@ -54,7 +54,7 @@ public class ClientReducer(
     /// <inheritdoc/>
     public void OnClientDisconnected(ConnectedClient client)
     {
-        logger.ClientDisconnected(client.ConnectionId, _observerKey!.MicroserviceId, _reducerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
+        logger.ClientDisconnected(client.ConnectionId, _observerKey!.EventStore, _reducerId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
         var id = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverKey.Parse(keyAsString);
         var observer = GrainFactory.GetGrain<IObserver>(id, key);

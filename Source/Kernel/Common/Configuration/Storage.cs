@@ -6,7 +6,7 @@ using Aksio.Configuration;
 namespace Cratis.Kernel.Configuration;
 
 /// <summary>
-/// Represents the storage configuration for all microservices.
+/// Represents the storage configuration.
 /// </summary>
 [Configuration]
 public class Storage

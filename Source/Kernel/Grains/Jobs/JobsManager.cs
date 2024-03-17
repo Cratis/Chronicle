@@ -32,7 +32,7 @@ public class JobsManager(
         this.GetPrimaryKeyLong(out var key);
         _key = key;
 
-        _namespaceStorage = storage.GetEventStore((string)_key.MicroserviceId).GetNamespace(_key.TenantId);
+        _namespaceStorage = storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace);
         _jobStorage = _namespaceStorage.Jobs;
         _jobStepStorage = _namespaceStorage.JobSteps;
 
@@ -50,7 +50,7 @@ public class JobsManager(
         foreach (var runningJob in runningJobs)
         {
             var grainType = (Type)runningJob.Type;
-            var job = GrainFactory.GetGrain(grainType, runningJob.Id, new JobKey(_key.MicroserviceId, _key.TenantId)) as IJob;
+            var job = GrainFactory.GetGrain(grainType, runningJob.Id, new JobKey(_key.EventStore, _key.Namespace)) as IJob;
             await job!.Resume();
         }
     }
@@ -67,8 +67,8 @@ public class JobsManager(
         var job = GrainFactory.GetGrain<TJob>(
             jobId,
             new JobKey(
-                _key.MicroserviceId,
-                _key.TenantId));
+                _key.EventStore,
+                _key.Namespace));
 
         await job.Start(request);
     }
@@ -81,7 +81,7 @@ public class JobsManager(
         logger.ResumingJob(jobId);
 
         var jobState = await _jobStorage!.GetJob(jobId);
-        var job = (GrainFactory.GetGrain(jobState.Type, jobId, new JobKey(_key.MicroserviceId, _key.TenantId)) as IJob)!;
+        var job = (GrainFactory.GetGrain(jobState.Type, jobId, new JobKey(_key.EventStore, _key.Namespace)) as IJob)!;
         await job.Resume();
     }
 
@@ -93,7 +93,7 @@ public class JobsManager(
         logger.StoppingJob(jobId);
 
         var jobState = await _jobStorage!.GetJob(jobId);
-        var job = (GrainFactory.GetGrain(jobState.Type, jobId, new JobKey(_key.MicroserviceId, _key.TenantId)) as IJob)!;
+        var job = (GrainFactory.GetGrain(jobState.Type, jobId, new JobKey(_key.EventStore, _key.Namespace)) as IJob)!;
         await job.Stop();
     }
 

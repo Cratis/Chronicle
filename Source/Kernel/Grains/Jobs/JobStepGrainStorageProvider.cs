@@ -33,7 +33,7 @@ public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
         if (grainId.TryGetGuidKey(out var jobStepId, out var keyExtension))
         {
             var key = (JobStepKey)keyExtension!;
-            var @namespace = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
+            var @namespace = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).JobSteps;
             var state = await @namespace.Read<T>(key.JobId, jobStepId);
             if (state is not null)
             {
@@ -50,7 +50,7 @@ public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
         if (grainId.TryGetGuidKey(out var jobStepId, out var keyExtension))
         {
             var key = (JobStepKey)keyExtension!;
-            var @namespace = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
+            var @namespace = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).JobSteps;
 
             var actualState = (grainState.State as JobStepState)!;
 

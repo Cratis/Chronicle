@@ -20,17 +20,17 @@ public class ProjectionObserverSubscriber(IKernel kernel) : Grain, IProjectionOb
 {
     ProjectionId _projectionId = ProjectionId.NotSet;
     IProjectionPipeline? _pipeline;
-    MicroserviceId _microserviceId = MicroserviceId.Unspecified;
-    TenantId _tenantId = TenantId.NotSet;
+    EventStoreName _eventStore = EventStoreName.NotSet;
+    EventStoreNamespaceName _namespace = EventStoreNamespaceName.NotSet;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _projectionId = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverSubscriberKey.Parse(keyAsString);
-        _microserviceId = key.MicroserviceId;
-        _tenantId = key.TenantId;
-        var projection = GrainFactory.GetGrain<IProjection>(_projectionId, new ProjectionKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
+        _eventStore = key.EventStore;
+        _namespace = key.Namespace;
+        var projection = GrainFactory.GetGrain<IProjection>(_projectionId, new ProjectionKey(key.EventStore, key.Namespace, key.EventSequenceId));
         await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
 
         HandleDefinitionsAndInstances();
@@ -73,7 +73,7 @@ public class ProjectionObserverSubscriber(IKernel kernel) : Grain, IProjectionOb
 
     void HandleDefinitionsAndInstances()
     {
-        var projectionManager = kernel.GetEventStore((string)_microserviceId).GetNamespace(_tenantId).ProjectionManager;
+        var projectionManager = kernel.GetEventStore((string)_eventStore).GetNamespace(_namespace).ProjectionManager;
         _pipeline = projectionManager.GetPipeline(_projectionId);
     }
 }

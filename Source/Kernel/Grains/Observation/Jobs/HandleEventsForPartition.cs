@@ -46,8 +46,8 @@ public class HandleEventsForPartition(
         }
 
         var key = new ObserverSubscriberKey(
-            request.ObserverKey.MicroserviceId,
-            request.ObserverKey.TenantId,
+            request.ObserverKey.EventStore,
+            request.ObserverKey.Namespace,
             request.ObserverKey.EventSequenceId,
             eventSourceId,
             request.ObserverSubscription.SiloAddress.ToParsableString());
@@ -66,7 +66,7 @@ public class HandleEventsForPartition(
         }
 
         var eventSourceId = (EventSourceId)(request.Partition.Value.ToString() ?? string.Empty);
-        var eventSequenceStorage = GetEventSequenceStorage(request.ObserverKey.MicroserviceId, request.ObserverKey.TenantId, request.ObserverKey.EventSequenceId);
+        var eventSequenceStorage = GetEventSequenceStorage(request.ObserverKey.EventStore, request.ObserverKey.Namespace, request.ObserverKey.EventSequenceId);
         using var events = await eventSequenceStorage.GetFromSequenceNumber(
             request.StartEventSequenceNumber,
             eventSourceId,
@@ -159,5 +159,6 @@ public class HandleEventsForPartition(
         return eventsToHandle;
     }
 
-    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _eventSequenceStorage ??= storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
+    IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
+        _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
 }

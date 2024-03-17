@@ -14,41 +14,41 @@ namespace Cratis.Kernel.Domain.Recommendations;
 /// Initializes a new instance of the <see cref="Recommendations"/> class.
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-[Route("/api/events/store/{microserviceId}/{tenantId}/recommendations")]
+[Route("/api/events/store/{eventStore}/{namespace}/recommendations")]
 public class Recommendations(IGrainFactory grainFactory) : ControllerBase
 {
     /// <summary>
     /// Perform a recommendation.
     /// </summary>
-    /// <param name="microserviceId">The <see cref="MicroserviceId"/> for the recommendation.</param>
-    /// <param name="tenantId">The <see cref="TenantId"/> for the recommendation.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> for the recommendation.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> for the recommendation.</param>
     /// <param name="recommendationId">The <see cref="RecommendationId"/> of the recommendation to perform.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("{recommendationId}/perform")]
     public async Task Perform(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] RecommendationId recommendationId)
     {
-        await GetRecommendationsManager(microserviceId, tenantId).Perform(recommendationId);
+        await GetRecommendationsManager(eventStore, @namespace).Perform(recommendationId);
     }
 
     /// <summary>
     /// Ignore a recommendation.
     /// </summary>
-    /// <param name="microserviceId">The <see cref="MicroserviceId"/> for the recommendation.</param>
-    /// <param name="tenantId">The <see cref="TenantId"/> for the recommendation.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> for the recommendation.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> for the recommendation.</param>
     /// <param name="recommendationId">The <see cref="RecommendationId"/> of the recommendation to ignore.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("{recommendationId}/ignore")]
     public async Task Ignore(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] RecommendationId recommendationId)
     {
-        await GetRecommendationsManager(microserviceId, tenantId).Ignore(recommendationId);
+        await GetRecommendationsManager(eventStore, @namespace).Ignore(recommendationId);
     }
 
-    IRecommendationsManager GetRecommendationsManager(MicroserviceId microserviceId, TenantId tenantId) =>
-        grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(microserviceId, tenantId));
+    IRecommendationsManager GetRecommendationsManager(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+        grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(eventStore, @namespace));
 }

@@ -16,26 +16,26 @@ namespace Cratis.Kernel.Read.Observation;
 /// Initializes a new instance of the <see cref="Observers"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-[Route("/api/events/store/{microserviceId}/{tenantId}/failed-partitions")]
+[Route("/api/events/store/{eventStore}/{namespace}/failed-partitions")]
 public class FailedPartitions(IStorage storage) : ControllerBase
 {
     /// <summary>
-    /// Gets all failed partitions.
+    /// Gets all failed partitions for an event store and namespace.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> the failed partitions are for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the failed partitions are for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the failed partitions are for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the failed partitions are for.</param>
     /// <param name="observerId">Optional <see cref="ObserverId"/> to filter down which observer it is for.</param>
     /// <returns>Client observable of a collection of <see cref="FailedPartitions"/>.</returns>
     [HttpGet("{observerId}")]
     public Task<ClientObservable<IEnumerable<FailedPartition>>> AllFailedPartitions(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] ObserverId? observerId = default)
     {
         observerId ??= ObserverId.Unspecified;
 
         var clientObservable = new ClientObservable<IEnumerable<FailedPartition>>();
-        var failedPartitions = storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).FailedPartitions;
+        var failedPartitions = storage.GetEventStore(eventStore).GetNamespace(@namespace).FailedPartitions;
         var observable = failedPartitions.ObserveAllFor(observerId);
         var subscription = observable.Subscribe(clientObservable.OnNext);
         clientObservable.ClientDisconnected = () =>

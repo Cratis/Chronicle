@@ -8,18 +8,18 @@ namespace Cratis.Observation;
 /// <summary>
 /// Represents a key for an observer.
 /// </summary>
-/// <param name="MicroserviceId">The Microservice identifier.</param>
-/// <param name="TenantId">The Tenant identifier.</param>
+/// <param name="EventStore">The name of the event store.</param>
+/// <param name="Namespace">The namespace within the event store.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
 public record ObserverKey(
-    MicroserviceId MicroserviceId,
-    TenantId TenantId,
+    EventStoreName EventStore,
+    EventStoreNamespaceName Namespace,
     EventSequenceId EventSequenceId)
 {
     /// <summary>
     /// Gets the empty <see cref="ObserverKey"/>.
     /// </summary>
-    public static readonly ObserverKey NotSet = new(MicroserviceId.Unspecified, TenantId.NotSet, EventSequenceId.Unspecified);
+    public static readonly ObserverKey NotSet = new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Unspecified);
 
     /// <summary>
     /// Implicitly convert from <see cref="ObserverKey"/> to string.
@@ -30,7 +30,7 @@ public record ObserverKey(
     /// <inheritdoc/>
     public override string ToString()
     {
-        return $"{MicroserviceId}+{TenantId}+{EventSequenceId}";
+        return $"{EventStore}+{Namespace}+{EventSequenceId}";
     }
 
     /// <summary>
@@ -41,10 +41,10 @@ public record ObserverKey(
     public static ObserverKey Parse(string key)
     {
         var elements = key.Split('+');
-        var microserviceId = (MicroserviceId)elements[0];
-        var tenantId = (TenantId)elements[1];
+        var eventStore = (EventStoreName)elements[0];
+        var @namespace = (EventStoreNamespaceName)elements[1];
         var eventSequenceId = (EventSequenceId)elements[2];
 
-        return new(microserviceId, tenantId, eventSequenceId);
+        return new(eventStore, @namespace, eventSequenceId);
     }
 }

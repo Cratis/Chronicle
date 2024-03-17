@@ -36,7 +36,7 @@ public class EventSequences(ILogger<EventSequences> logger) : Grain, IEventSeque
             EventSequenceId.System,
         };
 
-        var eventSequenceKey = new EventSequenceKey(_key.MicroserviceId, _key.TenantId);
+        var eventSequenceKey = new EventSequenceKey(_key.EventStore, _key.Namespace);
         foreach (var eventSequence in eventSequences)
         {
             var grain = GrainFactory.GetGrain<IEventSequence>(eventSequence, eventSequenceKey);
@@ -46,7 +46,7 @@ public class EventSequences(ILogger<EventSequences> logger) : Grain, IEventSeque
             }
             catch (Exception ex)
             {
-                logger.FailedRehydratingEventSequence(eventSequence, _key.MicroserviceId, _key.TenantId, ex);
+                logger.FailedRehydratingEventSequence(eventSequence, _key.EventStore, _key.Namespace, ex);
             }
         }
     }

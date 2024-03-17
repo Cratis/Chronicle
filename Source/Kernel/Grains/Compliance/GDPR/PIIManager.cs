@@ -24,7 +24,7 @@ public class PIIManager(IEncryption encryption, IEncryptionKeyStorage keyStore) 
         var primaryKey = (PIIManagerKey)primaryKeyExtension;
 
         var key = encryption.GenerateKey();
-        await keyStore.SaveFor((string)primaryKey.MicroserviceId, primaryKey.TenantId, identifier, key);
+        await keyStore.SaveFor((string)primaryKey.EventStore, primaryKey.Namespace, identifier, key);
     }
 
     /// <inheritdoc/>
@@ -33,6 +33,6 @@ public class PIIManager(IEncryption encryption, IEncryptionKeyStorage keyStore) 
         _ = this.GetPrimaryKey(out var primaryKeyExtension);
         var primaryKey = (PIIManagerKey)primaryKeyExtension;
 
-        await keyStore.DeleteFor((string)primaryKey.MicroserviceId, primaryKey.TenantId, identifier);
+        await keyStore.DeleteFor((string)primaryKey.EventStore, primaryKey.Namespace, identifier);
     }
 }

@@ -40,9 +40,9 @@ public class ClientReducerSubscriber(
     ILogger<ClientReducerSubscriber> logger) : Grain, IClientReducerSubscriber
 {
     readonly IKernel _kernel = kernel;
-    MicroserviceId _microserviceId = MicroserviceId.Unspecified;
+    EventStoreName _eventStore = EventStoreName.NotSet;
     ReducerId _reducerId = ObserverId.Unspecified;
-    TenantId _tenantId = TenantId.NotSet;
+    EventStoreNamespaceName _namespace = EventStoreNamespaceName.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IConnectedClients? _connectedClients;
     IReducerPipeline? _pipeline;
@@ -54,13 +54,13 @@ public class ClientReducerSubscriber(
     {
         var id = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverSubscriberKey.Parse(keyAsString);
-        _microserviceId = key.MicroserviceId;
+        _eventStore = key.EventStore;
         _reducerId = id;
-        _tenantId = key.TenantId;
+        _namespace = key.Namespace;
         _eventSequenceId = key.EventSequenceId;
 
-        var eventStore = _kernel.GetEventStore((string)_microserviceId);
-        var eventStoreNamespace = eventStore.GetNamespace(_tenantId);
+        var eventStore = _kernel.GetEventStore((string)_eventStore);
+        var eventStoreNamespace = eventStore.GetNamespace(_namespace);
 
         var definition = await eventStore.ReducerPipelineDefinitions.GetFor(_reducerId);
         _pipeline = await eventStoreNamespace.ReducerPipelines.GetFor(definition);
@@ -76,8 +76,8 @@ public class ClientReducerSubscriber(
         {
             _logger.EventReceived(
                 _reducerId.Value,
-                _microserviceId,
-                _tenantId,
+                _eventStore,
+                _namespace,
                 @event.Metadata.Type.Id,
                 _eventSequenceId,
                 @event.Context.SequenceNumber);
@@ -105,7 +105,7 @@ public class ClientReducerSubscriber(
                     events,
                     initial is not null ? _expandoObjectConverter.ToJsonObject(initial, _pipeline.ReadModel.Schema) : null);
                 using var jsonContent = JsonContent.Create(reduce, options: _jsonSerializerOptions);
-                httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
+                httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _namespace.ToString());
                 var response = await httpClient.PostAsync($"/.cratis/reducers/{_reducerId}", jsonContent);
 
                 var contentAsString = string.Empty;

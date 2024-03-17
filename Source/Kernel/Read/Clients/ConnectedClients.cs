@@ -19,7 +19,7 @@ namespace Read.Clients;
 public class ConnectedClients(IGrainFactory grainFactory) : Controller
 {
     /// <summary>
-    /// Get and observe all connected clients for a specific microservice.
+    /// Get and observe all connected clients for a specific event store.
     /// </summary>
     /// <returns>Client observable of a collection of <see cref="ConnectedClient"/>.</returns>
     [HttpGet]

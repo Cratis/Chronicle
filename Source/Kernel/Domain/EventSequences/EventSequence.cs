@@ -26,7 +26,7 @@ namespace Cratis.Kernel.Domain.EventSequences;
 /// <param name="identityProvider">The <see cref="IIdentityProvider"/> for getting current identity.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
-[Route("/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}")]
+[Route("/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
 public class EventSequence(
     IGrainFactory grainFactory,
     ICausationManager causationManager,
@@ -37,22 +37,22 @@ public class EventSequence(
     /// <summary>
     /// Appends an event to the event log.
     /// </summary>
-    /// <param name="microserviceId">The microservice to append for.</param>
+    /// <param name="eventStore">The event store to append for.</param>
+    /// <param name="namespace">The namespace to append to.</param>
     /// <param name="eventSequenceId">The event sequence to append to.</param>
-    /// <param name="tenantId">The tenant to append to.</param>
     /// <param name="eventToAppend">The payload with the details about the event to append.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost]
     public async Task Append(
-        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] EventSequenceId eventSequenceId,
-        [FromRoute] TenantId tenantId,
         [FromBody] AppendEvent eventToAppend)
     {
         var causation = eventToAppend.Causation ?? causationManager.GetCurrentChain();
         var causedBy = eventToAppend.CausedBy ?? identityProvider.GetCurrent();
 
-        var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
+        var eventSequence = GetEventSequence(eventStore, @namespace, eventSequenceId);
         await eventSequence.Append(
             eventToAppend.EventSourceId,
             eventToAppend.EventType,
@@ -65,22 +65,22 @@ public class EventSequence(
     /// <summary>
     /// Appends an event to the event log.
     /// </summary>
-    /// <param name="microserviceId">The microservice to append for.</param>
+    /// <param name="eventStore">The event store to append for.</param>
+    /// <param name="namespace">The namespace to append to.</param>
     /// <param name="eventSequenceId">The event sequence to append to.</param>
-    /// <param name="tenantId">The tenant to append to.</param>
     /// <param name="eventsToAppend">The payload with the details about the events to append.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("append-many")]
     public async Task AppendMany(
-        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] EventSequenceId eventSequenceId,
-        [FromRoute] TenantId tenantId,
         [FromBody] AppendManyEvents eventsToAppend)
     {
         var causation = eventsToAppend.Causation ?? causationManager.GetCurrentChain();
         var causedBy = eventsToAppend.CausedBy ?? identityProvider.GetCurrent();
 
-        var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
+        var eventSequence = GetEventSequence(eventStore, @namespace, eventSequenceId);
         var events = eventsToAppend.Events.Select(_ => new Grains.EventSequences.EventToAppend(eventsToAppend.EventSourceId, _.EventType, _.Content, _.ValidFrom)).ToArray();
         await eventSequence.AppendMany(events, causation, causedBy);
     }
@@ -88,16 +88,16 @@ public class EventSequence(
     /// <summary>
     /// Redact a specific single event by its sequence number.
     /// </summary>
-    /// <param name="microserviceId">The microservice to redact for.</param>
+    /// <param name="eventStore">The event store to append for.</param>
+    /// <param name="namespace">The namespace to append to.</param>
     /// <param name="eventSequenceId">The event sequence to redact for.</param>
-    /// <param name="tenantId">The tenant to redact for.</param>
     /// <param name="redaction">The <see cref="RedactEvent"/> to redact.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("redact-event")]
     public async Task RedactEvent(
-        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] EventSequenceId eventSequenceId,
-        [FromRoute] TenantId tenantId,
         [FromBody] RedactEvent redaction)
     {
         var causation = redaction.Causation ?? causationManager.GetCurrentChain();
@@ -105,14 +105,12 @@ public class EventSequence(
 
         var eventType = eventTypes.GetEventTypeFor(typeof(EventRedacted));
         var @event = new EventRedacted(
-                microserviceId,
-                tenantId,
-                EventSequenceId.Log,
+                eventSequenceId,
                 redaction.SequenceNumber,
                 redaction.Reason);
         var content = await eventSerializer.Serialize(@event);
 
-        var eventSequence = GetEventSequence(MicroserviceId.Kernel, EventSequenceId.System, TenantId.NotSet);
+        var eventSequence = GetEventSequence(eventStore, @namespace, EventSequenceId.System);
         await eventSequence.Append(
             EventSequenceId.Log.Value,
             eventType,
@@ -124,16 +122,16 @@ public class EventSequence(
     /// <summary>
     /// Redact multiple events.
     /// </summary>
-    /// <param name="microserviceId">The microservice to redact for.</param>
+    /// <param name="eventStore">The event store to append for.</param>
+    /// <param name="namespace">The namespace to append to.</param>
     /// <param name="eventSequenceId">The event sequence to redact for.</param>
-    /// <param name="tenantId">The tenant to redact for.</param>
     /// <param name="redaction">The redaction filter to use.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("redact-events")]
     public async Task RedactEvents(
-        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] EventSequenceId eventSequenceId,
-        [FromRoute] TenantId tenantId,
         [FromBody] RedactEvents redaction)
     {
         var causation = redaction.Causation ?? causationManager.GetCurrentChain();
@@ -141,15 +139,13 @@ public class EventSequence(
 
         var eventType = eventTypes.GetEventTypeFor(typeof(EventsRedactedForEventSource));
         var @event = new EventsRedactedForEventSource(
-                microserviceId,
-                tenantId,
-                EventSequenceId.Log,
+                eventSequenceId,
                 redaction.EventSourceId,
                 redaction.EventTypes.Select(_ => new EventType(_, EventGeneration.Unspecified)).ToArray(),
                 redaction.Reason);
         var content = await eventSerializer.Serialize(@event);
 
-        var eventSequence = GetEventSequence(MicroserviceId.Kernel, EventSequenceId.System, TenantId.NotSet);
+        var eventSequence = GetEventSequence(eventStore, @namespace, EventSequenceId.System);
         await eventSequence.Append(
             EventSequenceId.Log.Value,
             eventType,
@@ -158,6 +154,6 @@ public class EventSequence(
             causedBy);
     }
 
-    IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
-        grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new EventSequenceKey(microserviceId, tenantId));
+    IEventSequence GetEventSequence(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
+        grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new EventSequenceKey(eventStore, @namespace));
 }

@@ -22,7 +22,7 @@ namespace Cratis.Kernel.Read.EventSequences;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
-[Route("/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}")]
+[Route("/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
 public class EventSequence(
     IStorage storage,
     IGrainFactory grainFactory,
@@ -31,37 +31,37 @@ public class EventSequence(
     /// <summary>
     /// Get the head sequence number.
     /// </summary>
+    /// <param name="eventStore">Event store to get for.</param>
+    /// <param name="namespace">Namespace to get for.</param>
     /// <param name="eventSequenceId">Event sequence to get for.</param>
-    /// <param name="microserviceId">Microservice to get for.</param>
-    /// <param name="tenantId">Tenant to get for.</param>
     /// <returns>The tail sequence number.</returns>
     [HttpGet("next-sequence-number")]
     public Task<EventSequenceNumber> Next(
-        [FromRoute] EventSequenceId eventSequenceId,
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId) =>
-        GetEventSequence(microserviceId, eventSequenceId, tenantId).GetNextSequenceNumber();
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
+        [FromRoute] EventSequenceId eventSequenceId) =>
+        GetEventSequence(eventStore, @namespace, eventSequenceId).GetNextSequenceNumber();
 
     /// <summary>
     /// Get the tail sequence number.
     /// </summary>
+    /// <param name="eventStore">Event store to get for.</param>
+    /// <param name="namespace">Namespace to get for.</param>
     /// <param name="eventSequenceId">Event sequence to get for.</param>
-    /// <param name="microserviceId">Microservice to get for.</param>
-    /// <param name="tenantId">Tenant to get for.</param>
     /// <returns>The tail sequence number.</returns>
     [HttpGet("tail-sequence-number")]
     public Task<EventSequenceNumber> Tail(
-        [FromRoute] EventSequenceId eventSequenceId,
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId) =>
-        GetEventSequence(microserviceId, eventSequenceId, tenantId).GetTailSequenceNumber();
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
+        [FromRoute] EventSequenceId eventSequenceId) =>
+        GetEventSequence(eventStore, @namespace, eventSequenceId).GetTailSequenceNumber();
 
     /// <summary>
     /// Get the tail sequence number for a specific observer.
     /// </summary>
+    /// <param name="eventStore">Event store to get for.</param>
+    /// <param name="namespace">Namespace to get for.</param>
     /// <param name="eventSequenceId">Event sequence to get for.</param>
-    /// <param name="microserviceId">Microservice to get for.</param>
-    /// <param name="tenantId">Tenant to get for.</param>
     /// <param name="observerId">The observer to get for.</param>
     /// <returns>The tail sequence number.</returns>
     /// <remarks>
@@ -70,21 +70,21 @@ public class EventSequence(
     /// </remarks>
     [HttpGet("tail-sequence-number/observer/{observerId}")]
     public async Task<EventSequenceNumber> TailForObserver(
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] EventSequenceId eventSequenceId,
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId,
         [FromRoute] ObserverId observerId)
     {
-        var observer = await GetObserverStorage(microserviceId, tenantId).GetObserver(observerId);
-        return await GetEventSequenceStorage(microserviceId, tenantId, eventSequenceId).GetTailSequenceNumber(observer.EventTypes);
+        var observer = await GetObserverStorage(eventStore, @namespace).GetObserver(observerId);
+        return await GetEventSequenceStorage(eventStore, @namespace, eventSequenceId).GetTailSequenceNumber(observer.EventTypes);
     }
 
     /// <summary>
-    /// Get events for a specific event sequence in a microservice for a specific tenant.
+    /// Get events for a specific event sequence in an event store in a specific namespace.
     /// </summary>
+    /// <param name="eventStore">Event store to get for.</param>
+    /// <param name="namespace">Namespace to get for.</param>
     /// <param name="eventSequenceId">Event sequence to get for.</param>
-    /// <param name="microserviceId">Microservice to get for.</param>
-    /// <param name="tenantId">Tenant to get for.</param>
     /// <param name="pageSize">Size of page to return.</param>
     /// <param name="pageNumber">Page number to return.</param>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for.</param>
@@ -92,9 +92,9 @@ public class EventSequence(
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet]
     public async Task<PagedQueryResult<AppendedEventWithJsonAsContent>> GetAppendedEvents(
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] EventSequenceId eventSequenceId,
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId,
         [FromQuery] int pageSize = 100,
         [FromQuery] int pageNumber = 0,
         [FromQuery] EventSourceId eventSourceId = null!,
@@ -103,7 +103,7 @@ public class EventSequence(
         var result = new List<AppendedEventWithJsonAsContent>();
         var parsedEventTypes = eventTypes?.Select(EventType.Parse).ToArray();
 
-        var eventSequenceStorage = GetEventSequenceStorage(microserviceId, tenantId, eventSequenceId);
+        var eventSequenceStorage = GetEventSequenceStorage(eventStore, @namespace, eventSequenceId);
 
         var from = EventSequenceNumber.First + (pageNumber * pageSize);
         var tail = await eventSequenceStorage.GetTailSequenceNumber(
@@ -131,11 +131,11 @@ public class EventSequence(
     }
 
     /// <summary>
-    /// Get events for a specific event sequence in a microservice for a specific tenant.
+    /// Get events for a specific event sequence in an event store in a specific namespace.
     /// </summary>
+    /// <param name="eventStore">Event store to get for.</param>
+    /// <param name="namespace">Namespace to get for.</param>
     /// <param name="eventSequenceId">Event sequence to get for.</param>
-    /// <param name="microserviceId">Microservice to get for.</param>
-    /// <param name="tenantId">Tenant to get for.</param>
     /// <param name="fromSequenceNumber">Fetch events from this id, including.</param>
     /// <param name="toSequenceNumber">Fetch events to this id, excluding.</param>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for.</param>
@@ -143,9 +143,9 @@ public class EventSequence(
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet("range")]
     public async Task<PagedQueryResult<AppendedEventWithJsonAsContent>> GetAppendedEventsRange(
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] EventSequenceId eventSequenceId,
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId,
         [FromQuery] ulong fromSequenceNumber,
         [FromQuery] ulong toSequenceNumber,
         [FromQuery] EventSourceId eventSourceId = null!,
@@ -153,7 +153,7 @@ public class EventSequence(
     {
         var result = new List<AppendedEventWithJsonAsContent>();
         var parsedEventTypes = eventTypes?.Select(EventType.Parse).ToArray();
-        var eventSequenceStorage = GetEventSequenceStorage(microserviceId, tenantId, eventSequenceId);
+        var eventSequenceStorage = GetEventSequenceStorage(eventStore, @namespace, eventSequenceId);
         var tail = await eventSequenceStorage.GetTailSequenceNumber(
             eventTypes: parsedEventTypes,
             eventSourceId: eventSourceId);
@@ -179,26 +179,26 @@ public class EventSequence(
     }
 
     /// <summary>
-    /// Get events for a specific event sequence in a microservice for a specific tenant.
+    /// Get events for a specific event sequence in an event store in a specific namespace.
     /// </summary>
+    /// <param name="eventStore">Event store to get for.</param>
+    /// <param name="namespace">Namespace to get for.</param>
     /// <param name="eventSequenceId">Event sequence to get for.</param>
-    /// <param name="microserviceId">Microservice to get for.</param>
-    /// <param name="tenantId">Tenant to get for.</param>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for.</param>
     /// <param name="eventTypes">Optional collection of <see cref="EventType"/> to get for.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet("all")]
     public async Task<IEnumerable<AppendedEventWithJsonAsContent>> GetAllAppendedEvents(
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
         [FromRoute] EventSequenceId eventSequenceId,
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId,
         [FromQuery] EventSourceId eventSourceId = null!,
         [FromQuery(Name = "eventTypes[]")] IEnumerable<string> eventTypes = null!)
     {
         var result = new List<AppendedEventWithJsonAsContent>();
         var parsedEventTypes = eventTypes?.Select(EventType.Parse).ToArray();
 
-        var cursor = await GetEventSequenceStorage(microserviceId, tenantId, eventSequenceId).GetFromSequenceNumber(
+        var cursor = await GetEventSequenceStorage(eventStore, @namespace, eventSequenceId).GetFromSequenceNumber(
             sequenceNumber: EventSequenceNumber.First,
             eventSourceId: eventSourceId,
             eventTypes: parsedEventTypes);
@@ -219,8 +219,8 @@ public class EventSequence(
     [HttpGet("histogram")]
     public Task<IEnumerable<EventHistogramEntry>> Histogram(/*[FromRoute] EventSequenceId eventSequenceId*/) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
 
-    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
-    IObserverStorage GetObserverStorage(MicroserviceId microserviceId, TenantId tenantId) => storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers;
-    IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
-        grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new EventSequenceKey(microserviceId, tenantId));
+    IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) => storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
+    IObserverStorage GetObserverStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace) => storage.GetEventStore(eventStore).GetNamespace(@namespace).Observers;
+    IEventSequence GetEventSequence(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
+        grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new EventSequenceKey(eventStore, @namespace));
 }

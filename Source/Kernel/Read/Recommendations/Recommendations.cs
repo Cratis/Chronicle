@@ -16,37 +16,37 @@ namespace Cratis.Kernel.Read.Recommendations;
 /// Initializes a new instance of the <see cref="Recommendations"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-[Route("/api/events/store/{microserviceId}/{tenantId}/recommendations")]
+[Route("/api/events/store/{eventStore}/{tenantId}/recommendations")]
 public class Recommendations(IStorage storage) : ControllerBase
 {
     /// <summary>
-    /// Get all observers.
+    /// Get all observers for an event store and namespace.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> the recommendations are for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the recommendations are for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the recommendations are for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the recommendations are for.</param>
     /// <returns>Collection of <see cref="RecommendationInformation"/>.</returns>
     [HttpGet]
     public async Task<IEnumerable<RecommendationInformation>> GetRecommendations(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId)
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace)
     {
-        var recommendations = await storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations.GeAll();
+        var recommendations = await storage.GetEventStore(eventStore).GetNamespace(@namespace).Recommendations.GeAll();
         return Convert(recommendations);
     }
 
     /// <summary>
-    /// Get and observe all observers.
+    /// Get and observe all observers for an event store and namespace.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> the recommendations are for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the recommendations are for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the recommendations are for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the recommendations are for.</param>
     /// <returns>Client observable of a collection of <see cref="RecommendationInformation"/>.</returns>
     [HttpGet("observe")]
     public Task<ClientObservable<IEnumerable<RecommendationInformation>>> AllRecommendations(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId)
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace)
     {
         var clientObservable = new ClientObservable<IEnumerable<RecommendationInformation>>();
-        var recommendations = storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Recommendations;
+        var recommendations = storage.GetEventStore(eventStore).GetNamespace(@namespace).Recommendations;
         var observable = recommendations.ObserveRecommendations();
         var subscription = observable.Subscribe(recommendations => clientObservable.OnNext(Convert(recommendations)));
         clientObservable.ClientDisconnected = () =>

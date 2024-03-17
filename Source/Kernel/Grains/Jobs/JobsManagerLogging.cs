@@ -36,7 +36,7 @@ internal static class JobsManagerScopes
     internal static IDisposable? BeginJobsManagerScope(this ILogger<JobsManager> logger, JobsManagerKey key) =>
         logger.BeginScope(new Dictionary<string, object>
         {
-            ["MicroserviceId"] = key.MicroserviceId,
-            ["TenantId"] = key.TenantId
+            ["EventStore"] = key.EventStore,
+            ["Namespace"] = key.Namespace
         });
 }

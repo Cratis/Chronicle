@@ -92,7 +92,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         State.Name = GetType().Name;
         State.Type = this.GetGrainType();
-        Storage = ServiceProvider.GetRequiredService<IStorage>().GetEventStore((string)JobKey.MicroserviceId).GetNamespace(JobKey.TenantId);
+        Storage = ServiceProvider.GetRequiredService<IStorage>().GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace);
 
         return Task.CompletedTask;
     }
@@ -156,7 +156,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         var steps = await Storage.JobSteps.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused);
         foreach (var step in steps)
         {
-            var jobStep = (GrainFactory.GetGrain((Type)step.Type, step.Id.JobStepId, keyExtension: new JobStepKey(JobId, JobKey.MicroserviceId, JobKey.TenantId)) as IJobStep)!;
+            var jobStep = (GrainFactory.GetGrain((Type)step.Type, step.Id.JobStepId, keyExtension: new JobStepKey(JobId, JobKey.EventStore, JobKey.Namespace)) as IJobStep)!;
             await jobStep.Resume(this.GetGrainId());
         }
     }
@@ -321,7 +321,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         return new(
             typeof(TJobStep),
             jobStepId,
-            new JobStepKey(jobId, jobKey.MicroserviceId, jobKey.TenantId),
+            new JobStepKey(jobId, jobKey.EventStore, jobKey.Namespace),
             request,
             resultType);
     }
@@ -345,7 +345,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <returns>The <see cref="JobDetails"/>.</returns>
     protected virtual JobDetails GetJobDetails() => JobDetails.NotSet;
 
-    IDictionary<JobStepId, JobStepGrainAndRequest> CreateGrainsFromJobSteps(IImmutableList<JobStepDetails> jobSteps) =>
+    Dictionary<JobStepId, JobStepGrainAndRequest> CreateGrainsFromJobSteps(IImmutableList<JobStepDetails> jobSteps) =>
         jobSteps.ToDictionary(
             _ => _.Id,
             _ => new JobStepGrainAndRequest(
@@ -465,7 +465,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             }
 
             await GrainFactory
-                    .GetGrain<IJobsManager>(0, new JobsManagerKey(key.MicroserviceId, key.TenantId))
+                    .GetGrain<IJobsManager>(0, new JobsManagerKey(key.EventStore, key.Namespace))
                     .OnCompleted(id, State.Status);
 
             if (RemoveAfterCompleted)

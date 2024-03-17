@@ -25,10 +25,10 @@ public class EventSequenceQueueCache(IEventSequenceCaches caches) : IQueueCache
         {
             if (message is EventSequenceBatchContainer batchContainer)
             {
-                var microserviceAndTenant = (MicroserviceAndTenant)message.StreamId.GetNamespace()!;
+                var eventStoreAndNamespace = (EventStoreAndNamespace)message.StreamId.GetNamespace()!;
                 foreach (var (@event, _) in batchContainer.GetEvents<AppendedEvent>())
                 {
-                    caches.GetFor(microserviceAndTenant.MicroserviceId, microserviceAndTenant.TenantId, (EventSequenceId)message.StreamId.GetKeyAsString()).Add(@event);
+                    caches.GetFor(eventStoreAndNamespace.EventStore, eventStoreAndNamespace.Namespace, (EventSequenceId)message.StreamId.GetKeyAsString()).Add(@event);
                 }
             }
         }
@@ -47,10 +47,10 @@ public class EventSequenceQueueCache(IEventSequenceCaches caches) : IQueueCache
             return new EmptyEventSequenceQueueCacheCursor();
         }
 
-        var microserviceAndTenant = (MicroserviceAndTenant)streamId.GetNamespace()!;
+        var eventStoreAndNamespace = (EventStoreAndNamespace)streamId.GetNamespace()!;
         var cache = caches.GetFor(
-                microserviceAndTenant.MicroserviceId,
-                microserviceAndTenant.TenantId,
+                eventStoreAndNamespace.EventStore,
+                eventStoreAndNamespace.Namespace,
                 (EventSequenceId)streamId.GetKeyAsString());
 
         if (token.SequenceNumber < (long)cache.Head.Value)
@@ -60,8 +60,8 @@ public class EventSequenceQueueCache(IEventSequenceCaches caches) : IQueueCache
 
         return new EventSequenceQueueCacheCursor(
             cache,
-            microserviceAndTenant.MicroserviceId,
-            microserviceAndTenant.TenantId,
+            eventStoreAndNamespace.EventStore,
+            eventStoreAndNamespace.Namespace,
             (EventSequenceId)streamId.GetKeyAsString(),
             (ulong)token.SequenceNumber);
     }

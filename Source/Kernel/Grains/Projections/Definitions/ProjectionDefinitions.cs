@@ -16,7 +16,6 @@ namespace Cratis.Kernel.Grains.Projections.Definitions;
 /// </remarks>
 /// <param name="storage"><see cref="IProjectionDefinitionsStorage"/> for stored definitions.</param>
 /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serialization.</param>
-[SingletonPerMicroservice]
 public class ProjectionDefinitions(
     IProjectionDefinitionsStorage storage,
     IJsonProjectionSerializer projectionSerializer) : IProjectionDefinitions

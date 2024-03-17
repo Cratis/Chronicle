@@ -16,32 +16,32 @@ namespace Cratis.Kernel.Read.Jobs;
 /// Initializes a new instance of the <see cref="Jobs"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-[Route("/api/events/store/{microserviceId}/{tenantId}/jobs")]
+[Route("/api/events/store/{eventStore}/{namespace}/jobs")]
 public class Jobs(IStorage storage) : ControllerBase
 {
     /// <summary>
-    /// Observes all jobs for a specific microservice.
+    /// Observes all jobs for a specific event store and namespace.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to observe for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> to observe for. </param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to observe for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to observe for. </param>
     /// <returns>A <see cref="ClientObservable{T}"/> for observing a collection of <see cref="JobState"/>.</returns>
     [HttpGet]
     public ClientObservable<IEnumerable<JobState>> AllJobs(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId) =>
-        storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Jobs.ObserveJobs().ToClientObservable();
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace) =>
+        storage.GetEventStore(eventStore).GetNamespace(@namespace).Jobs.ObserveJobs().ToClientObservable();
 
     /// <summary>
-    /// Observes all job steps for a specific job and microservice.
+    /// Observes all job steps for a specific job and event store and namespace.
     /// </summary>
     /// <param name="jobId"><see cref="JobId"/> to observe for.</param>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to observe for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> to observe for. </param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to observe for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to observe for. </param>
     /// <returns>A <see cref="ClientObservable{T}"/> for observing a collection of <see cref="JobStepState"/>.</returns>
     [HttpGet("{jobId}/steps")]
     public ClientObservable<IEnumerable<JobStepState>> AllJobSteps(
         [FromRoute] JobId jobId,
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId) =>
-        storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).JobSteps.ObserveForJob(jobId).ToClientObservable();
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace) =>
+        storage.GetEventStore((string)eventStore).GetNamespace(@namespace).JobSteps.ObserveForJob(jobId).ToClientObservable();
 }

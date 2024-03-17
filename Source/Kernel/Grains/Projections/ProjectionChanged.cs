@@ -9,8 +9,8 @@ namespace Cratis.Kernel.Grains.Projections;
 /// Represents the message for a projection that has changed its definition.
 /// </summary>
 /// <param name="RuntimeIdentity">The Orleans Silo runtime identity the message was published from.</param>
-/// <param name="MicroserviceId">The <see cref="MicroserviceId"/> for the projection.</param>
+/// <param name="EventStore">The <see cref="EventStoreName"/> that the projection belongs to.</param>
 /// <param name="Projection">The <see cref="ProjectionDefinition"/> for the changed projection.</param>
 /// <param name="Pipeline">The <see cref="ProjectionPipelineDefinition"/> for the changed projection.</param>
 /// <param name="IsNew">Whether or not the projection is new.</param>
-public record ProjectionChanged(string RuntimeIdentity, MicroserviceId MicroserviceId, ProjectionDefinition Projection, ProjectionPipelineDefinition Pipeline, bool IsNew);
+public record ProjectionChanged(string RuntimeIdentity, EventStoreName EventStore, ProjectionDefinition Projection, ProjectionPipelineDefinition Pipeline, bool IsNew);

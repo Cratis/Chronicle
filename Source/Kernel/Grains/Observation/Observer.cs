@@ -66,13 +66,13 @@ public class Observer(
         _observerKey = ObserverKey.Parse(keyAsString);
 
         _streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-        _jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_observerKey.MicroserviceId, _observerKey.TenantId));
+        _jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_observerKey.EventStore, _observerKey.Namespace));
 
         await failures.ReadStateAsync();
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
             _observerKey.EventSequenceId,
-            new EventSequenceKey(_observerKey.MicroserviceId, _observerKey.TenantId));
+            new EventSequenceKey(_observerKey.EventStore, _observerKey.Namespace));
 
         _metrics = meter.BeginObserverScope(_observerId, _observerKey);
     }
@@ -149,8 +149,8 @@ public class Observer(
             _observerKey,
             new ReplayEvaluator(
                 GrainFactory,
-                _observerKey.MicroserviceId,
-                _observerKey.TenantId),
+                _observerKey.EventStore,
+                _observerKey.Namespace),
             _eventSequence,
             loggerFactory.CreateLogger<Routing>()),
 
@@ -177,8 +177,8 @@ public class Observer(
 
         new Observing(
             _streamProvider,
-            _observerKey.MicroserviceId,
-            _observerKey.TenantId,
+            _observerKey.EventStore,
+            _observerKey.Namespace,
             _observerKey.EventSequenceId,
             loggerFactory.CreateLogger<Observing>())
     }.ToImmutableList();
@@ -337,8 +337,8 @@ public class Observer(
                 try
                 {
                     var key = new ObserverSubscriberKey(
-                        _observerKey.MicroserviceId,
-                        _observerKey.TenantId,
+                        _observerKey.EventStore,
+                        _observerKey.Namespace,
                         _observerKey.EventSequenceId,
                         partition,
                         _subscription.SiloAddress.ToParsableString());

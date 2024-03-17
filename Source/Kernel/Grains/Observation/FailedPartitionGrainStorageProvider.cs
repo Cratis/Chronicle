@@ -27,7 +27,7 @@ public class FailedPartitionGrainStorageProvider(IStorage storage) : IGrainStora
         var observerId = grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var failedPartitions = storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).FailedPartitions;
+        var failedPartitions = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).FailedPartitions;
         actualGrainState.State = await failedPartitions.GetFor(observerId);
     }
 
@@ -38,7 +38,7 @@ public class FailedPartitionGrainStorageProvider(IStorage storage) : IGrainStora
         var observerId = grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var failedPartitions = storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).FailedPartitions;
+        var failedPartitions = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).FailedPartitions;
         foreach (var failedPartition in actualGrainState.State.Partitions)
         {
             failedPartition.ObserverId = observerId;

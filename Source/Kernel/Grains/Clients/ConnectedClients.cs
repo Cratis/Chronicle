@@ -44,8 +44,6 @@ public class ConnectedClients(
         string version,
         bool isRunningWithDebugger)
     {
-        var microserviceId = (MicroserviceId)this.GetPrimaryKey();
-
         logger.ClientConnected(connectionId);
 
         _clients.Where(_ => _.ConnectionId == connectionId).ToList().ForEach(_ => _clients.Remove(_));

@@ -12,7 +12,7 @@ namespace Cratis.Kernel.Storage.Keys;
 public interface IObserverKeyIndex
 {
     /// <summary>
-    /// Get the keys for a specific microservice and tenant.
+    /// Get the keys starting from a <see cref="EventSequenceNumber"/> .
     /// </summary>
     /// <param name="fromEventSequenceNumber">The from <see cref="EventSequenceNumber"/> to get keys from.</param>
     /// <returns>All the <see cref="IObserverKeys"/>.</returns>

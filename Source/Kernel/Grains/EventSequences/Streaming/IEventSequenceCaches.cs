@@ -11,13 +11,13 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 public interface IEventSequenceCaches
 {
     /// <summary>
-    /// Get the cache for a specific event sequence for a specific tenant and microservice.
+    /// Get the cache for a specific event sequence for a specific namespace and event store.
     /// </summary>
-    /// <param name="microserviceId">MicroserviceId to get for.</param>
-    /// <param name="tenantId">TenantId to get for.</param>
+    /// <param name="eventStore">Event store to get for.</param>
+    /// <param name="namespace">Namespace to get for.</param>
     /// <param name="eventSequenceId">EventSequenceId to get for.</param>
     /// <returns>The <see cref="IEventSequenceCache"/> associated.</returns>
-    IEventSequenceCache GetFor(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId);
+    IEventSequenceCache GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId);
 
     /// <summary>
     /// Prime all caches.

@@ -31,8 +31,8 @@ internal static class ImmediateProjectionScopes
         logger.BeginScope(new Dictionary<string, object>
         {
             ["ProjectionId"] = projectionId,
-            ["MicroserviceId"] = projectionKey.MicroserviceId,
-            ["TenantId"] = projectionKey.TenantId,
+            ["EventStore"] = projectionKey.EventStore,
+            ["Namespace"] = projectionKey.Namespace,
             ["EventSequenceId"] = projectionKey.EventSequenceId,
             ["SessionId"] = projectionKey.CorrelationId ?? string.Empty
         });

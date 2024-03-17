@@ -9,8 +9,8 @@ namespace Cratis.Observation;
 /// <summary>
 /// Represents a key for an observer.
 /// </summary>
-/// <param name="MicroserviceId">The Microservice identifier.</param>
-/// <param name="TenantId">The Tenant identifier.</param>
+/// <param name="EventStore">The event store.</param>
+/// <param name="Namespace">The namespace.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
 /// <param name="EventSourceId">The event source identifier - partition.</param>
 /// <param name="SiloAddress">The string representation of the address to the Orleans Silo the subscriber grain should be running on.</param>
@@ -19,8 +19,8 @@ namespace Cratis.Observation;
 /// This is to avoid network hops when sending events to an observer, e.g. a client.
 /// </remarks>
 public record ObserverSubscriberKey(
-    MicroserviceId MicroserviceId,
-    TenantId TenantId,
+    EventStoreName EventStore,
+    EventStoreNamespaceName Namespace,
     EventSequenceId EventSequenceId,
     EventSourceId EventSourceId,
     string SiloAddress)
@@ -34,7 +34,7 @@ public record ObserverSubscriberKey(
     /// <inheritdoc/>
     public override string ToString()
     {
-        return $"{MicroserviceId}+{TenantId}+{EventSequenceId}+{EventSourceId}+{SiloAddress}";
+        return $"{EventStore}+{Namespace}+{EventSequenceId}+{EventSourceId}+{SiloAddress}";
     }
 
     /// <summary>
@@ -45,13 +45,13 @@ public record ObserverSubscriberKey(
     public static ObserverSubscriberKey Parse(string key)
     {
         var elements = key.Split('+');
-        var microserviceId = (MicroserviceId)elements[0];
-        var tenantId = (TenantId)elements[1];
+        var eventStore = (EventStoreName)elements[0];
+        var @namespace = (EventStoreNamespaceName)elements[1];
         var eventSequenceId = (EventSequenceId)elements[2];
         var eventSourceId = (EventSourceId)elements[3];
         var siloAddress = elements[4];
 
-        return new(microserviceId, tenantId, eventSequenceId, eventSourceId, siloAddress);
+        return new(eventStore, @namespace, eventSequenceId, eventSourceId, siloAddress);
     }
 
     /// <summary>
@@ -62,5 +62,5 @@ public record ObserverSubscriberKey(
     /// <param name="siloAddress">Name of the silo it should run on.</param>
     /// <returns>An ObserverSubscriber Key.</returns>
     public static ObserverSubscriberKey FromObserverKey(ObserverKey observerKey, EventSourceId eventSourceId, string siloAddress)
-        => new(observerKey.MicroserviceId, observerKey.TenantId, observerKey.EventSequenceId, eventSourceId, siloAddress);
+        => new(observerKey.EventStore, observerKey.Namespace, observerKey.EventSequenceId, eventSourceId, siloAddress);
 }

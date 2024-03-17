@@ -13,12 +13,19 @@ namespace Cratis.Kernel.Storage.EventSequences;
 /// Initializes a new instance of the <see cref="UnableToAppendToEventSequence"/> class.
 /// </remarks>
 /// <param name="eventSequenceId">The stream that is failing.</param>
-/// <param name="microserviceId">For which microservice it is.</param>
-/// <param name="tenantId">For which tenant it is.</param>
+/// <param name="eventStore">For which event store it is failing for.</param>
+/// <param name="namespace">For which namespace it is failing for.</param>
 /// <param name="sequenceNumber">The sequence number that is failing.</param>
 /// <param name="eventSourceId">EventSource it is failing for.</param>
 /// <param name="innerException">The inner exception.</param>
-public class UnableToAppendToEventSequence(EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, Exception innerException) : Exception($"Unable to append event at sequence {sequenceNumber} for event source {eventSourceId} on tenant {tenantId} in microservice {microserviceId} from event sequence {eventSequenceId}", innerException)
+public class UnableToAppendToEventSequence(
+    EventSequenceId eventSequenceId,
+    EventStoreName eventStore,
+    EventStoreNamespaceName @namespace,
+    EventSequenceNumber sequenceNumber,
+    EventSourceId eventSourceId,
+    Exception innerException)
+    : Exception($"Unable to append event at sequence {sequenceNumber} for event source {eventSourceId} in namespace {@namespace} in event store {eventStore} from event sequence {eventSequenceId}", innerException)
 {
     /// <summary>
     /// Gets the stream identifier.
@@ -28,7 +35,7 @@ public class UnableToAppendToEventSequence(EventSequenceId eventSequenceId, Micr
     /// <summary>
     /// Gets the tenant identifier.
     /// </summary>
-    public TenantId TenantId { get; } = tenantId;
+    public EventStoreNamespaceName TenantId { get; } = @namespace;
 
     /// <summary>
     /// Gets the sequence number within the event sequence.

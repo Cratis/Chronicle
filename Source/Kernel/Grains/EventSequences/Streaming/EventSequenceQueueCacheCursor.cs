@@ -16,14 +16,14 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 /// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/> class.
 /// </remarks>
 /// <param name="cache">The <see cref="IEventSequenceCache"/> to use by the cursor.</param>
-/// <param name="microserviceId">The <see cref="MicroserviceId"/> the cursor is for.</param>
-/// <param name="tenantId">The <see cref="TenantId"/> the cursor is for.</param>
+/// <param name="eventStore">The <see cref="EventStoreName"/> the cursor is for.</param>
+/// <param name="namespace">The <see cref="TenantId"/> the cursor is for.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the cursor is for.</param>
 /// <param name="from">The from <see cref="EventSequenceNumber"/>.</param>
 public class EventSequenceQueueCacheCursor(
     IEventSequenceCache cache,
-    MicroserviceId microserviceId,
-    TenantId tenantId,
+    EventStoreName eventStore,
+    EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
     EventSequenceNumber from) : IQueueCacheCursor
 {
@@ -48,7 +48,7 @@ public class EventSequenceQueueCacheCursor(
 
             var @event = _current.Event;
             var streamId = StreamId.Create(
-                new MicroserviceAndTenant(microserviceId, tenantId),
+                new EventStoreAndNamespace(eventStore, @namespace),
                 eventSequenceId.Value.ToString());
 
             return new EventSequenceBatchContainer(

@@ -6,14 +6,14 @@ namespace Cratis.Kernel.Grains.Recommendations;
 /// <summary>
 /// Represents the key for a recommendation.
 /// </summary>
-/// <param name="MicroserviceId">The Microservice the recommendation is for.</param>
-/// <param name="TenantId">The tenant the recommendation is for.</param>
-public record RecommendationKey(MicroserviceId MicroserviceId, TenantId TenantId)
+/// <param name="EventStore">The event store the recommendation is for.</param>
+/// <param name="Namespace">The namespace the recommendation is for.</param>
+public record RecommendationKey(EventStoreName EventStore, EventStoreNamespaceName Namespace)
 {
     /// <summary>
     /// Represents an unset key.
     /// </summary>
-    public static readonly RecommendationKey NotSet = new(MicroserviceId.Unspecified, TenantId.NotSet);
+    public static readonly RecommendationKey NotSet = new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet);
 
     /// <summary>
     /// Implicitly convert from string to <see cref="RecommendationKey"/>.
@@ -28,7 +28,7 @@ public record RecommendationKey(MicroserviceId MicroserviceId, TenantId TenantId
     public static implicit operator string(RecommendationKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{MicroserviceId}+{TenantId}";
+    public override string ToString() => $"{EventStore}+{Namespace}";
 
     /// <summary>
     /// Parse a key from a string.
@@ -38,8 +38,8 @@ public record RecommendationKey(MicroserviceId MicroserviceId, TenantId TenantId
     public static RecommendationKey Parse(string key)
     {
         var elements = key.Split('+');
-        var microserviceId = (MicroserviceId)elements[0];
-        var tenantId = (TenantId)elements[1];
-        return new(microserviceId, tenantId);
+        var eventStore = (EventStoreName)elements[0];
+        var @namespace = (EventStoreNamespaceName)elements[1];
+        return new(eventStore, @namespace);
     }
 }

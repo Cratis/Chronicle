@@ -10,6 +10,6 @@ namespace Cratis.Kernel.Grains.Observation.Clients;
 
 internal static partial class ClientObserverSubscriberLogMessages
 {
-    [LoggerMessage(0, LogLevel.Trace, "Observer {ObserverId} in microservice {MicroserviceId} for tenant {TenantId} received event of type {EventTypeId} in sequence {EventSequenceId} with sequence number {EventSequenceNumber}")]
-    internal static partial void EventReceived(this ILogger<ClientObserverSubscriber> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventTypeId eventTypeId, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
+    [LoggerMessage(0, LogLevel.Trace, "Observer {ObserverId} in event store {EventStore} for tenant {Namespace} received event of type {EventTypeId} in sequence {EventSequenceId} with sequence number {EventSequenceNumber}")]
+    internal static partial void EventReceived(this ILogger<ClientObserverSubscriber> logger, ObserverId observerId, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventTypeId eventTypeId, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
 }

@@ -39,8 +39,8 @@ public class ClientObserver(
     /// <inheritdoc/>
     public async Task Start(ObserverName name, IEnumerable<EventType> eventTypes)
     {
-        logger.Starting(_observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
-        var key = new ObserverKey(_observerKey.MicroserviceId, _observerKey.TenantId, _observerKey.EventSequenceId);
+        logger.Starting(_observerKey!.EventStore, _observerId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
+        var key = new ObserverKey(_observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         var observer = GrainFactory.GetGrain<IObserver>(_observerId!, key);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
         await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
@@ -51,9 +51,9 @@ public class ClientObserver(
     /// <inheritdoc/>
     public void OnClientDisconnected(ConnectedClient client)
     {
-        logger.ClientDisconnected(client.ConnectionId, _observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
+        logger.ClientDisconnected(client.ConnectionId, _observerKey!.EventStore, _observerId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
         var id = this.GetPrimaryKey(out var _);
-        var key = new ObserverKey(_observerKey.MicroserviceId, _observerKey.TenantId, _observerKey.EventSequenceId);
+        var key = new ObserverKey(_observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         var observer = GrainFactory.GetGrain<IObserver>(id, key);
         observer.Unsubscribe();
     }

@@ -26,7 +26,7 @@ public class EventSequences(
     /// <inheritdoc/>
     public async Task<AppendResponse> Append(AppendRequest request)
     {
-        var eventSequence = GetEventSequence(request.EventStoreName, request.EventSequenceId, request.Namespace);
+        var eventSequence = GetEventSequence(request.EventStoreName, request.Namespace, request.EventSequenceId);
         await eventSequence.Append(
             request.EventSourceId,
             request.EventType.ToKernel(),
@@ -38,6 +38,6 @@ public class EventSequences(
         return new AppendResponse();
     }
 
-    Grains.EventSequences.IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
-        grainFactory.GetGrain<Grains.EventSequences.IEventSequence>(eventSequenceId, keyExtension: new MicroserviceAndTenant(microserviceId, tenantId));
+    Grains.EventSequences.IEventSequence GetEventSequence(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
+        grainFactory.GetGrain<Grains.EventSequences.IEventSequence>(eventSequenceId, keyExtension: new EventStoreAndNamespace(eventStore, @namespace));
 }

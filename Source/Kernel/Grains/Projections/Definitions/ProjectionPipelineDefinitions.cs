@@ -14,7 +14,6 @@ namespace Cratis.Kernel.Grains.Projections.Definitions;
 /// Initializes a new instance of the <see cref="ProjectionDefinition"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IProjectionPipelineDefinitionsStorage"/> for stored definitions.</param>
-[SingletonPerMicroservice]
 public class ProjectionPipelineDefinitions(
     IProjectionPipelineDefinitionsStorage storage) : IProjectionPipelineDefinitions
 {

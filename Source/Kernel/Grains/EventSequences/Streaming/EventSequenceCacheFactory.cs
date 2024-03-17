@@ -20,6 +20,6 @@ public class EventSequenceCacheFactory(
     ILogger<EventSequenceCache> logger) : IEventSequenceCacheFactory
 {
     /// <inheritdoc/>
-    public IEventSequenceCache Create(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) =>
-        new EventSequenceCache(storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId), logger);
+    public IEventSequenceCache Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
+        new EventSequenceCache(storage.GetEventStore((string)eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId), logger);
 }

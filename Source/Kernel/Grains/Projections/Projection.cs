@@ -31,20 +31,20 @@ public class Projection(
     IObserver? _observer;
     ProjectionId _projectionId = ProjectionId.NotSet;
     ProjectionDefinition? _definition;
-    TenantId? _tenantId;
-    MicroserviceId? _microserviceId;
+    EventStoreName? _eventStore;
+    EventStoreNamespaceName? _namespace;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _projectionId = this.GetPrimaryKey(out var keyAsString);
         var key = ProjectionKey.Parse(keyAsString);
-        _microserviceId = key.MicroserviceId;
-        _tenantId = key.TenantId;
+        _eventStore = key.EventStore;
+        _namespace = key.Namespace;
 
         await RefreshDefinition();
 
-        _observer = GrainFactory.GetGrain<IObserver>(_projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
+        _observer = GrainFactory.GetGrain<IObserver>(_projectionId, new ObserverKey(key.EventStore, key.Namespace, key.EventSequenceId));
 
         await _observer.Subscribe<IProjectionObserverSubscriber>(
             _definition!.Name.Value,
@@ -63,8 +63,8 @@ public class Projection(
     /// <inheritdoc/>
     public async Task RefreshDefinition()
     {
-        var eventStore = kernel.GetEventStore((string)_microserviceId!);
-        var eventStoreNamespace = eventStore.GetNamespace(_tenantId!);
+        var eventStore = kernel.GetEventStore((string)_eventStore!);
+        var eventStoreNamespace = eventStore.GetNamespace(_namespace!);
 
         var (_, projectionDefinition) = await eventStore.ProjectionDefinitions.TryGetFor(_projectionId);
         _definition = projectionDefinition;

@@ -26,8 +26,8 @@ public class JobGrainStorageProvider(IStorage storage) : IGrainStorage
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
             var key = (JobKey)keyExtension!;
-            var jobStorage = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Jobs;
-            var jobStepStorage = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
+            var jobStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Jobs;
+            var jobStepStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).JobSteps;
 
             await jobStepStorage.RemoveAllForJob(jobId);
             await jobStorage.Remove(jobId);
@@ -43,12 +43,12 @@ public class JobGrainStorageProvider(IStorage storage) : IGrainStorage
         {
             var key = (JobKey)keyExtension!;
 
-            var jobStorage = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Jobs;
+            var jobStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Jobs;
             var state = await jobStorage.Read<T>(jobId);
             if (state is not null)
             {
                 var jobState = (state as JobState)!;
-                var jobStepStorage = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
+                var jobStepStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).JobSteps;
                 var successfulCount = await jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Succeeded);
                 var failedCount = await jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Failed);
 
@@ -75,7 +75,7 @@ public class JobGrainStorageProvider(IStorage storage) : IGrainStorage
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
             var key = (JobKey)keyExtension!;
-            var jobStorage = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Jobs;
+            var jobStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Jobs;
             var state = (grainState.State as JobState)!;
             state.Id = jobId;
 

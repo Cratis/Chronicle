@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Connections;
-using Cratis.Kernel.Configuration;
 using Cratis.Kernel.Grains.Clients;
 using Cratis.Kernel.Grains.Observation.Reducers.Clients;
 using Cratis.Observation.Reducers;
@@ -17,25 +16,23 @@ namespace Cratis.Kernel.Domain.Observation;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Observers"/> class.
 /// </remarks>
-/// <param name="configuration">The Kernel configuration.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-[Route("/api/events/store/{microserviceId}/reducers")]
+[Route("/api/events/store/{eventStore}/reducers")]
 public class Reducers(
-    KernelConfiguration configuration,
     IGrainFactory grainFactory,
     ILogger<Reducers> logger) : ControllerBase
 {
     /// <summary>
-    /// Register client observers for a specific microservice and unique connection.
+    /// Register client observers for a specific event store and unique connection.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to register for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to register for.</param>
     /// <param name="connectionId"><see cref="ConnectionId"/> to register with.</param>
     /// <param name="definitions">Collection of <see cref="ReducerDefinition"/>.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("register/{connectionId}")]
     public Task Register(
-        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] EventStoreName eventStore,
         [FromRoute] ConnectionId connectionId,
         [FromBody] IEnumerable<ReducerDefinition> definitions)
     {
@@ -45,10 +42,10 @@ public class Reducers(
         {
             var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
             var client = await connectedClients.GetConnectedClient(connectionId);
-            var reducers = grainFactory.GetGrain<IClientReducers>(microserviceId);
+            var reducers = grainFactory.GetGrain<IClientReducers>(eventStore);
 
             // TODO: This needs to register all reducers for all namespaces - or rather, the client reducers internally should deal with that!
-            await reducers.Register(connectionId, definitions, Enumerable.Empty<TenantId>());
+            await reducers.Register(connectionId, definitions, Enumerable.Empty<EventStoreNamespaceName>());
         });
 
         return Task.CompletedTask;

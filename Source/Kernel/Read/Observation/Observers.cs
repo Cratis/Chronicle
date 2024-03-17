@@ -15,34 +15,34 @@ namespace Cratis.Kernel.Read.Observation;
 /// Initializes a new instance of the <see cref="Observers"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-[Route("/api/events/store/{microserviceId}/{tenantId}/observers")]
+[Route("/api/events/store/{eventStore}/{namespace}/observers")]
 public class Observers(IStorage storage) : ControllerBase
 {
     /// <summary>
-    /// Get all observers.
+    /// Get all observers for an event store and namespace.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> the observers are for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the observers are for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the observers are for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the observers are for.</param>
     /// <returns>Collection of <see cref="ObserverInformation"/>.</returns>
     [HttpGet]
     public Task<IEnumerable<ObserverInformation>> GetObservers(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId) =>
-         storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers.GetAllObservers();
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace) =>
+         storage.GetEventStore(eventStore).GetNamespace(@namespace).Observers.GetAllObservers();
 
     /// <summary>
-    /// Get and observe all observers.
+    /// Get and observe all observers for an event store and namespace.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> the observers are for.</param>
-    /// <param name="tenantId"><see cref="TenantId"/> the observers are for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the observers are for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the observers are for.</param>
     /// <returns>Client observable of a collection of <see cref="ObserverInformation"/>.</returns>
     [HttpGet("observe")]
     public Task<ClientObservable<IEnumerable<ObserverInformation>>> AllObservers(
-        [FromRoute] MicroserviceId microserviceId,
-        [FromRoute] TenantId tenantId)
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace)
     {
         var clientObservable = new ClientObservable<IEnumerable<ObserverInformation>>();
-        var observers = storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).Observers;
+        var observers = storage.GetEventStore(eventStore).GetNamespace(@namespace).Observers;
         var observable = observers.ObserveAll();
         var subscription = observable.Subscribe(clientObservable.OnNext);
         clientObservable.ClientDisconnected = () =>

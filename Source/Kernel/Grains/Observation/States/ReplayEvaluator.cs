@@ -13,19 +13,19 @@ namespace Cratis.Kernel.Grains.Observation.States;
 /// Initializes a new instance of the <see cref="ReplayEvaluator"/> class.
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-/// <param name="microserviceId">The <see cref="MicroserviceId"/> the evaluator is for.</param>
-/// <param name="tenantId">The <see cref="TenantId"/> the evaluator is for.</param>
+/// <param name="eventStore">The <see cref="EventStoreName"/> the evaluator is for.</param>
+/// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the evaluator is for.</param>
 public class ReplayEvaluator(
     IGrainFactory grainFactory,
-    MicroserviceId microserviceId,
-    TenantId tenantId) : IReplayEvaluator
+    EventStoreName eventStore,
+    EventStoreNamespaceName @namespace) : IReplayEvaluator
 {
     /// <inheritdoc/>
     public async Task<bool> Evaluate(ReplayEvaluationContext context)
     {
         if (NeedsToReplay(context))
         {
-            var recommendationsManager = grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(microserviceId, tenantId));
+            var recommendationsManager = grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(eventStore, @namespace));
             await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
                 "Event types has changed.",
                 new ReplayCandidateRequest

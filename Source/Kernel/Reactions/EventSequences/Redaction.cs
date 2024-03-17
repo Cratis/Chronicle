@@ -29,7 +29,7 @@ public class Redaction(IGrainFactory grainFactory)
     /// <returns>Awaitable task.</returns>
     public async Task SingleEvent(EventRedacted @event, EventContext context)
     {
-        var grain = grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new EventSequenceKey(@event.Microservice, @event.TenantId));
+        var grain = grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new EventSequenceKey(context.EventStore, context.Namespace));
         await grain.Redact(@event.SequenceNumber, @event.Reason, context.Causation, context.CausedBy);
     }
 
@@ -41,7 +41,7 @@ public class Redaction(IGrainFactory grainFactory)
     /// <returns>Awaitable task.</returns>
     public async Task ByEventSource(EventsRedactedForEventSource @event, EventContext context)
     {
-        var grain = grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new EventSequenceKey(@event.Microservice, @event.TenantId));
+        var grain = grainFactory.GetGrain<IEventSequence>(@event.Sequence, keyExtension: new EventSequenceKey(context.EventStore, context.Namespace));
         await grain.Redact(@event.EventSourceId, @event.Reason, @event.EventTypes, context.Causation, context.CausedBy);
     }
 }

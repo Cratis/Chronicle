@@ -10,6 +10,11 @@ namespace Cratis;
 public record EventStoreName(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
+    /// Gets the not set <see cref="EventStoreName"/>.
+    /// </summary>
+    public static readonly EventStoreName NotSet = "[NotSet]";
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="EventStoreName"/>.
     /// </summary>
     /// <param name="value"><see cref="string"/> representation.</param>

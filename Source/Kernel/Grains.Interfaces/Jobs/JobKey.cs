@@ -6,14 +6,14 @@ namespace Cratis.Kernel.Grains.Jobs;
 /// <summary>
 /// Represents the key for a job.
 /// </summary>
-/// <param name="MicroserviceId">The Microservice the job is for.</param>
-/// <param name="TenantId">The tenant the job is for.</param>
-public record JobKey(MicroserviceId MicroserviceId, TenantId TenantId)
+/// <param name="EventStore">The event store the job is for.</param>
+/// <param name="Namespace">The namespace within the event store the job is for.</param>
+public record JobKey(EventStoreName EventStore, EventStoreNamespaceName Namespace)
 {
     /// <summary>
     /// Represents an unset key.
     /// </summary>
-    public static readonly JobKey NotSet = new(MicroserviceId.Unspecified, TenantId.NotSet);
+    public static readonly JobKey NotSet = new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet);
 
     /// <summary>
     /// Implicitly convert from string to <see cref="JobKey"/>.
@@ -28,7 +28,7 @@ public record JobKey(MicroserviceId MicroserviceId, TenantId TenantId)
     public static implicit operator string(JobKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{MicroserviceId}+{TenantId}";
+    public override string ToString() => $"{EventStore}+{Namespace}";
 
     /// <summary>
     /// Parse a key from a string.
@@ -38,8 +38,8 @@ public record JobKey(MicroserviceId MicroserviceId, TenantId TenantId)
     public static JobKey Parse(string key)
     {
         var elements = key.Split('+');
-        var microserviceId = (MicroserviceId)elements[0];
-        var tenantId = (TenantId)elements[1];
-        return new(microserviceId, tenantId);
+        var eventStore = (EventStoreName)elements[0];
+        var @namespace = (EventStoreNamespaceName)elements[1];
+        return new(eventStore, @namespace);
     }
 }

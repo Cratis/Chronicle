@@ -18,7 +18,6 @@ namespace Cratis.Kernel.Grains.Observation.Reducers;
 /// </remarks>
 /// <param name="sinks"><see cref="ISinks"/> in the system.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
-[SingletonPerMicroserviceAndTenant]
 public class ReducerPipelines(
     ISinks sinks,
     IObjectComparer objectComparer) : IReducerPipelines

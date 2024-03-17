@@ -19,7 +19,7 @@ public class RegisterObserver
     public string ConnectionId { get; set; }
 
     /// <summary>
-    /// Gets or sets the microservice identifier.
+    /// Gets or sets the event store name.
     /// </summary>
     [ProtoMember(2)]
     public string EventStoreName { get; set; }

@@ -6,14 +6,14 @@ namespace Cratis.Kernel.Storage.EventSequences;
 /// <summary>
 /// Represents the key for an event sequence.
 /// </summary>
-/// <param name="MicroserviceId">The <see cref="MicroserviceId"/> part.</param>
-/// <param name="TenantId">The <see cref="TenantId"/> part.</param>
-public record EventSequenceKey(MicroserviceId MicroserviceId, TenantId TenantId)
+/// <param name="EventStore">The <see cref="EventStoreName"/> part.</param>
+/// <param name="Namespace">The <see cref="EventStoreNamespaceName"/> part.</param>
+public record EventSequenceKey(EventStoreName EventStore, EventStoreNamespaceName Namespace)
 {
     /// <summary>
     /// The key when not set.
     /// </summary>
-    public static readonly EventSequenceKey NotSet = new(MicroserviceId.Unspecified, TenantId.NotSet);
+    public static readonly EventSequenceKey NotSet = new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet);
 
     /// <summary>
     /// Implicitly convert from <see cref="EventSequenceKey"/> to <see cref="string"/>.
@@ -28,7 +28,7 @@ public record EventSequenceKey(MicroserviceId MicroserviceId, TenantId TenantId)
     public static implicit operator EventSequenceKey(string key) => Parse(key);
 
     /// <inheritdoc/>
-    public override string ToString() => $"{MicroserviceId}+{TenantId}";
+    public override string ToString() => $"{EventStore}+{Namespace}";
 
     /// <summary>
     /// Parse a <see cref="EventSequenceKey"/> from a string.

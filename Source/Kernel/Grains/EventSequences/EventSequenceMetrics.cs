@@ -24,10 +24,10 @@ internal static partial class EventSequenceMetrics
 
 internal static class EventSequenceMetricsScopes
 {
-    internal static IMeterScope<EventSequence> BeginEventSequenceScope(this IMeter<EventSequence> meter, MicroserviceId microserviceId, TenantId tenantId) =>
+    internal static IMeterScope<EventSequence> BeginEventSequenceScope(this IMeter<EventSequence> meter, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
         meter.BeginScope(new Dictionary<string, object>
         {
-            ["MicroserviceId"] = microserviceId,
-            ["TenantId"] = tenantId
+            ["EventStore"] = eventStore,
+            ["Namespace"] = @namespace
         });
 }

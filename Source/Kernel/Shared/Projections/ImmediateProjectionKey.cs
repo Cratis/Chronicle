@@ -9,14 +9,14 @@ namespace Cratis.Projections;
 /// <summary>
 /// Represents the compound key for an immediate projection.
 /// </summary>
-/// <param name="MicroserviceId">The Microservice identifier.</param>
-/// <param name="TenantId">The Tenant identifier.</param>
+/// <param name="EventStore">The event store name.</param>
+/// <param name="Namespace">The namespace within the event store.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
 /// <param name="ModelKey">The event source identifier.</param>
 /// <param name="CorrelationId">The optional correlation identifier.</param>
 public record ImmediateProjectionKey(
-    MicroserviceId MicroserviceId,
-    TenantId TenantId,
+    EventStoreName EventStore,
+    EventStoreNamespaceName Namespace,
     EventSequenceId EventSequenceId,
     ModelKey ModelKey,
     CorrelationId? CorrelationId = default)
@@ -32,10 +32,10 @@ public record ImmediateProjectionKey(
     {
         if (CorrelationId != default)
         {
-            return $"{MicroserviceId}+{TenantId}+{EventSequenceId}+{ModelKey}+{CorrelationId}";
+            return $"{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}+{CorrelationId}";
         }
 
-        return $"{MicroserviceId}+{TenantId}+{EventSequenceId}+{ModelKey}";
+        return $"{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}";
     }
 
     /// <summary>
@@ -46,15 +46,15 @@ public record ImmediateProjectionKey(
     public static ImmediateProjectionKey Parse(string key)
     {
         var elements = key.Split('+');
-        var microserviceId = (MicroserviceId)elements[0];
-        var tenantId = (TenantId)elements[1];
+        var eventStore = (EventStoreName)elements[0];
+        var @namespace = (EventStoreNamespaceName)elements[1];
         var eventSequenceId = (EventSequenceId)elements[2];
         var modelKey = (ModelKey)elements[3];
         if (elements.Length == 5)
         {
             var correlationId = (CorrelationId)elements[4];
-            return new(microserviceId, tenantId, eventSequenceId, modelKey, correlationId);
+            return new(eventStore, @namespace, eventSequenceId, modelKey, correlationId);
         }
-        return new(microserviceId, tenantId, eventSequenceId, modelKey);
+        return new(eventStore, @namespace, eventSequenceId, modelKey);
     }
 }

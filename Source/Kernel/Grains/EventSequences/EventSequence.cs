@@ -53,10 +53,10 @@ public class EventSequence(
     IAsyncStream<AppendedEvent>? _stream;
     IMeterScope<EventSequence>? _metrics;
 
-    IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetNamespace(_eventSequenceKey.TenantId).GetEventSequence(_eventSequenceId);
-    IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).EventTypes;
-    IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).Identities;
-    IObserverStorage ObserverStorage => _observerStorage ??= storage.GetEventStore((string)_eventSequenceKey.MicroserviceId).GetNamespace(_eventSequenceKey.TenantId).Observers;
+    IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore((string)_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
+    IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore((string)_eventSequenceKey.EventStore).EventTypes;
+    IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore((string)_eventSequenceKey.EventStore).Identities;
+    IObserverStorage ObserverStorage => _observerStorage ??= storage.GetEventStore((string)_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Observers;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -66,7 +66,7 @@ public class EventSequence(
         var streamId = StreamId.Create(_eventSequenceKey, (Guid)_eventSequenceId);
         var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _stream = streamProvider.GetStream<AppendedEvent>(streamId);
-        _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId);
+        _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
 
         await base.OnActivateAsync(cancellationToken);
     }
@@ -83,7 +83,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumberForEventTypes(IEnumerable<EventType> eventTypes)
     {
-        logger.GettingTailSequenceNumberForEventTypes(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, eventTypes);
+        logger.GettingTailSequenceNumberForEventTypes(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventTypes);
 
         var sequenceNumber = EventSequenceNumber.Unavailable;
         try
@@ -96,11 +96,11 @@ public class EventSequence(
         }
         catch (Exception ex)
         {
-            logger.FailedGettingTailSequenceNumberForEventTypes(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, eventTypes, ex);
+            logger.FailedGettingTailSequenceNumberForEventTypes(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventTypes, ex);
         }
 
         sequenceNumber ??= EventSequenceNumber.Unavailable;
-        logger.ResultForGettingTailSequenceNumberForEventTypes(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, eventTypes, sequenceNumber);
+        logger.ResultForGettingTailSequenceNumberForEventTypes(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventTypes, sequenceNumber);
         return Task.FromResult(sequenceNumber);
     }
 
@@ -113,15 +113,15 @@ public class EventSequence(
         var result = EventSequenceNumber.Unavailable;
         try
         {
-            logger.GettingNextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>());
+            logger.GettingNextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>());
             result = await EventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(sequenceNumber, eventTypes, eventSourceId);
         }
         catch (Exception ex)
         {
-            logger.FailedGettingNextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), ex);
+            logger.FailedGettingNextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), ex);
         }
 
-        logger.NextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), result);
+        logger.NextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, eventTypes ?? Enumerable.Empty<EventType>(), result);
 
         return result;
     }
@@ -142,15 +142,15 @@ public class EventSequence(
             var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
             eventName = eventSchema.Schema.GetDisplayName();
             logger.Appending(
-                _eventSequenceKey.MicroserviceId,
-                _eventSequenceKey.TenantId,
+                _eventSequenceKey.EventStore,
+                _eventSequenceKey.Namespace,
                 _eventSequenceId,
                 eventType,
                 eventName,
                 eventSourceId,
                 State.SequenceNumber);
 
-            var compliantEvent = await jsonComplianceManagerProvider.Apply((string)_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, eventSchema.Schema, eventSourceId, content);
+            var compliantEvent = await jsonComplianceManagerProvider.Apply((string)_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
 
             var compliantEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
 
@@ -166,7 +166,8 @@ public class EventSequence(
                             State.SequenceNumber,
                             DateTimeOffset.UtcNow,
                             validFrom ?? DateTimeOffset.MinValue,
-                            _eventSequenceKey.TenantId,
+                            _eventSequenceKey.EventStore,
+                            _eventSequenceKey.Namespace,
                             CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
                             causation,
                             causedBy),
@@ -193,8 +194,8 @@ public class EventSequence(
         {
             _metrics?.FailedAppending(eventSourceId, eventName);
             logger.FailedAppending(
-                _eventSequenceKey.MicroserviceId,
-                _eventSequenceKey.TenantId,
+                _eventSequenceKey.EventStore,
+                _eventSequenceKey.Namespace,
                 eventType,
                 ex.StreamId,
                 ex.EventSourceId,
@@ -206,8 +207,8 @@ public class EventSequence(
         catch (Exception ex)
         {
             logger.ErrorAppending(
-                _eventSequenceKey.MicroserviceId,
-                _eventSequenceKey.TenantId,
+                _eventSequenceKey.EventStore,
+                _eventSequenceKey.Namespace,
                 _eventSequenceId,
                 eventSourceId,
                 State.SequenceNumber,
@@ -251,8 +252,8 @@ public class EventSequence(
         DateTimeOffset? validFrom = default)
     {
         logger.Compensating(
-            _eventSequenceKey.MicroserviceId,
-            _eventSequenceKey.TenantId,
+            _eventSequenceKey.EventStore,
+            _eventSequenceKey.Namespace,
             eventType,
             _eventSequenceId,
             sequenceNumber);
@@ -268,8 +269,8 @@ public class EventSequence(
         Identity causedBy)
     {
         logger.Redacting(
-            _eventSequenceKey.MicroserviceId,
-            _eventSequenceKey.TenantId,
+            _eventSequenceKey.EventStore,
+            _eventSequenceKey.Namespace,
             _eventSequenceId,
             sequenceNumber);
 
@@ -291,8 +292,8 @@ public class EventSequence(
         Identity causedBy)
     {
         logger.RedactingMultiple(
-            _eventSequenceKey.MicroserviceId,
-            _eventSequenceKey.TenantId,
+            _eventSequenceKey.EventStore,
+            _eventSequenceKey.Namespace,
             _eventSequenceId,
             eventSourceId,
             eventTypes);
@@ -314,7 +315,7 @@ public class EventSequence(
         var observers = await ObserverStorage.GetObserversForEventTypes(affectedEventTypes);
         foreach (var observer in observers)
         {
-            var key = new ObserverKey(_eventSequenceKey.MicroserviceId, _eventSequenceKey.TenantId, _eventSequenceId);
+            var key = new ObserverKey(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
             await GrainFactory.GetGrain<IObserver>(observer.ObserverId, key).ReplayPartition(eventSourceId);
         }
     }
