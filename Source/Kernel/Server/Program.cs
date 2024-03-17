@@ -33,7 +33,6 @@ public static class Program
          Host.CreateDefaultBuilder(args)
             .ConfigureCpuBoundWorkers()
             .UseMongoDB()
-            .UseAksio(mvcOptions => mvcOptions.Filters.Add<KernelReadyResourceFilter>(0))
             .UseCratis()
             .UseOrleans(_ => _
                 .UseCluster()

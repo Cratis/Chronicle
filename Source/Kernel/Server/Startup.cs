@@ -26,20 +26,9 @@ public class Startup
 
     public void Configure(IApplicationBuilder app)
     {
-        var logger = app.ApplicationServices.GetRequiredService<ILogger<Startup>>();
-
         app.UseRouting();
         app.UseWebSockets();
         app.MapGrpcServices();
         app.UseCratis();
-        var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
-        appLifetime.ApplicationStarted.Register(() =>
-        {
-            logger.PerformingBootProcedures();
-            app.PerformBootProcedures();
-
-            KernelReadyResourceFilter.KernelReady = true;
-        });
-        app.UseAksio();
     }
 }
