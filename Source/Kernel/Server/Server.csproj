@@ -6,6 +6,7 @@
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <ServerGarbageCollection>true</ServerGarbageCollection>
+        <NoWarn>$(NoWarn);RCS1093</NoWarn>
     </PropertyGroup>
 
     <!-- 3rd party package references -->

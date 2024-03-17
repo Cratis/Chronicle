@@ -2,8 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Text.Json;
+using Cratis.DependencyInjection;
+using Cratis.Json;
 using Cratis.Kernel.Grains.Observation.Placement;
 using Cratis.Kernel.Server.Serialization;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 
 #pragma warning disable SA1600
@@ -26,8 +30,14 @@ public static class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
+            .UseConfiguration()
+            .UseLogging()
             .ConfigureCpuBoundWorkers()
             .UseMongoDB()
+            .ConfigureServices(services => services
+                .AddSingleton(Globals.JsonSerializerOptions)
+                .AddBindingsByConvention()
+                .AddSelfBindings())
             .UseOrleans(_ => _
                 .UseLocalhostClustering() // TODO: Implement MongoDB clustering
                 .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
@@ -43,6 +53,13 @@ public static class Program
                 .ConfigureStorage()
                 .UseMongoDB()
                 .AddEventSequenceStreaming());
+            // .ConfigureWebHostDefaults(_ => _
+            //     .ConfigureKestrel(options =>
+            //     {
+            //         options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+            //         options.Limits.Http2.MaxStreamsPerConnection = 100;
+            //     })
+            //     .UseStartup<Startup>());
 
     static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
     {

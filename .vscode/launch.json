@@ -29,12 +29,12 @@
             "justMyCode": false,
             "requireExactSource": false,
             "symbolOptions": {
-                "moduleFilter": {
-                    "mode": "loadOnlyIncluded",
-                    "includedModules": [
-                        "Cratis.*.dll"
-                    ]
-                },
+                // "moduleFilter": {
+                //     "mode": "loadOnlyIncluded",
+                //     "includedModules": [
+                //         "Cratis.*.dll"
+                //     ]
+                // },
                 "searchPaths": [],
                 "searchMicrosoftSymbolServer": false,
                 "searchNuGetOrgSymbolServer": true
