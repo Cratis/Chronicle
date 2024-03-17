@@ -28,8 +28,7 @@ public class ChildrenBuilder<TParentModel, TChildModel>(
     IEventTypes eventTypes,
     IJsonSchemaGenerator schemaGenerator,
     JsonSerializerOptions jsonSerializerOptions) :
-    ProjectionBuilder<TChildModel,
-    IChildrenBuilder<TParentModel, TChildModel>>(eventTypes, schemaGenerator, jsonSerializerOptions),
+    ProjectionBuilder<TChildModel, IChildrenBuilder<TParentModel, TChildModel>>(eventTypes, schemaGenerator, jsonSerializerOptions),
     IChildrenBuilder<TParentModel, TChildModel>
 {
     PropertyPath _identifiedBy = PropertyPath.NotSet;
