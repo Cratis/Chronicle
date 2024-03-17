@@ -306,3 +306,5 @@ out
 # Benachmark .NET
 BenchmarkDotNet.Artifacts/
 Benchmarks/results
+
+.mono
