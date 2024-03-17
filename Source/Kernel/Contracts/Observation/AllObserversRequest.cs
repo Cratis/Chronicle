@@ -18,8 +18,8 @@ public class AllObserversRequest
     public string EventStoreName { get; set; }
 
     /// <summary>
-    /// Gets or sets the tenant identifier.
+    /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public Guid TenantId { get; set; }
+    public string Namespace { get; set; }
 }

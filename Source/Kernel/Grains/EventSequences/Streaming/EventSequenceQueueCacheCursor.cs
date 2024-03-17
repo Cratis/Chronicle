@@ -17,7 +17,7 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 /// </remarks>
 /// <param name="cache">The <see cref="IEventSequenceCache"/> to use by the cursor.</param>
 /// <param name="eventStore">The <see cref="EventStoreName"/> the cursor is for.</param>
-/// <param name="namespace">The <see cref="TenantId"/> the cursor is for.</param>
+/// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the cursor is for.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the cursor is for.</param>
 /// <param name="from">The from <see cref="EventSequenceNumber"/>.</param>
 public class EventSequenceQueueCacheCursor(

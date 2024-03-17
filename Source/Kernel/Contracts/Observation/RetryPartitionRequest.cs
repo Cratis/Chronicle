@@ -18,18 +18,18 @@ public class RetryPartitionRequest
     public string EventStoreName { get; set; }
 
     /// <summary>
-    /// Gets or sets the tenant identifier.
+    /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public Guid TenantId { get; set; }
+    public string Namespace { get; set; }
 
     /// <summary>
     /// Gets or sets the observer identifier.
     /// </summary>
-    public Guid ObserverId { get; set; }
+    public Guid ObserverId { get; set; }
 
     /// <summary>
     /// Gets or sets the partition to rewind.
     /// </summary>
-    public string Partition { get; set; }
+    public string Partition { get; set; }
 }

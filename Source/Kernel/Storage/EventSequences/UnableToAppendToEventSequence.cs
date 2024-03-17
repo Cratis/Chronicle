@@ -33,9 +33,9 @@ public class UnableToAppendToEventSequence(
     public Guid StreamId { get; } = eventSequenceId;
 
     /// <summary>
-    /// Gets the tenant identifier.
+    /// Gets the namespace.
     /// </summary>
-    public EventStoreNamespaceName TenantId { get; } = @namespace;
+    public EventStoreNamespaceName Namespace { get; } = @namespace;
 
     /// <summary>
     /// Gets the sequence number within the event sequence.

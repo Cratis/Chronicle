@@ -40,7 +40,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// Initializes a new instance of the <see cref="EventStoreNamespaceStorage"/> class.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the storage is for.</param>
-    /// <param name="namespace"><see cref="TenantId"/> the storage is for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the storage is for.</param>
     /// <param name="eventStoreNamespaceDatabase">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
     /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
     /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>

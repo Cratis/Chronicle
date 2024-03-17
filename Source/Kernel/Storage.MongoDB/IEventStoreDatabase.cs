@@ -6,7 +6,7 @@ using MongoDB.Driver;
 namespace Cratis.Kernel.Storage.MongoDB;
 
 /// <summary>
-/// Defines the common database for event store that goes across all tenants within an event store.
+/// Defines the common database for event store that goes across all namespaces within an event store.
 /// </summary>
 public interface IEventStoreDatabase
 {

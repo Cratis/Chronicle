@@ -16,7 +16,7 @@ namespace Cratis.Kernel.Read.Recommendations;
 /// Initializes a new instance of the <see cref="Recommendations"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-[Route("/api/events/store/{eventStore}/{tenantId}/recommendations")]
+[Route("/api/events/store/{eventStore}/{namespace}/recommendations")]
 public class Recommendations(IStorage storage) : ControllerBase
 {
     /// <summary>

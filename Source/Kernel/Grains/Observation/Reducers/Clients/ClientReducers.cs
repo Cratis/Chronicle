@@ -34,14 +34,14 @@ public class ClientReducers(
         foreach (var definition in definitions)
         {
             await eventStore.ReducerPipelineDefinitions.Register(definition);
-            foreach (var tenantId in namespaces)
+            foreach (var @namespace in namespaces)
             {
                 logger.RegisterReducer(
                     definition.ReducerId,
                     definition.Name,
                     definition.EventSequenceId);
 
-                var key = new ObserverKey(eventStoreName, tenantId, definition.EventSequenceId);
+                var key = new ObserverKey(eventStoreName, @namespace, definition.EventSequenceId);
                 var reducer = GrainFactory.GetGrain<IClientReducer>(definition.ReducerId, key);
                 await reducer.Start(definition.Name, connectionId, definition.EventTypes);
             }
