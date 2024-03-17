@@ -29,6 +29,7 @@ public static class Program
             .ConfigureCpuBoundWorkers()
             .UseMongoDB()
             .UseOrleans(_ => _
+                .UseLocalhostClustering() // TODO: Implement MongoDB clustering
                 .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
                 .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
                 .ConfigureSerialization()
