@@ -45,10 +45,10 @@ public class Reducers(
         {
             var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
             var client = await connectedClients.GetConnectedClient(connectionId);
-            var tenants = configuration.Tenants.GetTenantIds();
-
             var reducers = grainFactory.GetGrain<IClientReducers>(microserviceId);
-            await reducers.Register(connectionId, definitions, tenants);
+
+            // TODO: This needs to register all reducers for all namespaces - or rather, the client reducers internally should deal with that!
+            await reducers.Register(connectionId, definitions, Enumerable.Empty<TenantId>());
         });
 
         return Task.CompletedTask;

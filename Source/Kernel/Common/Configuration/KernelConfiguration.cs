@@ -10,23 +10,8 @@ namespace Cratis.Kernel.Configuration;
 /// Represents the configuration for the Kernel.
 /// </summary>
 [Configuration("cratis")]
-public class KernelConfiguration : IPerformPostBindOperations
+public class KernelConfiguration
 {
-    /// <summary>
-    /// Gets the <see cref="Tenants"/> configuration.
-    /// </summary>
-    public Tenants Tenants { get; init; } = [];
-
-    /// <summary>
-    /// Gets the <see cref="Microservice"/> configuration.
-    /// </summary>
-    public Microservices Microservices { get; init; } = [];
-
-    /// <summary>
-    /// Gets the <see cref="Cluster"/> configuration.
-    /// </summary>
-    public Cluster Cluster { get; init; } = new();
-
     /// <summary>
     /// Gets the <see cref="Telemetry"/> configuration.
     /// </summary>
@@ -36,20 +21,4 @@ public class KernelConfiguration : IPerformPostBindOperations
     /// Gets the <see cref="Storage"/> configuration.
     /// </summary>
     public Storage Storage { get; init; } = new();
-
-    /// <inheritdoc/>
-    public void Perform()
-    {
-        Tenants[TenantId.NotSet.ToString()] = new()
-        {
-            Name = "Default Single Tenant"
-        };
-        Microservices[MicroserviceId.Unspecified.ToString()] = new()
-        {
-            Name = "Shared"
-        };
-        Microservices[MicroserviceId.Unspecified.ToString()] = new() { Name = "Shared" };
-        Microservices[MicroserviceId.Kernel.ToString()] = new() { Name = "Kernel" };
-        Storage.ConfigureKernelMicroservice(Tenants.Select(_ => _.Key));
-    }
 }

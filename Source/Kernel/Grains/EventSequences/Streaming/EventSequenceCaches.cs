@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using Cratis.EventSequences;
-using Cratis.Kernel.Configuration;
 
 namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 
@@ -14,11 +13,9 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 /// Initializes a new instance of the <see cref="EventSequenceCaches"/> class.
 /// </remarks>
 /// <param name="eventSequenceCacheFactory"><see cref="IEventSequenceCacheFactory"/> for creating <see cref="IEventSequenceCache"/> instances.</param>
-/// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
 [Singleton]
 public class EventSequenceCaches(
-    IEventSequenceCacheFactory eventSequenceCacheFactory,
-    KernelConfiguration configuration) : IEventSequenceCaches
+    IEventSequenceCacheFactory eventSequenceCacheFactory) : IEventSequenceCaches
 {
     readonly ConcurrentDictionary<(MicroserviceId, TenantId, EventSequenceId), IEventSequenceCache> _caches = new();
 
@@ -41,19 +38,20 @@ public class EventSequenceCaches(
     /// <inheritdoc/>
     public async Task PrimeAll()
     {
-        foreach (var (microserviceId, microservice) in configuration.Microservices)
-        {
-            foreach (var (tenantId, _) in configuration.Tenants)
-            {
-                if (!configuration.Storage.Microservices.ContainsKey(microserviceId) ||
-                    !configuration.Storage.Microservices.Get(microserviceId).Tenants.ContainsKey(tenantId))
-                {
-                    continue;
-                }
-
-                await GetFor(microserviceId, tenantId, EventSequenceId.Log).PrimeWithTailWindow();
-            }
-        }
+        // TODO: This needs to be implemented properly. Or if we get to rewrite how we append to event sequences first, we can remove this entire file.
+        // foreach (var (microserviceId, microservice) in configuration.Microservices)
+        // {
+        //     foreach (var (tenantId, _) in configuration.Tenants)
+        //     {
+        //         if (!configuration.Storage.Microservices.ContainsKey(microserviceId) ||
+        //             !configuration.Storage.Microservices.Get(microserviceId).Tenants.ContainsKey(tenantId))
+        //         {
+        //             continue;
+        //         }
+        //         await GetFor(microserviceId, tenantId, EventSequenceId.Log).PrimeWithTailWindow();
+        //     }
+        // }
+        await Task.CompletedTask;
     }
 
     /// <inheritdoc/>

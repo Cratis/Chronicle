@@ -25,7 +25,6 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     readonly IKernel _kernel;
     readonly IClusterClient _clusterClient;
     readonly KernelConfiguration _configuration;
-    readonly Microservices _microservices;
     readonly ILogger<Projections> _logger;
     readonly IBroadcastChannelProvider _projectionChangedChannel;
 
@@ -35,19 +34,16 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
     /// <param name="clusterClient"><see cref="IClusterClient"/> instance.</param>
     /// <param name="configuration">The Kernel configuration.</param>
-    /// <param name="microservices">All configured microservices.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Projections(
         IKernel kernel,
         IClusterClient clusterClient,
         KernelConfiguration configuration,
-        Microservices microservices,
         ILogger<Projections> logger)
     {
         _kernel = kernel;
         _clusterClient = clusterClient;
         _configuration = configuration;
-        _microservices = microservices;
         _logger = logger;
         _projectionChangedChannel = _clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ProjectionChanged);
     }
@@ -57,27 +53,29 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     {
         _logger.Rehydrate();
 
-        foreach (var microserviceId in _microservices.GetMicroserviceIds())
-        {
-            var eventStore = _kernel.GetEventStore((string)microserviceId);
-            var projectionPipelineDefinitions = await eventStore.ProjectionPipelineDefinitions.GetAll();
-            foreach (var pipeline in projectionPipelineDefinitions)
-            {
-                if (await eventStore.ProjectionDefinitions.TryGetFor(pipeline.ProjectionId) is (true, ProjectionDefinition projectionDefinition))
-                {
-                    foreach (var tenant in _configuration.Tenants.GetTenantIds())
-                    {
-                        var eventStoreNamespace = eventStore.GetNamespace(tenant);
-                        await eventStoreNamespace.ProjectionManager.Register(projectionDefinition, pipeline);
+        // TODO: This needs to register all projections for all event stores and namespaces instead
 
-                        if (!projectionDefinition.IsActive) continue;
+        // foreach (var microserviceId in _microservices.GetMicroserviceIds())
+        // {
+        //     var eventStore = _kernel.GetEventStore((string)microserviceId);
+        //     var projectionPipelineDefinitions = await eventStore.ProjectionPipelineDefinitions.GetAll();
+        //     foreach (var pipeline in projectionPipelineDefinitions)
+        //     {
+        //         if (await eventStore.ProjectionDefinitions.TryGetFor(pipeline.ProjectionId) is (true, ProjectionDefinition projectionDefinition))
+        //         {
+        //             foreach (var tenant in _configuration.Tenants.GetTenantIds())
+        //             {
+        //                 var eventStoreNamespace = eventStore.GetNamespace(tenant);
+        //                 await eventStoreNamespace.ProjectionManager.Register(projectionDefinition, pipeline);
+        //                 if (!projectionDefinition.IsActive) continue;
+        //                 var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
+        //                 await GrainFactory.GetGrain<IProjection>(pipeline.ProjectionId, key).Ensure();
+        //             }
+        //         }
+        //     }
+        // }
 
-                        var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
-                        await GrainFactory.GetGrain<IProjection>(pipeline.ProjectionId, key).Ensure();
-                    }
-                }
-            }
-        }
+        await Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -145,6 +143,8 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
         await eventStore.ProjectionDefinitions.Register(projectionDefinition);
         await eventStore.ProjectionPipelineDefinitions.Register(pipelineDefinition);
 
+        // TODO: This needs to register all projections for all namespaces.
+        /*
         foreach (var tenant in _configuration.Tenants.GetTenantIds())
         {
             var eventStoreNamespace = eventStore.GetNamespace(tenant);
@@ -181,5 +181,6 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
                 }
             }
         }
+        */
     }
 }

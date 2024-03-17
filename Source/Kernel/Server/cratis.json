@@ -1,16 +1,4 @@
 {
-    "tenants": {
-    },
-    "microservices": {
-    },
-    "cluster": {
-        "name": "Cratis",
-        "type": "single",
-        "advertisedIP": "127.0.0.1",
-        "siloPort": 11111,
-        "gatewayPort": 30000,
-        "options": {}
-    },
     "telemetry": {
         "type": "open-telemetry",
         "options": {
@@ -18,11 +6,7 @@
         }
     },
     "storage": {
-        "cluster": {
-            "type": "MongoDB",
-            "connectionDetails": "mongodb://localhost:27017/cratis-shared"
-        },
-        "microservices": {
-        }
+        "type": "MongoDB",
+        "connectionDetails": "mongodb://localhost:27017"
     }
 }
