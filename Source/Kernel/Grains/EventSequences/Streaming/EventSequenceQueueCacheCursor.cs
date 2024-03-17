@@ -4,7 +4,6 @@
 using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.Kernel.EventSequences;
-using Cratis.Kernel.Orleans.Execution;
 using Orleans.Runtime;
 using Orleans.Streams;
 
@@ -55,12 +54,7 @@ public class EventSequenceQueueCacheCursor(
             return new EventSequenceBatchContainer(
                 new[] { @event },
                 streamId,
-                new Dictionary<string, object>
-                {
-                    { RequestContextKeys.MicroserviceId, microserviceId },
-                    { RequestContextKeys.TenantId, tenantId },
-                    { RequestContextKeys.CorrelationId, @event.Context.CorrelationId }
-                });
+                new Dictionary<string, object>());
         }
         catch (Exception ex)
         {

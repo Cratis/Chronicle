@@ -51,8 +51,7 @@ public static class Program
                 })
                 .ConfigureStorage()
                 .UseMongoDB()
-                .AddEventSequenceStreaming()
-                .AddExecutionContext())
+                .AddEventSequenceStreaming())
             .ConfigureWebHostDefaults(_ => _
                 .ConfigureKestrel(options =>
                 {
