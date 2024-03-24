@@ -24,12 +24,10 @@ var builder = WebApplication
 
 builder.Host
         .UseMongoDB()
-        .ConfigureServices(services => services.AddMongoDBReadModels())
-        .UseAksio();
+        .ConfigureServices(services => services.AddMongoDBReadModels());
 
 var app = builder.Build();
 app.UseRouting();
 app.UseCratis();
-app.UseAksio();
 
 app.Run();

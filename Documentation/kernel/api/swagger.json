@@ -1106,7 +1106,7 @@
           }
         ],
         "requestBody": {
-          "description": "The details about the Cratis.Kernel.Domain.Projections.ImmediateProjection.",
+          "description": "The details about the Cratis.API.Projections.Commands.ImmediateProjection.",
           "content": {
             "application/json": {
               "schema": {
@@ -2398,7 +2398,7 @@
             "items": {
               "$ref": "#/components/schemas/EventTypeRegistration"
             },
-            "description": "Collection of Cratis.Kernel.Domain.Projections.EventTypeRegistration.",
+            "description": "Collection of Cratis.API.Projections.Commands.EventTypeRegistration.",
             "nullable": true
           }
         },
@@ -2413,7 +2413,7 @@
             "items": {
               "$ref": "#/components/schemas/ProjectionRegistration"
             },
-            "description": "Collection of Cratis.Kernel.Domain.Projections.ProjectionRegistration.",
+            "description": "Collection of Cratis.API.Projections.Commands.ProjectionRegistration.",
             "nullable": true
           }
         },
