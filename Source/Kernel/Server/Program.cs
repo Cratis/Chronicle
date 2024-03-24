@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using System.Text.Json;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Cratis.Kernel.Grains.Observation.Placement;
@@ -31,6 +30,11 @@ public static class Program
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
             .UseConfiguration()
+            .UseDefaultServiceProvider(_ =>
+            {
+                _.ValidateScopes = false;
+                _.ValidateOnBuild = false;
+            })
             .UseLogging()
             .ConfigureCpuBoundWorkers()
             .UseMongoDB()
@@ -52,14 +56,14 @@ public static class Program
                 })
                 .ConfigureStorage()
                 .UseMongoDB()
-                .AddEventSequenceStreaming());
-            // .ConfigureWebHostDefaults(_ => _
-            //     .ConfigureKestrel(options =>
-            //     {
-            //         options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
-            //         options.Limits.Http2.MaxStreamsPerConnection = 100;
-            //     })
-            //     .UseStartup<Startup>());
+                .AddEventSequenceStreaming())
+            .ConfigureWebHostDefaults(_ => _
+                .ConfigureKestrel(options =>
+                {
+                    options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+                    options.Limits.Http2.MaxStreamsPerConnection = 100;
+                })
+                .UseStartup<Startup>());
 
     static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
     {
