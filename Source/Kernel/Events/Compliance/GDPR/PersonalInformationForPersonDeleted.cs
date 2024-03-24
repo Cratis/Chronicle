@@ -8,5 +8,4 @@ namespace Cratis.Kernel.Compliance.GDPR.Events;
 /// <summary>
 /// Represents the event that gets applied when personal information for a person is deleted.
 /// </summary>
-[EventType("5e938436-a24b-4886-af5d-90f31d08da55")]
 public record PersonalInformationForPersonDeleted();

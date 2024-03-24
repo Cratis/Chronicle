@@ -12,5 +12,4 @@ namespace Cratis.Kernel.Compliance.GDPR.Events;
 /// <param name="FirstName"><see cref="FirstName"/> of the person.</param>
 /// <param name="LastName"><see cref="LastName"/> of the person.</param>
 /// <param name="SocialSecurityNumber"><see cref="SocialSecurityNumber"/> for the person.</param>
-[EventType("12b88453-12c9-4f99-a60c-abb21282aede")]
 public record PersonRegistered(FirstName FirstName, LastName LastName, SocialSecurityNumber SocialSecurityNumber);
