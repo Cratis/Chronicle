@@ -73,7 +73,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Integration", "Integration"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kernel", "Specifications\Integration\Kernel\Kernel.csproj", "{1C757327-F744-41EB-8489-D8C34FB4B1AE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Roslyn.Extensions", "Source\Roslyn.Extensions\Roslyn.Extensions.csproj", "{4B9A23BE-CE65-4A84-8BC7-819B359DF779}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Roslyn.Extensions", "Source\Tools\Roslyn.Extensions\Roslyn.Extensions.csproj", "{4B9A23BE-CE65-4A84-8BC7-819B359DF779}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compliance", "Source\Kernel\Compliance\Compliance.csproj", "{55FC426B-B94E-45BB-B129-B8B041986001}"
 EndProject
