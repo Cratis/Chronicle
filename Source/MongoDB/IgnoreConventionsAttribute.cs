@@ -6,22 +6,17 @@ namespace Cratis.MongoDB;
 /// <summary>
 /// Used to mark models for ignoring specific <see cref="ConventionPacks">convention packs</see>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="IgnoreConventionsAttribute"/> class.
+/// </remarks>
+/// <param name="conventionPacks">Any specific <see cref="ConventionPacks">convention packs</see> to ignore. If none are given, all convention packs will be ignored.</param>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-public sealed class IgnoreConventionsAttribute : Attribute
+public sealed class IgnoreConventionsAttribute(params string[] conventionPacks) : Attribute
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="IgnoreConventionsAttribute"/> class.
-    /// </summary>
-    /// <param name="conventionPacks">Any specific <see cref="ConventionPacks">convention packs</see> to ignore. If none are given, all convention packs will be ignored.</param>
-    public IgnoreConventionsAttribute(params string[] conventionPacks)
-    {
-        ConventionPacks = conventionPacks;
-    }
-
     /// <summary>
     /// Gets convention packs to ignore.
     /// </summary>
-    public string[] ConventionPacks { get; }
+    public string[] ConventionPacks { get; } = conventionPacks;
 
     /// <summary>
     /// Gets whether or not to ignore all convention packs.

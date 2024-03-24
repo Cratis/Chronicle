@@ -17,17 +17,14 @@ namespace Cratis.MongoDB;
 /// <summary>
 /// Represents an implementation of <see cref="IMongoDBClientFactory"/>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="MongoDBClientFactory"/> class.
+/// </remarks>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [Singleton]
-public class MongoDBClientFactory : IMongoDBClientFactory
+public class MongoDBClientFactory(ILogger<MongoDBClientFactory> logger) : IMongoDBClientFactory
 {
-    readonly ILogger<MongoDBClientFactory> _logger;
     readonly ConcurrentDictionary<string, IMongoClient> _clients = new();
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBClientFactory"/> class.
-    /// </summary>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public MongoDBClientFactory(ILogger<MongoDBClientFactory> logger) => _logger = logger;
 
     /// <inheritdoc/>
     public IMongoClient Create(MongoClientSettings settings) => _clients.GetOrAdd(settings.Server.ToString(), (_, v) => v, CreateImplementation(settings));
@@ -41,7 +38,7 @@ public class MongoDBClientFactory : IMongoDBClientFactory
     IMongoClient CreateImplementation(MongoClientSettings settings)
     {
         settings.ClusterConfigurator = ClusterConfigurator;
-        _logger.CreateClient(settings.Server.ToString());
+        logger.CreateClient(settings.Server.ToString());
         var client = new MongoClient(settings);
 
         var resiliencePipeline = new ResiliencePipelineBuilder()
@@ -63,7 +60,7 @@ public class MongoDBClientFactory : IMongoDBClientFactory
 
     void ClusterConfigurator(ClusterBuilder builder)
     {
-        if (_logger.IsEnabled(LogLevel.Trace))
+        if (logger.IsEnabled(LogLevel.Trace))
         {
             builder
                 .Subscribe<CommandStartedEvent>(CommandStarted)
@@ -72,9 +69,9 @@ public class MongoDBClientFactory : IMongoDBClientFactory
         }
     }
 
-    void CommandStarted(CommandStartedEvent command) => _logger.CommandStarted(command.RequestId, command.CommandName, command.Command.ToJson());
+    void CommandStarted(CommandStartedEvent command) => logger.CommandStarted(command.RequestId, command.CommandName, command.Command.ToJson());
 
-    void CommandFailed(CommandFailedEvent command) => _logger.CommandFailed(command.RequestId, command.CommandName, command.Failure.Message);
+    void CommandFailed(CommandFailedEvent command) => logger.CommandFailed(command.RequestId, command.CommandName, command.Failure.Message);
 
-    void CommandSucceeded(CommandSucceededEvent command) => _logger.CommandSucceeded(command.RequestId, command.CommandName);
+    void CommandSucceeded(CommandSucceededEvent command) => logger.CommandSucceeded(command.RequestId, command.CommandName);
 }

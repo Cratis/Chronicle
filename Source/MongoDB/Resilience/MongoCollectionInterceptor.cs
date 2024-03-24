@@ -10,24 +10,15 @@ namespace Cratis.MongoDB;
 /// <summary>
 /// Represents an interceptor for <see cref="IMongoCollection{TDocument}"/>.
 /// </summary>
-public class MongoCollectionInterceptor : IInterceptor
+/// <remarks>
+/// Initializes a new instance of the <see cref="MongoCollectionInterceptorForReturnValues"/> class.
+/// </remarks>
+/// <param name="resiliencePipeline">The <see cref="ResiliencePipeline"/> to use.</param>
+/// <param name="openConnectionSemaphore">The <see cref="SemaphoreSlim"/> for keeping track of open connections.</param>
+public class MongoCollectionInterceptor(
+    ResiliencePipeline resiliencePipeline,
+    SemaphoreSlim openConnectionSemaphore) : IInterceptor
 {
-    readonly ResiliencePipeline _resiliencePipeline;
-    readonly SemaphoreSlim _openConnectionSemaphore;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MongoCollectionInterceptorForReturnValues"/> class.
-    /// </summary>
-    /// <param name="resiliencePipeline">The <see cref="ResiliencePipeline"/> to use.</param>
-    /// <param name="openConnectionSemaphore">The <see cref="SemaphoreSlim"/> for keeping track of open connections.</param>
-    public MongoCollectionInterceptor(
-        ResiliencePipeline resiliencePipeline,
-        SemaphoreSlim openConnectionSemaphore)
-    {
-        _resiliencePipeline = resiliencePipeline;
-        _openConnectionSemaphore = openConnectionSemaphore;
-    }
-
     /// <inheritdoc/>
     public void Intercept(IInvocation invocation)
     {
@@ -36,15 +27,15 @@ public class MongoCollectionInterceptor : IInterceptor
         invocation.ReturnValue = tcs.Task;
 
 #pragma warning disable CA2012 // Use ValueTasks correctly
-        _resiliencePipeline.ExecuteAsync(async (_) =>
+        resiliencePipeline.ExecuteAsync(async (_) =>
         {
-            await _openConnectionSemaphore.WaitAsync(1000);
+            await openConnectionSemaphore.WaitAsync(1000);
             try
             {
                 var result = (invocation.Method.Invoke(invocation.InvocationTarget, invocation.Arguments) as Task)!;
                 await result.ConfigureAwait(false);
 
-                _openConnectionSemaphore.Release(1);
+                openConnectionSemaphore.Release(1);
                 if (result.IsCanceled)
                 {
                     tcs.SetCanceled();
@@ -56,12 +47,12 @@ public class MongoCollectionInterceptor : IInterceptor
             }
             catch (TaskCanceledException)
             {
-                _openConnectionSemaphore.Release(1);
+                openConnectionSemaphore.Release(1);
                 tcs.SetCanceled();
             }
             catch (Exception ex)
             {
-                _openConnectionSemaphore.Release(1);
+                openConnectionSemaphore.Release(1);
                 tcs.SetException(ex);
                 return ValueTask.FromException(ex);
             }

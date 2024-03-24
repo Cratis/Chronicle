@@ -95,7 +95,7 @@ public static class MongoDBDefaults
             foreach (var type in typeInterfaces)
             {
                 var genericMethod = method.MakeGenericMethod(type.GenericTypeArguments[0]);
-                genericMethod.Invoke(null, new[] { classMapProvider });
+                genericMethod.Invoke(null, [classMapProvider]);
             }
         }
     }
@@ -106,7 +106,7 @@ public static class MongoDBDefaults
         {
             return;
         }
-        BsonClassMap.RegisterClassMap<T>(_ => classMapProvider.Configure(_));
+        BsonClassMap.RegisterClassMap<T>(classMapProvider.Configure);
     }
 
     static void RegisterConventionAsPack(IEnumerable<ICanFilterMongoDBConventionPacksForType> conventionPackFilters, string name, IConvention convention)

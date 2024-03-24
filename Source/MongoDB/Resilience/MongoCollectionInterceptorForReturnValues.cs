@@ -11,24 +11,15 @@ namespace Cratis.MongoDB;
 /// <summary>
 /// Represents an interceptor for <see cref="IMongoCollection{TDocument}"/> for methods that returns a <see cref="Task{T}"/>.
 /// </summary>
-public class MongoCollectionInterceptorForReturnValues : IInterceptor
+/// <remarks>
+/// Initializes a new instance of the <see cref="MongoCollectionInterceptorForReturnValues"/> class.
+/// </remarks>
+/// <param name="resiliencePipeline">The <see cref="ResiliencePipeline"/> to use.</param>
+/// <param name="openConnectionSemaphore">The <see cref="SemaphoreSlim"/> for keeping track of open connections.</param>
+public class MongoCollectionInterceptorForReturnValues(
+    ResiliencePipeline resiliencePipeline,
+    SemaphoreSlim openConnectionSemaphore) : IInterceptor
 {
-    readonly ResiliencePipeline _resiliencePipeline;
-    readonly SemaphoreSlim _openConnectionSemaphore;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MongoCollectionInterceptorForReturnValues"/> class.
-    /// </summary>
-    /// <param name="resiliencePipeline">The <see cref="ResiliencePipeline"/> to use.</param>
-    /// <param name="openConnectionSemaphore">The <see cref="SemaphoreSlim"/> for keeping track of open connections.</param>
-    public MongoCollectionInterceptorForReturnValues(
-        ResiliencePipeline resiliencePipeline,
-        SemaphoreSlim openConnectionSemaphore)
-    {
-        _resiliencePipeline = resiliencePipeline;
-        _openConnectionSemaphore = openConnectionSemaphore;
-    }
-
     /// <inheritdoc/>
     public void Intercept(IInvocation invocation)
     {
@@ -42,42 +33,42 @@ public class MongoCollectionInterceptorForReturnValues : IInterceptor
         var tcs = Activator.CreateInstance(taskType, new[] { TaskCreationOptions.RunContinuationsAsynchronously })!;
         var tcsType = tcs.GetType();
         setResultMethod = tcsType.GetMethod(nameof(TaskCompletionSource<object>.SetResult))!;
-        setExceptionMethod = tcsType.GetMethod(nameof(TaskCompletionSource<object>.SetException), new Type[] { typeof(Exception) })!;
-        setCanceledMethod = tcsType.GetMethod(nameof(TaskCompletionSource<object>.SetCanceled), Array.Empty<Type>())!;
+        setExceptionMethod = tcsType.GetMethod(nameof(TaskCompletionSource<object>.SetException), [typeof(Exception)])!;
+        setCanceledMethod = tcsType.GetMethod(nameof(TaskCompletionSource<object>.SetCanceled), [])!;
         returnTask = (tcsType.GetProperty(nameof(TaskCompletionSource<object>.Task))!.GetValue(tcs) as Task)!;
 
         invocation.ReturnValue = returnTask!;
 
 #pragma warning disable CA2012 // Use ValueTasks correctly
-        _resiliencePipeline.ExecuteAsync(async (_) =>
+        resiliencePipeline.ExecuteAsync(async (_) =>
         {
-            await _openConnectionSemaphore.WaitAsync(1000);
+            await openConnectionSemaphore.WaitAsync(1000);
             try
             {
                 var result = (invocation.Method.Invoke(invocation.InvocationTarget, invocation.Arguments) as Task)!;
                 await result.ConfigureAwait(false);
 
-                _openConnectionSemaphore.Release(1);
+                openConnectionSemaphore.Release(1);
                 if (result.IsCanceled)
                 {
-                    setCanceledMethod.Invoke(tcs, Array.Empty<object>());
+                    setCanceledMethod.Invoke(tcs, []);
                 }
                 else
                 {
 #pragma warning disable CA1849 // Synchronous blocks
                     var taskResult = result.GetType().GetProperty(nameof(Task<object>.Result))!.GetValue(result);
-                    setResultMethod.Invoke(tcs, new[] { taskResult });
+                    setResultMethod.Invoke(tcs, [taskResult]);
 #pragma warning restore CA1849 // Synchronous blocks
                 }
             }
             catch (TaskCanceledException)
             {
-                _openConnectionSemaphore.Release(1);
-                setCanceledMethod.Invoke(tcs, Array.Empty<object>());
+                openConnectionSemaphore.Release(1);
+                setCanceledMethod.Invoke(tcs, []);
             }
             catch (Exception ex)
             {
-                _openConnectionSemaphore.Release(1);
+                openConnectionSemaphore.Release(1);
                 setExceptionMethod.Invoke(tcs, new[] { ex });
             }
 

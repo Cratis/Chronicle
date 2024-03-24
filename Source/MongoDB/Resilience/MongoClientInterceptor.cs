@@ -10,38 +10,27 @@ namespace Cratis.MongoDB;
 /// <summary>
 /// Represents an interceptor for <see cref="IMongoClient"/>.
 /// </summary>
-public class MongoClientInterceptor : IInterceptor
+/// <remarks>
+/// Initializes a new instance of the <see cref="MongoClientInterceptor"/> class.
+/// </remarks>
+/// <param name="proxyGenerator"><see cref="ProxyGenerator"/> for creating further proxies.</param>
+/// <param name="resiliencePipeline">The <see cref="ResiliencePipeline"/> to use.</param>
+/// <param name="mongoClient"><see cref="IMongoClient"/> to intercept.</param>
+public class MongoClientInterceptor(
+    ProxyGenerator proxyGenerator,
+    ResiliencePipeline resiliencePipeline,
+    IMongoClient mongoClient) : IInterceptor
 {
-    readonly ProxyGenerator _proxyGenerator;
-    readonly ResiliencePipeline _resiliencePipeline;
-    readonly IMongoClient _mongoClient;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MongoClientInterceptor"/> class.
-    /// </summary>
-    /// <param name="proxyGenerator"><see cref="ProxyGenerator"/> for creating further proxies.</param>
-    /// <param name="resiliencePipeline">The <see cref="ResiliencePipeline"/> to use.</param>
-    /// <param name="mongoClient"><see cref="IMongoClient"/> to intercept.</param>
-    public MongoClientInterceptor(
-        ProxyGenerator proxyGenerator,
-        ResiliencePipeline resiliencePipeline,
-        IMongoClient mongoClient)
-    {
-        _proxyGenerator = proxyGenerator;
-        _resiliencePipeline = resiliencePipeline;
-        _mongoClient = mongoClient;
-    }
-
     /// <inheritdoc/>
     public void Intercept(IInvocation invocation)
     {
         invocation.Proceed();
 
-        invocation.ReturnValue = _proxyGenerator.CreateInterfaceProxyWithTarget(
+        invocation.ReturnValue = proxyGenerator.CreateInterfaceProxyWithTarget(
             invocation.ReturnValue as IMongoDatabase,
             new ProxyGenerationOptions
             {
-                Selector = new MongoDatabaseInterceptorSelector(_proxyGenerator, _resiliencePipeline, _mongoClient)
+                Selector = new MongoDatabaseInterceptorSelector(proxyGenerator, resiliencePipeline, mongoClient)
             });
     }
 }

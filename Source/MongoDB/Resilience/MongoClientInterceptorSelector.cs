@@ -11,35 +11,24 @@ namespace Cratis.MongoDB;
 /// <summary>
 /// Represents a selector for <see cref="MongoClientInterceptor"/>.
 /// </summary>
-public class MongoClientInterceptorSelector : IInterceptorSelector
+/// <remarks>
+/// Initializes a new instance of the <see cref="MongoClientInterceptorSelector"/> class.
+/// </remarks>
+/// <param name="proxyGenerator"><see cref="ProxyGenerator"/> for creating further proxies.</param>
+/// <param name="resiliencePipeline">The <see cref="ResiliencePipeline"/> to use.</param>
+/// <param name="mongoClient"><see cref="IMongoClient"/> to intercept.</param>
+public class MongoClientInterceptorSelector(
+    ProxyGenerator proxyGenerator,
+    ResiliencePipeline resiliencePipeline,
+    IMongoClient mongoClient) : IInterceptorSelector
 {
-    readonly ProxyGenerator _proxyGenerator;
-    readonly ResiliencePipeline _resiliencePipeline;
-    readonly IMongoClient _mongoClient;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MongoClientInterceptorSelector"/> class.
-    /// </summary>
-    /// <param name="proxyGenerator"><see cref="ProxyGenerator"/> for creating further proxies.</param>
-    /// <param name="resiliencePipeline">The <see cref="ResiliencePipeline"/> to use.</param>
-    /// <param name="mongoClient"><see cref="IMongoClient"/> to intercept.</param>
-    public MongoClientInterceptorSelector(
-        ProxyGenerator proxyGenerator,
-        ResiliencePipeline resiliencePipeline,
-        IMongoClient mongoClient)
-    {
-        _proxyGenerator = proxyGenerator;
-        _resiliencePipeline = resiliencePipeline;
-        _mongoClient = mongoClient;
-    }
-
     /// <inheritdoc/>
     public IInterceptor[] SelectInterceptors(Type type, MethodInfo method, IInterceptor[] interceptors)
     {
         if (method.Name == nameof(IMongoClient.GetDatabase))
         {
-            return new[] { new MongoClientInterceptor(_proxyGenerator, _resiliencePipeline, _mongoClient) };
+            return new[] { new MongoClientInterceptor(proxyGenerator, resiliencePipeline, mongoClient) };
         }
-        return Array.Empty<IInterceptor>();
+        return [];
     }
 }

@@ -52,7 +52,7 @@ public class ConceptSerializer<T> : IBsonSerializer<T>
             }
             else
             {
-                throw new FailedConceptSerialization("Expected a concept object, but no key named 'Value' or 'value' was found on the object");
+                throw new MissingValueKeyInConcept();
             }
         }
         else
@@ -200,6 +200,6 @@ public class ConceptSerializer<T> : IBsonSerializer<T>
             return bsonReader.ReadDecimal128();
         }
 
-        throw new FailedConceptSerialization($"Could not deserialize the concept value to '{valueType.FullName}'");
+        throw new UnableToDeserializeValueForConcept(valueType);
     }
 }

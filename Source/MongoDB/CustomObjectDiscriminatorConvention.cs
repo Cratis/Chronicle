@@ -14,6 +14,9 @@ namespace Cratis.MongoDB;
 /// </summary>
 public class CustomObjectDiscriminatorConvention : IDiscriminatorConvention
 {
+    /// <summary>
+    /// Singleton instance of <see cref="CustomObjectDiscriminatorConvention"/>.
+    /// </summary>
     internal static readonly CustomObjectDiscriminatorConvention Instance = new();
     readonly ObjectDiscriminatorConvention _convention;
 

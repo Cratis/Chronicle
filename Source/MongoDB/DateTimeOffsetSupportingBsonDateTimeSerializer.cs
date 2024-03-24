@@ -20,19 +20,16 @@ public class DateTimeOffsetSupportingBsonDateTimeSerializer : StructSerializerBa
              IRepresentationConfigurable<DateTimeOffsetSupportingBsonDateTimeSerializer>
 {
     /// <summary>
+    /// The serialization format used.
+    /// </summary>
+    public static readonly string StringSerializationFormat = "YYYY-MM-ddTHH:mm:ss.FFFFFFK";
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="DateTimeOffsetSupportingBsonDateTimeSerializer"/> class.
     /// </summary>
     public DateTimeOffsetSupportingBsonDateTimeSerializer() : this(BsonType.DateTime)
     {
     }
-
-    /// <summary>
-    /// The serialization format used.
-    /// </summary>
-    public static readonly string StringSerializationFormat = "YYYY-MM-ddTHH:mm:ss.FFFFFFK";
-
-    /// <inheritdoc/>
-    public BsonType Representation { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DateTimeOffsetSupportingBsonDateTimeSerializer"/> class.
@@ -51,6 +48,9 @@ public class DateTimeOffsetSupportingBsonDateTimeSerializer : StructSerializerBa
 
         Representation = representation;
     }
+
+    /// <inheritdoc/>
+    public BsonType Representation { get; }
 
     /// <inheritdoc/>
     public override DateTimeOffset Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
