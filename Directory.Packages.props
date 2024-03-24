@@ -51,7 +51,7 @@
     <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
     <PackageVersion Include="OrleansDashboard" Version="8.0.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.4.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.7.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.7.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.7.1" />
