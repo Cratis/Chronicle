@@ -17,5 +17,6 @@
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="FluentValidation" />
         <PackageReference Include="System.Reactive" />
+        <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
     </ItemGroup>
 </Project>

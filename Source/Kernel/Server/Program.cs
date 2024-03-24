@@ -44,6 +44,7 @@ public static class Program
                 .AddSelfBindings())
             .UseOrleans(_ => _
                 .UseLocalhostClustering() // TODO: Implement MongoDB clustering
+                .UseTelemetry() // TODO: Fix telemetry
                 .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
                 .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
                 .ConfigureSerialization()
