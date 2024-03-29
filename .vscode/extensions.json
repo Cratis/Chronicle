@@ -21,6 +21,7 @@
         "pmneo.tsimporter",
         "nsoult.typescript-imports-sort",
         "dskwrk.vscode-generate-getter-setter",
-        "formulahendry.dotnet-test-explorer"
+        "formulahendry.dotnet-test-explorer",
+        "rioj7.command-variable"
     ]
 }

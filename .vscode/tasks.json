@@ -2,78 +2,55 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build server",
+            "label": "Get Target",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/getTarget.sh ${input:remembered-project} ${input:remembered-project}/.target",
+            "problemMatcher": [],
+        },
+        {
+            "label": "build",
             "command": "dotnet",
             "type": "process",
+            "dependsOn": "Get Target",
             "args": [
                 "build",
                 "--no-restore",
-                "${workspaceFolder}/Source/Kernel/Server/Server.csproj",
                 "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
+                "/consoleloggerparameters:NoSummary",
+                "${input:remembered-project}"
             ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build bank sample",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "--no-restore",
-                "${workspaceFolder}/Samples/Banking/Bank/Main/Main.csproj",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build balance notifier sample",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "--no-restore",
-                "${workspaceFolder}/Samples/BalanceNotifier/Main/Main.csproj",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build basic sample",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "--no-restore",
-                "${workspaceFolder}/Samples/Basic/Basic.csproj",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build benchmarks",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "--no-restore",
-                "${workspaceFolder}/Benchmarks/Benchmarks.csproj",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-
-        {
-            "label": "Client and server",
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "dependsOn": ["build server", "build bank sample"]
+            "problemMatcher": "$msCompile",
+            "runOptions": {
+                "reevaluateOnRerun": false
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "project",
+            "type": "command",
+            "command": "extension.commandvariable.pickStringRemember",
+            "args": {
+                "description": "Pick project to build",
+                "default": "${remember:project}",
+                "options": [
+                    "${workspaceFolder}/Source/Kernel/Server",
+                    "${workspaceFolder}/Source/Clients/DotNET"
+                ]
+            }
+        },
+        {
+            "id": "remembered-project",
+            "type": "command",
+            "command": "extension.commandvariable.remember",
+            "args": {
+                "key": "project",
+                "value": "${input:project}"
+            }
         }
     ]
 }
