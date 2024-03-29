@@ -8,9 +8,9 @@
             "name": "launch",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${input:target}",
+            "preLaunchTask": "build-internal",
             "cwd": "${input:project}",
+            "program": "${input:target}",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
@@ -58,6 +58,7 @@
             "args": {
                 "description": "Pick project to debug",
                 "key": "project",
+                "default": "",
                 "options": [
                     "${workspaceFolder}/Source/Kernel/Server",
                     "${workspaceFolder}/Source/Clients/DotNET",
@@ -68,11 +69,13 @@
         {
             "id": "target",
             "type": "command",
-            "command": "extension.commandvariable.file.content",
+            "command": "shellCommand.execute",
             "args": {
-                "fileName": "${remember:project}/.target"
+                "command": "${workspaceFolder}/.vscode/get-target.sh ${input:project}",
+                "cwd": "${input:project}",
+                "useSingleResult": true
             }
-        }
+        },
     ],
     "compounds": []
 }

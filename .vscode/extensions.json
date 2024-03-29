@@ -22,6 +22,7 @@
         "nsoult.typescript-imports-sort",
         "dskwrk.vscode-generate-getter-setter",
         "formulahendry.dotnet-test-explorer",
-        "rioj7.command-variable"
+        "rioj7.command-variable",
+        "augustocdias.tasks-shell-input"
     ]
 }

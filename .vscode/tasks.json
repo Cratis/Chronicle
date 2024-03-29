@@ -2,27 +2,24 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Get Target",
-            "type": "shell",
-            "command": "${workspaceFolder}/.vscode/getTarget.sh ${input:remembered-project} ${input:remembered-project}/.target",
-            "problemMatcher": [],
+            "label": "build",
+            "command": "${workspaceFolder}/.vscode/build-project.sh",
+            "type": "process",
+            "args": [
+                "${input:project}"
+            ],
+            "problemMatcher": "$msCompile",
+            "runOptions": {
+                "reevaluateOnRerun": false
+            }
         },
         {
-            "label": "build",
-            "command": "dotnet",
+            "label": "build-internal",
+            "command": "${workspaceFolder}/.vscode/build-project.sh",
             "type": "process",
-            "dependsOn": "Get Target",
             "args": [
-                "build",
-                "--no-restore",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary",
-                "${input:remembered-project}"
+                "${input:remembered-project}",
             ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
             "problemMatcher": "$msCompile",
             "runOptions": {
                 "reevaluateOnRerun": false
@@ -31,19 +28,6 @@
     ],
     "inputs": [
         {
-            "id": "project",
-            "type": "command",
-            "command": "extension.commandvariable.pickStringRemember",
-            "args": {
-                "description": "Pick project to build",
-                "default": "${remember:project}",
-                "options": [
-                    "${workspaceFolder}/Source/Kernel/Server",
-                    "${workspaceFolder}/Source/Clients/DotNET"
-                ]
-            }
-        },
-        {
             "id": "remembered-project",
             "type": "command",
             "command": "extension.commandvariable.remember",
@@ -51,6 +35,21 @@
                 "key": "project",
                 "value": "${input:project}"
             }
+        },
+        {
+            "id": "project",
+            "type": "command",
+            "command": "extension.commandvariable.pickStringRemember",
+            "args": {
+                "description": "Pick project to build",
+                "key": "project",
+                "fileName": "${workspaceFolder}/.vscode/projects.txt",
+                "fileFormat": "pattern",
+                "pattern": {
+                    "regexp": "^(.*)$"
+                }
+            }
         }
     ]
 }
+

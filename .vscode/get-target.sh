@@ -1,6 +1,5 @@
 #!/bin/bash
-cd $1
-target_file=$2
+echo $1
 target=$(find . -maxdepth 1 -type f -name "*.csproj" -print -quit)
 project=$(basename "$target")
 project="${project%.*}"
@@ -13,5 +12,3 @@ else
 fi
 set target_path="$target_path"
 echo "$target_path"
-echo "$target_path" > "$target_file"
-
