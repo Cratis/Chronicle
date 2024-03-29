@@ -18,7 +18,7 @@
     <PackageVersion Include="polly.core" Version="8.3.1" />
     <PackageVersion Include="protobuf-net.Grpc" Version="1.1.1" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.1.1" />
-    <PackageVersion Include="Grpc.Net.Client" Version="2.57.0" />
+    <PackageVersion Include="Grpc.Net.Client" Version="2.62.0" />
     <PackageVersion Include="mongodb.driver" Version="2.24.0" />
     <PackageVersion Include="OrleansTestKit" Version="4.0.0-beta.3" NoWarn="NU5104" />
     <PackageVersion Include="serilog" Version="3.1.1" />
