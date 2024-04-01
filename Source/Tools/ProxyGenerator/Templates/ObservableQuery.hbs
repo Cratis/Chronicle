@@ -1,0 +1,76 @@
+/*---------------------------------------------------------------------------------------------
+ *  **DO NOT EDIT** - This file is an automatically generated file.
+ *--------------------------------------------------------------------------------------------*/
+
+import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@aksio/applications/queries';
+{{#Imports}}
+import { {{Type}} } from '{{Module}}';
+{{/Imports}}
+import Handlebars from 'handlebars';
+
+const routeTemplate = Handlebars.compile('{{{Route}}}');
+
+{{#if Arguments.[0]}}
+export interface {{Name}}Arguments {
+    {{#Arguments}}
+    {{#if IsOptional}}
+    {{camelcase Name}}?: string;
+    {{else}}
+    {{camelcase Name}}: string;
+    {{/if}}
+    {{/Arguments}}
+}
+{{#if IsEnumerable}}
+export class {{Name}} extends ObservableQueryFor<{{Model}}[], {{Name}}Arguments> {
+{{else}}
+export class {{Name}} extends ObservableQueryFor<{{Model}}, {{Name}}Arguments> {
+{{/if}}
+{{else}}
+{{#if IsEnumerable}}
+export class {{Name}} extends ObservableQueryFor<{{Model}}[]> {
+{{else}}
+export class {{Name}} extends ObservableQueryFor<{{Model}}> {
+{{/if}}
+{{/if}}
+    readonly route: string = '{{{Route}}}';
+    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
+{{#if IsEnumerable}}
+    readonly defaultValue: {{Model}}[] = [];
+{{else}}
+    readonly defaultValue: {{Model}} = {} as any;
+{{/if}}
+
+    constructor() {
+        super({{Model}}, {{lowercase IsEnumerable}});
+    }
+
+    get requestArguments(): string[] {
+        return [
+            {{#Arguments}}
+            '{{camelcase Name}}',
+            {{/Arguments}}
+        ];
+    }
+
+{{#if Arguments.[0]}}
+{{#if IsEnumerable}}
+    static use(args?: {{Name}}Arguments): [QueryResultWithState<{{Model}}[]>] {
+        return useObservableQuery<{{Model}}[], {{Name}}, {{Name}}Arguments>({{Name}}, args);
+    }
+{{else}}
+    static use(args?: {{Name}}Arguments): [QueryResultWithState<{{Model}}>] {
+        return useObservableQuery<{{Model}}, {{Name}}, {{Name}}Arguments>({{Name}}, args);
+    }
+{{/if}}
+{{else}}
+{{#if IsEnumerable}}
+    static use(): [QueryResultWithState<{{Model}}[]>] {
+        return useObservableQuery<{{Model}}[], {{Name}}>({{Name}});
+    }
+{{else}}
+    static use(): [QueryResultWithState<{{Model}}>] {
+        return useObservableQuery<{{Model}}, {{Name}}>({{Name}});
+    }
+{{/if}}
+{{/if}}
+}

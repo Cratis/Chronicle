@@ -10,6 +10,11 @@
         "outputPath": "${workspaceFolder}/Source/API/bin/Debug/net8.0/Cratis.API.dll"
     },
     {
+        "name": "ProxyGenerator",
+        "path": "${workspaceFolder}/Source/Tools/ProxyGenerator",
+        "outputPath": "${workspaceFolder}/Source/Tools/ProxyGenerator/bin/Debug/net8.0/Cratis.ProxyGenerator.dll"
+    },
+    {
         "name": "Basic Sample",
         "path": "${workspaceFolder}/Samples/Basic",
         "outputPath": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll"
