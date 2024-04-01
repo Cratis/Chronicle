@@ -2,11 +2,12 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFramework>net8.0</TargetFramework>
-        <AssemblyName>Cratis.Api.Server</AssemblyName>
-        <RootNamespace>Cratis.Api.Server</RootNamespace>
+        <AssemblyName>Cratis.Api</AssemblyName>
+        <RootNamespace>Cratis.Api</RootNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <ServerGarbageCollection>false</ServerGarbageCollection>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
     <ItemGroup>
@@ -17,5 +18,7 @@
 
     <ItemGroup>
       <PackageReference Include="serilog" />
+      <PackageReference Include="Swashbuckle.AspNetCore" />
+      <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
     </ItemGroup>
 </Project>
