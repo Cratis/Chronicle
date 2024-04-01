@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.EventSequences;
-using Cratis.Kernel.Grains.EventSequences;
-using Cratis.Kernel.Storage.EventSequences;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.API.EventSequences.Commands;
@@ -29,9 +26,9 @@ public class EventSequence(
     /// <returns>Awaitable task.</returns>
     [HttpPost]
     public async Task Append(
-        [FromRoute] EventStoreName eventStore,
-        [FromRoute] EventStoreNamespaceName @namespace,
-        [FromRoute] EventSequenceId eventSequenceId,
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] string eventSequenceId,
         [FromBody] AppendEvent eventToAppend)
     {
         throw new NotImplementedException();
@@ -47,9 +44,9 @@ public class EventSequence(
     /// <returns>Awaitable task.</returns>
     [HttpPost("append-many")]
     public async Task AppendMany(
-        [FromRoute] EventStoreName eventStore,
-        [FromRoute] EventStoreNamespaceName @namespace,
-        [FromRoute] EventSequenceId eventSequenceId,
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] string eventSequenceId,
         [FromBody] AppendManyEvents eventsToAppend)
     {
         throw new NotImplementedException();
@@ -65,9 +62,9 @@ public class EventSequence(
     /// <returns>Awaitable task.</returns>
     [HttpPost("redact-event")]
     public async Task RedactEvent(
-        [FromRoute] EventStoreName eventStore,
-        [FromRoute] EventStoreNamespaceName @namespace,
-        [FromRoute] EventSequenceId eventSequenceId,
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] string eventSequenceId,
         [FromBody] RedactEvent redaction)
     {
         throw new NotImplementedException();
@@ -83,14 +80,11 @@ public class EventSequence(
     /// <returns>Awaitable task.</returns>
     [HttpPost("redact-events")]
     public async Task RedactEvents(
-        [FromRoute] EventStoreName eventStore,
-        [FromRoute] EventStoreNamespaceName @namespace,
-        [FromRoute] EventSequenceId eventSequenceId,
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] string eventSequenceId,
         [FromBody] RedactEvents redaction)
     {
         throw new NotImplementedException();
     }
-
-    IEventSequence GetEventSequence(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
-        grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new EventSequenceKey(eventStore, @namespace));
 }

@@ -1,9 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Auditing;
-using Cratis.Events;
-using Cratis.Identities;
+using Cratis.Kernel.Contracts.Auditing;
+using Cratis.Kernel.Contracts.Identities;
 
 namespace Cratis.API.EventSequences.Commands;
 
@@ -16,8 +15,8 @@ namespace Cratis.API.EventSequences.Commands;
 /// <param name="Causation">Collection of <see cref="Causation"/>.</param>
 /// <param name="CausedBy"><see cref="CausedBy"/> to identify the person, system or service that caused the redaction.</param>
 public record RedactEvents(
-    EventSourceId EventSourceId,
-    RedactionReason Reason,
-    IEnumerable<EventTypeId> EventTypes,
+    string EventSourceId,
+    string Reason,
+    IEnumerable<string> EventTypes,
     IEnumerable<Causation>? Causation,
     Identity? CausedBy);

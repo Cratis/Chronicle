@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Events;
 using Microsoft.AspNetCore.Mvc;
+using EventType = Cratis.Kernel.Contracts.Events.EventType;
 
 namespace Cratis.API.EventTypes.Queries;
 
@@ -22,7 +22,7 @@ public class EventTypes() : ControllerBase
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get event types for.</param>
     /// <returns>Collection of event types.</returns>
     [HttpGet]
-    public async Task<IEnumerable<EventType>> AllEventTypes([FromRoute] EventStoreName eventStore)
+    public async Task<IEnumerable<EventType>> AllEventTypes([FromRoute] string eventStore)
     {
         throw new NotImplementedException();
     }
@@ -35,8 +35,8 @@ public class EventTypes() : ControllerBase
     /// <returns>Schemas.</returns>
     [HttpGet("schemas/{eventTypeId}")]
     public async Task<IEnumerable<JsonDocument>> GenerationSchemasForType(
-        [FromQuery] EventStoreName eventStore,
-        [FromRoute] EventTypeId eventTypeId)
+        [FromQuery] string eventStore,
+        [FromRoute] string eventTypeId)
     {
         throw new NotImplementedException();
     }
@@ -47,7 +47,7 @@ public class EventTypes() : ControllerBase
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get event types for.</param>
     /// <returns>Collection of event types with schemas.</returns>
     [HttpGet("schemas")]
-    public async Task<IEnumerable<EventTypeWithSchemas>> AllEventTypesWithSchemas([FromRoute] EventStoreName eventStore)
+    public async Task<IEnumerable<EventTypeWithSchemas>> AllEventTypesWithSchemas([FromRoute] string eventStore)
     {
         throw new NotImplementedException();
     }

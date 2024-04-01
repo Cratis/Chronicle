@@ -20,15 +20,15 @@ public class Jobs(IGrainFactory grainFactory) : ControllerBase
     /// <summary>
     /// Stop a specific job.
     /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> the job is for.</param>
-    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the job is for.</param>
+    /// <param name="eventStore">Name of the event store the job is for.</param>
+    /// <param name="namespace">Namespace within the event store the job is for.</param>
     /// <param name="jobId"><see cref="JobId"/> to stop.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("{jobId}/resume/")]
     public async Task ResumeJob(
-        [FromRoute] EventStoreName eventStore,
-        [FromRoute] EventStoreNamespaceName @namespace,
-        [FromRoute] JobId jobId)
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] Guid jobId)
     {
         var jobsManager = grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(eventStore, @namespace));
         await jobsManager.Resume(jobId);
@@ -37,15 +37,15 @@ public class Jobs(IGrainFactory grainFactory) : ControllerBase
     /// <summary>
     /// Stop a specific job.
     /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> the job is for.</param>
-    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the job is for.</param>
+    /// <param name="eventStore">Name of the event store the job is for.</param>
+    /// <param name="namespace">Namespace within the event store the job is for.</param>
     /// <param name="jobId"><see cref="JobId"/> to stop.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("{jobId}/stop/")]
     public async Task StopJob(
-        [FromRoute] EventStoreName eventStore,
-        [FromRoute] EventStoreNamespaceName @namespace,
-        [FromRoute] JobId jobId)
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] Guid jobId)
     {
         var jobsManager = grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(eventStore, @namespace));
         await jobsManager.Stop(jobId);
@@ -54,15 +54,15 @@ public class Jobs(IGrainFactory grainFactory) : ControllerBase
     /// <summary>
     /// Delete a specific job.
     /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> the job is for.</param>
-    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the job is for.</param>
+    /// <param name="eventStore">Name of the event store the job is for.</param>
+    /// <param name="namespace">Namespace within the event store the job is for.</param>
     /// <param name="jobId"><see cref="JobId"/> to stop.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("{jobId}/delete/")]
     public async Task DeleteJob(
-        [FromRoute] EventStoreName eventStore,
-        [FromRoute] EventStoreNamespaceName @namespace,
-        [FromRoute] JobId jobId)
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] Guid jobId)
     {
         var jobsManager = grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(eventStore, @namespace));
         await jobsManager.Delete(jobId);

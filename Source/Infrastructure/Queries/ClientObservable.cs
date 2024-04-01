@@ -43,7 +43,7 @@ public class ClientObservable<T>(Action? clientDisconnected = default) : IClient
     {
         using var webSocket = await context.HttpContext.WebSockets.AcceptWebSocketAsync();
         IDisposable? subscription = default;
-        var queryResult = new QueryResult();
+        var queryResult = new QueryResult<object>();
         using var cts = new CancellationTokenSource();
 
 #pragma warning disable MA0147 // Avoid async void method for delegate

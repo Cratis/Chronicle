@@ -1,21 +1,20 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Auditing;
-using Cratis.Events;
-using Cratis.Identities;
+using Cratis.Kernel.Contracts.Auditing;
+using Cratis.Kernel.Contracts.Identities;
 
 namespace Cratis.API.EventSequences.Commands;
 
 /// <summary>
 /// Represents the payload for appending many events.
 /// </summary>
-/// <param name="EventSourceId">The <see cref="EventSourceId"/> to append to.</param>
+/// <param name="EventSourceId">The event source id to append to.</param>
 /// <param name="Events">The events to append.</param>
 /// <param name="Causation">Optional Collection of <see cref="Causation"/>.</param>
 /// <param name="CausedBy">Optional <see cref="CausedBy"/> to identify the person, system or service that caused the events.</param>
 public record AppendManyEvents(
-    EventSourceId EventSourceId,
+    string EventSourceId,
     IEnumerable<EventToAppend> Events,
     IEnumerable<Causation>? Causation,
     Identity? CausedBy);

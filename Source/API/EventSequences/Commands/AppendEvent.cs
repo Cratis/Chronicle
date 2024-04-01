@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Auditing;
-using Cratis.Events;
-using Cratis.Identities;
+using Cratis.Kernel.Contracts.Auditing;
+using Cratis.Kernel.Contracts.Identities;
+using EventType = Cratis.Kernel.Contracts.Events.EventType;
 
 namespace Cratis.API.EventSequences.Commands;
 
@@ -18,7 +18,7 @@ namespace Cratis.API.EventSequences.Commands;
 /// <param name="CausedBy">Optional <see cref="CausedBy"/> to identify the person, system or service that caused the event.</param>
 /// <param name="ValidFrom">Optional valid from.</param>
 public record AppendEvent(
-    EventSourceId EventSourceId,
+    string EventSourceId,
     EventType EventType,
     JsonObject Content,
     IEnumerable<Causation>? Causation,

@@ -8,17 +8,18 @@ namespace Cratis.Queries;
 /// <summary>
 /// Represents the result coming from performing a query.
 /// </summary>
-public class QueryResult
+/// <typeparam name="T">Type of the data returned.</typeparam>
+public class QueryResult<T>
 {
     /// <summary>
     /// Represents a successful command result.
     /// </summary>
-    public static readonly QueryResult Success = new();
+    public static readonly QueryResult<T> Success = new();
 
     /// <summary>
     /// The data returned.
     /// </summary>
-    public object Data { get; set; } = null!;
+    public T Data { get; set; } = default!;
 
     /// <summary>
     /// Gets whether or not the query executed successfully.

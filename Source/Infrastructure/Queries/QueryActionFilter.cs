@@ -82,7 +82,7 @@ public class QueryActionFilter(
             else
             {
                 logger.NonClientObservableReturnValue(controllerActionDescriptor.ControllerName, controllerActionDescriptor.ActionName);
-                var queryResult = new QueryResult
+                var queryResult = new QueryResult<object>
                 {
                     ValidationResults = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(p => p.ToValidationResult(_.Key.ToCamelCase()))),
                     ExceptionMessages = exceptionMessages.ToArray(),
