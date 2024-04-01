@@ -1,0 +1,21 @@
+[
+    {
+        "name": "Server",
+        "path": "${workspaceFolder}/Source/Kernel/Server",
+        "outputPath": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net8.0/Cratis.Kernel.Server.dll"
+    },
+    {
+        "name": "API",
+        "path": "${workspaceFolder}/Source/API",
+        "outputPath": "${workspaceFolder}/Source/API/bin/Debug/net8.0/Cratis.API.dll"
+    },
+    {
+        "name": "Basic Sample",
+        "path": "${workspaceFolder}/Samples/Basic",
+        "outputPath": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll"
+    },
+    {
+        "name": "DotNET Client",
+        "path": "${workspaceFolder}/Source/Clients/DotNET"
+    }
+]

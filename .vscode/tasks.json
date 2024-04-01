@@ -3,22 +3,14 @@
     "tasks": [
         {
             "label": "build",
-            "command": "${workspaceFolder}/.vscode/build-project.sh",
+            "command": "dotnet",
             "type": "process",
             "args": [
+                "build",
+                "--no-restore",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary",
                 "${input:project}"
-            ],
-            "problemMatcher": "$msCompile",
-            "runOptions": {
-                "reevaluateOnRerun": false
-            }
-        },
-        {
-            "label": "build-internal",
-            "command": "${workspaceFolder}/.vscode/build-project.sh",
-            "type": "process",
-            "args": [
-                "${input:remembered-project}",
             ],
             "problemMatcher": "$msCompile",
             "runOptions": {
@@ -28,28 +20,12 @@
     ],
     "inputs": [
         {
-            "id": "remembered-project",
-            "type": "command",
-            "command": "extension.commandvariable.remember",
-            "args": {
-                "key": "project",
-                "value": "${input:project}"
-            }
-        },
-        {
             "id": "project",
             "type": "command",
-            "command": "extension.commandvariable.pickStringRemember",
+            "command": "dotnet-build-commands.selectProject",
             "args": {
-                "description": "Pick project to build",
-                "key": "project",
-                "fileName": "${workspaceFolder}/.vscode/projects.txt",
-                "fileFormat": "pattern",
-                "pattern": {
-                    "regexp": "^(.*)$"
-                }
+                "file": "${workspaceFolder}/.vscode/projects.json"
             }
         }
     ]
 }
-
