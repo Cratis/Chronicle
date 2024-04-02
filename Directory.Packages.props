@@ -60,7 +60,7 @@
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.0.0-beta.10" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.5.0-alpha.2" />
-    <PackageVersion Include="handlebars.net" Version="2.1.4" />
+    <PackageVersion Include="handlebars.net" Version="2.1.5" />
     <!-- Roslyn-->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" />
