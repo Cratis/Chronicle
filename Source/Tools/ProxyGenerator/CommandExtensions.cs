@@ -38,8 +38,17 @@ public static class CommandExtensions
             typesInvolved.Add(method.ReturnType);
         }
 
+        foreach (var property in properties.Where(_ => !_.OriginalType.IsKnownType()))
+        {
+            property.CollectTypesInvolved(typesInvolved);
+        }
+
+        if (method.Name == "Append")
+        {
+            Console.WriteLine("Hello, ;-)   ");
+        }
+
         var commandPath = method.DeclaringType!.ResolveTargetPath();
-        typesInvolved.AddRange(properties.Select(_ => _.OriginalType).Where(t_ => !t_.IsKnownType()));
         imports.AddRange(typesInvolved.Select(_ =>
         {
             var importPath = Path.GetRelativePath(commandPath, _.ResolveTargetPath());
@@ -68,5 +77,15 @@ public static class CommandExtensions
     public static IEnumerable<PropertyDescriptor> GetPropertyDescriptors(this MethodInfo method)
     {
         return method.GetParameters().ToList().ConvertAll(_ => _.ToPropertyDescriptor());
+    }
+
+    static void CollectTypesInvolved(this PropertyDescriptor property, List<Type> typesInvolved)
+    {
+        if (typesInvolved.Exists(_ => _ == property.OriginalType)) return;
+        typesInvolved.Add(property.OriginalType);
+        foreach (var subProperty in property.OriginalType.GetPropertyDescriptors().Where(_ => !_.OriginalType.IsKnownType()))
+        {
+            CollectTypesInvolved(subProperty, typesInvolved);
+        }
     }
 }

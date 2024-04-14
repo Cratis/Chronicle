@@ -60,6 +60,11 @@ public static class TypeExtensions
     /// <returns>True if it is known, false if not.</returns>
     public static bool IsKnownType(this Type type)
     {
+        if (type.IsDictionary())
+        {
+            return true;
+        }
+
         if (type.IsConcept())
         {
             type = type.GetConceptValueType();
@@ -85,6 +90,11 @@ public static class TypeExtensions
     /// <returns>The <see cref="TargetType"/>.</returns>
     public static TargetType GetTargetType(this Type type)
     {
+        if (type.IsDictionary())
+        {
+            return AnyTypeFinal;
+        }
+
         if (type.IsConcept())
         {
             type = type.GetConceptValueType();
