@@ -115,17 +115,22 @@ public static class TypeExtensions
     /// <returns>Converted <see cref="TypeDescriptor"/>.</returns>
     public static TypeDescriptor ToTypeDescriptor(this Type type)
     {
+        var imports = new List<ImportStatement>();
+        var typesInvolved = new List<Type>();
+
         var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public).ToList();
         var propertyDescriptors = properties.ConvertAll(_ => _.ToPropertyDescriptor());
 
-        var typesInvolved = new List<Type>();
-        typesInvolved.AddRange(propertyDescriptors.Select(_ => _.OriginalType).Where(t_ => !t_.IsKnownType()));
+        foreach (var property in propertyDescriptors.Where(_ => !_.OriginalType.IsKnownType()))
+        {
+            property.CollectTypesInvolved(typesInvolved);
+        }
 
         return new TypeDescriptor(
             type,
             type.GetTargetType().Type,
             propertyDescriptors,
-            [],
+            typesInvolved.GetImports(type!.ResolveTargetPath()),
             typesInvolved);
     }
 
@@ -167,4 +172,34 @@ public static class TypeExtensions
     /// <returns>Resolved path.</returns>
     public static string ResolveTargetPath(this Type type) =>
         type.Namespace!.Replace(Globals.NamespacePrefix, string.Empty).Replace('.', Path.DirectorySeparatorChar);
+
+    /// <summary>
+    /// Get imports from a collection of types.
+    /// </summary>
+    /// <param name="types">Types to get from.</param>
+    /// <param name="relativePath">The relative path to work from.</param>
+    /// <returns>A collection of <see cref="ImportStatement"/>.</returns>
+    public static IEnumerable<ImportStatement> GetImports(this IEnumerable<Type> types, string relativePath) =>
+         types.Select(_ =>
+        {
+            var importPath = Path.GetRelativePath(relativePath, _.ResolveTargetPath());
+            importPath = $"{importPath}/{_.Name}";
+            return new ImportStatement(_.GetTargetType().Type, importPath);
+        }).ToArray();
+
+    /// <summary>
+    /// Collect types involved for a property, recursively.
+    /// </summary>
+    /// <param name="property">Property to collect for.</param>
+    /// <param name="typesInvolved">Collected types involved.</param>
+    /// <remarks>It skips any types already added to the collection passed to it.</remarks>
+    public static void CollectTypesInvolved(this PropertyDescriptor property, IList<Type> typesInvolved)
+    {
+        if (typesInvolved.Contains(property.OriginalType)) return;
+        typesInvolved.Add(property.OriginalType);
+        foreach (var subProperty in property.OriginalType.GetPropertyDescriptors().Where(_ => !_.OriginalType.IsKnownType()))
+        {
+            CollectTypesInvolved(subProperty, typesInvolved);
+        }
+    }
 }

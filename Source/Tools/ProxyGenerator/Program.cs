@@ -52,6 +52,20 @@ foreach (var command in commandDescriptors)
 Console.WriteLine($"{commands.Count} commands in ${stopwatch.Elapsed}");
 stopwatch.Restart();
 
+var queryDescriptors = queries.ConvertAll(_ => _.ToQueryDescriptor());
+foreach (var query in queryDescriptors)
+{
+    var path = query.Controller.ResolveTargetPath();
+    var fullPath = Path.Join(targetPath, path, $"{query.Name}.ts");
+    var directory = Path.GetDirectoryName(fullPath)!;
+    if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+    var proxyContent = TemplateTypes.Query(query);
+    await File.WriteAllTextAsync(fullPath, proxyContent);
+}
+
+Console.WriteLine($"{queries.Count} queries in ${stopwatch.Elapsed}");
+stopwatch.Restart();
+
 var typesInvolved = new List<Type>();
 typesInvolved.AddRange(commandDescriptors.SelectMany(_ => _.TypesInvolved));
 typesInvolved = typesInvolved.Distinct().ToList();
