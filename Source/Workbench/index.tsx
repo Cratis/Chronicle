@@ -10,7 +10,7 @@ import './Styles/theme.css';
 import React from 'react';
 import App from "./App";
 import { configure as configureMobx } from 'mobx';
-import { Bindings } from './MVVM';
+import { Bindings } from './Infrastructure/MVVM';
 
 import { FakeData } from './FakeData';
 
