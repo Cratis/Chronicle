@@ -25,11 +25,14 @@
             "API/*": [
                 "./API/*"
             ],
+            "Infrastructure/*": [
+                "./Infrastructure/*"
+            ],
             "MVVM": [
-                "MVVM/index.ts"
+                "Infrastructure/MVVM/index.ts"
             ],
             "MVVM/*": [
-                "MVVM/*"
+                "Infrastructure/MVVM/*"
             ],
             "Components/*": [
                 "Components/*"
@@ -51,7 +54,7 @@
         "Components",
         "FakeData",
         "Layout",
-        "MVVM",
+        "Infrastructure/MVVM",
         "Utils",
         "App.tsx",
         "index.tsx",
