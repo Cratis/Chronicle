@@ -10,8 +10,6 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "@aksio/applications": "1.5.8",
-        "@aksio/fundamentals": "1.6.1",
         "allotment": "^1.20.0",
         "echarts": "5.4.3",
         "mobx": "6.12.0",
