@@ -2,8 +2,10 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { field } from 'Infrastructure';
-
-
-export class EventObservationState {
+export enum EventObservationState {
+    none = 0,
+    initial = 1,
+    headOfReplay = 2,
+    replay = 4,
+    tailOfReplay = 8,
 }

@@ -2,8 +2,9 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { field } from 'Infrastructure';
-
-
-export class ObserverType {
+export enum ObserverType {
+    unknown = 0,
+    client = 1,
+    projection = 2,
+    reducer = 3,
 }
