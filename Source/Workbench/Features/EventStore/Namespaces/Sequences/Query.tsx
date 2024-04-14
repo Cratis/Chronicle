@@ -1,4 +1,4 @@
-import { withViewModel } from 'MVVM/withViewModel';
+import { withViewModel } from 'Infrastructure/MVVM/withViewModel';
 import { QueryViewModel } from './QueryViewModel';
 import { EventList } from './EventList';
 import { QueryDefinition } from './QueryDefinition';
