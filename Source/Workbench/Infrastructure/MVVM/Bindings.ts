@@ -3,7 +3,7 @@
 
 import { container } from 'tsyringe';
 import { Messenger } from './Messenger';
-import { Constructor } from '@aksio/fundamentals';
+import { Constructor } from 'Infrastructure';
 import { IMessenger } from './IMessenger';
 
 export class Bindings {

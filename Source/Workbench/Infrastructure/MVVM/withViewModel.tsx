@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { container } from "tsyringe";
-import { Constructor } from '@aksio/fundamentals';
+import { Constructor } from 'Infrastructure';
 import { FunctionComponent, ReactElement } from 'react';
 import { Observer } from 'mobx-react';
 import { makeAutoObservable } from 'mobx';

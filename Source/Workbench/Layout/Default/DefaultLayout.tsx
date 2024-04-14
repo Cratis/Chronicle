@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 
-import { withViewModel } from 'MVVM';
+import { withViewModel } from 'Infrastructure/MVVM';
 import { LayoutContext } from './context/LayoutContext';
 import { generatePath, Outlet, useParams } from 'react-router-dom';
 import { NamespaceSelector } from './NamespaceSelector/NamespaceSelector';
