@@ -4,6 +4,7 @@
 
 import { field } from 'Infrastructure';
 
+import { EventType } from '../../EventTypes/EventType';
 
 export class EventToAppend {
 

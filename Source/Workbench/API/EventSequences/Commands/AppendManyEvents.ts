@@ -4,6 +4,10 @@
 
 import { field } from 'Infrastructure';
 
+import { EventToAppend } from './EventToAppend';
+import { EventType } from '../../EventTypes/EventType';
+import { Causation } from '../../Auditing/Causation';
+import { Identity } from '../../Identities/Identity';
 
 export class AppendManyEvents {
 

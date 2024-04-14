@@ -4,6 +4,7 @@
 
 import { field } from 'Infrastructure';
 
+import { EventType } from './EventType';
 
 export class EventTypeRegistration {
 

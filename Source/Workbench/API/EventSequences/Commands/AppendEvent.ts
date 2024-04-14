@@ -4,6 +4,9 @@
 
 import { field } from 'Infrastructure';
 
+import { EventType } from '../../EventTypes/EventType';
+import { Causation } from '../../Auditing/Causation';
+import { Identity } from '../../Identities/Identity';
 
 export class AppendEvent {
 

@@ -5,9 +5,6 @@
 import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from 'Infrastructure/commands';
 import { Validator } from 'Infrastructure/validation';
 import { AppendEvent } from './AppendEvent';
-import { EventType } from '../../EventTypes/EventType';
-import { Causation } from '../../Auditing/Causation';
-import { Identity } from '../../Identities/Identity';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}');

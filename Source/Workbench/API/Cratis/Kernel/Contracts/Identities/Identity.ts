@@ -4,6 +4,7 @@
 
 import { field } from 'Infrastructure';
 
+import { Identity } from './Identity';
 
 export class Identity {
 

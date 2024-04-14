@@ -4,6 +4,7 @@
 
 import { field } from 'Infrastructure';
 
+import { SerializableDateTimeOffset } from '../Primitives/SerializableDateTimeOffset';
 
 export class Causation {
 
