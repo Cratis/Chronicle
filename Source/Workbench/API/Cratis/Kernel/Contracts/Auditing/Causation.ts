@@ -5,8 +5,14 @@
 import { field } from 'Infrastructure';
 
 
-export class RegisterEventTypes {
+export class Causation {
 
-    @field(EventTypeRegistration, true)
-    types!: EventTypeRegistration[];
+    @field(SerializableDateTimeOffset)
+    occurred!: SerializableDateTimeOffset;
+
+    @field(String)
+    type!: string;
+
+    @field(Object)
+    properties!: any;
 }

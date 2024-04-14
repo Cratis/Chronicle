@@ -5,8 +5,17 @@
 import { field } from 'Infrastructure';
 
 
-export class RegisterEventTypes {
+export class Identity {
 
-    @field(EventTypeRegistration, true)
-    types!: EventTypeRegistration[];
+    @field(String)
+    subject!: string;
+
+    @field(String)
+    name!: string;
+
+    @field(String)
+    userName!: string;
+
+    @field(Identity)
+    onBehalfOf!: Identity;
 }

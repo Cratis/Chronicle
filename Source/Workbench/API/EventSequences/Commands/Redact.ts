@@ -4,9 +4,7 @@
 
 import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from 'Infrastructure/commands';
 import { Validator } from 'Infrastructure/validation';
-import { AppendManyEvents } from './AppendManyEvents';
-import { EventToAppend } from './EventToAppend';
-import { EventType } from '../../Users/einari/Projects/Cratis/Cratis/Source/Tools/ProxyGenerator/Cratis/Kernel/Contracts/Events/EventType';
+import { RedactEvent } from './RedactEvent';
 import { Causation } from '../../Users/einari/Projects/Cratis/Cratis/Source/Tools/ProxyGenerator/Cratis/Kernel/Contracts/Auditing/Causation';
 import { SerializableDateTimeOffset } from '../../Users/einari/Projects/Cratis/Cratis/Source/Tools/ProxyGenerator/Cratis/Kernel/Contracts/Primitives/SerializableDateTimeOffset';
 import { Identity } from '../../Users/einari/Projects/Cratis/Cratis/Source/Tools/ProxyGenerator/Cratis/Kernel/Contracts/Identities/Identity';
@@ -14,31 +12,31 @@ import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}');
 
-export interface IAppendMany {
+export interface IRedact {
     eventStore?: string;
     namespace?: string;
     eventSequenceId?: string;
-    eventsToAppend?: AppendManyEvents;
+    redaction?: RedactEvent;
 }
 
-export class AppendManyValidator extends CommandValidator {
+export class RedactValidator extends CommandValidator {
     readonly properties: CommandPropertyValidators = {
         eventStore: new Validator(),
         namespace: new Validator(),
         eventSequenceId: new Validator(),
-        eventsToAppend: new Validator(),
+        redaction: new Validator(),
     };
 }
 
-export class AppendMany extends Command<IAppendMany> implements IAppendMany {
+export class Redact extends Command<IRedact> implements IRedact {
     readonly route: string = '/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly validation: CommandValidator = new AppendManyValidator();
+    readonly validation: CommandValidator = new RedactValidator();
 
     private _eventStore!: string;
     private _namespace!: string;
     private _eventSequenceId!: string;
-    private _eventsToAppend!: AppendManyEvents;
+    private _redaction!: RedactEvent;
 
     constructor() {
         super(Object, false);
@@ -57,7 +55,7 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
             'eventStore',
             'namespace',
             'eventSequenceId',
-            'eventsToAppend',
+            'redaction',
         ];
     }
 
@@ -85,16 +83,16 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
         this._eventSequenceId = value;
         this.propertyChanged('eventSequenceId');
     }
-    get eventsToAppend(): AppendManyEvents {
-        return this._eventsToAppend;
+    get redaction(): RedactEvent {
+        return this._redaction;
     }
 
-    set eventsToAppend(value: AppendManyEvents) {
-        this._eventsToAppend = value;
-        this.propertyChanged('eventsToAppend');
+    set redaction(value: RedactEvent) {
+        this._redaction = value;
+        this.propertyChanged('redaction');
     }
 
-    static use(initialValues?: IAppendMany): [AppendMany, SetCommandValues<IAppendMany>, ClearCommandValues] {
-        return useCommand<AppendMany, IAppendMany>(AppendMany, initialValues);
+    static use(initialValues?: IRedact): [Redact, SetCommandValues<IRedact>, ClearCommandValues] {
+        return useCommand<Redact, IRedact>(Redact, initialValues);
     }
 }

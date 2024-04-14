@@ -5,8 +5,11 @@
 import { field } from 'Infrastructure';
 
 
-export class RegisterEventTypes {
+export class SerializableDateTimeOffset {
 
-    @field(EventTypeRegistration, true)
-    types!: EventTypeRegistration[];
+    @field(Number)
+    ticks!: number;
+
+    @field(Number)
+    offsetMinutes!: number;
 }

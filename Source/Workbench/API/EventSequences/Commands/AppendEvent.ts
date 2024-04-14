@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { field } from '@aksio/fundamentals';
+import { field } from 'Infrastructure';
 
 
 export class AppendEvent {
@@ -13,8 +13,8 @@ export class AppendEvent {
     @field(EventType)
     eventType!: EventType;
 
-    @field(KeyValuePair`2, true)
-    content!: KeyValuePair`2[];
+    @field(Object)
+    content!: any;
 
     @field(Causation, true)
     causation!: Causation[];
@@ -22,6 +22,6 @@ export class AppendEvent {
     @field(Identity)
     causedBy!: Identity;
 
-    @field(Nullable`1)
-    validFrom?: Nullable`1;
+    @field(Date)
+    validFrom?: Date;
 }

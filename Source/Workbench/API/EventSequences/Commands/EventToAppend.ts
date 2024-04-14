@@ -5,8 +5,14 @@
 import { field } from 'Infrastructure';
 
 
-export class RegisterEventTypes {
+export class EventToAppend {
 
-    @field(EventTypeRegistration, true)
-    types!: EventTypeRegistration[];
+    @field(EventType)
+    eventType!: EventType;
+
+    @field(Object)
+    content!: any;
+
+    @field(Date)
+    validFrom?: Date;
 }

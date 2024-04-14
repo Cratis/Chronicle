@@ -5,8 +5,14 @@
 import { field } from 'Infrastructure';
 
 
-export class RegisterEventTypes {
+export class EventType {
 
-    @field(EventTypeRegistration, true)
-    types!: EventTypeRegistration[];
+    @field(String)
+    id!: string;
+
+    @field(Number)
+    generation!: number;
+
+    @field(Boolean)
+    isPublic!: boolean;
 }
