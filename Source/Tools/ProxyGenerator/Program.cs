@@ -8,6 +8,7 @@ using Cratis.ProxyGenerator;
 using Cratis.ProxyGenerator.Templates;
 using Microsoft.AspNetCore.Mvc;
 
+var overallStopwatch = Stopwatch.StartNew();
 var stopwatch = Stopwatch.StartNew();
 
 var assemblyFile = "../../API/bin/Debug/net8.0/Cratis.Api.dll";
@@ -52,7 +53,7 @@ foreach (var command in commandDescriptors)
 }
 typesInvolved.AddRange(commandDescriptors.SelectMany(_ => _.TypesInvolved));
 
-Console.WriteLine($"{commands.Count} commands in ${stopwatch.Elapsed}");
+Console.WriteLine($"{commands.Count} commands in {stopwatch.Elapsed}");
 stopwatch.Restart();
 
 var queryDescriptors = queries.ConvertAll(_ => _.ToQueryDescriptor());
@@ -68,7 +69,7 @@ foreach (var query in queryDescriptors)
 }
 typesInvolved.AddRange(queryDescriptors.SelectMany(_ => _.TypesInvolved));
 
-Console.WriteLine($"{queries.Count} queries in ${stopwatch.Elapsed}");
+Console.WriteLine($"{queries.Count} queries in {stopwatch.Elapsed}");
 stopwatch.Restart();
 
 typesInvolved = typesInvolved.Distinct().ToList();
@@ -86,7 +87,7 @@ foreach (var type in typeDescriptors)
     await File.WriteAllTextAsync(fullPath, proxyContent);
 }
 
-Console.WriteLine($"{typeDescriptors.Count} types in ${stopwatch.Elapsed}");
+Console.WriteLine($"{typeDescriptors.Count} types in {stopwatch.Elapsed}");
 stopwatch.Restart();
 
 var enumDescriptors = enums.ConvertAll(_ => _.ToEnumDescriptor());
@@ -100,4 +101,6 @@ foreach (var type in enumDescriptors)
     await File.WriteAllTextAsync(fullPath, proxyContent);
 }
 
-Console.WriteLine($"{enumDescriptors.Count} enums in ${stopwatch.Elapsed}");
+Console.WriteLine($"{enumDescriptors.Count} enums in {stopwatch.Elapsed}");
+
+Console.WriteLine($"Overall time: {overallStopwatch.Elapsed}");
