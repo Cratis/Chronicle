@@ -141,6 +141,12 @@ public static class TypeExtensions
     /// <returns>Converted <see cref="ModelDescriptor"/>.</returns>
     public static ModelDescriptor ToModelDescriptor(this Type type)
     {
+        var isObservable = type.IsObservable();
+        if (isObservable)
+        {
+            type = type.GetObservableElementType()!;
+        }
+
         var isEnumerable = type.IsEnumerable();
         if (isEnumerable)
         {
@@ -154,7 +160,7 @@ public static class TypeExtensions
             targetType.Type,
             targetType.Constructor,
             isEnumerable,
-            type.IsObservable(),
+            isObservable,
             Enumerable.Empty<ImportStatement>());
     }
 
@@ -170,8 +176,16 @@ public static class TypeExtensions
     /// </summary>
     /// <param name="type">Type to resolve for.</param>
     /// <returns>Resolved path.</returns>
-    public static string ResolveTargetPath(this Type type) =>
-        type.Namespace!.Replace(Globals.NamespacePrefix, string.Empty).Replace('.', Path.DirectorySeparatorChar);
+    public static string ResolveTargetPath(this Type type)
+    {
+        var path = type.Namespace!.Replace(Globals.NamespacePrefix, string.Empty).Replace('.', Path.DirectorySeparatorChar);
+        if (string.IsNullOrEmpty(path))
+        {
+            path = $"{Path.DirectorySeparatorChar}";
+        }
+
+        return path;
+    }
 
     /// <summary>
     /// Get imports from a collection of types.
@@ -198,6 +212,22 @@ public static class TypeExtensions
         if (typesInvolved.Contains(property.OriginalType)) return;
         typesInvolved.Add(property.OriginalType);
         foreach (var subProperty in property.OriginalType.GetPropertyDescriptors().Where(_ => !_.OriginalType.IsKnownType()))
+        {
+            CollectTypesInvolved(subProperty, typesInvolved);
+        }
+    }
+
+    /// <summary>
+    /// Collect types involved for an argument, recursively.
+    /// </summary>
+    /// <param name="argument">Argument to collect for.</param>
+    /// <param name="typesInvolved">Collected types involved.</param>
+    /// <remarks>It skips any types already added to the collection passed to it.</remarks>
+    public static void CollectTypesInvolved(this RequestArgumentDescriptor argument, IList<Type> typesInvolved)
+    {
+        if (typesInvolved.Contains(argument.OriginalType)) return;
+        typesInvolved.Add(argument.OriginalType);
+        foreach (var subProperty in argument.OriginalType.GetPropertyDescriptors().Where(_ => !_.OriginalType.IsKnownType()))
         {
             CollectTypesInvolved(subProperty, typesInvolved);
         }

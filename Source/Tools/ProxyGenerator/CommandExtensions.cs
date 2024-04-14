@@ -28,23 +28,26 @@ public static class CommandExtensions
             hasResponse = true;
             var responseType = method.ReturnType.GetGenericArguments()[0];
             responseModel = responseType.ToModelDescriptor();
-            typesInvolved.Add(responseType);
         }
         else if (method.ReturnType != typeof(void) && method.ReturnType != typeof(Task))
         {
             hasResponse = true;
             responseModel = method.ReturnType.ToModelDescriptor();
-            typesInvolved.Add(method.ReturnType);
+        }
+
+        if (!(responseModel.Type?.IsKnownType() ?? true))
+        {
+            typesInvolved.Add(responseModel.Type);
         }
 
         var propertiesWithComplexTypes = properties.Where(_ => !_.OriginalType.IsKnownType());
         typesInvolved.AddRange(propertiesWithComplexTypes.Select(_ => _.OriginalType));
         var imports = typesInvolved.GetImports(method.DeclaringType!.ResolveTargetPath());
 
-        typesInvolved = [];
+        var additionalTypesInvolved = new List<Type>();
         foreach (var property in propertiesWithComplexTypes)
         {
-            property.CollectTypesInvolved(typesInvolved);
+            property.CollectTypesInvolved(additionalTypesInvolved);
         }
 
         return new(
@@ -57,6 +60,6 @@ public static class CommandExtensions
             method.GetArgumentDescriptors(),
             hasResponse,
             responseModel,
-            typesInvolved);
+            [.. typesInvolved, .. additionalTypesInvolved]);
     }
 }

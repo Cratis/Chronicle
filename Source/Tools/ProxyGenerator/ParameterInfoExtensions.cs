@@ -20,7 +20,7 @@ public static class ParameterInfoExtensions
     public static RequestArgumentDescriptor ToRequestArgumentDescriptor(this ParameterInfo parameterInfo)
     {
         var type = parameterInfo.ParameterType.GetTargetType();
-        return new RequestArgumentDescriptor(parameterInfo.Name!, type.Type, parameterInfo.HasDefaultValue);
+        return new RequestArgumentDescriptor(parameterInfo.ParameterType, parameterInfo.Name!, type.Type, parameterInfo.HasDefaultValue);
     }
 
     /// <summary>

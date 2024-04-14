@@ -38,6 +38,8 @@ var targetPath = Path.GetFullPath("../../Workbench/API");
 if (Directory.Exists(targetPath)) Directory.Delete(targetPath, true);
 if (!Directory.Exists(targetPath)) Directory.CreateDirectory(targetPath);
 
+var typesInvolved = new List<Type>();
+
 var commandDescriptors = commands.ConvertAll(_ => _.ToCommandDescriptor());
 foreach (var command in commandDescriptors)
 {
@@ -48,6 +50,7 @@ foreach (var command in commandDescriptors)
     var proxyContent = TemplateTypes.Command(command);
     await File.WriteAllTextAsync(fullPath, proxyContent);
 }
+typesInvolved.AddRange(commandDescriptors.SelectMany(_ => _.TypesInvolved));
 
 Console.WriteLine($"{commands.Count} commands in ${stopwatch.Elapsed}");
 stopwatch.Restart();
@@ -59,15 +62,15 @@ foreach (var query in queryDescriptors)
     var fullPath = Path.Join(targetPath, path, $"{query.Name}.ts");
     var directory = Path.GetDirectoryName(fullPath)!;
     if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+
     var proxyContent = TemplateTypes.Query(query);
     await File.WriteAllTextAsync(fullPath, proxyContent);
 }
+typesInvolved.AddRange(queryDescriptors.SelectMany(_ => _.TypesInvolved));
 
 Console.WriteLine($"{queries.Count} queries in ${stopwatch.Elapsed}");
 stopwatch.Restart();
 
-var typesInvolved = new List<Type>();
-typesInvolved.AddRange(commandDescriptors.SelectMany(_ => _.TypesInvolved));
 typesInvolved = typesInvolved.Distinct().ToList();
 
 var typeDescriptors = typesInvolved.ConvertAll(_ => _.ToTypeDescriptor());

@@ -15,8 +15,10 @@ namespace Cratis.ProxyGenerator.Templates;
 /// <param name="Model">Type of model the query is for.</param>
 /// <param name="Constructor">The JavaScript constructor for the model type.</param>
 /// <param name="IsEnumerable">Whether or not the result is an enumerable or not.</param>
+/// <param name="IsObservable">Whether or not it is an observable query or not.</param>
 /// <param name="Imports">Additional import statements.</param>
 /// <param name="Arguments">Arguments for the query.</param>
+/// <param name="TypesInvolved">Collection of types involved in the query.</param>
 public record QueryDescriptor(
     Type Controller,
     MethodInfo Method,
@@ -25,5 +27,7 @@ public record QueryDescriptor(
     string Model,
     string Constructor,
     bool IsEnumerable,
+    bool IsObservable,
     IEnumerable<ImportStatement> Imports,
-    IEnumerable<RequestArgumentDescriptor> Arguments);
+    IEnumerable<RequestArgumentDescriptor> Arguments,
+    IEnumerable<Type> TypesInvolved);

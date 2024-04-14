@@ -19,29 +19,42 @@ public static class QueryExtensions
     public static QueryDescriptor ToQueryDescriptor(this MethodInfo method)
     {
         var typesInvolved = new List<Type>();
-        var properties = method.GetPropertyDescriptors();
+        var arguments = method.GetArgumentDescriptors();
         var responseModel = ModelDescriptor.Empty;
 
         if (method.ReturnType.IsAssignableTo(typeof(Task)) && method.ReturnType.IsGenericType)
         {
             var responseType = method.ReturnType.GetGenericArguments()[0];
             responseModel = responseType.ToModelDescriptor();
-            typesInvolved.Add(responseType);
         }
         else if (method.ReturnType != typeof(void) && method.ReturnType != typeof(Task))
         {
             responseModel = method.ReturnType.ToModelDescriptor();
-            typesInvolved.Add(method.ReturnType);
         }
 
-        var propertiesWithComplexTypes = properties.Where(_ => !_.OriginalType.IsKnownType());
-        typesInvolved.AddRange(propertiesWithComplexTypes.Select(_ => _.OriginalType));
+        if (!responseModel.Type.IsKnownType())
+        {
+            typesInvolved.Add(responseModel.Type);
+        }
+
+        var argumentsWithComplexTypes = arguments.Where(_ => !_.OriginalType.IsKnownType());
+        typesInvolved.AddRange(argumentsWithComplexTypes.Select(_ => _.OriginalType));
         var imports = typesInvolved.GetImports(method.DeclaringType!.ResolveTargetPath());
 
-        typesInvolved = [];
-        foreach (var property in propertiesWithComplexTypes)
+        var additionalTypesInvolved = new List<Type>();
+        foreach (var argument in argumentsWithComplexTypes)
         {
-            property.CollectTypesInvolved(typesInvolved);
+            argument.CollectTypesInvolved(additionalTypesInvolved);
+        }
+
+        foreach (var property in responseModel.Type.GetPropertyDescriptors())
+        {
+            property.CollectTypesInvolved(additionalTypesInvolved);
+        }
+
+        if (method.Name == "AllJobSteps")
+        {
+            Console.WriteLine("Hello");
         }
 
         return new(
@@ -49,10 +62,12 @@ public static class QueryExtensions
             method,
             method.GetRoute(),
             method.Name,
-            "Model", // TODO: Get the model type from the method
-            "Constructor", // TODO: Get the constructor from the method
-            false, // TODO: Whether or not it is an enumerable
+            responseModel.Name,
+            responseModel.Constructor,
+            responseModel.IsEnumerable,
+            responseModel.IsObservable,
             imports,
-            method.GetArgumentDescriptors());
+            method.GetArgumentDescriptors(),
+            [.. typesInvolved, .. additionalTypesInvolved]);
     }
 }
