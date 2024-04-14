@@ -21,7 +21,7 @@
         <PackageReference Include="Microsoft.Orleans.TestingHost"/>
 
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <PackageReference Include="Aksio.Specifications" />
+        <PackageReference Include="Cratis.Specifications" />
     </ItemGroup>
 
     <ItemGroup>
