@@ -8,4 +8,4 @@ namespace Cratis.ProxyGenerator.Templates;
 /// </summary>
 /// <param name="Name">Name of value.</param>
 /// <param name="Value">The actual value.</param>
-public record EnumValueDescriptor(string Name, int Value);
+public record EnumMemberDescriptor(string Name, object Value);

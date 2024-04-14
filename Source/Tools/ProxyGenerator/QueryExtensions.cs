@@ -52,11 +52,6 @@ public static class QueryExtensions
             property.CollectTypesInvolved(additionalTypesInvolved);
         }
 
-        if (method.Name == "AllJobSteps")
-        {
-            Console.WriteLine("Hello");
-        }
-
         return new(
             method.DeclaringType!,
             method,

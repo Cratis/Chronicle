@@ -165,6 +165,20 @@ public static class TypeExtensions
     }
 
     /// <summary>
+    /// Convert a <see cref="Type"/> to a <see cref="EnumDescriptor"/>.
+    /// </summary>
+    /// <param name="type">Enum type to convert.</param>
+    /// <returns>Converted <see cref="EnumDescriptor"/>.</returns>
+    public static EnumDescriptor ToEnumDescriptor(this Type type)
+    {
+        var enumUnderlyingType = Enum.GetUnderlyingType(type);
+        var values = Enum.GetValues(type).Cast<object>().Select(value => Convert.ChangeType(value, enumUnderlyingType)).ToArray();
+        var names = Enum.GetNames(type);
+        var members = values.Select((value, index) => new EnumMemberDescriptor(names[index], value)).ToArray();
+        return new EnumDescriptor(type, type.Name, members);
+    }
+
+    /// <summary>
     /// Check if a type is observable.
     /// </summary>
     /// <param name="type">Type to check.</param>

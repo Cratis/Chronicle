@@ -73,7 +73,9 @@ stopwatch.Restart();
 
 typesInvolved = typesInvolved.Distinct().ToList();
 
-var typeDescriptors = typesInvolved.ConvertAll(_ => _.ToTypeDescriptor());
+var enums = typesInvolved.Where(_ => _.IsEnum).ToList();
+
+var typeDescriptors = typesInvolved.Where(_ => !enums.Contains(_)).ToList().ConvertAll(_ => _.ToTypeDescriptor());
 foreach (var type in typeDescriptors)
 {
     var path = type.Type.ResolveTargetPath();
@@ -84,4 +86,18 @@ foreach (var type in typeDescriptors)
     await File.WriteAllTextAsync(fullPath, proxyContent);
 }
 
-Console.WriteLine($"{typesInvolved.Count} types in ${stopwatch.Elapsed}");
+Console.WriteLine($"{typeDescriptors.Count} types in ${stopwatch.Elapsed}");
+stopwatch.Restart();
+
+var enumDescriptors = enums.ConvertAll(_ => _.ToEnumDescriptor());
+foreach (var type in enumDescriptors)
+{
+    var path = type.Type.ResolveTargetPath();
+    var fullPath = Path.Join(targetPath, path, $"{type.Name}.ts");
+    var directory = Path.GetDirectoryName(fullPath)!;
+    if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+    var proxyContent = TemplateTypes.Enum(type);
+    await File.WriteAllTextAsync(fullPath, proxyContent);
+}
+
+Console.WriteLine($"{enumDescriptors.Count} enums in ${stopwatch.Elapsed}");
