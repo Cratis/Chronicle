@@ -73,7 +73,7 @@
     <!-- Specifications -->
     <PackageVersion Include="Cratis.Specifications" Version="3.0.0" />
     <PackageVersion Include="Testcontainers" Version="3.7.0" />
-    <PackageVersion Include="xunit" Version="2.4.2" />
+    <PackageVersion Include="xunit" Version="2.7.1" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.4.2" />
     <PackageVersion Include="moq" Version="4.18.4" />
     <PackageVersion Include="Microsoft.NET.Test.SDK" Version="16.10.0" />
