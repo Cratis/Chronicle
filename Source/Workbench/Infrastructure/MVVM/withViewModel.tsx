@@ -13,10 +13,10 @@ export interface IViewContext<T, TProps = any> {
 }
 
 export function withViewModel<TViewModel extends {}, TProps = {}>(viewModelType: Constructor<TViewModel>, targetComponent: FunctionComponent<IViewContext<TViewModel, TProps>>) {
-    let renderComponent = (props: TProps) => {
+    const renderComponent = (props: TProps) => {
         const viewModel = container.resolve<TViewModel>(viewModelType) as any;
 
-        for(let key in props) {
+        for(const key in props) {
             viewModel[key] = props[key];
         }
 

@@ -32,7 +32,7 @@ const getJobStatusText = (status: JobStatus) => {
         case JobStatus.stopped: return 'Stopped';
         case JobStatus.failed: return 'Failed';
     }
-}
+};
 
 const getJobStepStatusText = (status: JobStepStatus) => {
     switch (status) {
@@ -44,7 +44,7 @@ const getJobStepStatusText = (status: JobStepStatus) => {
         case JobStepStatus.paused: return 'Paused';
         case JobStepStatus.stopped: return 'Stopped';
     }
-}
+};
 
 const jobColumns: GridColDef[] = [
     {
@@ -134,16 +134,16 @@ const jobStepColumns: GridColDef[] = [
             return getJobStepStatusText(params.row.status);
         }
     },
-]
+];
 
 
 export const Jobs = () => {
     const { microserviceId } = useRouteParams();
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
-    const [resumeJob, setResumeJobValues] = ResumeJob.use()
-    const [stopJob, setStopJobValues] = StopJob.use()
-    const [deleteJob, setDeleteJobValues] = DeleteJob.use()
+    const [resumeJob, setResumeJobValues] = ResumeJob.use();
+    const [stopJob, setStopJobValues] = StopJob.use();
+    const [deleteJob, setDeleteJobValues] = DeleteJob.use();
 
     const [jobs] = AllJobs.use({
         microserviceId,
@@ -153,7 +153,7 @@ export const Jobs = () => {
     const [jobSteps] = AllJobSteps.use({
         microserviceId,
         tenantId: selectedTenant?.id || undefined!,
-        jobId: selectedJob?.id!
+        jobId: selectedJob?.id
     });
 
     useEffect(() => {
@@ -168,7 +168,7 @@ export const Jobs = () => {
         if (selectedJobs.length == 1) {
             setSelectedJob(selectedJobs[0]);
         }
-    }
+    };
 
     return (
         <Stack direction="column" style={{ height: '100%' }}>

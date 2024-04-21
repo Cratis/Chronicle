@@ -19,14 +19,14 @@ export const ItemsList = <TItem extends {}>(props: IItemsListProps<TItem>) => {
             return (item[props.idProperty] as any).toString();
         }
         return (item as any).toString();
-    }
+    };
 
     const getName = (item: TItem):string => {
         if (props.nameProperty) {
             return (item[props.nameProperty] as any).toString();
         }
         return (item as any).toString();
-    }
+    };
 
     return (
         <ul className={css.list}>
@@ -34,7 +34,7 @@ export const ItemsList = <TItem extends {}>(props: IItemsListProps<TItem>) => {
                 return (
                     <li key={getKey(item)} onClick={() => props.onItemClicked?.(item)} className={`p-2 ${css.listItem}`}>
                         {getName(item)}
-                    </li>)
+                    </li>);
             })}
         </ul>
     );

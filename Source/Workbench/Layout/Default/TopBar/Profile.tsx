@@ -15,11 +15,11 @@ const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onCli
             <span className='mr-4'>{icon}</span>
             <span>{label}</span>
         </li>
-    )
-}
+    );
+};
 
 export const Profile = () => {
-    const { isDarkMode, toggle: toggleDarkMode } = useDarkMode()
+    const { isDarkMode, toggle: toggleDarkMode } = useDarkMode();
     const overlayPanelRef = useRef<OverlayPanel>(null);
 
     return (
@@ -45,5 +45,5 @@ export const Profile = () => {
                     </ul>
                 </OverlayPanel>
             </div>
-        </div>)
-}
+        </div>);
+};

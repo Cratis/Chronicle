@@ -28,7 +28,7 @@ export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
                 />
 
             </>
-    }]
+    }];
 
     return (
         <Page

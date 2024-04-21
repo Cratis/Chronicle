@@ -25,7 +25,7 @@ export const NamespaceSelector = (props: INamespaceSelectorProps) => {
     const selectNamespace = (namespace: string) => {
         props.onNamespaceSelected(namespace);
         op?.current?.hide();
-    }
+    };
 
     const filteredNamespaces = useMemo(() => props.namespaces.filter((t) => t.toLowerCase().includes(search.toLowerCase())), [props.namespaces, search]);
 
@@ -33,7 +33,7 @@ export const NamespaceSelector = (props: INamespaceSelectorProps) => {
         <div>
             <CurrentNamespace compact={!layoutConfig.leftSidebarOpen}
                 namespace={props.currentNamespace} onClick={(e) => {
-                    op?.current?.toggle(e, null)
+                    op?.current?.toggle(e, null);
                 }} />
 
             <OverlayPanel ref={op}
@@ -44,7 +44,7 @@ export const NamespaceSelector = (props: INamespaceSelectorProps) => {
                         <InputText value={search}
                             placeholder={'Search for namespace'}
                             onChange={(e) => {
-                                setSearch(e.target.value)
+                                setSearch(e.target.value);
                             }} />
                     </div>
 
@@ -52,4 +52,4 @@ export const NamespaceSelector = (props: INamespaceSelectorProps) => {
                 </div>
             </OverlayPanel>
         </div>);
-}
+};

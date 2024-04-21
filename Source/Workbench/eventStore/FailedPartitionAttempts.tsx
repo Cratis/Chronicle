@@ -13,7 +13,7 @@ export interface FailedPartitionAttemptsProps {
 }
 
 export const FailedPartitionAttempts = (props: FailedPartitionAttemptsProps) => {
-    const [selectedAttempt, setSelectedAttempt] = useState<FailedPartitionAttempt>(props.failedPartition.attempts[0])
+    const [selectedAttempt, setSelectedAttempt] = useState<FailedPartitionAttempt>(props.failedPartition.attempts[0]);
     const [selectedAttemptIndex, setSelectedAttemptIndex] = useState<number>(0);
 
     useEffect(() => {
@@ -55,5 +55,5 @@ export const FailedPartitionAttempts = (props: FailedPartitionAttemptsProps) => 
                     <TextField disabled defaultValue={selectedAttempt.stackTrace} multiline title={selectedAttempt.stackTrace.toString()} style={{ width: '100%' }} />
                 </>}
         </>
-    )
-}
+    );
+};

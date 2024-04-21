@@ -64,5 +64,5 @@ export const EventStore = () => {
                 <Route path={'sinks'} element={<Sinks/>}/>
             </Route>
         </Routes>
-    </>)
-}
+    </>);
+};

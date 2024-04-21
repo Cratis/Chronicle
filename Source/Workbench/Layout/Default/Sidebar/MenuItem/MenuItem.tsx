@@ -35,7 +35,7 @@ export const MenuItem = ({ item, basePath, ...rest }: IMenuItemProps) => {
 
     const [labelClass, setLabelClass] = useState(css.label);
     useEffect(() => {
-        setLabelClass(css.label + ' ' + (!layoutContext.layoutConfig.leftSidebarOpen ? css.hidden : ''))
+        setLabelClass(css.label + ' ' + (!layoutContext.layoutConfig.leftSidebarOpen ? css.hidden : ''));
     }, [layoutContext.layoutConfig.leftSidebarOpen]);
 
     return (
@@ -55,7 +55,7 @@ export const MenuItem = ({ item, basePath, ...rest }: IMenuItemProps) => {
         </NavLink>
 
     );
-}
+};
 
 function cleanupPath(path: string | undefined) {
     if (path && path.length > 1 && !path.endsWith('/')) {

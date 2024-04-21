@@ -28,7 +28,7 @@ export const CurrentNamespace = ({ namespace: namespace, compact, ...rest }: ICu
             initials += names[names.length - 1].substring(0, 1).toUpperCase();
         }
         return initials;
-    }
+    };
     if (compact) {
         return <>
             <Tooltip target={`.${css.smallNamespaceWrapper}`}/>
@@ -37,7 +37,7 @@ export const CurrentNamespace = ({ namespace: namespace, compact, ...rest }: ICu
                     <span className={css.namespaceName}>{getInitials(namespace)}</span>
                 </div>
             </div>
-        </>
+        </>;
     }
     return <>
         {isEllipsisActive && <Tooltip target={`.${css.currentNamespace}`}/>}
@@ -46,4 +46,4 @@ export const CurrentNamespace = ({ namespace: namespace, compact, ...rest }: ICu
             <span><MdKeyboardArrowDown size={25}/></span>
         </div>
     </>;
-}
+};

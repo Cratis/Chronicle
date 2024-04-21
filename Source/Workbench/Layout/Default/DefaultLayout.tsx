@@ -37,7 +37,7 @@ export const DefaultLayout = withViewModel<DefaultLayoutViewModel, IDefaultLayou
         viewModel.currentNamespace = namespace;
         const newRoute = location.pathname.replace(params.namespace!, namespace);
         navigate(newRoute);
-    }
+    };
 
     return (
 

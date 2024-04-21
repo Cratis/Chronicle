@@ -1,5 +1,5 @@
-/* Copyright (c) Cratis. All rights reserved.
-   Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { BookmarkTree } from './components/BookmarkTree';
 import { useBookmarkNodes } from './hook/useBookmark';

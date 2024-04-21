@@ -6,4 +6,4 @@ import { Page } from 'Components/Common/Page';
 export const Sinks = () => {
     return (
         <Page title='Sinks' />);
-}
+};

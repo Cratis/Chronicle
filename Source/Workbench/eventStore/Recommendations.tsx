@@ -32,7 +32,7 @@ const columns: GridColDef[] = [
         field: 'description',
         width: 300,
     }
-]
+];
 
 
 export const Recommendations = () => {
@@ -122,5 +122,5 @@ export const Recommendations = () => {
                 </Box>
             </Stack>
         </>
-    )
+    );
 };

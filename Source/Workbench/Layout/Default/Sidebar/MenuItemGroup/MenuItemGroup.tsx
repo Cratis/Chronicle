@@ -11,7 +11,7 @@ interface IMenuItemGroupProps {
 }
 
 export const MenuItemGroup = ({ group, basePath }: IMenuItemGroupProps) => {
-    const { layoutConfig } = useLayoutContext()
+    const { layoutConfig } = useLayoutContext();
     return <>
         {group.label &&
             <div className={`${css.label} ${!layoutConfig.leftSidebarOpen && 'invisible'} mb-2`}>
@@ -19,8 +19,8 @@ export const MenuItemGroup = ({ group, basePath }: IMenuItemGroupProps) => {
             </div>}
 
         {group.items.map((item, index) => {
-            return <MenuItem key={index} item={item} basePath={basePath} />
+            return <MenuItem key={index} item={item} basePath={basePath} />;
         }
         )}
     </>;
-}
+};

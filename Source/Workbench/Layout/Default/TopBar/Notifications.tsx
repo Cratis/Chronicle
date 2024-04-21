@@ -10,5 +10,5 @@ export const Notifications = () => {
                 <Badge value="2"></Badge>
             </i>
         </div>
-    </div>)
+    </div>);
 };

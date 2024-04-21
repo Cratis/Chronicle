@@ -20,5 +20,5 @@ export const EventStore = () => {
             </OverlayPanel>
 
         </div>
-    </div>)
+    </div>);
 };
