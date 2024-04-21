@@ -1,18 +1,21 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 module.exports = function (wallaby) {
     return {
         files: [
-            { pattern: 'package.json', instrument: false },
-            { pattern: 'Source/**/package.json', instrument: false },
-            '!Source/**/*.d.ts*',
-            '!Source/**/for_*/**/when_*.ts*',
-            '!Source/**/for_*/**/and_*.ts*',
-            'Source/**/*.ts*'
+            { pattern: './package.json', instrument: false },
+            '!**/*.d.ts*',
+            '!**/for_*/**/when_*.ts*',
+            '!**/for_*/**/and_*.ts*',
+            '**/*.ts*'
         ],
 
         tests: [
-            '!Source/**/*.d.ts*',
-            'Source/**/for_*/**/when_*.ts*',
-            'Source/**/for_*/**/and_*.ts*'
+            '!**/node_modules/**/*',
+            '!**/*.d.ts*',
+            '**/for_*/**/when_*.ts*',
+            '**/for_*/**/and_*.ts*'
         ],
 
         testFramework: 'mocha',
@@ -26,26 +29,12 @@ module.exports = function (wallaby) {
 
         setup: wallaby => {
             const { glob } = require('glob');
-            const { addAliases } = require('module-alias');
             const fs = require('fs');
             const path = require('path');
-
-            const rootFolder = wallaby.projectCacheDir;
-            const getAliases = () => {
-                const aliases = {};
-                const searchPath = path.join(rootFolder, 'Source/**/package.json');
-                glob.sync(searchPath).forEach(packageJson => {
-                    const packageName = require(packageJson).name;
-                    aliases[packageName] = path.dirname(packageJson);
-                });
-                return aliases;
-            }
-            addAliases(getAliases());
-
-            const mocha = wallaby.testFramework;
-
             const chai = require('chai');
             const sinon = require('sinon');
+
+            const mocha = wallaby.testFramework;
 
             chai.use(require('sinon-chai'));
 
