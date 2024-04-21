@@ -27,6 +27,7 @@ public static class TypeExtensions
     static readonly Dictionary<string, TargetType> _primitiveTypeMap = new()
     {
         { typeof(object).FullName!, AnyTypeFinal },
+        { typeof(char).FullName!, new("string", "String") },
         { typeof(byte).FullName!, new("number", "Number") },
         { typeof(sbyte).FullName!, new("number", "Number") },
         { typeof(bool).FullName!, new("boolean", "Boolean") },
@@ -43,14 +44,13 @@ public static class TypeExtensions
         { typeof(DateTime).FullName!, new("Date",  "Date") },
         { typeof(DateTimeOffset).FullName!, new("Date", "Date") },
         { typeof(Guid).FullName!, new("string", "String") },
-        { "System.DateOnly", new("Date", "Date") },
-        { "System.TimeOnly", new("Date", "Date") },
-        { "System.Text.Json.Nodes", AnyTypeFinal },
-        { "System.Text.Json.Nodes.JsonNode", AnyTypeFinal },
-        { "System.Text.Json.Nodes.JsonObject", AnyTypeFinal },
-        { "System.Text.Json.Nodes.JsonArray", AnyTypeFinal },
-        { "System.Text.Json.JsonDocument", AnyTypeFinal },
-        { "System.Uri", new("string", "String") }
+        { typeof(DateOnly).FullName!, new("Date", "Date") },
+        { typeof(TimeOnly).FullName!, new("Date", "Date") },
+        { typeof(System.Text.Json.Nodes.JsonNode).FullName!, AnyTypeFinal },
+        { typeof(System.Text.Json.Nodes.JsonObject).FullName!, AnyTypeFinal },
+        { typeof(System.Text.Json.Nodes.JsonArray).FullName!, AnyTypeFinal },
+        { typeof(System.Text.Json.JsonDocument).FullName!, AnyTypeFinal },
+        { typeof(Uri).FullName!, new("string", "String") }
     };
 
     /// <summary>
