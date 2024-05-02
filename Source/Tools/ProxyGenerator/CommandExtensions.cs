@@ -18,7 +18,6 @@ public static class CommandExtensions
     /// <returns>Converted <see cref="CommandDescriptor"/>.</returns>
     public static CommandDescriptor ToCommandDescriptor(this MethodInfo method)
     {
-        var imports = new List<ImportStatement>();
         var typesInvolved = new List<Type>();
         var properties = method.GetPropertyDescriptors();
         var hasResponse = false;
@@ -29,34 +28,29 @@ public static class CommandExtensions
             hasResponse = true;
             var responseType = method.ReturnType.GetGenericArguments()[0];
             responseModel = responseType.ToModelDescriptor();
-            typesInvolved.Add(responseType);
         }
         else if (method.ReturnType != typeof(void) && method.ReturnType != typeof(Task))
         {
             hasResponse = true;
             responseModel = method.ReturnType.ToModelDescriptor();
-            typesInvolved.Add(method.ReturnType);
         }
 
-        foreach (var property in properties.Where(_ => !_.OriginalType.IsKnownType()))
+        if (!(responseModel.Type?.IsKnownType() ?? true))
         {
-            property.CollectTypesInvolved(typesInvolved);
+            typesInvolved.Add(responseModel.Type);
         }
 
-        if (method.Name == "Append")
+        var propertiesWithComplexTypes = properties.Where(_ => !_.OriginalType.IsKnownType());
+        typesInvolved.AddRange(propertiesWithComplexTypes.Select(_ => _.OriginalType));
+        var imports = typesInvolved.GetImports(method.DeclaringType!.ResolveTargetPath());
+
+        var additionalTypesInvolved = new List<Type>();
+        foreach (var property in propertiesWithComplexTypes)
         {
-            Console.WriteLine("Hello, ;-)   ");
+            property.CollectTypesInvolved(additionalTypesInvolved);
         }
 
-        var commandPath = method.DeclaringType!.ResolveTargetPath();
-        imports.AddRange(typesInvolved.Select(_ =>
-        {
-            var importPath = Path.GetRelativePath(commandPath, _.ResolveTargetPath());
-            importPath = $"{importPath}/{_.Name}";
-            return new ImportStatement(_.GetTargetType().Type, importPath);
-        }));
-
-        return new CommandDescriptor(
+        return new(
             method.DeclaringType!,
             method,
             method.GetRoute(),
@@ -66,26 +60,6 @@ public static class CommandExtensions
             method.GetArgumentDescriptors(),
             hasResponse,
             responseModel,
-            typesInvolved);
-    }
-
-    /// <summary>
-    /// Get properties from a <see cref="MethodInfo"/>.
-    /// </summary>
-    /// <param name="method">Method to get for.</param>
-    /// <returns>Collection of <see cref="PropertyDescriptor"/>.</returns>
-    public static IEnumerable<PropertyDescriptor> GetPropertyDescriptors(this MethodInfo method)
-    {
-        return method.GetParameters().ToList().ConvertAll(_ => _.ToPropertyDescriptor());
-    }
-
-    static void CollectTypesInvolved(this PropertyDescriptor property, List<Type> typesInvolved)
-    {
-        if (typesInvolved.Exists(_ => _ == property.OriginalType)) return;
-        typesInvolved.Add(property.OriginalType);
-        foreach (var subProperty in property.OriginalType.GetPropertyDescriptors().Where(_ => !_.OriginalType.IsKnownType()))
-        {
-            CollectTypesInvolved(subProperty, typesInvolved);
-        }
+            [.. typesInvolved, .. additionalTypesInvolved]);
     }
 }

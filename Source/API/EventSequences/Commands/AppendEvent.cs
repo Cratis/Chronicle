@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Kernel.Contracts.Auditing;
-using Cratis.Kernel.Contracts.Identities;
-using EventType = Cratis.Kernel.Contracts.Events.EventType;
+using Cratis.API.Auditing;
+using Cratis.API.EventTypes;
+using Cratis.API.Identities;
 
 namespace Cratis.API.EventSequences.Commands;
 

@@ -8,6 +8,7 @@ using Cratis.ProxyGenerator;
 using Cratis.ProxyGenerator.Templates;
 using Microsoft.AspNetCore.Mvc;
 
+var overallStopwatch = Stopwatch.StartNew();
 var stopwatch = Stopwatch.StartNew();
 
 var assemblyFile = "../../API/bin/Debug/net8.0/Cratis.Api.dll";
@@ -38,6 +39,8 @@ var targetPath = Path.GetFullPath("../../Workbench/API");
 if (Directory.Exists(targetPath)) Directory.Delete(targetPath, true);
 if (!Directory.Exists(targetPath)) Directory.CreateDirectory(targetPath);
 
+var typesInvolved = new List<Type>();
+
 var commandDescriptors = commands.ConvertAll(_ => _.ToCommandDescriptor());
 foreach (var command in commandDescriptors)
 {
@@ -48,15 +51,32 @@ foreach (var command in commandDescriptors)
     var proxyContent = TemplateTypes.Command(command);
     await File.WriteAllTextAsync(fullPath, proxyContent);
 }
+typesInvolved.AddRange(commandDescriptors.SelectMany(_ => _.TypesInvolved));
 
-Console.WriteLine($"{commands.Count} commands in ${stopwatch.Elapsed}");
+Console.WriteLine($"{commands.Count} commands in {stopwatch.Elapsed}");
 stopwatch.Restart();
 
-var typesInvolved = new List<Type>();
-typesInvolved.AddRange(commandDescriptors.SelectMany(_ => _.TypesInvolved));
+var queryDescriptors = queries.ConvertAll(_ => _.ToQueryDescriptor());
+foreach (var query in queryDescriptors)
+{
+    var path = query.Controller.ResolveTargetPath();
+    var fullPath = Path.Join(targetPath, path, $"{query.Name}.ts");
+    var directory = Path.GetDirectoryName(fullPath)!;
+    if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+
+    var proxyContent = TemplateTypes.Query(query);
+    await File.WriteAllTextAsync(fullPath, proxyContent);
+}
+typesInvolved.AddRange(queryDescriptors.SelectMany(_ => _.TypesInvolved));
+
+Console.WriteLine($"{queries.Count} queries in {stopwatch.Elapsed}");
+stopwatch.Restart();
+
 typesInvolved = typesInvolved.Distinct().ToList();
 
-var typeDescriptors = typesInvolved.ConvertAll(_ => _.ToTypeDescriptor());
+var enums = typesInvolved.Where(_ => _.IsEnum).ToList();
+
+var typeDescriptors = typesInvolved.Where(_ => !enums.Contains(_)).ToList().ConvertAll(_ => _.ToTypeDescriptor());
 foreach (var type in typeDescriptors)
 {
     var path = type.Type.ResolveTargetPath();
@@ -67,4 +87,20 @@ foreach (var type in typeDescriptors)
     await File.WriteAllTextAsync(fullPath, proxyContent);
 }
 
-Console.WriteLine($"{typesInvolved.Count} types in ${stopwatch.Elapsed}");
+Console.WriteLine($"{typeDescriptors.Count} types in {stopwatch.Elapsed}");
+stopwatch.Restart();
+
+var enumDescriptors = enums.ConvertAll(_ => _.ToEnumDescriptor());
+foreach (var type in enumDescriptors)
+{
+    var path = type.Type.ResolveTargetPath();
+    var fullPath = Path.Join(targetPath, path, $"{type.Name}.ts");
+    var directory = Path.GetDirectoryName(fullPath)!;
+    if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+    var proxyContent = TemplateTypes.Enum(type);
+    await File.WriteAllTextAsync(fullPath, proxyContent);
+}
+
+Console.WriteLine($"{enumDescriptors.Count} enums in {stopwatch.Elapsed}");
+
+Console.WriteLine($"Overall time: {overallStopwatch.Elapsed}");

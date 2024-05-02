@@ -6,6 +6,7 @@ namespace Cratis.ProxyGenerator.Templates;
 /// <summary>
 /// Describes an enum.
 /// </summary>
+/// <param name="Type">Original type.</param>
 /// <param name="Name">Name of the enum.</param>
 /// <param name="Values">The values on the enum.</param>
-public record EnumDescriptor(string Name, IEnumerable<EnumValueDescriptor> Values);
+public record EnumDescriptor(Type Type, string Name, IEnumerable<EnumMemberDescriptor> Values);
