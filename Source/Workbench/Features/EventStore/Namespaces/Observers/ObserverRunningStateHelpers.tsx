@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ObserverRunningState } from 'API/events/store/observers/ObserverRunningState';
+import { ObserverRunningState } from 'API/Cratis/Kernel/Contracts/Observation/ObserverRunningState';
 import { ColumnFilterElementTemplateOptions } from 'primereact/column';
 import { MultiSelect, MultiSelectChangeEvent } from 'primereact/multiselect';
 

@@ -5,9 +5,9 @@ import { withViewModel } from 'Infrastructure/MVVM';
 import { ObserversViewModel } from './ObserversViewModel';
 import { DataTable, DataTableFilterMeta } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { ObserverType } from 'API/events/store/observers/ObserverType';
+import { ObserverType } from 'API/Cratis/Kernel/Contracts/Observation/ObserverType';
 import { Page } from 'Components/Common/Page';
-import { ObserverState } from 'API/events/store/observers/ObserverState';
+import { ObserverInformation } from 'API/Cratis/Kernel/Contracts/Observation/ObserverInformation';
 import { FilterMatchMode } from 'primereact/api';
 import { useState } from 'react';
 import { ColumnFilterProps } from 'Components/ColumnFilter/ColumnFilter';
@@ -20,7 +20,7 @@ import { MenuItem } from 'primereact/menuitem';
 import { FaArrowsRotate } from "react-icons/fa6";
 import strings from 'Strings';
 
-const observerType = (observer: ObserverState) => {
+const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {
         case ObserverType.unknown:
             return 'Unknown';

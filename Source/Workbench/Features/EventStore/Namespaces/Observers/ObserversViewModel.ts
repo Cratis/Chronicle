@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { injectable } from 'tsyringe';
-import { AllObservers } from 'API/events/store/observers/AllObservers';
-import { ObserverState } from 'API/events/store/observers/ObserverState';
+import { AllObservers } from 'API/Observation/AllObservers';
+import { ObserverInformation } from 'API/Cratis/Kernel/Contracts/Observation/ObserverInformation';
 
 @injectable()
 export class ObserversViewModel {
@@ -17,7 +17,7 @@ export class ObserversViewModel {
         });
     }
 
-    observers: ObserverState[] = [];
+    observers: ObserverInformation[] = [];
 
-    selectedObserver: ObserverState | undefined;
+    selectedObserver: ObserverInformation | undefined;
 }
