@@ -3,7 +3,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 
-namespace Cratis.API.Observation.Commands;
+namespace Cratis.API.Observation;
 
 /// <summary>
 /// Represents the API for working with observers.
