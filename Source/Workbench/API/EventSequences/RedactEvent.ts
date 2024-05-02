@@ -4,8 +4,8 @@
 
 import { field } from 'Infrastructure';
 
-import { Causation } from '../../Auditing/Causation';
-import { Identity } from '../../Identities/Identity';
+import { Causation } from '../Auditing/Causation';
+import { Identity } from '../Identities/Identity';
 
 export class RedactEvent {
 

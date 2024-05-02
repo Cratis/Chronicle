@@ -4,19 +4,18 @@
 
 import { field } from 'Infrastructure';
 
-import { Causation } from '../../Auditing/Causation';
-import { Identity } from '../../Identities/Identity';
+import { EventToAppend } from './EventToAppend';
+import { EventType } from '../EventTypes/EventType';
+import { Causation } from '../Auditing/Causation';
+import { Identity } from '../Identities/Identity';
 
-export class RedactEvents {
+export class AppendManyEvents {
 
     @field(String)
     eventSourceId!: string;
 
-    @field(String)
-    reason!: string;
-
-    @field(String, true)
-    eventTypes!: string[];
+    @field(EventToAppend, true)
+    events!: EventToAppend[];
 
     @field(Causation, true)
     causation!: Causation[];

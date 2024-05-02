@@ -4,7 +4,7 @@
 
 import { field } from 'Infrastructure';
 
-import { AppendedEventWithJsonAsContent } from 'EventSequences/Queries/AppendedEventWithJsonAsContent';
+import { AppendedEventWithJsonAsContent } from 'EventSequences/AppendedEventWithJsonAsContent';
 import { EventMetadata } from 'Users/einari/Projects/Cratis/Cratis/Source/Tools/ProxyGenerator/Cratis/Kernel/Contracts/Events/EventMetadata';
 import { EventType } from 'Users/einari/Projects/Cratis/Cratis/Source/Tools/ProxyGenerator/Cratis/Kernel/Contracts/Events/EventType';
 import { EventContext } from 'Users/einari/Projects/Cratis/Cratis/Source/Tools/ProxyGenerator/Cratis/Kernel/Contracts/Events/EventContext';

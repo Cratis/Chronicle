@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from 'Infrastructure/queries';
-import { PagedQueryResult`1 } from '../../PagedQueryResult`1';
+import { PagedQueryResult`1 } from '../PagedQueryResult`1';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}/range/range');

@@ -3,17 +3,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from 'Infrastructure/queries';
-import { ObserverInformation } from '../../Users/einari/Projects/Cratis/Cratis/Source/Tools/ProxyGenerator/Cratis/Kernel/Contracts/Observation/ObserverInformation';
+import { ObserverInformation } from '../Users/einari/Projects/Cratis/Cratis/Source/Tools/ProxyGenerator/Cratis/Kernel/Contracts/Observation/ObserverInformation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/observers');
+const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/observers/observe/observe');
 
-export interface GetObserversArguments {
+export interface AllObserversArguments {
     eventStore: string;
     namespace: string;
 }
-export class GetObservers extends QueryFor<ObserverInformation[], GetObserversArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/observers';
+export class AllObservers extends QueryFor<ObserverInformation[], AllObserversArguments> {
+    readonly route: string = '/api/events/store/{eventStore}/{namespace}/observers/observe/observe';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverInformation[] = [];
 
@@ -28,7 +28,7 @@ export class GetObservers extends QueryFor<ObserverInformation[], GetObserversAr
         ];
     }
 
-    static use(args?: GetObserversArguments): [QueryResultWithState<ObserverInformation[]>, PerformQuery<GetObserversArguments>] {
-        return useQuery<ObserverInformation[], GetObservers, GetObserversArguments>(GetObservers, args);
+    static use(args?: AllObserversArguments): [QueryResultWithState<ObserverInformation[]>, PerformQuery<AllObserversArguments>] {
+        return useQuery<ObserverInformation[], AllObservers, AllObserversArguments>(AllObservers, args);
     }
 }

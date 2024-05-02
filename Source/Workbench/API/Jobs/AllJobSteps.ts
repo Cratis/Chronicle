@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from 'Infrastructure/queries';
-import { JobStepState } from '../JobStepState';
+import { JobStepState } from './JobStepState';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/jobs/{jobId}/steps/{jobId}/steps');

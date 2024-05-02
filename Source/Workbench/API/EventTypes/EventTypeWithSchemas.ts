@@ -4,7 +4,7 @@
 
 import { field } from 'Infrastructure';
 
-import { EventType } from '../EventType';
+import { EventType } from './EventType';
 
 export class EventTypeWithSchemas {
 
