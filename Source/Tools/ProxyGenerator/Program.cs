@@ -45,7 +45,10 @@ var commandDescriptors = commands.ConvertAll(_ => _.ToCommandDescriptor(targetPa
 await commandDescriptors.Write(targetPath, typesInvolved, TemplateTypes.Command, directories, "commands");
 
 var queryDescriptors = queries.ConvertAll(_ => _.ToQueryDescriptor(targetPath));
-await queryDescriptors.Write(targetPath, typesInvolved, TemplateTypes.Query, directories, "queries");
+var enumerableQueries = queryDescriptors.Where(_ => _.IsEnumerable).ToList();
+await enumerableQueries.Write(targetPath, typesInvolved, TemplateTypes.Query, directories, "queries");
+var observableQueries = queryDescriptors.Where(_ => _.IsObservable).ToList();
+await observableQueries.Write(targetPath, typesInvolved, TemplateTypes.ObservableQuery, directories, "observable queries");
 
 typesInvolved = typesInvolved.Distinct().ToList();
 var enums = typesInvolved.Where(_ => _.IsEnum).ToList();
