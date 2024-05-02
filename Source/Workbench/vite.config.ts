@@ -38,6 +38,7 @@ export default defineConfig({
             'MVVM': path.resolve('./MVVM'),
             'assets': path.resolve('./assets'),
             'Components': path.resolve('./Components'),
+            'Infrastructure': path.resolve('./Infrastructure'),
             'Layout': path.resolve('./Layout'),
             'Features': path.resolve('./Features'),
             'Strings': path.resolve('./Strings'),
