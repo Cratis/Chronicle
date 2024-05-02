@@ -7,11 +7,9 @@ import { ObservableQuerySubscription, OnNextResult, QueryResult } from 'Infrastr
 import { container } from 'tsyringe';
 import { AllObservers } from 'API/Observation/AllObservers';
 import { ObserverInformation } from 'API/Cratis/Kernel/Contracts/Observation/ObserverInformation';
-import { AllNamespaces } from 'API/Namespaces/AllNamespaces';
-import { Namespace } from '../API/Namespaces/Namespace';
+import { AllNamespaces, Namespace } from 'API/Namespaces';
 import observers from './Observers.json';
 import namespaces from './Namespaces.json';
-
 
 function registerFakeQuery<TDataType>(queryType: Constructor, itemConstructor: Constructor, data: any) {
     const query = new queryType() as any;
