@@ -1,21 +1,19 @@
 # Cratis Workbench
 
+
+https://github.com/rhangai/vue-di
+
 ## Prerequisites
 
 ## Building
 
 ## Components
 
-https://primereact.org
-https://allotment.mulberryhousesoftware.com
+https://primevue.org
 
 ## Icons
 
-https://react-icons.github.io/react-icons/icons/md/
-
 ## MVVM
-
-https://mobx.js.org
 
 ### Dependency Inversion - IoC
 
