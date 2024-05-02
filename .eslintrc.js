@@ -24,13 +24,19 @@ module.exports = {
     ],
     extends: [
         'eslint:recommended',
-        'plugin:@typescript-eslint/recommended'
+        'plugin:@typescript-eslint/recommended',
+        'plugin:react/recommended'
     ],
     settings: {
+        react: {
+            version: 'detect',
+        },
     },
     rules: {
         'no-irregular-whitespace': 0,
         'semi': [2, "always"],
+        'react/display-name': 0,
+        'react/react-in-jsx-scope': 0,
         'no-prototype-builtins': 0,
         '@typescript-eslint/no-unused-vars': 0,
         '@typescript-eslint/no-explicit-any': 0,

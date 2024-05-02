@@ -1,0 +1,44 @@
+/* Copyright (c) Cratis. All rights reserved.
+   Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.menuItem {
+    border-left: 3px solid transparent;
+    padding: 1.1rem 0;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+}
+
+.menuItem .icon {
+    width: 4.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.menuItem .label {
+    flex: 1;
+    color: var(--cratis-sidebar-textColor);
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+.menuItem .label.hidden {
+    opacity: 0;
+}
+
+.menuItem.active {
+    background-color: var(--cratis-sidebar-menuitem-active-bg);
+    border-color: var(--primary-color);
+    color: var(--cratis-sidebar-menuitem-active-textColor);
+    font-weight: 600;
+}
+.menuItem.active .label {
+    color: var(--cratis-sidebar-menuitem-active-textColor);
+}
+.menuItem.pending {
+    background-color: var(--surface-d);
+    border-color: #faad14;
+    color: #faad14;
+    font-weight: 600;
+}

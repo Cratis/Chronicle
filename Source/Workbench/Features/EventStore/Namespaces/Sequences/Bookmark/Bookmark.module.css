@@ -1,0 +1,32 @@
+/* Copyright (c) Cratis. All rights reserved.
+   Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.addButton {
+    margin-left: 10px;
+}
+
+.itemContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.deleteButton {
+    color: var(--red-500);
+    font-size: 0.875rem;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.75rem;
+}
+
+.savedQuery {
+    padding: 5px;
+}
+
+.content {
+    padding: 0px;
+}
+
+:global(.p-tree .p-tree-container .p-treenode .p-treenode-content) {
+    padding: 0 !important;
+}

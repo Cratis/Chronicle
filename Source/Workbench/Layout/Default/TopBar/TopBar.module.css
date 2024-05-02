@@ -1,0 +1,22 @@
+/* Copyright (c) Cratis. All rights reserved.
+   Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: var(--topbar-height);
+}
+
+.leftSide {
+    flex: 0 0  var(--sidebar-width);
+}
+
+.sidebarToggle {
+    width: var(--sidebar-closed-width);
+    position:absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
