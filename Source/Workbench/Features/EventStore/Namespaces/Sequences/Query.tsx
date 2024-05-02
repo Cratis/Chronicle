@@ -22,22 +22,26 @@ export const Query = withViewModel<QueryViewModel, QueryProps>(QueryViewModel, (
 
     const items: MenuItem[] = [
         {
+            id: 'selectSequence',
             label: 'Event log',
             icon: 'pi pi-list',
             command: (e) => selectSequencePanelRef.current?.toggle(e.originalEvent),
         },
         {
+            id: 'run',
             label: 'Run',
             icon: 'pi pi-play',
             command: () => { },
         },
         {
+            id: 'timeRange',
             label: 'Time range',
             icon: 'pi pi-chart-line',
             className: showTimeRange ? 'highlight' : '',
             command: () => toggleTimeRange(),
         },
         {
+            id: 'save',
             label: 'Save',
             icon: 'pi pi-save',
             disabled: !viewModel.hasChanges,
