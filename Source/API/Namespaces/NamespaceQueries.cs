@@ -17,6 +17,6 @@ public class NamespaceQueries : ControllerBase
     /// </summary>
     /// <returns>A <see cref="ClientObservable{T}"/> for observing a collection of <see cref="Namespace"/>.</returns>
     [HttpGet]
-    public ClientObservable<IEnumerable<Namespace>> AllNamespaces() =>
+    public Task<ClientObservable<IEnumerable<Namespace>>> AllNamespaces() =>
         throw new NotImplementedException();
 }
