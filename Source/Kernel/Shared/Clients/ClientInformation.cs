@@ -7,6 +7,5 @@ namespace Cratis.Connections;
 /// Represents the information sent to the Kernel when connecting.
 /// </summary>
 /// <param name="ClientVersion">The version of the client.</param>
-/// <param name="AdvertisedUri">The URI that the client is advertised with.</param>
 /// <param name="IsRunningWithDebugger">Whether or not the client is running with debugger attached.</param>
-public record ClientInformation(string ClientVersion, string AdvertisedUri, bool IsRunningWithDebugger);
+public record ClientInformation(string ClientVersion, bool IsRunningWithDebugger);

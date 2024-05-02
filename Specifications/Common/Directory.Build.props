@@ -20,7 +20,7 @@
         <PackageReference Include="moq" />
 
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <PackageReference Include="Aksio.Specifications" />
+        <PackageReference Include="Cratis.Specifications" />
     </ItemGroup>
 
     <ItemGroup>

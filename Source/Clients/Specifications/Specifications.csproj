@@ -9,9 +9,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="xunit" Version="$(xunit)" />
-        <PackageReference Include="moq" Version="$(Moq)" />
-        <PackageReference Include="Aksio.Specifications" Version="$(AksioSpecifications)" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="moq" />
+        <PackageReference Include="Cratis.Specifications" />
     </ItemGroup>
 
     <ItemGroup>

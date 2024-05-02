@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Kernel.Observation;
-using Cratis.Kernel.Storage;
 using Cratis.Observation;
 using Cratis.Queries;
 using Microsoft.AspNetCore.Mvc;
@@ -15,9 +14,8 @@ namespace Cratis.API.Observation.Queries;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Observers"/> class.
 /// </remarks>
-/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 [Route("/api/events/store/{eventStore}/{namespace}/failed-partitions")]
-public class FailedPartitions(IStorage storage) : ControllerBase
+public class FailedPartitions() : ControllerBase
 {
     /// <summary>
     /// Gets all failed partitions for an event store and namespace.
@@ -28,25 +26,10 @@ public class FailedPartitions(IStorage storage) : ControllerBase
     /// <returns>Client observable of a collection of <see cref="FailedPartitions"/>.</returns>
     [HttpGet("{observerId}")]
     public Task<ClientObservable<IEnumerable<FailedPartition>>> AllFailedPartitions(
-        [FromRoute] EventStoreName eventStore,
-        [FromRoute] EventStoreNamespaceName @namespace,
-        [FromRoute] ObserverId? observerId = default)
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] string? observerId = default)
     {
-        observerId ??= ObserverId.Unspecified;
-
-        var clientObservable = new ClientObservable<IEnumerable<FailedPartition>>();
-        var failedPartitions = storage.GetEventStore(eventStore).GetNamespace(@namespace).FailedPartitions;
-        var observable = failedPartitions.ObserveAllFor(observerId);
-        var subscription = observable.Subscribe(clientObservable.OnNext);
-        clientObservable.ClientDisconnected = () =>
-        {
-            subscription.Dispose();
-            if (observable is IDisposable disposableObservable)
-            {
-                disposableObservable.Dispose();
-            }
-        };
-
-        return Task.FromResult(clientObservable);
+        throw new NotImplementedException();
     }
 }

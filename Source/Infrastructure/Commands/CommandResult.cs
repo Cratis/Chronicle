@@ -9,12 +9,13 @@ namespace Cratis.Commands;
 /// <summary>
 /// Represents the result coming from executing a command.
 /// </summary>
-public class CommandResult
+/// <typeparam name="T">Type of the data returned.</typeparam>
+public class CommandResult<T>
 {
     /// <summary>
     /// Represents a successful command result.
     /// </summary>
-    public static readonly CommandResult Success = new();
+    public static readonly CommandResult<T> Success = new();
 
     /// <summary>
     /// Gets the <see cref="CorrelationId"/> associated with the command.
@@ -59,5 +60,5 @@ public class CommandResult
     /// <summary>
     /// Optional response object. Controller actions representing a command can optionally return a response as any type, this is where it would be.
     /// </summary>
-    public object? Response { get; init; }
+    public T? Response { get; init; }
 }

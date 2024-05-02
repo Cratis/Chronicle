@@ -9,6 +9,6 @@ namespace Cratis.API.EventTypes.Queries;
 /// <summary>
 /// Represents an event type with all its schemas.
 /// </summary>
-/// <param name="EventType">Event type.</param>
+/// <param name="Type">Event type.</param>
 /// <param name="Schemas">Collection of schemas.</param>
-public record EventTypeWithSchemas(EventType EventType, IEnumerable<JsonDocument> Schemas);
+public record EventTypeWithSchemas(EventType Type, IEnumerable<JsonDocument> Schemas);

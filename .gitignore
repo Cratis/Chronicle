@@ -308,3 +308,4 @@ BenchmarkDotNet.Artifacts/
 Benchmarks/results
 
 .mono
+.target
