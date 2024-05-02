@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from 'Infrastructure/queries';
-import { ObserverInformation } from '../Users/einari/Projects/Cratis/Cratis/Source/Tools/ProxyGenerator/Cratis/Kernel/Contracts/Observation/ObserverInformation';
+import { ObserverInformation } from '../Cratis/Kernel/Contracts/Observation/ObserverInformation';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/observers/observe/observe');
