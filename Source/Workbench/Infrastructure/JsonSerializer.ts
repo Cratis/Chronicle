@@ -65,6 +65,10 @@ export class JsonSerializer {
      */
     static deserializeFromInstance<TResult extends {}>(targetType: Constructor<TResult>, instance: any): TResult {
         const fields = Fields.getFieldsForType(targetType as Constructor);
+        if (typeof instance == 'number' || typeof instance == 'string' || typeof instance == 'boolean') {
+            return instance as any;
+        }
+
         const deserialized = new targetType();
         for (const field of fields) {
             let value = instance[field.name];
