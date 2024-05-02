@@ -27,6 +27,7 @@ public static class TypeExtensions
     static readonly Dictionary<string, TargetType> _primitiveTypeMap = new()
     {
         { typeof(object).FullName!, AnyTypeFinal },
+        { typeof(char).FullName!, new("string", "String") },
         { typeof(byte).FullName!, new("number", "Number") },
         { typeof(sbyte).FullName!, new("number", "Number") },
         { typeof(bool).FullName!, new("boolean", "Boolean") },
@@ -43,14 +44,13 @@ public static class TypeExtensions
         { typeof(DateTime).FullName!, new("Date",  "Date") },
         { typeof(DateTimeOffset).FullName!, new("Date", "Date") },
         { typeof(Guid).FullName!, new("string", "String") },
-        { "System.DateOnly", new("Date", "Date") },
-        { "System.TimeOnly", new("Date", "Date") },
-        { "System.Text.Json.Nodes", AnyTypeFinal },
-        { "System.Text.Json.Nodes.JsonNode", AnyTypeFinal },
-        { "System.Text.Json.Nodes.JsonObject", AnyTypeFinal },
-        { "System.Text.Json.Nodes.JsonArray", AnyTypeFinal },
-        { "System.Text.Json.JsonDocument", AnyTypeFinal },
-        { "System.Uri", new("string", "String") }
+        { typeof(DateOnly).FullName!, new("Date", "Date") },
+        { typeof(TimeOnly).FullName!, new("Date", "Date") },
+        { typeof(System.Text.Json.Nodes.JsonNode).FullName!, AnyTypeFinal },
+        { typeof(System.Text.Json.Nodes.JsonObject).FullName!, AnyTypeFinal },
+        { typeof(System.Text.Json.Nodes.JsonArray).FullName!, AnyTypeFinal },
+        { typeof(System.Text.Json.JsonDocument).FullName!, AnyTypeFinal },
+        { typeof(Uri).FullName!, new("string", "String") }
     };
 
     /// <summary>
@@ -60,6 +60,11 @@ public static class TypeExtensions
     /// <returns>True if it is known, false if not.</returns>
     public static bool IsKnownType(this Type type)
     {
+        if (type.IsDictionary())
+        {
+            return true;
+        }
+
         if (type.IsConcept())
         {
             type = type.GetConceptValueType();
@@ -85,6 +90,11 @@ public static class TypeExtensions
     /// <returns>The <see cref="TargetType"/>.</returns>
     public static TargetType GetTargetType(this Type type)
     {
+        if (type.IsDictionary())
+        {
+            return AnyTypeFinal;
+        }
+
         if (type.IsConcept())
         {
             type = type.GetConceptValueType();
@@ -105,17 +115,22 @@ public static class TypeExtensions
     /// <returns>Converted <see cref="TypeDescriptor"/>.</returns>
     public static TypeDescriptor ToTypeDescriptor(this Type type)
     {
+        var imports = new List<ImportStatement>();
+        var typesInvolved = new List<Type>();
+
         var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public).ToList();
         var propertyDescriptors = properties.ConvertAll(_ => _.ToPropertyDescriptor());
 
-        var typesInvolved = new List<Type>();
-        typesInvolved.AddRange(propertyDescriptors.Select(_ => _.OriginalType).Where(t_ => !t_.IsKnownType()));
+        foreach (var property in propertyDescriptors.Where(_ => !_.OriginalType.IsKnownType()))
+        {
+            property.CollectTypesInvolved(typesInvolved);
+        }
 
         return new TypeDescriptor(
             type,
             type.GetTargetType().Type,
             propertyDescriptors,
-            [],
+            typesInvolved.GetImports(type!.ResolveTargetPath()),
             typesInvolved);
     }
 
@@ -126,6 +141,12 @@ public static class TypeExtensions
     /// <returns>Converted <see cref="ModelDescriptor"/>.</returns>
     public static ModelDescriptor ToModelDescriptor(this Type type)
     {
+        var isObservable = type.IsObservable();
+        if (isObservable)
+        {
+            type = type.GetObservableElementType()!;
+        }
+
         var isEnumerable = type.IsEnumerable();
         if (isEnumerable)
         {
@@ -139,8 +160,22 @@ public static class TypeExtensions
             targetType.Type,
             targetType.Constructor,
             isEnumerable,
-            type.IsObservable(),
+            isObservable,
             Enumerable.Empty<ImportStatement>());
+    }
+
+    /// <summary>
+    /// Convert a <see cref="Type"/> to a <see cref="EnumDescriptor"/>.
+    /// </summary>
+    /// <param name="type">Enum type to convert.</param>
+    /// <returns>Converted <see cref="EnumDescriptor"/>.</returns>
+    public static EnumDescriptor ToEnumDescriptor(this Type type)
+    {
+        var enumUnderlyingType = Enum.GetUnderlyingType(type);
+        var values = Enum.GetValues(type).Cast<object>().Select(value => Convert.ChangeType(value, enumUnderlyingType)).ToArray();
+        var names = Enum.GetNames(type);
+        var members = values.Select((value, index) => new EnumMemberDescriptor(names[index], value)).ToArray();
+        return new EnumDescriptor(type, type.Name, members);
     }
 
     /// <summary>
@@ -155,6 +190,60 @@ public static class TypeExtensions
     /// </summary>
     /// <param name="type">Type to resolve for.</param>
     /// <returns>Resolved path.</returns>
-    public static string ResolveTargetPath(this Type type) =>
-        type.Namespace!.Replace(Globals.NamespacePrefix, string.Empty).Replace('.', Path.DirectorySeparatorChar);
+    public static string ResolveTargetPath(this Type type)
+    {
+        var path = type.Namespace!.Replace(Globals.NamespacePrefix, string.Empty).Replace('.', Path.DirectorySeparatorChar);
+        if (string.IsNullOrEmpty(path))
+        {
+            path = $"{Path.DirectorySeparatorChar}";
+        }
+
+        return path;
+    }
+
+    /// <summary>
+    /// Get imports from a collection of types.
+    /// </summary>
+    /// <param name="types">Types to get from.</param>
+    /// <param name="relativePath">The relative path to work from.</param>
+    /// <returns>A collection of <see cref="ImportStatement"/>.</returns>
+    public static IEnumerable<ImportStatement> GetImports(this IEnumerable<Type> types, string relativePath) =>
+         types.Select(_ =>
+        {
+            var importPath = Path.GetRelativePath(relativePath, _.ResolveTargetPath());
+            importPath = $"{importPath}/{_.Name}";
+            return new ImportStatement(_.GetTargetType().Type, importPath);
+        }).ToArray();
+
+    /// <summary>
+    /// Collect types involved for a property, recursively.
+    /// </summary>
+    /// <param name="property">Property to collect for.</param>
+    /// <param name="typesInvolved">Collected types involved.</param>
+    /// <remarks>It skips any types already added to the collection passed to it.</remarks>
+    public static void CollectTypesInvolved(this PropertyDescriptor property, IList<Type> typesInvolved)
+    {
+        if (typesInvolved.Contains(property.OriginalType)) return;
+        typesInvolved.Add(property.OriginalType);
+        foreach (var subProperty in property.OriginalType.GetPropertyDescriptors().Where(_ => !_.OriginalType.IsKnownType()))
+        {
+            CollectTypesInvolved(subProperty, typesInvolved);
+        }
+    }
+
+    /// <summary>
+    /// Collect types involved for an argument, recursively.
+    /// </summary>
+    /// <param name="argument">Argument to collect for.</param>
+    /// <param name="typesInvolved">Collected types involved.</param>
+    /// <remarks>It skips any types already added to the collection passed to it.</remarks>
+    public static void CollectTypesInvolved(this RequestArgumentDescriptor argument, IList<Type> typesInvolved)
+    {
+        if (typesInvolved.Contains(argument.OriginalType)) return;
+        typesInvolved.Add(argument.OriginalType);
+        foreach (var subProperty in argument.OriginalType.GetPropertyDescriptors().Where(_ => !_.OriginalType.IsKnownType()))
+        {
+            CollectTypesInvolved(subProperty, typesInvolved);
+        }
+    }
 }

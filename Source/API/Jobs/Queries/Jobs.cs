@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.Jobs;
 using Cratis.Queries;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,9 +12,8 @@ namespace Cratis.API.Jobs.Queries;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Jobs"/> class.
 /// </remarks>
-/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 [Route("/api/events/store/{eventStore}/{namespace}/jobs")]
-public class Jobs(IStorage storage) : ControllerBase
+public class Jobs() : ControllerBase
 {
     /// <summary>
     /// Observes all jobs for a specific event store and namespace.
@@ -28,7 +25,7 @@ public class Jobs(IStorage storage) : ControllerBase
     public ClientObservable<IEnumerable<JobState>> AllJobs(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        storage.GetEventStore(eventStore).GetNamespace(@namespace).Jobs.ObserveJobs().ToClientObservable();
+        throw new NotImplementedException();
 
     /// <summary>
     /// Observes all job steps for a specific job and event store and namespace.
@@ -42,5 +39,5 @@ public class Jobs(IStorage storage) : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid jobId) =>
-        storage.GetEventStore(eventStore).GetNamespace(@namespace).JobSteps.ObserveForJob(jobId).ToClientObservable();
+        throw new NotImplementedException();
 }
