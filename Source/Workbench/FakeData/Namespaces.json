@@ -1,0 +1,14 @@
+[
+    {
+        "name": "First-Namespace",
+        "description": "This is the first namespace"
+    },
+    {
+        "name": "Second-Namespace",
+        "description": "This is the second namespace"
+    },
+    {
+        "name": "Third-Namespace",
+        "description": "This is the third namespace"
+    }
+]

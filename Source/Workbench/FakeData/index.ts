@@ -5,9 +5,12 @@ import { Constructor } from 'Infrastructure';
 import { NullObservableQueryConnection } from './NullObservableQueryConnection';
 import { ObservableQuerySubscription, OnNextResult, QueryResult } from 'Infrastructure/queries';
 import { container } from 'tsyringe';
-import { AllObservers } from 'API//Observation/AllObservers';
+import { AllObservers } from 'API/Observation/AllObservers';
 import { ObserverInformation } from 'API/Cratis/Kernel/Contracts/Observation/ObserverInformation';
+import { AllNamespaces } from 'API/Namespaces/AllNamespaces';
+import { Namespace } from '../API/Namespaces/Namespace';
 import observers from './Observers.json';
+import namespaces from './Namespaces.json';
 
 
 function registerFakeQuery<TDataType>(queryType: Constructor, itemConstructor: Constructor, data: any) {
@@ -36,6 +39,7 @@ function registerFakeQuery<TDataType>(queryType: Constructor, itemConstructor: C
 export class FakeData {
     static initialize() {
         registerFakeQuery(AllObservers, ObserverInformation, observers);
+        registerFakeQuery(AllNamespaces, Namespace, namespaces);
     }
 }
 
