@@ -4,12 +4,11 @@
 
 import { field } from 'Infrastructure';
 
-import { Char } from './Char';
 
 export class string {
 
-    @field(Char)
-    chars!: Char;
+    @field(String)
+    chars!: string;
 
     @field(Number)
     length!: number;
