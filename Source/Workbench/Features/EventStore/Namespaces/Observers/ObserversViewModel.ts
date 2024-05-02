@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { injectable } from 'tsyringe';
-import { AllObservers } from 'API/Observation/AllObservers';
+import { AllObservers } from 'API/Observation';
 import { ObserverInformation } from 'API/Cratis/Kernel/Contracts/Observation/ObserverInformation';
 
 @injectable()
@@ -12,8 +12,8 @@ export class ObserversViewModel {
         this._allObservers.subscribe(result => {
             this.observers = result.data;
         }, {
-            microserviceId: '00000000-0000-0000-0000-000000000000',
-            tenantId: '00000000-0000-0000-0000-000000000000',
+            eventStore: '00000000-0000-0000-0000-000000000000',
+            namespace: '00000000-0000-0000-0000-000000000000',
         });
     }
 
