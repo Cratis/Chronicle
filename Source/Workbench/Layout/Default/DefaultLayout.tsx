@@ -16,6 +16,7 @@ import { DefaultLayoutViewModel } from './DefaultLayoutViewModel';
 import { useContext, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLocalStorage } from "usehooks-ts";
+import { Namespace } from 'API/Namespaces';
 
 interface IDefaultLayoutProps {
     menu?: IMenuItemGroup[];
@@ -28,18 +29,19 @@ export const DefaultLayout = withViewModel<DefaultLayoutViewModel, IDefaultLayou
     const layoutContext = useContext(LayoutContext);
     const navigate = useNavigate();
     const location = useLocation();
-    const [currentNamespace, setCurrentNamespace] = useLocalStorage('currentNamespace', viewModel.currentNamespace);
-
+    const [currentNamespace, setCurrentNamespace] = useLocalStorage<string>('currentNamespace', viewModel.currentNamespace.name);
 
     useEffect(() => {
-        const namespace = params.namespace ?? currentNamespace;
-        viewModel.currentNamespace = namespace;
+        const namespace = viewModel.getNamespaceFromName(params.namespace ?? currentNamespace);
+        if (namespace) {
+            viewModel.currentNamespace = namespace;
+        }
     }, [params]);
 
-    const namespaceSelected = (namespace: string) => {
+    const namespaceSelected = (namespace: Namespace) => {
         viewModel.currentNamespace = namespace;
-        setCurrentNamespace(namespace);
-        const newRoute = location.pathname.replace(params.namespace!, namespace);
+        setCurrentNamespace(namespace.name);
+        const newRoute = location.pathname.replace(params.namespace!, namespace.name);
         navigate(newRoute);
     };
 
@@ -62,7 +64,7 @@ export const DefaultLayout = withViewModel<DefaultLayoutViewModel, IDefaultLayou
                             onNamespaceSelected={namespaceSelected}
                         />
                         {props.menu && (
-                            <MenuProvider params={{ namespace: viewModel.currentNamespace }}>
+                            <MenuProvider params={{ namespace: viewModel.currentNamespace.name }}>
                                 <SidebarMenu
                                     items={props.menu}
                                     basePath={sidebarBasePath}

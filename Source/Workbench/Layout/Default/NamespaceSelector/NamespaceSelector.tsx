@@ -9,11 +9,12 @@ import { useLayoutContext } from "../context/LayoutContext";
 import { CurrentNamespace } from "./CurrentNamespace";
 import { InputText } from 'primereact/inputtext';
 import { ItemsList } from 'Components/ItemsList/ItemsList';
+import { Namespace } from 'API/Namespaces';
 
 export interface INamespaceSelectorProps extends React.HTMLAttributes<HTMLDivElement> {
-    namespaces: string[];
-    currentNamespace: string;
-    onNamespaceSelected: (namespace: string) => void;
+    namespaces: Namespace[];
+    currentNamespace: Namespace;
+    onNamespaceSelected: (namespace: Namespace) => void;
 }
 
 export const NamespaceSelector = (props: INamespaceSelectorProps) => {
@@ -22,17 +23,17 @@ export const NamespaceSelector = (props: INamespaceSelectorProps) => {
 
     const op = useRef<OverlayPanel>(null);
 
-    const selectNamespace = (namespace: string) => {
+    const selectNamespace = (namespace: Namespace) => {
         props.onNamespaceSelected(namespace);
         op?.current?.hide();
     };
 
-    const filteredNamespaces = useMemo(() => props.namespaces.filter((t) => t.toLowerCase().includes(search.toLowerCase())), [props.namespaces, search]);
+    const filteredNamespaces = useMemo(() => props.namespaces.filter((t) => t.name?.toLowerCase().includes(search.toLowerCase())), [props.namespaces, search]);
 
     return (
         <div>
             <CurrentNamespace compact={!layoutConfig.leftSidebarOpen}
-                namespace={props.currentNamespace} onClick={(e) => {
+                namespace={props.currentNamespace?.name} onClick={(e) => {
                     op?.current?.toggle(e, null);
                 }} />
 
@@ -48,7 +49,7 @@ export const NamespaceSelector = (props: INamespaceSelectorProps) => {
                             }} />
                     </div>
 
-                    <ItemsList<string> items={filteredNamespaces} onItemClicked={selectNamespace} />
+                    <ItemsList<Namespace> items={filteredNamespaces} idProperty='name' nameProperty='name' onItemClicked={selectNamespace} />
                 </div>
             </OverlayPanel>
         </div>);
