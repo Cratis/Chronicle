@@ -11,45 +11,34 @@ namespace Cratis.Reducers;
 /// <summary>
 /// Represents the endpoint called for receiving events from the kernel.
 /// </summary>
-public class ClientReducers : IClientReducers
+/// <remarks>
+/// Initializes a new instance of the <see cref="ClientReducers"/> class.
+/// </remarks>
+/// <param name="reducers">The <see cref="IReducersRegistrar"/> in the system.</param>
+/// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+public class ClientReducers(
+    IReducersRegistrar reducers,
+    JsonSerializerOptions jsonSerializerOptions,
+    ILogger<ClientReducers> logger) : IClientReducers
 {
-    readonly IReducersRegistrar _reducers;
-    readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly ILogger<ClientReducers> _logger;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ClientReducers"/> class.
-    /// </summary>
-    /// <param name="reducers">The <see cref="IReducersRegistrar"/> in the system.</param>
-    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public ClientReducers(
-        IReducersRegistrar reducers,
-        JsonSerializerOptions jsonSerializerOptions,
-        ILogger<ClientReducers> logger)
-    {
-        _reducers = reducers;
-        _jsonSerializerOptions = jsonSerializerOptions;
-        _logger = logger;
-    }
-
     /// <inheritdoc/>
     public async Task<InternalReduceResult> OnNext(
         ReducerId reducerId,
         IEnumerable<AppendedEvent> events,
         JsonObject? initialAsJson)
     {
-        _logger.EventsReceived(events.Count(), reducerId);
-        var handler = _reducers.GetById(reducerId);
+        logger.EventsReceived(events.Count(), reducerId);
+        var handler = reducers.GetById(reducerId);
         if (handler is not null)
         {
             var initial = initialAsJson is null ?
                 null :
-                initialAsJson.Deserialize(handler.ReadModelType, _jsonSerializerOptions)!;
+                initialAsJson.Deserialize(handler.ReadModelType, jsonSerializerOptions)!;
             return await handler.OnNext(events, initial);
         }
 
-        _logger.UnknownReducer(reducerId);
+        logger.UnknownReducer(reducerId);
         return new(initialAsJson, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
     }
 }

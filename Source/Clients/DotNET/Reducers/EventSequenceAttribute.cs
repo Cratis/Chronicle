@@ -8,20 +8,15 @@ namespace Cratis.Reducers;
 /// <summary>
 /// Attribute to specify which event sequence to use.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequenceAttribute"/> class.
+/// </remarks>
+/// <param name="sequence">String representation of a <see cref="EventSequenceId"/>.</param>
 [AttributeUsage(AttributeTargets.Class)]
-public sealed class EventSequenceAttribute : Attribute
+public sealed class EventSequenceAttribute(string sequence) : Attribute
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequenceAttribute"/> class.
-    /// </summary>
-    /// <param name="sequence">String representation of a <see cref="EventSequenceId"/>.</param>
-    public EventSequenceAttribute(string sequence)
-    {
-        Sequence = sequence;
-    }
-
     /// <summary>
     /// Gets the <see cref="EventSequenceId"/> to use.
     /// </summary>
-    public EventSequenceId Sequence { get; }
+    public EventSequenceId Sequence { get; } = sequence;
 }

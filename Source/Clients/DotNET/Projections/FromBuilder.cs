@@ -11,17 +11,14 @@ namespace Cratis.Projections;
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of parent builder.</typeparam>
-public class FromBuilder<TModel, TEvent, TParentBuilder> : ModelPropertiesBuilder<TModel, TEvent, IFromBuilder<TModel, TEvent>, TParentBuilder>, IFromBuilder<TModel, TEvent>
-    where TParentBuilder : class
+/// <remarks>
+/// Initializes a new instance of the <see cref="FromBuilder{TModel, TEvent, TParentBuilder}"/>.
+/// </remarks>
+/// <param name="projectionBuilder">The parent <see cref="IProjectionBuilderFor{TModel}"/>.</param>
+public class FromBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TModel, TParentBuilder> projectionBuilder)
+    : ModelPropertiesBuilder<TModel, TEvent, IFromBuilder<TModel, TEvent>, TParentBuilder>(projectionBuilder), IFromBuilder<TModel, TEvent>
+        where TParentBuilder : class
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="FromBuilder{TModel, TEvent, TParentBuilder}"/>.
-    /// </summary>
-    /// <param name="projectionBuilder">The parent <see cref="IProjectionBuilderFor{TModel}"/>.</param>
-    public FromBuilder(IProjectionBuilder<TModel, TParentBuilder> projectionBuilder) : base(projectionBuilder)
-    {
-    }
-
     /// <inheritdoc/>
     public FromDefinition Build() => new()
     {

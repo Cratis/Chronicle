@@ -3,11 +3,7 @@
 
 namespace Cratis.Changes.for_ObjectComparer;
 #pragma warning disable CS0144, CA1036
-public class MyComparable : IComparable
+public class MyComparable(int desiredResult) : IComparable
 {
-    readonly int _desiredResult;
-
-    public MyComparable(int desiredResult) => _desiredResult = desiredResult;
-
-    public int CompareTo(object obj) => _desiredResult;
+    public int CompareTo(object obj) => desiredResult;
 }

@@ -1,12 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Types;
 using Cratis.Auditing;
 using Cratis.Compliance;
 using Cratis.Connections;
 using Cratis.Schemas;
+using Cratis.Types;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis;
 
@@ -15,6 +16,13 @@ namespace Cratis;
 /// </summary>
 public class CratisClient : ICratisClient, IDisposable
 {
+    const string VersionMetadataKey = "softwareVersion";
+    const string CommitMetadataKey = "softwareCommit";
+    const string ProgramIdentifierMetadataKey = "programIdentifier";
+    const string OperatingSystemMetadataKey = "os";
+    const string MachineNameMetadataKey = "machineName";
+    const string ProcessMetadataKey = "process";
+
     readonly CratisOptions _options;
     readonly ICratisConnection? _connection;
     readonly ICausationManager _causationManager;
@@ -47,10 +55,22 @@ public class CratisClient : ICratisClient, IDisposable
     public CratisClient(CratisOptions options)
     {
         _options = options;
-        _causationManager = new CausationManager();
+        var causationManager = new CausationManager();
+        causationManager.DefineRoot(new Dictionary<string, string>
+        {
+            { VersionMetadataKey, options.SoftwareVersion },
+            { CommitMetadataKey, options.SoftwareCommit },
+            { ProgramIdentifierMetadataKey, options.ProgramIdentifier },
+            { OperatingSystemMetadataKey, Environment.OSVersion.ToString() },
+            { MachineNameMetadataKey, Environment.MachineName },
+            { ProcessMetadataKey, Environment.ProcessPath ?? string.Empty }
+        });
+
+        _causationManager = causationManager;
+
         _complianceMetadataResolver = new ComplianceMetadataResolver(
-            new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Instance, options.ServiceProvider),
-            new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Instance, options.ServiceProvider));
+            new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, options.ServiceProvider),
+            new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, options.ServiceProvider));
         _jsonSchemaGenerator = new JsonSchemaGenerator(_complianceMetadataResolver);
         _connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
         _connection = new CratisConnection(

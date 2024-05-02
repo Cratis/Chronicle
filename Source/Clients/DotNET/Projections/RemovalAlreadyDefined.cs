@@ -6,13 +6,9 @@ namespace Cratis.Projections;
 /// <summary>
 /// Exception that gets thrown when removal has already been defined.
 /// </summary>
-public class RemovalAlreadyDefined : Exception
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RemovalAlreadyDefined"/> class.
-    /// </summary>
-    /// <param name="type">The type of projection.</param>
-    public RemovalAlreadyDefined(Type type) : base($"Removal already defined for projection '{type.FullName}'. You can only define one event type to be the removal event type.")
-    {
-    }
-}
+/// <remarks>
+/// Initializes a new instance of the <see cref="RemovalAlreadyDefined"/> class.
+/// </remarks>
+/// <param name="type">The type of projection.</param>
+public class RemovalAlreadyDefined(Type type)
+    : Exception($"Removal already defined for projection '{type.FullName}'. You can only define one event type to be the removal event type.");

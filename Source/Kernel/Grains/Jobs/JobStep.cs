@@ -93,7 +93,7 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
     /// <inheritdoc/>
     public async Task Pause()
     {
-        _cancellationTokenSource.Cancel();
+        await _cancellationTokenSource.CancelAsync();
         await Job.Unsubscribe(this.AsReference<IJobObserver>());
         StatusChanged(JobStepStatus.Paused);
     }
@@ -111,7 +111,7 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
     /// <inheritdoc/>
     public async Task Stop()
     {
-        _cancellationTokenSource.Cancel();
+        await _cancellationTokenSource.CancelAsync();
         await Job.Unsubscribe(this.AsReference<IJobObserver>());
         StatusChanged(JobStepStatus.Stopped);
         await _state.WriteStateAsync();

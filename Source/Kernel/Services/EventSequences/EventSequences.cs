@@ -18,18 +18,15 @@ namespace Cratis.Kernel.Services.EventSequences;
 /// Initializes a new instance of the <see cref="EventSequences"/> class.
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
-/// <param name="executionContextManager">The <see cref="IExecutionContextManager"/> for working with the execution context.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 public class EventSequences(
     IGrainFactory grainFactory,
-    IExecutionContextManager executionContextManager,
     JsonSerializerOptions jsonSerializerOptions) : IEventSequences
 {
     /// <inheritdoc/>
     public async Task<AppendResponse> Append(AppendRequest request)
     {
-        executionContextManager.Establish(request.Namespace, CorrelationId.New(), request.EventStoreName);
-        var eventSequence = GetEventSequence(request.EventStoreName, request.EventSequenceId, request.Namespace);
+        var eventSequence = GetEventSequence(request.EventStoreName, request.Namespace, request.EventSequenceId);
         await eventSequence.Append(
             request.EventSourceId,
             request.EventType.ToKernel(),
@@ -41,6 +38,6 @@ public class EventSequences(
         return new AppendResponse();
     }
 
-    Grains.EventSequences.IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
-        grainFactory.GetGrain<Grains.EventSequences.IEventSequence>(eventSequenceId, keyExtension: new MicroserviceAndTenant(microserviceId, tenantId));
+    Grains.EventSequences.IEventSequence GetEventSequence(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
+        grainFactory.GetGrain<Grains.EventSequences.IEventSequence>(eventSequenceId, keyExtension: new EventStoreAndNamespace(eventStore, @namespace));
 }

@@ -12,19 +12,12 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 /// <summary>
 /// Represents an implementation of <see cref="IQueueCache"/> for MongoDB event log.
 /// </summary>
-public class EventSequenceQueueCache : IQueueCache
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequenceQueueCache"/> class.
+/// </remarks>
+/// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
+public class EventSequenceQueueCache(IEventSequenceCaches caches) : IQueueCache
 {
-    readonly IEventSequenceCaches _caches;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequenceQueueCache"/> class.
-    /// </summary>
-    /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
-    public EventSequenceQueueCache(IEventSequenceCaches caches)
-    {
-        _caches = caches;
-    }
-
     /// <inheritdoc/>
     public void AddToCache(IList<IBatchContainer> messages)
     {
@@ -32,10 +25,10 @@ public class EventSequenceQueueCache : IQueueCache
         {
             if (message is EventSequenceBatchContainer batchContainer)
             {
-                var microserviceAndTenant = (MicroserviceAndTenant)message.StreamId.GetNamespace()!;
+                var eventStoreAndNamespace = (EventStoreAndNamespace)message.StreamId.GetNamespace()!;
                 foreach (var (@event, _) in batchContainer.GetEvents<AppendedEvent>())
                 {
-                    _caches.GetFor(microserviceAndTenant.MicroserviceId, microserviceAndTenant.TenantId, (EventSequenceId)message.StreamId.GetKeyAsString()).Add(@event);
+                    caches.GetFor(eventStoreAndNamespace.EventStore, eventStoreAndNamespace.Namespace, (EventSequenceId)message.StreamId.GetKeyAsString()).Add(@event);
                 }
             }
         }
@@ -54,10 +47,10 @@ public class EventSequenceQueueCache : IQueueCache
             return new EmptyEventSequenceQueueCacheCursor();
         }
 
-        var microserviceAndTenant = (MicroserviceAndTenant)streamId.GetNamespace()!;
-        var cache = _caches.GetFor(
-                microserviceAndTenant.MicroserviceId,
-                microserviceAndTenant.TenantId,
+        var eventStoreAndNamespace = (EventStoreAndNamespace)streamId.GetNamespace()!;
+        var cache = caches.GetFor(
+                eventStoreAndNamespace.EventStore,
+                eventStoreAndNamespace.Namespace,
                 (EventSequenceId)streamId.GetKeyAsString());
 
         if (token.SequenceNumber < (long)cache.Head.Value)
@@ -67,8 +60,8 @@ public class EventSequenceQueueCache : IQueueCache
 
         return new EventSequenceQueueCacheCursor(
             cache,
-            microserviceAndTenant.MicroserviceId,
-            microserviceAndTenant.TenantId,
+            eventStoreAndNamespace.EventStore,
+            eventStoreAndNamespace.Namespace,
             (EventSequenceId)streamId.GetKeyAsString(),
             (ulong)token.SequenceNumber);
     }
@@ -77,13 +70,13 @@ public class EventSequenceQueueCache : IQueueCache
     public int GetMaxAddCount() => int.MaxValue;
 
     /// <inheritdoc/>
-    public bool IsUnderPressure() => _caches.IsUnderPressure();
+    public bool IsUnderPressure() => caches.IsUnderPressure();
 
     /// <inheritdoc/>
     public bool TryPurgeFromCache(out IList<IBatchContainer> purgedItems)
     {
         purgedItems = null!;
-        _caches.Purge();
+        caches.Purge();
         return false;
     }
 }

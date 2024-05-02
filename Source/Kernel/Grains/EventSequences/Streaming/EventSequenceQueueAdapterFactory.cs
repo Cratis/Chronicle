@@ -10,29 +10,19 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 /// <summary>
 /// Represents an implementation of <see cref="IQueueAdapterFactory"/> for our persistent event store.
 /// </summary>
-public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
+/// </remarks>
+/// <param name="name">Name of stream.</param>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+/// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
+public class EventSequenceQueueAdapterFactory(
+    string name,
+    IStorage storage,
+    IEventSequenceCaches caches) : IQueueAdapterFactory
 {
-    readonly IQueueAdapterCache _cache;
-    readonly IStreamQueueMapper _mapper;
-    readonly string _name;
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
-    /// </summary>
-    /// <param name="name">Name of stream.</param>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
-    public EventSequenceQueueAdapterFactory(
-        string name,
-        IStorage storage,
-        IEventSequenceCaches caches)
-    {
-        _mapper = new HashRingBasedStreamQueueMapper(new(), name);
-        _cache = new EventSequenceQueueAdapterCache(caches);
-        _name = name;
-        _storage = storage;
-    }
+    readonly IQueueAdapterCache _cache = new EventSequenceQueueAdapterCache(caches);
+    readonly IStreamQueueMapper _mapper = new HashRingBasedStreamQueueMapper(new(), name);
 
     /// <summary>
     /// Creates a <see cref="EventSequenceQueueAdapterFactory"/>.
@@ -49,7 +39,7 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     }
 
     /// <inheritdoc/>
-    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _storage));
+    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(name, _mapper, storage));
 
     /// <inheritdoc/>
     public Task<IStreamFailureHandler> GetDeliveryFailureHandler(QueueId queueId) => Task.FromResult<IStreamFailureHandler>(new NoOpStreamDeliveryFailureHandler());

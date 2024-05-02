@@ -12,21 +12,16 @@ namespace Cratis.Specifications;
 /// <summary>
 /// Represents an implementation of <see cref="IEventLog"/> for specifications.
 /// </summary>
-public class EventLogForSpecifications : IEventLog
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventLogForSpecifications"/> class.
+/// </remarks>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/>.</param>
+/// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/>.</param>
+public class EventLogForSpecifications(
+      IExpandoObjectConverter expandoObjectConverter,
+      IJsonSchemaGenerator schemaGenerator) : IEventLog
 {
-    readonly EventSequenceForSpecifications _sequence;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventLogForSpecifications"/> class.
-    /// </summary>
-    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/>.</param>
-    /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/>.</param>
-    public EventLogForSpecifications(
-          IExpandoObjectConverter expandoObjectConverter,
-          IJsonSchemaGenerator schemaGenerator)
-    {
-        _sequence = new(expandoObjectConverter, schemaGenerator);
-    }
+    readonly EventSequenceForSpecifications _sequence = new(expandoObjectConverter, schemaGenerator);
 
     /// <summary>
     /// Gets the appended events.

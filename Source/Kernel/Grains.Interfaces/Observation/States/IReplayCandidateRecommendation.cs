@@ -8,6 +8,4 @@ namespace Cratis.Kernel.Grains.Observation.States;
 /// <summary>
 /// Defines the Grain that represents a replay candidate for an observer.
 /// </summary>
-public interface IReplayCandidateRecommendation : IRecommendation<ReplayCandidateRequest>
-{
-}
+public interface IReplayCandidateRecommendation : IRecommendation<ReplayCandidateRequest>;

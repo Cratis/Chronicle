@@ -3,40 +3,29 @@
 
 using System.Collections.Concurrent;
 using Cratis.EventSequences;
-using Cratis.Kernel.Configuration;
 
 namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequenceCaches"/>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequenceCaches"/> class.
+/// </remarks>
+/// <param name="eventSequenceCacheFactory"><see cref="IEventSequenceCacheFactory"/> for creating <see cref="IEventSequenceCache"/> instances.</param>
 [Singleton]
-public class EventSequenceCaches : IEventSequenceCaches
+public class EventSequenceCaches(
+    IEventSequenceCacheFactory eventSequenceCacheFactory) : IEventSequenceCaches
 {
-    readonly ConcurrentDictionary<(MicroserviceId, TenantId, EventSequenceId), IEventSequenceCache> _caches = new();
-    readonly IEventSequenceCacheFactory _eventSequenceCacheFactory;
-    readonly KernelConfiguration _configuration;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequenceCaches"/> class.
-    /// </summary>
-    /// <param name="eventSequenceCacheFactory"><see cref="IEventSequenceCacheFactory"/> for creating <see cref="IEventSequenceCache"/> instances.</param>
-    /// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
-    public EventSequenceCaches(
-        IEventSequenceCacheFactory eventSequenceCacheFactory,
-        KernelConfiguration configuration)
-    {
-        _eventSequenceCacheFactory = eventSequenceCacheFactory;
-        _configuration = configuration;
-    }
+    readonly ConcurrentDictionary<(EventStoreName, EventStoreNamespaceName, EventSequenceId), IEventSequenceCache> _caches = new();
 
     /// <inheritdoc/>
-    public IEventSequenceCache GetFor(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId)
+    public IEventSequenceCache GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId)
     {
-        var key = (microserviceId, tenantId, eventSequenceId);
+        var key = (eventStore, @namespace, eventSequenceId);
         if (!_caches.TryGetValue(key, out var cache))
         {
-            cache = _eventSequenceCacheFactory.Create(microserviceId, tenantId, eventSequenceId);
+            cache = eventSequenceCacheFactory.Create(eventStore, @namespace, eventSequenceId);
             _caches.TryAdd(key, cache);
         }
 
@@ -49,19 +38,20 @@ public class EventSequenceCaches : IEventSequenceCaches
     /// <inheritdoc/>
     public async Task PrimeAll()
     {
-        foreach (var (microserviceId, microservice) in _configuration.Microservices)
-        {
-            foreach (var (tenantId, _) in _configuration.Tenants)
-            {
-                if (!_configuration.Storage.Microservices.ContainsKey(microserviceId) ||
-                    !_configuration.Storage.Microservices.Get(microserviceId).Tenants.ContainsKey(tenantId))
-                {
-                    continue;
-                }
-
-                await GetFor(microserviceId, tenantId, EventSequenceId.Log).PrimeWithTailWindow();
-            }
-        }
+        // TODO: This needs to be implemented properly. Or if we get to rewrite how we append to event sequences first, we can remove this entire file.
+        // foreach (var (microserviceId, microservice) in configuration.Microservices)
+        // {
+        //     foreach (var (tenantId, _) in configuration.Tenants)
+        //     {
+        //         if (!configuration.Storage.Microservices.ContainsKey(microserviceId) ||
+        //             !configuration.Storage.Microservices.Get(microserviceId).Tenants.ContainsKey(tenantId))
+        //         {
+        //             continue;
+        //         }
+        //         await GetFor(microserviceId, tenantId, EventSequenceId.Log).PrimeWithTailWindow();
+        //     }
+        // }
+        await Task.CompletedTask;
     }
 
     /// <inheritdoc/>

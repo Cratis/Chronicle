@@ -11,20 +11,13 @@ namespace Cratis.Kernel.Storage.MongoDB.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IFailedPartitionsStorage"/> for MongoDB.
 /// </summary>
-public class FailedPartitionStorage : IFailedPartitionsStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="ObserverStorage"/> class.
+/// </remarks>
+/// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
+public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFailedPartitionsStorage
 {
-    readonly IEventStoreNamespaceDatabase _database;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverStorage"/> class.
-    /// </summary>
-    /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
-    public FailedPartitionStorage(IEventStoreNamespaceDatabase database)
-    {
-        _database = database;
-    }
-
-    IMongoCollection<FailedPartition> Collection => _database.GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
+    IMongoCollection<FailedPartition> Collection => database.GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<FailedPartition>> ObserveAllFor(ObserverId? observerId = default)

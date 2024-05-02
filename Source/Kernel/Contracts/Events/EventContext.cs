@@ -39,32 +39,38 @@ public class EventContext
     public SerializableDateTimeOffset ValidFrom { get; set; }
 
     /// <summary>
-    /// Gets or sets the tenant id the event was appended to.
+    /// Gets or sets the event store the event belongs to.
     /// </summary>
     [ProtoMember(5)]
-    public Guid TenantId { get; set; }
+    public string EventStore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the namespace id the event belongs to.
+    /// </summary>
+    [ProtoMember(6)]
+    public string Namespace { get; set; }
 
     /// <summary>
     /// Gets or sets the correlation id for the event.
     /// </summary>
-    [ProtoMember(6)]
+    [ProtoMember(7)]
     public string CorrelationId { get; set; }
 
     /// <summary>
     /// Gets or sets a collection of causation for what caused the event.
     /// </summary>
-    [ProtoMember(7)]
+    [ProtoMember(8)]
     public IEnumerable<Causation> Causation { get; set; }
 
     /// <summary>
     /// Gets or sets a collection of Identities that caused the event.
     /// </summary>
-    [ProtoMember(8)]
+    [ProtoMember(9)]
     public Identity CausedBy { get; set; }
 
     /// <summary>
     /// Gets or sets the state relevant for the observer observing.
     /// </summary>
-    [ProtoMember(9)]
+    [ProtoMember(10)]
     public EventObservationState ObservationState { get; set; }
 }

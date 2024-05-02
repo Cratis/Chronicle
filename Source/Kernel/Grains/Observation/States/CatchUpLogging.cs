@@ -32,8 +32,8 @@ internal static class CatchUpScopes
         logger.BeginScope(new Dictionary<string, object>
         {
             ["ObserverId"] = observerId,
-            ["MicroserviceId"] = observerKey.MicroserviceId,
-            ["TenantId"] = observerKey.TenantId,
+            ["EventStore"] = observerKey.EventStore,
+            ["Namespace"] = observerKey.Namespace,
             ["EventSequenceId"] = observerKey.EventSequenceId
         });
 }

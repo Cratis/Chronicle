@@ -12,8 +12,8 @@ namespace Cratis.Specifications;
 /// </summary>
 public class EventTypesForSpecifications : IEventTypes
 {
-    readonly Dictionary<Type, EventType> _eventTypes = new();
-    readonly Dictionary<EventTypeId, Type> _clrTypesByEventType = new();
+    readonly Dictionary<Type, EventType> _eventTypes = [];
+    readonly Dictionary<EventTypeId, Type> _clrTypesByEventType = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypesForSpecifications"/> class.

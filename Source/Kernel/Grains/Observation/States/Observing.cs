@@ -20,14 +20,14 @@ namespace Cratis.Kernel.Grains.Observation.States;
 /// Initializes a new instance of the <see cref="Observing"/> class.
 /// </remarks>
 /// <param name="streamProvider"><see cref="IStreamProvider"/> to use to work with streams.</param>
-/// <param name="microserviceId"><see cref="MicroserviceId"/> the state is for.</param>
-/// <param name="tenantId"><see cref="TenantId"/> the state is for.</param>
+/// <param name="eventStore"><see cref="EventStoreName"/> the state is for.</param>
+/// <param name="namespace"><see cref="EventStoreNamespaceName"/> the state is for.</param>
 /// <param name="eventSequenceId"><see cref="EventSequenceId"/> being observed.</param>
 /// <param name="logger">Logger for logging.</param>
 public class Observing(
     IStreamProvider streamProvider,
-    MicroserviceId microserviceId,
-    TenantId tenantId,
+    EventStoreName eventStore,
+    EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
     ILogger<Observing> logger) : BaseObserverState
 {
@@ -49,11 +49,11 @@ public class Observing(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        using var scope = logger.BeginObservingScope(state, microserviceId, tenantId, eventSequenceId);
+        using var scope = logger.BeginObservingScope(state, eventStore, @namespace, eventSequenceId);
         logger.Entering();
 
-        var microserviceAndTenant = new MicroserviceAndTenant(microserviceId, tenantId);
-        var streamId = StreamId.Create(microserviceAndTenant, eventSequenceId);
+        var eventStoreAndNamespace = new EventStoreAndNamespace(eventStore, @namespace);
+        var streamId = StreamId.Create(eventStoreAndNamespace, eventSequenceId);
         var stream = streamProvider.GetStream<AppendedEvent>(streamId);
 
         logger.SubscribingToStream(state.NextEventSequenceNumber);

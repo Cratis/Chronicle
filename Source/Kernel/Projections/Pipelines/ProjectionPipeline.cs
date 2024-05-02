@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Types;
 using Cratis.Changes;
 using Cratis.Events;
 using Cratis.Kernel.Keys;
@@ -11,6 +10,7 @@ using Cratis.Kernel.Storage.EventSequences;
 using Cratis.Kernel.Storage.Sinks;
 using Cratis.Properties;
 using Cratis.Schemas;
+using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Kernel.Projections.IProjection;
 
@@ -54,7 +54,7 @@ public class ProjectionPipeline(
     public async Task Handle(AppendedEvent @event)
     {
         logger.HandlingEvent(@event.Metadata.SequenceNumber);
-        var correlationId = CorrelationId.New();
+        var correlationId = CorrelationId.New(); // TODO: Fix this when we have a proper correlation id
         var keyResolver = Projection.GetKeyResolverFor(@event.Metadata.Type);
         var key = await keyResolver(eventSequenceStorage, @event);
         key = EnsureCorrectTypeForArrayIndexersOnKey(key);

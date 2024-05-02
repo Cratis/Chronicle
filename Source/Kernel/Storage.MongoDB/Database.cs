@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.MongoDB;
+using Cratis.MongoDB;
 using MongoDB.Driver;
 using StorageConfiguration = Cratis.Kernel.Configuration.Storage;
 
@@ -28,7 +28,7 @@ public class Database : IDatabase
         IMongoDBClientManager clientManager,
         StorageConfiguration configuration)
     {
-        var url = new MongoUrl(configuration.Cluster.ConnectionDetails.ToString());
+        var url = new MongoUrl(configuration.ConnectionDetails.ToString());
         var settings = MongoClientSettings.FromUrl(url);
         var client = clientManager.GetClientFor(settings);
         _database = client.GetDatabase(url.DatabaseName);
@@ -67,11 +67,16 @@ public class Database : IDatabase
             return database;
         }
 
-        var readModelsConfig = _configuration.Microservices.Get((string)eventStore).Tenants[@namespace].Get(WellKnownStorageTypes.ReadModels);
-        var url = new MongoUrl(readModelsConfig.ConnectionDetails.ToString());
-        var settings = MongoClientSettings.FromUrl(url);
+        // TODO: This should be a configurable convention.
+        var databaseName = $"{eventStore}-{@namespace}-rm";
+        var urlBuilder = new MongoUrlBuilder(_configuration.ConnectionDetails.ToString())
+        {
+            DatabaseName = databaseName
+        };
+
+        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
         var client = _clientManager.GetClientFor(settings);
-        database = client.GetDatabase(url.DatabaseName);
+        database = client.GetDatabase(databaseName);
         _readModelDatabases[key] = database;
         return database;
     }

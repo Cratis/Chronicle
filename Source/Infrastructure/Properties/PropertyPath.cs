@@ -6,10 +6,10 @@ using System.Dynamic;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using Aksio.Reflection;
-using Aksio.Strings;
 using Cratis.Dynamic;
 using Cratis.Objects;
+using Cratis.Reflection;
+using Cratis.Strings;
 
 namespace Cratis.Properties;
 

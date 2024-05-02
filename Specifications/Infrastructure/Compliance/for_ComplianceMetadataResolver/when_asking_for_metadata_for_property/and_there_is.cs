@@ -23,7 +23,7 @@ public class and_there_is : Specification
         provider.Setup(_ => _.CanProvide(MyClass.SomethingProperty)).Returns(true);
 
         resolver = new(
-            new KnownInstancesOf<ICanProvideComplianceMetadataForType>(Array.Empty<ICanProvideComplianceMetadataForType>()),
+            new KnownInstancesOf<ICanProvideComplianceMetadataForType>([]),
             new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>(new[] { provider.Object })
         );
     }

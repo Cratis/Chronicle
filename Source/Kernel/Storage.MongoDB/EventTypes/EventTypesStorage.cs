@@ -14,33 +14,23 @@ namespace Cratis.Events.MongoDB.EventTypes;
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypesStorage"/>.
 /// </summary>
-public class EventTypesStorage : IEventTypesStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventTypesStorage"/> class.
+/// </remarks>
+/// <param name="eventStore"><see cref="EventStoreName"/> the storage is for.</param>
+/// <param name="sharedDatabase">The <see cref="IEventStoreDatabase"/>.</param>
+/// <param name="logger">Logger for logging.</param>
+public class EventTypesStorage(
+    EventStoreName eventStore,
+    IEventStoreDatabase sharedDatabase,
+    ILogger<EventTypesStorage> logger) : IEventTypesStorage
 {
-    readonly EventStoreName _eventStore;
-    readonly IEventStoreDatabase _sharedDatabase;
-    readonly ILogger<EventTypesStorage> _logger;
-    Dictionary<EventTypeId, Dictionary<EventGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = new();
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventTypesStorage"/> class.
-    /// </summary>
-    /// <param name="eventStore"><see cref="EventStoreName"/> the storage is for.</param>
-    /// <param name="sharedDatabase">The <see cref="IEventStoreDatabase"/>.</param>
-    /// <param name="logger">Logger for logging.</param>
-    public EventTypesStorage(
-        EventStoreName eventStore,
-        IEventStoreDatabase sharedDatabase,
-        ILogger<EventTypesStorage> logger)
-    {
-        _eventStore = eventStore;
-        _sharedDatabase = sharedDatabase;
-        _logger = logger;
-    }
+    Dictionary<EventTypeId, Dictionary<EventGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = [];
 
     /// <inheritdoc/>
     public async Task Populate()
     {
-        _logger.Populating(_eventStore);
+        logger.Populating(eventStore);
 
         var findResult = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var allSchemas = findResult.ToList();
@@ -65,14 +55,15 @@ public class EventTypesStorage : IEventTypesStorage
         schema.SetGeneration(type.Generation);
 
         var eventSchema = new EventTypeSchema(type, schema);
-        if (!_schemasByTypeAndGeneration.ContainsKey(type.Id))
+        if (!_schemasByTypeAndGeneration.TryGetValue(type.Id, out var value))
         {
-            _schemasByTypeAndGeneration[type.Id] = new();
+            value = [];
+            _schemasByTypeAndGeneration[type.Id] = value;
         }
 
         eventSchema.Schema.ResetFlattenedProperties();
 
-        if (_schemasByTypeAndGeneration[type.Id].TryGetValue(type.Generation, out var existingSchema))
+        if (value.TryGetValue(type.Generation, out var existingSchema))
         {
             existingSchema.Schema.ResetFlattenedProperties();
             if (existingSchema.Schema.ToJson() == schema.ToJson())
@@ -82,10 +73,10 @@ public class EventTypesStorage : IEventTypesStorage
         }
 
         schema.EnsureFlattenedProperties();
-        _logger.Registering(friendlyName, type.Id, type.Generation, _eventStore);
+        logger.Registering(friendlyName, type.Id, type.Generation, eventStore);
 
         var mongoEventSchema = eventSchema.ToMongoDB();
-        _schemasByTypeAndGeneration[type.Id][type.Generation] = eventSchema;
+        value[type.Generation] = eventSchema;
         await GetCollection().ReplaceOneAsync(
             _ => _.Id == mongoEventSchema.Id,
             mongoEventSchema,
@@ -131,7 +122,7 @@ public class EventTypesStorage : IEventTypesStorage
         if (schemas.Count == 0)
         {
             throw new MissingEventSchemaForEventType(
-                _eventStore,
+                eventStore,
                 type,
                 generation);
         }
@@ -154,7 +145,7 @@ public class EventTypesStorage : IEventTypesStorage
         return schemas.Count == 1;
     }
 
-    IMongoCollection<EventSchemaMongoDB> GetCollection() => _sharedDatabase.GetCollection<EventSchemaMongoDB>(WellKnownCollectionNames.Schemas);
+    IMongoCollection<EventSchemaMongoDB> GetCollection() => sharedDatabase.GetCollection<EventSchemaMongoDB>(WellKnownCollectionNames.Schemas);
 
     FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(EventTypeId type, EventGeneration? generation) => Builders<EventSchemaMongoDB>.Filter.And(
                    Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Value),

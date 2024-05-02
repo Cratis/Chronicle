@@ -9,9 +9,9 @@ namespace Cratis.Kernel.Grains.Jobs;
 /// Represents the key for a job step.
 /// </summary>
 /// <param name="JobId">The job the step is for.</param>
-/// <param name="MicroserviceId">The Microservice the job step is for.</param>
-/// <param name="TenantId">The tenant the job step is for.</param>
-public record JobStepKey(JobId JobId, MicroserviceId MicroserviceId, TenantId TenantId)
+/// <param name="EventStore">The event store the job step is for.</param>
+/// <param name="Namespace">The namespace within the event store the job step is for.</param>
+public record JobStepKey(JobId JobId, EventStoreName EventStore, EventStoreNamespaceName Namespace)
 {
     /// <summary>
     /// Implicitly convert from string to <see cref="JobKey"/>.
@@ -26,7 +26,7 @@ public record JobStepKey(JobId JobId, MicroserviceId MicroserviceId, TenantId Te
     public static implicit operator string(JobStepKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{JobId}+{MicroserviceId}+{TenantId}";
+    public override string ToString() => $"{JobId}+{EventStore}+{Namespace}";
 
     /// <summary>
     /// Parse a key from a string.
@@ -37,8 +37,8 @@ public record JobStepKey(JobId JobId, MicroserviceId MicroserviceId, TenantId Te
     {
         var elements = key.Split('+');
         var jobId = (JobId)elements[0];
-        var microserviceId = (MicroserviceId)elements[1];
-        var tenantId = (TenantId)elements[2];
-        return new(jobId, microserviceId, tenantId);
+        var eventStore = (EventStoreName)elements[1];
+        var @namespace = (EventStoreNamespaceName)elements[2];
+        return new(jobId, eventStore, @namespace);
     }
 }

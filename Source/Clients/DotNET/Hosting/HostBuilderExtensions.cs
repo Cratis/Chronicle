@@ -12,7 +12,7 @@ namespace Microsoft.Extensions.Hosting;
 public static class HostBuilderExtensions
 {
     /// <summary>
-    /// Configures the <see cref="IClientBuilder"/> for a non-microservice oriented scenario.
+    /// Configures the usage of Cratis for the app.
     /// </summary>
     /// <param name="hostBuilder"><see cref="IHostBuilder"/> to build on.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>

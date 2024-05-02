@@ -16,7 +16,7 @@ namespace Cratis.Kernel.Contracts.EventSequences;
 public class AppendRequest
 {
     /// <summary>
-    /// Gets or sets the microservice identifier.
+    /// Gets or sets the event store name.
     /// </summary>
     [ProtoMember(1)]
     public string EventStoreName { get; set; }

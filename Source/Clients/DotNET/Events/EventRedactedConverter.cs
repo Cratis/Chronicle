@@ -9,24 +9,17 @@ namespace Cratis.Events;
 /// <summary>
 /// Represents a <see cref="JsonConverter"/> for <see cref="EventRedacted"/>.
 /// </summary>
-public class EventRedactedConverter : JsonConverter<EventRedacted>
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventRedactedConverter"/> class.
+/// </remarks>
+/// <param name="eventTypes"><see creF="IEventTypes"/> for event type resolution.</param>
+public class EventRedactedConverter(IEventTypes eventTypes) : JsonConverter<EventRedacted>
 {
-    readonly IEventTypes _eventTypes;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventRedactedConverter"/> class.
-    /// </summary>
-    /// <param name="eventTypes"><see creF="IEventTypes"/> for event type resolution.</param>
-    public EventRedactedConverter(IEventTypes eventTypes)
-    {
-        _eventTypes = eventTypes;
-    }
-
     /// <inheritdoc/>
     public override EventRedacted? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var content = JsonSerializer.Deserialize<RedactionEventContent>(ref reader, options)!;
-        var eventType = _eventTypes.GetClrTypeFor(content.OriginalEventType);
+        var eventType = eventTypes.GetClrTypeFor(content.OriginalEventType);
 
         return new EventRedacted(
             content.Reason,
@@ -42,7 +35,7 @@ public class EventRedactedConverter : JsonConverter<EventRedacted>
     {
         var content = new RedactionEventContent(
              value.Reason,
-             _eventTypes.GetEventTypeFor(value.OriginalEventType).Id,
+             eventTypes.GetEventTypeFor(value.OriginalEventType).Id,
              value.Occurred,
              value.CorrelationId,
              value.Causation,

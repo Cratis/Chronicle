@@ -8,6 +8,4 @@ namespace Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Defines a client for <see cref="IObserverService"/>.
 /// </summary>
-public interface IObserverServiceClient : IGrainServiceClient<IObserverService>, IObserverService
-{
-}
+public interface IObserverServiceClient : IGrainServiceClient<IObserverService>, IObserverService;

@@ -43,7 +43,7 @@ internal static class JobScopes
         logger.BeginScope(new Dictionary<string, object>
         {
             ["JobId"] = jobId,
-            ["MicroserviceId"] = key.MicroserviceId,
-            ["TenantId"] = key.TenantId
+            ["EventStore"] = key.EventStore,
+            ["Namespace"] = key.Namespace
         });
 }

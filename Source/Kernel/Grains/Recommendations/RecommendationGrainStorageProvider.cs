@@ -11,19 +11,12 @@ namespace Cratis.Kernel.Grains.Recommendations;
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for <see cref="RecommendationState"/>.
 /// </summary>
-public class RecommendationGrainStorageProvider : IGrainStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="RecommendationGrainStorageProvider"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+public class RecommendationGrainStorageProvider(IStorage storage) : IGrainStorage
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RecommendationGrainStorageProvider"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public RecommendationGrainStorageProvider(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <inheritdoc/>
     public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
@@ -31,7 +24,7 @@ public class RecommendationGrainStorageProvider : IGrainStorage
         {
             var key = (RecommendationKey)keyExtension!;
 
-            var recommendationStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Recommendations;
+            var recommendationStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Recommendations;
             await recommendationStorage.Remove(recommendationId);
         }
     }
@@ -44,7 +37,7 @@ public class RecommendationGrainStorageProvider : IGrainStorage
             var actualGrainState = (grainState as IGrainState<RecommendationState>)!;
             var key = (RecommendationKey)keyExtension!;
 
-            var recommendationStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Recommendations;
+            var recommendationStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Recommendations;
             actualGrainState.State = await recommendationStorage.Get(recommendationId) ?? new RecommendationState();
         }
     }
@@ -57,7 +50,7 @@ public class RecommendationGrainStorageProvider : IGrainStorage
             var actualGrainState = (grainState as IGrainState<RecommendationState>)!;
             var key = (RecommendationKey)keyExtension!;
 
-            var recommendationStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Recommendations;
+            var recommendationStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Recommendations;
             actualGrainState.State.Id = recommendationId;
             await recommendationStorage.Save(recommendationId, actualGrainState.State);
         }

@@ -29,9 +29,9 @@ public class ClientObserverSubscriber(
     IObserverMediator observerMediator,
     ILogger<ClientObserverSubscriber> logger) : Grain, IClientObserverSubscriber
 {
-    MicroserviceId _microserviceId = MicroserviceId.Unspecified;
+    EventStoreName _eventStore = EventStoreName.NotSet;
     ObserverId _observerId = ObserverId.Unspecified;
-    TenantId _tenantId = TenantId.NotSet;
+    EventStoreNamespaceName _namespace = EventStoreNamespaceName.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
 
     /// <inheritdoc/>
@@ -39,9 +39,9 @@ public class ClientObserverSubscriber(
     {
         var id = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverSubscriberKey.Parse(keyAsString);
-        _microserviceId = key.MicroserviceId;
+        _eventStore = key.EventStore;
         _observerId = id;
-        _tenantId = key.TenantId;
+        _namespace = key.Namespace;
         _eventSequenceId = key.EventSequenceId;
         return Task.CompletedTask;
     }
@@ -53,8 +53,8 @@ public class ClientObserverSubscriber(
         {
             logger.EventReceived(
                 _observerId,
-                _microserviceId,
-                _tenantId,
+                _eventStore,
+                _namespace,
                 @event.Metadata.Type.Id,
                 _eventSequenceId,
                 @event.Context.SequenceNumber);

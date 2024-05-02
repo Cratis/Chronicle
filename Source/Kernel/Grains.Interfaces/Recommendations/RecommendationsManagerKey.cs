@@ -6,14 +6,14 @@ namespace Cratis.Kernel.Grains.Recommendations;
 /// <summary>
 /// Represents the key for a <see cref="IRecommendationsManager"/>.
 /// </summary>
-/// <param name="MicroserviceId">The Microservice the job is for.</param>
-/// <param name="TenantId">The tenant the job is for.</param>
-public record RecommendationsManagerKey(MicroserviceId MicroserviceId, TenantId TenantId)
+/// <param name="EventStore">The event store the job is for.</param>
+/// <param name="Namespace">The namespace within the event store the job is for.</param>
+public record RecommendationsManagerKey(EventStoreName EventStore, EventStoreNamespaceName Namespace)
 {
     /// <summary>
     /// Represents an unset key.
     /// </summary>
-    public static readonly RecommendationsManagerKey NotSet = new(MicroserviceId.Unspecified, TenantId.NotSet);
+    public static readonly RecommendationsManagerKey NotSet = new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet);
 
     /// <summary>
     /// Implicitly convert from string to <see cref="RecommendationsManagerKey"/>.
@@ -28,7 +28,7 @@ public record RecommendationsManagerKey(MicroserviceId MicroserviceId, TenantId 
     public static implicit operator string(RecommendationsManagerKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{MicroserviceId}+{TenantId}";
+    public override string ToString() => $"{EventStore}+{Namespace}";
 
     /// <summary>
     /// Parse a key from a string.
@@ -38,8 +38,8 @@ public record RecommendationsManagerKey(MicroserviceId MicroserviceId, TenantId 
     public static RecommendationsManagerKey Parse(string key)
     {
         var elements = key.Split('+');
-        var microserviceId = (MicroserviceId)elements[0];
-        var tenantId = (TenantId)elements[1];
-        return new(microserviceId, tenantId);
+        var eventStore = (EventStoreName)elements[0];
+        var @namespace = (EventStoreNamespaceName)elements[1];
+        return new(eventStore, @namespace);
     }
 }

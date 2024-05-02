@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Json;
-using Aksio.Types;
 using Cratis.Identities;
+using Cratis.Json;
 using Cratis.Models;
+using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis;
@@ -38,6 +38,21 @@ public class CratisOptions(
     /// Gets the <see cref="CratisUrl"/> to use.
     /// </summary>
     public CratisUrl Url { get; init; } = url;
+
+    /// <summary>
+    /// Gets or sets the software version.
+    /// </summary>
+    public string SoftwareVersion { get; set; } = "0.0.0";
+
+    /// <summary>
+    /// Gets or sets the software commit.
+    /// </summary>
+    public string SoftwareCommit { get; set; } = "[N/A]";
+
+    /// <summary>
+    /// Gets or sets the program identifier.
+    /// </summary>
+    public string ProgramIdentifier { get; set; } = "[N/A]";
 
     /// <summary>
     /// Gets the <see cref="IIdentityProvider"/> to use.

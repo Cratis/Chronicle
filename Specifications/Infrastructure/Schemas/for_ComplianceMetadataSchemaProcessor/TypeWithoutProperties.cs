@@ -3,6 +3,4 @@
 
 namespace Cratis.Schemas.for_ComplianceMetadataSchemaProcessor;
 
-public class TypeWithoutProperties
-{
-}
+public class TypeWithoutProperties;

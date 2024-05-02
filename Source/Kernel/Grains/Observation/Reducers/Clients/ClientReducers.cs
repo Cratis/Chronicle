@@ -24,25 +24,24 @@ public class ClientReducers(
     public async Task Register(
         ConnectionId connectionId,
         IEnumerable<ReducerDefinition> definitions,
-        IEnumerable<TenantId> tenants)
+        IEnumerable<EventStoreNamespaceName> namespaces)
     {
         logger.RegisterReducers();
 
-        var microserviceId = (MicroserviceId)this.GetPrimaryKey();
-
-        var eventStore = kernel.GetEventStore((string)microserviceId);
+        var eventStoreName = (EventStoreName)this.GetPrimaryKeyString();
+        var eventStore = kernel.GetEventStore(eventStoreName);
 
         foreach (var definition in definitions)
         {
             await eventStore.ReducerPipelineDefinitions.Register(definition);
-            foreach (var tenantId in tenants)
+            foreach (var @namespace in namespaces)
             {
                 logger.RegisterReducer(
                     definition.ReducerId,
                     definition.Name,
                     definition.EventSequenceId);
 
-                var key = new ObserverKey(microserviceId, tenantId, definition.EventSequenceId);
+                var key = new ObserverKey(eventStoreName, @namespace, definition.EventSequenceId);
                 var reducer = GrainFactory.GetGrain<IClientReducer>(definition.ReducerId, key);
                 await reducer.Start(definition.Name, connectionId, definition.EventTypes);
             }

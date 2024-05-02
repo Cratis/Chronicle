@@ -20,8 +20,8 @@ public class ReducerReplayHandler(IKernel kernel) : ICanHandleReplayForObserver
     /// <inheritdoc/>
     public async Task BeginReplayFor(ObserverDetails observerDetails)
     {
-        var eventStore = kernel.GetEventStore((string)observerDetails.Key.MicroserviceId);
-        var @namespace = eventStore.GetNamespace(observerDetails.Key.TenantId);
+        var eventStore = kernel.GetEventStore(observerDetails.Key.EventStore);
+        var @namespace = eventStore.GetNamespace(observerDetails.Key.Namespace);
 
         if (await eventStore.ReducerPipelineDefinitions.HasFor(observerDetails.Identifier))
         {
@@ -34,8 +34,8 @@ public class ReducerReplayHandler(IKernel kernel) : ICanHandleReplayForObserver
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails)
     {
-        var eventStore = kernel.GetEventStore((string)observerDetails.Key.MicroserviceId);
-        var @namespace = eventStore.GetNamespace(observerDetails.Key.TenantId);
+        var eventStore = kernel.GetEventStore(observerDetails.Key.EventStore);
+        var @namespace = eventStore.GetNamespace(observerDetails.Key.Namespace);
 
         if (await eventStore.ReducerPipelineDefinitions.HasFor(observerDetails.Identifier))
         {

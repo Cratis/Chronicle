@@ -2,9 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Json;
-using Aksio.Reflection;
-using Aksio.Types;
 using Cratis.Changes;
 using Cratis.Compliance;
 using Cratis.Dynamic;
@@ -24,7 +21,9 @@ using Cratis.Kernel.Storage.Sinks.InMemory;
 using Cratis.Models;
 using Cratis.Projections;
 using Cratis.Properties;
+using Cratis.Reflection;
 using Cratis.Schemas;
+using Cratis.Types;
 
 namespace Cratis.Specifications.Integration;
 

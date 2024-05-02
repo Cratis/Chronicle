@@ -28,7 +28,4 @@ internal static partial class StartupLogMessages
 
     [LoggerMessage(6, LogLevel.Information, "Using Azure storage clustering")]
     internal static partial void UsingAzureStorageClustering(this ILogger<Startup> logger);
-
-    [LoggerMessage(7, LogLevel.Information, "Performing boot procedures")]
-    internal static partial void PerformingBootProcedures(this ILogger<Startup> logger);
 }

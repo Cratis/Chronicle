@@ -4,7 +4,7 @@
 namespace Cratis.Kernel.Grains.EventSequences;
 
 /// <summary>
-/// Defines a system that manages all the event sequences for an event store and tenant.
+/// Defines a system that manages all the event sequences for an event store and namespace.
 /// </summary>
 public interface IEventSequences : IGrainWithIntegerCompoundKey
 {

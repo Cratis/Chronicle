@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.MongoDB;
+using Cratis.MongoDB;
 using MongoDB.Driver;
 using StorageConfiguration = Cratis.Kernel.Configuration.Storage;
 
@@ -30,11 +30,15 @@ public class EventStoreDatabase : IEventStoreDatabase
         IMongoDBClientManager clientManager,
         StorageConfiguration configuration)
     {
-        var url = new MongoUrl(configuration.Microservices.Get((string)eventStore).Shared.Get(WellKnownStorageTypes.EventStore).ConnectionDetails.ToString());
-        var settings = MongoClientSettings.FromUrl(url);
+        var urlBuilder = new MongoUrlBuilder(configuration.ConnectionDetails.ToString())
+        {
+            DatabaseName = eventStore.Value
+        };
+
+        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
         var client = clientManager.GetClientFor(settings);
 
-        _database = client.GetDatabase(url.DatabaseName);
+        _database = client.GetDatabase(eventStore.Value);
         _eventStore = eventStore;
         _clientManager = clientManager;
         _configuration = configuration;

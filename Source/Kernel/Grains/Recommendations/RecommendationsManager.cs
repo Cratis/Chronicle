@@ -9,19 +9,12 @@ namespace Cratis.Kernel.Grains.Recommendations;
 /// <summary>
 /// Represents an implementation of <see cref="IRecommendationsManager"/> that has a result.
 /// </summary>
-public class RecommendationsManager : Grain, IRecommendationsManager
+/// <remarks>
+/// Initializes a new instance of the <see cref="RecommendationsManager"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsManager
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RecommendationsManager"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public RecommendationsManager(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <inheritdoc/>
     public async Task<RecommendationId> Add<TRecommendation, TRequest>(RecommendationDescription description, TRequest request)
         where TRecommendation : IRecommendation<TRequest>
@@ -50,8 +43,8 @@ public class RecommendationsManager : Grain, IRecommendationsManager
     async Task<IRecommendation> GetGrainFor(RecommendationId recommendationId)
     {
         var key = GetRecommendationKey();
-        var recommendationStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Recommendations;
-        var recommendationState = await recommendationStorage.Get(recommendationId) ?? throw new UnknownRecommendation(key.MicroserviceId, key.TenantId, recommendationId);
+        var recommendationStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Recommendations;
+        var recommendationState = await recommendationStorage.Get(recommendationId) ?? throw new UnknownRecommendation(key.EventStore, key.Namespace, recommendationId);
         var recommendationType = (Type)recommendationState.Type;
         return GrainFactory.GetGrain(recommendationType, recommendationId, keyExtension: GetRecommendationKey()).AsReference<IRecommendation>();
     }
@@ -60,6 +53,6 @@ public class RecommendationsManager : Grain, IRecommendationsManager
     {
         this.GetPrimaryKey(out var keyAsString);
         var key = (RecommendationsManagerKey)keyAsString;
-        return new RecommendationKey(key.MicroserviceId, key.TenantId);
+        return new RecommendationKey(key.EventStore, key.Namespace);
     }
 }

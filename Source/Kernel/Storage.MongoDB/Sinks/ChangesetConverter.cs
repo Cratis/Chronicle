@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Reflection;
 using Cratis.Changes;
 using Cratis.Events;
 using Cratis.Kernel.Keys;
 using Cratis.Models;
 using Cratis.Properties;
+using Cratis.Reflection;
 using Cratis.Schemas;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -18,32 +18,19 @@ namespace Cratis.Kernel.Storage.MongoDB.Sinks;
 /// <summary>
 /// Represents an implementation of <see cref="IChangesetConverter"/>.
 /// </summary>
-public class ChangesetConverter : IChangesetConverter
+/// <remarks>
+/// Initializes a new instance of the <see cref="ChangesetConverter"/> class.
+/// </remarks>
+/// <param name="model">The <see cref="Model"/> the sink is for.</param>
+/// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
+/// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+public class ChangesetConverter(
+    Model model,
+    IMongoDBConverter converter,
+    ISinkCollections collections,
+    IExpandoObjectConverter expandoObjectConverter) : IChangesetConverter
 {
-    readonly Model _model;
-    readonly IMongoDBConverter _converter;
-    readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly ISinkCollections _collections;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ChangesetConverter"/> class.
-    /// </summary>
-    /// <param name="model">The <see cref="Model"/> the sink is for.</param>
-    /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
-    /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
-    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
-    public ChangesetConverter(
-        Model model,
-        IMongoDBConverter converter,
-        ISinkCollections collections,
-        IExpandoObjectConverter expandoObjectConverter)
-    {
-        _model = model;
-        _converter = converter;
-        _collections = collections;
-        _expandoObjectConverter = expandoObjectConverter;
-    }
-
     /// <inheritdoc/>
     public async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isReplaying)
     {
@@ -105,10 +92,10 @@ public class ChangesetConverter : IChangesetConverter
 
         foreach (var propertyDifference in propertiesChanged.Differences.Where(_ => !_.PropertyPath.IsMongoDBKey()).ToArray())
         {
-            var (property, arrayFilters) = _converter.ToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
+            var (property, arrayFilters) = converter.ToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
             allArrayFilters.AddRange(arrayFilters);
 
-            var value = _converter.ToBsonValue(propertyDifference.Changed, propertyDifference.PropertyPath);
+            var value = converter.ToBsonValue(propertyDifference.Changed, propertyDifference.PropertyPath);
 
             if (updateBuilder != default)
             {
@@ -134,8 +121,8 @@ public class ChangesetConverter : IChangesetConverter
         }
         else
         {
-            var schema = _model.Schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
-            bsonValue = _expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
+            var schema = model.Schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
+            bsonValue = expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
         }
 
         var segments = childAdded.ChildrenProperty.Segments.ToArray();
@@ -147,7 +134,7 @@ public class ChangesetConverter : IChangesetConverter
 
         childrenProperty += segments[^1].Value;
         var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
-        var (property, arrayFilters) = _converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
+        var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
         arrayFiltersForDocument.AddRange(arrayFilters);
 
         if (updateBuilder is not null)
@@ -162,14 +149,14 @@ public class ChangesetConverter : IChangesetConverter
 
     void BuildJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, bool isReplaying, List<Task> joinTasks, Joined joined)
     {
-        var (property, _) = _converter.ToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
+        var (property, _) = converter.ToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
 
         UpdateDefinition<BsonDocument>? joinUpdateBuilder = default;
         var hasJoinChanges = false;
 
         var filter = Builders<BsonDocument>.Filter.Eq(property, joined.Key);
 
-        var collection = _collections.GetCollection();
+        var collection = collections.GetCollection();
 
         var joinArrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
         ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, isReplaying).Wait();

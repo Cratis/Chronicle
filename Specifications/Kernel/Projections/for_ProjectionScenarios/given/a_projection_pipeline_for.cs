@@ -17,7 +17,7 @@ using Cratis.Kernel.Storage.Sinks;
 using Cratis.Kernel.Storage.Sinks.InMemory;
 using Cratis.Models;
 using Cratis.Schemas;
-using Aksio.Json;
+using Cratis.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Events.Projections.for_ProjectionScenarios.given;

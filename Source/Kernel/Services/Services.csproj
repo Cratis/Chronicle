@@ -7,12 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aksio.Fundamentals" />
+      <ProjectReference Include="..\Contracts\Contracts.csproj" />
+      <ProjectReference Include="..\Grains.Interfaces\Grains.Interfaces.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Contracts\Contracts.csproj" />
-      <ProjectReference Include="..\Grains.Interfaces\Grains.Interfaces.csproj" />
+      <PackageReference Include="System.Reactive" />
     </ItemGroup>
 
 </Project>

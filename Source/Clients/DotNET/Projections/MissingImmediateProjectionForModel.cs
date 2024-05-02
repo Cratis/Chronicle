@@ -6,13 +6,9 @@ namespace Cratis.Projections;
 /// <summary>
 /// Exception that gets thrown when an immediate projection is missing for a model type.
 /// </summary>
-public class MissingImmediateProjectionForModel : Exception
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MissingImmediateProjectionForModel"/>.
-    /// </summary>
-    /// <param name="modelType">Type of model.</param>
-    public MissingImmediateProjectionForModel(Type modelType) : base($"Missing immediate projection definition for model of type '{modelType.FullName}'. Implement one by implementing the interface IImmediateProjectionFor<{modelType.FullName}>.")
-    {
-    }
-}
+/// <remarks>
+/// Initializes a new instance of the <see cref="MissingImmediateProjectionForModel"/>.
+/// </remarks>
+/// <param name="modelType">Type of model.</param>
+public class MissingImmediateProjectionForModel(Type modelType)
+    : Exception($"Missing immediate projection definition for model of type '{modelType.FullName}'. Implement one by implementing the interface IImmediateProjectionFor<{modelType.FullName}>.");

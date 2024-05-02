@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Observation;
-
 namespace Cratis.Observation;
 
 /// <summary>
@@ -28,17 +26,4 @@ public interface IObservers
     /// <param name="id"><see cref="ObserverId"/> to get for.</param>
     /// <returns><see cref="ObserverHandler"/> instance.</returns>
     ObserverHandler GetHandlerById(ObserverId id);
-
-    /// <summary>
-    /// Get all observers for specific event types.
-    /// </summary>
-    /// <param name="eventTypes">Collection of types representing events to get for.</param>
-    /// <returns>Collection of <see cref="ObserverInformation"/> holding all information about the observers.</returns>
-    Task<IEnumerable<ObserverInformation>> GetObserversForEventTypes(IEnumerable<Type> eventTypes);
-
-    /// <summary>
-    /// Get all observers.
-    /// </summary>
-    /// <returns>Collection of <see cref="ObserverInformation"/> holding all information about the observers.</returns>
-    Task<IEnumerable<ObserverInformation>> GetAllObservers();
 }

@@ -12,27 +12,20 @@ namespace Cratis.Kernel.Storage.MongoDB;
 /// <summary>
 /// Represents an implementation of <see cref="IEventCursor"/> for handling events from event sequence.
 /// </summary>
-public class EventCursor : IEventCursor
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventCursor"/> class.
+/// </remarks>
+/// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
+/// <param name="innerCursor">The underlying MongoDB cursor.</param>
+/// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+public class EventCursor(
+    IEventConverter converter,
+    IAsyncCursor<Event>? innerCursor,
+    CancellationToken cancellationToken = default) : IEventCursor
 {
-    readonly IEventConverter _converter;
-    readonly IAsyncCursor<Event>? _innerCursor;
-    readonly CancellationToken _cancellationToken;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventCursor"/> class.
-    /// </summary>
-    /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
-    /// <param name="innerCursor">The underlying MongoDB cursor.</param>
-    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
-    public EventCursor(
-        IEventConverter converter,
-        IAsyncCursor<Event>? innerCursor,
-        CancellationToken cancellationToken = default)
-    {
-        _converter = converter;
-        _innerCursor = innerCursor;
-        _cancellationToken = cancellationToken;
-    }
+    readonly IEventConverter _converter = converter;
+    readonly IAsyncCursor<Event>? _innerCursor = innerCursor;
+    readonly CancellationToken _cancellationToken = cancellationToken;
 
     /// <inheritdoc/>
     public IEnumerable<AppendedEvent> Current { get; private set; } = Array.Empty<AppendedEvent>();

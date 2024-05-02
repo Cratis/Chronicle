@@ -6,6 +6,4 @@ namespace Cratis.EventSequences;
 /// <summary>
 /// Defines a specialized version of an <see cref="IEventSequence"/> that is for the event log.
 /// </summary>
-public interface IEventLog : IEventSequence
-{
-}
+public interface IEventLog : IEventSequence;

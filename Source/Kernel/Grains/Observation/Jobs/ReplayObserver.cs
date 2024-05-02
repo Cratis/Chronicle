@@ -51,7 +51,7 @@ public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, Repla
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverRequest request)
     {
-        var observerKeyIndexes = storage.GetEventStore((string)JobKey.MicroserviceId).GetNamespace(JobKey.TenantId).ObserverKeyIndexes;
+        var observerKeyIndexes = storage.GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
         var index = await observerKeyIndexes.GetFor(
             request.ObserverId,
             request.ObserverKey);

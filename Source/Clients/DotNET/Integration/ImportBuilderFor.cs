@@ -10,19 +10,12 @@ namespace Cratis.Integration;
 /// </summary>
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TExternalModel">The type of the external model.</typeparam>
-public class ImportBuilderFor<TModel, TExternalModel> : IImportBuilderFor<TModel, TExternalModel>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ImportBuilderFor{TModel, TExternalModel}"/> class.
+/// </remarks>
+/// <param name="importContexts">Subject to build for.</param>
+public class ImportBuilderFor<TModel, TExternalModel>(Subject<ImportContext<TModel, TExternalModel>> importContexts) : IImportBuilderFor<TModel, TExternalModel>
 {
-    readonly Subject<ImportContext<TModel, TExternalModel>> _importContexts;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ImportBuilderFor{TModel, TExternalModel}"/> class.
-    /// </summary>
-    /// <param name="importContexts">Subject to build for.</param>
-    public ImportBuilderFor(Subject<ImportContext<TModel, TExternalModel>> importContexts)
-    {
-        _importContexts = importContexts;
-    }
-
     /// <inheritdoc/>
-    public IDisposable Subscribe(IObserver<ImportContext<TModel, TExternalModel>> observer) => _importContexts.Subscribe(observer);
+    public IDisposable Subscribe(IObserver<ImportContext<TModel, TExternalModel>> observer) => importContexts.Subscribe(observer);
 }

@@ -4,12 +4,12 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
-using Aksio.Collections;
-using Aksio.Reflection;
+using Cratis.Collections;
 using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.Kernel.Contracts.Projections;
 using Cratis.Models;
+using Cratis.Reflection;
 using Cratis.Schemas;
 
 namespace Cratis.Projections;
@@ -25,9 +25,8 @@ public class ImmediateProjections : IImmediateProjections
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
     readonly IJsonSchemaGenerator _schemaGenerator;
-    readonly IExecutionContextManager _executionContextManager;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly List<ProjectionDefinition> _definitions = new();
+    readonly List<ProjectionDefinition> _definitions = [];
     readonly IDictionary<Type, ProjectionDefinition> _definitionsByModelType = new Dictionary<Type, ProjectionDefinition>();
 
     /// <summary>
@@ -40,7 +39,6 @@ public class ImmediateProjections : IImmediateProjections
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating model schema.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with the execution context.</param>
     public ImmediateProjections(
         IModelNameResolver modelNameResolver,
         IClientArtifactsProvider clientArtifacts,
@@ -48,8 +46,7 @@ public class ImmediateProjections : IImmediateProjections
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
         IJsonSchemaGenerator schemaGenerator,
-        JsonSerializerOptions jsonSerializerOptions,
-        IExecutionContextManager executionContextManager)
+        JsonSerializerOptions jsonSerializerOptions)
     {
         _modelNameResolver = modelNameResolver;
         _clientArtifacts = clientArtifacts;
@@ -58,7 +55,6 @@ public class ImmediateProjections : IImmediateProjections
         _eventSerializer = eventSerializer;
         _schemaGenerator = schemaGenerator;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _executionContextManager = executionContextManager;
 
         _clientArtifacts.ImmediateProjections.ForEach(_ =>
         {
@@ -167,12 +163,11 @@ public class ImmediateProjections : IImmediateProjections
             EventSequenceId.Log,
             modelKey);
 
-        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}";
-        if (correlationId is not null)
-        {
-            route = $"{route}/session/{correlationId}";
-        }
-
+        // var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}";
+        // if (correlationId is not null)
+        // {
+        //     route = $"{route}/session/{correlationId}";
+        // }
         // var result = await _connection.PerformCommand(route, immediateProjection);
         // var element = (JsonElement)result.Response!;
         // return element.Deserialize<ImmediateProjectionResultRaw>(_jsonSerializerOptions)!;

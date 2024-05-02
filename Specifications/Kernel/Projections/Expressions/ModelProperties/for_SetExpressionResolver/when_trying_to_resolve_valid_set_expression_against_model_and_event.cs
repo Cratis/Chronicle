@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.EventSequences;
 using Cratis.Kernel.Projections.Expressions.EventValues;
 using Cratis.Properties;
-using Aksio.Strings;
+using Cratis.Strings;
 using NJsonSchema;
 
 namespace Cratis.Kernel.Projections.Expressions.ModelProperties.for_SetExpressionResolver;

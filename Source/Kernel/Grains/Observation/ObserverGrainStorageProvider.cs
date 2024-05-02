@@ -28,7 +28,7 @@ public class ObserverGrainStorageProvider(IStorage storage) : IGrainStorage
         var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var observers = storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).Observers;
+        var observers = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).Observers;
         actualGrainState.State = await observers.GetState(observerId, observerKey);
     }
 
@@ -39,7 +39,7 @@ public class ObserverGrainStorageProvider(IStorage storage) : IGrainStorage
         var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
-        var observers = storage.GetEventStore((string)observerKey.MicroserviceId).GetNamespace(observerKey.TenantId).Observers;
+        var observers = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).Observers;
         await observers.SaveState(observerId, observerKey, actualGrainState.State);
     }
 }

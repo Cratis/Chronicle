@@ -15,36 +15,25 @@ namespace Cratis.Kernel.Storage.MongoDB.Reminders;
 /// <summary>
 /// Represents an implementation of <see cref="IReminderTable"/>.
 /// </summary>
-public class ReminderTable : IReminderTable
+/// <remarks>
+/// Initializes a new instance of the <see cref="ReminderTable"/> class.
+/// </remarks>
+/// <param name="database"><see cref="IDatabase"/> to keep state in.</param>
+/// <param name="clusterOptions">The <see cref="ClusterOptions"/>.</param>
+/// <param name="orleansJsonSerializerOptions">The Orleans Json serializer options.</param>
+/// <param name="logger">Logger for logging.</param>
+public class ReminderTable(
+    IDatabase database,
+    IOptions<ClusterOptions> clusterOptions,
+    IOptions<OrleansJsonSerializerOptions> orleansJsonSerializerOptions,
+    ILogger<ReminderTable> logger) : IReminderTable
 {
     const string ETagProperty = "eTag";
     const string GrainKeyProperty = "grainKey";
     const string GrainHashProperty = "grainHash";
     const string ServiceIdProperty = "serviceId";
 
-    readonly JsonSerializerSettings _serializerSettings;
-    readonly IDatabase _database;
-    readonly IOptions<ClusterOptions> _clusterOptions;
-    readonly ILogger<ReminderTable> _logger;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReminderTable"/> class.
-    /// </summary>
-    /// <param name="database"><see cref="IDatabase"/> to keep state in.</param>
-    /// <param name="clusterOptions">The <see cref="ClusterOptions"/>.</param>
-    /// <param name="orleansJsonSerializerOptions">The Orleans Json serializer options.</param>
-    /// <param name="logger">Logger for logging.</param>
-    public ReminderTable(
-        IDatabase database,
-        IOptions<ClusterOptions> clusterOptions,
-        IOptions<OrleansJsonSerializerOptions> orleansJsonSerializerOptions,
-        ILogger<ReminderTable> logger)
-    {
-        _serializerSettings = orleansJsonSerializerOptions.Value.JsonSerializerSettings;
-        _database = database;
-        _clusterOptions = clusterOptions;
-        _logger = logger;
-    }
+    readonly JsonSerializerSettings _serializerSettings = orleansJsonSerializerOptions.Value.JsonSerializerSettings;
 
     /// <inheritdoc/>
     public Task Init() => Task.CompletedTask;
@@ -55,7 +44,7 @@ public class ReminderTable : IReminderTable
         var key = GetKeyFrom(grainId, reminderName);
         var filter = GetKeyFilterFor(key);
 
-        _logger.ReadingSpecificReminderForGrain(grainId.GetGuidKey().ToString(), reminderName);
+        logger.ReadingSpecificReminderForGrain(grainId.GetGuidKey().ToString(), reminderName);
 
         var result = await GetCollection().FindAsync(filter);
         var entries = result.ToList();
@@ -66,10 +55,10 @@ public class ReminderTable : IReminderTable
     /// <inheritdoc/>
     public async Task<ReminderTableData> ReadRows(GrainId grainId)
     {
-        _logger.ReadingAllRemindersForGrain(grainId.GetGuidKey().ToString());
+        logger.ReadingAllRemindersForGrain(grainId.GetGuidKey().ToString());
 
         var filter = Builders<BsonDocument>.Filter.And(
-            Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(ServiceIdProperty), _clusterOptions.Value.ServiceId),
+            Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(ServiceIdProperty), clusterOptions.Value.ServiceId),
             Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(GrainKeyProperty), grainId.GetGuidKey().ToString()));
 
         var result = await GetCollection().FindAsync(filter);
@@ -80,10 +69,10 @@ public class ReminderTable : IReminderTable
     /// <inheritdoc/>
     public async Task<ReminderTableData> ReadRows(uint begin, uint end)
     {
-        _logger.ReadingRemindersInRange(begin, end);
+        logger.ReadingRemindersInRange(begin, end);
 
         var filter = Builders<BsonDocument>.Filter.And(
-            Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(ServiceIdProperty), _clusterOptions.Value.ServiceId),
+            Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(ServiceIdProperty), clusterOptions.Value.ServiceId),
             Builders<BsonDocument>.Filter.Gt(new StringFieldDefinition<BsonDocument, long>(GrainHashProperty), begin),
             Builders<BsonDocument>.Filter.Lte(new StringFieldDefinition<BsonDocument, long>(GrainHashProperty), end));
 
@@ -99,17 +88,17 @@ public class ReminderTable : IReminderTable
         try
         {
             var filter = Builders<BsonDocument>.Filter.And(
-                Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(ServiceIdProperty), _clusterOptions.Value.ServiceId),
+                Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(ServiceIdProperty), clusterOptions.Value.ServiceId),
                 GetKeyFilterFor(key),
                 Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(ETagProperty), eTag));
-            _logger.Removing(key);
+            logger.Removing(key);
 
             var result = await GetCollection().DeleteOneAsync(filter);
             return result.DeletedCount == 1;
         }
         catch (Exception ex)
         {
-            _logger.FailedRemoving(key, ex);
+            logger.FailedRemoving(key, ex);
             return false;
         }
     }
@@ -131,16 +120,16 @@ public class ReminderTable : IReminderTable
             bson[ETagProperty] = "1"; // TODO: What do we do with ETag ??
             bson[GrainKeyProperty] = entry.GrainId.GetGuidKey().ToString();
             bson[GrainHashProperty] = hash;
-            bson[ServiceIdProperty] = _clusterOptions.Value.ServiceId;
+            bson[ServiceIdProperty] = clusterOptions.Value.ServiceId;
 
-            _logger.Upserting(key);
+            logger.Upserting(key);
 
             await GetCollection().ReplaceOneAsync(filter, bson, new ReplaceOptions { IsUpsert = true });
             return "Reminder successfully upserted";
         }
         catch (Exception ex)
         {
-            _logger.FailedUpserting(key, ex);
+            logger.FailedUpserting(key, ex);
             return null!;
         }
     }
@@ -153,7 +142,7 @@ public class ReminderTable : IReminderTable
         return JsonConvert.DeserializeObject<ReminderEntry>(json, _serializerSettings)!;
     }
 
-    IMongoCollection<BsonDocument> GetCollection() => _database.GetCollection<BsonDocument>(WellKnownCollectionNames.Reminders);
+    IMongoCollection<BsonDocument> GetCollection() => database.GetCollection<BsonDocument>(WellKnownCollectionNames.Reminders);
 
     FilterDefinition<BsonDocument> GetKeyFilterFor(string key) => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>("_id"), key);
 

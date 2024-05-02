@@ -9,7 +9,7 @@ public class and_there_is_metadata_and_details : given.a_provider
 
     [PII]
     [ComplianceDetails(details)]
-    class MyType { }
+    class MyType;
 
     ComplianceMetadata result;
 

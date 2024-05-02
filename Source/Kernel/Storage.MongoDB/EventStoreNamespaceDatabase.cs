@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.MongoDB;
 using Cratis.EventSequences;
 using Cratis.Kernel.Storage.Observation;
+using Cratis.MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -15,13 +15,13 @@ namespace Cratis.Kernel.Storage.MongoDB;
 public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 {
     readonly IMongoDatabase _database;
-    readonly HashSet<EventSequenceId> _indexedEventSequences = new();
+    readonly HashSet<EventSequenceId> _indexedEventSequences = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreNamespaceDatabase"/> class.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the database is for.</param>
-    /// <param name="namespace"><see cref="TenantId"/> the database is for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the database is for.</param>
     /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
     /// <param name="configuration"><see cref="Kernel.Configuration.Storage"/> configuration.</param>
     public EventStoreNamespaceDatabase(
@@ -30,16 +30,18 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         IMongoDBClientManager clientManager,
         Kernel.Configuration.Storage configuration)
     {
-        var storageTypes = configuration.Microservices
-                                .Get((string)eventStore).Tenants
-                                .Get((TenantId)(string)@namespace);
-        var eventStoreForTenant = storageTypes.Get(WellKnownStorageTypes.EventStore);
-        var url = new MongoUrl(eventStoreForTenant.ConnectionDetails.ToString());
-        var settings = MongoClientSettings.FromUrl(url);
+        var databaseName = $"{eventStore}-{@namespace}";
+
+        var urlBuilder = new MongoUrlBuilder(configuration.ConnectionDetails.ToString())
+        {
+            DatabaseName = databaseName
+        };
+
+        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
 
         // settings.ReadPreference = ReadPreference.SecondaryPreferred;
         var client = clientManager.GetClientFor(settings);
-        _database = client.GetDatabase(url.DatabaseName);
+        _database = client.GetDatabase(databaseName);
     }
 
     /// <inheritdoc/>

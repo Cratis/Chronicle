@@ -9,6 +9,4 @@ namespace Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Defines a step in the <see cref="IConsolidateStateForObservers"/> job.
 /// </summary>
-public interface IConsolidateStateForObserver : IJobStep<ObserverIdAndKey, object>
-{
-}
+public interface IConsolidateStateForObserver : IJobStep<ObserverIdAndKey, object>;

@@ -8,6 +8,4 @@ namespace Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Defines the job for consolidating observer state.
 /// </summary>
-public interface IConsolidateStateForObservers : IJob<ConsolidateStateForObserveRequest>
-{
-}
+public interface IConsolidateStateForObservers : IJob<ConsolidateStateForObserveRequest>;

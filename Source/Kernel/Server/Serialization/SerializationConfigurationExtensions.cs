@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Json;
 using Cratis.Json;
 using Cratis.Kernel.EventSequences;
 using Cratis.Kernel.Grains.Observation;
@@ -48,7 +47,7 @@ public static class SerializationConfigurationExtensions
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<JobStepStateJsonConverter, JobStepState>());
 
         services.AddSerializer(serializerBuilder => serializerBuilder.AddJsonSerializer(
-            _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Aksio") ?? false),
+            _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Cratis") ?? false),
             options));
     }
 }

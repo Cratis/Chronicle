@@ -28,14 +28,14 @@ public class Observers(
         _ = this.GetPrimaryKeyLong(out var keyAsString);
         var key = ObserversKey.Parse(keyAsString!);
 
-        var observerStorage = storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Observers;
+        var observerStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Observers;
         var observers = await observerStorage.GetAllObservers();
 
         var observersForConsolidation = new List<ObserverIdAndKey>();
 
         foreach (var observerInfo in observers)
         {
-            var observerKey = new ObserverKey(key.MicroserviceId, key.TenantId, observerInfo.EventSequenceId);
+            var observerKey = new ObserverKey(key.EventStore, key.Namespace, observerInfo.EventSequenceId);
             var observer = grainFactory.GetGrain<IObserver>(observerInfo.ObserverId, keyExtension: observerKey);
             await observer.Ensure();
 
@@ -49,7 +49,7 @@ public class Observers(
 
         if (observersForConsolidation.Count == 0) return;
 
-        var jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(key.MicroserviceId, key.TenantId));
+        var jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(key.EventStore, key.Namespace));
         await jobsManager.Start<IConsolidateStateForObservers, ConsolidateStateForObserveRequest>(
             JobId.New(),
             new ConsolidateStateForObserveRequest(observersForConsolidation));

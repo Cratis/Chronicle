@@ -4,11 +4,11 @@
 using System.Collections;
 using System.Dynamic;
 using System.Text;
-using Aksio.Strings;
 using Cratis.Kernel.Keys;
 using Cratis.Models;
 using Cratis.Properties;
 using Cratis.Schemas;
+using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
@@ -18,28 +18,17 @@ namespace Cratis.Kernel.Storage.MongoDB.Sinks;
 /// <summary>
 /// Represents an implementation of <see cref="IMongoDBConverter"/>.
 /// </summary>
-public class MongoDBConverter : IMongoDBConverter
+/// <remarks>
+/// Initializes a new instance of the <see cref="MongoDBConverter"/> class.
+/// </remarks>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between <see cref="ExpandoObject"/> to <see cref="BsonDocument"/>.</param>
+/// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
+/// <param name="model"><see cref="Model"/> the converter is for.</param>
+public class MongoDBConverter(
+    IExpandoObjectConverter expandoObjectConverter,
+    ITypeFormats typeFormats,
+    Model model) : IMongoDBConverter
 {
-    readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly ITypeFormats _typeFormats;
-    readonly Model _model;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBConverter"/> class.
-    /// </summary>
-    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between <see cref="ExpandoObject"/> to <see cref="BsonDocument"/>.</param>
-    /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
-    /// <param name="model"><see cref="Model"/> the converter is for.</param>
-    public MongoDBConverter(
-        IExpandoObjectConverter expandoObjectConverter,
-        ITypeFormats typeFormats,
-        Model model)
-    {
-        _expandoObjectConverter = expandoObjectConverter;
-        _typeFormats = typeFormats;
-        _model = model;
-    }
-
     /// <inheritdoc/>
     public MongoDBProperty ToMongoDBProperty(PropertyPath propertyPath, ArrayIndexers arrayIndexers)
     {
@@ -93,7 +82,7 @@ public class MongoDBConverter : IMongoDBConverter
     public BsonValue ToBsonValue(Key key)
     {
         var bsonValue = key.Value is ExpandoObject ?
-                _expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, _model.Schema.GetSchemaForPropertyPath("id")) :
+                expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, model.Schema.GetSchemaForPropertyPath("id")) :
                 ToBsonValue(key.Value, "id");
 
         // If the schema does not have the Id property, we assume it is the event source identifier, which is of type string.
@@ -143,7 +132,7 @@ public class MongoDBConverter : IMongoDBConverter
     public BsonValue ToBsonValue(object? input, PropertyPath property)
     {
         BsonValue value = BsonNull.Value;
-        var schemaProperty = _model.Schema.GetSchemaPropertyForPropertyPath(property);
+        var schemaProperty = model.Schema.GetSchemaPropertyForPropertyPath(property);
         if (schemaProperty is not null)
         {
             return ToBsonValue(input, schemaProperty);
@@ -157,15 +146,15 @@ public class MongoDBConverter : IMongoDBConverter
     {
         if (input is null) return BsonNull.Value;
 
-        if (_typeFormats.IsKnown(schemaProperty.Format))
+        if (typeFormats.IsKnown(schemaProperty.Format))
         {
-            var targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
+            var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format);
             return input.ToBsonValue(targetType);
         }
 
         if (input is ExpandoObject expandoObject)
         {
-            return _expandoObjectConverter.ToBsonDocument(expandoObject, schemaProperty.ActualTypeSchema);
+            return expandoObjectConverter.ToBsonDocument(expandoObject, schemaProperty.ActualTypeSchema);
         }
 
         var bsonValue = input.ToBsonValue();
@@ -181,7 +170,7 @@ public class MongoDBConverter : IMongoDBConverter
             {
                 if (item is ExpandoObject itemAsExpandoObject)
                 {
-                    items.Add(_expandoObjectConverter.ToBsonDocument(itemAsExpandoObject, schemaProperty.Item));
+                    items.Add(expandoObjectConverter.ToBsonDocument(itemAsExpandoObject, schemaProperty.Item));
                 }
                 else
                 {

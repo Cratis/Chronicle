@@ -10,31 +10,22 @@ namespace Cratis.Kernel.Grains;
 /// <summary>
 /// Represents an implementation of <see cref="IKernel"/>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Kernel"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+/// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
+/// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [Singleton]
-public class Kernel : IKernel
+public class Kernel(
+    IStorage storage,
+    IServiceProvider serviceProvider,
+    ILoggerFactory loggerFactory) : IKernel
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStore> _eventStores = new();
-    readonly IServiceProvider _serviceProvider;
-    readonly ILoggerFactory _loggerFactory;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Kernel"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
-    /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-    public Kernel(
-        IStorage storage,
-        IServiceProvider serviceProvider,
-        ILoggerFactory loggerFactory)
-    {
-        Storage = storage;
-        _serviceProvider = serviceProvider;
-        _loggerFactory = loggerFactory;
-    }
 
     /// <inheritdoc/>
-    public IStorage Storage { get; }
+    public IStorage Storage { get; } = storage;
 
     /// <inheritdoc/>
     public IEventStore GetEventStore(EventStoreName name)
@@ -44,8 +35,8 @@ public class Kernel : IKernel
             eventStore = new EventStore(
                 name,
                 Storage.GetEventStore(name),
-                _serviceProvider,
-                _loggerFactory);
+                serviceProvider,
+                loggerFactory);
             _eventStores[name] = eventStore;
         }
 

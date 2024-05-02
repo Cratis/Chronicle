@@ -14,7 +14,7 @@ namespace Cratis.Integration;
 [Singleton]
 public class Adapters : IAdapters
 {
-    readonly Dictionary<AdapterKey, object> _artifacts = new();
+    readonly Dictionary<AdapterKey, object> _artifacts = [];
     readonly IClientArtifactsProvider _clientArtifacts;
     readonly IServiceProvider _serviceProvider;
     readonly IAdapterProjectionFactory _adapterProjectionFactory;
@@ -72,7 +72,7 @@ public class Adapters : IAdapters
             var key = new AdapterKey(adapterInterface.GenericTypeArguments[0], adapterInterface.GenericTypeArguments[1]);
             var artifacts = Activator.CreateInstance(adapterArtifactsType, adapterType, _serviceProvider, _adapterProjectionFactory, _adapterMapperFactory);
             var method = adapterArtifactsType.GetMethod(nameof(AdapterArtifacts<object, object>.Initialize), BindingFlags.Public | BindingFlags.Instance);
-            await (method!.Invoke(artifacts, Array.Empty<object>()) as Task)!;
+            await (method!.Invoke(artifacts, []) as Task)!;
 
             var projection = adapterArtifactsType.GetProperty(nameof(AdapterArtifacts<object, object>.Projection))!.GetValue(artifacts);
             var projectionDefinition = projection!.GetType().GetProperty(nameof(IAdapterProjectionFor<object>.Definition))!.GetValue(projection) as ProjectionDefinition;

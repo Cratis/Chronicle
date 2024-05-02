@@ -14,31 +14,21 @@ namespace Cratis.Kernel.Grains.EventSequences.Streaming;
 /// <summary>
 /// Represents an implementation of <see cref="IQueueAdapter"/> for MongoDB event log.
 /// </summary>
-public class EventSequenceQueueAdapter : IQueueAdapter
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
+/// </remarks>
+/// <param name="name">Name of stream.</param>
+/// <param name="mapper"><see cref="IStreamQueueMapper"/> for getting queue identifiers.</param>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+public class EventSequenceQueueAdapter(
+    string name,
+    IStreamQueueMapper mapper,
+    IStorage storage) : IQueueAdapter
 {
-    readonly Dictionary<QueueId, EventSequenceQueueAdapterReceiver> _receivers = new();
-
-    readonly IStreamQueueMapper _mapper;
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
-    /// </summary>
-    /// <param name="name">Name of stream.</param>
-    /// <param name="mapper"><see cref="IStreamQueueMapper"/> for getting queue identifiers.</param>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public EventSequenceQueueAdapter(
-        string name,
-        IStreamQueueMapper mapper,
-        IStorage storage)
-    {
-        Name = name;
-        _mapper = mapper;
-        _storage = storage;
-    }
+    readonly Dictionary<QueueId, EventSequenceQueueAdapterReceiver> _receivers = [];
 
     /// <inheritdoc/>
-    public string Name { get; }
+    public string Name { get; } = name;
 
     /// <inheritdoc/>
     public bool IsRewindable => true;
@@ -52,15 +42,15 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     /// <inheritdoc/>
     public async Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
     {
-        var queueId = _mapper.GetQueueForStream(streamId);
+        var queueId = mapper.GetQueueForStream(streamId);
         var streamNamespace = streamId.GetNamespace();
         CreateReceiverIfNotExists(queueId);
         if (!token.IsWarmUp() && streamNamespace is not null)
         {
             var eventSequenceId = (EventSequenceId)streamId.GetKeyAsString();
             var eventSequenceKey = (EventSequenceKey)streamNamespace;
-            var eventStore = _storage.GetEventStore((string)eventSequenceKey.MicroserviceId);
-            var eventSequenceStorage = eventStore.GetNamespace(eventSequenceKey.TenantId).GetEventSequence(eventSequenceId);
+            var eventStore = storage.GetEventStore(eventSequenceKey.EventStore);
+            var eventSequenceStorage = eventStore.GetNamespace(eventSequenceKey.Namespace).GetEventSequence(eventSequenceId);
 
             events = events.ToArray();
             var appendedEvents = new List<AppendedEvent>();
@@ -88,8 +78,8 @@ public class EventSequenceQueueAdapter : IQueueAdapter
 
                     throw new UnableToAppendToEventSequence(
                         eventSequenceId,
-                        eventSequenceKey.MicroserviceId,
-                        eventSequenceKey.TenantId,
+                        eventSequenceKey.EventStore,
+                        eventSequenceKey.Namespace,
                         appendedEvent.Metadata.SequenceNumber,
                         appendedEvent.Context.EventSourceId,
                         ex);
@@ -100,7 +90,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
         _receivers[queueId].AddAppendedEvent(streamId, events.Cast<AppendedEvent>().ToArray(), requestContext);
     }
 
-    IQueueAdapterReceiver CreateReceiverIfNotExists(QueueId queueId)
+    EventSequenceQueueAdapterReceiver CreateReceiverIfNotExists(QueueId queueId)
     {
         if (_receivers.TryGetValue(queueId, out var receiver)) return receiver;
 

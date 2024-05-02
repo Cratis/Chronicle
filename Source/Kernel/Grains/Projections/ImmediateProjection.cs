@@ -50,8 +50,8 @@ public class ImmediateProjection(
         _projectionId = this.GetPrimaryKey(out var keyAsString);
         _projectionKey = ImmediateProjectionKey.Parse(keyAsString);
         _eventSequenceStorage = storage
-                                    .GetEventStore((string)_projectionKey.MicroserviceId)
-                                    .GetNamespace(_projectionKey.TenantId)
+                                    .GetEventStore(_projectionKey.EventStore)
+                                    .GetNamespace(_projectionKey.Namespace)
                                     .GetEventSequence(_projectionKey.EventSequenceId);
 
         return Task.CompletedTask;
@@ -66,8 +66,8 @@ public class ImmediateProjection(
 
         try
         {
-            var eventStore = kernel.GetEventStore((string)_projectionKey!.MicroserviceId);
-            var @namespace = eventStore.GetNamespace(_projectionKey!.TenantId);
+            var eventStore = kernel.GetEventStore(_projectionKey!.EventStore);
+            var @namespace = eventStore.GetNamespace(_projectionKey!.Namespace);
 
             var projectionChanged = false;
 
@@ -82,7 +82,7 @@ public class ImmediateProjection(
                 fromSequenceNumber = EventSequenceNumber.First;
             }
 
-            var eventSequence = GrainFactory.GetGrain<IEventSequence>(_projectionKey.EventSequenceId, new MicroserviceAndTenant(_projectionKey.MicroserviceId, _projectionKey.TenantId));
+            var eventSequence = GrainFactory.GetGrain<IEventSequence>(_projectionKey.EventSequenceId, new EventStoreAndNamespace(_projectionKey.EventStore, _projectionKey.Namespace));
             var tail = await eventSequence.GetTailSequenceNumberForEventTypes(projection.EventTypes);
             if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null && !projectionChanged)
             {
@@ -132,12 +132,12 @@ public class ImmediateProjection(
     /// <inheritdoc/>
     public async Task<ImmediateProjectionResult> GetCurrentModelInstanceWithAdditionalEventsApplied(IEnumerable<EventToApply> events)
     {
-        var @namespace = kernel.GetEventStore((string)_projectionKey!.MicroserviceId).GetNamespace(_projectionKey!.TenantId);
+        var @namespace = kernel.GetEventStore(_projectionKey!.EventStore).GetNamespace(_projectionKey!.Namespace);
 
         var projection = @namespace.ProjectionManager.Get(_projectionId);
         var affectedProperties = new HashSet<PropertyPath>();
 
-        var eventTypesStorage = storage.GetEventStore((string)_projectionKey!.MicroserviceId).EventTypes;
+        var eventTypesStorage = storage.GetEventStore(_projectionKey!.EventStore).EventTypes;
         var eventsToApplyTasks = events.Select(async _ =>
         {
             var eventSchema = await eventTypesStorage.GetFor(_.EventType.Id, _.EventType.Generation);

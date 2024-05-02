@@ -12,19 +12,12 @@ namespace Cratis.Kernel.Grains.Jobs;
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling job state storage.
 /// </summary>
-public class JobGrainStorageProvider : IGrainStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="JobGrainStorageProvider"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+public class JobGrainStorageProvider(IStorage storage) : IGrainStorage
 {
-    readonly IStorage _storage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JobGrainStorageProvider"/> class.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-    public JobGrainStorageProvider(IStorage storage)
-    {
-        _storage = storage;
-    }
-
     /// <inheritdoc/>
     public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
@@ -33,8 +26,8 @@ public class JobGrainStorageProvider : IGrainStorage
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
             var key = (JobKey)keyExtension!;
-            var jobStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Jobs;
-            var jobStepStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
+            var jobStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Jobs;
+            var jobStepStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).JobSteps;
 
             await jobStepStorage.RemoveAllForJob(jobId);
             await jobStorage.Remove(jobId);
@@ -50,12 +43,12 @@ public class JobGrainStorageProvider : IGrainStorage
         {
             var key = (JobKey)keyExtension!;
 
-            var jobStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Jobs;
+            var jobStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Jobs;
             var state = await jobStorage.Read<T>(jobId);
             if (state is not null)
             {
                 var jobState = (state as JobState)!;
-                var jobStepStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).JobSteps;
+                var jobStepStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).JobSteps;
                 var successfulCount = await jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Succeeded);
                 var failedCount = await jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Failed);
 
@@ -82,7 +75,7 @@ public class JobGrainStorageProvider : IGrainStorage
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
             var key = (JobKey)keyExtension!;
-            var jobStorage = _storage.GetEventStore((string)key.MicroserviceId).GetNamespace(key.TenantId).Jobs;
+            var jobStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Jobs;
             var state = (grainState.State as JobState)!;
             state.Id = jobId;
 

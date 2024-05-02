@@ -15,19 +15,12 @@ namespace Cratis.Specifications;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IEventStoreNamespaceStorage"/>.
 /// </summary>
-public class EventStoreNamespaceStorageForSpecifications : IEventStoreNamespaceStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventStoreNamespaceStorageForSpecifications"/> class.
+/// </remarks>
+/// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> to use.</param>
+public class EventStoreNamespaceStorageForSpecifications(IEventSequenceStorage eventSequenceStorage) : IEventStoreNamespaceStorage
 {
-    readonly IEventSequenceStorage _eventSequenceStorage;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventStoreNamespaceStorageForSpecifications"/> class.
-    /// </summary>
-    /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> to use.</param>
-    public EventStoreNamespaceStorageForSpecifications(IEventSequenceStorage eventSequenceStorage)
-    {
-        _eventSequenceStorage = eventSequenceStorage;
-    }
-
     /// <inheritdoc/>
     public IChangesetStorage Changesets => throw new NotImplementedException();
 
@@ -50,5 +43,5 @@ public class EventStoreNamespaceStorageForSpecifications : IEventStoreNamespaceS
     public IObserverKeyIndexes ObserverKeyIndexes => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId) => _eventSequenceStorage;
+    public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId) => eventSequenceStorage;
 }

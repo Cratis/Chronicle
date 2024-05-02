@@ -2,7 +2,7 @@ using System;
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Concepts;
+using Cratis.Concepts;
 using Cratis.Events;
 using Cratis.Keys;
 using Cratis.Observation;

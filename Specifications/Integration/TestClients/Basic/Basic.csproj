@@ -12,9 +12,4 @@
     <ProjectReference Include="..\..\..\..\Source\Clients\MongoDB\MongoDB.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Aksio.Applications" />
-    <PackageReference Include="Aksio.MongoDB" />
-  </ItemGroup>
-
 </Project>

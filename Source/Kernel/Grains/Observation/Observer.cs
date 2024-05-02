@@ -25,51 +25,36 @@ namespace Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IObserver"/>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Observer"/> class.
+/// </remarks>
+/// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
+/// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
+/// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Observers)]
-public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
+public class Observer(
+    [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
+    IPersistentState<FailedPartitions> failures,
+    IObserverServiceClient replayStateServiceClient,
+    ILogger<Observer> logger,
+    IMeter<Observer> meter,
+    ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
 {
-    readonly ILogger<Observer> _logger;
-    readonly IMeter<Observer> _meter;
-    readonly ILoggerFactory _loggerFactory;
-    readonly IPersistentState<FailedPartitions> _failuresState;
-    readonly IObserverServiceClient _replayStateServiceClient;
     IStreamProvider _streamProvider = null!;
     ObserverId _observerId = Guid.Empty;
     ObserverKey _observerKey = ObserverKey.NotSet;
-    ObserverSubscription _subscription;
+    ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
     IEventSequence _eventSequence = null!;
     IMeterScope<Observer>? _metrics;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Observer"/> class.
-    /// </summary>
-    /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
-    /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
-    /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-    public Observer(
-        [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
-        IPersistentState<FailedPartitions> failures,
-        IObserverServiceClient replayStateServiceClient,
-        ILogger<Observer> logger,
-        IMeter<Observer> meter,
-        ILoggerFactory loggerFactory)
-    {
-        _failuresState = failures;
-        _replayStateServiceClient = replayStateServiceClient;
-        _logger = logger;
-        _meter = meter;
-        _loggerFactory = loggerFactory;
-        _subscription = ObserverSubscription.Unsubscribed;
-    }
-
     /// <inheritdoc/>
     protected override Type InitialState => typeof(Routing);
 
-    FailedPartitions Failures => _failuresState.State;
+    FailedPartitions Failures => failures.State;
 
     /// <inheritdoc/>
     public override async Task OnActivation(CancellationToken cancellationToken)
@@ -81,15 +66,15 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
         _observerKey = ObserverKey.Parse(keyAsString);
 
         _streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-        _jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_observerKey.MicroserviceId, _observerKey.TenantId));
+        _jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_observerKey.EventStore, _observerKey.Namespace));
 
-        await _failuresState.ReadStateAsync();
+        await failures.ReadStateAsync();
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
             _observerKey.EventSequenceId,
-            new EventSequenceKey(_observerKey.MicroserviceId, _observerKey.TenantId));
+            new EventSequenceKey(_observerKey.EventStore, _observerKey.Namespace));
 
-        _metrics = _meter.BeginObserverScope(_observerId, _observerKey);
+        _metrics = meter.BeginObserverScope(_observerId, _observerKey);
     }
 
     /// <inheritdoc/>
@@ -137,9 +122,9 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
         object? subscriberArgs = null)
         where TObserverSubscriber : IObserverSubscriber
     {
-        using var scope = _logger.BeginObserverScope(_observerId, _observerKey);
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
-        _logger.Subscribing();
+        logger.Subscribing();
 
         State = State with { Name = name, Type = type };
 
@@ -164,38 +149,38 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
             _observerKey,
             new ReplayEvaluator(
                 GrainFactory,
-                _observerKey.MicroserviceId,
-                _observerKey.TenantId),
+                _observerKey.EventStore,
+                _observerKey.Namespace),
             _eventSequence,
-            _loggerFactory.CreateLogger<Routing>()),
+            loggerFactory.CreateLogger<Routing>()),
 
         new CatchUp(
             _observerId,
             _observerKey,
             _jobsManager,
-            _loggerFactory.CreateLogger<CatchUp>()),
+            loggerFactory.CreateLogger<CatchUp>()),
 
         new ResumeReplay(
             _observerId,
             _observerKey,
-            _replayStateServiceClient,
+            replayStateServiceClient,
             _jobsManager),
 
         new Replay(
             _observerId,
             _observerKey,
-            _replayStateServiceClient,
+            replayStateServiceClient,
             _jobsManager,
-            _loggerFactory.CreateLogger<Replay>()),
+            loggerFactory.CreateLogger<Replay>()),
 
         new Indexing(),
 
         new Observing(
             _streamProvider,
-            _observerKey.MicroserviceId,
-            _observerKey.TenantId,
+            _observerKey.EventStore,
+            _observerKey.Namespace,
             _observerKey.EventSequenceId,
-            _loggerFactory.CreateLogger<Observing>())
+            loggerFactory.CreateLogger<Observing>())
     }.ToImmutableList();
 
     /// <inheritdoc/>
@@ -254,11 +239,11 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
         IEnumerable<string> exceptionMessages,
         string exceptionStackTrace)
     {
-        using var scope = _logger.BeginObserverScope(_observerId, _observerKey);
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         _metrics?.PartitionFailed(partition);
 
-        _logger.PartitionFailed(
+        logger.PartitionFailed(
             partition,
             sequenceNumber);
 
@@ -275,25 +260,25 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
         }
         else
         {
-            _logger.GivingUpOnRecoveringFailedPartition(partition);
+            logger.GivingUpOnRecoveringFailedPartition(partition);
         }
 
-        await _failuresState.WriteStateAsync();
+        await failures.WriteStateAsync();
     }
 
     /// <inheritdoc/>
     public Task FailedPartitionRecovered(Key partition)
     {
         Failures.Remove(partition);
-        return _failuresState.WriteStateAsync();
+        return failures.WriteStateAsync();
     }
 
     /// <inheritdoc/>
     public async Task TryRecoverFailedPartition(Key partition)
     {
-        using var scope = _logger.BeginObserverScope(_observerId, _observerKey);
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
-        _logger.TryingToRecoverFailedPartition(partition);
+        logger.TryingToRecoverFailedPartition(partition);
 
         var failure = Failures.Get(partition);
         if (failure is null) return;
@@ -352,8 +337,8 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
                 try
                 {
                     var key = new ObserverSubscriberKey(
-                        _observerKey.MicroserviceId,
-                        _observerKey.TenantId,
+                        _observerKey.EventStore,
+                        _observerKey.Namespace,
                         _observerKey.EventSequenceId,
                         partition,
                         _subscription.SiloAddress.ToParsableString());
@@ -429,7 +414,7 @@ public class Observer : StateMachine<ObserverState>, IObserver, IRemindable
     {
         await RemoveReminder(reminderName);
 
-        var partition = _failuresState.State.Partitions.FirstOrDefault(_ => _.Partition.ToString() == reminderName);
+        var partition = failures.State.Partitions.FirstOrDefault(_ => _.Partition.ToString() == reminderName);
         if (partition is not null)
         {
             await TryRecoverFailedPartition(partition.Partition);

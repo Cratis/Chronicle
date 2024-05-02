@@ -2,16 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
-using Azure.Monitor.OpenTelemetry.Exporter;
-using Cratis.Kernel.Orleans.Configuration;
 using Cratis.Metrics;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
-namespace Orleans.Hosting;
+namespace Cratis.Kernel.Server;
 
 /// <summary>
-/// Extension methods for working with the <see cref="Telemetry"/> configuration.
+/// Extension methods for working with the telemetry configuration.
 /// </summary>
 public static class TelemetryConfigurationExtensions
 {
@@ -24,7 +22,6 @@ public static class TelemetryConfigurationExtensions
     {
         builder.ConfigureServices(services =>
         {
-            var telemetryConfig = services.GetTelemetryConfig();
             var meter = new Meter("Cratis.Kernel");
             services.AddSingleton(meter);
             services.AddSingleton(typeof(Meter<>));
@@ -40,26 +37,6 @@ public static class TelemetryConfigurationExtensions
                         .AddSource("Microsoft.Orleans.Application")
                         .AddAspNetCoreInstrumentation()
                         .AddHttpClientInstrumentation();
-
-                    switch (telemetryConfig.Type)
-                    {
-                        case TelemetryTypes.AppInsights:
-                            {
-                                var options = telemetryConfig.GetAppInsightsTelemetryOptions();
-                                if (!string.IsNullOrEmpty(options.ConnectionString))
-                                {
-                                    tracing.AddAzureMonitorTraceExporter(exporter => exporter.ConnectionString = options.ConnectionString);
-                                }
-                            }
-                            break;
-
-                        case TelemetryTypes.OpenTelemetry:
-                            {
-                                var openTelemetryOptions = telemetryConfig.GetOpenTelemetryOptions();
-                                tracing.AddOtlpExporter(options => options.Endpoint = new Uri(openTelemetryOptions.Endpoint));
-                            }
-                            break;
-                    }
                 })
                 .WithMetrics(metrics =>
                 {
@@ -68,28 +45,7 @@ public static class TelemetryConfigurationExtensions
                         .AddMeter("Microsoft.Orleans")
                         .AddAspNetCoreInstrumentation()
                         .AddHttpClientInstrumentation()
-                        .AddRuntimeInstrumentation()
-                        .AddInMemoryObservableMetrics();
-
-                    switch (telemetryConfig.Type)
-                    {
-                        case TelemetryTypes.AppInsights:
-                            {
-                                var options = telemetryConfig.GetAppInsightsTelemetryOptions();
-                                if (!string.IsNullOrEmpty(options.ConnectionString))
-                                {
-                                    metrics.AddAzureMonitorMetricExporter(exporter => exporter.ConnectionString = options.ConnectionString);
-                                }
-                            }
-                            break;
-
-                        case TelemetryTypes.OpenTelemetry:
-                            {
-                                var openTelemetryOptions = telemetryConfig.GetOpenTelemetryOptions();
-                                metrics.AddOtlpExporter(options => options.Endpoint = new Uri(openTelemetryOptions.Endpoint));
-                            }
-                            break;
-                    }
+                        .AddRuntimeInstrumentation();
                 });
         });
 

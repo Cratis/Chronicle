@@ -4,7 +4,6 @@
 using System.Collections.Immutable;
 using System.Dynamic;
 using System.Text.Json;
-using Aksio.Strings;
 using Cratis.Auditing;
 using Cratis.Events;
 using Cratis.EventSequences;
@@ -12,6 +11,7 @@ using Cratis.Identities;
 using Cratis.Kernel.EventSequences;
 using Cratis.Kernel.Storage.EventSequences;
 using Cratis.Kernel.Storage.EventTypes;
+using Cratis.Strings;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -23,61 +23,34 @@ namespace Cratis.Kernel.Storage.MongoDB.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequenceStorage"/> for MongoDB.
 /// </summary>
-public class EventSequenceStorage : IEventSequenceStorage
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequenceStorage"/> class.
+/// </remarks>
+/// <param name="eventStore"><see cref="EventStoreName"/> the storage is for.</param>
+/// <param name="namespace"><see cref="EventStoreNamespaceName"/> the storage is for.</param>
+/// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the storage represent.</param>
+/// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
+/// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
+/// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
+/// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+public class EventSequenceStorage(
+    EventStoreName eventStore,
+    EventStoreNamespaceName @namespace,
+    EventSequenceId eventSequenceId,
+    IEventStoreNamespaceDatabase database,
+    IEventConverter converter,
+    IEventTypesStorage eventTypesStorage,
+    Json.IExpandoObjectConverter expandoObjectConverter,
+    JsonSerializerOptions jsonSerializerOptions,
+    ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
 {
-    readonly IExecutionContextManager _executionContextManager;
-    readonly EventStoreName _eventStore;
-    readonly EventStoreNamespaceName _namespace;
-    readonly EventSequenceId _eventSequenceId;
-    readonly IEventConverter _converter;
-    readonly IEventStoreNamespaceDatabase _database;
-    readonly IEventTypesStorage _eventTypesStorage;
-    readonly Json.IExpandoObjectConverter _expandoObjectConverter;
-    readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly ILogger<EventSequenceStorage> _logger;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSequenceStorage"/> class.
-    /// </summary>
-    /// <param name="eventStore"><see cref="EventStoreName"/> the storage is for.</param>
-    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the storage is for.</param>
-    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the storage represent.</param>
-    /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
-    /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
-    /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
-    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
-    /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting the execution context.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public EventSequenceStorage(
-        EventStoreName eventStore,
-        EventStoreNamespaceName @namespace,
-        EventSequenceId eventSequenceId,
-        IEventStoreNamespaceDatabase database,
-        IEventConverter converter,
-        IEventTypesStorage eventTypesStorage,
-        Json.IExpandoObjectConverter expandoObjectConverter,
-        JsonSerializerOptions jsonSerializerOptions,
-        IExecutionContextManager executionContextManager,
-        ILogger<EventSequenceStorage> logger)
-    {
-        _executionContextManager = executionContextManager;
-        _eventStore = eventStore;
-        _namespace = @namespace;
-        _eventSequenceId = eventSequenceId;
-        _converter = converter;
-        _database = database;
-        _eventTypesStorage = eventTypesStorage;
-        _expandoObjectConverter = expandoObjectConverter;
-        _jsonSerializerOptions = jsonSerializerOptions;
-        _logger = logger;
-    }
-
     /// <inheritdoc/>
     public async Task<Kernel.Storage.EventSequences.EventSequenceState> GetState()
     {
-        var collection = _database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
-        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), _eventSequenceId);
+        var collection = database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
+        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
         var cursor = await collection.FindAsync(filter).ConfigureAwait(false);
         var state = await cursor.FirstOrDefaultAsync();
         return state?.ToKernel() ?? new Kernel.Storage.EventSequences.EventSequenceState();
@@ -86,8 +59,8 @@ public class EventSequenceStorage : IEventSequenceStorage
     /// <inheritdoc/>
     public async Task SaveState(Kernel.Storage.EventSequences.EventSequenceState state)
     {
-        var collection = _database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
-        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), _eventSequenceId);
+        var collection = database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
+        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
 
         await collection.ReplaceOneAsync(filter, state.ToMongoDB(), new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
@@ -111,7 +84,7 @@ public class EventSequenceStorage : IEventSequenceStorage
             filters.Add(FilterDefinition<Event>.Empty);
         }
 
-        var filter = Builders<Event>.Filter.And(filters.ToArray());
+        var filter = Builders<Event>.Filter.And([.. filters]);
         var collection = GetCollection();
         return await collection.CountDocumentsAsync(filter).ConfigureAwait(false);
     }
@@ -129,17 +102,17 @@ public class EventSequenceStorage : IEventSequenceStorage
     {
         try
         {
-            var schema = await _eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-            var jsonObject = _expandoObjectConverter.ToJsonObject(content, schema.Schema);
-            var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, _jsonSerializerOptions));
-            _logger.Appending(
+            var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
+            var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
+            var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+            logger.Appending(
                 sequenceNumber,
-                _eventSequenceId,
-                _eventStore,
-                _namespace);
+                eventSequenceId,
+                eventStore,
+                @namespace);
             var @event = new Event(
                 sequenceNumber,
-                _executionContextManager.Current.CorrelationId,
+                CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
                 causation,
                 causedByChain,
                 eventType.Id,
@@ -156,21 +129,21 @@ public class EventSequenceStorage : IEventSequenceStorage
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            _logger.DuplicateEventSequenceNumber(
+            logger.DuplicateEventSequenceNumber(
                 sequenceNumber,
-                _eventSequenceId,
-                _eventStore,
-                _namespace);
+                eventSequenceId,
+                eventStore,
+                @namespace);
 
-            throw new DuplicateEventSequenceNumber(sequenceNumber, _eventSequenceId);
+            throw new DuplicateEventSequenceNumber(sequenceNumber, eventSequenceId);
         }
         catch (Exception ex)
         {
-            _logger.AppendFailure(
+            logger.AppendFailure(
                 sequenceNumber,
-                _eventSequenceId,
-                _eventStore,
-                _namespace,
+                eventSequenceId,
+                eventStore,
+                @namespace,
                 ex);
             throw;
         }
@@ -194,13 +167,13 @@ public class EventSequenceStorage : IEventSequenceStorage
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred)
     {
-        _logger.Redacting(_eventSequenceId, sequenceNumber);
+        logger.Redacting(eventSequenceId, sequenceNumber);
         var collection = GetCollection();
 
         var @event = await GetEventAt(sequenceNumber);
         if (@event.Metadata.Type == GlobalEventTypes.Redaction)
         {
-            _logger.RedactionAlreadyApplied(_eventSequenceId, sequenceNumber);
+            logger.RedactionAlreadyApplied(eventSequenceId, sequenceNumber);
             return @event;
         }
 
@@ -219,7 +192,7 @@ public class EventSequenceStorage : IEventSequenceStorage
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred)
     {
-        _logger.RedactingMultiple(_eventSequenceId, eventSourceId, eventTypes ?? Enumerable.Empty<EventType>());
+        logger.RedactingMultiple(eventSequenceId, eventSourceId, eventTypes ?? Enumerable.Empty<EventType>());
         var collection = GetCollection();
         var updates = new List<UpdateOneModel<Event>>();
         var affectedEventTypes = new HashSet<EventType>();
@@ -231,7 +204,7 @@ public class EventSequenceStorage : IEventSequenceStorage
             {
                 if (@event.Metadata.Type.Id == GlobalEventTypes.Redaction)
                 {
-                    _logger.RedactionAlreadyApplied(_eventSequenceId, @event.Metadata.SequenceNumber);
+                    logger.RedactionAlreadyApplied(eventSequenceId, @event.Metadata.SequenceNumber);
                     continue;
                 }
 
@@ -250,7 +223,7 @@ public class EventSequenceStorage : IEventSequenceStorage
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null)
     {
-        _logger.GettingHeadSequenceNumber(_eventSequenceId);
+        logger.GettingHeadSequenceNumber(eventSequenceId);
 
         var collection = GetCollection();
         var filters = new List<FilterDefinition<Event>>();
@@ -264,7 +237,7 @@ public class EventSequenceStorage : IEventSequenceStorage
             filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
         }
 
-        var filter = Builders<Event>.Filter.And(filters.ToArray());
+        var filter = Builders<Event>.Filter.And([.. filters]);
 
         var highest = await collection.Find(filter)
                                       .SortBySequenceNumber()
@@ -279,7 +252,7 @@ public class EventSequenceStorage : IEventSequenceStorage
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null)
     {
-        _logger.GettingTailSequenceNumber(_eventSequenceId);
+        logger.GettingTailSequenceNumber(eventSequenceId);
 
         var collection = GetCollection();
         var filters = new List<FilterDefinition<Event>>();
@@ -296,7 +269,7 @@ public class EventSequenceStorage : IEventSequenceStorage
             filters.Add(FilterDefinition<Event>.Empty);
         }
 
-        var filter = Builders<Event>.Filter.And(filters.ToArray());
+        var filter = Builders<Event>.Filter.And([.. filters]);
         var highest = await collection.Find(filter)
                                       .SortByDescendingSequenceNumber()
                                       .Limit(1)
@@ -309,7 +282,7 @@ public class EventSequenceStorage : IEventSequenceStorage
     public Task<TailEventSequenceNumbers> GetTailSequenceNumbers(
         IEnumerable<EventType> eventTypes)
     {
-        var collection = _database.GetEventSequenceCollectionAsBsonFor(_eventSequenceId);
+        var collection = database.GetEventSequenceCollectionAsBsonFor(eventSequenceId);
         var sort = PipelineStageDefinitionBuilder.Sort<BsonDocument>(/*lang=json*/ "{ '_id' : -1 }");
         var limit = PipelineStageDefinitionBuilder.Limit<BsonDocument>(1);
         var tailProjection = PipelineStageDefinitionBuilder.Project<BsonDocument>(/*lang=json*/ $"{{ '{nameof(TailEventSequenceNumbers.Tail)}': '$_id'}}");
@@ -332,7 +305,7 @@ public class EventSequenceStorage : IEventSequenceStorage
         var hasTailForEventTypes = sequenceNumbers.TryGetValue("TailForEventTypes", out var tailForEventTypes) && tailForEventTypes is not null && tailForEventTypes is not BsonNull;
 
         return Task.FromResult(new TailEventSequenceNumbers(
-            _eventSequenceId,
+            eventSequenceId,
             eventTypes.ToImmutableList(),
             hasTail ? new EventSequenceNumber((ulong)tail!.AsInt64) : EventSequenceNumber.Unavailable,
             hasTailForEventTypes ? new EventSequenceNumber((ulong)tailForEventTypes!.AsInt64) : EventSequenceNumber.Unavailable));
@@ -342,9 +315,9 @@ public class EventSequenceStorage : IEventSequenceStorage
     public async Task<IImmutableDictionary<EventType, EventSequenceNumber>> GetTailSequenceNumbersForEventTypes(IEnumerable<EventType> eventTypes)
     {
         var eventTypeIds = eventTypes.Select(_ => _.Id.Value).ToArray();
-        _logger.GettingTailSequenceNumbersForEventTypes(_eventSequenceId, eventTypeIds);
+        logger.GettingTailSequenceNumbersForEventTypes(eventSequenceId, eventTypeIds);
 
-        var collection = _database.GetEventSequenceCollectionAsBsonFor(_eventSequenceId);
+        var collection = database.GetEventSequenceCollectionAsBsonFor(eventSequenceId);
 
         var eventTypesFilter = Builders<BsonDocument>.Filter.In(new StringFieldDefinition<BsonDocument, Guid>(nameof(Event.Type).ToCamelCase()), eventTypeIds);
         var sortDefinition = Builders<BsonDocument>.Sort.Descending("_id");
@@ -393,7 +366,7 @@ public class EventSequenceStorage : IEventSequenceStorage
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null)
     {
-        var collection = _database.GetEventSequenceCollectionFor(_eventSequenceId);
+        var collection = database.GetEventSequenceCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>
             {
                 Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber)
@@ -408,7 +381,7 @@ public class EventSequenceStorage : IEventSequenceStorage
             filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
         }
 
-        var filter = Builders<Event>.Filter.And(filters.ToArray());
+        var filter = Builders<Event>.Filter.And([.. filters]);
         var highest = await collection.Find(filter)
                                       .SortBySequenceNumber()
                                       .Limit(1)
@@ -434,7 +407,7 @@ public class EventSequenceStorage : IEventSequenceStorage
     /// <inheritdoc/>
     public async Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber)
     {
-        _logger.GettingEventAtSequenceNumber(_eventSequenceId, sequenceNumber);
+        logger.GettingEventAtSequenceNumber(eventSequenceId, sequenceNumber);
 
         var filter = Builders<Event>.Filter.And(Builders<Event>.Filter.Eq(_ => _.SequenceNumber, sequenceNumber));
 
@@ -444,7 +417,7 @@ public class EventSequenceStorage : IEventSequenceStorage
                                      .Limit(1)
                                      .SingleAsync()
                                      .ConfigureAwait(false);
-        return await _converter.ToAppendedEvent(@event);
+        return await converter.ToAppendedEvent(@event);
     }
 
     /// <inheritdoc/>
@@ -452,7 +425,7 @@ public class EventSequenceStorage : IEventSequenceStorage
         EventTypeId eventTypeId,
         EventSourceId eventSourceId)
     {
-        _logger.GettingLastInstanceFor(_eventSequenceId, eventTypeId, eventSourceId);
+        logger.GettingLastInstanceFor(eventSequenceId, eventTypeId, eventSourceId);
 
         var filter = Builders<Event>.Filter.And(
             Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
@@ -463,8 +436,8 @@ public class EventSequenceStorage : IEventSequenceStorage
                                      .SortByDescendingSequenceNumber()
                                      .Limit(1)
                                      .SingleOrDefaultAsync()
-                                     .ConfigureAwait(false) ?? throw new MissingEvent(_eventSequenceId, eventTypeId, eventSourceId);
-        return await _converter.ToAppendedEvent(@event);
+                                     .ConfigureAwait(false) ?? throw new MissingEvent(eventSequenceId, eventTypeId, eventSourceId);
+        return await converter.ToAppendedEvent(@event);
     }
 
     /// <inheritdoc/>
@@ -472,7 +445,7 @@ public class EventSequenceStorage : IEventSequenceStorage
         EventSourceId eventSourceId,
         IEnumerable<EventTypeId> eventTypes)
     {
-        _logger.GettingLastInstanceOfAny(_eventSequenceId, eventSourceId, eventTypes);
+        logger.GettingLastInstanceOfAny(eventSequenceId, eventSourceId, eventTypes);
 
         var anyEventTypes = Builders<Event>.Filter.In(e => e.Type, eventTypes);
 
@@ -486,7 +459,7 @@ public class EventSequenceStorage : IEventSequenceStorage
                                      .Limit(1)
                                      .SingleAsync()
                                      .ConfigureAwait(false);
-        return await _converter.ToAppendedEvent(@event);
+        return await converter.ToAppendedEvent(@event);
     }
 
     /// <inheritdoc/>
@@ -496,7 +469,7 @@ public class EventSequenceStorage : IEventSequenceStorage
         IEnumerable<EventType>? eventTypes = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.GettingFromSequenceNumber(_eventSequenceId, sequenceNumber);
+        logger.GettingFromSequenceNumber(eventSequenceId, sequenceNumber);
 
         var collection = GetCollection();
         var filters = new List<FilterDefinition<Event>>
@@ -514,12 +487,12 @@ public class EventSequenceStorage : IEventSequenceStorage
             filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
         }
 
-        var filter = Builders<Event>.Filter.And(filters.ToArray());
+        var filter = Builders<Event>.Filter.And([.. filters]);
         var cursor = await collection.Find(filter)
                                      .SortBySequenceNumber()
                                      .ToCursorAsync(cancellationToken)
                                      .ConfigureAwait(false);
-        return new EventCursor(_converter, cursor);
+        return new EventCursor(converter, cursor);
     }
 
     /// <inheritdoc/>
@@ -530,7 +503,7 @@ public class EventSequenceStorage : IEventSequenceStorage
         IEnumerable<EventType>? eventTypes = default,
         CancellationToken cancellationToken = default)
     {
-        _logger.GettingRange(_eventSequenceId, start, end);
+        logger.GettingRange(eventSequenceId, start, end);
         var collection = GetCollection();
         var filters = new List<FilterDefinition<Event>>
             {
@@ -548,16 +521,16 @@ public class EventSequenceStorage : IEventSequenceStorage
             filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
         }
 
-        var filter = Builders<Event>.Filter.And(filters.ToArray());
+        var filter = Builders<Event>.Filter.And([.. filters]);
 
         var cursor = await collection.Find(filter)
                                      .SortBySequenceNumber()
                                      .ToCursorAsync(cancellationToken)
                                      .ConfigureAwait(false);
-        return new EventCursor(_converter, cursor);
+        return new EventCursor(converter, cursor);
     }
 
-    IMongoCollection<Event> GetCollection() => _database.GetEventSequenceCollectionFor(_eventSequenceId);
+    IMongoCollection<Event> GetCollection() => database.GetEventSequenceCollectionFor(eventSequenceId);
 
     UpdateOneModel<Event> CreateRedactionUpdateModelFor(
         AppendedEvent @event,
@@ -566,16 +539,15 @@ public class EventSequenceStorage : IEventSequenceStorage
         IEnumerable<IdentityId> causedById,
         DateTimeOffset occurred)
     {
-        var executionContext = _executionContextManager.Current;
         var content = new RedactionEventContent(
             reason,
             @event.Metadata.Type.Id,
             occurred,
-            executionContext.CorrelationId,
+            CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
             causation,
             causedById);
 
-        var document = BsonDocument.Parse(JsonSerializer.Serialize(content, _jsonSerializerOptions));
+        var document = BsonDocument.Parse(JsonSerializer.Serialize(content, jsonSerializerOptions));
         var generationalContent = new Dictionary<string, BsonDocument>
                 {
                         { EventGeneration.First.ToString(), document }

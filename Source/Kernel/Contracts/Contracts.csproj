@@ -9,7 +9,6 @@
 
     <ItemGroup>
       <PackageReference Include="protobuf-net.Grpc" />
-      <PackageReference Include="Aksio.Fundamentals" />
     </ItemGroup>
 
 </Project>

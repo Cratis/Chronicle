@@ -11,21 +11,14 @@ namespace Cratis.Kernel.Storage.MongoDB.Keys;
 /// <summary>
 /// Represents an implementation of <see cref="IAsyncEnumerator{T}"/> for MongoDB.
 /// </summary>
-public class ObserverKeysAsyncEnumerator : IAsyncEnumerator<Key>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ObserverKeysAsyncEnumerator"/> class.
+/// </remarks>
+/// <param name="cursor">The inner <see cref="IAsyncCursor{T}"/>.</param>
+public class ObserverKeysAsyncEnumerator(IAsyncCursor<EventSourceId> cursor) : IAsyncEnumerator<Key>
 {
-    readonly IAsyncCursor<EventSourceId> _cursor;
     Key? _current;
     Queue<Key>? _queue;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverKeysAsyncEnumerator"/> class.
-    /// </summary>
-    /// <param name="cursor">The inner <see cref="IAsyncCursor{T}"/>.</param>
-    public ObserverKeysAsyncEnumerator(IAsyncCursor<EventSourceId> cursor)
-    {
-        _cursor = cursor;
-        _current = default;
-    }
 
     /// <inheritdoc/>
     public Key Current => _current!;
@@ -33,7 +26,7 @@ public class ObserverKeysAsyncEnumerator : IAsyncEnumerator<Key>
     /// <inheritdoc/>
     public ValueTask DisposeAsync()
     {
-        _cursor.Dispose();
+        cursor.Dispose();
         return ValueTask.CompletedTask;
     }
 
@@ -42,14 +35,14 @@ public class ObserverKeysAsyncEnumerator : IAsyncEnumerator<Key>
     {
         if (_queue is null)
         {
-            var result = await _cursor.MoveNextAsync();
+            var result = await cursor.MoveNextAsync();
             if (!result)
             {
                 _current = null;
                 return false;
             }
 
-            _queue = new Queue<Key>(_cursor.Current.Select(_ => new Key(_.Value, ArrayIndexers.NoIndexers)));
+            _queue = new Queue<Key>(cursor.Current.Select(_ => new Key(_.Value, ArrayIndexers.NoIndexers)));
         }
 
         if (_queue.Count == 0)

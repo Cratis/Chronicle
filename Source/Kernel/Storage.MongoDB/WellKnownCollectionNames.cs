@@ -29,11 +29,6 @@ public static class WellKnownCollectionNames
     public const string Reminders = "reminders";
 
     /// <summary>
-    /// The collection that holds tenant configuration.
-    /// </summary>
-    public const string TenantConfiguration = "tenants-configuration";
-
-    /// <summary>
     /// The collection that holds event sequences.
     /// </summary>
     public const string EventSequences = "event-sequences";

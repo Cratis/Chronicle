@@ -13,7 +13,7 @@ namespace Cratis.Projections;
 /// <typeparam name="TModel">Type of model to build for.</typeparam>
 public class FromEveryBuilder<TModel> : IFromEveryBuilder<TModel>
 {
-    readonly List<IPropertyExpressionBuilder> _propertyExpressions = new();
+    readonly List<IPropertyExpressionBuilder> _propertyExpressions = [];
     bool _includeChildren;
 
     /// <inheritdoc/>

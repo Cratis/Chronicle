@@ -8,19 +8,12 @@ namespace Cratis.Aggregates;
 /// <summary>
 /// Represents a system that is capable of creating instances of <see cref="IAggregateRootEventHandlersFactory"/>.
 /// </summary>
-public class AggregateRootEventHandlersFactory : IAggregateRootEventHandlersFactory
+/// <remarks>
+/// Initializes a new instance of <see cref="AggregateRootEventHandlersFactory"/>.
+/// </remarks>
+/// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
+public class AggregateRootEventHandlersFactory(IEventTypes eventTypes) : IAggregateRootEventHandlersFactory
 {
-    readonly IEventTypes _eventTypes;
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="AggregateRootEventHandlersFactory"/>.
-    /// </summary>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
-    public AggregateRootEventHandlersFactory(IEventTypes eventTypes)
-    {
-        _eventTypes = eventTypes;
-    }
-
     /// <inheritdoc/>
     public IAggregateRootEventHandlers CreateFor(IAggregateRoot aggregateRoot)
     {
@@ -28,6 +21,6 @@ public class AggregateRootEventHandlersFactory : IAggregateRootEventHandlersFact
         {
             return NullAggregateRootEventHandlers.Instance;
         }
-        return new AggregateRootEventHandlers(_eventTypes, aggregateRoot.GetType());
+        return new AggregateRootEventHandlers(eventTypes, aggregateRoot.GetType());
     }
 }

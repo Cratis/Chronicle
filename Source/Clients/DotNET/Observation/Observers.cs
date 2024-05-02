@@ -9,7 +9,6 @@ using Cratis.Events;
 using Cratis.Identities;
 using Cratis.Kernel.Contracts.Observation;
 using Microsoft.Extensions.Logging;
-using ObserverInformation = Cratis.Kernel.Observation.ObserverInformation;
 
 namespace Cratis.Observation;
 
@@ -109,26 +108,6 @@ public class Observers : IObservers
         return observerHandler!;
     }
 
-    /// <inheritdoc/>
-    public async Task<IEnumerable<ObserverInformation>> GetAllObservers()
-    {
-        // var tenantId = _executionContextManager.Current.TenantId;
-        // var microserviceId = _executionContextManager.Current.MicroserviceId;
-        // var route = $"/api/events/store/{microserviceId}/{tenantId}/observers";
-        // var result = await _connection.PerformQuery<IEnumerable<ObserverInformation>>(route);
-        // return result.Data;
-        await Task.CompletedTask;
-        return null!;
-    }
-
-    /// <inheritdoc/>
-    public async Task<IEnumerable<ObserverInformation>> GetObserversForEventTypes(IEnumerable<Type> eventTypes)
-    {
-        var observers = await GetAllObservers();
-        var eventTypeIdentifiers = eventTypes.Select(_eventStore.EventTypes.GetEventTypeFor);
-        return observers.Where(_ => _.EventTypes.Any(_ => eventTypeIdentifiers.Contains(_)));
-    }
-
     void ThrowIfUnknownObserverId(ObserverHandler? handler, ObserverId observerId)
     {
         if (handler is null)
@@ -167,8 +146,8 @@ public class Observers : IObservers
 
                 try
                 {
-                    var context = @event.Context.ToKernel();
-                    var metadata = @event.Metadata.ToKernel();
+                    var context = @event.Context.ToClient();
+                    var metadata = @event.Metadata.ToClient();
 
                     BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
                     var eventType = _eventTypes.GetClrTypeFor(metadata.Type.Id);

@@ -11,7 +11,7 @@ namespace Cratis.Kernel.Grains.Projections;
 public interface IProjections : IGrainWithIntegerKey
 {
     /// <summary>
-    /// Rehydrate all projections for all microservices and tenants.
+    /// Rehydrate all projections for all event stores and namespaces.
     /// </summary>
     /// <returns>Async task.</returns>
     Task Rehydrate();
@@ -19,12 +19,12 @@ public interface IProjections : IGrainWithIntegerKey
     /// <summary>
     /// Register a <see cref="ProjectionDefinition"/> with a <see cref="ProjectionPipelineDefinition"/>.
     /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to register for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to register for.</param>
     /// <param name="registrations">A collection of <see cref="ProjectionAndPipeline"/>.</param>
     /// <returns>Async task.</returns>
     /// <remarks>
     /// If any of the projections are already in the system, it will look for changes in the definition
     /// and possibly rewind the projection.
     /// </remarks>
-    Task Register(MicroserviceId microserviceId, IEnumerable<ProjectionAndPipeline> registrations);
+    Task Register(EventStoreName eventStore, IEnumerable<ProjectionAndPipeline> registrations);
 }

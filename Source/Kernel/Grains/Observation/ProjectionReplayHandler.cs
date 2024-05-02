@@ -20,7 +20,7 @@ public class ProjectionReplayHandler(IKernel kernel) : ICanHandleReplayForObserv
     /// <inheritdoc/>
     public async Task BeginReplayFor(ObserverDetails observerDetails)
     {
-        var @namespace = kernel.GetEventStore((string)observerDetails.Key.MicroserviceId).GetNamespace(observerDetails.Key.TenantId);
+        var @namespace = kernel.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
         var pipeline = @namespace.ProjectionManager.GetPipeline(observerDetails.Identifier.Value);
         await pipeline.BeginReplay();
     }
@@ -28,7 +28,7 @@ public class ProjectionReplayHandler(IKernel kernel) : ICanHandleReplayForObserv
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails)
     {
-        var @namespace = kernel.GetEventStore((string)observerDetails.Key.MicroserviceId).GetNamespace(observerDetails.Key.TenantId);
+        var @namespace = kernel.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
         var pipeline = @namespace.ProjectionManager.GetPipeline(observerDetails.Identifier.Value);
         await pipeline.EndReplay();
     }

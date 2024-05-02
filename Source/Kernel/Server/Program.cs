@@ -2,7 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using Aksio.Applications.Autofac;
+using Cratis.DependencyInjection;
+using Cratis.Json;
 using Cratis.Kernel.Grains.Observation.Placement;
 using Cratis.Kernel.Server.Serialization;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -16,9 +17,6 @@ public static class Program
     public static Task Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
-        SelfBindingRegistrationSource.AddNamespaceStartsWithToExclude(
-            "Microsoft",
-            "Orleans");
 
         // Force invariant culture for the Kernel
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
@@ -31,18 +29,26 @@ public static class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
+            .UseConfiguration()
+            .UseDefaultServiceProvider(_ =>
+            {
+                _.ValidateScopes = false;
+                _.ValidateOnBuild = false;
+            })
+            .UseLogging()
             .ConfigureCpuBoundWorkers()
             .UseMongoDB()
-            .UseAksio(mvcOptions => mvcOptions.Filters.Add<KernelReadyResourceFilter>(0))
-            .UseCratis()
+            .ConfigureServices(services => services
+                .AddSingleton(Globals.JsonSerializerOptions)
+                .AddBindingsByConvention()
+                .AddSelfBindings())
             .UseOrleans(_ => _
-                .UseCluster()
+                .UseLocalhostClustering() // TODO: Implement MongoDB clustering
+                .UseTelemetry() // TODO: Fix telemetry
                 .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
-                .UseStreamCaching()
                 .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
                 .ConfigureSerialization()
                 .AddReplayStateManagement()
-                .UseTelemetry()
                 .UseDashboard(options =>
                 {
                     options.Host = "*";
@@ -51,12 +57,10 @@ public static class Program
                 })
                 .ConfigureStorage()
                 .UseMongoDB()
-                .AddEventSequenceStreaming()
-                .AddExecutionContext())
+                .AddEventSequenceStreaming())
             .ConfigureWebHostDefaults(_ => _
                 .ConfigureKestrel(options =>
                 {
-                    options.ListenAnyIP(8080, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
                     options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
                     options.Limits.Http2.MaxStreamsPerConnection = 100;
                 })

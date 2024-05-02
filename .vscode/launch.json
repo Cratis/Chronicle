@@ -5,36 +5,35 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Core Launch (Server)",
+            "name": "launch",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build server",
-            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net8.0/Cratis.Kernel.Server.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Source/Kernel/Server",
+            "preLaunchTask": "build",
+            "cwd": "${input:project}",
+            "program": "${input:target}",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
-            }
+            },
+            "internalConsoleOptions": "openOnSessionStart"
         },
         {
-            "name": ".NET Core Launch (Server - not just my code)",
+            "name": "launch-njmc",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build server",
-            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net8.0/Cratis.Kernel.Server.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Source/Kernel/Server",
+            "preLaunchTask": "build",
+            "program": "${input:target}",
+            "cwd": "${input:project}",
             "stopAtEntry": false,
             "justMyCode": false,
             "requireExactSource": false,
             "symbolOptions": {
-                "moduleFilter": {
-                    "mode": "loadOnlyIncluded",
-                    "includedModules": [
-                        "Cratis.*.dll"
-                    ]
-                },
+                // "moduleFilter": {
+                //     "mode": "loadOnlyIncluded",
+                //     "includedModules": [
+                //         "Cratis.*.dll"
+                //     ]
+                // },
                 "searchPaths": [],
                 "searchMicrosoftSymbolServer": false,
                 "searchNuGetOrgSymbolServer": true
@@ -43,153 +42,28 @@
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
             },
-            "sourceFileMap": {
-            }
+            "sourceFileMap": {}
         },
-        {
-            "name": ".NET Core Launch (Bank Sample - not just my code)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build bank sample",
-            "program": "${workspaceFolder}/Samples/Banking/Bank/Main/bin/Debug/net6.0/Main.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Samples/Banking/Bank/Main",
-            "stopAtEntry": false,
-            "justMyCode": false,
-            "requireExactSource": false,
-            "symbolOptions": {
-                "moduleFilter": {
-                    "mode": "loadOnlyIncluded",
-                    "includedModules": [
-                        "Cratis.*.dll"
-                    ]
-                },
-                "searchPaths": [],
-                "searchMicrosoftSymbolServer": false,
-                "searchNuGetOrgSymbolServer": true
-            },
-            "suppressJITOptimizations": true,
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            },
-            "sourceFileMap": {
-            }
-        },
-        {
-            "name": ".NET Core Launch (Bank Sample)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build bank sample",
-            "program": "${workspaceFolder}/Samples/Banking/Bank/Main/bin/Debug/net6.0/Main.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Samples/Banking/Bank/Main",
-            "stopAtEntry": false,
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        {
-            "name": ".NET Core Launch (Balance Notifier)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build balance notifier sample",
-            "program": "${workspaceFolder}/Samples/Banking/BalanceNotifier/Main/bin/Debug/net6.0/Main.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Samples/Banking/BalanceNotifier/Main",
-            "stopAtEntry": false,
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        {
-            "name": ".NET Core Launch (Basic sample)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build basic sample",
-            "program": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Samples/Basic",
-            "stopAtEntry": false,
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        {
-            "name": ".NET Core Launch (Basic sample - not just my code)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build basic sample",
-            "program": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Samples/Basic",
-            "stopAtEntry": false,
-            "justMyCode": false,
-            "requireExactSource": false,
-            "symbolOptions": {
-                "moduleFilter": {
-                    "mode": "loadOnlyIncluded",
-                    "includedModules": [
-                        "Cratis.*.dll",
-                        "Namotion.Reflection.dll"
-                    ]
-                },
-                "searchPaths": [],
-                "searchMicrosoftSymbolServer": false,
-                "searchNuGetOrgSymbolServer": true
-            },
-            "suppressJITOptimizations": true,
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        {
-            "name": ".NET Core Launch (Benchmarks)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build benchmarks",
-            "program": "${workspaceFolder}/Benchmarks/bin/Debug/net8.0/Benchmarks.dll",
-            "args": ["@run.rsp"],
-            "cwd": "${workspaceFolder}/Benchmarks",
-            "stopAtEntry": false,
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-
         {
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach"
         }
     ],
-    "compounds": [
+    "inputs": [
         {
-            "name": "Server and Bank Sample",
-            "configurations": [
-                ".NET Core Launch (Server)",
-                ".NET Core Launch (Bank Sample)"
-            ]
+            "id": "project",
+            "type": "command",
+            "command": "dotnet-build-commands.selectProjectForLaunch",
+            "args": {
+                "file": "${workspaceFolder}/.vscode/projects.json"
+            }
         },
         {
-            "name": "Server and Balance Notifier",
-            "configurations": [
-                ".NET Core Launch (Server)",
-                ".NET Core Launch (Balance Notifier)"
-            ]
-        },
-        {
-            "name": "Server and Client (Not just my code",
-            "configurations": [
-                ".NET Core Launch (Server - not just my code)",
-                ".NET Core Launch (Bank Sample - not just my code)"
-            ]
-        },
-        {
-            "name": "Server and Basic",
-            "configurations": [
-                ".NET Core Launch (Server)",
-                ".NET Core Launch (Basic sample)"
-            ]
+            "id": "target",
+            "type": "command",
+            "command": "dotnet-build-commands.getTarget"
         }
-    ]
+    ],
+    "compounds": []
 }

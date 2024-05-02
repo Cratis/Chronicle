@@ -6,7 +6,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Storage/Storage.csproj"/>
-        <ProjectReference Include="../Shared/Shared.csproj"/>
+        <ProjectReference Include="../Storage/Storage.csproj" />
+        <ProjectReference Include="../Shared/Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="System.Reactive" />
     </ItemGroup>
 </Project>

@@ -16,7 +16,6 @@ namespace Cratis.Kernel.Grains.Projections.Definitions;
 /// </remarks>
 /// <param name="storage"><see cref="IProjectionDefinitionsStorage"/> for stored definitions.</param>
 /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serialization.</param>
-[SingletonPerMicroservice]
 public class ProjectionDefinitions(
     IProjectionDefinitionsStorage storage,
     IJsonProjectionSerializer projectionSerializer) : IProjectionDefinitions
@@ -48,7 +47,7 @@ public class ProjectionDefinitions(
         definition = definition with { LastUpdated = DateTimeOffset.UtcNow };
         _definitions[definition.Identifier] = definition;
 
-        await _storage.Save(definition);
+        await storage.Save(definition);
     }
 
     /// <inheritdoc/>

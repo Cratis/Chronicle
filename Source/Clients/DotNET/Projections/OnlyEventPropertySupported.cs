@@ -8,13 +8,9 @@ namespace Cratis.Projections;
 /// <summary>
 /// Exception that gets thrown when a target property only supports being mapped to a property on the event.
 /// </summary>
-public class OnlyEventPropertySupported : Exception
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OnlyEventPropertySupported"/> class.
-    /// </summary>
-    /// <param name="targetProperty"><see cref="PropertyPath"/> for the target property that requires this.</param>
-    public OnlyEventPropertySupported(PropertyPath targetProperty) : base($"'{targetProperty}' can only be mapped to another property on event.")
-    {
-    }
-}
+/// <remarks>
+/// Initializes a new instance of the <see cref="OnlyEventPropertySupported"/> class.
+/// </remarks>
+/// <param name="targetProperty"><see cref="PropertyPath"/> for the target property that requires this.</param>
+public class OnlyEventPropertySupported(PropertyPath targetProperty)
+    : Exception($"'{targetProperty}' can only be mapped to another property on event.");

@@ -9,15 +9,15 @@ namespace Cratis.Kernel.Grains.EventSequences;
 /// <summary>
 /// Represents the request for rewinding a partition.
 /// </summary>
-/// <param name="MicroserviceId">Microservice that is affected.</param>
-/// <param name="TenantId">TenantId that is affected.</param>
+/// <param name="EventStore">Event store that is affected.</param>
+/// <param name="Namespace">Namespace that is affected.</param>
 /// <param name="EventSequenceId">The event sequence the event belongs to.</param>
 /// <param name="EventSourceId">The event source id of the redaction.</param>
 /// <param name="SequenceNumber">The sequence number to rewind to.</param>
 /// <param name="AffectedEventTypes">Affected event types.</param>
 public record RewindPartitionForObserversAfterRedactRequest(
-    MicroserviceId MicroserviceId,
-    TenantId TenantId,
+    EventStoreName EventStore,
+    EventStoreNamespaceName Namespace,
     EventSequenceId EventSequenceId,
     EventSourceId EventSourceId,
     EventSequenceNumber SequenceNumber,

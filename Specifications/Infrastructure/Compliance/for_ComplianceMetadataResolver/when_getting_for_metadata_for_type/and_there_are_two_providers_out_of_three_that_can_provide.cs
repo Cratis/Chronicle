@@ -28,7 +28,7 @@ public class and_there_are_two_providers_out_of_three_that_can_provide : Specifi
 
         resolver = new(
             new KnownInstancesOf<ICanProvideComplianceMetadataForType>(new[] { firstProvider.Object, second_provider.Object, thirdProvider.Object }),
-            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>(Array.Empty<ICanProvideComplianceMetadataForProperty>())
+            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([])
         );
     }
 

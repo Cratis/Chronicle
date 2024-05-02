@@ -15,52 +15,42 @@ namespace Cratis.Kernel.Grains.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IProjection"/>.
 /// </summary>
-public class Projection : Grain, IProjection
+/// <remarks>
+/// Initializes a new instance of the <see cref="Projection"/> class.
+/// </remarks>
+/// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
+/// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
+/// <param name="logger">Logger for logging.</param>
+public class Projection(
+    IKernel kernel,
+    ILocalSiloDetails localSiloDetails,
+    ILogger<Projection> logger) : Grain, IProjection
 {
-    readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers;
-    readonly IKernel _kernel;
-    readonly ILocalSiloDetails _localSiloDetails;
+    readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromMinutes(1), logger, "ProjectionDefinitionObservers");
     EngineProjection? _projection;
     IObserver? _observer;
-    ProjectionId _projectionId;
+    ProjectionId _projectionId = ProjectionId.NotSet;
     ProjectionDefinition? _definition;
-    TenantId? _tenantId;
-    MicroserviceId? _microserviceId;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Projection"/> class.
-    /// </summary>
-    /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
-    /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
-    /// <param name="logger">Logger for logging.</param>
-    public Projection(
-        IKernel kernel,
-        ILocalSiloDetails localSiloDetails,
-        ILogger<Projection> logger)
-    {
-        _projectionId = ProjectionId.NotSet;
-        _definitionObservers = new(TimeSpan.FromMinutes(1), logger, "ProjectionDefinitionObservers");
-        _kernel = kernel;
-        _localSiloDetails = localSiloDetails;
-    }
+    EventStoreName? _eventStore;
+    EventStoreNamespaceName? _namespace;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _projectionId = this.GetPrimaryKey(out var keyAsString);
         var key = ProjectionKey.Parse(keyAsString);
-        _microserviceId = key.MicroserviceId;
-        _tenantId = key.TenantId;
+        _eventStore = key.EventStore;
+        _namespace = key.Namespace;
 
         await RefreshDefinition();
 
-        _observer = GrainFactory.GetGrain<IObserver>(_projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
+        _observer = GrainFactory.GetGrain<IObserver>(_projectionId, new ObserverKey(key.EventStore, key.Namespace, key.EventSequenceId));
 
         await _observer.Subscribe<IProjectionObserverSubscriber>(
             _definition!.Name.Value,
             ObserverType.Projection,
             _projection!.EventTypes,
-            _localSiloDetails.SiloAddress);
+            localSiloDetails.SiloAddress);
     }
 
     /// <inheritdoc/>
@@ -73,8 +63,8 @@ public class Projection : Grain, IProjection
     /// <inheritdoc/>
     public async Task RefreshDefinition()
     {
-        var eventStore = _kernel.GetEventStore((string)_microserviceId!);
-        var eventStoreNamespace = eventStore.GetNamespace(_tenantId!);
+        var eventStore = kernel.GetEventStore(_eventStore!);
+        var eventStoreNamespace = eventStore.GetNamespace(_namespace!);
 
         var (_, projectionDefinition) = await eventStore.ProjectionDefinitions.TryGetFor(_projectionId);
         _definition = projectionDefinition;

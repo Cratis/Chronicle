@@ -12,6 +12,4 @@ namespace Cratis.Rules;
 /// <typeparam name="TCommand">Type of command the rule is for.</typeparam>
 /// <typeparam name="TProperty">The type of the property being validated.</typeparam>
 public interface IStateRuleBuilder<TState, TCommand, TProperty> : IRuleBuilderInitial<TState, TProperty>
-    where TState : RulesFor<TState, TCommand>
-{
-}
+    where TState : RulesFor<TState, TCommand>;

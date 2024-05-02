@@ -9,7 +9,6 @@ namespace Cratis.Kernel.Grains.Observation.Reducers;
 /// <summary>
 /// Represents an implementation of <see cref="IReducerPipelineDefinitions"/>.
 /// </summary>
-[SingletonPerMicroservice]
 public class ReducerPipelineDefinitions : IReducerPipelineDefinitions
 {
     readonly ConcurrentDictionary<ReducerId, ReducerDefinition> _definitions = new();

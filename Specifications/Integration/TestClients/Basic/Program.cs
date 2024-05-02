@@ -5,7 +5,7 @@ using System.Globalization;
 using Cratis;
 using Cratis.Client;
 using Cratis.Configuration;
-using Aksio.Execution;
+using Cratis.Execution;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -24,12 +24,10 @@ var builder = WebApplication
 
 builder.Host
         .UseMongoDB()
-        .ConfigureServices(services => services.AddMongoDBReadModels())
-        .UseAksio();
+        .ConfigureServices(services => services.AddMongoDBReadModels());
 
 var app = builder.Build();
 app.UseRouting();
 app.UseCratis();
-app.UseAksio();
 
 app.Run();

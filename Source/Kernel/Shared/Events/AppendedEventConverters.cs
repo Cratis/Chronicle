@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using System.Text.Json;
-using Aksio.Json;
+using Cratis.Json;
 
 namespace Cratis.Events;
 

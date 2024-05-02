@@ -2,7 +2,7 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Kernel.Grains.Interfaces</AssemblyName>
         <RootNamespace>Cratis.Kernel.Grains</RootNamespace>
-        <NoWarn>$(NoWarn);ORL1001</NoWarn>
+        <NoWarn>$(NoWarn);ORLEANS0010</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

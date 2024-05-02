@@ -15,25 +15,18 @@ namespace Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents an implementation of <see cref="IConsolidateStateForObserver"/>.
 /// </summary>
-public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, JobStepState>, IConsolidateStateForObserver
+/// <remarks>
+/// Initializes a new instance of the <see cref="ConsolidateStateForObserver"/> class.
+/// </remarks>
+/// <param name="jobStepState"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
+/// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
+public class ConsolidateStateForObserver(
+    [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
+    IPersistentState<JobStepState> jobStepState,
+    IStorage storage) : JobStep<ObserverIdAndKey, object, JobStepState>(jobStepState), IConsolidateStateForObserver
 {
-    readonly IStorage _storage;
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver? _observer;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConsolidateStateForObserver"/> class.
-    /// </summary>
-    /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
-    /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
-    public ConsolidateStateForObserver(
-        [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
-        IPersistentState<JobStepState> state,
-        IStorage storage)
-        : base(state)
-    {
-        _storage = storage;
-    }
 
     /// <inheritdoc/>
     public override Task Prepare(ObserverIdAndKey request)
@@ -51,7 +44,7 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, Job
 
         var modified = false;
 
-        var eventSequenceStorage = GetEventSequenceStorage(request.ObserverKey.MicroserviceId, request.ObserverKey.TenantId, request.ObserverKey.EventSequenceId);
+        var eventSequenceStorage = GetEventSequenceStorage(request.ObserverKey.EventStore, request.ObserverKey.Namespace, request.ObserverKey.EventSequenceId);
 
         if (state.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable &&
             state.Handled == EventCount.NotSet)
@@ -90,5 +83,6 @@ public class ConsolidateStateForObserver : JobStep<ObserverIdAndKey, object, Job
         return JobStepResult.Succeeded();
     }
 
-    IEventSequenceStorage GetEventSequenceStorage(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId) => _eventSequenceStorage ??= _storage.GetEventStore((string)microserviceId).GetNamespace(tenantId).GetEventSequence(eventSequenceId);
+    IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
+        _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
 }
