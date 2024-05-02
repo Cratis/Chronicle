@@ -30,10 +30,20 @@ public static class PropertyExtensions
 
     static PropertyDescriptor ToPropertyDescriptor(Type propertyType, string name)
     {
-        var isEnumerable = propertyType.IsEnumerable();
-        if (isEnumerable)
+        var isEnumerable = false;
+        var isNullable = false;
+        if (!propertyType.IsKnownType())
         {
-            propertyType = propertyType.GetEnumerableElementType()!;
+            isEnumerable = propertyType.IsEnumerable();
+            if (isEnumerable)
+            {
+                propertyType = propertyType.GetEnumerableElementType()!;
+            }
+            isNullable = propertyType.IsNullable();
+            if (isNullable)
+            {
+                propertyType = propertyType.GetNullableType()!;
+            }
         }
 
         var targetType = propertyType.GetTargetType();
@@ -44,6 +54,6 @@ public static class PropertyExtensions
             targetType.Type,
             targetType.Constructor,
             isEnumerable,
-            propertyType.IsNullable());
+            isNullable);
     }
 }
