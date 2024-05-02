@@ -5,7 +5,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from 'Infrastructure/queries';
+import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from 'Infrastructure/queries';
 import { RecommendationInformation } from '../Cratis/Recommendations/RecommendationInformation';
 import Handlebars from 'handlebars';
 
@@ -15,7 +15,7 @@ export interface AllRecommendationsArguments {
     eventStore: string;
     namespace: string;
 }
-export class AllRecommendations extends QueryFor<RecommendationInformation[], AllRecommendationsArguments> {
+export class AllRecommendations extends ObservableQueryFor<RecommendationInformation[], AllRecommendationsArguments> {
     readonly route: string = '/api/events/store/{eventStore}/{namespace}/recommendations/observe/observe';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: RecommendationInformation[] = [];
@@ -31,7 +31,7 @@ export class AllRecommendations extends QueryFor<RecommendationInformation[], Al
         ];
     }
 
-    static use(args?: AllRecommendationsArguments): [QueryResultWithState<RecommendationInformation[]>, PerformQuery<AllRecommendationsArguments>] {
-        return useQuery<RecommendationInformation[], AllRecommendations, AllRecommendationsArguments>(AllRecommendations, args);
+    static use(args?: AllRecommendationsArguments): [QueryResultWithState<RecommendationInformation[]>] {
+        return useObservableQuery<RecommendationInformation[], AllRecommendations, AllRecommendationsArguments>(AllRecommendations, args);
     }
 }

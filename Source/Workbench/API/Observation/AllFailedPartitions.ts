@@ -5,7 +5,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from 'Infrastructure/queries';
+import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from 'Infrastructure/queries';
 import { FailedPartition } from '../Cratis/Kernel/Observation/FailedPartition';
 import Handlebars from 'handlebars';
 
@@ -16,7 +16,7 @@ export interface AllFailedPartitionsArguments {
     namespace: string;
     observerId?: string;
 }
-export class AllFailedPartitions extends QueryFor<FailedPartition[], AllFailedPartitionsArguments> {
+export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], AllFailedPartitionsArguments> {
     readonly route: string = '/api/events/store/{eventStore}/{namespace}/failed-partitions/{observerId}/{observerId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: FailedPartition[] = [];
@@ -33,7 +33,7 @@ export class AllFailedPartitions extends QueryFor<FailedPartition[], AllFailedPa
         ];
     }
 
-    static use(args?: AllFailedPartitionsArguments): [QueryResultWithState<FailedPartition[]>, PerformQuery<AllFailedPartitionsArguments>] {
-        return useQuery<FailedPartition[], AllFailedPartitions, AllFailedPartitionsArguments>(AllFailedPartitions, args);
+    static use(args?: AllFailedPartitionsArguments): [QueryResultWithState<FailedPartition[]>] {
+        return useObservableQuery<FailedPartition[], AllFailedPartitions, AllFailedPartitionsArguments>(AllFailedPartitions, args);
     }
 }

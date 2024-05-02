@@ -5,13 +5,13 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from 'Infrastructure/queries';
+import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from 'Infrastructure/queries';
 import { Person } from './Person';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/compliance/gdpr/people');
 
-export class AllPeople extends QueryFor<Person[]> {
+export class AllPeople extends ObservableQueryFor<Person[]> {
     readonly route: string = '/api/compliance/gdpr/people';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Person[] = [];
@@ -25,7 +25,7 @@ export class AllPeople extends QueryFor<Person[]> {
         ];
     }
 
-    static use(): [QueryResultWithState<Person[]>, PerformQuery] {
-        return useQuery<Person[], AllPeople>(AllPeople);
+    static use(): [QueryResultWithState<Person[]>] {
+        return useObservableQuery<Person[], AllPeople>(AllPeople);
     }
 }

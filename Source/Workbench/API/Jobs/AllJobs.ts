@@ -5,7 +5,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from 'Infrastructure/queries';
+import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from 'Infrastructure/queries';
 import { JobState } from './JobState';
 import Handlebars from 'handlebars';
 
@@ -15,7 +15,7 @@ export interface AllJobsArguments {
     eventStore: string;
     namespace: string;
 }
-export class AllJobs extends QueryFor<JobState[], AllJobsArguments> {
+export class AllJobs extends ObservableQueryFor<JobState[], AllJobsArguments> {
     readonly route: string = '/api/events/store/{eventStore}/{namespace}/jobs';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: JobState[] = [];
@@ -31,7 +31,7 @@ export class AllJobs extends QueryFor<JobState[], AllJobsArguments> {
         ];
     }
 
-    static use(args?: AllJobsArguments): [QueryResultWithState<JobState[]>, PerformQuery<AllJobsArguments>] {
-        return useQuery<JobState[], AllJobs, AllJobsArguments>(AllJobs, args);
+    static use(args?: AllJobsArguments): [QueryResultWithState<JobState[]>] {
+        return useObservableQuery<JobState[], AllJobs, AllJobsArguments>(AllJobs, args);
     }
 }

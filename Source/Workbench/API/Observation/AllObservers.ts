@@ -5,7 +5,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from 'Infrastructure/queries';
+import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from 'Infrastructure/queries';
 import { ObserverInformation } from '../Cratis/Kernel/Contracts/Observation/ObserverInformation';
 import Handlebars from 'handlebars';
 
@@ -15,7 +15,7 @@ export interface AllObserversArguments {
     eventStore: string;
     namespace: string;
 }
-export class AllObservers extends QueryFor<ObserverInformation[], AllObserversArguments> {
+export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllObserversArguments> {
     readonly route: string = '/api/events/store/{eventStore}/{namespace}/observers/observe/observe';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverInformation[] = [];
@@ -31,7 +31,7 @@ export class AllObservers extends QueryFor<ObserverInformation[], AllObserversAr
         ];
     }
 
-    static use(args?: AllObserversArguments): [QueryResultWithState<ObserverInformation[]>, PerformQuery<AllObserversArguments>] {
-        return useQuery<ObserverInformation[], AllObservers, AllObserversArguments>(AllObservers, args);
+    static use(args?: AllObserversArguments): [QueryResultWithState<ObserverInformation[]>] {
+        return useObservableQuery<ObserverInformation[], AllObservers, AllObserversArguments>(AllObservers, args);
     }
 }

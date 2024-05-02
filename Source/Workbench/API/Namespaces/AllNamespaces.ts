@@ -5,13 +5,13 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from 'Infrastructure/queries';
+import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from 'Infrastructure/queries';
 import { Namespace } from './Namespace';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/namespaces');
 
-export class AllNamespaces extends QueryFor<Namespace[]> {
+export class AllNamespaces extends ObservableQueryFor<Namespace[]> {
     readonly route: string = '/api/namespaces';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Namespace[] = [];
@@ -25,7 +25,7 @@ export class AllNamespaces extends QueryFor<Namespace[]> {
         ];
     }
 
-    static use(): [QueryResultWithState<Namespace[]>, PerformQuery] {
-        return useQuery<Namespace[], AllNamespaces>(AllNamespaces);
+    static use(): [QueryResultWithState<Namespace[]>] {
+        return useObservableQuery<Namespace[], AllNamespaces>(AllNamespaces);
     }
 }
