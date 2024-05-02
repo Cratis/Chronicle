@@ -6,30 +6,26 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from 'Infrastructure/queries';
-import { EventType } from './EventType';
+import { Namespace } from './Namespace';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/types');
+const routeTemplate = Handlebars.compile('/api/namespaces');
 
-export interface AllEventTypesArguments {
-    eventStore: string;
-}
-export class AllEventTypes extends QueryFor<EventType[], AllEventTypesArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/types';
+export class AllNamespaces extends QueryFor<Namespace[]> {
+    readonly route: string = '/api/namespaces';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly defaultValue: EventType[] = [];
+    readonly defaultValue: Namespace[] = [];
 
     constructor() {
-        super(EventType, true);
+        super(Namespace, true);
     }
 
     get requestArguments(): string[] {
         return [
-            'eventStore',
         ];
     }
 
-    static use(args?: AllEventTypesArguments): [QueryResultWithState<EventType[]>, PerformQuery<AllEventTypesArguments>] {
-        return useQuery<EventType[], AllEventTypes, AllEventTypesArguments>(AllEventTypes, args);
+    static use(): [QueryResultWithState<Namespace[]>, PerformQuery] {
+        return useQuery<Namespace[], AllNamespaces>(AllNamespaces);
     }
 }

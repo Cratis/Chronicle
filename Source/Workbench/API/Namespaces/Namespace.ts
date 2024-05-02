@@ -7,16 +7,12 @@
 
 import { field } from 'Infrastructure';
 
-import { EventType } from '../EventTypes/EventType';
 
-export class EventToAppend {
+export class Namespace {
 
-    @field(EventType)
-    eventType!: EventType;
+    @field(String)
+    name!: string;
 
-    @field(Object)
-    content!: any;
-
-    @field(Date)
-    validFrom?: Date;
+    @field(String)
+    description!: string;
 }
