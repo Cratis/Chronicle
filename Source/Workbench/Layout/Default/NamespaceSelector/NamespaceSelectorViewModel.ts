@@ -5,7 +5,7 @@ import { injectable } from 'tsyringe';
 import { AllNamespaces, Namespace } from 'API/Namespaces';
 
 @injectable()
-export class DefaultLayoutViewModel {
+export class NamespaceSelectorViewModel {
     constructor(private readonly _namespaces: AllNamespaces) {
         this._namespaces.subscribe(result => {
             this.namespaces = result.data;
