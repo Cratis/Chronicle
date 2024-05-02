@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <AssemblyName>Cratis.Api</AssemblyName>
+        <RootNamespace>Cratis.Api</RootNamespace>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
+        <ServerGarbageCollection>false</ServerGarbageCollection>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../Kernel/Shared/Shared.csproj" />
+        <ProjectReference Include="../Kernel/Grains.Interfaces/Grains.Interfaces.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="serilog" />
+      <PackageReference Include="Swashbuckle.AspNetCore" />
+      <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
+    </ItemGroup>
+</Project>

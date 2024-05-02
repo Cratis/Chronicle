@@ -5,10 +5,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aksio.MongoDB" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Serialization" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
+        <PackageReference Include="System.Reactive" />
     </ItemGroup>
 
     <ItemGroup>
@@ -16,5 +16,6 @@
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Compliance/Compliance.csproj" />
+        <ProjectReference Include="..\..\MongoDB\MongoDB.csproj" />
     </ItemGroup>
 </Project>

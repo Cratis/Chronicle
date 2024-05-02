@@ -4,7 +4,7 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Cratis.Collections;
-using Aksio.MongoDB;
+using Cratis.MongoDB;
 using Cratis;
 using Cratis.Events;
 using Cratis.Kernel.Configuration;

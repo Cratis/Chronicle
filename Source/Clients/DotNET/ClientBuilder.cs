@@ -1,14 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Tasks;
-using Aksio.Timers;
 using Cratis.Aggregates;
 using Cratis.Auditing;
 using Cratis.Collections;
 using Cratis.Compliance;
 using Cratis.Compliance.GDPR;
-using Cratis.Configuration;
 using Cratis.Connections;
 using Cratis.Events;
 using Cratis.Identities;
@@ -21,11 +18,12 @@ using Cratis.Projections;
 using Cratis.Reducers;
 using Cratis.Rules;
 using Cratis.Schemas;
+using Cratis.Tasks;
+using Cratis.Timers;
 using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using TaskFactory = Aksio.Tasks.TaskFactory;
+using TaskFactory = Cratis.Tasks.TaskFactory;
 
 namespace Cratis;
 
@@ -43,7 +41,6 @@ public class ClientBuilder : IClientBuilder
     const string CommitMetadataKey = "softwareCommit";
     const string ProgramIdentifierMetadataKey = "programIdentifier";
 
-    readonly OptionsBuilder<ClientOptions> _optionsBuilder;
     readonly Dictionary<string, string> _metadata = [];
     Type _identityProviderType;
 
@@ -64,11 +61,11 @@ public class ClientBuilder : IClientBuilder
         _metadata["process"] = Environment.ProcessPath ?? string.Empty;
         _identityProviderType = typeof(BaseIdentityProvider);
 
-        _optionsBuilder = services.AddOptions<ClientOptions>();
-        SetDefaultOptions();
-        _optionsBuilder.BindConfiguration("cratis")
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
+        // _optionsBuilder = services.AddOptions<ClientOptions>();
+        // SetDefaultOptions();
+        // _optionsBuilder.BindConfiguration("cratis")
+        //     .ValidateDataAnnotations()
+        //     .ValidateOnStart();
         Services = services;
         _logger = logger;
     }
@@ -125,14 +122,11 @@ public class ClientBuilder : IClientBuilder
     {
         _logger.Configuring();
 
-        var options = Services.BuildServiceProvider().GetRequiredService<IOptions<ClientOptions>>();
-
+        // var options = Services.BuildServiceProvider().GetRequiredService<IOptions<ClientOptions>>();
         var clientArtifacts = _clientArtifactsProvider ?? new DefaultClientArtifactsProvider(
-            new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
+             new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
         _logger.ConfiguringServices();
-
-        CausationManager.DefineRoot(_metadata);
 
         Services
             .AddHttpClient()
@@ -178,11 +172,11 @@ public class ClientBuilder : IClientBuilder
         clientArtifacts.ComplianceForPropertiesProviders.ForEach(_ => Services.AddTransient(_));
     }
 
-    void SetDefaultOptions()
-    {
-        _optionsBuilder
-            .Configure(options =>
-            {
-            });
-    }
+    // void SetDefaultOptions()
+    // {
+    //     _optionsBuilder
+    //         .Configure(options =>
+    //         {
+    //         });
+    // }
 }

@@ -2,9 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using Aksio.Applications.Autofac;
+using Cratis.DependencyInjection;
+using Cratis.Json;
 using Cratis.Kernel.Grains.Observation.Placement;
 using Cratis.Kernel.Server.Serialization;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 
 #pragma warning disable SA1600
@@ -15,9 +17,6 @@ public static class Program
     public static Task Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
-        SelfBindingRegistrationSource.AddNamespaceStartsWithToExclude(
-            "Microsoft",
-            "Orleans");
 
         // Force invariant culture for the Kernel
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
@@ -30,9 +29,22 @@ public static class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
+            .UseConfiguration()
+            .UseDefaultServiceProvider(_ =>
+            {
+                _.ValidateScopes = false;
+                _.ValidateOnBuild = false;
+            })
+            .UseLogging()
             .ConfigureCpuBoundWorkers()
             .UseMongoDB()
+            .ConfigureServices(services => services
+                .AddSingleton(Globals.JsonSerializerOptions)
+                .AddBindingsByConvention()
+                .AddSelfBindings())
             .UseOrleans(_ => _
+                .UseLocalhostClustering() // TODO: Implement MongoDB clustering
+                .UseTelemetry() // TODO: Fix telemetry
                 .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
                 .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
                 .ConfigureSerialization()
@@ -45,7 +57,14 @@ public static class Program
                 })
                 .ConfigureStorage()
                 .UseMongoDB()
-                .AddEventSequenceStreaming());
+                .AddEventSequenceStreaming())
+            .ConfigureWebHostDefaults(_ => _
+                .ConfigureKestrel(options =>
+                {
+                    options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+                    options.Limits.Http2.MaxStreamsPerConnection = 100;
+                })
+                .UseStartup<Startup>());
 
     static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
     {

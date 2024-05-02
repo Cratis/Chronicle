@@ -10,12 +10,10 @@ namespace Cratis.Auditing;
 /// </summary>
 public class CausationManager : ICausationManager
 {
-    static Causation _root = new(DateTimeOffset.UtcNow, CausationType.Unknown, ImmutableDictionary<string, string>.Empty);
-
     readonly AsyncLocal<List<Causation>> _current = new();
 
     /// <inheritdoc/>
-    public Causation Root => _root;
+    public Causation Root { get; private set; } = new(DateTimeOffset.UtcNow, CausationType.Unknown, ImmutableDictionary<string, string>.Empty);
 
     /// <inheritdoc/>
     public IImmutableList<Causation> GetCurrentChain()
@@ -23,7 +21,7 @@ public class CausationManager : ICausationManager
         _current.Value ??= [];
         if (_current.Value.Count == 0)
         {
-            _current.Value.Add(_root);
+            _current.Value.Add(Root);
         }
 
         return _current.Value.ToImmutableList();
@@ -35,7 +33,7 @@ public class CausationManager : ICausationManager
         _current.Value ??= [];
         if (_current.Value.Count == 0)
         {
-            _current.Value.Add(_root);
+            _current.Value.Add(Root);
         }
 
         _current.Value.Add(new Causation(DateTimeOffset.UtcNow, type, properties.ToImmutableDictionary()));
@@ -45,8 +43,8 @@ public class CausationManager : ICausationManager
     /// Defines the root causation for the current process.
     /// </summary>
     /// <param name="properties">Properties associated with the root causation.</param>
-    internal static void DefineRoot(IDictionary<string, string> properties)
+    internal void DefineRoot(IDictionary<string, string> properties)
     {
-        _root = new Causation(DateTimeOffset.UtcNow, CausationType.Root, properties.ToImmutableDictionary());
+        Root = new Causation(DateTimeOffset.UtcNow, CausationType.Root, properties.ToImmutableDictionary());
     }
 }

@@ -1434,7 +1434,7 @@ This operation does not require authentication
 |---|---|---|---|---|
 |microserviceId|path|[MicroserviceId](#schemamicroserviceid)|true|Cratis.Execution.MicroserviceId to perform for.|
 |tenantId|path|[TenantId](#schematenantid)|true|Cratis.Execution.TenantId to perform for.|
-|body|body|[ImmediateProjection](#schemaimmediateprojection)|false|The details about the Cratis.Kernel.Domain.Projections.ImmediateProjection.|
+|body|body|[ImmediateProjection](#schemaimmediateprojection)|false|The details about the Cratis.API.Projections.Commands.ImmediateProjection.|
 
 > Example responses
 
@@ -3560,7 +3560,7 @@ Payload for registering multiple event types.
 
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
-|types|[[EventTypeRegistration](#schemaeventtyperegistration)]¦null|false|none|Collection of Cratis.Kernel.Domain.Projections.EventTypeRegistration.|
+|types|[[EventTypeRegistration](#schemaeventtyperegistration)]¦null|false|none|Collection of Cratis.API.Projections.Commands.EventTypeRegistration.|
 
 <h2 id="tocS_RegisterProjections">RegisterProjections</h2>
 <!-- backwards compatibility -->
@@ -3599,7 +3599,7 @@ Represents the payload for registering projections.
 
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
-|projections|[[ProjectionRegistration](#schemaprojectionregistration)]¦null|false|none|Collection of Cratis.Kernel.Domain.Projections.ProjectionRegistration.|
+|projections|[[ProjectionRegistration](#schemaprojectionregistration)]¦null|false|none|Collection of Cratis.API.Projections.Commands.ProjectionRegistration.|
 
 <h2 id="tocS_SocialSecurityNumber">SocialSecurityNumber</h2>
 <!-- backwards compatibility -->

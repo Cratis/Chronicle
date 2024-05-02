@@ -21,11 +21,11 @@ public class ConnectRequest
     /// Gets or sets the client version.
     /// </summary>
     [ProtoMember(2)]
-    public string ClientVersion { get; set; } = string.Empty;
+    public string ClientVersion { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets whether or not the client is running with debugger attached.
     /// </summary>
     [ProtoMember(3)]
-    public bool IsRunningWithDebugger { get; set; }
+    public bool IsRunningWithDebugger { get; set; }
 }

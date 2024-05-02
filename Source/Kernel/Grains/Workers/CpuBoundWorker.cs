@@ -27,7 +27,6 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     Exception? _exception;
     Task? _task;
     TResult? _result;
-
     TaskScheduler TaskScheduler => _taskScheduler ??= ServiceProvider.GetService<LimitedConcurrencyLevelTaskScheduler>() ?? TaskScheduler.Default;
 
     /// <inheritdoc/>

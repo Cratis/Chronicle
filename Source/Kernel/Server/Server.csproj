@@ -5,21 +5,31 @@
         <RootNamespace>Cratis.Kernel.Server</RootNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
-        <ServerGarbageCollection>false</ServerGarbageCollection>
+        <ServerGarbageCollection>true</ServerGarbageCollection>
+        <NoWarn>$(NoWarn);RCS1093</NoWarn>
     </PropertyGroup>
 
     <!-- 3rd party package references -->
     <ItemGroup>
-        <PackageReference Include="Aksio.Applications" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="OrleansDashboard" />
+        <PackageReference Include="OpenTelemetry" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
         <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
         <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+        <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
         <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
         <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
+        <PackageReference Include="serilog" />
+        <PackageReference Include="Serilog.AspNetCore" />
+        <PackageReference Include="Serilog.Exceptions" />
+        <PackageReference Include="Serilog.Extensions.Logging" />
+        <PackageReference Include="Serilog.Settings.Configuration" />
+        <PackageReference Include="Serilog.Sinks.Console" />
+        <PackageReference Include="Serilog.Sinks.PeriodicBatching" />
+        <PackageReference Include="Serilog.Sinks.Seq" />
     </ItemGroup>
 
     <ItemGroup>
@@ -38,5 +48,6 @@
     <ItemGroup>
         <ProjectReference Include="..\Contracts\Contracts.csproj" />
         <ProjectReference Include="..\Services\Services.csproj" />
+        <ProjectReference Include="..\..\MongoDB\MongoDB.csproj" />
     </ItemGroup>
 </Project>

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Cratis.Infrastructure</AssemblyName>
-        <RootNamespace>Cratis.Infrastructure</RootNamespace>
+        <RootNamespace>Cratis</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -10,9 +10,13 @@
 
     <ItemGroup>
         <PackageReference Include="humanizer" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.DependencyModel" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
         <PackageReference Include="NJsonSchema" />
         <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="FluentValidation" />
+        <PackageReference Include="System.Reactive" />
+        <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
     </ItemGroup>
 </Project>

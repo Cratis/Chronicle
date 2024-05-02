@@ -5,6 +5,10 @@
     "editor.codeActionsOnSave": {
         "source.fixAll.eslint": "never"
     },
+    "eslint.validate": [
+        "javascript",
+        "vue"
+    ],
     "files.exclude": {
         "**/*.scss.d.ts": true,
         "**/node_modules": true,
@@ -86,17 +90,19 @@
         "PII",
         "Pkcs",
         "primeicons",
-        "primereact",
+        "primevue",
         "propertymapper",
         "Proto",
         "protobuf",
         "Referer",
         "Remindable",
         "Retryable",
+        "Stylesheet",
         "Swashbuckle",
-        "Testcontainers",
         "tabmenu",
         "tabview",
+        "templating",
+        "Testcontainers",
         "tinycolor",
         "tsyringe",
         "typeparam",

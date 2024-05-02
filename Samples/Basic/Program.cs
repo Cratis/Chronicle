@@ -1,10 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System;
-using Cratis;
-using Cratis.Configuration;
 using Basic;
+using Cratis;
 using Microsoft.Extensions.Logging;
 
 using var loggerFactory = LoggerFactory.Create(builder => builder
@@ -14,7 +12,6 @@ using var loggerFactory = LoggerFactory.Create(builder => builder
 using var client = new CratisClient(
         new CratisOptions(
             new CratisUrl("cratis://localhost:35000"),
-            KernelConnectivity.Default,
             loggerFactory: loggerFactory));
 
 var eventStore = client.GetEventStore(Guid.Empty.ToString());

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Strings.for_ToCamelCase;
+namespace Cratis.Strings.for_ToCamelCase;
 
 public static class when_converting
 {

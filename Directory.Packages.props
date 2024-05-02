@@ -6,30 +6,38 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
+    <PackageVersion Include="castle.core" Version="5.1.1" />
     <PackageVersion Include="docfx.console" Version="2.59.3" />
-    <PackageVersion Include="Aksio.Fundamentals" Version="1.6.3" />
-    <PackageVersion Include="Aksio.MongoDB" Version="1.4.6" />
-    <PackageVersion Include="Aksio.Applications" Version="$(ApplicationModel)" />
-    <PackageVersion Include="Aksio.Applications.CQRS" Version="$(ApplicationModel)" />
-    <PackageVersion Include="Aksio.Applications.CQRS.MongoDB" Version="$(ApplicationModel)" />
     <PackageVersion Include="humanizer" Version="2.14.1" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="8.0.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageVersion Include="OpenTelemetry" Version="1.8.1" />
+    <PackageVersion Include="polly.core" Version="8.3.1" />
     <PackageVersion Include="protobuf-net.Grpc" Version="1.1.1" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.1.1" />
-    <PackageVersion Include="Grpc.Net.Client" Version="2.57.0" />
-    <PackageVersion Include="mongodb.driver" Version="2.24.0" />
-    <PackageVersion Include="OrleansTestKit" Version="8.0.0" NoWarn="NU5104" />
+    <PackageVersion Include="Grpc.Net.Client" Version="2.62.0" />
+    <PackageVersion Include="mongodb.driver" Version="2.25.0" />
+    <PackageVersion Include="OrleansTestKit" Version="8.0.0" />
     <PackageVersion Include="serilog" Version="3.1.1" />
+    <PackageVersion Include="Serilog.AspNetCore" Version="8.0.1" />
+    <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
+    <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
+    <PackageVersion Include="Serilog.Settings.Configuration" Version="8.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="5.0.1" />
+    <PackageVersion Include="Serilog.Sinks.PeriodicBatching" Version="4.0.1" />
+    <PackageVersion Include="Serilog.Sinks.Seq" Version="7.0.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="8.0.2" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.8.6" />
     <PackageVersion Include="System.Net.NameResolution" Version="4.3.0" />
     <PackageVersion Include="System.Reactive" Version="6.0.0" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageVersion Include="automapper" Version="13.0.1" />
     <PackageVersion Include="Azure.Data.Tables" Version="12.8.3" />
-    <PackageVersion Include="FluentValidation" Version="11.9.0" />
+    <PackageVersion Include="FluentValidation" Version="11.9.1" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
@@ -44,30 +52,31 @@
     <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
-    <PackageVersion Include="OrleansDashboard" Version="7.2.2" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.4.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.1" NoWarn="NU5104" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.7.0" NoWarn="NU5104" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.7.1" NoWarn="NU5104" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0" />
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.0.0-beta.10" NoWarn="NU5104" />
-    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.5.0-alpha.2" NoWarn="NU5104" />
-    <PackageVersion Include="handlebars.net" Version="2.1.4" />
+    <PackageVersion Include="OrleansDashboard" Version="8.0.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.8.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.8.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.8.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.8.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.8.1" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.0.0-beta.10" />
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.8.1" />
+    <PackageVersion Include="handlebars.net" Version="2.1.6" />
     <!-- Roslyn-->
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.9.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" />
     <!-- Analysis -->
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" Version="4.8.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" Version="4.9.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
-    <PackageVersion Include="Roslynator.Analyzers" Version="4.11.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.145" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="4.12.2" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.150" />
     <!-- Specifications -->
-    <PackageVersion Include="Aksio.Specifications" Version="2.0.1" />
+    <PackageVersion Include="Cratis.Specifications" Version="3.0.0" />
+    <PackageVersion Include="Testcontainers" Version="3.8.0" />
     <PackageVersion Include="Testcontainers" Version="3.7.0" />
-    <PackageVersion Include="xunit" Version="2.4.2" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.4.2" />
+    <PackageVersion Include="xunit" Version="2.8.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.0" />
     <PackageVersion Include="moq" Version="4.20.70" />
-    <PackageVersion Include="Microsoft.NET.Test.SDK" Version="16.10.0" />
+    <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.9.0" />
   </ItemGroup>
 </Project>

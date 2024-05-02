@@ -40,6 +40,21 @@ public class CratisOptions(
     public CratisUrl Url { get; init; } = url;
 
     /// <summary>
+    /// Gets or sets the software version.
+    /// </summary>
+    public string SoftwareVersion { get; set; } = "0.0.0";
+
+    /// <summary>
+    /// Gets or sets the software commit.
+    /// </summary>
+    public string SoftwareCommit { get; set; } = "[N/A]";
+
+    /// <summary>
+    /// Gets or sets the program identifier.
+    /// </summary>
+    public string ProgramIdentifier { get; set; } = "[N/A]";
+
+    /// <summary>
     /// Gets the <see cref="IIdentityProvider"/> to use.
     /// </summary>
     public IIdentityProvider IdentityProvider { get; init; } = identityProvider ?? new BaseIdentityProvider();
