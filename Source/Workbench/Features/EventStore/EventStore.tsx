@@ -47,21 +47,22 @@ export const EventStore = () => {
     return (<>
         <Routes>
             <Route path=':eventStoreId'
-                   element={<DefaultLayout menu={menuItems} basePath={'/event-store/:eventStoreId'}/>}>
+                element={<DefaultLayout menu={menuItems} basePath={'/event-store/:eventStoreId'} />}>
+
+                <Route path={'types'} element={<Types />} errorElement={<Projections />} />
+                <Route path={'projections'} element={<Projections />} />
+                <Route path={'sequences'} element={<GeneralSequences />} />
+                <Route path={'sinks'} element={<Sinks />} />
 
                 <Route path={':namespace'}>
-                    <Route path={''} element={<Navigate to={'recommendations'}/>}/>
-                    <Route path={'recommendations'} element={<Recommendations/>}/>
-                    <Route path={'jobs'} element={<Jobs/>}/>
-                    <Route path={'sequences/*'} element={<Sequences/>}/>
-                    <Route path={'observers'} element={<Observers/>}/>
-                    <Route path={'failed-partitions'} element={<FailedPartitions/>}/>
-                    <Route path={'identities'} element={<Identities/>}/>
+                    <Route path={''} element={<Navigate to={'recommendations'} />} />
+                    <Route path={'recommendations'} element={<Recommendations />} />
+                    <Route path={'jobs'} element={<Jobs />} />
+                    <Route path={'sequences/*'} element={<Sequences />} />
+                    <Route path={'observers'} element={<Observers />} />
+                    <Route path={'failed-partitions'} element={<FailedPartitions />} />
+                    <Route path={'identities'} element={<Identities />} />
                 </Route>
-                <Route path={'types'} element={<Types/>} errorElement={<Projections/>}/>
-                <Route path={'projections'} element={<Projections/>}/>
-                <Route path={'sequences'} element={<GeneralSequences/>}/>
-                <Route path={'sinks'} element={<Sinks/>}/>
             </Route>
         </Routes>
     </>);

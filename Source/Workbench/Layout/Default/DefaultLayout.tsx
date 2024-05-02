@@ -15,6 +15,7 @@ import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
 import { DefaultLayoutViewModel } from './DefaultLayoutViewModel';
 import { useContext, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocalStorage } from "usehooks-ts";
 
 interface IDefaultLayoutProps {
     menu?: IMenuItemGroup[];
@@ -27,13 +28,17 @@ export const DefaultLayout = withViewModel<DefaultLayoutViewModel, IDefaultLayou
     const layoutContext = useContext(LayoutContext);
     const navigate = useNavigate();
     const location = useLocation();
+    const [currentNamespace, setCurrentNamespace] = useLocalStorage('currentNamespace', viewModel.currentNamespace);
+
 
     useEffect(() => {
-        viewModel.currentNamespace = params.namespace!;
+        const namespace = params.namespace ?? currentNamespace;
+        viewModel.currentNamespace = namespace;
     }, [params]);
 
     const namespaceSelected = (namespace: string) => {
         viewModel.currentNamespace = namespace;
+        setCurrentNamespace(namespace);
         const newRoute = location.pathname.replace(params.namespace!, namespace);
         navigate(newRoute);
     };
