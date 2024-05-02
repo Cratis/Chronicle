@@ -38,7 +38,7 @@
     <PackageVersion Include="automapper" Version="13.0.1" />
     <PackageVersion Include="Azure.Data.Tables" Version="12.8.3" />
     <PackageVersion Include="FluentValidation" Version="11.9.1" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
