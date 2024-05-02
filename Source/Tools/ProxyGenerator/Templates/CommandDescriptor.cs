@@ -8,7 +8,7 @@ namespace Cratis.ProxyGenerator.Templates;
 /// <summary>
 /// Describes a command for templating purposes.
 /// </summary>
-/// <param name="Controller">The controller type that owns the command.</param>
+/// <param name="Type">The controller type that owns the command.</param>
 /// <param name="Method">The method that represents the command.</param>
 /// <param name="Route">API route for the command.</param>
 /// <param name="Name">Name of the command.</param>
@@ -19,7 +19,7 @@ namespace Cratis.ProxyGenerator.Templates;
 /// <param name="ResponseType">The details about the response type.</param>
 /// <param name="TypesInvolved">Collection of types involved in the command.</param>
 public record CommandDescriptor(
-    Type Controller,
+    Type Type,
     MethodInfo Method,
     string Route,
     string Name,
@@ -28,4 +28,4 @@ public record CommandDescriptor(
     IEnumerable<RequestArgumentDescriptor> Arguments,
     bool HasResponse,
     ModelDescriptor ResponseType,
-    IEnumerable<Type> TypesInvolved);
+    IEnumerable<Type> TypesInvolved) : IDescriptor;

@@ -176,7 +176,7 @@ public static class TypeExtensions
         var values = Enum.GetValues(type).Cast<object>().Select(value => Convert.ChangeType(value, enumUnderlyingType)).ToArray();
         var names = Enum.GetNames(type);
         var members = values.Select((value, index) => new EnumMemberDescriptor(names[index], value)).ToArray();
-        return new EnumDescriptor(type, type.Name, members);
+        return new EnumDescriptor(type, type.Name, members, []);
     }
 
     /// <summary>

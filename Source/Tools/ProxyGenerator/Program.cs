@@ -9,7 +9,6 @@ using Cratis.ProxyGenerator.Templates;
 using Microsoft.AspNetCore.Mvc;
 
 var overallStopwatch = Stopwatch.StartNew();
-var stopwatch = Stopwatch.StartNew();
 
 var assemblyFile = "../../API/bin/Debug/net8.0/Cratis.Api.dll";
 assemblyFile = Path.GetFullPath(assemblyFile);
@@ -40,67 +39,33 @@ if (Directory.Exists(targetPath)) Directory.Delete(targetPath, true);
 if (!Directory.Exists(targetPath)) Directory.CreateDirectory(targetPath);
 
 var typesInvolved = new List<Type>();
+var directories = new List<string>();
 
 var commandDescriptors = commands.ConvertAll(_ => _.ToCommandDescriptor(targetPath));
-foreach (var command in commandDescriptors)
-{
-    var path = command.Controller.ResolveTargetPath();
-    var fullPath = Path.Join(targetPath, path, $"{command.Name}.ts");
-    var directory = Path.GetDirectoryName(fullPath)!;
-    if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
-    var proxyContent = TemplateTypes.Command(command);
-    await File.WriteAllTextAsync(fullPath, proxyContent);
-}
-typesInvolved.AddRange(commandDescriptors.SelectMany(_ => _.TypesInvolved));
-
-Console.WriteLine($"{commands.Count} commands in {stopwatch.Elapsed}");
-stopwatch.Restart();
+await commandDescriptors.Write(targetPath, typesInvolved, TemplateTypes.Command, directories, "commands");
 
 var queryDescriptors = queries.ConvertAll(_ => _.ToQueryDescriptor(targetPath));
-foreach (var query in queryDescriptors)
-{
-    var path = query.Controller.ResolveTargetPath();
-    var fullPath = Path.Join(targetPath, path, $"{query.Name}.ts");
-    var directory = Path.GetDirectoryName(fullPath)!;
-    if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
-
-    var proxyContent = TemplateTypes.Query(query);
-    await File.WriteAllTextAsync(fullPath, proxyContent);
-}
-typesInvolved.AddRange(queryDescriptors.SelectMany(_ => _.TypesInvolved));
-
-Console.WriteLine($"{queries.Count} queries in {stopwatch.Elapsed}");
-stopwatch.Restart();
+await queryDescriptors.Write(targetPath, typesInvolved, TemplateTypes.Query, directories, "queries");
 
 typesInvolved = typesInvolved.Distinct().ToList();
-
 var enums = typesInvolved.Where(_ => _.IsEnum).ToList();
 
 var typeDescriptors = typesInvolved.Where(_ => !enums.Contains(_)).ToList().ConvertAll(_ => _.ToTypeDescriptor(targetPath));
-foreach (var type in typeDescriptors)
-{
-    var path = type.Type.ResolveTargetPath();
-    var fullPath = Path.Join(targetPath, path, $"{type.Name}.ts");
-    var directory = Path.GetDirectoryName(fullPath)!;
-    if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
-    var proxyContent = TemplateTypes.Type(type);
-    await File.WriteAllTextAsync(fullPath, proxyContent);
-}
-
-Console.WriteLine($"{typeDescriptors.Count} types in {stopwatch.Elapsed}");
-stopwatch.Restart();
+await typeDescriptors.Write(targetPath, typesInvolved, TemplateTypes.Type, directories, "types");
 
 var enumDescriptors = enums.ConvertAll(_ => _.ToEnumDescriptor());
-foreach (var type in enumDescriptors)
+await enumDescriptors.Write(targetPath, typesInvolved, TemplateTypes.Enum, directories, "enums");
+
+var stopwatch = Stopwatch.StartNew();
+var directoriesWithContent = directories.Distinct().Select(_ => new DirectoryInfo(_));
+foreach (var directory in directoriesWithContent)
 {
-    var path = type.Type.ResolveTargetPath();
-    var fullPath = Path.Join(targetPath, path, $"{type.Name}.ts");
-    var directory = Path.GetDirectoryName(fullPath)!;
-    if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
-    var proxyContent = TemplateTypes.Enum(type);
-    await File.WriteAllTextAsync(fullPath, proxyContent);
+    var exports = directory.GetFiles("*.ts").Select(_ => $"./{Path.GetFileNameWithoutExtension(_.Name)}");
+    var descriptor = new IndexDescriptor(exports);
+    var content = TemplateTypes.Index(descriptor);
+    await File.WriteAllTextAsync(Path.Join(directory.FullName, "index.ts"), content);
 }
 
-Console.WriteLine($"{enumDescriptors.Count} enums in {stopwatch.Elapsed}");
+Console.WriteLine($"{directoriesWithContent.Count()} index files written in {stopwatch.Elapsed}");
 
 Console.WriteLine($"Overall time: {overallStopwatch.Elapsed}");

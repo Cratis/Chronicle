@@ -41,6 +41,11 @@ public static class TemplateTypes
     /// </summary>
     public static readonly HandlebarsTemplate<object, object> ObservableQuery = Handlebars.Compile(GetTemplate("ObservableQuery"));
 
+    /// <summary>
+    /// The template for the index file of each module.
+    /// </summary>
+    public static readonly HandlebarsTemplate<object, object> Index = Handlebars.Compile(GetTemplate("index"));
+
     static TemplateTypes()
     {
         Handlebars.RegisterHelper("camelcase", (writer, _, parameters) => writer.WriteSafeString(parameters[0].ToString()!.ToCamelCase()));

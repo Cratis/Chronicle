@@ -9,4 +9,9 @@ namespace Cratis.ProxyGenerator.Templates;
 /// <param name="Type">Original type.</param>
 /// <param name="Name">Name of the enum.</param>
 /// <param name="Values">The values on the enum.</param>
-public record EnumDescriptor(Type Type, string Name, IEnumerable<EnumMemberDescriptor> Values);
+/// <param name="TypesInvolved">Additional types involved.</param>
+public record EnumDescriptor(
+    Type Type,
+    string Name,
+    IEnumerable<EnumMemberDescriptor> Values,
+    IEnumerable<Type> TypesInvolved) : IDescriptor;

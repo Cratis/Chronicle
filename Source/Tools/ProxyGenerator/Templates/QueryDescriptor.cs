@@ -8,7 +8,7 @@ namespace Cratis.ProxyGenerator.Templates;
 /// <summary>
 /// Describes a query for templating purposes.
 /// </summary>
-/// <param name="Controller">The controller type that owns the query.</param>
+/// <param name="Type">The controller type that owns the query.</param>
 /// <param name="Method">The method that represents the query.</param>
 /// <param name="Route">API route for the query.</param>
 /// <param name="Name">Name of the query.</param>
@@ -20,7 +20,7 @@ namespace Cratis.ProxyGenerator.Templates;
 /// <param name="Arguments">Arguments for the query.</param>
 /// <param name="TypesInvolved">Collection of types involved in the query.</param>
 public record QueryDescriptor(
-    Type Controller,
+    Type Type,
     MethodInfo Method,
     string Route,
     string Name,
@@ -30,4 +30,4 @@ public record QueryDescriptor(
     bool IsObservable,
     IEnumerable<ImportStatement> Imports,
     IEnumerable<RequestArgumentDescriptor> Arguments,
-    IEnumerable<Type> TypesInvolved);
+    IEnumerable<Type> TypesInvolved) : IDescriptor;
