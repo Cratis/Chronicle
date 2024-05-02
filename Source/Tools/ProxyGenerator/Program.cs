@@ -41,7 +41,7 @@ if (!Directory.Exists(targetPath)) Directory.CreateDirectory(targetPath);
 
 var typesInvolved = new List<Type>();
 
-var commandDescriptors = commands.ConvertAll(_ => _.ToCommandDescriptor());
+var commandDescriptors = commands.ConvertAll(_ => _.ToCommandDescriptor(targetPath));
 foreach (var command in commandDescriptors)
 {
     var path = command.Controller.ResolveTargetPath();
@@ -56,7 +56,7 @@ typesInvolved.AddRange(commandDescriptors.SelectMany(_ => _.TypesInvolved));
 Console.WriteLine($"{commands.Count} commands in {stopwatch.Elapsed}");
 stopwatch.Restart();
 
-var queryDescriptors = queries.ConvertAll(_ => _.ToQueryDescriptor());
+var queryDescriptors = queries.ConvertAll(_ => _.ToQueryDescriptor(targetPath));
 foreach (var query in queryDescriptors)
 {
     var path = query.Controller.ResolveTargetPath();
@@ -76,7 +76,7 @@ typesInvolved = typesInvolved.Distinct().ToList();
 
 var enums = typesInvolved.Where(_ => _.IsEnum).ToList();
 
-var typeDescriptors = typesInvolved.Where(_ => !enums.Contains(_)).ToList().ConvertAll(_ => _.ToTypeDescriptor());
+var typeDescriptors = typesInvolved.Where(_ => !enums.Contains(_)).ToList().ConvertAll(_ => _.ToTypeDescriptor(targetPath));
 foreach (var type in typeDescriptors)
 {
     var path = type.Type.ResolveTargetPath();

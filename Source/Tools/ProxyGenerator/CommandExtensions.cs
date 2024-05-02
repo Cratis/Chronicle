@@ -15,8 +15,9 @@ public static class CommandExtensions
     /// Convert a <see cref="MethodInfo"/> to a <see cref="CommandDescriptor"/>.
     /// </summary>
     /// <param name="method">Method to convert.</param>
+    /// <param name="targetPath">The target path the proxies are generated to.</param>
     /// <returns>Converted <see cref="CommandDescriptor"/>.</returns>
-    public static CommandDescriptor ToCommandDescriptor(this MethodInfo method)
+    public static CommandDescriptor ToCommandDescriptor(this MethodInfo method, string targetPath)
     {
         var typesInvolved = new List<Type>();
         var properties = method.GetPropertyDescriptors();
@@ -42,7 +43,7 @@ public static class CommandExtensions
 
         var propertiesWithComplexTypes = properties.Where(_ => !_.OriginalType.IsKnownType());
         typesInvolved.AddRange(propertiesWithComplexTypes.Select(_ => _.OriginalType));
-        var imports = typesInvolved.GetImports(method.DeclaringType!.ResolveTargetPath());
+        var imports = typesInvolved.GetImports(targetPath, method.DeclaringType!.ResolveTargetPath());
 
         var additionalTypesInvolved = new List<Type>();
         foreach (var property in propertiesWithComplexTypes)

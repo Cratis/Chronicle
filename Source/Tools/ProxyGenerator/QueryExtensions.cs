@@ -15,8 +15,9 @@ public static class QueryExtensions
     /// Convert a <see cref="MethodInfo"/> to a <see cref="CommandDescriptor"/>.
     /// </summary>
     /// <param name="method">Method to convert.</param>
+    /// <param name="targetPath">The target path the proxies are generated to.</param>
     /// <returns>Converted <see cref="CommandDescriptor"/>.</returns>
-    public static QueryDescriptor ToQueryDescriptor(this MethodInfo method)
+    public static QueryDescriptor ToQueryDescriptor(this MethodInfo method, string targetPath)
     {
         var typesInvolved = new List<Type>();
         var arguments = method.GetArgumentDescriptors();
@@ -39,7 +40,8 @@ public static class QueryExtensions
 
         var argumentsWithComplexTypes = arguments.Where(_ => !_.OriginalType.IsKnownType());
         typesInvolved.AddRange(argumentsWithComplexTypes.Select(_ => _.OriginalType));
-        var imports = typesInvolved.GetImports(method.DeclaringType!.ResolveTargetPath());
+
+        var imports = typesInvolved.GetImports(targetPath, method.DeclaringType!.ResolveTargetPath());
 
         var additionalTypesInvolved = new List<Type>();
         foreach (var argument in argumentsWithComplexTypes)

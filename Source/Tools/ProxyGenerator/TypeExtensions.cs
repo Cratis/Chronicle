@@ -112,8 +112,9 @@ public static class TypeExtensions
     /// Convert a <see cref="Type"/> to a <see cref="TypeDescriptor"/>.
     /// </summary>
     /// <param name="type">Type to convert.</param>
+    /// <param name="targetPath">The target path the proxies are generated to.</param>
     /// <returns>Converted <see cref="TypeDescriptor"/>.</returns>
-    public static TypeDescriptor ToTypeDescriptor(this Type type)
+    public static TypeDescriptor ToTypeDescriptor(this Type type, string targetPath)
     {
         var imports = new List<ImportStatement>();
         var typesInvolved = new List<Type>();
@@ -130,7 +131,7 @@ public static class TypeExtensions
             type,
             type.GetTargetType().Type,
             propertyDescriptors,
-            typesInvolved.GetImports(type!.ResolveTargetPath()),
+            typesInvolved.GetImports(targetPath, type!.ResolveTargetPath()),
             typesInvolved);
     }
 
@@ -161,7 +162,7 @@ public static class TypeExtensions
             targetType.Constructor,
             isEnumerable,
             isObservable,
-            Enumerable.Empty<ImportStatement>());
+            []);
     }
 
     /// <summary>
@@ -205,12 +206,15 @@ public static class TypeExtensions
     /// Get imports from a collection of types.
     /// </summary>
     /// <param name="types">Types to get from.</param>
+    /// <param name="targetPath">The target path the proxies are generated to.</param>
     /// <param name="relativePath">The relative path to work from.</param>
     /// <returns>A collection of <see cref="ImportStatement"/>.</returns>
-    public static IEnumerable<ImportStatement> GetImports(this IEnumerable<Type> types, string relativePath) =>
+    public static IEnumerable<ImportStatement> GetImports(this IEnumerable<Type> types, string targetPath, string relativePath) =>
          types.Select(_ =>
         {
-            var importPath = Path.GetRelativePath(relativePath, _.ResolveTargetPath());
+            var fullPath = Path.Join(targetPath, relativePath);
+            var fullPathForType = Path.Join(targetPath, _.ResolveTargetPath());
+            var importPath = Path.GetRelativePath(fullPath, fullPathForType);
             importPath = $"{importPath}/{_.Name}";
             return new ImportStatement(_.GetTargetType().Type, importPath);
         }).ToArray();
