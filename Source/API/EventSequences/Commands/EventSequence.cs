@@ -58,10 +58,10 @@ public class EventSequence(
     /// <param name="eventStore">The event store to append for.</param>
     /// <param name="namespace">The namespace to append to.</param>
     /// <param name="eventSequenceId">The event sequence to redact for.</param>
-    /// <param name="redaction">The <see cref="RedactEvent"/> to redact.</param>
+    /// <param name="redaction">The <see cref="Redact"/> to redact.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("redact-event")]
-    public async Task RedactEvent(
+    public async Task Redact(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string eventSequenceId,
@@ -79,7 +79,7 @@ public class EventSequence(
     /// <param name="redaction">The redaction filter to use.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("redact-events")]
-    public async Task RedactEvents(
+    public async Task RedactMany(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string eventSequenceId,

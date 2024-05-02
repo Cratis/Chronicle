@@ -6,7 +6,12 @@ namespace Cratis.ProxyGenerator.Templates;
 /// <summary>
 /// Describes a query argument for template purposes.
 /// </summary>
+/// <param name="OriginalType">The original type of the argument.</param>
 /// <param name="Name">Name of argument.</param>
 /// <param name="Type">Type of argument.</param>
 /// <param name="IsOptional">Whether or not the argument is nullable / optional.</param>
-public record RequestArgumentDescriptor(string Name, string Type, bool IsOptional);
+public record RequestArgumentDescriptor(
+    Type OriginalType,
+    string Name,
+    string Type,
+    bool IsOptional);

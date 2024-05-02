@@ -62,4 +62,12 @@ public static class MethodInfoExtensions
     public static bool IsCommandMethod(this MethodInfo method) =>
          method.GetCustomAttribute<HttpPostAttribute>() != null &&
          method.GetCustomAttribute<AspNetResultAttribute>() == null;
+
+    /// <summary>
+    /// Get properties from a <see cref="MethodInfo"/>.
+    /// </summary>
+    /// <param name="method">Method to get for.</param>
+    /// <returns>Collection of <see cref="PropertyDescriptor"/>.</returns>
+    public static IEnumerable<PropertyDescriptor> GetPropertyDescriptors(this MethodInfo method) =>
+        method.GetParameters().ToList().ConvertAll(_ => _.ToPropertyDescriptor());
 }

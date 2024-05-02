@@ -22,10 +22,7 @@ public class PackageReferencedAssemblies : ICanProvideAssembliesForDiscovery
 
     static readonly object _lock = new();
 
-    readonly List<string> _assemblyPrefixesToInclude =
-    [
-        "Aksio"
-    ];
+    readonly List<string> _assemblyPrefixesToInclude = ["Cratis"];
 
     readonly List<Assembly> _assemblies = [];
 
