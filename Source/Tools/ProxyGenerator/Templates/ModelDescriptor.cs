@@ -23,5 +23,5 @@ public record ModelDescriptor(
     /// <summary>
     /// Represents an empty <see cref="ModelDescriptor"/>.
     /// </summary>
-    public static readonly ModelDescriptor Empty = new(null!, string.Empty, string.Empty, false, false, Enumerable.Empty<ImportStatement>());
+    public static readonly ModelDescriptor Empty = new(null!, string.Empty, string.Empty, false, false, []);
 }
