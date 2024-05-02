@@ -32,7 +32,6 @@ export const MenuItem = ({ item, basePath, ...rest }: IMenuItemProps) => {
     const itemPath = cleanupPath(basePath) + item.url;
     const resolvedPath = generatePath(itemPath ?? '', Object.assign({}, ctx.paramsFallback, params));
 
-
     const [labelClass, setLabelClass] = useState(css.label);
     useEffect(() => {
         setLabelClass(css.label + ' ' + (!layoutContext.layoutConfig.leftSidebarOpen ? css.hidden : ''));
