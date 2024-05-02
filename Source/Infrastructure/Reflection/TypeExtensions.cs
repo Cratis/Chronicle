@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Reflection;
+using Cratis.Queries;
 
 namespace Cratis.Reflection;
 
@@ -255,6 +256,24 @@ public static class TypeExtensions
         return enumerableType.GetInterfaces()
             .Where(t => t.IsGenericType &&
                 t.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            .Select(t => t.GenericTypeArguments[0]).FirstOrDefault()!;
+    }
+
+    /// <summary>
+    /// Gets the element type of an observable.
+    /// </summary>
+    /// <param name="observableType">The <see cref="Type"/> to get from.</param>
+    /// <returns>The observable element type.</returns>
+    public static Type GetObservableElementType(this Type observableType)
+    {
+        if (observableType.IsGenericType && observableType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
+        {
+            return observableType.GetGenericArguments()[0];
+        }
+
+        return observableType.GetInterfaces()
+            .Where(t => t.IsGenericType &&
+                t.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
             .Select(t => t.GenericTypeArguments[0]).FirstOrDefault()!;
     }
 

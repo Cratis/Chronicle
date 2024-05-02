@@ -1,3 +1,0 @@
-${workspaceFolder}/Source/Kernel/Server
-${workspaceFolder}/Source/Clients/DotNET
-${workspaceFolder}/Samples/Basic

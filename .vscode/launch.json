@@ -8,7 +8,7 @@
             "name": "launch",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build-internal",
+            "preLaunchTask": "build",
             "cwd": "${input:project}",
             "program": "${input:target}",
             "stopAtEntry": false,
@@ -54,28 +54,16 @@
         {
             "id": "project",
             "type": "command",
-            "command": "extension.commandvariable.pickStringRemember",
+            "command": "dotnet-build-commands.selectProjectForLaunch",
             "args": {
-                "description": "Pick project to debug",
-                "key": "project",
-                "default": "",
-                "options": [
-                    "${workspaceFolder}/Source/Kernel/Server",
-                    "${workspaceFolder}/Source/Clients/DotNET",
-                    "${workspaceFolder}/Samples/Basic"
-                ]
+                "file": "${workspaceFolder}/.vscode/projects.json"
             }
         },
         {
             "id": "target",
             "type": "command",
-            "command": "shellCommand.execute",
-            "args": {
-                "command": "${workspaceFolder}/.vscode/get-target.sh ${input:project}",
-                "cwd": "${input:project}",
-                "useSingleResult": true
-            }
-        },
+            "command": "dotnet-build-commands.getTarget"
+        }
     ],
     "compounds": []
 }

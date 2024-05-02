@@ -49,7 +49,7 @@ public class CommandActionFilter : IAsyncActionFilter
                 }
             }
 
-            var commandResult = new CommandResult
+            var commandResult = new CommandResult<object>
             {
                 // TODO: Set correlation ID to the actual correlation ID
                 // CorrelationId = _executionContextManager.Current.CorrelationId,
