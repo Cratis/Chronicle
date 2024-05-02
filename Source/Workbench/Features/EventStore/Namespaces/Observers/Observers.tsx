@@ -19,6 +19,7 @@ import { Menubar } from 'primereact/menubar';
 import { MenuItem } from 'primereact/menuitem';
 import { FaArrowsRotate } from "react-icons/fa6";
 import strings from 'Strings';
+import { Button } from 'primereact/button';
 
 const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {
@@ -28,8 +29,6 @@ const observerType = (observer: ObserverInformation) => {
             return 'Client';
         case ObserverType.projection:
             return 'Projection';
-        case ObserverType.inbox:
-            return 'Inbox';
         case ObserverType.reducer:
             return 'Reducer';
     }
@@ -45,9 +44,9 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
 
     const menuItems: MenuItem[] = [
         {
+            id: 'replay',
             label: 'Replay',
             icon: <FaArrowsRotate className={'mr-2'} />,
-
         }
     ];
 
@@ -68,8 +67,8 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                     scrollHeight={'flex'}
                     selectionMode='single'
                     selection={viewModel.selectedObserver}
-                    onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverState)}
-                    dataKey='id'
+                    onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverInformation)}
+                    dataKey='observerId'
                     filters={filters}
                     filterDisplay='menu'
                     onFilter={(e) => setFilters(e.filters)}
@@ -89,7 +88,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                         field='runningState'
                         header={strings.eventStore.namespaces.observers.columns.state}
                         sortable
-                        body={(data: ObserverState) => getObserverRunningStateAsText(data.runningState)}
+                        body={(data: ObserverInformation) => getObserverRunningStateAsText(data.runningState)}
                         filterElement={ObserverRunningStateFilterTemplate}
                         showFilterMatchModes={false}
                     />
