@@ -22,7 +22,7 @@ export class NamespaceSelectorViewModel {
         @inject('props') private readonly _props: INamespaceSelectorProps,
         @inject('params') private readonly _params: any) {
 
-        _navigation.onUrlChanged((url, previousUrl) => {
+        this._navigation.onUrlChanged((url, previousUrl) => {
             console.log('Url changed', url, previousUrl);
         });
 
