@@ -3,9 +3,10 @@
 
 import { container } from "tsyringe";
 import { Constructor } from 'Infrastructure';
-import { FunctionComponent, ReactElement } from 'react';
+import { FunctionComponent, ReactElement, useState } from 'react';
 import { Observer } from 'mobx-react';
 import { makeAutoObservable } from 'mobx';
+import { useParams } from 'react-router-dom';
 
 export interface IViewContext<T, TProps = any> {
     viewModel: T,
@@ -14,13 +15,20 @@ export interface IViewContext<T, TProps = any> {
 
 export function withViewModel<TViewModel extends {}, TProps extends {} = {}>(viewModelType: Constructor<TViewModel>, targetComponent: FunctionComponent<IViewContext<TViewModel, TProps>>) {
     const renderComponent = (props: TProps) => {
+        const [viewModel, setViewModel] = useState<TViewModel>();
+        let vm = viewModel;
 
-        const child = container.createChildContainer();
-        child.registerInstance('props', props);
-        const viewModel = child.resolve<TViewModel>(viewModelType) as any;
+        if (!vm) {
+            const child = container.createChildContainer();
+            const params = useParams();
+            child.registerInstance('props', props);
+            child.registerInstance('params', params);
+            vm = child.resolve<TViewModel>(viewModelType) as any;
+            setViewModel(vm);
+            makeAutoObservable(vm as any);
+        }
 
-        makeAutoObservable(viewModel as any);
-        const component = () => targetComponent({ viewModel, props }) as ReactElement<any, string>;
+        const component = () => targetComponent({ viewModel: vm!, props }) as ReactElement<any, string>;
         return <Observer>{component}</Observer>;
     };
 
