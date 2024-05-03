@@ -4,6 +4,7 @@
         "useDefineForClassFields": true,
         "lib": [
             "ES2020",
+            "ES2021.WeakRef",
             "DOM",
             "DOM.Iterable"
         ],
@@ -27,6 +28,12 @@
             ],
             "Infrastructure/*": [
                 "./Infrastructure/*"
+            ],
+            "Browser": [
+                "./Infrastructure/Browser/index.ts"
+            ],
+            "Browser/*": [
+                "./Infrastructure/Browser/*"
             ],
             "MVVM": [
                 "Infrastructure/MVVM/index.ts"

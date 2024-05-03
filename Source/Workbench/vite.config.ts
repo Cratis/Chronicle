@@ -39,6 +39,7 @@ export default defineConfig({
             'assets': path.resolve('./assets'),
             'Components': path.resolve('./Components'),
             'Infrastructure': path.resolve('./Infrastructure'),
+            'Browser': path.resolve('./Infrastructure/Browser'),
             'Layout': path.resolve('./Layout'),
             'Features': path.resolve('./Features'),
             'Strings': path.resolve('./Strings'),
