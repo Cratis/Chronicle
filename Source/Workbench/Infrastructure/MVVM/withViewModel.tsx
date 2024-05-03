@@ -12,13 +12,12 @@ export interface IViewContext<T, TProps = any> {
     props: TProps,
 }
 
-export function withViewModel<TViewModel extends {}, TProps = {}>(viewModelType: Constructor<TViewModel>, targetComponent: FunctionComponent<IViewContext<TViewModel, TProps>>) {
+export function withViewModel<TViewModel extends {}, TProps extends {} = {}>(viewModelType: Constructor<TViewModel>, targetComponent: FunctionComponent<IViewContext<TViewModel, TProps>>) {
     const renderComponent = (props: TProps) => {
-        const viewModel = container.resolve<TViewModel>(viewModelType) as any;
 
-        for(const key in props) {
-            viewModel[key] = props[key];
-        }
+        const child = container.createChildContainer();
+        child.registerInstance('props', props);
+        const viewModel = child.resolve<TViewModel>(viewModelType) as any;
 
         makeAutoObservable(viewModel as any);
         const component = () => targetComponent({ viewModel, props }) as ReactElement<any, string>;
