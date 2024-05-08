@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <ApplicationModel>1.5.9</ApplicationModel>
-    <Orleans>8.0.0</Orleans>
+    <Orleans>8.1.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
@@ -20,7 +20,7 @@
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.1.1" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.62.0" />
     <PackageVersion Include="mongodb.driver" Version="2.25.0" />
-    <PackageVersion Include="OrleansTestKit" Version="8.0.0" />
+    <PackageVersion Include="OrleansTestKit" Version="8.1.0" />
     <PackageVersion Include="serilog" Version="3.1.1" />
     <PackageVersion Include="Serilog.AspNetCore" Version="8.0.1" />
     <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
