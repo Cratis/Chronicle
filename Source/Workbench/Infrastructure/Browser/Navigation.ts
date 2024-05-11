@@ -7,7 +7,6 @@ export class Navigation implements INavigation {
     private readonly _callbacks: UrlChangedCallback[] = [];
 
     constructor() {
-        console.log('Navigation created');
         const previousUrl = location.href;
         const observer = new MutationObserver((mutations) => {
             if (location.href !== previousUrl) {
