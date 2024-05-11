@@ -3,7 +3,6 @@
 
 import { useMemo, useRef, useState } from "react";
 
-import css from './NamespaceSelector.module.css';
 import { OverlayPanel } from "primereact/overlaypanel";
 import { useLayoutContext } from "../context/LayoutContext";
 import { CurrentNamespace } from "./CurrentNamespace";
@@ -12,6 +11,7 @@ import { ItemsList } from 'Components/ItemsList/ItemsList';
 import { Namespace } from 'API/Namespaces';
 import { INamespaceSelectorProps, NamespaceSelectorViewModel } from './NamespaceSelectorViewModel';
 import { withViewModel } from 'Infrastructure/MVVM';
+import css from './NamespaceSelector.module.css';
 
 export const NamespaceSelector = withViewModel<NamespaceSelectorViewModel, INamespaceSelectorProps>(NamespaceSelectorViewModel, ({ viewModel, props }) => {
     const { layoutConfig } = useLayoutContext();
