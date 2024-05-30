@@ -71,7 +71,7 @@
     <PackageVersion Include="Roslynator.Analyzers" Version="4.12.3" />
     <PackageVersion Include="Meziantou.Analyzer" Version="2.0.150" />
     <!-- Specifications -->
-    <PackageVersion Include="Cratis.Specifications" Version="3.0.0" />
+    <PackageVersion Include="Cratis.Specifications" Version="3.0.1" />
     <PackageVersion Include="Testcontainers" Version="3.8.0" />
     <PackageVersion Include="xunit" Version="2.8.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.0" />
