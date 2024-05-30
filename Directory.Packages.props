@@ -10,6 +10,7 @@
     <PackageVersion Include="Cratis.Applications.MongoDB" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Orleans" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="$(ApplicationModel)" />
+    <PackageVersion Include="Cratis.Applications.Roslyn" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Serilog" Version="$(ApplicationModel)" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageVersion Include="castle.core" Version="5.1.1" />
