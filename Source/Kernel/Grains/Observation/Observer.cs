@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Events;
 using Cratis.Jobs;
 using Cratis.Kernel.Grains.EventSequences;
@@ -10,7 +11,6 @@ using Cratis.Kernel.Grains.Observation.Jobs;
 using Cratis.Kernel.Grains.Observation.States;
 using Cratis.Kernel.Keys;
 using Cratis.Kernel.Observation;
-using Cratis.Kernel.Orleans.StateMachines;
 using Cratis.Kernel.Storage.EventSequences;
 using Cratis.Kernel.Storage.Observation;
 using Cratis.Metrics;

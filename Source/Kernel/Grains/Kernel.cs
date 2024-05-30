@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.DependencyInjection;
 using Cratis.Kernel.Storage;
 using Microsoft.Extensions.Logging;
 

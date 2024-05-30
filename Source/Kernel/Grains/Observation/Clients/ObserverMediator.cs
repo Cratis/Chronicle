@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using Cratis.Connections;
+using Cratis.DependencyInjection;
 using Cratis.Events;
 using Cratis.Observation;
 
