@@ -48,6 +48,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
+        <PackageReference Include="Cratis.Fundamentals" />
     </ItemGroup>
 
     <ItemGroup>

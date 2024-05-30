@@ -2,9 +2,10 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <ApplicationModel>1.5.9</ApplicationModel>
-    <Orleans>8.0.0</Orleans>
+    <Orleans>8.1.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="Cratis.Fundamentals" Version="5.0.4" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageVersion Include="castle.core" Version="5.1.1" />
     <PackageVersion Include="docfx.console" Version="2.59.3" />
@@ -71,7 +72,7 @@
     <PackageVersion Include="Roslynator.Analyzers" Version="4.12.2" />
     <PackageVersion Include="Meziantou.Analyzer" Version="2.0.150" />
     <!-- Specifications -->
-    <PackageVersion Include="Cratis.Specifications" Version="3.0.0" />
+    <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.0" />
     <PackageVersion Include="Testcontainers" Version="3.8.0" />
     <PackageVersion Include="xunit" Version="2.8.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.0" />
