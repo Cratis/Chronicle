@@ -5,11 +5,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Orleans/Orleans.csproj" />
         <ProjectReference Include="../Shared/Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Cratis.Applications.Orleans" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
     </ItemGroup>
 </Project>

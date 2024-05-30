@@ -56,7 +56,7 @@ public static class CollectionExtensions
 
         if (childrenProperty.GetValue(target!, ArrayIndexers.NoIndexers) is not ICollection<TChild> items)
         {
-            items = new List<TChild>();
+            items = [];
             childrenProperty.SetValue(target!, items, ArrayIndexers.NoIndexers);
         }
 

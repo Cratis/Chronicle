@@ -63,7 +63,7 @@ public static class JsonSchemaExtensions
                 return allMetadata;
             }
 
-            return Array.Empty<ComplianceSchemaMetadata>();
+            return [];
         }
     }
 

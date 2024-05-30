@@ -23,7 +23,7 @@ public class FailedPartitionAttempt
     /// <summary>
     /// Gets or sets the Error Messages for the last error on this failed partition.
     /// </summary>
-    public IEnumerable<string> Messages { get; set; } = Enumerable.Empty<string>();
+    public IEnumerable<string> Messages { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the StackTrace for the last error on this failed partition.

@@ -6,7 +6,7 @@ using System.Dynamic;
 using System.Reflection;
 using Cratis.Collections;
 using Cratis.Concepts;
-using Cratis.Execution;
+using Cratis.DependencyInjection;
 using Cratis.Properties;
 using Cratis.Reflection;
 
@@ -199,7 +199,7 @@ public class ObjectComparer : IObjectComparer
                 {
                     var comparableInterface = type.GetInterface(typeof(IComparable<>).Name);
                     var compareToMethod = comparableInterface!.GetMethod(nameof(IComparable<object>.CompareTo), BindingFlags.Public | BindingFlags.Instance);
-                    different = ((int)compareToMethod!.Invoke(leftValue, new[] { rightValue })!) != 0;
+                    different = ((int)compareToMethod!.Invoke(leftValue, [rightValue])!) != 0;
                 }
             }
             else if (!leftValue!.Equals(rightValue))

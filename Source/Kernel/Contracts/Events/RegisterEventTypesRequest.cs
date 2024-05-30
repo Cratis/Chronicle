@@ -21,5 +21,5 @@ public class RegisterEventTypesRequest
     /// Gets or sets the collection of types to register.
     /// </summary>
     [ProtoMember(2)]
-    public IList<EventTypeRegistration> Types { get; set; } = new List<EventTypeRegistration>();
+    public IList<EventTypeRegistration> Types { get; set; } = [];
 }

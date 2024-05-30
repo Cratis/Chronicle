@@ -11,7 +11,7 @@ public class ArrayIndexers
     /// <summary>
     /// Represents no indexers - used when you don't have any indexers.
     /// </summary>
-    public static readonly ArrayIndexers NoIndexers = new(Enumerable.Empty<ArrayIndexer>());
+    public static readonly ArrayIndexers NoIndexers = new([]);
 
     readonly IDictionary<PropertyPath, ArrayIndexer> _arrayIndexers = new Dictionary<PropertyPath, ArrayIndexer>();
 

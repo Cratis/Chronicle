@@ -21,7 +21,7 @@ public class JobStatusChanged
     /// <summary>
     /// Gets or sets any exception messages that happened during the job step - typically when it failed.
     /// </summary>
-    public IEnumerable<string> ExceptionMessages { get; set; } = Enumerable.Empty<string>();
+    public IEnumerable<string> ExceptionMessages { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the stack trace for the exception that happened during the job step - typically when it failed.

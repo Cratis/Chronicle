@@ -33,12 +33,12 @@ public class JobState
     /// <summary>
     /// Gets or sets the <see cref="JobStatus"/>.
     /// </summary>
-    public JobStatus Status => StatusChanges.Count == 0 ? JobStatus.None : StatusChanges.Last().Status;
+    public JobStatus Status => StatusChanges.Count == 0 ? JobStatus.None : StatusChanges[^1].Status;
 
     /// <summary>
     /// Gets or sets collection of status changes that happened to the job.
     /// </summary>
-    public IList<JobStatusChanged> StatusChanges { get; set; } = new List<JobStatusChanged>();
+    public IList<JobStatusChanged> StatusChanges { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the <see cref="JobProgress"/>.

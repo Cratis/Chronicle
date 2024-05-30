@@ -6,6 +6,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Cratis.Fundamentals" Version="5.2.4" />
+    <PackageVersion Include="Cratis.Applications" Version="10.0.1" />
+    <PackageVersion Include="Cratis.Applications.MongoDB" Version="10.0.1" />
+    <PackageVersion Include="Cratis.Applications.Orleans" Version="10.0.1" />
+    <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="10.0.1" />
+    <PackageVersion Include="Cratis.Applications.Serilog" Version="10.0.1" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageVersion Include="castle.core" Version="5.1.1" />
     <PackageVersion Include="docfx.console" Version="2.59.3" />
@@ -74,8 +79,6 @@
     <!-- Specifications -->
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.1" />
     <PackageVersion Include="Testcontainers" Version="3.8.0" />
-    <PackageVersion Include="xunit" Version="2.8.0" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.1" />
     <PackageVersion Include="xunit" Version="2.8.1" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.1" />
     <PackageVersion Include="moq" Version="4.20.70" />

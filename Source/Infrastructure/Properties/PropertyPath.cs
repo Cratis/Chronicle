@@ -6,7 +6,6 @@ using System.Dynamic;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using Cratis.Dynamic;
 using Cratis.Objects;
 using Cratis.Reflection;
 using Cratis.Strings;
@@ -243,7 +242,7 @@ public class PropertyPath
         if (target is ExpandoObject targetAsExpandoObject)
         {
             var innerInstance = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
-            return innerInstance.ContainsKey(LastSegment.Value);
+            return innerInstance!.ContainsKey(LastSegment.Value);
         }
 
         var inner = target.EnsurePath(this, arrayIndexers);
@@ -262,7 +261,7 @@ public class PropertyPath
         if (target is ExpandoObject targetAsExpandoObject)
         {
             var innerInstance = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
-            return innerInstance.ContainsKey(LastSegment.Value) ? innerInstance[LastSegment.Value] : null;
+            return innerInstance!.ContainsKey(LastSegment.Value) ? innerInstance[LastSegment.Value] : null;
         }
 
         var inner = target.EnsurePath(this, arrayIndexers);
@@ -281,7 +280,7 @@ public class PropertyPath
         if (target is ExpandoObject targetAsExpandoObject)
         {
             var inner = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
-            inner[LastSegment.Value] = value;
+            inner![LastSegment.Value] = value;
         }
         else
         {

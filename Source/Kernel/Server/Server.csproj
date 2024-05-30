@@ -11,6 +11,11 @@
 
     <!-- 3rd party package references -->
     <ItemGroup>
+        <PackageReference Include="Cratis.Applications" />
+        <PackageReference Include="Cratis.Applications.MongoDB" />
+        <PackageReference Include="Cratis.Applications.Orleans" />
+        <PackageReference Include="Cratis.Applications.Orleans.MongoDB" />
+        <PackageReference Include="Cratis.Applications.Serilog" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="OrleansDashboard" />
         <PackageReference Include="OpenTelemetry" />
@@ -39,7 +44,6 @@
         <ProjectReference Include="../Grains/Grains.csproj" />
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
-        <ProjectReference Include="../Orleans/Orleans.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Shared/Shared.csproj" />
     </ItemGroup>

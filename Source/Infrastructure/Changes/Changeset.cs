@@ -117,10 +117,10 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         {
             // TODO: Should support non ref/class type objects as children.
             item = new TChild();
-            arrayIndexers = new ArrayIndexers(new[]
-            {
+            arrayIndexers = new ArrayIndexers(
+            [
                 arrayIndexers.All.First() with { Identifier = items.Count }
-            });
+            ]);
         }
 
         if (item is not null)

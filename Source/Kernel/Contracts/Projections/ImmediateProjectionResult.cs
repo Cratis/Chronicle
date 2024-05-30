@@ -21,7 +21,7 @@ public class ImmediateProjectionResult
     /// Collection of properties that was set.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<string> AffectedProperties { get; set; } = Array.Empty<string>();
+    public IEnumerable<string> AffectedProperties { get; set; } = [];
 
     /// <summary>
     /// Number of events that caused projection.

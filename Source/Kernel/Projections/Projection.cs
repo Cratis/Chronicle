@@ -76,10 +76,10 @@ public class Projection : IProjection
     public IObservable<ProjectionEventContext> Event { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<EventType> EventTypes { get; private set; } = Array.Empty<EventType>();
+    public IEnumerable<EventType> EventTypes { get; private set; } = [];
 
     /// <inheritdoc/>
-    public IEnumerable<EventType> OwnEventTypes { get; private set; } = Array.Empty<EventType>();
+    public IEnumerable<EventType> OwnEventTypes { get; private set; } = [];
 
     /// <inheritdoc/>
     public IEnumerable<IProjection> ChildProjections { get; }
@@ -91,7 +91,7 @@ public class Projection : IProjection
     public IProjection? Parent { get; private set; }
 
     /// <inheritdoc/>
-    public IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; private set; } = Array.Empty<EventTypeWithKeyResolver>();
+    public IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; private set; } = [];
 
     /// <inheritdoc/>
     public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => EventTypes.Any(et => et.Id == _.Event.Metadata.Type.Id));

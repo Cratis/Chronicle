@@ -33,7 +33,7 @@ public class JobStepState
     /// <summary>
     /// Gets or sets collection of status changes that happened to the job step.
     /// </summary>
-    public IList<JobStepStatusChanged> StatusChanges { get; set; } = new List<JobStepStatusChanged>();
+    public IList<JobStepStatusChanged> StatusChanges { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the <see cref="JobStepProgress"/>.

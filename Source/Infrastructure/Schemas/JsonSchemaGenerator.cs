@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Compliance;
-using Cratis.Execution;
+using Cratis.DependencyInjection;
 using Cratis.Strings;
 using NJsonSchema;
 using NJsonSchema.Generation;

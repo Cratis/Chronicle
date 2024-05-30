@@ -52,5 +52,5 @@ public class RegisterObserver
     /// Gets or sets a collection of event types to observe.
     /// </summary>
     [ProtoMember(7)]
-    public IList<EventType> EventTypes { get; set; } = new List<EventType>();
+    public IList<EventType> EventTypes { get; set; } = [];
 }

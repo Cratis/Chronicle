@@ -27,7 +27,7 @@ public class ObservationResult
     /// Gets or sets the exception messages.
     /// </summary>
     [ProtoMember(3)]
-    public IList<string> ExceptionMessages { get; set; } = new List<string>();
+    public IList<string> ExceptionMessages { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the exception stack trace.
