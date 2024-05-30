@@ -62,7 +62,7 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
         var filter = GetKeyFilter(observerId, observerKey);
         var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
         return await cursor.FirstOrDefaultAsync().ConfigureAwait(false) ?? new ObserverState(
-            Enumerable.Empty<EventType>(),
+            [],
             observerKey.EventSequenceId,
             observerId,
             ObserverName.NotSpecified,
@@ -111,7 +111,7 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
         state.LastHandledEventSequenceNumber,
         state.RunningState,
         state.Handled,
-        Enumerable.Empty<FailedPartition>());
+        []);
 
     string GetKeyFrom(ObserverId observerId, ObserverKey key) => $"{key.EventSequenceId} : {observerId}";
 

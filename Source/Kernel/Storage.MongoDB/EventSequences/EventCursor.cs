@@ -28,7 +28,7 @@ public class EventCursor(
     readonly CancellationToken _cancellationToken = cancellationToken;
 
     /// <inheritdoc/>
-    public IEnumerable<AppendedEvent> Current { get; private set; } = Array.Empty<AppendedEvent>();
+    public IEnumerable<AppendedEvent> Current { get; private set; } = [];
 
     /// <inheritdoc/>
     public async Task<bool> MoveNext()
@@ -39,11 +39,11 @@ public class EventCursor(
         var result = _innerCursor.MoveNext(_cancellationToken);
         if (_innerCursor.Current is not null)
         {
-            Current = (await Task.WhenAll(_innerCursor.Current.Select(_converter.ToAppendedEvent))).ToArray();
+            Current = [.. await Task.WhenAll(_innerCursor.Current.Select(_converter.ToAppendedEvent))];
         }
         else
         {
-            Current = Array.Empty<AppendedEvent>();
+            Current = [];
         }
         return result;
     }

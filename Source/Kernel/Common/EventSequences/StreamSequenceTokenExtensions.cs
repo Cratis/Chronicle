@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using System.Dynamic;
-using Cratis.Auditing;
 using Cratis.Events;
 using Cratis.Identities;
 using Orleans.Streams;
@@ -39,7 +37,7 @@ public static class StreamSequenceTokenExtensions
                 EventStoreName.NotSet,
                 EventStoreNamespaceName.NotSet,
                 CorrelationId.New(),
-                ImmutableList<Causation>.Empty,
+                [],
                 Identity.System,
                 EventObservationState.Initial),
             new ExpandoObject());

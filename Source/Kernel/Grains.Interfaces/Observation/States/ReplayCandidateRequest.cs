@@ -24,5 +24,5 @@ public class ReplayCandidateRequest
     /// <summary>
     /// Gets or sets the reasons for why this is a replay candidate.
     /// </summary>
-    public IEnumerable<ReplayCandidateReason> Reasons { get; set; } = Enumerable.Empty<ReplayCandidateReason>();
+    public IEnumerable<ReplayCandidateReason> Reasons { get; set; } = [];
 }

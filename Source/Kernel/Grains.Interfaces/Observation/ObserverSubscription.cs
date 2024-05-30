@@ -27,7 +27,7 @@ public record ObserverSubscription(
     /// <summary>
     /// Gets a subscription representing no subscription.
     /// </summary>
-    public static readonly ObserverSubscription Unsubscribed = new(ObserverId.Unspecified, ObserverKey.NotSet, Enumerable.Empty<EventType>(), typeof(NullObserverSubscriber), SiloAddress.Zero, null);
+    public static readonly ObserverSubscription Unsubscribed = new(ObserverId.Unspecified, ObserverKey.NotSet, [], typeof(NullObserverSubscriber), SiloAddress.Zero, null);
 
     /// <summary>
     /// Check whether or not the subscription is subscribed.

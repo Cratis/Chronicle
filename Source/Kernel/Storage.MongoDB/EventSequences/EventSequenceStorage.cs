@@ -123,7 +123,7 @@ public class EventSequenceStorage(
                 {
                         { eventType.Generation.ToString(), document }
                 },
-                Array.Empty<EventCompensation>());
+                []);
             var collection = GetCollection();
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
         }
@@ -192,7 +192,7 @@ public class EventSequenceStorage(
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred)
     {
-        logger.RedactingMultiple(eventSequenceId, eventSourceId, eventTypes ?? Enumerable.Empty<EventType>());
+        logger.RedactingMultiple(eventSequenceId, eventSourceId, eventTypes ?? []);
         var collection = GetCollection();
         var updates = new List<UpdateOneModel<Event>>();
         var affectedEventTypes = new HashSet<EventType>();

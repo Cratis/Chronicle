@@ -75,7 +75,7 @@ public class MongoDBConverter(
 
         var property = propertyBuilder.ToString();
         property = GetNameForPropertyInBsonDocument(property);
-        return new(property, arrayFilters.ToArray());
+        return new(property, [.. arrayFilters]);
     }
 
     /// <inheritdoc/>

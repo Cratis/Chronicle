@@ -19,14 +19,14 @@ public record ObserverSubscriberResult(ObserverSubscriberState State, EventSeque
     /// </summary>
     /// <param name="lastSuccessfulObservation">The <see cref="EventSequenceNumber"/> of the last successful observation.</param>
     /// <returns>The result object to use.</returns>
-    public static ObserverSubscriberResult Ok(EventSequenceNumber lastSuccessfulObservation) => new(ObserverSubscriberState.Ok, lastSuccessfulObservation, Enumerable.Empty<string>(), string.Empty);
+    public static ObserverSubscriberResult Ok(EventSequenceNumber lastSuccessfulObservation) => new(ObserverSubscriberState.Ok, lastSuccessfulObservation, [], string.Empty);
 
     /// <summary>
     /// The result that represents a failed observer.
     /// </summary>
     /// <param name="lastSuccessfulObservation">The <see cref="EventSequenceNumber"/> of the last successful observation.</param>
     /// <returns>The result object to use.</returns>
-    public static ObserverSubscriberResult Failed(EventSequenceNumber lastSuccessfulObservation) => new(ObserverSubscriberState.Failed, lastSuccessfulObservation, Enumerable.Empty<string>(), string.Empty);
+    public static ObserverSubscriberResult Failed(EventSequenceNumber lastSuccessfulObservation) => new(ObserverSubscriberState.Failed, lastSuccessfulObservation, [], string.Empty);
 
     /// <summary>
     /// The result that represents a failed observer.
@@ -34,12 +34,12 @@ public record ObserverSubscriberResult(ObserverSubscriberState State, EventSeque
     /// <param name="lastSuccessfulObservation">The <see cref="EventSequenceNumber"/> of the last successful observation.</param>
     /// <param name="reason">The reason it failed.</param>
     /// <returns>The result object to use.</returns>
-    public static ObserverSubscriberResult Failed(EventSequenceNumber lastSuccessfulObservation, string reason) => new(ObserverSubscriberState.Failed, lastSuccessfulObservation, new[] { reason }, string.Empty);
+    public static ObserverSubscriberResult Failed(EventSequenceNumber lastSuccessfulObservation, string reason) => new(ObserverSubscriberState.Failed, lastSuccessfulObservation, [reason], string.Empty);
 
     /// <summary>
     /// The result that represents a disconnected observer.
     /// </summary>
     /// <param name="lastSuccessfulObservation">The <see cref="EventSequenceNumber"/> of the last successful observation.</param>
     /// <returns>The result object to use.</returns>
-    public static ObserverSubscriberResult Disconnected(EventSequenceNumber lastSuccessfulObservation) => new(ObserverSubscriberState.Disconnected, lastSuccessfulObservation, Enumerable.Empty<string>(), string.Empty);
+    public static ObserverSubscriberResult Disconnected(EventSequenceNumber lastSuccessfulObservation) => new(ObserverSubscriberState.Disconnected, lastSuccessfulObservation, [], string.Empty);
 }

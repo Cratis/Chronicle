@@ -24,12 +24,12 @@ public record JobStepResult(JobStepStatus Status, IEnumerable<string> Messages, 
     /// </summary>
     /// <param name="result">Optional result object.</param>
     /// <returns>A new <see cref="JobStepResult"/> instance.</returns>
-    public static JobStepResult Succeeded(object? result = null) => new(JobStepStatus.Succeeded, Enumerable.Empty<string>(), string.Empty, result);
+    public static JobStepResult Succeeded(object? result = null) => new(JobStepStatus.Succeeded, [], string.Empty, result);
 
     /// <summary>
     /// Creates a failed job step.
     /// </summary>
     /// <param name="message">Message to associate with the failure.</param>
     /// <returns><see cref="JobStepResult"/>.</returns>
-    public static JobStepResult Failed(string message) => new(JobStepStatus.Failed, new[] { message }, string.Empty);
+    public static JobStepResult Failed(string message) => new(JobStepStatus.Failed, [message], string.Empty);
 }
