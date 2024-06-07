@@ -42,7 +42,7 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
         try
         {
             Monitor.TryEnter(_tasks, ref lockTaken);
-            if (lockTaken) return _tasks.ToArray();
+            if (lockTaken) return [.. _tasks];
 
             throw new NotSupportedException();
         }

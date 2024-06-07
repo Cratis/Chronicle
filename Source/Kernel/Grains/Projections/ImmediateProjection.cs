@@ -88,7 +88,7 @@ public class ImmediateProjection(
             {
                 logger.UsingCachedModelInstance();
                 var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, projection.Model.Schema);
-                return new(initialStateAsJson, Enumerable.Empty<PropertyPath>(), 0);
+                return new(initialStateAsJson, [], 0);
             }
 
             if (!projection.EventTypes.Any())

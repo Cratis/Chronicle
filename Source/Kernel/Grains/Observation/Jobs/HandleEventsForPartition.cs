@@ -121,7 +121,7 @@ public class HandleEventsForPartition(
                         break;
                     case ObserverSubscriberState.Disconnected:
                         failed = true;
-                        exceptionMessages = new[] { SubscriberDisconnected };
+                        exceptionMessages = [SubscriberDisconnected];
                         break;
                 }
             }

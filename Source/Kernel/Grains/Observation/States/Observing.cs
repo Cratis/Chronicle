@@ -59,7 +59,7 @@ public class Observing(
         logger.SubscribingToStream(state.NextEventSequenceNumber);
 
         _streamSubscription = await stream.SubscribeAsync(
-            async (@event, _) => await Observer.Handle(@event.Context.EventSourceId, new[] { @event }),
+            async (@event, _) => await Observer.Handle(@event.Context.EventSourceId, [@event]),
             new EventSequenceNumberToken(state.NextEventSequenceNumber));
 
         await stream.WarmUp();
