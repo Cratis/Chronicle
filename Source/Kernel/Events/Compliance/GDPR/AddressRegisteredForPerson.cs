@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Events;
+using Cratis.PersonalInformation;
 using Cratis.API.Compliance.PersonalInformation;
 
 namespace Cratis.Kernel.Compliance.GDPR.Events;
