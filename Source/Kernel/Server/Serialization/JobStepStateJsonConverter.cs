@@ -13,8 +13,5 @@ namespace Cratis.Kernel.Server.Serialization;
 public class JobStepStateJsonConverter : TypeWithObjectPropertiesJsonConverter<JobStepState>
 {
     /// <inheritdoc/>
-    protected override IEnumerable<string> ObjectProperties => new[]
-    {
-        nameof(JobStepState.Request)
-    };
+    protected override IEnumerable<string> ObjectProperties => [nameof(JobStepState.Request)];
 }

@@ -13,8 +13,5 @@ namespace Cratis.Kernel.Server.Serialization;
 public class ObserverSubscriptionJsonConverter : TypeWithObjectPropertiesJsonConverter<ObserverSubscription>
 {
     /// <inheritdoc/>
-    protected override IEnumerable<string> ObjectProperties => new[]
-    {
-        nameof(ObserverSubscription.Arguments)
-    };
+    protected override IEnumerable<string> ObjectProperties => [nameof(ObserverSubscription.Arguments)];
 }
