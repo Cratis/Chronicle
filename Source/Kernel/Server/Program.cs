@@ -37,7 +37,9 @@ public static class Program
             })
             .UseLogging()
             .ConfigureCpuBoundWorkers()
-            .UseMongoDB()
+
+            // TODO: Which extension method do we actually want to call here?
+            .UseMongoDB(mongoDBArtifacts: null)
             .ConfigureServices(services => services
                 .AddSingleton(Globals.JsonSerializerOptions)
                 .AddBindingsByConvention()
