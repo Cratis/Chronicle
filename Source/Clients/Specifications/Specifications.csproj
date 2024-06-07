@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Specifications</AssemblyName>
+        <AssemblyName>Cratis.Testing</AssemblyName>
         <RootNamespace>Cratis.Specifications</RootNamespace>
         <IsTestProject>false</IsTestProject>
 
