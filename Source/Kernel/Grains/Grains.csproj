@@ -14,8 +14,8 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Cratis.Metrics.Roslyn" />
       <PackageReference Include="Cratis.Applications" />
-      <PackageReference Include="Cratis.Applications.Roslyn" />
       <PackageReference Include="Microsoft.Orleans.Streaming" />
       <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
       <PackageReference Include="Microsoft.Orleans.Sdk" />

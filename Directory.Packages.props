@@ -1,16 +1,16 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>10.0.3</ApplicationModel>
+    <ApplicationModel>10.1.9</ApplicationModel>
     <Orleans>8.1.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Cratis.Fundamentals" Version="5.2.4" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="5.2.5" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="5.2.5" />
     <PackageVersion Include="Cratis.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.MongoDB" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Orleans" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="$(ApplicationModel)" />
-    <PackageVersion Include="Cratis.Applications.Roslyn" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Serilog" Version="$(ApplicationModel)" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageVersion Include="castle.core" Version="5.1.1" />
