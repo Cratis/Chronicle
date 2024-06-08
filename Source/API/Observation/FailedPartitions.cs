@@ -3,7 +3,6 @@
 
 using Cratis.Kernel.Observation;
 using Cratis.Observation;
-using Cratis.Queries;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.API.Observation;
