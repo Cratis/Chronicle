@@ -4,6 +4,7 @@
 #pragma warning disable SA1600
 
 using System.Net;
+using Cratis.Applications.Queries;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
