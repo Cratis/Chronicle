@@ -28,14 +28,14 @@
     <PackageVersion Include="Grpc.Net.Client" Version="2.63.0" />
     <PackageVersion Include="mongodb.driver" Version="2.25.0" />
     <PackageVersion Include="OrleansTestKit" Version="8.1.0" />
-    <PackageVersion Include="serilog" Version="3.1.1" />
+    <PackageVersion Include="serilog" Version="4.0.0" />
     <PackageVersion Include="Serilog.AspNetCore" Version="8.0.1" />
     <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
-    <PackageVersion Include="Serilog.Settings.Configuration" Version="8.0.0" />
+    <PackageVersion Include="Serilog.Settings.Configuration" Version="8.0.1" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="5.0.1" />
     <PackageVersion Include="Serilog.Sinks.PeriodicBatching" Version="4.1.1" />
-    <PackageVersion Include="Serilog.Sinks.Seq" Version="7.0.1" />
+    <PackageVersion Include="Serilog.Sinks.Seq" Version="8.0.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="8.0.2" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.8.6" />
@@ -76,9 +76,9 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.12.4" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.154" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.155" />
     <!-- Specifications -->
-    <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.2" />
+    <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.3" />
     <PackageVersion Include="Testcontainers" Version="3.8.0" />
     <PackageVersion Include="xunit" Version="2.8.1" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.1" />
