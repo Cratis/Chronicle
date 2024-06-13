@@ -16,6 +16,5 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Clients/DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../../Kernel/Projections/Projections.csproj"/>
     </ItemGroup>
 </Project>
