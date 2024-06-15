@@ -14,6 +14,7 @@ public class JoinDefinition
     /// <summary>
     /// Gets or sets the property representing the model property one is joining on.
     /// </summary>
+    [ProtoMember(1)]
     public string On { get; set; }
 
     /// <summary>

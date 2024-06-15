@@ -41,9 +41,9 @@ public interface IObservers
     /// </summary>
     /// <param name="request">The <see cref="AllObserversRequest"/>.</param>
     /// <param name="context">gRPC call context.</param>
-    /// <returns>An observable of <see cref="ObserverInformation"/>.</returns>
+    /// <returns>A collection of observables of <see cref="ObserverInformation"/>.</returns>
     [Operation]
-    IEnumerable<ObserverInformation> GetObservers(AllObserversRequest request, CallContext context = default);
+    Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default);
 
     /// <summary>
     /// Observe all observers.

@@ -15,5 +15,5 @@ public class ConnectionKeepAlive
     /// Gets or sets the unique identifier of the connection.
     /// </summary>
     [ProtoMember(1)]
-    public string ConnectionId { get; set; } = string.Empty;
+    public string ConnectionId { get; set; } = string.Empty;
 }

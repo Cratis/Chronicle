@@ -28,5 +28,6 @@ public interface IConnectionService
     /// Notify server the client is still alive.
     /// </summary>
     /// <param name="keepAlive"><see cref="ConnectionKeepAlive"/> with information about the client.</param>
-    void ConnectionKeepAlive(ConnectionKeepAlive keepAlive);
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive);
 }
