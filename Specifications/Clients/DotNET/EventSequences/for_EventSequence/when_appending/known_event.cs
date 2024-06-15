@@ -4,8 +4,10 @@
 
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Identities;
 
-namespace Cratis.EventSequences.for_EventSequence.when_appending;
+namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending;
 
 public class known_event : given.an_event_sequence
 {
@@ -24,13 +26,13 @@ public class known_event : given.an_event_sequence
         @event = "Actual event";
         event_type = new(Guid.NewGuid(), EventGeneration.First);
 
-        event_content = new JsonObject();
+        event_content = [];
         event_serializer.Setup(_ => _.Serialize(@event)).ReturnsAsync(event_content);
 
-        causation = new[]
-        {
+        causation =
+        [
             new Causation(DateTimeOffset.UtcNow, Guid.NewGuid().ToString(), new Dictionary<string, string> { { "key", "42" } })
-        };
+        ];
 
         caused_by = new("Subject", "Name", "UserName", new("BehalfOf_Subject", "BehalfOf_Name", "BehalfOf_UserName"));
 

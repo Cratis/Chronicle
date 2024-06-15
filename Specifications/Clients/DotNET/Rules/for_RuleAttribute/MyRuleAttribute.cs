@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Cratis.Rules.for_Rules.for_RuleAttribute;
+namespace Cratis.Chronicle.Rules.for_Rules.for_RuleAttribute;
 
 public class MyRuleAttribute : RuleAttribute
 {

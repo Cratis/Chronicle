@@ -3,7 +3,7 @@
 
 using Cratis.Strings;
 
-namespace Cratis.Changes.for_ObjectComparer;
+namespace Cratis.Chronicle.Changes.for_ObjectComparer;
 
 public class when_comparing_object_with_collections_that_have_different_number_of_elements : given.an_object_comparer
 {

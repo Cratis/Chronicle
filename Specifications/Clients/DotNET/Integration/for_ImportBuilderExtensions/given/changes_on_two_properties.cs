@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Integration.for_ImportBuilderExtensions.given;
+using Cratis.Chronicle.Changes;
+
+namespace Cratis.Chronicle.Integration.for_ImportBuilderExtensions.given;
 
 public class changes_on_two_properties : no_changes
 {
@@ -10,8 +12,8 @@ public class changes_on_two_properties : no_changes
         modified_model = new Model(43, "Forty Three", "Three");
         original_model = new Model(42, "Forty Two", "Two");
 
-        changeset.Add(new PropertiesChanged<Model>(modified_model, new[]
-        {
+        changeset.Add(new PropertiesChanged<Model>(modified_model,
+        [
                 new PropertyDifference(
                     new(nameof(Model.SomeInteger)),
                     original_model,
@@ -21,6 +23,6 @@ public class changes_on_two_properties : no_changes
                     new(nameof(Model.SomeString)),
                     original_model,
                     modified_model)
-        }));
+        ]));
     }
 }

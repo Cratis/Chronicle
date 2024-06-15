@@ -1,10 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Specs</AssemblyName>
-        <RootNamespace>Cratis</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="../../../Source/Clients/DotNET/DotNET.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Cratis.Applications" />
     </ItemGroup>
 </Project>

@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Projections.for_Projections;
+using Cratis.Chronicle.Contracts.Projections;
+
+namespace Cratis.Chronicle.Projections.for_Projections;
 
 public class when_there_are_no_projections : given.all_dependencies
 {
@@ -10,7 +12,7 @@ public class when_there_are_no_projections : given.all_dependencies
 
     void Establish()
     {
-        client_artifacts.Setup(_ => _.Projections).Returns(Array.Empty<Type>());
+        client_artifacts.Setup(_ => _.Projections).Returns([]);
         projections = new Projections(
             event_types.Object,
             client_artifacts.Object,

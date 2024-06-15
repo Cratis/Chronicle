@@ -3,7 +3,7 @@
 
 using NJsonSchema;
 
-namespace Cratis.Rules.for_RulesProjections.given;
+namespace Cratis.Chronicle.Rules.for_RulesProjections.given;
 
 public class two_rules_with_projections : all_dependencies
 {
@@ -11,11 +11,11 @@ public class two_rules_with_projections : all_dependencies
 
     void Establish()
     {
-        client_artifacts.SetupGet(_ => _.Rules).Returns(new[]
-        {
+        client_artifacts.SetupGet(_ => _.Rules).Returns(
+        [
             typeof(FirstRule),
             typeof(SecondRule)
-        });
+        ]);
 
         service_provider.Setup(_ => _.GetService(typeof(FirstRule))).Returns(new FirstRule());
         service_provider.Setup(_ => _.GetService(typeof(SecondRule))).Returns(new SecondRule());

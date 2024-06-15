@@ -4,7 +4,7 @@
 using System.Collections;
 using Cratis.Strings;
 
-namespace Cratis.Changes.for_ObjectComparer;
+namespace Cratis.Chronicle.Changes.for_ObjectComparer;
 
 public class when_comparing_object_with_unequal_collections_and_different_element_types_on_second_value : given.an_object_comparer
 {

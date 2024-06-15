@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Integration.for_ImportBuilderExtensions;
+using Cratis.Chronicle.Properties;
+
+namespace Cratis.Chronicle.Integration.for_ImportBuilderExtensions;
 
 public class when_filtering_on_model_properties_are_not_set_and_they_are_not : given.a_change_on_one_property
 {
@@ -16,7 +18,7 @@ public class when_filtering_on_model_properties_are_not_set_and_they_are_not : g
     void Because() =>
         subject.OnNext(
             new ImportContext<Model, ExternalModel>(
-                new AdapterProjectionResult<Model>(new(0, string.Empty, string.Empty), Array.Empty<PropertyPath>(), 0),
+                new AdapterProjectionResult<Model>(new(0, string.Empty, string.Empty), [], 0),
                 changeset,
                 events_to_append));
 

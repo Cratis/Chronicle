@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Rules.for_Rules.for_RuleAttribute;
+namespace Cratis.Chronicle.Rules.for_Rules.for_RuleAttribute;
 
 public class when_validating_with_model_key : given.a_validation_context
 {

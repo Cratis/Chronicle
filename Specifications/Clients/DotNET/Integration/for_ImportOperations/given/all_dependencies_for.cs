@@ -2,8 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using AutoMapper;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Integration.for_ImportOperations.given;
+namespace Cratis.Chronicle.Integration.for_ImportOperations.given;
 
 public class all_dependencies_for<TEvent> : Specification
 {

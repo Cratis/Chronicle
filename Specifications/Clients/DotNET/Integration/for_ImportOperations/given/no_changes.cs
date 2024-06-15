@@ -1,7 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Integration.for_ImportOperations.given;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Properties;
+
+namespace Cratis.Chronicle.Integration.for_ImportOperations.given;
 
 public class no_changes : all_dependencies_for<SomeEvent>
 {
@@ -14,7 +17,7 @@ public class no_changes : all_dependencies_for<SomeEvent>
         initial = new(42, "Forty Two", "Two");
         incoming = new(42, "Forty Two");
 
-        projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(new AdapterProjectionResult<Model>(initial, Array.Empty<PropertyPath>(), 0)));
+        projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(new AdapterProjectionResult<Model>(initial, [], 0)));
         mapper.Setup(_ => _.Map<Model>(incoming)).Returns(initial);
         objects_comparer.Setup(_ => _.Equals(initial, IsAny<Model>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
 

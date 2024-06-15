@@ -1,9 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Projections;
 using NJsonSchema;
 
-namespace Cratis.Projections.for_Projections;
+namespace Cratis.Chronicle.Projections.for_Projections;
 
 public class when_there_are_two_projections : given.all_dependencies
 {
@@ -21,11 +22,11 @@ public class when_there_are_two_projections : given.all_dependencies
         first_projection = new();
         second_projection = new();
 
-        client_artifacts.Setup(_ => _.Projections).Returns(new[]
-        {
+        client_artifacts.Setup(_ => _.Projections).Returns(
+        [
             first_projection.Object.GetType(),
             second_projection.Object.GetType()
-        });
+        ]);
 
         service_provider.Setup(_ => _.GetService(first_projection.Object.GetType())).Returns(first_projection.Object);
         service_provider.Setup(_ => _.GetService(second_projection.Object.GetType())).Returns(second_projection.Object);

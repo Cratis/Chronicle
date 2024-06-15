@@ -3,7 +3,7 @@
 
 using Cratis.Strings;
 
-namespace Cratis.Changes.for_ObjectComparer;
+namespace Cratis.Chronicle.Changes.for_ObjectComparer;
 
 public class when_comparing_object_with_generic_comparable_that_are_not_equal : given.an_object_comparer
 {

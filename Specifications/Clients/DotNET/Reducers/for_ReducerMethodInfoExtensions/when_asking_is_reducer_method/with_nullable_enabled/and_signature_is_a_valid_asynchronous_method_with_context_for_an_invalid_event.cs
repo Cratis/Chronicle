@@ -3,7 +3,10 @@
 
 #nullable enable
 
-namespace Cratis.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method.with_nullable_enabled;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Reducers;
+
+namespace Cratis.Chronicle.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method.with_nullable_enabled;
 
 public class and_signature_is_a_valid_asynchronous_method_with_context_for_an_invalid_event : Specification
 {
@@ -16,7 +19,7 @@ public class and_signature_is_a_valid_asynchronous_method_with_context_for_an_in
 
     bool result;
 
-    void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something))!.IsReducerMethod(typeof(ReadModel), Enumerable.Empty<Type>());
+    void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something))!.IsReducerMethod(typeof(ReadModel), []);
 
     [Fact] void should_not_be_considered_a_reducer_method() => result.ShouldBeFalse();
 }

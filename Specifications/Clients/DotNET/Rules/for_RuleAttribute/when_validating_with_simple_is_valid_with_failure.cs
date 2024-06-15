@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Cratis.Rules.for_Rules.for_RuleAttribute;
+namespace Cratis.Chronicle.Rules.for_Rules.for_RuleAttribute;
 
 public class when_validating_with_simple_is_valid_with_failure : given.a_validation_context
 {

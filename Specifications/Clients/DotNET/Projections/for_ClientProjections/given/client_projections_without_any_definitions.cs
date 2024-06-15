@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Contracts.Projections;
 
-namespace Cratis.Projections.for_ClientProjections.given;
+namespace Cratis.Chronicle.Projections.for_ClientProjections.given;
 
 public class client_projections_without_any_definitions : all_dependencies
 {

@@ -8,5 +8,4 @@ global using Cratis.DependencyInjection;
 global using Cratis.Execution;
 
 using System.Runtime.CompilerServices;
-[assembly: InternalsVisibleTo("Cratis.Specs")]
-[assembly: InternalsVisibleTo("Cratis.Specifications")]
+[assembly: InternalsVisibleTo("Cratis.Chronicle.Specs")]

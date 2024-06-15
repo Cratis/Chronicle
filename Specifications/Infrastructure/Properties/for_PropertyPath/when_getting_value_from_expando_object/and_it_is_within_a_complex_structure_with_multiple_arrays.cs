@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Properties.for_PropertyPath;
+namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class and_it_is_within_a_complex_structure_with_multiple_arrays : Specification
 {

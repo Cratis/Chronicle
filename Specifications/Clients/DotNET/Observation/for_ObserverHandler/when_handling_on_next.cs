@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Identities;
 
-namespace Cratis.Observation.for_ObserverHandler;
-
-public record SomeEvent(string Property);
+namespace Cratis.Chronicle.Observation.for_ObserverHandler;
 
 public class when_handling_on_next : given.an_observer_handler
 {
@@ -23,7 +23,7 @@ public class when_handling_on_next : given.an_observer_handler
         appended_event = new(
             new(0,
             new(Guid.NewGuid(), 1)),
-            new(Guid.NewGuid(), 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, Guid.NewGuid(), Guid.NewGuid().ToString(), Enumerable.Empty<Causation>(), Identity.NotSet),
+            new(Guid.NewGuid(), 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Guid.NewGuid().ToString(), [], Identity.NotSet),
             new ExpandoObject());
 
         event_serializer.Setup(_ => _.Deserialize(appended_event)).Returns(Task.FromResult<object>(event_content));

@@ -3,7 +3,7 @@
 
 using Cratis.Strings;
 
-namespace Cratis.Properties.for_PropertyPath;
+namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class when_creating_complex_path_with_nested_properties_and_array_indexers : Specification
 {

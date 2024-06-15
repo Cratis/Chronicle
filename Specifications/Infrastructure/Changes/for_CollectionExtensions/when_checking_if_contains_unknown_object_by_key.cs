@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Changes.for_CollectionExtensions;
+namespace Cratis.Chronicle.Changes.for_CollectionExtensions;
 
 public class when_checking_if_contains_unknown_object_by_key : Specification
 {

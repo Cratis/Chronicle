@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Rules.for_Rules.given;
+namespace Cratis.Chronicle.Rules.for_Rules.given;
 
 public class one_rule_for_type : all_dependencies
 {
@@ -11,7 +11,7 @@ public class one_rule_for_type : all_dependencies
 
     void Establish()
     {
-        client_artifacts.SetupGet(_ => _.Rules).Returns(new[] { typeof(RulesForTypeForRules) });
+        client_artifacts.SetupGet(_ => _.Rules).Returns([typeof(RulesForTypeForRules)]);
 
         rules = new(
             json_serializer_options,

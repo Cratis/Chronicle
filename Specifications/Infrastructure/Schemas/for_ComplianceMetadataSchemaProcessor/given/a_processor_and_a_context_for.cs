@@ -7,7 +7,7 @@ using Newtonsoft.Json.Serialization;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
-namespace Cratis.Schemas.for_ComplianceMetadataSchemaProcessor.given;
+namespace Cratis.Chronicle.Schemas.for_ComplianceMetadataSchemaProcessor.given;
 
 public class a_processor_and_a_context_for<T> : Specification
     where T : new()

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Reducers.for_ReducerInvoker.given;
+namespace Cratis.Chronicle.Reducers.for_ReducerInvoker.given;
 
 public class a_reducer_invoker_for<TReducer> : Specification
     where TReducer : class, new()
@@ -26,5 +26,5 @@ public class a_reducer_invoker_for<TReducer> : Specification
             typeof(ReadModel));
     }
 
-    protected virtual IEnumerable<Type> GetEventTypes() => Enumerable.Empty<Type>();
+    protected virtual IEnumerable<Type> GetEventTypes() => [];
 }

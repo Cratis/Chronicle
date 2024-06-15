@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 
-namespace Cratis.Aggregates;
+using Cratis.Chronicle.Aggregates;
+
+namespace Cratis.Chronicle.Aggregates;
 
 public class StatefulAggregateRoot : AggregateRoot<StateForAggregateRoot>
 {

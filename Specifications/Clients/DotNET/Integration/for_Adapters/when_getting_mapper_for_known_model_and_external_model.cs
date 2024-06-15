@@ -3,7 +3,7 @@
 
 using AutoMapper;
 
-namespace Cratis.Integration.for_Adapters;
+namespace Cratis.Chronicle.Integration.for_Adapters;
 
 public class when_getting_mapper_for_known_model_and_external_model : given.one_adapter
 {

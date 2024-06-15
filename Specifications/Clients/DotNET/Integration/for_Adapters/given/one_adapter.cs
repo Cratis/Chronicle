@@ -3,7 +3,7 @@
 
 using AutoMapper;
 
-namespace Cratis.Integration.for_Adapters.given;
+namespace Cratis.Chronicle.Integration.for_Adapters.given;
 
 public class one_adapter : all_dependencies
 {
@@ -17,7 +17,7 @@ public class one_adapter : all_dependencies
     {
         adapter = new Mock<IAdapterFor<Model, ExternalModel>>();
         var adapterType = adapter.Object.GetType();
-        client_artifacts.SetupGet(_ => _.Adapters).Returns(new[] { adapterType });
+        client_artifacts.SetupGet(_ => _.Adapters).Returns([adapterType]);
         service_provider.Setup(_ => _.GetService(adapterType)).Returns(adapter.Object);
 
         mapper = new();

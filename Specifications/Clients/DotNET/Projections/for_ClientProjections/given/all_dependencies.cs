@@ -1,7 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Projections.for_ClientProjections.given;
+using Cratis.Chronicle.Integration;
+using Cratis.Chronicle.Rules;
+
+namespace Cratis.Chronicle.Projections.for_ClientProjections.given;
 
 public class all_dependencies : Specification
 {

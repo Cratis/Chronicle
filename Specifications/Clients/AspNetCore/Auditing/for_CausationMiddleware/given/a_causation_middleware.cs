@@ -3,7 +3,7 @@
 
 using Microsoft.AspNetCore.Http;
 
-namespace Cratis.AspNetCore.Auditing.for_CausationMiddleware.given;
+namespace Cratis.Chronicle.AspNetCore.Auditing.for_CausationMiddleware.given;
 
 public class a_causation_middleware : Specification
 {

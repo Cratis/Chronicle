@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Rules.for_Rules.when_projecting_to_rule;
+using Cratis.Chronicle.Models;
+
+namespace Cratis.Chronicle.Rules.for_Rules.when_projecting_to_rule;
 
 public class without_state : given.no_rules
 {

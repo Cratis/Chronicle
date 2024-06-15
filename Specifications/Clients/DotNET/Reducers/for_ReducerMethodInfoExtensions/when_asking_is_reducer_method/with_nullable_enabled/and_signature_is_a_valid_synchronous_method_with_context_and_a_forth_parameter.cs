@@ -3,7 +3,7 @@
 
 #nullable enable
 
-namespace Cratis.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method.with_nullable_enabled;
+namespace Cratis.Chronicle.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method.with_nullable_enabled;
 
 public class and_signature_is_a_valid_synchronous_method_with_context_and_a_forth_parameter : Specification
 {
@@ -16,7 +16,7 @@ public class and_signature_is_a_valid_synchronous_method_with_context_and_a_fort
 
     bool result;
 
-    void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something))!.IsReducerMethod(typeof(ReadModel), Enumerable.Empty<Type>());
+    void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something))!.IsReducerMethod(typeof(ReadModel), []);
 
     [Fact] void should_not_be_considered_a_reducer_method() => result.ShouldBeFalse();
 }

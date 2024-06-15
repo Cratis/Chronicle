@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Integration.for_ImportBuilderExtensions;
+using Cratis.Chronicle.Properties;
 
-public class when_filtering_on_properties_and_next_value_with_similar_name_is_changed : given.a_change_on_similarily_named_property
+namespace Cratis.Chronicle.Integration.for_ImportBuilderExtensions;
+
+public class when_filtering_on_properties_and_next_value_with_similar_name_is_changed : given.a_change_on_similarly_named_property
 {
     ImportContext<Model, ExternalModel> result;
 
@@ -16,7 +18,7 @@ public class when_filtering_on_properties_and_next_value_with_similar_name_is_ch
     void Because() =>
         subject.OnNext(
             new ImportContext<Model, ExternalModel>(
-                new AdapterProjectionResult<Model>(new(0, default, default), Array.Empty<PropertyPath>(), 0),
+                new AdapterProjectionResult<Model>(new(0, default, default), [], 0),
                 changeset,
                 events_to_append));
 

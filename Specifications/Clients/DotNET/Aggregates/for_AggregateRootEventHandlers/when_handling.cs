@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Aggregates.for_AggregateRootEventHandlers;
+namespace Cratis.Chronicle.Aggregates.for_AggregateRootEventHandlers;
 
 public class when_handling : given.aggregate_root_event_handlers
 {
@@ -9,11 +9,11 @@ public class when_handling : given.aggregate_root_event_handlers
 
     void Establish()
     {
-        events = new[]
-        {
+        events =
+        [
             new EventAndContext(new FirstEventType("First"), EventContext.Empty),
             new EventAndContext(new SecondEventType("Second"), EventContext.Empty)
-        };
+        ];
     }
 
     async Task Because() => await handlers.Handle(aggregate_root, events);

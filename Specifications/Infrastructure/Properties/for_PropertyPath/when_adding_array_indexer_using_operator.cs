@@ -3,7 +3,7 @@
 
 using Cratis.Strings;
 
-namespace Cratis.Properties.for_PropertyPath;
+namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class when_adding_array_indexer_using_operator : Specification
 {

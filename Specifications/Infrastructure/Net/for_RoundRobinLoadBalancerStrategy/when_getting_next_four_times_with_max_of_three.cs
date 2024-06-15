@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Net.for_RoundRobinLoadBalancerStrategy;
+namespace Cratis.Chronicle.Net.for_RoundRobinLoadBalancerStrategy;
 
 public class when_getting_next_four_times_with_max_of_three : Specification
 {

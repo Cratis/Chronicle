@@ -3,7 +3,7 @@
 
 using Cratis.Strings;
 
-namespace Cratis.Schemas.for_ComplianceMetadataSchemaProcessor;
+namespace Cratis.Chronicle.Schemas.for_ComplianceMetadataSchemaProcessor;
 
 public class when_processing_type_with_metadata_and_two_properties_with_metadata : given.a_processor_and_a_context_for<TypeWithProperties>
 {

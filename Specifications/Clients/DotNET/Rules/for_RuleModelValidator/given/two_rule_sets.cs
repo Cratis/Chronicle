@@ -4,7 +4,7 @@
 using FluentValidation;
 using FluentValidation.Results;
 
-namespace Cratis.Rules.for_Rules.for_RulesModelValidator.given;
+namespace Cratis.Chronicle.Rules.for_Rules.for_RulesModelValidator.given;
 
 public class two_rule_sets : Specification
 {
@@ -26,7 +26,7 @@ public class two_rule_sets : Specification
 
         rules = new();
 
-        validator = new(new[] { first_rule_set.Object, second_rule_set.Object }, rules.Object);
+        validator = new([first_rule_set.Object, second_rule_set.Object], rules.Object);
 
         first_rule_set_validation_result = new ValidationResult(new[]
         {

@@ -3,8 +3,13 @@
 
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Contracts.Models;
+using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Properties;
 
-namespace Cratis.Projections.for_ClientProjections;
+namespace Cratis.Chronicle.Projections.for_ClientProjections;
 
 public class when_there_are_projections_from_all_sources : given.all_dependencies
 {
@@ -34,14 +39,14 @@ public class when_there_are_projections_from_all_sources : given.all_dependencie
             rules_projections.Object);
     }
 
-    void Because() => all = definitions.Definitions.ToArray();
+    void Because() => all = definitions.Definitions;
 
     [Fact] void should_contain_projections_from_projections() => all.ShouldContain(projections_from_projections);
     [Fact] void should_contain_projections_from_immediate_projections() => all.ShouldContain(projections_from_immediate_projections);
     [Fact] void should_contain_projections_from_adapters() => all.ShouldContain(projections_from_adapters);
     [Fact] void should_contain_projections_from_rules_projections() => all.ShouldContain(projections_from_rules_projections);
 
-    IEnumerable<ProjectionDefinition> CreateProjectionDefinitions() =>
+    ProjectionDefinition[] CreateProjectionDefinitions() =>
         Enumerable.Range(0, 2).Select(_ => new
             ProjectionDefinition(
                 Guid.NewGuid(),
@@ -49,10 +54,10 @@ public class when_there_are_projections_from_all_sources : given.all_dependencie
                 new ModelDefinition(string.Empty, string.Empty),
                 false,
                 false,
-                new JsonObject(),
+                [],
                 new Dictionary<EventType, FromDefinition>(),
                 new Dictionary<EventType, JoinDefinition>(),
                 new Dictionary<PropertyPath, ChildrenDefinition>(),
-                Enumerable.Empty<FromAnyDefinition>(),
+                [],
                 new AllDefinition(new Dictionary<PropertyPath, string>(), false))).ToArray();
 }

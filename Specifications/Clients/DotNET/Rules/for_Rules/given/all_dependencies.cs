@@ -2,8 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Rules;
 
-namespace Cratis.Rules.for_Rules.given;
+namespace Cratis.Chronicle.Rules.for_Rules.given;
 
 public class all_dependencies : Specification
 {
@@ -11,7 +14,6 @@ public class all_dependencies : Specification
     protected Mock<IRulesProjections> rules_projections;
     protected Mock<IImmediateProjections> immediate_projections;
     protected JsonSerializerOptions json_serializer_options;
-    protected ExecutionContext execution_context;
 
     void Establish()
     {
@@ -22,10 +24,5 @@ public class all_dependencies : Specification
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
-
-        execution_context = new(
-            "1ca3e772-4e18-47b1-8f7b-c697b2c8ee8f",
-            TenantId.Development,
-            CorrelationId.New());
     }
 }

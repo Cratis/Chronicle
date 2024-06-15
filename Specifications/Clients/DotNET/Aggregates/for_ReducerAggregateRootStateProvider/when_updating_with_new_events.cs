@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Aggregates.for_ReducerAggregateRootStateProvider;
+using Cratis.Chronicle.Reducers;
+
+namespace Cratis.Chronicle.Aggregates.for_ReducerAggregateRootStateProvider;
 
 public class when_updating_with_new_events : given.an_aggregate_root_that_handles_two_event_types
 {
@@ -20,11 +22,11 @@ public class when_updating_with_new_events : given.an_aggregate_root_that_handle
         initial_state = new(Guid.NewGuid().ToString());
         state = new(Guid.NewGuid().ToString());
 
-        events = new[]
-        {
+        events =
+        [
             AppendedEvent.EmptyWithEventType(FirstEventType.EventTypeId),
             AppendedEvent.EmptyWithEventType(SecondEventType.EventTypeId)
-        };
+        ];
 
         invoker
             .Setup(_ => _.Invoke(IsAny<IEnumerable<EventAndContext>>(), IsAny<object>()))
@@ -32,7 +34,7 @@ public class when_updating_with_new_events : given.an_aggregate_root_that_handle
             {
                 initial_state_invoked_with = initial as StateForAggregateRoot;
                 events_invoked_with = ev.Select(_ => _.Event);
-                return new InternalReduceResult(state, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
+                return new InternalReduceResult(state, EventSequenceNumber.Unavailable, [], string.Empty);
             });
     }
 

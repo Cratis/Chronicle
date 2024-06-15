@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Integration.for_ImportBuilderExtensions.given;
+namespace Cratis.Chronicle.Integration.for_ImportBuilderExtensions.given;
 
-public class a_change_on_similarily_named_property : no_changes
+public class a_change_on_similarly_named_property : no_changes
 {
     void Establish()
     {

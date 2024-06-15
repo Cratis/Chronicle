@@ -15,7 +15,7 @@ using Cratis.Json;
 using Cratis.Models;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.for_ProjectionScenarios.given;
+namespace Cratis.Chronicle.Events.Projections.for_ProjectionScenarios.given;
 
 public abstract class a_projection_pipeline_for<TModel> : Specification
 {

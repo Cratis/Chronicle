@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Integration.for_ImportBuilderExtensions;
+namespace Cratis.Chronicle.Integration.for_ImportBuilderExtensions;
 
 public class when_appending_event_from_callback_with_valid_from : given.no_changes
 {

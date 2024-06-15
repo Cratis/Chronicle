@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 
-namespace Cratis.given;
+namespace Cratis.Chronicle.given;
 
 public class an_http_context : Specification
 {
@@ -37,7 +37,7 @@ public class an_http_context : Specification
         http_context.SetupGet(_ => _.RequestServices).Returns(service_provider.Object);
 
         route_values_feature = new();
-        route_values = new();
+        route_values = [];
         route_values_feature.SetupGet(_ => _.RouteValues).Returns(route_values);
         features = new();
         features.Setup(_ => _.Get<IRouteValuesFeature>()).Returns(route_values_feature.Object);

@@ -1,7 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Integration.for_ImportOperations.given;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Properties;
+
+namespace Cratis.Chronicle.Integration.for_ImportOperations.given;
 
 public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
 {
@@ -16,7 +19,7 @@ public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
         incoming = new(43, "Forty Two");
         mapped = new(incoming.SomeInteger, incoming.SomeString, null);
 
-        projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(new AdapterProjectionResult<Model>(initial, Array.Empty<PropertyPath>(), 0)));
+        projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(new AdapterProjectionResult<Model>(initial, [], 0)));
         mapper.Setup(_ => _.Map<Model>(incoming)).Returns(mapped);
 
         objects_comparer = new();
@@ -24,10 +27,10 @@ public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
             .Setup(_ => _.Equals(initial, IsAny<Model>(), out Ref<IEnumerable<PropertyDifference>>.IsAny))
             .Returns((object? _, object? __, out IEnumerable<PropertyDifference> differences) =>
             {
-                differences = new[]
-                {
+                differences =
+                [
                         new PropertyDifference(new(nameof(Model.SomeInteger)), initial.SomeInteger, incoming.SomeInteger)
-                };
+                ];
                 return false;
             });
 

@@ -2,8 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using AutoMapper;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Integration.for_Importer;
+namespace Cratis.Chronicle.Integration.for_Importer;
 
 public class when_getting_for_model_and_external_model : Specification
 {

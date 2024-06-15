@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Reducers.for_ReducerInvoker.when_invoking_with_no_initial_state;
+using Cratis.Chronicle.Identities;
+
+namespace Cratis.Chronicle.Reducers.for_ReducerInvoker.when_invoking_with_no_initial_state;
 
 public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReducer>
 {
@@ -12,10 +14,10 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
     void Establish()
     {
         @event = new();
-        event_context = new(Guid.Empty, 0, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), Enumerable.Empty<Causation>(), Identity.System);
+        event_context = new(Guid.Empty, 0, DateTimeOffset.Now, DateTimeOffset.Now, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System);
     }
 
-    async Task Because() => reduce_result = (await invoker.Invoke(new EventAndContext[] { new(@event, event_context) }, null))!;
+    async Task Because() => reduce_result = (await invoker.Invoke([new(@event, event_context)], null))!;
 
     [Fact] void should_pass_the_event() => reducer.ReceivedEvents.First().ShouldEqual(@event);
     [Fact] void should_pass_no_read_model() => reducer.ReceivedReadModels.First().ShouldBeNull();

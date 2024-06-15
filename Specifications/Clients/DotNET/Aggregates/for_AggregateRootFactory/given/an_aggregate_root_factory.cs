@@ -2,8 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Aggregates.for_AggregateRootStateFactory.given;
+namespace Cratis.Chronicle.Aggregates.for_AggregateRootStateFactory.given;
 
 public class an_aggregate_root_factory : Specification
 {
@@ -25,11 +28,11 @@ public class an_aggregate_root_factory : Specification
 
     void Establish()
     {
-        event_types = new EventType[]
-        {
+        event_types =
+        [
             FirstEventType.EventTypeId,
             SecondEventType.EventTypeId
-        };
+        ];
         first_event = new("First");
         second_event = new("Second");
 
@@ -44,11 +47,11 @@ public class an_aggregate_root_factory : Specification
         causation_manager = new();
         event_sequence = new();
 
-        appended_events = new AppendedEvent[]
-        {
+        appended_events =
+        [
             AppendedEvent.EmptyWithEventType(FirstEventType.EventTypeId),
             AppendedEvent.EmptyWithEventType(SecondEventType.EventTypeId)
-        };
+        ];
 
         event_sequence
             .Setup(_ => _.GetForEventSourceIdAndEventTypes(IsAny<EventSourceId>(), IsAny<IEnumerable<EventType>>()))

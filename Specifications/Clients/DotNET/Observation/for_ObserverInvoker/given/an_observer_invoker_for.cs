@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Observation.for_ObserverInvoker.given;
+namespace Cratis.Chronicle.Observation.for_ObserverInvoker.given;
 
 public class an_observer_invoker_for<TObserver> : Specification
 {
@@ -26,5 +26,5 @@ public class an_observer_invoker_for<TObserver> : Specification
             Mock.Of<ILogger<ObserverInvoker>>());
     }
 
-    protected virtual IEnumerable<Type> GetEventTypes() => Enumerable.Empty<Type>();
+    protected virtual IEnumerable<Type> GetEventTypes() => [];
 }

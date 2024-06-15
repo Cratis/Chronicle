@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
-namespace Cratis.AspNetCore.Rules.for_RulesModelValidatorProvider;
+namespace Cratis.Chronicle.AspNetCore.Rules.for_RulesModelValidatorProvider;
 
 public class when_creating_validators_for_type_that_has_rules : given.one_rule_for_type
 {

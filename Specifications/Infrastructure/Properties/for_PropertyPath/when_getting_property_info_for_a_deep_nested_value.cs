@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Cratis.Properties.for_PropertyPath;
+namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class when_getting_property_info_for_a_deep_nested_value : Specification
 {

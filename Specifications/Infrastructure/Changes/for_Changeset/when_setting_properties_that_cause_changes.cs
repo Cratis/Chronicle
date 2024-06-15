@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Changes.for_Changeset;
+namespace Cratis.Chronicle.Changes.for_Changeset;
 
 public class when_setting_properties_that_cause_changes : Specification
 {

@@ -3,7 +3,4 @@
 
 namespace Cratis.Chronicle.Aggregates.for_AggregateRootEventHandlers.when_creating_for;
 
-public class AggregateRootWithHandlerMethodForInterfaceEventTypeWithDerivatives : AggregateRoot
-{
-    public Task Handle(IMyEvent @event) => Task.CompletedTask;
-}
+public class AggregateRootWithNoHandlerMethods : AggregateRoot;

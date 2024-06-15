@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Aggregates.for_AggregateRoot;
+namespace Cratis.Chronicle.Aggregates.for_AggregateRoot;
 
 public class when_committing : given.a_stateless_aggregate_root
 {

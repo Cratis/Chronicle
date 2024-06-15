@@ -3,7 +3,7 @@
 
 using Cratis.Strings;
 
-namespace Cratis.Changes.for_ObjectComparer;
+namespace Cratis.Chronicle.Changes.for_ObjectComparer;
 
 public class when_comparing_complex_nested_object_with_null_values_for_the_nested_properties_on_right : given.an_object_comparer
 {

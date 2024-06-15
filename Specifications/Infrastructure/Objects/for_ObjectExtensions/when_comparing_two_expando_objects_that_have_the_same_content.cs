@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Objects.for_ObjectExtensions;
+namespace Cratis.Chronicle.Objects.for_ObjectExtensions;
 
 public class when_comparing_two_expando_objects_that_have_the_same_content : Specification
 {

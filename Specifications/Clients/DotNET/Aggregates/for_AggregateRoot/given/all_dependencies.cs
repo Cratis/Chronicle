@@ -1,7 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Aggregates.for_AggregateRoot.given;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.EventSequences;
+
+namespace Cratis.Chronicle.Aggregates.for_AggregateRoot.given;
 
 public class all_dependencies : Specification
 {

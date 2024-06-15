@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Aggregates.for_AggregateRootEventHandlers.given;
+namespace Cratis.Chronicle.Aggregates.for_AggregateRootEventHandlers.given;
 
 public class aggregate_root_event_handlers_for<TAggregateRoot> : Specification
     where TAggregateRoot : AggregateRoot
@@ -15,5 +15,5 @@ public class aggregate_root_event_handlers_for<TAggregateRoot> : Specification
         handlers = new AggregateRootEventHandlers(event_types, typeof(TAggregateRoot));
     }
 
-    protected virtual IEnumerable<Type> GetEventTypes() => Enumerable.Empty<Type>();
+    protected virtual IEnumerable<Type> GetEventTypes() => [];
 }

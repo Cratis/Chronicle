@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Properties.for_PropertyPath.when_checking_if_has_value_from_expando_object;
+namespace Cratis.Chronicle.Properties.for_PropertyPath.when_checking_if_has_value_from_expando_object;
 
 public class and_it_is_within_a_complex_structure_and_value_is_there : Specification
 {

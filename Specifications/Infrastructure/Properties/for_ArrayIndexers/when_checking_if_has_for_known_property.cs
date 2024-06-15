@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Properties.for_ArrayIndexers;
+namespace Cratis.Chronicle.Properties.for_ArrayIndexers;
 
 public class when_checking_if_has_for_known_property : given.two_array_indexers
 {

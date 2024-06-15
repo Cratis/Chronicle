@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Observation.for_ObserverInvoker.when_creating_for;
+namespace Cratis.Chronicle.Observation.for_ObserverInvoker.when_creating_for;
 
 public class observer_with_no_handler_methods : given.an_observer_invoker_for<ObserverWithNoHandlerMethods>
 {

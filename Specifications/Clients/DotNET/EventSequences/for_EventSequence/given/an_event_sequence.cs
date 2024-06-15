@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.EventSequences.for_EventSequence.given;
+namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 
 public class an_event_sequence : all_dependencies
 {
@@ -10,14 +10,13 @@ public class an_event_sequence : all_dependencies
     void Establish()
     {
         event_sequence = new(
+            Guid.NewGuid().ToString(),
+            Guid.NewGuid().ToString(),
             Guid.NewGuid(),
-            Guid.NewGuid(),
+            connection.Object,
             event_types.Object,
             event_serializer.Object,
-            connection.Object,
-            observers_registrar.Object,
             causation_manager.Object,
-            identity_provider.Object,
-            execution_context_manager.Object);
+            identity_provider.Object);
     }
 }

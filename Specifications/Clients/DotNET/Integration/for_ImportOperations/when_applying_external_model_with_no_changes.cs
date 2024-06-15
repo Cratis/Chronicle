@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Integration.for_ImportOperations;
+namespace Cratis.Chronicle.Integration.for_ImportOperations;
 
 public class when_applying_external_model_with_no_changes : given.no_changes
 {

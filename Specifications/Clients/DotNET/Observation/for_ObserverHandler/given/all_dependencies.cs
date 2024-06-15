@@ -1,7 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Observation.for_ObserverHandler.given;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+
+namespace Cratis.Chronicle.Observation.for_ObserverHandler.given;
 
 public class all_dependencies : Specification
 {

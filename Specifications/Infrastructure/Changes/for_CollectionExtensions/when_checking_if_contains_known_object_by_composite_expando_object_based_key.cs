@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Changes.for_CollectionExtensions;
+namespace Cratis.Chronicle.Changes.for_CollectionExtensions;
 
 public class when_checking_if_contains_known_object_by_composite_expando_object_based_key : Specification
 {

@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Cratis.Rules.for_Rules.for_RuleAttribute.given;
+namespace Cratis.Chronicle.Rules.for_Rules.for_RuleAttribute.given;
 
 public class a_validation_context : Specification
 {

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.for_EventContext;
+namespace Cratis.Chronicle.Events.for_EventContext;
 
 public class when_creating_copy_with_new_desired_state : Specification
 {

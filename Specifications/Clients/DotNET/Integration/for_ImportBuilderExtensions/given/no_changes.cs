@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Changes;
 
-namespace Cratis.Integration.for_ImportBuilderExtensions.given;
+namespace Cratis.Chronicle.Integration.for_ImportBuilderExtensions.given;
 
 public class no_changes : Specification
 {
@@ -25,6 +26,6 @@ public class no_changes : Specification
         objects_comparer = new();
         objects_comparer.Setup(_ => _.Equals(original_model, modified_model, out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
         changeset = new(objects_comparer.Object, modified_model, original_model);
-        events_to_append = new();
+        events_to_append = [];
     }
 }

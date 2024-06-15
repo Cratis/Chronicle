@@ -1,12 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Reducers;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Objects;
+
+namespace Cratis.Chronicle.Reducers;
 
 public class AsyncReducer
 {
-    List<EventAndContext> _receivedEventsAndContexts = new();
-    List<ReadModel> _readModels = new();
+    List<EventAndContext> _receivedEventsAndContexts = [];
+    List<ReadModel> _readModels = [];
 
     public IEnumerable<EventAndContext> ReceivedEventsAndContexts => _receivedEventsAndContexts;
     public IEnumerable<ValidEvent> ReceivedEvents => _receivedEventsAndContexts.Select(_ => _.Event).Cast<ValidEvent>().ToArray();

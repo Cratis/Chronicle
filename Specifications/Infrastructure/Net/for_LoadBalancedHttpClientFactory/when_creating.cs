@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Net.for_LoadBalancedHttpClientFactory;
+namespace Cratis.Chronicle.Net.for_LoadBalancedHttpClientFactory;
 
 public class when_creating : given.a_load_balanced_http_client_factory
 {

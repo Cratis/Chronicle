@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Changes;
 
-namespace Cratis.Integration.for_ImportBuilderExtensions.given;
+namespace Cratis.Chronicle.Integration.for_ImportBuilderExtensions.given;
 
 public class a_change_on_a_nested_property : Specification
 {
@@ -25,21 +26,21 @@ public class a_change_on_a_nested_property : Specification
             .Setup(_ => _.Equals(original_model, modified_model, out Ref<IEnumerable<PropertyDifference>>.IsAny))
             .Returns((object? _, object? __, out IEnumerable<PropertyDifference> differences) =>
             {
-                differences = new[]
-                {
+                differences =
+                [
                         new PropertyDifference(new($"{nameof(ComplexModel.Child)}.{nameof(Model.SomeInteger)}"), 43, 44)
-                };
+                ];
 
                 return false;
             });
         original_model = new(42, "Forty Two", new(43, "Forty Three", "Three"));
         modified_model = new(42, "Forty Two", new(44, "Forty Three", "Four"));
         changeset = new(objects_comparer.Object, modified_model, original_model);
-        changeset.Add(new PropertiesChanged<ComplexModel>(modified_model, new[]
-        {
+        changeset.Add(new PropertiesChanged<ComplexModel>(modified_model,
+        [
                 new PropertyDifference(new($"{nameof(ComplexModel.Child)}.{nameof(Model.SomeInteger)}"), 43, 44)
-        }));
+        ]));
 
-        events_to_append = new();
+        events_to_append = [];
     }
 }

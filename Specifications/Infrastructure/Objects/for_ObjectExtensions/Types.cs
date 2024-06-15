@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Objects.for_ObjectExtensions;
+namespace Cratis.Chronicle.Objects.for_ObjectExtensions;
 
 #pragma warning disable SA1649 // File name should match first type name
 
