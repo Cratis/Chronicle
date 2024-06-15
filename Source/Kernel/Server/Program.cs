@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.Observation.Placement;
 using Cratis.Chronicle.Server.Serialization;
 using Cratis.DependencyInjection;

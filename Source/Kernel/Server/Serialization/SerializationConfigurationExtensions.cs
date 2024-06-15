@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.Json;
