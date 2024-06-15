@@ -12,6 +12,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../Kernel/Grains.Interfaces/Grains.Interfaces.csproj" />
         <ProjectReference Include="../Kernel/Shared/Shared.csproj" />
     </ItemGroup>
 
@@ -20,5 +21,6 @@
       <PackageReference Include="Swashbuckle.AspNetCore" />
       <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
       <PackageReference Include="Cratis.Applications" />
+      <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
     </ItemGroup>
 </Project>

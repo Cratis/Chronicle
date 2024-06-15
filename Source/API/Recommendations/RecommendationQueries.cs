@@ -1,8 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Subjects;
 using Cratis.Applications.Queries;
+using Cratis.Chronicle;
+using Cratis.Chronicle.Recommendations;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.API.Recommendations;
@@ -13,9 +14,8 @@ namespace Cratis.API.Recommendations;
 /// <remarks>
 /// Initializes a new instance of the <see cref="RecommendationQueries"/> class.
 /// </remarks>
-/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 [Route("/api/events/store/{eventStore}/{namespace}/recommendations")]
-public class RecommendationQueries(IStorage storage) : ControllerBase
+public class RecommendationQueries() : ControllerBase
 {
     /// <summary>
     /// Get all observers for an event store and namespace.
@@ -24,12 +24,11 @@ public class RecommendationQueries(IStorage storage) : ControllerBase
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the recommendations are for.</param>
     /// <returns>Collection of <see cref="RecommendationInformation"/>.</returns>
     [HttpGet]
-    public async Task<IEnumerable<RecommendationInformation>> GetRecommendations(
+    public Task<IEnumerable<RecommendationInformation>> GetRecommendations(
         [FromRoute] EventStoreName eventStore,
         [FromRoute] EventStoreNamespaceName @namespace)
     {
-        var recommendations = await storage.GetEventStore(eventStore).GetNamespace(@namespace).Recommendations.GeAll();
-        return Convert(recommendations);
+        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -43,23 +42,6 @@ public class RecommendationQueries(IStorage storage) : ControllerBase
         [FromRoute] EventStoreName eventStore,
         [FromRoute] EventStoreNamespaceName @namespace)
     {
-        var recommendations = storage.GetEventStore(eventStore).GetNamespace(@namespace).Recommendations;
-        var observable = recommendations.ObserveRecommendations();
-        new Subject<IEnumerable<RecommendationInformation>>();
-        var clientObservable = new ClientObservable<IEnumerable<RecommendationInformation>>(observable, new Microsoft.AspNetCore.Mvc.JsonOptions());
-        var subscription = observable.Subscribe(recommendations => clientObservable.OnNext(Convert(recommendations)));
-        clientObservable.ClientDisconnected = () =>
-        {
-            subscription.Dispose();
-            if (observable is IDisposable disposableObservable)
-            {
-                disposableObservable.Dispose();
-            }
-        };
-
-        return Task.FromResult(clientObservable);
+        throw new NotImplementedException();
     }
-
-    RecommendationInformation[] Convert(IEnumerable<RecommendationState> recommendations) =>
-         recommendations.Select(_ => new RecommendationInformation(_.Id, _.Name, _.Description, _.Type, _.Occurred)).ToArray();
 }
