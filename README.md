@@ -2,8 +2,8 @@
 
 ## Packages / Deployables
 
-[![Nuget](https://img.shields.io/nuget/v/Cratis?logo=nuget)](http://nuget.org/packages/cratis)
-[![Docker](https://img.shields.io/docker/v/cratis/cratis?label=Cratis%20Kernel&logo=docker&sort=semver)](https://hub.docker.com/r/cratis/cratis)
+[![Nuget](https://img.shields.io/nuget/v/Cratis.Chronicle?logo=nuget)](http://nuget.org/packages/cratis.chronicle)
+[![Docker](https://img.shields.io/docker/v/cratis/chronicle?label=Chronicle&logo=docker&sort=semver)](https://hub.docker.com/r/cratis/chronicle)
 
 ## Builds
 
