@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Auditing;
 using Microsoft.AspNetCore.Http;
 
 namespace Cratis.Chronicle.AspNetCore.Auditing.for_CausationMiddleware.given;

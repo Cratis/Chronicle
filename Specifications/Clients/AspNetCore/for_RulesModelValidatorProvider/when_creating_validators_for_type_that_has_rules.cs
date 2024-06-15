@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Rules;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
@@ -18,13 +19,13 @@ public class when_creating_validators_for_type_that_has_rules : given.one_rule_f
     void Establish()
     {
         rules.Setup(_ => _.HasFor(typeof(Model))).Returns(true);
-        rules.Setup(_ => _.GetFor(typeof(Model))).Returns(new[]
-        {
+        rules.Setup(_ => _.GetFor(typeof(Model))).Returns(
+        [
             typeof(FirstRule),
             typeof(SecondRule)
-        });
+        ]);
         model_metadata = new(ModelMetadataIdentity.ForType(typeof(Model)));
-        context = new(model_metadata.Object, new List<ValidatorItem>());
+        context = new(model_metadata.Object, []);
 
         first_rule = new FirstRule();
         service_provider.Setup(_ => _.GetService(typeof(FirstRule))).Returns(first_rule);
