@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Projections.for_Projection;
+namespace Cratis.Chronicle.Projections.for_Projection;
 
 public class when_asking_if_public_event_type_is_accepted_and_it_is_registered_as_private : given.a_projection
 {

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Kernel.Contracts.Events;
+using Cratis.Chronicle.Contracts.Events;
 using Cratis.Schemas;
 
 namespace Cratis.Events;

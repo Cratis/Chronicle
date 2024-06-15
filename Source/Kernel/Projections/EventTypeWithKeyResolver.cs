@@ -3,7 +3,7 @@
 
 using Cratis.Events;
 
-namespace Cratis.Kernel.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents a combination of <see cref="EventType"/> and <see cref="KeyResolver"/>.

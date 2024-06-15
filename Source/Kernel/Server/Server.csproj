@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <AssemblyName>Cratis.Kernel.Server</AssemblyName>
-        <RootNamespace>Cratis.Kernel.Server</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Server</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Server</RootNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <ServerGarbageCollection>true</ServerGarbageCollection>

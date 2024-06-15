@@ -3,7 +3,7 @@
 
 using Cratis.Projections.Definitions;
 
-namespace Cratis.Kernel.Grains.Projections;
+namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
 /// Defines a system that is responsible for supervises projections in the system.

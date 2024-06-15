@@ -4,7 +4,7 @@
 using Cratis.Events;
 using Cratis.EventSequences;
 
-namespace Cratis.Kernel.Storage.EventSequences;
+namespace Cratis.Chronicle.Storage.EventSequences;
 
 /// <summary>
 /// Exception that gets thrown when an event is missing.

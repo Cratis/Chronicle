@@ -3,10 +3,10 @@
 
 using System.Dynamic;
 using Cratis.Changes;
+using Cratis.Chronicle.Storage.Changes;
 using Cratis.Events;
-using Cratis.Kernel.Storage.Changes;
 
-namespace Cratis.Kernel.Storage.MongoDB.Projections;
+namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 
 /// <summary>
 /// Represents a <see cref="IChangesetStorage"/> for storing changesets in MongoDB.

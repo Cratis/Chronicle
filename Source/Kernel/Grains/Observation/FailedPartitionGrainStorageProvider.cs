@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Observation;
+using Cratis.Chronicle.Observation;
 using Cratis.Observation;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Cratis.Kernel.Storage.Observation;
+namespace Cratis.Chronicle.Storage.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling <see cref="FailedPartition" /> storage.

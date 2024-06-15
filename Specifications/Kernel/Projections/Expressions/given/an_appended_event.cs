@@ -6,7 +6,7 @@ using Cratis.Auditing;
 using Cratis.Identities;
 using Cratis.Strings;
 
-namespace Cratis.Kernel.Projections.Expressions.given;
+namespace Cratis.Chronicle.Projections.Expressions.given;
 
 public class an_appended_event : Specification
 {

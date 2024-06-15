@@ -4,7 +4,7 @@
 using Cratis.Events;
 using Cratis.EventSequences;
 
-namespace Cratis.Kernel.EventSequences;
+namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
 /// Exception that gets thrown when a duplicate sequence number is detected.

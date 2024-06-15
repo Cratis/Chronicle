@@ -3,7 +3,7 @@
 
 using Cratis.Projections;
 
-namespace Cratis.Kernel.Grains.Projections;
+namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
 /// Defines an immediate projection.

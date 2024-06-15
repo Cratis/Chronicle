@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.Events;
+namespace Cratis.Chronicle.Contracts.Events;
 
 /// <summary>
 /// Represents the payload of an event type.

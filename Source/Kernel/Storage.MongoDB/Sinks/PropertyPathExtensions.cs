@@ -3,7 +3,7 @@
 
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 /// <summary>
 /// Extensions for <see cref="PropertyPath"/>.

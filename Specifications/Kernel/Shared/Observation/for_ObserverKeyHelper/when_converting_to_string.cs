@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Grains.Observation.for_ObserverKeyHelper;
+namespace Cratis.Chronicle.Grains.Observation.for_ObserverKeyHelper;
 
 public class when_converting_to_string : Specification
 {

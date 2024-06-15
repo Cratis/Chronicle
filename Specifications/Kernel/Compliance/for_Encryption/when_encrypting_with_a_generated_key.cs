@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
-using Cratis.Kernel.Storage.Compliance;
+using Cratis.Chronicle.Storage.Compliance;
 
-namespace Cratis.Kernel.Compliance.for_Encryption;
+namespace Cratis.Chronicle.Compliance.for_Encryption;
 
 public class when_encrypting_with_a_generated_key : Specification
 {

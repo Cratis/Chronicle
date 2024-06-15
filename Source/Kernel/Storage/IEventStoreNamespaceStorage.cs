@@ -1,15 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Changes;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Chronicle.Storage.Keys;
+using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.EventSequences;
-using Cratis.Kernel.Storage.Changes;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.Jobs;
-using Cratis.Kernel.Storage.Keys;
-using Cratis.Kernel.Storage.Observation;
-using Cratis.Kernel.Storage.Recommendations;
 
-namespace Cratis.Kernel.Storage;
+namespace Cratis.Chronicle.Storage;
 
 /// <summary>
 /// Defines the storage for a specific instance of an event store namespace.

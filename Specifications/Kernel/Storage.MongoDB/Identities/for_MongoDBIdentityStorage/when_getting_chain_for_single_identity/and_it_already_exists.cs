@@ -3,7 +3,7 @@
 
 using Cratis.Identities;
 
-namespace Cratis.Kernel.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.when_getting_chain_for_single_identity;
+namespace Cratis.Chronicle.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.when_getting_chain_for_single_identity;
 
 public class and_it_already_exists : given.two_identities_registered
 {

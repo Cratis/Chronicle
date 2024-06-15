@@ -3,15 +3,15 @@
 
 using System.Dynamic;
 using System.Text.Json;
+using Cratis.Chronicle.Grains.Clients;
 using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.Json;
-using Cratis.Kernel.Grains.Clients;
 using Cratis.Observation;
 using Cratis.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Grains.Observation.Reducers.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientReducerSubscriber"/>.

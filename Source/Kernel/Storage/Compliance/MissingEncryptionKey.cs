@@ -3,7 +3,7 @@
 
 using Cratis.Compliance;
 
-namespace Cratis.Kernel.Storage.Compliance;
+namespace Cratis.Chronicle.Storage.Compliance;
 
 /// <summary>
 /// Exception that gets thrown when an <see cref="EncryptionKey"/> is missing.

@@ -3,7 +3,7 @@
 
 using Cratis.Compliance;
 
-namespace Cratis.Kernel.Storage.Compliance.for_CacheEncryptionKeyStore;
+namespace Cratis.Chronicle.Storage.Compliance.for_CacheEncryptionKeyStore;
 
 public class when_saving : given.a_cache_encryption_key_store
 {

@@ -4,7 +4,7 @@
 using ProtoBuf.Grpc;
 using ProtoBuf.Grpc.Configuration;
 
-namespace Cratis.Kernel.Contracts.Observation;
+namespace Cratis.Chronicle.Contracts.Observation;
 
 /// <summary>
 /// Defines the contract for working with client observers.

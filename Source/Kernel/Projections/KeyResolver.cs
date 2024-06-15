@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Events;
-using Cratis.Kernel.Keys;
-using Cratis.Kernel.Storage.EventSequences;
 
-namespace Cratis.Kernel.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents the delegate for providing a value from an object.

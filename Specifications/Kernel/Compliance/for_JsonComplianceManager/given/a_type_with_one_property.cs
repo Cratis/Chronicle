@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 using NJsonSchema;
 using NJsonSchema.Generation;
 
-namespace Cratis.Kernel.Compliance.for_JsonComplianceManager.given;
+namespace Cratis.Chronicle.Compliance.for_JsonComplianceManager.given;
 
 public class a_type_with_one_property : Specification
 {

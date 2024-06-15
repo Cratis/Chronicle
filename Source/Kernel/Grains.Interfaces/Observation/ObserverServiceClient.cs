@@ -4,7 +4,7 @@
 using Orleans.Runtime;
 using Orleans.Runtime.Services;
 
-namespace Cratis.Kernel.Grains.Observation;
+namespace Cratis.Chronicle.Grains.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IObserverServiceClient"/>.

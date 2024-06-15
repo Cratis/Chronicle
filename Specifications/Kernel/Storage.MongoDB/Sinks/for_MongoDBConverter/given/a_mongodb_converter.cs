@@ -7,7 +7,7 @@ using Cratis.Schemas;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
-namespace Cratis.Kernel.Storage.MongoDB.Sinks.for_MongoDBConverter.given;
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.given;
 
 public class a_mongodb_converter : Specification
 {

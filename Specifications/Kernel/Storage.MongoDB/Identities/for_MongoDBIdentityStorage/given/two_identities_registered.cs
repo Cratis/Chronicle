@@ -4,7 +4,7 @@
 using Cratis.Identities;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.given;
+namespace Cratis.Chronicle.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.given;
 
 public class two_identities_registered : all_dependencies
 {

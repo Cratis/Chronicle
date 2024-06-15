@@ -3,7 +3,7 @@
 
 using Cratis.Collections;
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCache;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming.for_EventSequenceCache;
 
 public class when_asking_if_is_under_pressure_and_it_is_not : given.an_event_sequence_cache
 {

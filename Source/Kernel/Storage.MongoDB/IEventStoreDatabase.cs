@@ -3,7 +3,7 @@
 
 using MongoDB.Driver;
 
-namespace Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
 /// Defines the common database for event store that goes across all namespaces within an event store.

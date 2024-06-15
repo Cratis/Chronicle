@@ -4,7 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Events;
 
-namespace Cratis.Kernel.Grains.EventSequences;
+namespace Cratis.Chronicle.Grains.EventSequences;
 
 /// <summary>
 /// Represents the payload for appending an event.

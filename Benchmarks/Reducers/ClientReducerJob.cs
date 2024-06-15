@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Benchmark.Model;
-using Cratis.Kernel.Grains.Observation;
-using Cratis.Kernel.Storage.MongoDB;
+using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Observation;
 
 namespace Benchmarks.Reducers;

@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Jobs;
-using Cratis.Kernel.Storage.Jobs;
 
-namespace Cratis.Kernel.Grains.Jobs;
+namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
 /// Defines a system that manages jobs.

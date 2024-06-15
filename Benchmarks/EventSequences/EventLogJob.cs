@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.EventSequences;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
-using IEventSequence = Cratis.Kernel.Grains.EventSequences.IEventSequence;
+using IEventSequence = Cratis.Chronicle.Grains.EventSequences.IEventSequence;
 
 namespace Benchmarks.EventSequences;
 

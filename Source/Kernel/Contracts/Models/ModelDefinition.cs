@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.Models;
+namespace Cratis.Chronicle.Contracts.Models;
 
 /// <summary>
 /// Represents the definition of a model.

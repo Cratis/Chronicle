@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Changes;
 using Cratis.Events;
 
-namespace Cratis.Kernel.Storage.Changes;
+namespace Cratis.Chronicle.Storage.Changes;
 
 /// <summary>
 /// Defines the storage mechanism for changesets. Typically used for debugging purposes to see what changes has occurred.

@@ -4,10 +4,10 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
+using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Collections;
 using Cratis.Events;
 using Cratis.EventSequences;
-using Cratis.Kernel.Contracts.Projections;
 using Cratis.Models;
 using Cratis.Reflection;
 using Cratis.Schemas;

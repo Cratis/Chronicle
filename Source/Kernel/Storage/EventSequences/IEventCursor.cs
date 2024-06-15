@@ -3,7 +3,7 @@
 
 using Cratis.Events;
 
-namespace Cratis.Kernel.Storage.EventSequences;
+namespace Cratis.Chronicle.Storage.EventSequences;
 
 /// <summary>
 /// Defines a cursor API for walking through events.

@@ -3,11 +3,11 @@
 
 using System.Dynamic;
 using Cratis.Changes;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Events;
-using Cratis.Kernel.Storage.Sinks;
 using Cratis.Models;
 
-namespace Cratis.Kernel.Grains.Observation.Reducers;
+namespace Cratis.Chronicle.Grains.Observation.Reducers;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReducerPipeline"/>.

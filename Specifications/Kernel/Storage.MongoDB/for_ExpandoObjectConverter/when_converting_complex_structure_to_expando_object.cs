@@ -3,7 +3,7 @@
 
 using MongoDB.Bson;
 
-namespace Cratis.Kernel.Storage.MongoDB.for_ExpandoObjectConverter;
+namespace Cratis.Chronicle.Storage.MongoDB.for_ExpandoObjectConverter;
 
 public class when_converting_complex_structure_to_expando_object : given.an_expando_object_converter
 {

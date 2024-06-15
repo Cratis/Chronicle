@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Jobs;
-using Cratis.Kernel.Grains.Jobs;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.API.Jobs;

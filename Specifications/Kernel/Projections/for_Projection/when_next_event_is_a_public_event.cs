@@ -7,7 +7,7 @@ using Cratis.Changes;
 using Cratis.Identities;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections.for_Projection;
+namespace Cratis.Chronicle.Projections.for_Projection;
 
 public class when_next_event_is_a_public_event : given.a_projection
 {

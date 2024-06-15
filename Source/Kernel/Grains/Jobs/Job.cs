@@ -4,18 +4,18 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Jobs;
-using Cratis.Kernel.Orleans.Observers;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.Jobs;
 using Cratis.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.Providers;
 using Orleans.Runtime;
+using Orleans.Utilities;
 
-namespace Cratis.Kernel.Grains.Jobs;
+namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJob{TRequest}"/>.
@@ -80,8 +80,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
         _observers = new(
             TimeSpan.FromMinutes(1),
-            ServiceProvider.GetService<ILogger<ObserverManager<IJobObserver>>>() ?? new NullLogger<ObserverManager<IJobObserver>>(),
-            "JobObservers");
+            ServiceProvider.GetService<ILogger<ObserverManager<IJobObserver>>>() ?? new NullLogger<ObserverManager<IJobObserver>>());
 
         _jsonSerializerOptions = ServiceProvider.GetService<JsonSerializerOptions>() ?? new JsonSerializerOptions();
 

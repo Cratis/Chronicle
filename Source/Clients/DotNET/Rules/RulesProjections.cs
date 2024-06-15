@@ -4,9 +4,9 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
+using Cratis.Chronicle.Contracts.Projections;
 using Cratis.DependencyInjection;
 using Cratis.Events;
-using Cratis.Kernel.Contracts.Projections;
 using Cratis.Models;
 using Cratis.Projections;
 using Cratis.Schemas;

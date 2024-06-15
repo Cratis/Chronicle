@@ -3,16 +3,16 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Json;
-using Cratis.Kernel.EventSequences;
-using Cratis.Kernel.Grains.Observation;
-using Cratis.Kernel.Keys;
-using Cratis.Kernel.Storage.Jobs;
 using Cratis.Projections.Json;
 using Cratis.Properties;
 using Orleans.Serialization;
 
-namespace Cratis.Kernel.Server.Serialization;
+namespace Cratis.Chronicle.Server.Serialization;
 
 /// <summary>
 /// Extension methods for configuring serialization.

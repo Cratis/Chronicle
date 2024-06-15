@@ -6,7 +6,7 @@ using Cratis.Schemas;
 using MongoDB.Bson;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Storage.MongoDB.Sinks.for_MongoDBConverter.when_converting_to_bson_value_with_schema_info;
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.when_converting_to_bson_value_with_schema_info;
 
 public class and_value_is_expando_object : given.a_mongodb_converter
 {

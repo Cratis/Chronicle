@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Clients;
 
 /// <summary>
 /// Defines a client observer subscriber that will receive all events.

@@ -3,7 +3,7 @@
 
 using Cratis.Events;
 
-namespace Cratis.Kernel.Grains.Observation;
+namespace Cratis.Chronicle.Grains.Observation;
 
 #pragma warning disable CA1819 // Allow arrays to be used for filtering
 

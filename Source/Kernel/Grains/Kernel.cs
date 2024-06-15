@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
-using Cratis.Kernel.Storage;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Grains;
+namespace Cratis.Chronicle.Grains;
 
 /// <summary>
 /// Represents an implementation of <see cref="IKernel"/>.

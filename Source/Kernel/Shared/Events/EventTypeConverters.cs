@@ -13,7 +13,7 @@ public static class EventTypeConverters
     /// </summary>
     /// <param name="type"><see cref="EventType"/> to convert.</param>
     /// <returns>Converted contract version.</returns>
-    public static Kernel.Contracts.Events.EventType ToContract(this EventType type)
+    public static Chronicle.Contracts.Events.EventType ToContract(this EventType type)
     {
         return new()
         {
@@ -28,22 +28,22 @@ public static class EventTypeConverters
     /// </summary>
     /// <param name="types">Collection of <see cref="EventType"/> to convert.</param>
     /// <returns>Converted collection of contract version.</returns>
-    public static IEnumerable<Kernel.Contracts.Events.EventType> ToContract(this IEnumerable<EventType> types) =>
+    public static IEnumerable<Chronicle.Contracts.Events.EventType> ToContract(this IEnumerable<EventType> types) =>
         types.Select(_ => _.ToContract()).ToArray();
 
     /// <summary>
     /// Convert to Kernel representation.
     /// </summary>
-    /// <param name="eventType"><see cref="Kernel.Contracts.Events.EventType"/> to convert from.</param>
+    /// <param name="eventType"><see cref="Chronicle.Contracts.Events.EventType"/> to convert from.</param>
     /// <returns>Converted <see cref="EventType"/>.</returns>
-    public static EventType ToKernel(this Kernel.Contracts.Events.EventType eventType) =>
+    public static EventType ToKernel(this Chronicle.Contracts.Events.EventType eventType) =>
         new(eventType.Id, eventType.Generation, eventType.IsPublic);
 
     /// <summary>
-    /// Convert to a collection of kernel version of <see cref="Kernel.Contracts.Events.EventType"/>.
+    /// Convert to a collection of kernel version of <see cref="Chronicle.Contracts.Events.EventType"/>.
     /// </summary>
-    /// <param name="types">Collection of <see cref="Kernel.Contracts.Events.EventType"/> to convert.</param>
+    /// <param name="types">Collection of <see cref="Chronicle.Contracts.Events.EventType"/> to convert.</param>
     /// <returns>Converted collection of contract version.</returns>
-    public static IEnumerable<EventType> ToKernel(this IEnumerable<Kernel.Contracts.Events.EventType> types) =>
+    public static IEnumerable<EventType> ToKernel(this IEnumerable<Chronicle.Contracts.Events.EventType> types) =>
         types.Select(_ => _.ToKernel()).ToArray();
 }

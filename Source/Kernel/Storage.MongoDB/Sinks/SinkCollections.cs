@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Storage.Sinks;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Models;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> for MongoDB.

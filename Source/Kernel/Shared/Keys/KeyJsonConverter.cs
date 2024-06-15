@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Keys;
+namespace Cratis.Chronicle.Keys;
 
 /// <summary>
 /// Represents a <see cref="JsonConverter{T}"/>  that can convert <see cref="Key"/>.

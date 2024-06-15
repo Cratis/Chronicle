@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Events;
 using Cratis.EventSequences;
 
-namespace Cratis.Kernel.Storage.EventSequences;
+namespace Cratis.Chronicle.Storage.EventSequences;
 
 /// <summary>
 /// Represents the tail sequence numbers.

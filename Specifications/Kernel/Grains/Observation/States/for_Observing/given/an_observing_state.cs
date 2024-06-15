@@ -2,16 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Orleans.StateMachines;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.EventSequences;
-using Cratis.Kernel.EventSequences;
-using Cratis.Kernel.Orleans.StateMachines;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 using Orleans.Streams;
 
-namespace Cratis.Kernel.Grains.Observation.States.for_Observing.given;
+namespace Cratis.Chronicle.Grains.Observation.States.for_Observing.given;
 
 public class an_observing_state : Specification
 {

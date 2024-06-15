@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using AutoMapper;
-using Cratis.Kernel.Contracts.Projections;
+using Cratis.Chronicle.Contracts.Projections;
 
 namespace Cratis.Integration;
 

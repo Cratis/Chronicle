@@ -5,7 +5,7 @@ using Cratis.Events;
 using Cratis.Observation;
 using Orleans.Runtime;
 
-namespace Cratis.Kernel.Grains.Observation;
+namespace Cratis.Chronicle.Grains.Observation;
 
 /// <summary>
 /// Represents a subscription to an observer.

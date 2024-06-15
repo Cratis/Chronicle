@@ -5,7 +5,7 @@ using Cratis.Models;
 using Cratis.Schemas;
 using Cratis.Sinks;
 
-namespace Cratis.Kernel.Storage.Sinks.InMemory;
+namespace Cratis.Chronicle.Storage.Sinks.InMemory;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISinkFactory"/> for <see cref="InMemorySink"/>.

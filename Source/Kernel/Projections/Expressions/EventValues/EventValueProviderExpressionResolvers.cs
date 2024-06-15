@@ -10,7 +10,7 @@ using Cratis.Schemas;
 using Cratis.Types;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Projections.Expressions.EventValues;
+namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 
 /// <summary>
 /// Represents an implementation of <see cref="IModelPropertyExpressionResolvers"/>.

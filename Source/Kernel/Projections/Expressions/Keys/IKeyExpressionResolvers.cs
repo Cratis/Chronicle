@@ -3,7 +3,7 @@
 
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections.Expressions.Keys;
+namespace Cratis.Chronicle.Projections.Expressions.Keys;
 
 /// <summary>
 /// Defines a system that knows about all <see cref="IKeyExpressionResolver"/>.

@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Jobs;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.Jobs;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Cratis.Kernel.Grains.Jobs;
+namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling job state storage.

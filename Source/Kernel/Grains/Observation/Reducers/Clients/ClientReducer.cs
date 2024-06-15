@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Grains.Clients;
 using Cratis.Connections;
-using Cratis.Kernel.Grains.Clients;
 using Cratis.Observation;
 using Cratis.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 
-namespace Cratis.Kernel.Grains.Observation.Reducers.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientReducer"/>.

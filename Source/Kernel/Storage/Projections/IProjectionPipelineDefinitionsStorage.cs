@@ -3,7 +3,7 @@
 
 using Cratis.Projections.Definitions;
 
-namespace Cratis.Kernel.Storage.Projections;
+namespace Cratis.Chronicle.Storage.Projections;
 
 /// <summary>
 /// Defines a system for working with <see cref="ProjectionDefinition"/>.

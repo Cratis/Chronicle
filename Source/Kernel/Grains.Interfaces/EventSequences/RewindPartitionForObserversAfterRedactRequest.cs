@@ -4,7 +4,7 @@
 using Cratis.Events;
 using Cratis.EventSequences;
 
-namespace Cratis.Kernel.Grains.EventSequences;
+namespace Cratis.Chronicle.Grains.EventSequences;
 
 /// <summary>
 /// Represents the request for rewinding a partition.

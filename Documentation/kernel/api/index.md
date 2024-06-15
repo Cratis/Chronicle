@@ -1,5 +1,5 @@
 ---
-title: Cratis.Kernel.Server v1.0
+title: Cratis.Chronicle.Server v1.0
 language_tabs: []
 toc_footers: []
 includes: []
@@ -11,7 +11,7 @@ headingLevel: 2
 
 <!-- Generator: Widdershins v4.0.1 -->
 
-<h1 id="cratis-kernel-server">Cratis.Kernel.Server v1.0</h1>
+<h1 id="cratis-kernel-server">Cratis.Chronicle.Server v1.0</h1>
 
 > Scroll down for example requests and responses.
 
@@ -605,7 +605,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|body|body|[AddMicroservice](#schemaaddmicroservice)|false|M:Cratis.Kernel.Domain.Compliance.Microservices.Microservices.AddMicroservice(Cratis.Kernel.Domain.Compliance.Microservices.AddMicroservice) payload.|
+|body|body|[AddMicroservice](#schemaaddmicroservice)|false|M:Cratis.Chronicle.Domain.Compliance.Microservices.Microservices.AddMicroservice(Cratis.Chronicle.Domain.Compliance.Microservices.AddMicroservice) payload.|
 
 <h3 id="post__api_compliance_microservices-responses">Responses</h3>
 
@@ -1004,7 +1004,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|body|body|[CreateAndRegisterKeyFor](#schemacreateandregisterkeyfor)|false|M:Cratis.Kernel.Domain.Compliance.GDPR.PII.CreateAndRegisterKeyFor(Cratis.Kernel.Domain.Compliance.GDPR.CreateAndRegisterKeyFor) payload.|
+|body|body|[CreateAndRegisterKeyFor](#schemacreateandregisterkeyfor)|false|M:Cratis.Chronicle.Domain.Compliance.GDPR.PII.CreateAndRegisterKeyFor(Cratis.Chronicle.Domain.Compliance.GDPR.CreateAndRegisterKeyFor) payload.|
 
 <h3 id="post__api_compliance_gdpr_pii-responses">Responses</h3>
 
@@ -1036,7 +1036,7 @@ This operation does not require authentication
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
-|body|body|[DeletePIIForPerson](#schemadeletepiiforperson)|false|M:Cratis.Kernel.Domain.Compliance.GDPR.PII.DeletePIIForPerson(Cratis.Kernel.Domain.Compliance.GDPR.DeletePIIForPerson) payload.|
+|body|body|[DeletePIIForPerson](#schemadeletepiiforperson)|false|M:Cratis.Chronicle.Domain.Compliance.GDPR.PII.DeletePIIForPerson(Cratis.Chronicle.Domain.Compliance.GDPR.DeletePIIForPerson) payload.|
 
 <h3 id="post__api_compliance_gdpr_pii_delete-responses">Responses</h3>
 
@@ -2720,7 +2720,7 @@ Represents the payload for performing an immediate projection.
 
 ```
 
-Represents the result of an Cratis.Kernel.Grains.Projections.IImmediateProjection.
+Represents the result of an Cratis.Chronicle.Grains.Projections.IImmediateProjection.
 
 ### Properties
 

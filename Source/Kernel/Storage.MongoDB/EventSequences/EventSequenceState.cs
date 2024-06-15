@@ -3,7 +3,7 @@
 
 using Cratis.Events;
 
-namespace Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
 /// Represents the persisted state of an event sequence for MongoDB.

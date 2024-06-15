@@ -4,7 +4,7 @@
 using Cratis.Events;
 using Orleans.Streams;
 
-namespace Cratis.Kernel.EventSequences;
+namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
 /// Stream sequence token that tracks sequence number and event index.

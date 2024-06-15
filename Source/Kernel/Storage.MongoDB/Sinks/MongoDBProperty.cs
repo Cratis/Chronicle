@@ -4,7 +4,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 /// <summary>
 /// Represents a MongoDB property.

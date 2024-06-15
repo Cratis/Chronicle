@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Contracts.Projections;
 using Cratis.DependencyInjection;
 using Cratis.Integration;
-using Cratis.Kernel.Contracts.Projections;
 using Cratis.Rules;
 
 namespace Cratis.Projections;

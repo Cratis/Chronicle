@@ -7,7 +7,7 @@ using Cratis.Identities;
 using Cratis.Properties;
 using Cratis.Schemas;
 
-namespace Cratis.Kernel.Projections.Expressions.ModelProperties.for_CountExpressionResolver;
+namespace Cratis.Chronicle.Projections.Expressions.ModelProperties.for_CountExpressionResolver;
 
 public class when_trying_to_resolve_valid_count_expression_against_model_with_count_value_set : Specification
 {

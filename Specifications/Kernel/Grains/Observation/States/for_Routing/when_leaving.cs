@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Grains.Observation.States.for_Routing;
+namespace Cratis.Chronicle.Grains.Observation.States.for_Routing;
 
 public class when_leaving : given.a_routing_state
 {

@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Keys;
+using Cratis.Chronicle.Keys;
 using Cratis.Metrics;
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Grains.Observation;
+namespace Cratis.Chronicle.Grains.Observation;
 
 #pragma warning disable SA1600 // Elements should be documented
 #pragma warning disable MA0048 // File name must match type name

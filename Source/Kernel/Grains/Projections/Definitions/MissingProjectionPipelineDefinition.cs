@@ -4,7 +4,7 @@
 using Cratis.Projections;
 using Cratis.Projections.Definitions;
 
-namespace Cratis.Kernel.Grains.Projections.Definitions;
+namespace Cratis.Chronicle.Grains.Projections.Definitions;
 
 /// <summary>
 /// Exception that gets thrown when a <see cref="ProjectionPipelineDefinition"/> is missing in the system.

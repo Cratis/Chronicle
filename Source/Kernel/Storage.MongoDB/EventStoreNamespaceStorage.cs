@@ -3,23 +3,23 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Cratis.Chronicle.Storage.Changes;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Chronicle.Storage.Keys;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences;
+using Cratis.Chronicle.Storage.MongoDB.Jobs;
+using Cratis.Chronicle.Storage.MongoDB.Keys;
+using Cratis.Chronicle.Storage.MongoDB.Observation;
+using Cratis.Chronicle.Storage.MongoDB.Projections;
+using Cratis.Chronicle.Storage.MongoDB.Recommendations;
+using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.EventSequences;
-using Cratis.Kernel.Storage.Changes;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.EventTypes;
-using Cratis.Kernel.Storage.Jobs;
-using Cratis.Kernel.Storage.Keys;
-using Cratis.Kernel.Storage.MongoDB.EventSequences;
-using Cratis.Kernel.Storage.MongoDB.Jobs;
-using Cratis.Kernel.Storage.MongoDB.Keys;
-using Cratis.Kernel.Storage.MongoDB.Observation;
-using Cratis.Kernel.Storage.MongoDB.Projections;
-using Cratis.Kernel.Storage.MongoDB.Recommendations;
-using Cratis.Kernel.Storage.Observation;
-using Cratis.Kernel.Storage.Recommendations;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreNamespaceStorage"/> for MongoDB.

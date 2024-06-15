@@ -4,17 +4,17 @@
 using System.Dynamic;
 using System.Text;
 using Cratis.Changes;
+using Cratis.Chronicle.Keys;
 using Cratis.Dynamic;
 using Cratis.Events;
 using Cratis.Json;
-using Cratis.Kernel.Keys;
 using Cratis.Models;
 using Cratis.Reflection;
 using Cratis.Schemas;
 using Cratis.Sinks;
 using Cratis.Types;
 
-namespace Cratis.Kernel.Storage.Sinks.InMemory;
+namespace Cratis.Chronicle.Storage.Sinks.InMemory;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> for working with projections in memory.

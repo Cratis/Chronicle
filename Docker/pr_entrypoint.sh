@@ -2,6 +2,6 @@
 set -e
 
 /usr/bin/mongod --replSet "rs0" --bind_ip 0.0.0.0 > /dev/null &
-dotnet ./Cratis.Kernel.Server.dll &
+dotnet ./Cratis.Chronicle.Server.dll &
 
 wait -n

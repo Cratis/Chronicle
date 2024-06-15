@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Kernel.Grains.Jobs;
-using Cratis.Kernel.Keys;
-using Cratis.Kernel.Storage.Keys;
+using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Storage.Keys;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;
+namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver;
 
 public class when_preparing_steps : given.a_catchup_observer_and_a_request
 {

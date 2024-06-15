@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.EventSequences;
-using Cratis.Kernel.Storage.Observation;
 using Cratis.MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreNamespaceDatabase"/>.
@@ -23,12 +23,12 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <param name="eventStore"><see cref="EventStoreName"/> the database is for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the database is for.</param>
     /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
-    /// <param name="configuration"><see cref="Kernel.Configuration.Storage"/> configuration.</param>
+    /// <param name="configuration"><see cref="Configuration.Storage"/> configuration.</param>
     public EventStoreNamespaceDatabase(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         IMongoDBClientManager clientManager,
-        Kernel.Configuration.Storage configuration)
+        Configuration.Storage configuration)
     {
         var databaseName = $"{eventStore}-{@namespace}";
 

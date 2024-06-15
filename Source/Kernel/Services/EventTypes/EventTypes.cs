@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Storage;
 using Cratis.Events;
-using Cratis.Kernel.Contracts.Events;
-using Cratis.Kernel.Storage;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Services.Events;
+namespace Cratis.Chronicle.Services.Events;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypes"/>.

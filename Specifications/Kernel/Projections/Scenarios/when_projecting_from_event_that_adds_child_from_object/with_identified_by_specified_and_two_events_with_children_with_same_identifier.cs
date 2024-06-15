@@ -3,7 +3,7 @@
 
 using Cratis.Specifications.Integration;
 
-namespace Cratis.Kernel.Projections.Scenarios.when_projecting_from_event_that_adds_child_from_object;
+namespace Cratis.Chronicle.Projections.Scenarios.when_projecting_from_event_that_adds_child_from_object;
 
 public class with_identified_by_specified_and_two_events_with_children_with_same_identifier : ProjectionSpecificationFor<ModelWithChildren>
 {

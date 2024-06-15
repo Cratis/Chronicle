@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Kernel.Storage.Specs</AssemblyName>
-        <RootNamespace>Cratis.Kernel.Storage</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Storage.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Storage</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

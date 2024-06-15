@@ -4,7 +4,7 @@
 using Cratis.MongoDB;
 using MongoDB.Bson.Serialization;
 
-namespace Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
 /// Represents a class map for <see cref="Event"/>.

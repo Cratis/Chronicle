@@ -3,7 +3,7 @@
 
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Grains.Observation;
+namespace Cratis.Chronicle.Grains.Observation;
 
 /// <summary>
 /// Represents observer details to be used when performing observer service operations.

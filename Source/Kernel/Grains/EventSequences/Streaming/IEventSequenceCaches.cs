@@ -3,7 +3,7 @@
 
 using Cratis.EventSequences;
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Defines a system that works with event sequence caches.

@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Storage;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Represents an implementation of <see cref="IQueueAdapterFactory"/> for our persistent event store.

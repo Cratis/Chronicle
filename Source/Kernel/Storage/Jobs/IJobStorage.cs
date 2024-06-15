@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Jobs;
 
-namespace Cratis.Kernel.Storage.Jobs;
+namespace Cratis.Chronicle.Storage.Jobs;
 
 /// <summary>
 /// Defines a system that can store job state.

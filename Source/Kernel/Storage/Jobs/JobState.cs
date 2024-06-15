@@ -3,7 +3,7 @@
 
 using Cratis.Jobs;
 
-namespace Cratis.Kernel.Storage.Jobs;
+namespace Cratis.Chronicle.Storage.Jobs;
 
 /// <summary>
 /// Holds the state of a job.

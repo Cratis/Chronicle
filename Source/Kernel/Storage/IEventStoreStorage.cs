@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Storage.EventTypes;
-using Cratis.Kernel.Storage.Identities;
-using Cratis.Kernel.Storage.Projections;
+using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Identities;
+using Cratis.Chronicle.Storage.Projections;
 
-namespace Cratis.Kernel.Storage;
+namespace Cratis.Chronicle.Storage;
 
 /// <summary>
 /// Defines the shared storage for an event store.

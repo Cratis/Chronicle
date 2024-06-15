@@ -5,7 +5,7 @@ using Cratis.Events;
 using Cratis.Properties;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Projections.Expressions.EventValues;
+namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 
 /// <summary>
 /// Defines a system for resolving a event value provider expression. It represents known expression resolvers in the system.

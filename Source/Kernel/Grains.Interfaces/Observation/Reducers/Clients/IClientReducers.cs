@@ -4,7 +4,7 @@
 using Cratis.Connections;
 using Cratis.Observation.Reducers;
 
-namespace Cratis.Kernel.Grains.Observation.Reducers.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
 /// <summary>
 /// Defines a grain for working with all <see cref="IClientReducer">client reducers</see>.

@@ -3,10 +3,10 @@
 
 using System.Dynamic;
 using Cratis.Changes;
+using Cratis.Chronicle.Keys;
 using Cratis.Events;
-using Cratis.Kernel.Keys;
 
-namespace Cratis.Kernel.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents the context of an event when being handled by a <see cref="IProjection"/>.

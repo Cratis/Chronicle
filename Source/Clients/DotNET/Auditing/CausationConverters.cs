@@ -12,16 +12,16 @@ public static class CausationConverters
     /// Convert to contract representation.
     /// </summary>
     /// <param name="causations">Collection of <see cref="Causation"/> to convert.</param>
-    /// <returns>Converted collection of <see cref="Kernel.Contracts.Auditing.Causation"/>.</returns>
-    public static IEnumerable<Kernel.Contracts.Auditing.Causation> ToContract(this IEnumerable<Causation> causations) =>
+    /// <returns>Converted collection of <see cref="Chronicle.Contracts.Auditing.Causation"/>.</returns>
+    public static IEnumerable<Chronicle.Contracts.Auditing.Causation> ToContract(this IEnumerable<Causation> causations) =>
         causations.Select(c => c.ToContract()).ToArray();
 
     /// <summary>
     /// Convert to contract representation.
     /// </summary>
     /// <param name="causation"><see cref="Causation"/> to convert.</param>
-    /// <returns>Converted <see cref="Kernel.Contracts.Auditing.Causation"/>.</returns>
-    public static Kernel.Contracts.Auditing.Causation ToContract(this Causation causation) =>
+    /// <returns>Converted <see cref="Chronicle.Contracts.Auditing.Causation"/>.</returns>
+    public static Chronicle.Contracts.Auditing.Causation ToContract(this Causation causation) =>
         new()
         {
             Occurred = causation.Occurred!,
@@ -32,16 +32,16 @@ public static class CausationConverters
     /// <summary>
     /// Convert to Kernel representation.
     /// </summary>
-    /// <param name="causations">Collection of <see cref="Kernel.Contracts.Auditing.Causation"/> to convert from..</param>
+    /// <param name="causations">Collection of <see cref="Chronicle.Contracts.Auditing.Causation"/> to convert from..</param>
     /// <returns>Converted collection of <see cref="Causation"/>.</returns>
-    public static IEnumerable<Causation> ToClient(this IEnumerable<Kernel.Contracts.Auditing.Causation> causations) =>
+    public static IEnumerable<Causation> ToClient(this IEnumerable<Chronicle.Contracts.Auditing.Causation> causations) =>
         causations.Select(c => c.ToClient()).ToArray();
 
     /// <summary>
     /// Convert to Kernel representation.
     /// </summary>
-    /// <param name="causation"><see cref="Kernel.Contracts.Auditing.Causation"/> to convert from.</param>
+    /// <param name="causation"><see cref="Chronicle.Contracts.Auditing.Causation"/> to convert from.</param>
     /// <returns>Converted <see cref="Causation"/>.</returns>
-    public static Causation ToClient(this Kernel.Contracts.Auditing.Causation causation) =>
+    public static Causation ToClient(this Chronicle.Contracts.Auditing.Causation causation) =>
         new(causation.Occurred, causation.Type, causation.Properties ?? new Dictionary<string, string>());
 }

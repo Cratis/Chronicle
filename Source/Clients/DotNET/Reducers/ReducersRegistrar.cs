@@ -3,8 +3,8 @@
 
 using System.Reflection;
 using Cratis.Aggregates;
+using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Events;
-using Cratis.Kernel.Contracts.Observation.Reducers;
 using Cratis.Models;
 using Cratis.Observation;
 using Cratis.Reflection;

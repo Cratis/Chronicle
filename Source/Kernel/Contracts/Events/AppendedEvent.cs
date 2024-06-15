@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.Events;
+namespace Cratis.Chronicle.Contracts.Events;
 
 /// <summary>
 /// Represents an event that has been appended to an event log.

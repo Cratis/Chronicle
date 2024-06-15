@@ -4,7 +4,7 @@
 using Cratis.Projections;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections.Expressions.Keys;
+namespace Cratis.Chronicle.Projections.Expressions.Keys;
 
 /// <summary>
 /// Exception that gets thrown when a composite key property mapping expression is invalid.

@@ -4,7 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Compliance;
 
-namespace Cratis.Kernel.Compliance;
+namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
 /// Defines a system that can handle a property for a specific <see cref="ComplianceMetadataType"/>.

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Projections.Expressions.Keys.for_CompositeKeyExpressionResolver;
+namespace Cratis.Chronicle.Projections.Expressions.Keys.for_CompositeKeyExpressionResolver;
 
 public class when_asking_can_resolve_for_valid_expression : given.a_resolver
 {

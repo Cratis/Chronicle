@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Storage.Observation;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Grains.Observation.States;
+namespace Cratis.Chronicle.Grains.Observation.States;
 
 /// <summary>
 /// Represents the indexing state of an observer.

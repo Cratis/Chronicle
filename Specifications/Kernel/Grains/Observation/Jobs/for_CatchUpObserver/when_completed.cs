@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Grains.Observation.States;
+using Cratis.Chronicle.Grains.Observation.States;
 using Orleans.TestKit;
 
-namespace Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver;
+namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver;
 
 public class when_completed : given.a_catchup_observer_and_a_request
 {

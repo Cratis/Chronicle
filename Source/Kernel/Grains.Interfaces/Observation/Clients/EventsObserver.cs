@@ -3,7 +3,7 @@
 
 using Cratis.Events;
 
-namespace Cratis.Kernel.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Clients;
 
 /// <summary>
 /// Delegate that gets called when events are to be observed.

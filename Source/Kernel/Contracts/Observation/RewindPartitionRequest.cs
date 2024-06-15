@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.Observation;
+namespace Cratis.Chronicle.Contracts.Observation;
 
 /// <summary>
 /// Represents the request for rewinding a partition in an observer.

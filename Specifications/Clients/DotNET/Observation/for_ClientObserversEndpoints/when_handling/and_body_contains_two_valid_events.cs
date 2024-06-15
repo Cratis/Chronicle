@@ -4,8 +4,8 @@
 using System.Net;
 using System.Text.Json;
 using Cratis.Commands;
-using Cratis.Specifications.Events;
 using Cratis.Json;
+using Cratis.Specifications.Events;
 
 namespace Cratis.Observation.for_ClientObserversEndpoints.when_handling;
 

@@ -8,7 +8,7 @@ using Cratis.Changes;
 using Cratis.Identities;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections.for_ProjectionExtensions.given;
+namespace Cratis.Chronicle.Projections.for_ProjectionExtensions.given;
 
 public class an_observable_and_event_setup : Specification
 {

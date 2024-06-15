@@ -1,17 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.Jobs;
-using Cratis.Kernel.Grains.Jobs;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.Jobs;
 using Cratis.Observation;
 using Orleans.Runtime;
 
-namespace Cratis.Kernel.Grains.Observation.Jobs;
+namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents a step in a replay job.

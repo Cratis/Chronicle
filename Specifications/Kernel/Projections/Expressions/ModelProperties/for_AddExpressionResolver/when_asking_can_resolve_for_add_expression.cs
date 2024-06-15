@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Projections.Expressions.EventValues;
+using Cratis.Chronicle.Projections.Expressions.EventValues;
 
-namespace Cratis.Kernel.Projections.Expressions.ModelProperties.for_AddExpressionResolver;
+namespace Cratis.Chronicle.Projections.Expressions.ModelProperties.for_AddExpressionResolver;
 
 public class when_asking_can_resolve_for_add_expression : Specification
 {

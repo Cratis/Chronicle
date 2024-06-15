@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Grains.Projections.Pipelines;
-using Cratis.Kernel.Projections;
+using Cratis.Chronicle.Grains.Projections.Pipelines;
+using Cratis.Chronicle.Projections;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Grains.Projections.for_ProjectionManager.given;
+namespace Cratis.Chronicle.Grains.Projections.for_ProjectionManager.given;
 
 public class a_projection_manager_without_any_projections : Specification
 {

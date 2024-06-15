@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceQueueCacheCursor.when_moving_next;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming.for_EventSequenceQueueCacheCursor.when_moving_next;
 
 public class and_current_is_set_but_there_is_no_next_and_cache_does_not_have_it_but_source_does : given.a_cursor_and_an_empty_cache
 {

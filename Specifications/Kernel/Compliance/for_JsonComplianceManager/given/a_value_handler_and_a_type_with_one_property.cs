@@ -3,7 +3,7 @@
 
 using Cratis.Schemas;
 
-namespace Cratis.Kernel.Compliance.for_JsonComplianceManager.given;
+namespace Cratis.Chronicle.Compliance.for_JsonComplianceManager.given;
 
 public class a_value_handler_and_a_type_with_one_property : a_type_with_one_property
 {

@@ -3,7 +3,7 @@
 
 using Orleans.TestKit;
 
-namespace Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver.when_asking_if_can_resume;
+namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver.when_asking_if_can_resume;
 
 public class and_it_is_subscribed : given.a_catchup_observer_and_a_request
 {

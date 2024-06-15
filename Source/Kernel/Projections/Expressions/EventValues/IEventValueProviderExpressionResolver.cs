@@ -4,7 +4,7 @@
 using Cratis.Events;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections.Expressions.EventValues;
+namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 
 /// <summary>
 /// Defines a resolver of expressions for providing values from events.

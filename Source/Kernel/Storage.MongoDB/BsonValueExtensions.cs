@@ -10,7 +10,7 @@ using Cratis.Types;
 using MongoDB.Bson;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
 /// Extension methods for working with <see cref="BsonValue"/>.

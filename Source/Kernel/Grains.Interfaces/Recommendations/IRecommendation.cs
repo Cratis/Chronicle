@@ -3,7 +3,7 @@
 
 using Cratis.Recommendations;
 
-namespace Cratis.Kernel.Grains.Recommendations;
+namespace Cratis.Chronicle.Grains.Recommendations;
 
 /// <summary>
 /// Defines a system for a recommendation in the system.

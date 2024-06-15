@@ -37,7 +37,7 @@ public class EventSequence(
     {
         var eventType = eventTypes.GetEventTypeFor(@event.GetType());
         var content = await eventSerializer.Serialize(@event);
-        var causationChain = causationManager.GetCurrentChain().Select(_ => new Kernel.Contracts.Auditing.Causation
+        var causationChain = causationManager.GetCurrentChain().Select(_ => new Chronicle.Contracts.Auditing.Causation
         {
             Occurred = _.Occurred!,
             Type = _.Type,

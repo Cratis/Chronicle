@@ -4,7 +4,7 @@
 using Cratis.Events;
 using Cratis.EventSequences;
 
-namespace Cratis.Kernel.Storage.EventSequences;
+namespace Cratis.Chronicle.Storage.EventSequences;
 
 /// <summary>
 /// Exception that gets thrown when the storage mechanism is not able to append the event to the event sequence.

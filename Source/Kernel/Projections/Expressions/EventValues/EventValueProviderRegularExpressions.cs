@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Projections.Expressions.EventValues;
+namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 
 /// <summary>
 /// Regular expressions representing event value providers.

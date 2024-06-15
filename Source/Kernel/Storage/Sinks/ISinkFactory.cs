@@ -4,7 +4,7 @@
 using Cratis.Models;
 using Cratis.Sinks;
 
-namespace Cratis.Kernel.Storage.Sinks;
+namespace Cratis.Chronicle.Storage.Sinks;
 
 /// <summary>
 /// Defines a factory that can create instances of <see cref="ISink"/> for a specific <see cref="SinkTypeId"/>.

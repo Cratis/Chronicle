@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Grains.Observation.States.for_Observing;
+namespace Cratis.Chronicle.Grains.Observation.States.for_Observing;
 
 public class when_leaving : given.an_observing_state
 {

@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Identities;
 
-namespace Cratis.Kernel.Storage.Identities;
+namespace Cratis.Chronicle.Storage.Identities;
 
 /// <summary>
 /// Defines a system that manages <see cref="Identity">caused by</see> instances.

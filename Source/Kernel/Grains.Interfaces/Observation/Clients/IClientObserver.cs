@@ -4,7 +4,7 @@
 using Cratis.Events;
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Clients;
 
 /// <summary>
 /// Defines a client observer.

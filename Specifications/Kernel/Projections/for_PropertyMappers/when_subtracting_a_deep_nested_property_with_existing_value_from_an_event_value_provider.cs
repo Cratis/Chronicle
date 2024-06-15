@@ -6,7 +6,7 @@ using Cratis.Auditing;
 using Cratis.Identities;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections.for_PropertyMappers;
+namespace Cratis.Chronicle.Projections.for_PropertyMappers;
 
 public class when_subtracting_a_deep_nested_property_with_existing_value_from_an_event_value_provider : Specification
 {

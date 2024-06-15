@@ -3,7 +3,7 @@
 
 using Cratis.Compliance;
 
-namespace Cratis.Kernel.Storage.Compliance;
+namespace Cratis.Chronicle.Storage.Compliance;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEncryptionKeyStorage"/> that works as a configurable cache in front of another <see cref="IEncryptionKeyStorage"/>.

@@ -3,7 +3,7 @@
 
 using Cratis.Events;
 
-namespace Cratis.Kernel.Grains.Observation;
+namespace Cratis.Chronicle.Grains.Observation;
 
 /// <summary>
 /// Represents a result object after calling a <see cref="IObserverSubscriber"/>.

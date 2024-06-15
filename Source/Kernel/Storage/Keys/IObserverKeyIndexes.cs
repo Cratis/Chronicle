@@ -3,7 +3,7 @@
 
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Storage.Keys;
+namespace Cratis.Chronicle.Storage.Keys;
 
 /// <summary>
 /// Defines a system for managing <see cref="IObserverKeyIndex">observer key indexes</see>.

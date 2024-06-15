@@ -9,7 +9,7 @@ SelfBindingRegistrationSource.AddNamespaceStartsWithToExclude(
     "Microsoft",
     "Orleans");
 
-var host = Cratis.Kernel.Server.Program.CreateHostBuilder(Array.Empty<string>())
+var host = Cratis.Chronicle.Server.Program.CreateHostBuilder(Array.Empty<string>())
           .Build();
 
 GlobalVariables.SetServiceProvider(host!.Services);

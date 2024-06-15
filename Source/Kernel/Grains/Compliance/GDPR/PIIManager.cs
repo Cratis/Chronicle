@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Compliance;
-using Cratis.Kernel.Compliance;
-using Cratis.Kernel.Storage.Compliance;
 
-namespace Cratis.Kernel.Grains.Compliance.GDPR;
+namespace Cratis.Chronicle.Grains.Compliance.GDPR;
 
 /// <summary>
 /// Represents a manager of PII in the system.

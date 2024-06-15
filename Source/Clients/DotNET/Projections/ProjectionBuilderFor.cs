@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Events;
 using Cratis.EventTypes;
-using Cratis.Kernel.Contracts.Projections;
 using Cratis.Models;
 using Cratis.Schemas;
 

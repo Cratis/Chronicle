@@ -3,21 +3,21 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Cratis.Json;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.EventSequences;
-using Cratis.Kernel.Keys;
-using Cratis.Kernel.Observation;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.Observation;
+using Cratis.Json;
 using Cratis.Specifications;
 using Microsoft.Extensions.Logging;
 using Orleans.Core;
 using Orleans.Runtime;
 using Orleans.Streams;
 using Orleans.TestKit;
-using IEventSequence = Cratis.Kernel.Grains.EventSequences.IEventSequence;
+using IEventSequence = Cratis.Chronicle.Grains.EventSequences.IEventSequence;
 
-namespace Cratis.Kernel.Grains.Observation.for_Observer.given;
+namespace Cratis.Chronicle.Grains.Observation.for_Observer.given;
 
 public class an_observer : Specification
 {

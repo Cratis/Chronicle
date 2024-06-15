@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections.for_ProjectionExtensions.when_applying_from_filter;
+namespace Cratis.Chronicle.Projections.for_ProjectionExtensions.when_applying_from_filter;
 
 public class when_projecting_to_root_property : given.an_observable_and_event_setup
 {

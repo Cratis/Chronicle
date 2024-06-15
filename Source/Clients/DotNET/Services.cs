@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Contracts.Events;
-using Cratis.Kernel.Contracts.EventSequences;
-using Cratis.Kernel.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Observation;
 
 namespace Cratis;
 

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Kernel.Compliance.Specs</AssemblyName>
-        <RootNamespace>Cratis.Kernel.Compliance</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Compliance.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Compliance</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.Clients;
+namespace Cratis.Chronicle.Contracts.Clients;
 
 /// <summary>
 /// The request for connecting.

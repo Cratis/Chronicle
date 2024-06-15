@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Storage;
 using Cratis.Events;
 using Cratis.Jobs;
-using Cratis.Kernel.Grains.Jobs;
-using Cratis.Kernel.Grains.Observation.States;
-using Cratis.Kernel.Storage;
 
-namespace Cratis.Kernel.Grains.Observation.Jobs;
+namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents a job for replaying an observer.

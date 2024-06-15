@@ -7,7 +7,7 @@ using Cratis.Events;
 using Cratis.Identities;
 using Orleans.Concurrency;
 
-namespace Cratis.Kernel.Grains.EventSequences;
+namespace Cratis.Chronicle.Grains.EventSequences;
 
 /// <summary>
 /// Defines the event sequence.

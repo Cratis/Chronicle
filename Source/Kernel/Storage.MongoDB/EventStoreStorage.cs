@@ -3,17 +3,17 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Identities;
+using Cratis.Chronicle.Storage.MongoDB.Identities;
+using Cratis.Chronicle.Storage.MongoDB.Projections;
+using Cratis.Chronicle.Storage.Projections;
 using Cratis.Events.MongoDB.EventTypes;
-using Cratis.Kernel.Compliance;
-using Cratis.Kernel.Storage.EventTypes;
-using Cratis.Kernel.Storage.Identities;
-using Cratis.Kernel.Storage.MongoDB.Identities;
-using Cratis.Kernel.Storage.MongoDB.Projections;
-using Cratis.Kernel.Storage.Projections;
 using Cratis.Projections.Json;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreStorage"/> for MongoDB.

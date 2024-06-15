@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Grains.Workers;
+using Cratis.Chronicle.Grains.Workers;
 using Serilog;
 
 #pragma warning disable SA1600
-namespace Cratis.Kernel.Server;
+namespace Cratis.Chronicle.Server;
 
 /// <summary>
 /// Extension methods for configuring Cpu bound workers.

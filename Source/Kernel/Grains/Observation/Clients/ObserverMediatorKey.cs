@@ -4,7 +4,7 @@
 using Cratis.Connections;
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Clients;
 
 /// <summary>
 /// Represents a key used for the <see cref="IObserverMediator"/> to track observer subscriptions.

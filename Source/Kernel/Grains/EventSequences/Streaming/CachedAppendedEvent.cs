@@ -3,7 +3,7 @@
 
 using Cratis.Events;
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming;
 #pragma warning disable CA1051 // Do not declare visible instance fields
 
 /// <summary>

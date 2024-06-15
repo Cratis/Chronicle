@@ -4,7 +4,7 @@
 using Cratis.Models;
 using Cratis.Sinks;
 
-namespace Cratis.Kernel.Storage.Sinks;
+namespace Cratis.Chronicle.Storage.Sinks;
 
 /// <summary>
 /// Defines a system for working with available <see cref="ISink">projection sinks</see>.

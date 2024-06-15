@@ -3,11 +3,11 @@
 
 using System.Dynamic;
 using Cratis.Changes;
+using Cratis.Chronicle.Keys;
 using Cratis.Events;
-using Cratis.Kernel.Keys;
 using Cratis.Sinks;
 
-namespace Cratis.Kernel.Storage.Sinks;
+namespace Cratis.Chronicle.Storage.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> that does nothing.

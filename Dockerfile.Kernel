@@ -16,5 +16,5 @@ RUN dotnet publish -c Release -o out
 FROM mcr.microsoft.com/dotnet/aspnet:7.0
 WORKDIR /App
 COPY --from=build-env /App/Source/Kernel/Server/out .
-ENTRYPOINT ["dotnet", "Cratis.Kernel.Server.dll"]
+ENTRYPOINT ["dotnet", "Cratis.Chronicle.Server.dll"]
 

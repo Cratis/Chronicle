@@ -3,7 +3,7 @@
 
 using Cratis.Identities;
 
-namespace Cratis.Kernel.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.when_getting_single_by_identity;
+namespace Cratis.Chronicle.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.when_getting_single_by_identity;
 
 public class and_it_already_exists_without_subject : given.two_identities_without_subject_registered
 {

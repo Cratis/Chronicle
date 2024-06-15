@@ -3,7 +3,7 @@
 
 using Cratis.Compliance;
 
-namespace Cratis.Kernel.Storage.Compliance;
+namespace Cratis.Chronicle.Storage.Compliance;
 
 /// <summary>
 /// Represents a composite <see cref="IEncryptionKeyStorage"/>.

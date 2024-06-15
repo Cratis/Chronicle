@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Contracts.Events;
-using Cratis.Kernel.Contracts.Models;
+using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.Models;
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.Projections;
+namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
 /// Represents the definition of a children projection.

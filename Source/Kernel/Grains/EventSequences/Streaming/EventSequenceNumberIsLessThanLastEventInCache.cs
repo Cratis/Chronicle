@@ -3,7 +3,7 @@
 
 using Cratis.Events;
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Exception that gets thrown when an event sequence number is older than the last event in the cache.

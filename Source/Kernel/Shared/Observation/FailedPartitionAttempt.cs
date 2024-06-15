@@ -3,7 +3,7 @@
 
 using Cratis.Events;
 
-namespace Cratis.Kernel.Observation;
+namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Represents the state of an attempt of a failed partition. This includes representing the initial attempt that caused it.

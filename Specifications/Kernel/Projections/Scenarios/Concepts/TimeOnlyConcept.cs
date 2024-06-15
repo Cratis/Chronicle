@@ -3,7 +3,7 @@
 
 using Cratis.Concepts;
 
-namespace Cratis.Kernel.Projections.Scenarios.Concepts;
+namespace Cratis.Chronicle.Projections.Scenarios.Concepts;
 
 public record TimeOnlyConcept(TimeOnly Value) : ConceptAs<TimeOnly>(Value)
 {

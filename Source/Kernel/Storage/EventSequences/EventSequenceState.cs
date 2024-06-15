@@ -3,7 +3,7 @@
 
 using Cratis.Events;
 
-namespace Cratis.Kernel.Storage.EventSequences;
+namespace Cratis.Chronicle.Storage.EventSequences;
 
 /// <summary>
 /// Represents the state used by the event sequence. This state is meant to be per event sequence instance.

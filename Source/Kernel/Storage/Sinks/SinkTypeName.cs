@@ -3,7 +3,7 @@
 
 using Cratis.Sinks;
 
-namespace Cratis.Kernel.Storage.Sinks;
+namespace Cratis.Chronicle.Storage.Sinks;
 
 /// <summary>
 /// Represents a friendly name for a type of <see cref="ISink"/>.

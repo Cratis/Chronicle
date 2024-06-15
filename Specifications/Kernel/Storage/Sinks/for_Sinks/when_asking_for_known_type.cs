@@ -4,7 +4,7 @@
 using Cratis.Models;
 using Cratis.Sinks;
 
-namespace Cratis.Kernel.Storage.Sinks.for_Sinks;
+namespace Cratis.Chronicle.Storage.Sinks.for_Sinks;
 
 public class when_asking_for_known_type : Specification
 {

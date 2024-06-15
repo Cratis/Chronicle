@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Events;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.EventTypes;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Cratis.Kernel.Grains.EventSequences;
+namespace Cratis.Chronicle.Grains.EventSequences;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling event sequence state storage.

@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using Cratis.Auditing;
+using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.EventSequences;
-using Cratis.Kernel.Contracts.EventSequences;
 
 namespace Cratis.Aggregates.for_AggregateRootStateFactory.given;
 

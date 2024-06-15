@@ -1,15 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Events;
 using Cratis.EventSequences;
-using Cratis.Kernel.EventSequences;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.EventSequences;
 using Orleans.Runtime;
 using Orleans.Streams;
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Represents an implementation of <see cref="IQueueAdapter"/> for MongoDB event log.

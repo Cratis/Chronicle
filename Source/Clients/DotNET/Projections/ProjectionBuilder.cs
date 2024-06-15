@@ -5,15 +5,15 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Events;
-using Cratis.Kernel.Contracts.Projections;
 using Cratis.Models;
 using Cratis.Properties;
 using Cratis.Reflection;
 using Cratis.Schemas;
 using Cratis.Strings;
 using Humanizer;
-using EventType = Cratis.Kernel.Contracts.Events.EventType;
+using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
 namespace Cratis.Projections;
 

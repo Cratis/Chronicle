@@ -4,7 +4,7 @@
 using Cratis.Projections;
 using Cratis.Projections.Definitions;
 
-namespace Cratis.Kernel.Grains.Projections.Definitions;
+namespace Cratis.Chronicle.Grains.Projections.Definitions;
 
 /// <summary>
 /// Defines a system for working with <see cref="ProjectionPipelineDefinition"/>.

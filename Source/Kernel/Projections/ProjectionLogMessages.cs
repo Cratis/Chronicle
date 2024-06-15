@@ -4,7 +4,7 @@
 using Cratis.Projections;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Holds log messages for <see cref="Projection"/>.

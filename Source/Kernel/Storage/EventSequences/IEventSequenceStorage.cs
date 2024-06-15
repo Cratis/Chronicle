@@ -7,7 +7,7 @@ using Cratis.Auditing;
 using Cratis.Events;
 using Cratis.Identities;
 
-namespace Cratis.Kernel.Storage.EventSequences;
+namespace Cratis.Chronicle.Storage.EventSequences;
 
 /// <summary>
 /// Defines a storage provider for the event sequence.

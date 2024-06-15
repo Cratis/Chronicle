@@ -3,7 +3,7 @@
 
 using Cratis.Recommendations;
 
-namespace Cratis.Kernel.Storage.Recommendations;
+namespace Cratis.Chronicle.Storage.Recommendations;
 
 /// <summary>
 /// Holds the state of a recommendation.

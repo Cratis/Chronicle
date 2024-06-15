@@ -2,22 +2,22 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Changes;
+using Cratis.Chronicle.Grains.Observation.Reducers;
+using Cratis.Chronicle.Grains.Projections;
+using Cratis.Chronicle.Grains.Projections.Pipelines;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.Expressions;
+using Cratis.Chronicle.Projections.Expressions.EventValues;
+using Cratis.Chronicle.Projections.Expressions.Keys;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Json;
-using Cratis.Kernel.Grains.Observation.Reducers;
-using Cratis.Kernel.Grains.Projections;
-using Cratis.Kernel.Grains.Projections.Pipelines;
-using Cratis.Kernel.Projections;
-using Cratis.Kernel.Projections.Expressions;
-using Cratis.Kernel.Projections.Expressions.EventValues;
-using Cratis.Kernel.Projections.Expressions.Keys;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.Sinks;
 using Cratis.Schemas;
 using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Grains;
+namespace Cratis.Chronicle.Grains;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreNamespace"/>.

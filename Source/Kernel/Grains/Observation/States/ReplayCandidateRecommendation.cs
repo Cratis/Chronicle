@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Grains.Observation.Jobs;
+using Cratis.Chronicle.Grains.Recommendations;
 using Cratis.Jobs;
-using Cratis.Kernel.Grains.Jobs;
-using Cratis.Kernel.Grains.Observation.Jobs;
-using Cratis.Kernel.Grains.Recommendations;
 
-namespace Cratis.Kernel.Grains.Observation.States;
+namespace Cratis.Chronicle.Grains.Observation.States;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReplayCandidateRecommendation"/>.

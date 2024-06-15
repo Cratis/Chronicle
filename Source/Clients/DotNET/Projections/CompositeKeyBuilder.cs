@@ -3,8 +3,8 @@
 
 using System.Linq.Expressions;
 using System.Text;
-using Cratis.Reflection;
 using Cratis.Properties;
+using Cratis.Reflection;
 
 namespace Cratis.Projections;
 

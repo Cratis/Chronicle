@@ -3,7 +3,7 @@
 
 using Orleans.Services;
 
-namespace Cratis.Kernel.Grains.Observation;
+namespace Cratis.Chronicle.Grains.Observation;
 
 /// <summary>
 /// Defines a client for <see cref="IObserverService"/>.

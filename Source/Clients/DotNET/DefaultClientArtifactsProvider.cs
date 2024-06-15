@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Reflection;
-using Cratis.Types;
 using Cratis.Aggregates;
 using Cratis.Compliance;
 using Cratis.Events;
@@ -10,7 +8,9 @@ using Cratis.Integration;
 using Cratis.Observation;
 using Cratis.Projections;
 using Cratis.Reducers;
+using Cratis.Reflection;
 using Cratis.Rules;
+using Cratis.Types;
 
 namespace Cratis;
 

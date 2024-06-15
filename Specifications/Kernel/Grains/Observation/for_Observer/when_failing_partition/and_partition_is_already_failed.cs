@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 
-using Cratis.Kernel.Keys;
-using Cratis.Kernel.Observation;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Observation;
 
-namespace Cratis.Kernel.Grains.Observation.for_Observer.when_failing_partition;
+namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_failing_partition;
 
 public class and_partition_is_already_failed : given.an_observer
 {

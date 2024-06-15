@@ -4,7 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Observation.Reducers;
 
-namespace Cratis.Kernel.Grains.Observation.Reducers;
+namespace Cratis.Chronicle.Grains.Observation.Reducers;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReducerPipelineDefinitions"/>.

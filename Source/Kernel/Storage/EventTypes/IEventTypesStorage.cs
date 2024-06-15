@@ -5,7 +5,7 @@ using Cratis.Events;
 using Cratis.EventTypes;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Storage.EventTypes;
+namespace Cratis.Chronicle.Storage.EventTypes;
 
 /// <summary>
 /// Defines the store for event schemas.

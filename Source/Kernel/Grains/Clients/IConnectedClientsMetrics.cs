@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Grains.Clients;
+namespace Cratis.Chronicle.Grains.Clients;
 
 /// <summary>
 /// Defines a system that can track metrics for connected clients.

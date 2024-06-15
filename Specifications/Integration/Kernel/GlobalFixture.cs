@@ -6,7 +6,7 @@ using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 using MongoDB.Driver;
 
-namespace Cratis.Kernel;
+namespace Cratis.Chronicle;
 
 public class GlobalFixture : IDisposable
 {

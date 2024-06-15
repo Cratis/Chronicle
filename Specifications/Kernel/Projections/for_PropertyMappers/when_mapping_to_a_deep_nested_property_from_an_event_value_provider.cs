@@ -6,7 +6,7 @@ using Cratis.Auditing;
 using Cratis.Identities;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections.for_PropertyMappers;
+namespace Cratis.Chronicle.Projections.for_PropertyMappers;
 
 public class when_mapping_to_a_deep_nested_property_from_an_event_value_provider : Specification
 {

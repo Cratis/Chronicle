@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Contracts.Primitives;
+namespace Cratis.Chronicle.Contracts.Primitives;
 
 /// <summary>
 /// Exception that gets thrown when no value is set for a OneOf construct.

@@ -3,7 +3,7 @@
 
 using Cratis.Projections;
 
-namespace Cratis.Kernel.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Exception that gets thrown when a projection is missing.

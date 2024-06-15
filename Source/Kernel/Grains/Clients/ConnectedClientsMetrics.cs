@@ -3,7 +3,7 @@
 
 using System.Diagnostics.Metrics;
 
-namespace Cratis.Kernel.Grains.Clients;
+namespace Cratis.Chronicle.Grains.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClientsMetrics"/>.

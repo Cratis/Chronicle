@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.Projections;
+namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
 /// Represents the result of an immediate projection.

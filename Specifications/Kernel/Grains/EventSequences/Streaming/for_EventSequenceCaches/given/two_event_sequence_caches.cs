@@ -3,7 +3,7 @@
 
 using Cratis.EventSequences;
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCaches.given;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming.for_EventSequenceCaches.given;
 
 public class two_event_sequence_caches : an_event_sequence_caches
 {

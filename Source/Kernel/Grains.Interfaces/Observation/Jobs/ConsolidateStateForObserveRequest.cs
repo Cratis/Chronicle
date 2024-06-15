@@ -3,7 +3,7 @@
 
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Grains.Observation.Jobs;
+namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents the request for a <see cref="IReplayObserver"/>.

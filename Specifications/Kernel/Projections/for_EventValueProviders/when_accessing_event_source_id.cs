@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Auditing;
 using Cratis.Identities;
 
-namespace Cratis.Kernel.Projections.for_EventValueProviders;
+namespace Cratis.Chronicle.Projections.for_EventValueProviders;
 
 public class when_accessing_event_source_id : Specification
 {

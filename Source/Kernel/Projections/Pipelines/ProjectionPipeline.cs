@@ -3,18 +3,18 @@
 
 using System.Dynamic;
 using Cratis.Changes;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Storage.Changes;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Events;
-using Cratis.Kernel.Keys;
-using Cratis.Kernel.Storage.Changes;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.Sinks;
 using Cratis.Properties;
 using Cratis.Schemas;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Cratis.Kernel.Projections.IProjection;
+using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
-namespace Cratis.Kernel.Projections.Pipelines;
+namespace Cratis.Chronicle.Projections.Pipelines;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionPipeline"/>.

@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using Cratis.Events;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections.Expressions.EventValues;
+namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 
 /// <summary>
 /// Represents a <see cref="IModelPropertyExpressionResolver"/> for resolving value from <see cref="EventSourceId"/> of the <see cref="AppendedEvent"/>.

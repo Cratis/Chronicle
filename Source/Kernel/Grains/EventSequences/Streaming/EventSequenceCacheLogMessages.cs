@@ -4,7 +4,7 @@
 using Cratis.Events;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming;
 
 internal static partial class EventSequenceCacheLogMessages
 {

@@ -6,7 +6,7 @@ using Cratis.Events;
 using Cratis.Properties;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Projections.Expressions;
+namespace Cratis.Chronicle.Projections.Expressions;
 
 /// <summary>
 /// Defines a resolver of expressions related to target properties on the model.

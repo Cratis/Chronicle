@@ -4,7 +4,7 @@
 using Cratis.Compliance;
 using Cratis.DependencyInjection;
 
-namespace Cratis.Kernel.Storage.Compliance;
+namespace Cratis.Chronicle.Storage.Compliance;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEncryptionKeyStorage"/> for in-memory.

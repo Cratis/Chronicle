@@ -3,7 +3,7 @@
 
 using Cratis.Jobs;
 
-namespace Cratis.Kernel.Grains.Jobs;
+namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
 /// Represents a null <see cref="IJob"/>.

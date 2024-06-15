@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Recommendations;
 
-namespace Cratis.Kernel.Storage.Recommendations;
+namespace Cratis.Chronicle.Storage.Recommendations;
 
 /// <summary>
 /// Defines the storage for <see cref="RecommendationState"/>.

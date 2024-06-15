@@ -2,7 +2,7 @@
     {
         "name": "Server",
         "path": "${workspaceFolder}/Source/Kernel/Server",
-        "outputPath": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net8.0/Cratis.Kernel.Server.dll"
+        "outputPath": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net8.0/Cratis.Chronicle.Server.dll"
     },
     {
         "name": "API",

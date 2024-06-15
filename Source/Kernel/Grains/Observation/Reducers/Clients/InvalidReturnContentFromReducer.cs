@@ -3,7 +3,7 @@
 
 using System.Net;
 
-namespace Cratis.Kernel.Grains.Observation.Reducers.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
 /// <summary>
 /// Exception that gets thrown when the content from the reducer is invalid.

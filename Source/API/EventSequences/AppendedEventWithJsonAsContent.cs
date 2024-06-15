@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Kernel.Contracts.Events;
+using Cratis.Chronicle.Contracts.Events;
 
 namespace Cratis.API.EventSequences;
 

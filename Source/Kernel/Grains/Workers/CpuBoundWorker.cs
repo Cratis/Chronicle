@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Cratis.Kernel.Grains.Workers;
+namespace Cratis.Chronicle.Grains.Workers;
 
 /// <summary>
 /// This class should be used as the base class for extending for the creation of long running, cpu bound, synchronous work.

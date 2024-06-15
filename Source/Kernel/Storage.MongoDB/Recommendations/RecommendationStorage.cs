@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Kernel.Storage.MongoDB.Observation;
-using Cratis.Kernel.Storage.Recommendations;
+using Cratis.Chronicle.Storage.MongoDB.Observation;
+using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Recommendations;
 using MongoDB.Driver;
 
-namespace Cratis.Kernel.Storage.MongoDB.Recommendations;
+namespace Cratis.Chronicle.Storage.MongoDB.Recommendations;
 
 /// <summary>
 /// Represents an implementation of <see cref="IRecommendationStorage"/> for MongoDB.

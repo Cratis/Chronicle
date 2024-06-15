@@ -3,7 +3,7 @@
 
 using Orleans.TestKit;
 
-namespace Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
+namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
 
 public class and_event_is_of_a_type_the_observer_is_not_interested_in : given.an_observer_with_subscription_for_specific_event_type
 {

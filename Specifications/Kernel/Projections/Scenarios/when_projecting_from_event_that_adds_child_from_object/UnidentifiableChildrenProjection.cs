@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Projections.Scenarios.when_projecting_from_event_that_adds_child_from_object;
+namespace Cratis.Chronicle.Projections.Scenarios.when_projecting_from_event_that_adds_child_from_object;
 
 public class UnidentifiableChildrenProjection : IProjectionFor<ModelWithChildren>
 {

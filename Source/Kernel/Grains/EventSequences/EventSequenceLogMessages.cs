@@ -5,7 +5,7 @@ using Cratis.Events;
 using Cratis.EventSequences;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Grains.EventSequences;
+namespace Cratis.Chronicle.Grains.EventSequences;
 
 /// <summary>
 /// Holds log messages for <see cref="EventSequence"/>.

@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel;
+namespace Cratis.Chronicle;
 
 public class NullLogger : ILogger
 {

@@ -3,8 +3,8 @@
 
 using System.Dynamic;
 using Cratis.Changes;
+using Cratis.Chronicle.Keys;
 using Cratis.Events;
-using Cratis.Kernel.Keys;
 using Cratis.Models;
 using Cratis.Properties;
 using Cratis.Reflection;
@@ -13,7 +13,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChangesetConverter"/>.

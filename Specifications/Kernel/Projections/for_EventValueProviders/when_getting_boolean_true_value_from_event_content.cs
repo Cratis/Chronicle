@@ -6,7 +6,7 @@ using Cratis.Auditing;
 using Cratis.Identities;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections.for_EventValueProviders;
+namespace Cratis.Chronicle.Projections.for_EventValueProviders;
 
 public class when_getting_boolean_true_value_from_event_content : Specification
 {

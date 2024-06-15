@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using Cratis.Chronicle.Contracts.Clients;
+using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Connections;
-using Cratis.Kernel.Contracts.Clients;
-using Cratis.Kernel.Contracts.Events;
-using Cratis.Kernel.Contracts.EventSequences;
-using Cratis.Kernel.Contracts.Observation;
 using Cratis.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;

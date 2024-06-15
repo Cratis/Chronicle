@@ -3,7 +3,7 @@
 
 using Cratis.Events;
 
-namespace Cratis.Kernel.Grains.Observation.Jobs;
+namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents the result of handling events for a partition.

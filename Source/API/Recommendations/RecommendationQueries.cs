@@ -3,8 +3,8 @@
 
 using System.Reactive.Subjects;
 using Cratis.Applications.Queries;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.Recommendations;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Recommendations;
 using Microsoft.AspNetCore.Mvc;
 

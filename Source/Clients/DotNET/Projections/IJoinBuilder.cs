@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Cratis.Kernel.Contracts.Projections;
+using Cratis.Chronicle.Contracts.Projections;
 
 namespace Cratis.Projections;
 

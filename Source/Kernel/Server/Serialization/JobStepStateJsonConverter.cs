@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Serialization;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Json;
-using Cratis.Kernel.Storage.Jobs;
 
-namespace Cratis.Kernel.Server.Serialization;
+namespace Cratis.Chronicle.Server.Serialization;
 
 /// <summary>
 /// Represents the <see cref="JsonConverter{T}"/> that can convert <see cref="JobStepState"/>.

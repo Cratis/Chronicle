@@ -4,8 +4,8 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using AutoMapper;
+using Cratis.Chronicle.Contracts.Projections;
 using Cratis.DependencyInjection;
-using Cratis.Kernel.Contracts.Projections;
 
 namespace Cratis.Integration;
 

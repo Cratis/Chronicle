@@ -5,7 +5,7 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 
-namespace Cratis.Kernel;
+namespace Cratis.Chronicle;
 
 public class KernelFixture : IDisposable
 {

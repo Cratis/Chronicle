@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.Events;
+namespace Cratis.Chronicle.Contracts.Events;
 
 /// <summary>
 /// Represents the metadata related to an event.

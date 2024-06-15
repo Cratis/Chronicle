@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Storage.Sinks.for_Sinks;
+namespace Cratis.Chronicle.Storage.Sinks.for_Sinks;
 
 public class when_asking_for_unknown_type : Specification
 {

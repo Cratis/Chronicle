@@ -3,13 +3,13 @@
 
 using System.Reflection;
 using System.Text.Json.Nodes;
-using Cratis.Collections;
-using Cratis.MongoDB;
 using Cratis;
+using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Collections;
 using Cratis.Events;
-using Cratis.Kernel.Configuration;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.EventTypes;
+using Cratis.MongoDB;
 using Cratis.Schemas;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;

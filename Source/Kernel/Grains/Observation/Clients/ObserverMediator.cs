@@ -7,7 +7,7 @@ using Cratis.DependencyInjection;
 using Cratis.Events;
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IObserverMediator"/>.

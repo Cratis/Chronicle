@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
-        <AssemblyName>Cratis.Kernel.Storage</AssemblyName>
-        <RootNamespace>Cratis.Kernel.Storage</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Storage</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Storage</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

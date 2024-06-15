@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Projections.Expressions.EventValues;
+using Cratis.Chronicle.Projections.Expressions.ModelProperties;
 using Cratis.Events;
-using Cratis.Kernel.Projections.Expressions.EventValues;
-using Cratis.Kernel.Projections.Expressions.ModelProperties;
 using Cratis.Properties;
 using Cratis.Schemas;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Projections.Expressions;
+namespace Cratis.Chronicle.Projections.Expressions;
 
 /// <summary>
 /// Represents an implementation of <see cref="IModelPropertyExpressionResolvers"/>.

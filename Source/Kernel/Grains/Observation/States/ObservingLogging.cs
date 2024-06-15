@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Events;
 using Cratis.EventSequences;
-using Cratis.Kernel.Storage.Observation;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Grains.Observation.States;
+namespace Cratis.Chronicle.Grains.Observation.States;
 
 #pragma warning disable SA1600 // Elements should be documented
 #pragma warning disable MA0048 // File name must match type name

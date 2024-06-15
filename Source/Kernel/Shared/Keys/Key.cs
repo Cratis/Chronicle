@@ -4,7 +4,7 @@
 using Cratis.Events;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Keys;
+namespace Cratis.Chronicle.Keys;
 
 /// <summary>
 /// Represents the key coming from an event.

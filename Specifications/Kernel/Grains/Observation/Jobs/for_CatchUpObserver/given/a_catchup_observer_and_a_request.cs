@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver.given;
+namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver.given;
 
 public class a_catchup_observer_and_a_request : a_catchup_observer
 {

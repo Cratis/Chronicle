@@ -7,7 +7,7 @@ using Cratis.Models;
 using Cratis.Projections;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Defines a projection.

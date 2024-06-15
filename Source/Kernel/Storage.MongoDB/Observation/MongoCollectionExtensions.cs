@@ -4,7 +4,7 @@
 using System.Reactive.Subjects;
 using MongoDB.Driver;
 
-namespace Cratis.Kernel.Storage.MongoDB.Observation;
+namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 
 /// <summary>
 /// Extensions for working with MongoDB collections.

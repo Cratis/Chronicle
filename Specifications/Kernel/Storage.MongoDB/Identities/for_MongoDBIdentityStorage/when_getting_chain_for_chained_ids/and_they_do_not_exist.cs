@@ -3,7 +3,7 @@
 
 using Cratis.Identities;
 
-namespace Cratis.Kernel.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.when_getting_chain_for_chained_ids;
+namespace Cratis.Chronicle.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.when_getting_chain_for_chained_ids;
 
 public class and_they_do_not_exist : given.no_identities_registered
 {

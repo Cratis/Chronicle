@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Projections.Pipelines;
+using Cratis.Chronicle.Projections.Pipelines;
 using Cratis.Projections;
 using Cratis.Projections.Definitions;
-using EngineProjection = Cratis.Kernel.Projections.IProjection;
+using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
-namespace Cratis.Kernel.Grains.Projections;
+namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
 /// Defines a system that is responsible for supervises projections in the system.

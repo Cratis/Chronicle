@@ -3,7 +3,7 @@
 
 using Cratis.Connections;
 
-namespace Cratis.Kernel.Grains.Clients;
+namespace Cratis.Chronicle.Grains.Clients;
 
 /// <summary>
 /// Defines a system for tracking connected observers.

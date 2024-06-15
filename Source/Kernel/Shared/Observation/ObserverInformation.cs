@@ -5,7 +5,7 @@ using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Observation;
+namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Represents information about an observer.

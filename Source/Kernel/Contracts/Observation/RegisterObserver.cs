@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Contracts.Events;
+using Cratis.Chronicle.Contracts.Events;
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.Observation;
+namespace Cratis.Chronicle.Contracts.Observation;
 
 /// <summary>
 /// Represents the payload for registering an observer.

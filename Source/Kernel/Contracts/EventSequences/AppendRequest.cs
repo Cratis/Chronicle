@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Contracts.Auditing;
-using Cratis.Kernel.Contracts.Events;
-using Cratis.Kernel.Contracts.Identities;
-using Cratis.Kernel.Contracts.Primitives;
+using Cratis.Chronicle.Contracts.Auditing;
+using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.Identities;
+using Cratis.Chronicle.Contracts.Primitives;
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.EventSequences;
+namespace Cratis.Chronicle.Contracts.EventSequences;
 
 /// <summary>
 /// Represents the payload for appending an event.

@@ -5,7 +5,7 @@ using Cratis.Connections;
 using Cratis.Events;
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Clients;
 
 /// <summary>
 /// Defines a system that acts as an in-memory mediator between the actual client connected and an observer subscriber.

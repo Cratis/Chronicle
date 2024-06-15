@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Cratis.Events;
 
-namespace Cratis.Kernel.Grains.Observation.Reducers;
+namespace Cratis.Chronicle.Grains.Observation.Reducers;
 
 /// <summary>
 /// Represents the reducer delegate.

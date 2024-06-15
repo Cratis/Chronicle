@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.Recommendations;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Recommendations;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Cratis.Kernel.Grains.Recommendations;
+namespace Cratis.Chronicle.Grains.Recommendations;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for <see cref="RecommendationState"/>.

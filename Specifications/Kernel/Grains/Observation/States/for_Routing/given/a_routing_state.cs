@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Orleans.StateMachines;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.EventSequences;
-using Cratis.Kernel.Orleans.StateMachines;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.Observation;
 using Microsoft.Extensions.Logging;
-using IEventSequence = Cratis.Kernel.Grains.EventSequences.IEventSequence;
+using IEventSequence = Cratis.Chronicle.Grains.EventSequences.IEventSequence;
 
-namespace Cratis.Kernel.Grains.Observation.States.for_Routing.given;
+namespace Cratis.Chronicle.Grains.Observation.States.for_Routing.given;
 
 public class a_routing_state : Specification
 {

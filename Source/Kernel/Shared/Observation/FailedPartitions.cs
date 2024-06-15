@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Keys;
 using Cratis.Events;
-using Cratis.Kernel.Keys;
 
-namespace Cratis.Kernel.Observation;
+namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Represents the state of all failed partitions within an observer.

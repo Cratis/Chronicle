@@ -5,7 +5,7 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
 
-namespace Cratis.Kernel;
+namespace Cratis.Chronicle;
 
 public class TestClient
 {

@@ -5,7 +5,7 @@ using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Storage.Observation;
+namespace Cratis.Chronicle.Storage.Observation;
 
 /// <summary>
 /// Represents the state used for an observer.

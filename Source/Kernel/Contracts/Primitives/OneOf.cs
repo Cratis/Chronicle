@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.Primitives;
+namespace Cratis.Chronicle.Contracts.Primitives;
 
 /// <summary>
 /// Represents a construct for one of two types.

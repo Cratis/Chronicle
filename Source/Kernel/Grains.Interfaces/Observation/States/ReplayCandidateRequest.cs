@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Observation.Replaying;
+using Cratis.Chronicle.Observation.Replaying;
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Grains.Observation.States;
+namespace Cratis.Chronicle.Grains.Observation.States;
 
 /// <summary>
 /// Represents the request for a replay candidate.

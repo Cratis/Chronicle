@@ -3,10 +3,10 @@
 
 using System.Diagnostics;
 using Cratis.Connections;
-using Cratis.Kernel.Orleans.Observers;
 using Microsoft.Extensions.Logging;
+using Orleans.Utilities;
 
-namespace Cratis.Kernel.Grains.Clients;
+namespace Cratis.Chronicle.Grains.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClients"/>.
@@ -26,7 +26,7 @@ public class ConnectedClients(
     public const string ConnectedClientsHttpClient = "connected-clients";
 
     readonly List<ConnectedClient> _clients = [];
-    readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger, "ClientDisconnectedObservers");
+    readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger);
     IConnectedClientsMetrics? _metrics;
 
     /// <inheritdoc/>

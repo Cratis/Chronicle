@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.DependencyInjection;
 using Cratis.EventSequences;
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequenceCaches"/>.

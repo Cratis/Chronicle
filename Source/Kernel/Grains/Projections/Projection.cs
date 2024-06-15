@@ -1,16 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Grains.Observation;
-using Cratis.Kernel.Orleans.Observers;
+using Cratis.Chronicle.Grains.Observation;
 using Cratis.Observation;
 using Cratis.Projections;
 using Cratis.Projections.Definitions;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
-using EngineProjection = Cratis.Kernel.Projections.IProjection;
+using Orleans.Utilities;
+using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
-namespace Cratis.Kernel.Grains.Projections;
+namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjection"/>.
@@ -26,7 +26,7 @@ public class Projection(
     ILocalSiloDetails localSiloDetails,
     ILogger<Projection> logger) : Grain, IProjection
 {
-    readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromMinutes(1), logger, "ProjectionDefinitionObservers");
+    readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromMinutes(1), logger);
     EngineProjection? _projection;
     IObserver? _observer;
     ProjectionId _projectionId = ProjectionId.NotSet;

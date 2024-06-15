@@ -3,7 +3,7 @@
 
 using Cratis.Schemas;
 
-namespace Cratis.Kernel.Projections.Expressions.ModelProperties.for_CountExpressionResolver;
+namespace Cratis.Chronicle.Projections.Expressions.ModelProperties.for_CountExpressionResolver;
 
 public class when_asking_can_resolve_for_count_expression : Specification
 {

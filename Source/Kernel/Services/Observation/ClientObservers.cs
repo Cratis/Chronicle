@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Grains.Observation.Clients;
 using Cratis.Connections;
 using Cratis.Events;
-using Cratis.Kernel.Contracts.Observation;
-using Cratis.Kernel.Grains.Observation;
-using Cratis.Kernel.Grains.Observation.Clients;
 using Cratis.Observation;
 using ProtoBuf.Grpc;
 
-namespace Cratis.Kernel.Services.Observation;
+namespace Cratis.Chronicle.Services.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientObservers"/>.

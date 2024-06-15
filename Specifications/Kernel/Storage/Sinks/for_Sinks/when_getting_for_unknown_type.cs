@@ -3,7 +3,7 @@
 
 using Cratis.Models;
 
-namespace Cratis.Kernel.Storage.Sinks.for_Sinks;
+namespace Cratis.Chronicle.Storage.Sinks.for_Sinks;
 
 public class when_getting_for_unknown_type : Specification
 {

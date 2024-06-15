@@ -6,7 +6,7 @@ using Cratis.EventSequences;
 using Cratis.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Grains.Observation.Reducers.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
 internal static partial class ClientReducerSubscriberLogMessages
 {

@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Kernel.Contracts.Clients;
-using Cratis.Kernel.Grains.Clients;
+using Cratis.Chronicle.Contracts.Clients;
+using Cratis.Chronicle.Grains.Clients;
 using ProtoBuf.Grpc;
 
-namespace Cratis.Kernel.Services.Clients;
+namespace Cratis.Chronicle.Services.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IConnectionService"/>.

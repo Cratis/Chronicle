@@ -3,7 +3,7 @@
 
 using Orleans.TestKit;
 
-namespace Cratis.Kernel.Grains.Observation.for_Observer.given;
+namespace Cratis.Chronicle.Grains.Observation.for_Observer.given;
 
 public class an_observer_with_subscription : an_observer
 {

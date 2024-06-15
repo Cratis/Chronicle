@@ -3,7 +3,7 @@
 
 using Cratis.Projections.Definitions;
 
-namespace Cratis.Kernel.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Defines a factory for creating <see cref="IProjection"/>.

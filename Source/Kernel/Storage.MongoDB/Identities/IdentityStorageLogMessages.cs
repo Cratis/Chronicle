@@ -4,7 +4,7 @@
 using Cratis.Identities;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Storage.MongoDB.Identities;
+namespace Cratis.Chronicle.Storage.MongoDB.Identities;
 
 internal static partial class IdentityStorageLogMessages
 {

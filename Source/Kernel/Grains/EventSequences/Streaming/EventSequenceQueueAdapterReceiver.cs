@@ -5,7 +5,7 @@ using Cratis.Events;
 using Orleans.Runtime;
 using Orleans.Streams;
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Represents an implementation of <see cref="EventSequenceQueueAdapterReceiver"/> for MongoDB event log.

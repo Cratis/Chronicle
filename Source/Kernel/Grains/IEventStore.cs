@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Kernel.Grains.Observation.Reducers;
-using Cratis.Kernel.Grains.Projections.Definitions;
-using Cratis.Kernel.Storage;
+using Cratis.Chronicle.Grains.Observation.Reducers;
+using Cratis.Chronicle.Grains.Projections.Definitions;
+using Cratis.Chronicle.Storage;
 
-namespace Cratis.Kernel.Grains;
+namespace Cratis.Chronicle.Grains;
 
 /// <summary>
 /// Defines an <see cref="IEventStore"/>.

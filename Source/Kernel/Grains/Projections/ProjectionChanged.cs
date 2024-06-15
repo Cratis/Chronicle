@@ -3,7 +3,7 @@
 
 using Cratis.Projections.Definitions;
 
-namespace Cratis.Kernel.Grains.Projections;
+namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
 /// Represents the message for a projection that has changed its definition.

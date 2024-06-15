@@ -3,7 +3,7 @@
 
 using Cratis.Jobs;
 
-namespace Cratis.Kernel.Grains.Jobs;
+namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
 /// Represents a job that typically runs as long running with <see cref="IJobStep{TRequest, TResult}"/>.

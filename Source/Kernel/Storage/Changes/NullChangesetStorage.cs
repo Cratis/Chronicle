@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Changes;
 using Cratis.Events;
 
-namespace Cratis.Kernel.Storage.Changes;
+namespace Cratis.Chronicle.Storage.Changes;
 
 /// <summary>
 /// Represents a null <see cref="IChangesetStorage"/> that does nothing.

@@ -5,7 +5,7 @@ using Cratis.Observation;
 using Orleans.Runtime;
 using Orleans.Runtime.Placement;
 
-namespace Cratis.Kernel.Grains.Observation.Placement;
+namespace Cratis.Chronicle.Grains.Observation.Placement;
 
 /// <summary>
 /// Represents a placement director for connected observers to guarantee they run on the same silo as a connected client.

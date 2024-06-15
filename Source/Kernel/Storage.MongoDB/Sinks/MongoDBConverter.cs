@@ -4,7 +4,7 @@
 using System.Collections;
 using System.Dynamic;
 using System.Text;
-using Cratis.Kernel.Keys;
+using Cratis.Chronicle.Keys;
 using Cratis.Models;
 using Cratis.Properties;
 using Cratis.Schemas;
@@ -13,7 +13,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="IMongoDBConverter"/>.

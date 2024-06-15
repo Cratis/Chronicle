@@ -10,7 +10,7 @@ using Orleans.Configuration;
 using Orleans.Runtime;
 using Orleans.Serialization;
 
-namespace Cratis.Kernel.Storage.MongoDB.Reminders;
+namespace Cratis.Chronicle.Storage.MongoDB.Reminders;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReminderTable"/>.

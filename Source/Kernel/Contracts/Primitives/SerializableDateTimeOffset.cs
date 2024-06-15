@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.Primitives;
+namespace Cratis.Chronicle.Contracts.Primitives;
 
 /// <summary>
 /// Proto contract that represents a <see cref="DateTimeOffset"/>.

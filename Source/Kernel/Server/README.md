@@ -46,13 +46,13 @@ dotnet counters ps
 Find the process for the Kernel:
 
 ```shell
- 2483  Cratis.Ke  /Source/Kernel/Server/bin/Debug/net6.0/Cratis.Kernel.Server
+ 2483  Cratis.Ke  /Source/Kernel/Server/bin/Debug/net6.0/Cratis.Chronicle.Server
 ```
 
 Then use the process id as parameter for the monitor:
 
 ```shell
-dotnet counters monitor --process-id 2483 --counters Cratis.Kernel
+dotnet counters monitor --process-id 2483 --counters Cratis.Chronicle
 ```
 
 You should then be seeing something similar:
@@ -61,7 +61,7 @@ You should then be seeing something similar:
 Press p to pause, r to resume, q to quit.
     Status: Running
 
-[Cratis.Kernel]
+[Cratis.Chronicle]
     cratis_event_sequences-appended-events (Number of events app
         event_sequence_id=00000000-0000-0000-0000-000000000000,m           0
         event_sequence_id=ae99de1e-b19f-4a33-a5c4-3908508ce59f,m           0

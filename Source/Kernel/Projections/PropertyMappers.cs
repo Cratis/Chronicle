@@ -9,7 +9,7 @@ using Cratis.Schemas;
 using Cratis.Types;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents utilities for creating <see cref="PropertyMapper{Event, ExpandoObject}"/> for different scenarios.

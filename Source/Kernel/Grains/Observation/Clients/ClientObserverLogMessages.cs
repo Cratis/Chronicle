@@ -6,7 +6,7 @@ using Cratis.EventSequences;
 using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Clients;
 
 internal static partial class ClientObserverLogMessages
 {

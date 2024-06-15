@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Keys;
 using Cratis.Jobs;
-using Cratis.Kernel.Grains.Jobs;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.Keys;
 using Orleans.Core;
 using Orleans.TestKit;
-using IStorage = Cratis.Kernel.Storage.IStorage;
+using IStorage = Cratis.Chronicle.Storage.IStorage;
 
-namespace Cratis.Kernel.Grains.Observation.Jobs.for_CatchUpObserver.given;
+namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver.given;
 
 public class a_catchup_observer : Specification
 {

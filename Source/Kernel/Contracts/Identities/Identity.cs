@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Cratis.Kernel.Contracts.Identities;
+namespace Cratis.Chronicle.Contracts.Identities;
 
 /// <summary>
 /// Represents the payload for an identity.

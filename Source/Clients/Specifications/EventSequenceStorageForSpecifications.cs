@@ -4,9 +4,9 @@
 using System.Collections.Immutable;
 using System.Dynamic;
 using Cratis.Auditing;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Events;
 using Cratis.Identities;
-using Cratis.Kernel.Storage.EventSequences;
 
 namespace Cratis.Specifications;
 

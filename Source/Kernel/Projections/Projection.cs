@@ -9,7 +9,7 @@ using Cratis.Models;
 using Cratis.Projections;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents the implementation of <see cref="IProjection"/>.

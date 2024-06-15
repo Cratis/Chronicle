@@ -4,7 +4,7 @@
 using Cratis.Properties;
 using MongoDB.Bson;
 
-namespace Cratis.Kernel.Storage.MongoDB.Sinks.for_MongoDBConverter.when_converting_property_to_mongo_property;
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.when_converting_property_to_mongo_property;
 
 public class with_single_level_array_property_with_array_indexers : given.a_mongodb_converter
 {

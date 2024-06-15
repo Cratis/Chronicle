@@ -6,7 +6,7 @@ using Cratis.Metrics;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
-namespace Cratis.Kernel.Server;
+namespace Cratis.Chronicle.Server;
 
 /// <summary>
 /// Extension methods for working with the telemetry configuration.
@@ -22,7 +22,7 @@ public static class TelemetryConfigurationExtensions
     {
         builder.ConfigureServices(services =>
         {
-            var meter = new Meter("Cratis.Kernel");
+            var meter = new Meter("Cratis.Chronicle");
             services.AddSingleton(meter);
             services.AddSingleton(typeof(Meter<>));
 

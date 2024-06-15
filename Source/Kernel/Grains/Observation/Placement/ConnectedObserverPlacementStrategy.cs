@@ -3,7 +3,7 @@
 
 using Orleans.Runtime;
 
-namespace Cratis.Kernel.Grains.Observation.Placement;
+namespace Cratis.Chronicle.Grains.Observation.Placement;
 
 /// <summary>
 /// Represents a placement strategy for connected observers to guarantee they run on the same silo as a connected client.

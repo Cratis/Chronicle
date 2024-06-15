@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Kernel.Storage.Observation;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Grains.Observation.States;
+namespace Cratis.Chronicle.Grains.Observation.States;
 
 /// <summary>
 /// Represents the disconnected state of an observer.

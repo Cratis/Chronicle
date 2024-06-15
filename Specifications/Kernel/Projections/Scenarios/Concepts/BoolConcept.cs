@@ -3,7 +3,7 @@
 
 using Cratis.Concepts;
 
-namespace Cratis.Kernel.Projections.Scenarios.Concepts;
+namespace Cratis.Chronicle.Projections.Scenarios.Concepts;
 
 public record BoolConcept(bool Value) : ConceptAs<bool>(Value)
 {

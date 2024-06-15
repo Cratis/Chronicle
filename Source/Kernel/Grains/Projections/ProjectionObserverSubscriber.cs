@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Projections.Pipelines;
 using Cratis.Events;
-using Cratis.Kernel.Grains.Observation;
-using Cratis.Kernel.Projections.Pipelines;
 using Cratis.Observation;
 using Cratis.Projections;
 
-namespace Cratis.Kernel.Grains.Projections;
+namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionObserverSubscriber"/>.

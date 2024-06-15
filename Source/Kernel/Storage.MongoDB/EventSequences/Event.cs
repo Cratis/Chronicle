@@ -6,7 +6,7 @@ using Cratis.Events;
 using Cratis.Identities;
 using MongoDB.Bson;
 
-namespace Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
 /// Represents the document representation of a stored event.

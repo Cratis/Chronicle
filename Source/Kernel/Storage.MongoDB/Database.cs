@@ -4,9 +4,9 @@
 using System.Collections.Concurrent;
 using Cratis.MongoDB;
 using MongoDB.Driver;
-using StorageConfiguration = Cratis.Kernel.Configuration.Storage;
+using StorageConfiguration = Cratis.Chronicle.Configuration.Storage;
 
-namespace Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IDatabase"/>.

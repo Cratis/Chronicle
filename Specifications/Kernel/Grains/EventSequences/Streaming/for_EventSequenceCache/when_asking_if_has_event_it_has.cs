@@ -3,7 +3,7 @@
 
 using Cratis.Collections;
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceCache;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming.for_EventSequenceCache;
 
 public class when_asking_if_has_event_it_has : given.an_event_sequence_cache
 {

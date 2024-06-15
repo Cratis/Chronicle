@@ -3,7 +3,7 @@
 
 using Cratis.PersonalInformation;
 
-namespace Cratis.Kernel.Compliance.GDPR.Events;
+namespace Cratis.Chronicle.Compliance.GDPR.Events;
 
 /// <summary>
 /// Represents the event that gets applied when a person is registered.

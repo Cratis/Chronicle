@@ -6,7 +6,7 @@
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
-namespace Cratis.Kernel.Server;
+namespace Cratis.Chronicle.Server;
 
 public class Startup
 {

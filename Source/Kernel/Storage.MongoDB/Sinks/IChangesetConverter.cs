@@ -3,11 +3,11 @@
 
 using System.Dynamic;
 using Cratis.Changes;
+using Cratis.Chronicle.Keys;
 using Cratis.Events;
-using Cratis.Kernel.Keys;
 using MongoDB.Driver;
 
-namespace Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 /// <summary>
 /// Defines a system that can convert a <see cref="IChangeset{TEvent, TState}"/> to a <see cref="UpdateDefinition{TDocument}"/> for MongoDB.

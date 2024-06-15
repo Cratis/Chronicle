@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Cryptography;
-using Cratis.Kernel.Storage.Compliance;
+using Cratis.Chronicle.Storage.Compliance;
 
-namespace Cratis.Kernel.Compliance;
+namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEncryption"/>.

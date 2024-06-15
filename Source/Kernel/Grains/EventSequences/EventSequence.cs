@@ -3,27 +3,27 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Auditing;
+using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Identities;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.EventTypes;
 using Cratis.Identities;
 using Cratis.Json;
-using Cratis.Kernel.Compliance;
-using Cratis.Kernel.EventSequences;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.EventTypes;
-using Cratis.Kernel.Storage.Identities;
-using Cratis.Kernel.Storage.Observation;
 using Cratis.Metrics;
 using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Runtime;
 using Orleans.Streams;
-using IObserver = Cratis.Kernel.Grains.Observation.IObserver;
+using IObserver = Cratis.Chronicle.Grains.Observation.IObserver;
 
-namespace Cratis.Kernel.Grains.EventSequences;
+namespace Cratis.Chronicle.Grains.EventSequences;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequence"/>.

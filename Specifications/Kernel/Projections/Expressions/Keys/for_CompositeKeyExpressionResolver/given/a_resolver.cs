@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Projections.Expressions.EventValues;
+using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Models;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Projections.Expressions.Keys.for_CompositeKeyExpressionResolver.given;
+namespace Cratis.Chronicle.Projections.Expressions.Keys.for_CompositeKeyExpressionResolver.given;
 
 public class a_resolver : Specification
 {

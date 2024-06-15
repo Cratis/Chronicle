@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis;
-using Cratis.Kernel.Grains.EventSequences.Streaming;
+using Cratis.Chronicle.Grains.EventSequences.Streaming;
 using Orleans.Configuration;
 
 namespace Orleans.Hosting;

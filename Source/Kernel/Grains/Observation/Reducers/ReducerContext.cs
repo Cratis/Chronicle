@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Keys;
 using Cratis.Events;
-using Cratis.Kernel.Keys;
 
-namespace Cratis.Kernel.Grains.Observation.Reducers;
+namespace Cratis.Chronicle.Grains.Observation.Reducers;
 
 /// <summary>
 /// Represents the context for a reducer operation.

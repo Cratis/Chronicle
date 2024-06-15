@@ -3,7 +3,7 @@
 
 using Cratis.Sinks;
 
-namespace Cratis.Kernel.Storage.Sinks;
+namespace Cratis.Chronicle.Storage.Sinks;
 
 /// <summary>
 /// Exception that gets thrown when an unknown <see cref="ISink"/> is used.

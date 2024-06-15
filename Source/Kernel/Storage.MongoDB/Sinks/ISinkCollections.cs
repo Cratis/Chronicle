@@ -4,7 +4,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 /// <summary>
 /// Defines a context for a MongoDB collection used by <see cref="Sink"/>.

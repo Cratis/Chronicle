@@ -4,12 +4,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Auditing;
+using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.Identities;
-using Cratis.Kernel.Contracts.EventSequences;
 
-namespace Cratis.Kernel.Services.EventSequences;
+namespace Cratis.Chronicle.Services.EventSequences;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequences"/>.

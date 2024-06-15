@@ -3,7 +3,7 @@
 
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Clients;
 
 /// <summary>
 /// Exception that gets thrown when there is no state for an observer subscriber.

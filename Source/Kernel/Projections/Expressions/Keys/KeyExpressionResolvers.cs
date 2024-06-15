@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Projections.Expressions.EventValues;
+using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections.Expressions.Keys;
+namespace Cratis.Chronicle.Projections.Expressions.Keys;
 
 /// <summary>
 /// Represents an implementation of <see cref="IModelPropertyExpressionResolvers"/>.

@@ -4,7 +4,7 @@
 using Cratis.Events;
 using Cratis.Metrics;
 
-namespace Cratis.Kernel.Grains.EventSequences;
+namespace Cratis.Chronicle.Grains.EventSequences;
 
 #pragma warning disable SA1600 // Elements should be documented
 #pragma warning disable MA0048 // File name must match type name

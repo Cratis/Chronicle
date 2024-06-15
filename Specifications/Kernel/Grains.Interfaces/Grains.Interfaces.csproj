@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Kernel.Grains.Interfaces.Specs</AssemblyName>
-        <RootNamespace>Cratis.Kernel.Grains.Interfaces</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Grains.Interfaces.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Grains.Interfaces</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

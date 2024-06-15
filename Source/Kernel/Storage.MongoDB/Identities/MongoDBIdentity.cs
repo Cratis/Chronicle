@@ -3,7 +3,7 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace Cratis.Kernel.Storage.MongoDB.Identities;
+namespace Cratis.Chronicle.Storage.MongoDB.Identities;
 
 /// <summary>
 /// Represents a MongoDB representation of an identity.

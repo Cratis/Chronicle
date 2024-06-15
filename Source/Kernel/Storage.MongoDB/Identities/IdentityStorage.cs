@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Storage.Identities;
 using Cratis.Collections;
 using Cratis.Identities;
-using Cratis.Kernel.Storage.Identities;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
-namespace Cratis.Kernel.Storage.MongoDB.Identities;
+namespace Cratis.Chronicle.Storage.MongoDB.Identities;
 
 /// <summary>
 /// Represents an implementation of <see cref="IIdentityStorage"/> using MongoDB.

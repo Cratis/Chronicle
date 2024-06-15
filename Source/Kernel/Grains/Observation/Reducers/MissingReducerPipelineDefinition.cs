@@ -3,7 +3,7 @@
 
 using Cratis.Observation.Reducers;
 
-namespace Cratis.Kernel.Grains.Observation.Reducers;
+namespace Cratis.Chronicle.Grains.Observation.Reducers;
 
 /// <summary>
 /// Exception that gets thrown when a reducer pipeline definition is missing.

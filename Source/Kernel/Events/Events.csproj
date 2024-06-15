@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Kernel.Events</AssemblyName>
-        <RootNamespace>Cratis.Kernel.Events</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Events</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Events</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

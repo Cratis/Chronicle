@@ -3,7 +3,7 @@
 
 using Cratis.Projections;
 
-namespace Cratis.Kernel.Projections.Scenarios.Projections;
+namespace Cratis.Chronicle.Projections.Scenarios.Projections;
 
 public class CountingEventsProjection : IProjectionFor<Model>
 {

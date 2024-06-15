@@ -3,7 +3,7 @@
 
 using Cratis.EventSequences;
 
-namespace Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceQueueCacheCursor.given;
+namespace Cratis.Chronicle.Grains.EventSequences.Streaming.for_EventSequenceQueueCacheCursor.given;
 
 public class all_dependencies : Specification
 {

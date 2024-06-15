@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Kernel.Grains</AssemblyName>
-        <RootNamespace>Cratis.Kernel.Grains</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Grains</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Grains</RootNamespace>
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
         <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\GeneratedFiles</CompilerGeneratedFilesOutputPath>
         <NoWarn>$(NoWarn);ORLEANS0010</NoWarn>

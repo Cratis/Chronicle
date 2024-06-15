@@ -3,7 +3,7 @@
 
 using Cratis.Recommendations;
 
-namespace Cratis.Kernel.Grains.Recommendations;
+namespace Cratis.Chronicle.Grains.Recommendations;
 
 /// <summary>
 /// Exception that gets thrown when a recommendation does not exist.

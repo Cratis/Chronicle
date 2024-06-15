@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Observation;
+using Cratis.Chronicle.Observation;
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Storage.Observation;
+namespace Cratis.Chronicle.Storage.Observation;
 
 /// <summary>
 /// Defines a storage system for working with <see cref="FailedPartition"/>.

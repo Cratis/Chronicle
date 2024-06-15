@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Observation;
 using ProtoBuf.Grpc;
 
-namespace Cratis.Kernel.Services.Observation;
+namespace Cratis.Chronicle.Services.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IObservers"/>.

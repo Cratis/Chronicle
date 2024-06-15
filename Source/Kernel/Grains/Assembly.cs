@@ -3,4 +3,4 @@
 
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Cratis.Kernel.Grains.Specs")]
+[assembly: InternalsVisibleTo("Cratis.Chronicle.Grains.Specs")]

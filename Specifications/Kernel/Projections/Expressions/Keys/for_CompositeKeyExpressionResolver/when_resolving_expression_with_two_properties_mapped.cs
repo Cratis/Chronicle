@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Keys;
+using Cratis.Chronicle.Keys;
 using Cratis.Properties;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Projections.Expressions.Keys.for_CompositeKeyExpressionResolver;
+namespace Cratis.Chronicle.Projections.Expressions.Keys.for_CompositeKeyExpressionResolver;
 
 public class when_resolving_expression_with_two_properties_mapped : given.a_resolver
 {

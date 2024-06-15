@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "Cratis.Kernel.Server",
+    "title": "Cratis.Chronicle.Server",
     "version": "1.0"
   },
   "paths": {
@@ -540,7 +540,7 @@
         ],
         "summary": "Add a microservice.",
         "requestBody": {
-          "description": "M:Cratis.Kernel.Domain.Compliance.Microservices.Microservices.AddMicroservice(Cratis.Kernel.Domain.Compliance.Microservices.AddMicroservice) payload.",
+          "description": "M:Cratis.Chronicle.Domain.Compliance.Microservices.Microservices.AddMicroservice(Cratis.Chronicle.Domain.Compliance.Microservices.AddMicroservice) payload.",
           "content": {
             "application/json": {
               "schema": {
@@ -828,7 +828,7 @@
         ],
         "summary": "Create and register a key.",
         "requestBody": {
-          "description": "M:Cratis.Kernel.Domain.Compliance.GDPR.PII.CreateAndRegisterKeyFor(Cratis.Kernel.Domain.Compliance.GDPR.CreateAndRegisterKeyFor) payload.",
+          "description": "M:Cratis.Chronicle.Domain.Compliance.GDPR.PII.CreateAndRegisterKeyFor(Cratis.Chronicle.Domain.Compliance.GDPR.CreateAndRegisterKeyFor) payload.",
           "content": {
             "application/json": {
               "schema": {
@@ -861,7 +861,7 @@
         ],
         "summary": "Delete PII for a person.",
         "requestBody": {
-          "description": "M:Cratis.Kernel.Domain.Compliance.GDPR.PII.DeletePIIForPerson(Cratis.Kernel.Domain.Compliance.GDPR.DeletePIIForPerson) payload.",
+          "description": "M:Cratis.Chronicle.Domain.Compliance.GDPR.PII.DeletePIIForPerson(Cratis.Chronicle.Domain.Compliance.GDPR.DeletePIIForPerson) payload.",
           "content": {
             "application/json": {
               "schema": {
@@ -1929,7 +1929,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Represents the result of an Cratis.Kernel.Grains.Projections.IImmediateProjection."
+        "description": "Represents the result of an Cratis.Chronicle.Grains.Projections.IImmediateProjection."
       },
       "JsonNode": {
         "type": "object",

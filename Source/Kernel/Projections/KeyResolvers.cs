@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Dynamic;
 using Cratis.Events;
-using Cratis.Kernel.Keys;
-using Cratis.Kernel.Storage.EventSequences;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents utilities for creating <see cref="KeyResolvers"/> instances for providing values from <see cref="AppendedEvent">events</see>.

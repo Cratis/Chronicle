@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Grains.Workers;
 using Cratis.Jobs;
-using Cratis.Kernel.Grains.Workers;
 using Orleans.Concurrency;
 using Orleans.Runtime;
 
-namespace Cratis.Kernel.Grains.Jobs;
+namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
 /// Represents a step in a job.

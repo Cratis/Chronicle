@@ -3,7 +3,7 @@
 
 using Cratis.Projections;
 
-namespace Cratis.Kernel.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents the path for a <see cref="Projection"/>.

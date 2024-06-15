@@ -5,7 +5,7 @@ using Cratis.Events;
 using Cratis.Projections;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Projections.Pipelines;
+namespace Cratis.Chronicle.Projections.Pipelines;
 
 /// <summary>
 /// Holds log messages for <see cref="ProjectionPipeline"/>.

@@ -3,14 +3,14 @@
 
 using System.Dynamic;
 using Cratis.Auditing;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Dynamic;
 using Cratis.EventSequences;
 using Cratis.Identities;
-using Cratis.Kernel.Keys;
-using Cratis.Kernel.Storage.EventSequences;
 using Cratis.Properties;
 
-namespace Cratis.Kernel.Projections.for_KeyResolvers;
+namespace Cratis.Chronicle.Projections.for_KeyResolvers;
 
 public class when_identifying_model_key_from_parent_hierarchy_with_one_level : Specification
 {

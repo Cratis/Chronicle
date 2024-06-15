@@ -3,15 +3,15 @@
 
 using System.Dynamic;
 using Cratis.Changes;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Events;
-using Cratis.Kernel.Keys;
-using Cratis.Kernel.Storage.Sinks;
 using Cratis.Models;
 using Cratis.Sinks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 #pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
 

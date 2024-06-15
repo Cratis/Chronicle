@@ -2,8 +2,8 @@
 
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
-        <AssemblyName>Cratis.Kernel.Contracts</AssemblyName>
-        <RootNamespace>Cratis.Kernel.Contracts</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Contracts</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Contracts</RootNamespace>
         <NoWarn>$(NoWarn);CS8618</NoWarn>
     </PropertyGroup>
 

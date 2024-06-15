@@ -8,7 +8,7 @@ using Cratis.Schemas;
 using MongoDB.Bson;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IExpandoObjectConverter"/>.

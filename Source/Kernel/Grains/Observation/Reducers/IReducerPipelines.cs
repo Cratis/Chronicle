@@ -3,7 +3,7 @@
 
 using Cratis.Observation.Reducers;
 
-namespace Cratis.Kernel.Grains.Observation.Reducers;
+namespace Cratis.Chronicle.Grains.Observation.Reducers;
 
 /// <summary>
 /// Defines a system that manages <see cref="IReducerPipeline"/> instances.

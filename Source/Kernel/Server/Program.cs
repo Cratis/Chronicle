@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using Cratis.Chronicle.Grains.Observation.Placement;
+using Cratis.Chronicle.Server.Serialization;
 using Cratis.DependencyInjection;
 using Cratis.Json;
-using Cratis.Kernel.Grains.Observation.Placement;
-using Cratis.Kernel.Server.Serialization;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 
 #pragma warning disable SA1600
-namespace Cratis.Kernel.Server;
+namespace Cratis.Chronicle.Server;
 
 public static class Program
 {

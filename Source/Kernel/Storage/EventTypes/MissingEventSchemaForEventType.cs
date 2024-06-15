@@ -3,7 +3,7 @@
 
 using Cratis.Events;
 
-namespace Cratis.Kernel.Storage.EventTypes;
+namespace Cratis.Chronicle.Storage.EventTypes;
 
 /// <summary>
 /// Exception that gets thrown when an event type is missing from the event types storage.

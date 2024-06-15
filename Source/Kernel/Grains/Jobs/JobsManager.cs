@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Jobs;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Grains.Jobs;
+namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJobsManager"/>.

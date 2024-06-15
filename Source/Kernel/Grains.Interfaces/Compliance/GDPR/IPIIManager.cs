@@ -3,7 +3,7 @@
 
 using Cratis.Compliance;
 
-namespace Cratis.Kernel.Grains.Compliance.GDPR;
+namespace Cratis.Chronicle.Grains.Compliance.GDPR;
 
 /// <summary>
 /// Represents a manager of PII in the system.

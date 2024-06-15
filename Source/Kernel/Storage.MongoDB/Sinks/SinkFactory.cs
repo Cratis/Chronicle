@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Kernel.Storage.Sinks;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Models;
 using Cratis.Schemas;
 using Cratis.Sinks;
 
-namespace Cratis.Kernel.Storage.MongoDB.Sinks;
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISinkFactory"/>.

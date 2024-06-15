@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Grains.EventSequences;
-using Cratis.Kernel.Grains.Jobs;
-using Cratis.Kernel.Grains.Observation;
-using Cratis.Kernel.Grains.Recommendations;
-using Cratis.Kernel.Storage.Observation;
+using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Grains.Recommendations;
+using Cratis.Chronicle.Storage.Observation;
 using Orleans.Storage;
 
-namespace Cratis.Kernel.Server;
+namespace Cratis.Chronicle.Server;
 
 /// <summary>
 /// Extension methods for configuring storage for the Kernel.

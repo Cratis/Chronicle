@@ -3,7 +3,7 @@
 
 using Cratis.Observation;
 
-namespace Cratis.Kernel.Grains.Observation;
+namespace Cratis.Chronicle.Grains.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICanHandleReplayForObserver"/> for reducers.

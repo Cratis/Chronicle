@@ -5,18 +5,18 @@ using System.Collections.Immutable;
 using System.Dynamic;
 using System.Text.Json;
 using Cratis.Auditing;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Events;
 using Cratis.EventSequences;
 using Cratis.Identities;
-using Cratis.Kernel.EventSequences;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.EventTypes;
 using Cratis.Strings;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Cratis.Kernel.Storage.MongoDB.EventSequences;
+namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 
 #pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
 
@@ -47,17 +47,17 @@ public class EventSequenceStorage(
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
 {
     /// <inheritdoc/>
-    public async Task<Kernel.Storage.EventSequences.EventSequenceState> GetState()
+    public async Task<Chronicle.Storage.EventSequences.EventSequenceState> GetState()
     {
         var collection = database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
         var cursor = await collection.FindAsync(filter).ConfigureAwait(false);
         var state = await cursor.FirstOrDefaultAsync();
-        return state?.ToKernel() ?? new Kernel.Storage.EventSequences.EventSequenceState();
+        return state?.ToKernel() ?? new Chronicle.Storage.EventSequences.EventSequenceState();
     }
 
     /// <inheritdoc/>
-    public async Task SaveState(Kernel.Storage.EventSequences.EventSequenceState state)
+    public async Task SaveState(Chronicle.Storage.EventSequences.EventSequenceState state)
     {
         var collection = database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);

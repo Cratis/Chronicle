@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Applications.Orleans.StateMachines;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Events;
-using Cratis.Kernel.Keys;
-using Cratis.Kernel.Storage.Observation;
 using Cratis.Observation;
 using Orleans.Runtime;
 
-namespace Cratis.Kernel.Grains.Observation;
+namespace Cratis.Chronicle.Grains.Observation;
 
 /// <summary>
 /// Defines an observer in the system.

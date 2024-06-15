@@ -19,7 +19,7 @@ dotnet trace collect --format Speedscope -- dotnet bin/Debug/net6.0/Main.dll
 Similar for the Kernel you can simply go to [/Source/Kernel/Server](../../Source/Kernel/Server) folder and run:
 
 ```shell
-dotnet trace collect --format Speedscope -- dotnet bin/Debug/net6.0/Cratis.Kernel.Server.dll
+dotnet trace collect --format Speedscope -- dotnet bin/Debug/net6.0/Cratis.Chronicle.Server.dll
 ```
 
 > Note: You'll see a file called **dotnet_<date_time>.speedscope.json** file, this is the one you'll upload to Speedscope.

@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Specifications;
 using Cratis.Changes;
 using Cratis.EventSequences;
 using Cratis.Integration;
+using Cratis.Specifications;
 using Cratis.Specifications.Auditing;
 
 namespace Cratis.Specifications.Integration;

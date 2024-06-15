@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Kernel.Storage.MongoDB.Specs</AssemblyName>
-        <RootNamespace>Cratis.Kernel.Storage.MongoDB</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Storage.MongoDB.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Storage.MongoDB</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

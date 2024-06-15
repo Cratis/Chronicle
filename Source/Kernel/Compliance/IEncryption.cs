@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Storage.Compliance;
+using Cratis.Chronicle.Storage.Compliance;
 
-namespace Cratis.Kernel.Compliance;
+namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
 /// Defines a system for working with encryption.

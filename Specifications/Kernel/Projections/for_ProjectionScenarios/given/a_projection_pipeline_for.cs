@@ -2,22 +2,22 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Changes;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.Expressions;
+using Cratis.Chronicle.Projections.Expressions.EventValues;
+using Cratis.Chronicle.Projections.Expressions.Keys;
+using Cratis.Chronicle.Projections.Pipelines;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Changes;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.Sinks.InMemory;
 using Cratis.Compliance;
 using Cratis.EventSequences;
 using Cratis.Json;
-using Cratis.Kernel.Projections;
-using Cratis.Kernel.Projections.Expressions;
-using Cratis.Kernel.Projections.Expressions.EventValues;
-using Cratis.Kernel.Projections.Expressions.Keys;
-using Cratis.Kernel.Projections.Pipelines;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.Changes;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.Sinks;
-using Cratis.Kernel.Storage.Sinks.InMemory;
+using Cratis.Json;
 using Cratis.Models;
 using Cratis.Schemas;
-using Cratis.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Events.Projections.for_ProjectionScenarios.given;

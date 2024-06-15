@@ -4,7 +4,7 @@
 using Cratis.Events;
 using Cratis.EventSequences;
 
-namespace Cratis.Kernel.Events.EventSequences;
+namespace Cratis.Chronicle.Events.EventSequences;
 
 /// <summary>
 /// The event that occurs when a collection of events are redacted based on their <see cref="EventSourceId"/>.

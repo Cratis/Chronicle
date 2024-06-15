@@ -5,9 +5,9 @@ using System.Reactive.Subjects;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Cratis.Auditing;
+using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Events;
 using Cratis.Identities;
-using Cratis.Kernel.Contracts.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Observation;

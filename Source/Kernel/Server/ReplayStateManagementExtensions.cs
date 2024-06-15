@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Kernel.Grains.Observation;
+using Cratis.Chronicle.Grains.Observation;
 
 #pragma warning disable SA1600
-namespace Cratis.Kernel.Server;
+namespace Cratis.Chronicle.Server;
 
 /// <summary>
 /// Extension methods for replay state management initialization.

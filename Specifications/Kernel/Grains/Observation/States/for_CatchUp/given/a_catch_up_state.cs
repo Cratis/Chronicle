@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Orleans.StateMachines;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.EventSequences;
-using Cratis.Kernel.Grains.Jobs;
-using Cratis.Kernel.Orleans.StateMachines;
-using Cratis.Kernel.Storage.Observation;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Grains.Observation.States.for_CatchUp.given;
+namespace Cratis.Chronicle.Grains.Observation.States.for_CatchUp.given;
 
 public class a_catch_up_state : Specification
 {

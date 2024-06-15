@@ -3,16 +3,16 @@
 
 using System.Collections.Immutable;
 using Cratis.Applications.Orleans.StateMachines;
+using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Grains.Observation.Jobs;
+using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Events;
 using Cratis.Jobs;
-using Cratis.Kernel.Grains.EventSequences;
-using Cratis.Kernel.Grains.Jobs;
-using Cratis.Kernel.Grains.Observation.Jobs;
-using Cratis.Kernel.Grains.Observation.States;
-using Cratis.Kernel.Keys;
-using Cratis.Kernel.Observation;
-using Cratis.Kernel.Storage.EventSequences;
-using Cratis.Kernel.Storage.Observation;
 using Cratis.Metrics;
 using Cratis.Observation;
 using Microsoft.Extensions.Logging;
@@ -20,7 +20,7 @@ using Orleans.Providers;
 using Orleans.Runtime;
 using Orleans.Streams;
 
-namespace Cratis.Kernel.Grains.Observation;
+namespace Cratis.Chronicle.Grains.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IObserver"/>.

@@ -3,9 +3,9 @@
 
 using System.Text.Json.Nodes;
 using Benchmark.Model;
+using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Dynamic;
 using Cratis.Events;
-using Cratis.Kernel.Grains.EventSequences;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Benchmarks;

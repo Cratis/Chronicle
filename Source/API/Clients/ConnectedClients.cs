@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.AspNetCore.Mvc;
-using ConnectedClient = Cratis.Kernel.Contracts.Clients.ConnectedClient;
+using ConnectedClient = Cratis.Chronicle.Contracts.Clients.ConnectedClient;
 
 namespace Cratis.API.Clients;
 

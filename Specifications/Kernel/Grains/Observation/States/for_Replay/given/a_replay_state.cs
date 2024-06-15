@@ -2,16 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Grains.Observation.Jobs;
+using Cratis.Chronicle.Orleans.StateMachines;
+using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.EventSequences;
-using Cratis.Kernel.Grains.Jobs;
-using Cratis.Kernel.Grains.Observation.Jobs;
-using Cratis.Kernel.Orleans.StateMachines;
-using Cratis.Kernel.Storage.Jobs;
-using Cratis.Kernel.Storage.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 
-namespace Cratis.Kernel.Grains.Observation.States.for_Replay.given;
+namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.given;
 
 public class a_replay_state : Specification
 {

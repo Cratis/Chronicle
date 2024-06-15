@@ -6,7 +6,7 @@ using DotNet.Testcontainers.Containers;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Cratis.Kernel;
+namespace Cratis.Chronicle;
 
 public class MongoDBDatabase
 {

@@ -3,21 +3,21 @@
 
 using System.Dynamic;
 using Cratis.Changes;
+using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Dynamic;
 using Cratis.Events;
 using Cratis.Json;
-using Cratis.Kernel.Grains.EventSequences;
-using Cratis.Kernel.Keys;
-using Cratis.Kernel.Projections;
-using Cratis.Kernel.Storage;
-using Cratis.Kernel.Storage.EventSequences;
 using Cratis.Projections;
 using Cratis.Projections.Definitions;
 using Cratis.Properties;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Cratis.Kernel.Projections.IProjection;
+using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
-namespace Cratis.Kernel.Grains.Projections;
+namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IImmediateProjection"/>.

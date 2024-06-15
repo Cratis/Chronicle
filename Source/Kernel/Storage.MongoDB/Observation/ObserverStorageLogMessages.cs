@@ -5,7 +5,7 @@ using Cratis.Events;
 using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Kernel.Storage.MongoDB.Observation;
+namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 
 internal static partial class ObserverStorageLogMessages
 {

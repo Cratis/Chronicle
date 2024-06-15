@@ -4,9 +4,9 @@
 using System.Text.Json.Nodes;
 using Cratis.Projections.Definitions;
 using Cratis.Properties;
-using EngineProjection = Cratis.Kernel.Projections.IProjection;
+using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
-namespace Cratis.Kernel.Grains.Projections.for_ProjectionManager;
+namespace Cratis.Chronicle.Grains.Projections.for_ProjectionManager;
 
 public class when_registering : given.a_projection_manager_without_any_projections
 {

@@ -3,13 +3,13 @@
 
 using System.Linq.Expressions;
 using System.Text.Json;
+using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Events;
-using Cratis.Kernel.Contracts.Projections;
 using Cratis.Projections.Expressions;
 using Cratis.Properties;
 using Cratis.Reflection;
 using Cratis.Schemas;
-using EventType = Cratis.Kernel.Contracts.Events.EventType;
+using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
 namespace Cratis.Projections;
 

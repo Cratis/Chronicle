@@ -8,7 +8,7 @@ using Cratis.Schemas;
 using Cratis.Types;
 using NJsonSchema;
 
-namespace Cratis.Kernel.Compliance;
+namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJsonComplianceManager"/>.
