@@ -23,7 +23,7 @@ public class ReducerDefinition
     /// Gets or sets the name of the observer.
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; } = null!;
+    public string Name { get; set; }
 
     /// <summary>
     /// Gets or sets the event sequence the reducer is for.
@@ -34,8 +34,8 @@ public class ReducerDefinition
     /// <summary>
     /// Gets or sets the event types the reducer is interested in.
     /// </summary>
-    [ProtoMember(4)]
-    public IEnumerable<EventTypeWithKeyExpression> EventTypes { get; set; } = null!;
+    [ProtoMember(4, IsRequired = true)]
+    public IEnumerable<EventTypeWithKeyExpression> EventTypes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the <see cref="ModelDefinition"/> of the read model.

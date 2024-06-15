@@ -169,7 +169,7 @@ public class ChangesetConverter(
                 new UpdateOptions
                 {
                     IsUpsert = false,
-                    ArrayFilters = joinArrayFiltersForDocument.ToArray()
+                    ArrayFilters = [.. joinArrayFiltersForDocument]
                 }));
         }
     }

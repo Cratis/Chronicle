@@ -21,23 +21,6 @@ internal static partial class EventSequenceMetrics
     [Counter<int>("cratis-event-sequences-failed-appended-events", "Number of events that failed to be appended to the event sequence")]
     internal static partial void FailedAppending(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName);
 }
-internal static partial class EventSequenceMetrics
-{
-    internal static partial void AppendedEvent(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName)
-    {
-        throw new NotImplementedException();
-    }
-
-    internal static partial void DuplicateEventSequenceNumber(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName)
-    {
-        throw new NotImplementedException();
-    }
-
-    internal static partial void FailedAppending(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName)
-    {
-        throw new NotImplementedException();
-    }
-}
 
 internal static class EventSequenceMetricsScopes
 {

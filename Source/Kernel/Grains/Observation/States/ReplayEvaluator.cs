@@ -32,12 +32,12 @@ public class ReplayEvaluator(
                 {
                     ObserverId = context.Id,
                     ObserverKey = context.Key,
-                    Reasons = new[]
-                    {
+                    Reasons =
+                    [
                         new EventTypesChangedReplayCandidateReason(
                             context.State.EventTypes,
                             context.Subscription.EventTypes)
-                    }
+                    ]
                 });
         }
 

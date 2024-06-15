@@ -21,7 +21,7 @@ public class Observers : IObservers
     public Task RewindPartition(RewindPartitionRequest request, CallContext context = default) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IEnumerable<ObserverInformation> GetObservers(AllObserversRequest request, CallContext context = default) => throw new NotImplementedException();
+    public Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public IObservable<ObserverInformation> AllObservers(AllObserversRequest request, CallContext context = default) => throw new NotImplementedException();

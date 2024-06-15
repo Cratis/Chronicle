@@ -16,13 +16,6 @@ internal static partial class ObserverMetrics
     [Counter<int>("cratis-observer-partition-failed", "Number of failed partitions per observer in a given event store and namespace")]
     internal static partial void PartitionFailed(this IMeterScope<Observer> meter, Key partition);
 }
-internal static partial class ObserverMetrics
-{
-    internal static partial void PartitionFailed(this IMeterScope<Observer> meter, Key partition)
-    {
-        throw new NotImplementedException();
-    }
-}
 
 internal static class ObserverMetricsScopes
 {

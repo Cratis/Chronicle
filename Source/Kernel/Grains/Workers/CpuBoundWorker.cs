@@ -85,7 +85,9 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     /// <param name="request">The request to use for the invoke of the long running work.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns>a <see cref="Task"/> representing the fact that the work has been dispatched.</returns>
+#pragma warning disable CA1859 // Use concrete types when possible for improved performance
     Task CreateTask(TRequest request, CancellationToken cancellationToken = default)
+#pragma warning restore CA1859 // Use concrete types when possible for improved performance
     {
         return Task.Factory.StartNew(
             async () =>

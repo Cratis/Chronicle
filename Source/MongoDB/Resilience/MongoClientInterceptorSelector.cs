@@ -27,7 +27,7 @@ public class MongoClientInterceptorSelector(
     {
         if (method.Name == nameof(IMongoClient.GetDatabase))
         {
-            return new[] { new MongoClientInterceptor(proxyGenerator, resiliencePipeline, mongoClient) };
+            return [new MongoClientInterceptor(proxyGenerator, resiliencePipeline, mongoClient)];
         }
         return [];
     }

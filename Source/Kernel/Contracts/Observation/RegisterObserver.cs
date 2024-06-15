@@ -39,7 +39,7 @@ public class RegisterObserver
     /// <summary>
     /// Gets or sets the observer identifier.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(5, IsRequired = true)]
     public string ObserverId { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>
@@ -51,6 +51,6 @@ public class RegisterObserver
     /// <summary>
     /// Gets or sets a collection of event types to observe.
     /// </summary>
-    [ProtoMember(7)]
+    [ProtoMember(7, IsRequired = true)]
     public IList<EventType> EventTypes { get; set; } = [];
 }

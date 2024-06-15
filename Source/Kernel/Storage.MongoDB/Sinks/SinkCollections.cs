@@ -52,7 +52,7 @@ public class SinkCollections(
                     return -1;
                 })
                 .Where(_ => _ >= 0)
-                .OrderByDescending(_ => _)
+                .OrderDescending()
                 .First() + 1;
         }
         var oldCollectionName = $"{rewoundCollectionsPrefix}{nextCollectionSequenceNumber}";

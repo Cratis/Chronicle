@@ -54,9 +54,9 @@ public class ConnectionService(IGrainFactory grainFactory) : IConnectionService
     }
 
     /// <inheritdoc/>
-    public void ConnectionKeepAlive(ConnectionKeepAlive keepAlive)
+    public async Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive)
     {
         var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
-        connectedClients.OnClientPing(keepAlive.ConnectionId).GetAwaiter().GetResult();
+        await connectedClients.OnClientPing(keepAlive.ConnectionId);
     }
 }

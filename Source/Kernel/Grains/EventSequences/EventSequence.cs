@@ -91,7 +91,7 @@ public class EventSequence(
             sequenceNumber = State.TailSequenceNumberPerEventType
                         .Where(_ => eventTypes.Any(e => e.Id == _.Key) && _.Value != EventSequenceNumber.Unavailable)
                         .Select(_ => _.Value)
-                        .OrderByDescending(_ => _)
+                        .OrderDescending()
                         .FirstOrDefault();
         }
         catch (Exception ex)

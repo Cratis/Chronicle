@@ -14,7 +14,7 @@ public class EventTypeRegistration
     /// <summary>
     /// Gets or sets the type of the event.
     /// </summary>
-    [ProtoMember(1)]
+    [ProtoMember(1, IsRequired = true)]
     public EventType Type { get; set; } = new EventType();
 
     /// <summary>

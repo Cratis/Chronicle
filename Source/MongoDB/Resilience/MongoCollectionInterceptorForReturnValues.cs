@@ -69,7 +69,7 @@ public class MongoCollectionInterceptorForReturnValues(
             catch (Exception ex)
             {
                 openConnectionSemaphore.Release(1);
-                setExceptionMethod.Invoke(tcs, new[] { ex });
+                setExceptionMethod.Invoke(tcs, [ex]);
             }
 
             return ValueTask.CompletedTask;

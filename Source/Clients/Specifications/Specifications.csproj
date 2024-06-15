@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Testing</AssemblyName>
-        <RootNamespace>Cratis.Specifications</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Specifications</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Specifications</RootNamespace>
         <IsTestProject>false</IsTestProject>
 
         <NoWarn>$(NoWarn);CA1051;RCS1213;IDE0051;CS8618;IDE1006</NoWarn>

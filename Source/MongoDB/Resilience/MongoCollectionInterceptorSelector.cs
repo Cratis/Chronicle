@@ -30,10 +30,10 @@ public class MongoCollectionInterceptorSelector(
         {
             if (method.ReturnType.IsGenericType)
             {
-                return new[] { new MongoCollectionInterceptorForReturnValues(resiliencePipeline, semaphore) };
+                return [new MongoCollectionInterceptorForReturnValues(resiliencePipeline, semaphore)];
             }
 
-            return new[] { new MongoCollectionInterceptor(resiliencePipeline, semaphore) };
+            return [new MongoCollectionInterceptor(resiliencePipeline, semaphore)];
         }
         return [];
     }

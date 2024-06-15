@@ -170,7 +170,7 @@ public class CratisConnection : ICratisConnection
             _connectTcs?.SetResult();
         }
         _lastKeepAlive = DateTimeOffset.UtcNow;
-        _connectionService?.ConnectionKeepAlive(keepAlive);
+        _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
     }
 
     void StartWatchDog()

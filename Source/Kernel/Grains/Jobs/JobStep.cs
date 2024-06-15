@@ -14,26 +14,18 @@ namespace Cratis.Kernel.Grains.Jobs;
 /// <typeparam name="TRequest">Type of request for the step.</typeparam>
 /// <typeparam name="TResult">Type of result for the step.</typeparam>
 /// <typeparam name="TState">Type of state for the step.</typeparam>
-public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TRequest, JobStepResult>, IJobStep<TRequest, TResult>, IJobObserver, IDisposable
+/// <remarks>
+/// Initializes a new instance of the <see cref="JobStep{TRequest, TResult, TState}"/> class.
+/// </remarks>
+/// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
+public abstract class JobStep<TRequest, TResult, TState>(
+    [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
+    IPersistentState<TState> state) : CpuBoundWorker<TRequest, JobStepResult>, IJobStep<TRequest, TResult>, IJobObserver, IDisposable
     where TState : JobStepState
 {
-    readonly IPersistentState<TState> _state;
     readonly CancellationTokenSource _cancellationTokenSource = new();
     bool _running;
     JobStepResult? _result;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JobStep{TRequest, TResult, TState}"/> class.
-    /// </summary>
-    /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
-    protected JobStep(
-        [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
-        IPersistentState<TState> state)
-    {
-        Job = new NullJob();
-        ThisJobStep = null!;
-        _state = state;
-    }
 
     /// <summary>
     /// Gets the <see cref="JobStepId"/> for this job step.
@@ -43,17 +35,17 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
     /// <summary>
     /// Gets the parent job.
     /// </summary>
-    protected IJob Job { get; private set; }
+    protected IJob Job { get; private set; } = new NullJob();
 
     /// <summary>
     /// Gets the job step as a Grain reference.
     /// </summary>
-    protected IJobStep<TRequest, TResult> ThisJobStep { get; private set; }
+    protected IJobStep<TRequest, TResult> ThisJobStep { get; private set; } = null!;
 
     /// <summary>
     /// Gets the state for the job step.
     /// </summary>
-    protected TState State => _state.State;
+    protected TState State => state.State;
 
     /// <inheritdoc/>
     public void Dispose() => _cancellationTokenSource.Dispose();
@@ -70,9 +62,9 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
         var jobStepKey = (JobStepKey)key;
 
         var grainType = this.GetGrainType();
-        _state.State.Name = GetType().Name;
-        _state.State.Id = new(jobStepKey.JobId, JobStepId);
-        _state.State.Type = grainType;
+        state.State.Name = GetType().Name;
+        state.State.Id = new(jobStepKey.JobId, JobStepId);
+        state.State.Type = grainType;
     }
 
     /// <inheritdoc/>
@@ -83,8 +75,8 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
         ThisJobStep = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJobStep<TRequest, TResult>>();
 
         StatusChanged(JobStepStatus.Running);
-        _state.State.Request = request!;
-        await _state.WriteStateAsync();
+        state.State.Request = request!;
+        await state.WriteStateAsync();
         await Prepare(request);
         await Start(request, _cancellationTokenSource.Token);
         await Task.CompletedTask;
@@ -114,21 +106,21 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
         await _cancellationTokenSource.CancelAsync();
         await Job.Unsubscribe(this.AsReference<IJobObserver>());
         StatusChanged(JobStepStatus.Stopped);
-        await _state.WriteStateAsync();
+        await state.WriteStateAsync();
     }
 
     /// <inheritdoc/>
     public async Task ReportStatusChange(JobStepStatus status)
     {
         StatusChanged(status);
-        await _state.WriteStateAsync();
+        await state.WriteStateAsync();
     }
 
     /// <inheritdoc/>
     public async Task ReportFailure(IList<string> exceptionMessages, string exceptionStackTrace)
     {
         StatusChanged(JobStepStatus.Failed, exceptionMessages, exceptionStackTrace);
-        await _state.WriteStateAsync();
+        await state.WriteStateAsync();
         await Job.OnStepFailed(JobStepId, _result!);
     }
 
@@ -189,13 +181,13 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
 
     void StatusChanged(JobStepStatus status, IEnumerable<string>? exceptionMessages = null!, string? exceptionStackTrace = null!)
     {
-        _state.State.StatusChanges.Add(new JobStepStatusChanged
+        state.State.StatusChanges.Add(new JobStepStatusChanged
         {
             Status = status,
             Occurred = DateTimeOffset.UtcNow,
             ExceptionMessages = exceptionMessages ?? [],
             ExceptionStackTrace = exceptionStackTrace ?? string.Empty
         });
-        _state.State.Status = status;
+        state.State.Status = status;
     }
 }

@@ -21,7 +21,7 @@ public class MongoDBClientManager(IMongoDBClientFactory clientFactory) : IMongoD
     /// <inheritdoc/>
     public IMongoClient GetClientFor(MongoClientSettings settings)
     {
-        var identifier = string.Join('#', settings.Servers.Select(_ => _.ToString()).OrderBy(_ => _));
+        var identifier = string.Join('#', settings.Servers.Select(_ => _.ToString()).Order());
         if (!_clients.TryGetValue(identifier, out var client))
         {
             _clients[identifier] = client = clientFactory.Create(settings);

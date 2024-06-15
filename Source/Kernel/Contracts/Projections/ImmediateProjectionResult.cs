@@ -20,7 +20,7 @@ public class ImmediateProjectionResult
     /// <summary>
     /// Collection of properties that was set.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(2, IsRequired = true)]
     public IEnumerable<string> AffectedProperties { get; set; } = [];
 
     /// <summary>

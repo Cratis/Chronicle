@@ -26,7 +26,7 @@ public class ObservationResult
     /// <summary>
     /// Gets or sets the exception messages.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(3, IsRequired = true)]
     public IList<string> ExceptionMessages { get; set; } = [];
 
     /// <summary>
