@@ -24,7 +24,7 @@ public class and_there_is : Specification
 
         resolver = new(
             new KnownInstancesOf<ICanProvideComplianceMetadataForType>([]),
-            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>(new[] { provider.Object })
+            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([provider.Object])
         );
     }
 

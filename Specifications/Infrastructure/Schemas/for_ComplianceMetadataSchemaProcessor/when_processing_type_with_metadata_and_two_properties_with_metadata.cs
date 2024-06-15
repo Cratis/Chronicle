@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance;
 using Cratis.Strings;
 
 namespace Cratis.Chronicle.Schemas.for_ComplianceMetadataSchemaProcessor;
@@ -19,17 +20,17 @@ public class when_processing_type_with_metadata_and_two_properties_with_metadata
         first_type_metadata = new("5a9536de-a1e1-47cb-9146-96a7113bbf60", "First metadata details");
         second_type_metadata = new("7fec8e35-dfc1-4718-9b77-4095d081cb93", "Second metadata details");
         resolver.Setup(_ => _.HasMetadataFor(typeof(TypeWithProperties))).Returns(true);
-        resolver.Setup(_ => _.GetMetadataFor(typeof(TypeWithProperties))).Returns(new[] { first_type_metadata, second_type_metadata });
+        resolver.Setup(_ => _.GetMetadataFor(typeof(TypeWithProperties))).Returns([first_type_metadata, second_type_metadata]);
 
         first_property_first_metadata = new("731547a4-5969-435f-84a5-57760b0fb7c7", "First property first metadata details");
         first_property_second_metadata = new("0e89d0a8-2943-4c79-be9c-94b446775687", "First property second metadata details");
         resolver.Setup(_ => _.HasMetadataFor(TypeWithProperties.FirstProperty)).Returns(true);
-        resolver.Setup(_ => _.GetMetadataFor(TypeWithProperties.FirstProperty)).Returns(new[] { first_property_first_metadata, first_property_second_metadata });
+        resolver.Setup(_ => _.GetMetadataFor(TypeWithProperties.FirstProperty)).Returns([first_property_first_metadata, first_property_second_metadata]);
 
         second_property_first_metadata = new("cb084784-20a7-4009-a0a7-66a6957adf87", "Second property first metadata details");
         second_property_second_metadata = new("b96dedad-d2e9-4559-a812-beedf4ef1356", "Second property second metadata details");
         resolver.Setup(_ => _.HasMetadataFor(TypeWithProperties.SecondProperty)).Returns(true);
-        resolver.Setup(_ => _.GetMetadataFor(TypeWithProperties.SecondProperty)).Returns(new[] { second_property_first_metadata, second_property_second_metadata });
+        resolver.Setup(_ => _.GetMetadataFor(TypeWithProperties.SecondProperty)).Returns([second_property_first_metadata, second_property_second_metadata]);
     }
 
     void Because() => processor.Process(context);

@@ -15,8 +15,8 @@ public class when_comparing_object_with_equal_collections : given.an_object_comp
 
     void Establish()
     {
-        left = new(new[] { 1, 2, 3 });
-        right = new(new[] { 1, 2, 3 });
+        left = new([1, 2, 3]);
+        right = new([1, 2, 3]);
     }
 
     void Because() => result = comparer.Equals(left, right, out differences);

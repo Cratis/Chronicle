@@ -17,8 +17,8 @@ public class when_comparing_object_with_unequal_collections : given.an_object_co
 
     void Establish()
     {
-        left = new(new[] { 1, 2, 3 });
-        right = new(new[] { 4, 5, 6 });
+        left = new([1, 2, 3]);
+        right = new([4, 5, 6]);
     }
 
     void Because() => result = comparer.Equals(left, right, out differences);

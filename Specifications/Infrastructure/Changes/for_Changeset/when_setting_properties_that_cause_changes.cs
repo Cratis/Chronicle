@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Changes.for_Changeset;
 
@@ -23,13 +24,13 @@ public class when_setting_properties_that_cause_changes : Specification
         nested.Integer = 43;
         nested.String = "Forty Three";
 
-        property_mappers = new PropertyMapper<ExpandoObject, ExpandoObject>[]
-        {
+        property_mappers =
+        [
                 (_, target, __) => ((dynamic)target).Integer = 44,
                 (_, target, __) => ((dynamic)target).String = "Forty Four",
                 (_, target, __) => ((dynamic)target).Nested.Integer = 45,
                 (_, target, __) => ((dynamic)target).Nested.String = "Forty Five",
-        };
+        ];
 
         source = new ExpandoObject();
 
@@ -38,13 +39,13 @@ public class when_setting_properties_that_cause_changes : Specification
             .Setup(_ => _.Equals(initial_state, IsAny<ExpandoObject>(), out Ref<IEnumerable<PropertyDifference>>.IsAny))
             .Returns((object? _, object? __, out IEnumerable<PropertyDifference> differences) =>
             {
-                differences = new[]
-                {
+                differences =
+                [
                         new PropertyDifference("integer", 42, 44),
                         new PropertyDifference("string", "Forty Two", "Forty Four"),
                         new PropertyDifference("nested.integer", 43, 45),
                         new PropertyDifference("nested.string", "Forty Three", "Forty Five")
-                };
+                ];
 
                 return false;
             });

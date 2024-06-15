@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Changes.for_Changeset;
 
@@ -23,13 +24,13 @@ public class when_setting_properties_that_does_not_cause_changes : Specification
         nested.Integer = 43;
         nested.String = "Forty Three";
 
-        property_mappers = new PropertyMapper<ExpandoObject, ExpandoObject>[]
-        {
+        property_mappers =
+        [
                 (_, target, __) => ((dynamic)target).Integer = 42,
                 (_, target, __) => ((dynamic)target).String = "Forty Two",
                 (_, target, __) => ((dynamic)target).Nested.Integer = 43,
                 (_, target, __) => ((dynamic)target).Nested.String = "Forty Three",
-        };
+        ];
 
         source = new ExpandoObject();
 

@@ -31,7 +31,9 @@ public class when_comparing_complex_nested_expando_object_with_changes : given.a
         left.Second.StringValue = "FortyThree";
         left.Second.IntValue = 43;
         left.Second.Third = new ThirdLevel("FortyFour", 44);
+#pragma warning disable IDE0300 // Simplify collection initialization
         left.Collection = new[] { left_child };
+#pragma warning restore IDE0300 // Simplify collection initialization
 
         right_child = new ExpandoObject();
         right_child.StringValue = "FortyEight";
@@ -44,7 +46,9 @@ public class when_comparing_complex_nested_expando_object_with_changes : given.a
         right.Second.StringValue = "FortyFive";
         right.Second.IntValue = 45;
         right.Second.Third = new ThirdLevel("FortySix", 46);
+#pragma warning disable IDE0300 // Simplify collection initialization
         right.Collection = new[] { right_child };
+#pragma warning restore IDE0300 // Simplify collection initialization
     }
 
     void Because() => result = comparer.Equals(left, right, out differences);

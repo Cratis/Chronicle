@@ -25,11 +25,11 @@ public class when_checking_if_contains_known_object_by_composite_expando_object_
         ((dynamic)second_key).FirstCompositeProperty = "SecondKey FirstProperty";
         ((dynamic)second_key).SecondCompositeProperty = "SecondKey SecondProperty";
 
-        items = new[]
-        {
+        items =
+        [
             new Item(first_key, "First Value"),
             new Item(second_key, "Second Value")
-        };
+        ];
     }
 
     void Because() => result = items.Contains(nameof(Item.Key), second_key);

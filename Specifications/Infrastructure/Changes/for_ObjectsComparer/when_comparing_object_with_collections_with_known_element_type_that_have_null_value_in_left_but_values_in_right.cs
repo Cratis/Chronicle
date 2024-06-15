@@ -17,8 +17,8 @@ public class when_comparing_object_with_collections_with_known_element_type_that
 
     void Establish()
     {
-        left = new(new[] { (string)null! });
-        right = new(new[] { "1" });
+        left = new([null!]);
+        right = new(["1"]);
     }
 
     void Because() => result = comparer.Equals(left, right, out differences);

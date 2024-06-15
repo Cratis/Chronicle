@@ -27,7 +27,7 @@ public class and_there_are_two_providers_out_of_three_that_can_provide : Specifi
         thirdProvider.Setup(_ => _.Provide(typeof(object))).Returns(first_provider_metadata);
 
         resolver = new(
-            new KnownInstancesOf<ICanProvideComplianceMetadataForType>(new[] { firstProvider.Object, second_provider.Object, thirdProvider.Object }),
+            new KnownInstancesOf<ICanProvideComplianceMetadataForType>([firstProvider.Object, second_provider.Object, thirdProvider.Object]),
             new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([])
         );
     }

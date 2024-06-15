@@ -9,11 +9,11 @@ public class when_checking_if_contains_known_object_by_key : Specification
     IEnumerable<Item> items;
     bool result;
 
-    void Establish() => items = new[]
-    {
+    void Establish() => items =
+    [
         new Item("First", "First Value"),
         new Item("Second", "Second Value")
-    };
+    ];
 
     void Because() => result = items.Contains(nameof(Item.Key), "Second");
 

@@ -16,6 +16,6 @@ public class two_array_indexers : Specification
     {
         first_indexer = new(first_indexer_property, new(string.Empty), new object());
         second_indexer = new(second_indexer_property, new(string.Empty), new object());
-        indexers = new ArrayIndexers(new[] { first_indexer, second_indexer });
+        indexers = new ArrayIndexers([first_indexer, second_indexer]);
     }
 }

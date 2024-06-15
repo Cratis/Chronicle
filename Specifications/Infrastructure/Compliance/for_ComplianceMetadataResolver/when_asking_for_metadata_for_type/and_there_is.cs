@@ -14,7 +14,7 @@ public class and_there_is : Specification
         provider.Setup(_ => _.CanProvide(typeof(object))).Returns(true);
 
         resolver = new(
-            new KnownInstancesOf<ICanProvideComplianceMetadataForType>(new[] { provider.Object }),
+            new KnownInstancesOf<ICanProvideComplianceMetadataForType>([provider.Object]),
             new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([])
         );
     }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Dynamic;
 
 namespace Cratis.Chronicle.Properties.for_PropertyPath.when_checking_if_has_value_from_expando_object;
 
@@ -44,7 +45,7 @@ public class and_it_is_within_a_complex_structure_and_value_is_there : Specifica
         second_array_indexer = new("first_level.[second_level].third_level.[forth_level]", "identifier", "second");
     }
 
-    void Because() => result = property_path.HasValue(input, new ArrayIndexers(new[] { first_array_indexer, second_array_indexer }));
+    void Because() => result = property_path.HasValue(input, new ArrayIndexers([first_array_indexer, second_array_indexer]));
 
     [Fact] void should_not_have_it() => result.ShouldBeTrue();
 }

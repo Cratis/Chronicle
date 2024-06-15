@@ -9,11 +9,11 @@ public class when_finding_known_object_by_key : Specification
     IEnumerable<Item> items;
     Item result;
 
-    void Establish() => items = new[]
-    {
+    void Establish() => items =
+    [
         new Item("First", "First Value"),
         new Item("Second", "Second Value")
-    };
+    ];
 
     void Because() => result = items.FindByKey(nameof(Item.Key), "Second");
 

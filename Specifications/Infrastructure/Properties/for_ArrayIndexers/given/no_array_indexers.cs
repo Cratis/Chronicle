@@ -7,5 +7,5 @@ public class no_array_indexers : Specification
 {
     protected ArrayIndexers indexers;
 
-    void Establish() => indexers = new ArrayIndexers(Array.Empty<ArrayIndexer>());
+    void Establish() => indexers = new ArrayIndexers([]);
 }
