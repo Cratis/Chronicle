@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Orleans.Streams;
 
-namespace Cratis.Chronicle.EventSequences;
+namespace Cratis.Chronicle.Grains.EventSequences;
 
 /// <summary>
 /// Extension methods for <see cref="StreamSequenceToken"/>.
