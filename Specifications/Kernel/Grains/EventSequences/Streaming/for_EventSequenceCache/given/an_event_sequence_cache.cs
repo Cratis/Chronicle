@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage.EventSequences;
 using Microsoft.Extensions.Logging;
 
@@ -8,19 +9,17 @@ namespace Cratis.Chronicle.Grains.EventSequences.Streaming.for_EventSequenceCach
 
 public class an_event_sequence_cache : Specification
 {
-    protected MicroserviceId microservice_id;
-    protected TenantId tenant_id;
-    protected Mock<IExecutionContextManager> execution_context_manager;
+    protected EventStoreName event_store_name;
+    protected EventStoreNamespaceName event_store_namespace;
     protected Mock<IEventSequenceStorage> event_sequence_storage;
 
     protected EventSequenceCacheForSpecs cache;
 
     void Establish()
     {
-        microservice_id = Guid.NewGuid();
-        tenant_id = Guid.NewGuid();
+        event_store_name = Guid.NewGuid().ToString();
+        event_store_namespace = Guid.NewGuid().ToString();
 
-        execution_context_manager = new();
         event_sequence_storage = new();
 
         event_sequence_storage.Setup(_ => _.GetTailSequenceNumber(null, null)).Returns(Task.FromResult(EventSequenceNumber.First));

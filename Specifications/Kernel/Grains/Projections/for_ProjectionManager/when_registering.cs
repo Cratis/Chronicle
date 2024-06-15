@@ -2,6 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Projections.Definitions;
+using Cratis.Chronicle.Properties;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Grains.Projections.for_ProjectionManager;
@@ -19,14 +22,14 @@ public class when_registering : given.a_projection_manager_without_any_projectio
             new ModelDefinition("Some Model", "{}"),
             false,
             false,
-            new JsonObject(),
+            [],
             new Dictionary<EventType, FromDefinition>(),
             new Dictionary<EventType, JoinDefinition>(),
             new Dictionary<PropertyPath, ChildrenDefinition>(),
-            Enumerable.Empty<FromAnyDefinition>(),
+            [],
             new AllDefinition(new Dictionary<PropertyPath, string>(), false));
 
-        pipeline_definition = new ProjectionPipelineDefinition(projection_definition.Identifier, Enumerable.Empty<ProjectionSinkDefinition>());
+        pipeline_definition = new ProjectionPipelineDefinition(projection_definition.Identifier, []);
     }
 
     async Task Because() => await manager.Register(projection_definition, pipeline_definition);

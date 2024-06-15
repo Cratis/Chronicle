@@ -11,8 +11,8 @@ public class a_cursor_and_an_empty_cache : all_dependencies
     {
         cursor = new EventSequenceQueueCacheCursor(
             cache.Object,
-            microservice_id,
-            tenant_id,
+            event_store_name,
+            event_store_namespace,
             event_sequence_id,
             EventSequenceNumber.First);
     }

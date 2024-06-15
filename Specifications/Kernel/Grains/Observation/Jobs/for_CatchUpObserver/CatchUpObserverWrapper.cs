@@ -3,15 +3,14 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver;
 
-public class CatchUpObserverWrapper : CatchUpObserver, IGrainType
+public class CatchUpObserverWrapper(IStorage storage) : CatchUpObserver(storage), IGrainType
 {
     public Type GrainType => typeof(ICatchUpObserver);
-
-    public CatchUpObserverWrapper(IStorage storage) : base(storage) { }
 
     public Task<IImmutableList<JobStepDetails>> WrappedPrepareSteps(CatchUpObserverRequest request) => PrepareSteps(request);
     public Task<bool> WrappedCanResume() => CanResume();

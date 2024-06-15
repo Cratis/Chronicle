@@ -2,9 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Applications.Orleans.StateMachines;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
-using Cratis.Chronicle.Orleans.StateMachines;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
@@ -28,7 +30,7 @@ public class a_replay_state : Specification
     {
         observer = new();
         observer_id = Guid.NewGuid();
-        observer_key = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        observer_key = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid());
         observer_service_client = new();
         jobs_manager = new();
         state = new Replay(
@@ -47,8 +49,8 @@ public class a_replay_state : Specification
 
         subscription = new ObserverSubscription(
             stored_state.ObserverId,
-            new(MicroserviceId.Unspecified, TenantId.Development, EventSequenceId.Log),
-            Enumerable.Empty<EventType>(),
+            new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
+            [],
             typeof(object),
             SiloAddress.Zero,
             string.Empty);

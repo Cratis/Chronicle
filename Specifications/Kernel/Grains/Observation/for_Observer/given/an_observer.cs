@@ -3,11 +3,15 @@
 
 using System.Reflection;
 using System.Text.Json;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.Core;
 using Orleans.Runtime;
 using Orleans.Streams;
@@ -19,16 +23,15 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer.given;
 public class an_observer : Specification
 {
     protected Observer observer;
-    protected Mock<IExecutionContextManager> execution_context_manager;
     protected Mock<IStreamProvider> stream_provider;
     protected Mock<IStreamProvider> sequence_stream_provider;
     protected Mock<IObserverSubscriber> subscriber;
     protected Mock<IPersistentState<FailedPartitions>> failed_partitions_persistent_state;
     protected Mock<IObserverServiceClient> observer_service_client;
-    protected List<FailedPartitions> written_failed_partitions_states = new();
+    protected List<FailedPartitions> written_failed_partitions_states = [];
     protected FailedPartitions failed_partitions_state;
     protected ObserverId observer_id => Guid.Parse("d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e");
-    protected ObserverKey observer_key => new(MicroserviceId.Unspecified, TenantId.NotSet, EventSequenceId.Log);
+    protected ObserverKey observer_key => new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
     protected TestKitSilo silo = new();
     protected IStorage<ObserverState> state_storage;
 
@@ -37,7 +40,6 @@ public class an_observer : Specification
         subscriber = new();
         silo.AddProbe((_) => subscriber.Object);
 
-        execution_context_manager = silo.AddServiceProbe<IExecutionContextManager>();
         failed_partitions_persistent_state = silo.AddServiceProbe<IPersistentState<FailedPartitions>>();
         failed_partitions_state = new();
         failed_partitions_persistent_state.SetupGet(_ => _.State).Returns(failed_partitions_state);
@@ -68,7 +70,7 @@ public class an_observer : Specification
 
         var eventSequence = silo.AddProbe<IEventSequence>(
             observer_key.EventSequenceId,
-            new EventSequenceKey(observer_key.MicroserviceId, observer_key.TenantId));
+            new EventSequenceKey(observer_key.EventStore, observer_key.Namespace));
 
         eventSequence.Setup(_ => _.GetTailSequenceNumber()).ReturnsAsync(EventSequenceNumber.Unavailable);
         eventSequence.Setup(_ => _.GetTailSequenceNumberForEventTypes(IsAny<IEnumerable<EventType>>())).ReturnsAsync(EventSequenceNumber.Unavailable);

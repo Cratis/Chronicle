@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation.Jobs;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_CatchUp.when_entering;
@@ -20,9 +22,9 @@ public class and_a_paused_catch_up_job_exists : given.a_catch_up_state
                             observer_key,
                             subscription,
                             42,
-                            new[] { new EventType(Guid.NewGuid(), EventGeneration.First) }),
-            StatusChanges = new[]
-            {
+                            [new EventType(Guid.NewGuid(), EventGeneration.First)]),
+            StatusChanges =
+            [
                 new JobStatusChanged
                 {
                     Status = JobStatus.Running,
@@ -33,7 +35,7 @@ public class and_a_paused_catch_up_job_exists : given.a_catch_up_state
                     Status = JobStatus.Paused,
                     Occurred = DateTimeOffset.UtcNow
                 }
-            }.ToList()
+            ]
         };
 
         jobs_manager

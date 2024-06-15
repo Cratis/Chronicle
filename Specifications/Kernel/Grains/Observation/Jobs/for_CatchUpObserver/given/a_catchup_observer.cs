@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Keys;
 using Orleans.Core;
@@ -19,7 +20,7 @@ public class a_catchup_observer : Specification
     protected Mock<IEventStoreNamespaceStorage> event_store_namespace_storage;
     protected Mock<IObserverKeyIndexes> observer_key_indexes;
     protected CatchUpObserverWrapper job;
-    protected JobKey job_key = new(MicroserviceId.Unspecified, TenantId.NotSet);
+    protected JobKey job_key = new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet);
     protected JobId job_id => Guid.Parse("6341bcdb-c644-40ab-81cf-43907c510285");
     protected IStorage<CatchUpObserverState> state_storage;
     protected CatchUpObserverState state => state_storage.State;

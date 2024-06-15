@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Orleans.StateMachines;
+namespace Cratis.Applications.Orleans.StateMachines;
 
 /// <summary>
 /// Extension methods for working with states in the context of testing.

@@ -2,10 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Orleans.StateMachines;
+using Cratis.Applications.Orleans.StateMachines;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
+using Orleans.Runtime;
 using IEventSequence = Cratis.Chronicle.Grains.EventSequences.IEventSequence;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_Routing.given;
@@ -26,7 +30,7 @@ public class a_routing_state : Specification
     {
         observer = new();
         event_sequence = new();
-        observer_key = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        observer_key = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid());
         replay_evaluator = new();
         state = new Routing(
             observer_key,
@@ -41,9 +45,10 @@ public class a_routing_state : Specification
 
         subscription = new ObserverSubscription(
             Guid.NewGuid(),
-            new(MicroserviceId.Unspecified, TenantId.Development, EventSequenceId.Log),
-            Enumerable.Empty<EventType>(),
+            new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
+            [],
             typeof(object),
+            SiloAddress.Zero,
             string.Empty);
 
         observer.Setup(_ => _.GetSubscription()).Returns(() => Task.FromResult(subscription));

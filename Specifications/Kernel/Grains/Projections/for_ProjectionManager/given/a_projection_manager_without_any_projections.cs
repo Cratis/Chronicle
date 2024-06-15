@@ -13,17 +13,11 @@ public class a_projection_manager_without_any_projections : Specification
     protected const string event_store_namespace = "event_store_namespace";
 
     protected ProjectionManager manager;
-    protected Mock<IExecutionContextManager> execution_context_manager;
     protected Mock<IProjectionFactory> projection_factory;
     protected Mock<IProjectionPipelineFactory> projection_pipeline_factory;
 
     void Establish()
     {
-        execution_context_manager = new();
-        execution_context_manager.Setup(_ => _.Current).Returns(new ExecutionContext(
-            MicroserviceId.Unspecified,
-            TenantId.Development,
-            CorrelationId.New()));
         projection_factory = new();
         projection_pipeline_factory = new();
         manager = new ProjectionManager(

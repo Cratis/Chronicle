@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+
 namespace Cratis.Chronicle.Grains.Observation.States.for_Observing;
 
 public class when_event_for_type_handled_by_observer_is_received : given.an_observing_state
@@ -12,7 +14,7 @@ public class when_event_for_type_handled_by_observer_is_received : given.an_obse
     async Task Establish()
     {
         event_type = new(Guid.NewGuid(), EventGeneration.First);
-        stored_state = stored_state with { EventTypes = new[] { event_type } };
+        stored_state = stored_state with { EventTypes = [event_type] };
 
         event_published = AppendedEvent.EmptyWithEventType(event_type);
 

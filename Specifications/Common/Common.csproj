@@ -5,10 +5,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Orleans.Streaming" />
-      <PackageReference Include="Microsoft.Orleans.Reminders" />
-      <PackageReference Include="Microsoft.Orleans.Sdk" />
-      <PackageReference Include="Microsoft.Orleans.TestingHost" />
-      <PackageReference Include="OrleansTestKit" />
+        <PackageReference Include="Cratis.Applications.Orleans" />
+        <PackageReference Include="Microsoft.Orleans.Streaming" />
+        <PackageReference Include="Microsoft.Orleans.Reminders" />
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Microsoft.Orleans.TestingHost" />
+        <PackageReference Include="OrleansTestKit" />
     </ItemGroup>
 </Project>

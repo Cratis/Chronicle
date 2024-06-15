@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.given;
@@ -13,7 +15,7 @@ public class an_observer_with_subscription_for_specific_event_type : an_observer
 
     void Establish()
     {
-        subscription = new ObserverSubscription(observer_id, observer_key, new[] { event_type }, typeof(IObserverSubscriber), null);
+        subscription = new ObserverSubscription(observer_id, observer_key, [event_type], typeof(IObserverSubscriber), null);
         observer.SetSubscription(subscription);
 
         silo.StorageStats().ResetCounts();

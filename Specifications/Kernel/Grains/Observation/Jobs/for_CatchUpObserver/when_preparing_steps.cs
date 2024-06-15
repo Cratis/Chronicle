@@ -3,6 +3,8 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Keys;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver;
@@ -18,12 +20,12 @@ public class when_preparing_steps : given.a_catchup_observer_and_a_request
         index = new();
         observer_key_indexes.Setup(_ => _.GetFor(((CatchUpObserverRequest)state_storage.State.Request).ObserverId, ((CatchUpObserverRequest)state_storage.State.Request).ObserverKey)).ReturnsAsync(index.Object);
 
-        keys = new[]
-        {
+        keys =
+        [
             new Key(Guid.NewGuid(), ArrayIndexers.NoIndexers),
             new Key(Guid.NewGuid(), ArrayIndexers.NoIndexers),
             new Key(Guid.NewGuid(), ArrayIndexers.NoIndexers)
-        };
+        ];
         index.Setup(_ => _.GetKeys(((CatchUpObserverRequest)state_storage.State.Request).FromEventSequenceNumber)).Returns(() => new ObserverKeysForTesting(keys));
     }
 
