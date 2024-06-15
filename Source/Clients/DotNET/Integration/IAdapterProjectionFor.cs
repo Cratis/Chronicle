@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Models;
+using Cratis.Chronicle.Models;
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Defines a projection for an adapter for a specific model.

@@ -4,7 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Cratis.Properties;
+namespace Cratis.Chronicle.Properties;
 
 /// <summary>
 /// Represents a <see cref="JsonConverter"/> for converting <see cref="PropertyPath"/>.

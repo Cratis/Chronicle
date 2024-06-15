@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Serialization;
-using Cratis.Events;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Projections.Definitions;
+using Cratis.Chronicle.Properties;
 using Cratis.Json;
-using Cratis.Projections.Definitions;
-using Cratis.Properties;
 
-namespace Cratis.Projections.Json;
+namespace Cratis.Chronicle.Projections.Json;
 
 /// <summary>
 /// Represents a <see cref="JsonConverter"/> that can convert to a dictionary of <see cref="PropertyPath"/> and <see cref="JoinDefinition"/>.

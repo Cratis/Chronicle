@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Connections;
-using Cratis.Observation;
+using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Grains.Observation.Clients;
 

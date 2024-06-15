@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
-
 namespace Cratis.Integration.for_ImportBuilderExtensions;
 
 public class when_filtering_on_model_properties_with_similar_name_are_set : given.a_change_on_similarily_named_property

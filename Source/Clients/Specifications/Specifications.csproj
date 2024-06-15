@@ -16,5 +16,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Clients/DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../../Kernel/Storage/Storage.csproj"/>
+        <ProjectReference Include="../../Kernel/Storage/Storage.csproj"/>
     </ItemGroup>
 </Project>

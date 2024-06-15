@@ -3,7 +3,7 @@
 
 using Microsoft.AspNetCore.Hosting.Server.Features;
 
-namespace Cratis.Net;
+namespace Cratis.Chronicle.Net;
 
 /// <summary>
 /// Extension methods for working with <see cref="IServerAddressesFeature"/>.

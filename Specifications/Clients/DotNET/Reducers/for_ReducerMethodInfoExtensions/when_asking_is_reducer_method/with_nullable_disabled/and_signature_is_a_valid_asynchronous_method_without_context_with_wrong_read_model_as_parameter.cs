@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Observation.Reducers;
-
 namespace Cratis.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method.with_nullable_disabled;
 
 public class and_signature_is_a_valid_asynchronous_method_without_context_with_wrong_read_model_as_parameter : Specification

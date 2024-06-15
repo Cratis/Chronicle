@@ -3,9 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Storage.Keys;
-using Cratis.Properties;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver;
 

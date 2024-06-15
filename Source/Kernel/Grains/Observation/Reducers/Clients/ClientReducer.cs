@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Grains.Clients;
-using Cratis.Connections;
-using Cratis.Observation;
-using Cratis.Observation.Reducers;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 

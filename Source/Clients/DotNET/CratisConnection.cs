@@ -2,19 +2,19 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Connections;
-using Cratis.Tasks;
+using Cratis.Chronicle.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Grpc.Net.Client.Configuration;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc.Client;
 
-namespace Cratis;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICratisConnection"/>.

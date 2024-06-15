@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Connections;
+using Cratis.Chronicle.Connections;
 
-namespace Cratis;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Defines a system that manages the connection to Cratis.

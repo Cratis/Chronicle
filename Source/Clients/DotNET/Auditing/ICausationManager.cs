@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 
-namespace Cratis.Auditing;
+namespace Cratis.Chronicle.Auditing;
 
 /// <summary>
 /// Defines a system that manages causation.

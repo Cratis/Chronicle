@@ -1,11 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
-using Cratis.Auditing;
-using Cratis.Identities;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Identities;
 
-namespace Cratis.Events;
+namespace Cratis.Chronicle.Events;
 
 /// <summary>
 /// Represents the context in which an event exists in - typically what it was appended with.
@@ -58,7 +57,7 @@ public record EventContext(
             eventStore,
             @namespace,
             CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
-            ImmutableList<Causation>.Empty,
+            [],
             Identity.NotSet);
     }
 

@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
-
 namespace Cratis.Changes.for_CollectionExtensions;
 
 public class when_finding_unknown_object_identified_by_itself_by_key : Specification

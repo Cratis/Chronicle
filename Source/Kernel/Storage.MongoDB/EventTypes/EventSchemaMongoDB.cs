@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.EventTypes;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventTypes;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace Cratis.Events.MongoDB.EventTypes;

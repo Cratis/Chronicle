@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Options;
 
-namespace Cratis.Net;
+namespace Cratis.Chronicle.Net;
 
 /// <summary>
 /// Represents an implementation of <see cref="ILoadBalancedHttpClientFactory"/>.

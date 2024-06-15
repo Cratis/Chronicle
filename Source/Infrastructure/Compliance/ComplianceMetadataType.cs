@@ -3,7 +3,7 @@
 
 using Cratis.Concepts;
 
-namespace Cratis.Compliance;
+namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
 /// Represents a type of compliance metadata.

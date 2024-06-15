@@ -4,8 +4,6 @@
 
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
-using Cratis.Auditing;
-using Cratis.Identities;
 
 namespace Cratis.EventSequences.for_EventSequence.when_appending;
 

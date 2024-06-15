@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Orleans.StateMachines;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.EventSequences;
 using Microsoft.Extensions.Logging;
 using IEventSequence = Cratis.Chronicle.Grains.EventSequences.IEventSequence;
 

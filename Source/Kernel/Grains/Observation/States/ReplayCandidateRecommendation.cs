@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Recommendations;
-using Cratis.Jobs;
+using Cratis.Chronicle.Jobs;
 
 namespace Cratis.Chronicle.Grains.Observation.States;
 

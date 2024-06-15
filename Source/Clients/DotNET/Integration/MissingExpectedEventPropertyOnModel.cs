@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Exception that gets thrown when an expected property on an event does not exist on a model during convention based mapping.

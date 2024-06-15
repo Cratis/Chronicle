@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events;
-using Cratis.Observation;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation;

@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
-using Cratis.Events;
-using Cratis.Properties;
+using Cratis.Chronicle.Properties;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Expressions.ModelProperties;

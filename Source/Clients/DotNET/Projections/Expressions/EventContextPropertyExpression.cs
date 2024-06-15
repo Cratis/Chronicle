@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
+using Cratis.Chronicle.Properties;
 
-namespace Cratis.Projections.Expressions;
+namespace Cratis.Chronicle.Projections.Expressions;
 
 /// <summary>
 /// Represents a <see cref="IKeyBuilder"/> that builds an event context property accessor expression.

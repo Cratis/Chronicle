@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using AutoMapper;
 using Cratis.Chronicle.Contracts.Projections;
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Defines the system for working with <see cref="AdapterFor{TModel, TExternalModel}"/>.

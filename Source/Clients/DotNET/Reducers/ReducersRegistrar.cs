@@ -2,17 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Aggregates;
+using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
-using Cratis.Events;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Sinks;
 using Cratis.Models;
-using Cratis.Observation;
 using Cratis.Reflection;
-using Cratis.Schemas;
-using Cratis.Sinks;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Reducers;
+namespace Cratis.Chronicle.Reducers;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReducersRegistrar"/>.
@@ -139,7 +139,6 @@ public class ReducersRegistrar : IReducersRegistrar
         }).ToArray();
 
         // await _connection.PerformCommand(route, registrations);
-
         await Task.CompletedTask;
     }
 

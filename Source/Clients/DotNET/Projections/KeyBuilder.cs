@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Projections.Expressions;
+using Cratis.Chronicle.Projections.Expressions;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents a default implementation of <see cref="IKeyBuilder"/> that works with <see cref="IEventValueExpression"/>.

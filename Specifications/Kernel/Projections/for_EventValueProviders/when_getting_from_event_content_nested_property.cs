@@ -2,9 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Auditing;
-using Cratis.Identities;
-using Cratis.Properties;
 
 namespace Cratis.Chronicle.Projections.for_EventValueProviders;
 

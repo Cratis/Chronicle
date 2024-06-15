@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Holds log messages for <see cref="ClientBuilder"/>.

@@ -5,12 +5,13 @@ using System.Collections;
 using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Schemas;
+using Cratis.Json;
 using Cratis.Reflection;
-using Cratis.Schemas;
 using Cratis.Types;
 using NJsonSchema;
 
-namespace Cratis.Json;
+namespace Cratis.Chronicle.Json;
 
 /// <summary>
 /// Represents an implementation of <see cref="IExpandoObjectConverter"/>.

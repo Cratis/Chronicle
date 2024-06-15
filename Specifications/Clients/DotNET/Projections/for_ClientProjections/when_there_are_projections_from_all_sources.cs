@@ -3,8 +3,6 @@
 
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
-using Cratis.Projections.Definitions;
-using Cratis.Properties;
 
 namespace Cratis.Projections.for_ClientProjections;
 

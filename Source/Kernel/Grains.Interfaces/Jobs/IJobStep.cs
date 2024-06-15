@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Grains.Workers;
-using Cratis.Jobs;
+using Cratis.Chronicle.Jobs;
 using Orleans.Concurrency;
 using Orleans.Runtime;
 

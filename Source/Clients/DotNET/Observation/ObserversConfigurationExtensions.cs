@@ -4,7 +4,7 @@
 using Cratis.Collections;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.Observation;
+namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Extension methods for configuring observers.

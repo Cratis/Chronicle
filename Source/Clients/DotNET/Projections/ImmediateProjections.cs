@@ -5,14 +5,15 @@ using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Schemas;
 using Cratis.Collections;
-using Cratis.Events;
-using Cratis.EventSequences;
 using Cratis.Models;
 using Cratis.Reflection;
-using Cratis.Schemas;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IImmediateProjections"/>.

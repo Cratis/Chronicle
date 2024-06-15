@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Benchmark.Model;
-using Cratis.Events;
-using Cratis.Identities;
 
 namespace Benchmarks.EventSequences;
 

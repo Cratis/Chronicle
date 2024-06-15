@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Events;
-using Cratis.Properties;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Properties;
 
-namespace Cratis.Projections.Definitions;
+namespace Cratis.Chronicle.Projections.Definitions;
 
 /// <summary>
 /// Represents the definition of a children projection.

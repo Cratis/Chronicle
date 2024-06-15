@@ -1,8 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.EventTypes;
-using Cratis.Schemas;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Schemas;
 using NJsonSchema;
 
 namespace Cratis.Events.MongoDB.EventTypes;

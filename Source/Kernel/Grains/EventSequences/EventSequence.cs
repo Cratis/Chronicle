@@ -2,21 +2,20 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Auditing;
+using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Events;
-using Cratis.EventSequences;
-using Cratis.EventTypes;
-using Cratis.Identities;
-using Cratis.Json;
 using Cratis.Metrics;
-using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Runtime;

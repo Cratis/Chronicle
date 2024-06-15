@@ -4,8 +4,6 @@
 global using Cratis.Concepts;
 global using Cratis.Events;
 global using Cratis.Execution;
-global using Cratis.Observation;
-global using Cratis.Projections;
 global using Cratis.Specifications;
 global using Cratis.Types;
 global using Moq;

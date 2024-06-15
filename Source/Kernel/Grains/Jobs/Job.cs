@@ -4,9 +4,9 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
-using Cratis.Jobs;
 using Cratis.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

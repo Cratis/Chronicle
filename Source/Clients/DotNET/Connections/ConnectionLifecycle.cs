@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Connections;
+namespace Cratis.Chronicle.Connections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IConnectionLifecycle"/>.

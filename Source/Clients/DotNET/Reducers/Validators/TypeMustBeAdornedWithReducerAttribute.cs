@@ -3,7 +3,7 @@
 
 using Cratis.Reflection;
 
-namespace Cratis.Reducers.Validators;
+namespace Cratis.Chronicle.Reducers.Validators;
 
 /// <summary>
 /// Exception that gets thrown when a type is not adorned with the <see cref="ReducerAttribute"/>.

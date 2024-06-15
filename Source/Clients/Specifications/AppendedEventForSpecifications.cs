@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Events;
+using Cratis.Chronicle.Events;
 
-namespace Cratis.Specifications;
+namespace Cratis.Chronicle.Specifications;
 
 /// <summary>
 /// Represents a specialized version of <see cref="AppendedEvent"/> used in specifications.

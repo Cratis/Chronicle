@@ -6,16 +6,16 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Events;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Cratis.Models;
-using Cratis.Properties;
 using Cratis.Reflection;
-using Cratis.Schemas;
 using Cratis.Strings;
 using Humanizer;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents a base projection builder.

@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
-
 namespace Cratis.Objects.for_ObjectExtensions;
 
 public class when_ensuring_complex_path_with_multiple_arrays_and_nothing_defined : Specification

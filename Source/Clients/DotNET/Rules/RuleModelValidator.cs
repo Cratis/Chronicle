@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Models;
+using Cratis.Chronicle.Models;
 using Cratis.Reflection;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
-namespace Cratis.Rules;
+namespace Cratis.Chronicle.Rules;
 
 /// <summary>
 /// Represents a <see cref="ObjectModelValidator"/> for <see cref="RulesFor{TSelf, TCommand}"/>.
@@ -39,7 +39,7 @@ public class RuleModelValidator(
 
             rules.ProjectTo(rule, modelIdentifier);
             var validationContextType = typeof(ValidationContext<>).MakeGenericType(context.ModelMetadata.ModelType);
-            var validationContext = Activator.CreateInstance(validationContextType, new object[] { context.Model! }) as IValidationContext;
+            var validationContext = Activator.CreateInstance(validationContextType, [context.Model!]) as IValidationContext;
             var result = (rule as IValidator)!.Validate(validationContext);
             failures.AddRange(result.Errors.Select(x => new ModelValidationResult(x.PropertyName, x.ErrorMessage)));
         }

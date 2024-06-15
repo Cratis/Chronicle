@@ -3,9 +3,9 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Properties;
+using Cratis.Chronicle.Properties;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IFromEveryBuilder{TModel}"/>.

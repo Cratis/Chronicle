@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Models;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers;
 

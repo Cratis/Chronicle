@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using Cratis.Models;
-using Cratis.Schemas;
 
 namespace Cratis.Rules.for_RulesProjections.given;
 

@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
+using Cratis.Chronicle.Properties;
 
-namespace Cratis.Dynamic;
+namespace Cratis.Chronicle.Dynamic;
 
 /// <summary>
 /// Exception that gets thrown when a <see cref="IPropertyPathSegment">segment</see> within a <see cref="PropertyPath"/> is not an ExpandoObject.

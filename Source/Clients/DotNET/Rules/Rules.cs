@@ -3,12 +3,11 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Cratis.DependencyInjection;
-using Cratis.Models;
-using Cratis.Projections;
+using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Projections;
 using Cratis.Strings;
 
-namespace Cratis.Rules;
+namespace Cratis.Chronicle.Rules;
 
 /// <summary>
 /// Represents an implementation of <see cref="IRules"/>.
@@ -35,7 +34,7 @@ public class Rules(
     public bool HasFor(Type type) => _rulesPerCommand.ContainsKey(type);
 
     /// <inheritdoc/>
-    public IEnumerable<Type> GetFor(Type type) => HasFor(type) ? _rulesPerCommand[type] : Array.Empty<Type>();
+    public IEnumerable<Type> GetFor(Type type) => HasFor(type) ? _rulesPerCommand[type] : [];
 
     /// <inheritdoc/>
     public void ProjectTo(IRule rule, object? modelIdentifier = default)

@@ -4,13 +4,12 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Events;
-using Cratis.Execution;
-using Cratis.Identities;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Schemas;
 using Cratis.Json;
-using Cratis.Schemas;
 
-namespace Cratis.Specifications;
+namespace Cratis.Chronicle.Specifications;
 
 /// <summary>
 /// Represents an event sequence for working in-memory.

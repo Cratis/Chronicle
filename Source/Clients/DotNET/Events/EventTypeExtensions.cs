@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Cratis.Events;
+namespace Cratis.Chronicle.Events;
 
 /// <summary>
 /// Extension methods for working with <see cref="EventType"/> and <see cref="Type"/> .
@@ -34,7 +34,7 @@ public static class EventTypeExtensions
     /// <returns>Collection of actual event types.</returns>
     public static IEnumerable<Type> GetEventTypes(this Type type, IEnumerable<Type> eventTypes)
     {
-        eventTypes = eventTypes.Except(new[] { type });
+        eventTypes = eventTypes.Except([type]);
 
         if (type.GetCustomAttribute<EventTypeAttribute>() != null)
         {

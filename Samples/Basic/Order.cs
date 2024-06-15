@@ -1,13 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Linq;
-using System.Threading.Tasks;
-using Cratis.Aggregates;
-using Cratis.Events;
-using Cratis.Projections;
-using Cratis.Reducers;
-
 namespace Basic;
 
 public class Order : AggregateRoot<OrderState>

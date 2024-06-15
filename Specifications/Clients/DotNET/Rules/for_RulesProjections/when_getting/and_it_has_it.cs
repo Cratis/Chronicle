@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Projections.Definitions;
-
 namespace Cratis.Rules.for_RulesProjections.when_getting;
 
 public class and_it_has_it : given.two_rules_with_projections

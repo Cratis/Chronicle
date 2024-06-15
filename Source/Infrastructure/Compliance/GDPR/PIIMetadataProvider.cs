@@ -4,7 +4,7 @@
 using System.Reflection;
 using Cratis.Reflection;
 
-namespace Cratis.Compliance.GDPR;
+namespace Cratis.Chronicle.Compliance.GDPR;
 
 /// <summary>
 /// Represents a metadata provider for PII.

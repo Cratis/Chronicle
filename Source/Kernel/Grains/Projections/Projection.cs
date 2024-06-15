@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Grains.Observation;
-using Cratis.Observation;
-using Cratis.Projections;
-using Cratis.Projections.Definitions;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.Definitions;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 using Orleans.Utilities;

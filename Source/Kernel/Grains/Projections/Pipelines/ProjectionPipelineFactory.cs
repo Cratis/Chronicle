@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Changes;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Projections.Definitions;
 using Cratis.Chronicle.Projections.Pipelines;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.EventSequences;
-using Cratis.Projections.Definitions;
-using Cratis.Schemas;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 

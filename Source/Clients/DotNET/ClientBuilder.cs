@@ -1,23 +1,23 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Aggregates;
-using Cratis.Auditing;
+using Cratis.Chronicle.Aggregates;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Compliance.GDPR;
+using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Integration;
+using Cratis.Chronicle.Net;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Rules;
+using Cratis.Chronicle.Schemas;
 using Cratis.Collections;
-using Cratis.Compliance;
-using Cratis.Compliance.GDPR;
-using Cratis.Connections;
-using Cratis.Events;
-using Cratis.Identities;
-using Cratis.Integration;
 using Cratis.Json;
 using Cratis.Models;
-using Cratis.Net;
-using Cratis.Observation;
-using Cratis.Projections;
-using Cratis.Reducers;
-using Cratis.Rules;
-using Cratis.Schemas;
 using Cratis.Tasks;
 using Cratis.Timers;
 using Cratis.Types;
@@ -25,7 +25,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using TaskFactory = Cratis.Tasks.TaskFactory;
 
-namespace Cratis;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientBuilder"/>.

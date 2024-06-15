@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
-using Cratis.Jobs;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 

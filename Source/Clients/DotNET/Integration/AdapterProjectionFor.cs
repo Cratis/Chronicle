@@ -3,10 +3,10 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Models;
-using Cratis.Projections;
+using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Projections;
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAdapterProjectionFor{TModel}"/>.

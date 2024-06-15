@@ -2,10 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Events;
-using Cratis.Models;
-using Cratis.Projections;
-using Cratis.Properties;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections;
 

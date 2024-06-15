@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events;
-using Cratis.Observation;
-
 namespace Basic;
 
 [Observer("986b3b82-19b8-43ae-8c85-d68a79628018")]

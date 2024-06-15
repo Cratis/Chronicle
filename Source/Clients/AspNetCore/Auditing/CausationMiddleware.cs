@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Auditing;
+using Cratis.Chronicle.Auditing;
 using Cratis.Collections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
-namespace Cratis.AspNetCore.Auditing;
+namespace Cratis.Chronicle.AspNetCore.Auditing;
 
 /// <summary>
 /// Represents a middleware for adding causation from ASP.NET requests.

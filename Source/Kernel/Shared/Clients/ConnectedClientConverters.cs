@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Connections;
+namespace Cratis.Chronicle.Connections;
 
 /// <summary>
 /// Converter methods for <see cref="ConnectedClient"/>.
@@ -13,7 +13,7 @@ public static class ConnectedClientConverters
     /// </summary>
     /// <param name="connectedClient"><see cref="ConnectedClient"/> to convert.</param>
     /// <returns>Converted contract version.</returns>
-    public static Chronicle.Contracts.Clients.ConnectedClient ToContract(this ConnectedClient connectedClient)
+    public static Contracts.Clients.ConnectedClient ToContract(this ConnectedClient connectedClient)
     {
         return new()
         {
@@ -28,15 +28,15 @@ public static class ConnectedClientConverters
     /// </summary>
     /// <param name="connectedClients">Collection of <see cref="ConnectedClient"/> to convert.</param>
     /// <returns>Collection of converted contract versions.</returns>
-    public static IEnumerable<Chronicle.Contracts.Clients.ConnectedClient> ToContract(this IEnumerable<ConnectedClient> connectedClients) =>
+    public static IEnumerable<Contracts.Clients.ConnectedClient> ToContract(this IEnumerable<ConnectedClient> connectedClients) =>
         connectedClients.Select(ToContract);
 
     /// <summary>
     /// Convert to kernel version of <see cref="ConnectedClient"/>.
     /// </summary>
-    /// <param name="connectedClient"><see cref="Chronicle.Contracts.Clients.ConnectedClient"/> to convert.</param>
+    /// <param name="connectedClient"><see cref="Contracts.Clients.ConnectedClient"/> to convert.</param>
     /// <returns>Converted kernel version.</returns>
-    public static ConnectedClient ToKernel(this Chronicle.Contracts.Clients.ConnectedClient connectedClient)
+    public static ConnectedClient ToKernel(this Contracts.Clients.ConnectedClient connectedClient)
     {
         return new()
         {

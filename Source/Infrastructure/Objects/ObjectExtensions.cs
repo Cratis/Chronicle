@@ -5,14 +5,14 @@ using System.Collections;
 using System.Dynamic;
 using System.Reflection;
 using System.Text.Json;
+using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Properties;
 using Cratis.Concepts;
-using Cratis.Dynamic;
 using Cratis.Json;
-using Cratis.Properties;
 using Cratis.Reflection;
 using Cratis.Strings;
 
-namespace Cratis.Objects;
+namespace Cratis.Chronicle.Objects;
 
 /// <summary>
 /// Extension methods for any object.

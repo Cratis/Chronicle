@@ -4,13 +4,13 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Projections.Json;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Projections;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Events.MongoDB.EventTypes;
-using Cratis.Projections.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.MongoDB;

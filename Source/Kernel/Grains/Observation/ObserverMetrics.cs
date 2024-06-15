@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
-using Cratis.Observation;
 
 namespace Cratis.Chronicle.Grains.Observation;
 

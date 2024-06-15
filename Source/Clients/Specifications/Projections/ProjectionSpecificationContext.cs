@@ -2,30 +2,20 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Changes;
-using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Projections.Expressions;
-using Cratis.Chronicle.Projections.Expressions.EventValues;
-using Cratis.Chronicle.Projections.Expressions.Keys;
-using Cratis.Chronicle.Projections.Pipelines;
-using Cratis.Chronicle.Storage.Changes;
-using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Chronicle.Storage.Sinks.InMemory;
-using Cratis.Compliance;
-using Cratis.Dynamic;
-using Cratis.Events;
-using Cratis.EventSequences;
+using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Cratis.Json;
 using Cratis.Models;
-using Cratis.Projections;
-using Cratis.Properties;
 using Cratis.Reflection;
-using Cratis.Schemas;
 using Cratis.Types;
 
-namespace Cratis.Specifications.Integration;
+namespace Cratis.Chronicle.Specifications.Integration;
 
 /// <summary>
 /// Represents the context for specifications for a projection.

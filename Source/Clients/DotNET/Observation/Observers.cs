@@ -4,13 +4,13 @@
 using System.Reactive.Subjects;
 using System.Reflection;
 using System.Text.Json.Nodes;
-using Cratis.Auditing;
+using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Events;
-using Cratis.Identities;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Observation;
+namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IObservers"/>.

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Projections.Definitions;
 
 namespace Cratis.Projections.for_ClientProjections.given;
 

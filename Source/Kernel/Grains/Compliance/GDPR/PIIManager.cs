@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Storage.Compliance;
-using Cratis.Compliance;
 
 namespace Cratis.Chronicle.Grains.Compliance.GDPR;
 

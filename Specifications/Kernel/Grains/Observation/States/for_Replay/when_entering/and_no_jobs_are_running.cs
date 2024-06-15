@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Grains.Observation.Jobs;
-using Cratis.Jobs;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.when_entering;
 

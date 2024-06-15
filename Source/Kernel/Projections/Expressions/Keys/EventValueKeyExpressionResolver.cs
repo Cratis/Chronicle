@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Projections.Expressions.EventValues;
-using Cratis.Properties;
-using Cratis.Schemas;
+using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Expressions.Keys;

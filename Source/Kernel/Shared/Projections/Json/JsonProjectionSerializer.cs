@@ -3,11 +3,11 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Projections.Definitions;
+using Cratis.Chronicle.Properties;
 using Cratis.Json;
-using Cratis.Projections.Definitions;
-using Cratis.Properties;
 
-namespace Cratis.Projections.Json;
+namespace Cratis.Chronicle.Projections.Json;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJsonProjectionSerializer"/>.

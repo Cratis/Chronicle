@@ -3,7 +3,7 @@
 
 using System.Text.Json.Nodes;
 
-namespace Cratis.Events;
+namespace Cratis.Chronicle.Events;
 
 /// <summary>
 /// Defines something that can provide metadata to all events being appended.

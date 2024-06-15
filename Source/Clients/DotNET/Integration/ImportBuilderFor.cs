@@ -3,7 +3,7 @@
 
 using System.Reactive.Subjects;
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IImportBuilderFor{TModel, TExternalModel}"/>.

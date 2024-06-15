@@ -3,12 +3,12 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Events;
-using Cratis.EventTypes;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Schemas;
 using Cratis.Models;
-using Cratis.Schemas;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// /// Represents an implementation of <see cref="IProjectionBuilderFor{TModel}"/>.

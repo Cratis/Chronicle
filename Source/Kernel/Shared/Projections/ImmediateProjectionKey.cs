@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.EventSequences;
-using Cratis.Models;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Models;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents the compound key for an immediate projection.

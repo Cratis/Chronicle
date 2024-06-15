@@ -1,18 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Aggregates;
-using Cratis.Compliance;
-using Cratis.Events;
-using Cratis.Integration;
-using Cratis.Observation;
-using Cratis.Projections;
-using Cratis.Reducers;
+using Cratis.Chronicle.Aggregates;
+using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Integration;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Rules;
 using Cratis.Reflection;
-using Cratis.Rules;
 using Cratis.Types;
 
-namespace Cratis;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Represents a default implementation of <see cref="IClientArtifactsProvider"/>.

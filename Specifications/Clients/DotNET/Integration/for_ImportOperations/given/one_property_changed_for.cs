@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Changes;
-using Cratis.Properties;
-
 namespace Cratis.Integration.for_ImportOperations.given;
 
 public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>

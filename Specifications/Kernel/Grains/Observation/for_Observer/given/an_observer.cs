@@ -3,13 +3,10 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.EventSequences;
 using Cratis.Json;
-using Cratis.Specifications;
 using Microsoft.Extensions.Logging;
 using Orleans.Core;
 using Orleans.Runtime;

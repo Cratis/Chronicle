@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Auditing;
-using Cratis.Changes;
-using Cratis.EventSequences;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IImporter"/>.

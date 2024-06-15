@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Observation;
+namespace Cratis.Chronicle.Observation;
 
 internal static partial class ObserverInvokerLogMessages
 {

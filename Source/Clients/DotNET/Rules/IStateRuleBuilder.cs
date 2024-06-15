@@ -3,7 +3,7 @@
 
 using FluentValidation;
 
-namespace Cratis.Rules;
+namespace Cratis.Chronicle.Rules;
 
 /// <summary>
 /// Defines a rule builder for state on a <see cref="RulesFor{T,TC}"/>.

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Rules;
+namespace Cratis.Chronicle.Rules;
 
 /// <summary>
 /// Exception that gets thrown when the signature of `DefineState` on a business rule is wrong.

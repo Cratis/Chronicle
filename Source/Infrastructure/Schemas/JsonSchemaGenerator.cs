@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Compliance;
+using Cratis.Chronicle.Compliance;
 using Cratis.DependencyInjection;
 using Cratis.Strings;
 using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
-namespace Cratis.Schemas;
+namespace Cratis.Chronicle.Schemas;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJsonSchemaGenerator"/>.

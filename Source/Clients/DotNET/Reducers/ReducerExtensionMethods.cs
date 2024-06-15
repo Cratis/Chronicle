@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Events;
-using Cratis.Reducers.Validators;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Reducers.Validators;
 using Cratis.Reflection;
 
-namespace Cratis.Reducers;
+namespace Cratis.Chronicle.Reducers;
 
 /// <summary>
 /// Extension methods for identifying a <see cref="MethodInfo"/> as reducer method.

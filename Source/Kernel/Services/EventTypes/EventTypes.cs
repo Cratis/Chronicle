@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage;
-using Cratis.Events;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Services.Events;

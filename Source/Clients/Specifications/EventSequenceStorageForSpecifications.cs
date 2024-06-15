@@ -3,12 +3,11 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
-using Cratis.Auditing;
-using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Events;
-using Cratis.Identities;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
 
-namespace Cratis.Specifications;
+namespace Cratis.Chronicle.Specifications;
 
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IEventSequenceStorage"/>.

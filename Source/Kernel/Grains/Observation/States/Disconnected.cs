@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Observation;
 
 namespace Cratis.Chronicle.Grains.Observation.States;
 

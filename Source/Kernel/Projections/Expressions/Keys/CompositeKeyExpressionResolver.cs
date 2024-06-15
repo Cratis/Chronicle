@@ -3,8 +3,8 @@
 
 using System.Text.RegularExpressions;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
-using Cratis.Properties;
-using Cratis.Schemas;
+using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Expressions.Keys;

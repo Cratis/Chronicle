@@ -5,10 +5,10 @@ using System.Linq.Expressions;
 using System.Reactive.Linq;
 using System.Reflection;
 using AutoMapper;
-using Cratis.Changes;
-using Cratis.Properties;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Properties;
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Extension methods for building on the <see cref="IImportBuilderFor{TModel, TExternalModel}"/>.

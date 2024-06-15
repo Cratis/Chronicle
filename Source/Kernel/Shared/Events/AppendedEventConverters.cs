@@ -5,7 +5,7 @@ using System.Dynamic;
 using System.Text.Json;
 using Cratis.Json;
 
-namespace Cratis.Events;
+namespace Cratis.Chronicle.Events;
 
 /// <summary>
 /// Converter methods for <see cref="AppendedEvent"/>.
@@ -17,7 +17,7 @@ public static class AppendedEventConverters
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to convert.</param>
     /// <returns>Converted contract version.</returns>
-    public static Chronicle.Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event) => new()
+    public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event) => new()
     {
         Metadata = @event.Metadata.ToContract(),
         Context = @event.Context.ToContract(),
@@ -27,9 +27,9 @@ public static class AppendedEventConverters
     /// <summary>
     /// Convert to kernel version of <see cref="AppendedEvent"/>.
     /// </summary>
-    /// <param name="event"><see cref="Chronicle.Contracts.Events.AppendedEvent"/> to convert.</param>
+    /// <param name="event"><see cref="Contracts.Events.AppendedEvent"/> to convert.</param>
     /// <returns>Converted kernel version.</returns>
-    public static AppendedEvent ToKernel(this Chronicle.Contracts.Events.AppendedEvent @event) => new(
+    public static AppendedEvent ToKernel(this Contracts.Events.AppendedEvent @event) => new(
             @event.Metadata.ToKernel(),
             @event.Context.ToKernel(),
             JsonSerializer.Deserialize<ExpandoObject>(@event.Content, Globals.JsonSerializerOptions)!);

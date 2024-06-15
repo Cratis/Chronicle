@@ -1,11 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Specifications;
 using Moq;
 using Xunit;
 
-namespace Cratis.Specifications;
+namespace Cratis.Chronicle.Specifications;
 
 /// <summary>
 /// Holds extension methods for fluent "Should*" assertions related to enumerable of <see cref="AppendedEventForSpecifications"/>.

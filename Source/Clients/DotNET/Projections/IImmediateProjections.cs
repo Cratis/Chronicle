@@ -4,9 +4,9 @@
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Models;
+using Cratis.Chronicle.Models;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Defines a system that works with <see cref="IImmediateProjectionFor{TModel}"/>.

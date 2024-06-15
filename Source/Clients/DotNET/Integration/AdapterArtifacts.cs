@@ -3,7 +3,7 @@
 
 using AutoMapper;
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Represents an <see cref="IAdapterFor{TModel, TExternalModel}"/> and artifacts used with it.

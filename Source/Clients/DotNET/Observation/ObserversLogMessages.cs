@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events;
+using Cratis.Chronicle.Events;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Observation;
+namespace Cratis.Chronicle.Observation;
 
 internal static partial class ObserversLogMessages
 {

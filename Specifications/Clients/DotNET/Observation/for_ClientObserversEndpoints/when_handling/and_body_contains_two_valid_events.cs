@@ -3,9 +3,7 @@
 
 using System.Net;
 using System.Text.Json;
-using Cratis.Commands;
 using Cratis.Json;
-using Cratis.Specifications.Events;
 
 namespace Cratis.Observation.for_ClientObserversEndpoints.when_handling;
 

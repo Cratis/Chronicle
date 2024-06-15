@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Events;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Schemas;
 using Cratis.Models;
-using Cratis.Projections;
-using Cratis.Schemas;
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAdapterProjectionFactory"/>.

@@ -3,10 +3,6 @@
 
 using System.Dynamic;
 using System.Reactive.Subjects;
-using Cratis.Auditing;
-using Cratis.Changes;
-using Cratis.Identities;
-using Cratis.Properties;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionExtensions.given;
 

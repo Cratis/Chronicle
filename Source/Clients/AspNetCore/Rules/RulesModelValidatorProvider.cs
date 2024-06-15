@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Rules;
+using Cratis.Chronicle.Rules;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.AspNetCore.Rules;
+namespace Cratis.Chronicle.AspNetCore.Rules;
 
 /// <summary>
 /// Represents a <see cref="IModelValidatorProvider"/> for business rules.

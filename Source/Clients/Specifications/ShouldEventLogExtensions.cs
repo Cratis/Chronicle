@@ -3,7 +3,7 @@
 
 using Moq;
 
-namespace Cratis.Specifications;
+namespace Cratis.Chronicle.Specifications;
 
 /// <summary>
 /// Holds extension methods for fluent "Should*" assertions related to <see cref="IHaveEventLog"/>.

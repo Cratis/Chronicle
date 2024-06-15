@@ -3,18 +3,17 @@
 
 using System.Collections.Immutable;
 using Cratis.Applications.Orleans.StateMachines;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Events;
-using Cratis.Jobs;
 using Cratis.Metrics;
-using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Runtime;

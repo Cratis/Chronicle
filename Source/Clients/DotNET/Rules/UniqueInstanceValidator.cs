@@ -5,7 +5,7 @@ using System.Collections;
 using FluentValidation;
 using FluentValidation.Validators;
 
-namespace Cratis.Rules;
+namespace Cratis.Chronicle.Rules;
 
 /// <summary>
 /// Represents a <see cref="PropertyValidator{T, TProperty}"/> for checking for uniqueness.

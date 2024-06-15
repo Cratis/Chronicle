@@ -3,13 +3,13 @@
 
 using System.Collections;
 using System.Dynamic;
+using Cratis.Chronicle.Objects;
+using Cratis.Chronicle.Properties;
 using Cratis.Concepts;
-using Cratis.Objects;
-using Cratis.Properties;
 using Cratis.Reflection;
 using Cratis.Strings;
 
-namespace Cratis.Dynamic;
+namespace Cratis.Chronicle.Dynamic;
 
 /// <summary>
 /// Extension methods for working with <see cref="ExpandoObject"/>.

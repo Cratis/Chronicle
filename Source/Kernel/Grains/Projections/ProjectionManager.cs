@@ -3,9 +3,8 @@
 
 using Cratis.Chronicle.Grains.Projections.Pipelines;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.Definitions;
 using Cratis.Chronicle.Projections.Pipelines;
-using Cratis.Projections;
-using Cratis.Projections.Definitions;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 

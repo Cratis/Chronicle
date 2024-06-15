@@ -7,7 +7,6 @@ using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Orleans.StateMachines;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.EventSequences;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 

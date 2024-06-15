@@ -3,7 +3,7 @@
 
 using AutoMapper;
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Defines import operations that can be performed.

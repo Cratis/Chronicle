@@ -4,14 +4,13 @@
 using System.Linq.Expressions;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Events;
-using Cratis.Projections.Expressions;
-using Cratis.Properties;
-using Cratis.Reflection;
-using Cratis.Schemas;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Projections.Expressions;
+using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChildrenBuilder{TModel, TChildModel}"/>.

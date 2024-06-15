@@ -1,8 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Projections;
-using Cratis.Properties;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.Expressions.Keys;
 
@@ -15,6 +14,7 @@ namespace Cratis.Chronicle.Projections.Expressions.Keys;
 /// <param name="projectionId">Identifier of the projection.</param>
 /// <param name="identifiedByProperty">The property used as identifier for the key.</param>
 /// <param name="expression">Key/value expression.</param>
-public class MissingCompositeExpressions(ProjectionId projectionId, PropertyPath identifiedByProperty, string expression) : Exception($"There are no property expressions in '{expression}' in projection '{projectionId}' for property '{identifiedByProperty}' is invalid. Expecting a collection key/value of property=expression separated by ,")
+public class MissingCompositeExpressions(ProjectionId projectionId, PropertyPath identifiedByProperty, string expression)
+    : Exception($"There are no property expressions in '{expression}' in projection '{projectionId}' for property '{identifiedByProperty}' is invalid. Expecting a collection key/value of property=expression separated by ,")
 {
 }

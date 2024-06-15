@@ -1,15 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Auditing;
-using Cratis.Compliance;
-using Cratis.Connections;
-using Cratis.Schemas;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Schemas;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
-namespace Cratis;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICratisClient"/>.

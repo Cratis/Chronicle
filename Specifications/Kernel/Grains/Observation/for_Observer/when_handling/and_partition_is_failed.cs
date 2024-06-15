@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Observation;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;

@@ -4,13 +4,13 @@
 using System.Collections;
 using System.Dynamic;
 using System.Reflection;
+using Cratis.Chronicle.Properties;
 using Cratis.Collections;
 using Cratis.Concepts;
 using Cratis.DependencyInjection;
-using Cratis.Properties;
 using Cratis.Reflection;
 
-namespace Cratis.Changes;
+namespace Cratis.Chronicle.Changes;
 
 /// <summary>
 /// Represents an implementation of <see cref="IObjectComparer"/>.

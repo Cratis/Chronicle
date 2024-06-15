@@ -4,7 +4,6 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Storage.Compliance;
-using Cratis.Compliance;
 
 namespace Cratis.Chronicle.Compliance.GDPR;
 

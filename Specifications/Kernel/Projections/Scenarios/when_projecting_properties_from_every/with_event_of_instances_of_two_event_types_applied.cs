@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Projections.Scenarios.Projections;
-using Cratis.Specifications.Integration;
 
 namespace Cratis.Chronicle.Projections.Scenarios.when_projecting_properties_from_every;
 

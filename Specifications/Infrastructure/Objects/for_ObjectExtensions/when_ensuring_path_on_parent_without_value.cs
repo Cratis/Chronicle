@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
-
 namespace Cratis.Objects.for_ObjectExtensions;
 
 public class when_ensuring_path_on_parent_without_value : Specification

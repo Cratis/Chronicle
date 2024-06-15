@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Identities;
+namespace Cratis.Chronicle.Identities;
 
 /// <summary>
 /// Extension methods for converting to and from <see cref="Identity"/>.

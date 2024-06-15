@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
-using Cratis.Events;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Storage.Changes;
 

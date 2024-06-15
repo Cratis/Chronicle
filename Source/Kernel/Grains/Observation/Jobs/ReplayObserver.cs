@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
-using Cratis.Events;
-using Cratis.Jobs;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 

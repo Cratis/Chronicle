@@ -3,12 +3,11 @@
 
 using System.Globalization;
 using System.Linq.Expressions;
-using Cratis.Events;
-using Cratis.Projections.Expressions;
-using Cratis.Properties;
-using Cratis.Reflection;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Projections.Expressions;
+using Cratis.Chronicle.Properties;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 #pragma warning disable SA1402 // File may only contain a single type
 

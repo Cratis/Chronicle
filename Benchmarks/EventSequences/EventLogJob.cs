@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Chronicle.Storage.MongoDB;
-using Cratis.EventSequences;
 using Microsoft.Extensions.DependencyInjection;
 using IEventSequence = Cratis.Chronicle.Grains.EventSequences.IEventSequence;
 

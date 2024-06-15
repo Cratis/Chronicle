@@ -3,10 +3,10 @@
 
 using System.Linq.Expressions;
 using System.Text;
-using Cratis.Properties;
+using Cratis.Chronicle.Properties;
 using Cratis.Reflection;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICompositeKeyBuilder{TKeyType, TEvent}"/>.

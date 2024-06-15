@@ -4,7 +4,6 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
-using Cratis.Jobs;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.when_leaving;
 

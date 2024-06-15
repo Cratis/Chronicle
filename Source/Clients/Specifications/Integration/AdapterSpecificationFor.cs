@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Integration;
-using Cratis.Specifications;
+using Cratis.Chronicle.Integration;
 
-namespace Cratis.Specifications.Integration;
+namespace Cratis.Chronicle.Specifications.Integration;
 
 /// <summary>
 /// Represents a specialized <see cref="Specification"/> for specifying behaviors of adapters.

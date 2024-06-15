@@ -2,10 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Benchmark.Model;
-using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.Storage.MongoDB;
-using Cratis.EventSequences;
-using Cratis.Observation;
 
 namespace Benchmarks.Projections;
 

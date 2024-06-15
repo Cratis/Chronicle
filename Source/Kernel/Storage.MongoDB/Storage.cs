@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
-using Cratis.Projections.Json;
+using Cratis.Chronicle.Projections.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.MongoDB;

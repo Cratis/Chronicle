@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Identities;
+using Cratis.Chronicle.Identities;
 using Microsoft.AspNetCore.Http;
 
-namespace Cratis.AspNetCore.Identities;
+namespace Cratis.Chronicle.AspNetCore.Identities;
 
 /// <summary>
 /// Represents an implementation of <see cref="IIdentityProvider"/> for ASP.NET.

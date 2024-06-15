@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Recommendations;
+namespace Cratis.Chronicle.Recommendations;
 
 /// <summary>
 /// Exception that gets thrown when an unknown <see cref="RecommendationType"/> is encountered.

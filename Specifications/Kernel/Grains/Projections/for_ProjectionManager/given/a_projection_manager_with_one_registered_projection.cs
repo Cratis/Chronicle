@@ -3,8 +3,6 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Projections.Pipelines;
-using Cratis.Projections.Definitions;
-using Cratis.Properties;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Grains.Projections.for_ProjectionManager.given;

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Projections.Definitions;
 using NJsonSchema;
 
 namespace Cratis.Projections.for_Projections;

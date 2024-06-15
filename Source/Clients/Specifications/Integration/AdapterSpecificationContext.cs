@@ -1,13 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Changes;
-using Cratis.EventSequences;
-using Cratis.Integration;
-using Cratis.Specifications;
-using Cratis.Specifications.Auditing;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Integration;
+using Cratis.Chronicle.Specifications.Auditing;
 
-namespace Cratis.Specifications.Integration;
+namespace Cratis.Chronicle.Specifications.Integration;
 
 /// <summary>
 /// Represents the test context for an <see cref="IImporter"/>.

@@ -3,10 +3,10 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
-using Cratis.Events;
+using Cratis.Chronicle.Events;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.Reducers;
+namespace Cratis.Chronicle.Reducers;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReducerInvoker"/>.
@@ -69,11 +69,11 @@ public class ReducerInvoker : IReducerInvoker
 
                     if (parameters.Length == 3)
                     {
-                        returnValue = method.Invoke(actualReducer, new object[] { eventAndContext.Event, initialReadModelContent!, eventAndContext.Context })!;
+                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, initialReadModelContent!, eventAndContext.Context])!;
                     }
                     else
                     {
-                        returnValue = method.Invoke(actualReducer, new object[] { eventAndContext.Event, initialReadModelContent! })!;
+                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, initialReadModelContent!])!;
                     }
 
                     if (returnValue.GetType() == ReadModelType)
@@ -82,7 +82,7 @@ public class ReducerInvoker : IReducerInvoker
                     }
                     else
                     {
-                        initialReadModelContent = _getResultMethod.GetGenericMethodDefinition().MakeGenericMethod(ReadModelType).Invoke(this, new[] { returnValue });
+                        initialReadModelContent = _getResultMethod.GetGenericMethodDefinition().MakeGenericMethod(ReadModelType).Invoke(this, [returnValue]);
                     }
 
                     lastSuccessfulObservedEventAndContext = eventAndContext;
@@ -103,7 +103,7 @@ public class ReducerInvoker : IReducerInvoker
             new InternalReduceResult(
                 initialReadModelContent,
                 lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
-                Enumerable.Empty<string>(),
+                [],
                 string.Empty));
     }
 

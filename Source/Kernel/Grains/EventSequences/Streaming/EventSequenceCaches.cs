@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.Chronicle.EventSequences;
 using Cratis.DependencyInjection;
-using Cratis.EventSequences;
 
 namespace Cratis.Chronicle.Grains.EventSequences.Streaming;
 

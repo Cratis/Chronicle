@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Dynamic;
 
 namespace Cratis.Properties.for_PropertyPath.when_checking_if_has_value_from_expando_object;
 

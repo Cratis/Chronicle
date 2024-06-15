@@ -3,9 +3,6 @@
 
 using System.Reactive.Subjects;
 using Cratis.Applications.Queries;
-using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Recommendations;
-using Cratis.Recommendations;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.API.Recommendations;

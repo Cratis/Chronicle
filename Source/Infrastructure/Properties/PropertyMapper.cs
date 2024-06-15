@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Properties;
+namespace Cratis.Chronicle.Properties;
 
 /// <summary>
 /// Represents the delegate of an operation that maps data from a source into a target object.

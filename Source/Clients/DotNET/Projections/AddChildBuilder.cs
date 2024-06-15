@@ -2,11 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Cratis.Events;
-using Cratis.Properties;
-using Cratis.Reflection;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Properties;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAddChildBuilder{TChildModel, TEvent}"/>.

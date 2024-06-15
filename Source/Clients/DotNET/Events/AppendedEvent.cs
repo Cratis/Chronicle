@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Events;
+namespace Cratis.Chronicle.Events;
 
 /// <summary>
 /// Represents an event that has been appended to an event log.

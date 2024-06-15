@@ -4,7 +4,7 @@
 using System.Reflection;
 using Cratis.Types;
 
-namespace Cratis.Compliance;
+namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
 /// Represents an implementation of <see cref="IComplianceMetadataResolver"/>.

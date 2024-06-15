@@ -3,7 +3,7 @@
 
 using AutoMapper;
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Defines a factory for creating <see cref="IMapper"/> instances.

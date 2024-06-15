@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.EventSequences;
-using Cratis.Observation;
-using Cratis.Observation.Reducers;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;

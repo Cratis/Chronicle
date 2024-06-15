@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Cratis.Projections;
+using Cratis.Chronicle.Projections;
 using FluentValidation;
 using FluentValidation.Results;
 
-namespace Cratis.Rules;
+namespace Cratis.Chronicle.Rules;
 
 /// <summary>
 /// Represents a <see cref="AbstractValidator{T}"/> for business rules related to a command.

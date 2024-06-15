@@ -3,7 +3,7 @@
 
 using System.Linq.Expressions;
 
-namespace Cratis.Properties;
+namespace Cratis.Chronicle.Properties;
 
 /// <summary>
 /// Extension methods for <see cref="Expression"/>.

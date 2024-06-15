@@ -4,13 +4,12 @@
 using System.Collections.Immutable;
 using System.Dynamic;
 using System.Text.Json;
-using Cratis.Auditing;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
-using Cratis.Events;
-using Cratis.EventSequences;
-using Cratis.Identities;
 using Cratis.Strings;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;

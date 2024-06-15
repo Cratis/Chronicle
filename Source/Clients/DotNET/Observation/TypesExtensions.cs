@@ -3,7 +3,7 @@
 
 using Cratis.Reflection;
 
-namespace Cratis.Observation;
+namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Extension methods for working with observers and type discovery.

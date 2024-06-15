@@ -6,11 +6,11 @@ using System.Dynamic;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using Cratis.Objects;
+using Cratis.Chronicle.Objects;
 using Cratis.Reflection;
 using Cratis.Strings;
 
-namespace Cratis.Properties;
+namespace Cratis.Chronicle.Properties;
 
 /// <summary>
 /// Represents an encapsulation of a property in the system - used for accessing properties on objects.

@@ -3,8 +3,8 @@
 
 using System.Collections;
 using System.Dynamic;
+using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
-using Cratis.Schemas;
 using MongoDB.Bson;
 using NJsonSchema;
 

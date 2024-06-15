@@ -3,7 +3,7 @@
 
 using System.Collections;
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Represents the translated events from <see cref="AdapterFor{TModel, TExternalModel}"/>.

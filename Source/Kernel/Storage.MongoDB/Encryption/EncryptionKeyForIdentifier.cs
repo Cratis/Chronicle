@@ -3,6 +3,7 @@
 
 #pragma warning disable CA1819 // Allow arrays for properties
 
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Compliance.MongoDB;

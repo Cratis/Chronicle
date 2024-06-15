@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage.Changes;
-using Cratis.Events;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 

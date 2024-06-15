@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Rules;
-
 namespace Cratis.AspNetCore.Rules.for_RulesModelValidatorProvider;
 
 public class SecondRule : IRule

@@ -5,7 +5,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Keys;
-using Cratis.Jobs;
 using Orleans.Core;
 using Orleans.TestKit;
 using IStorage = Cratis.Chronicle.Storage.IStorage;

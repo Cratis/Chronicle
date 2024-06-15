@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Aggregates;
-using Cratis.Events;
-using Cratis.Specifications.Auditing;
-using Cratis.Specifications.Events;
+using Cratis.Chronicle.Aggregates;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Specifications.Auditing;
+using Cratis.Chronicle.Specifications.Events;
 
-namespace Cratis.Specifications.Aggregates;
+namespace Cratis.Chronicle.Specifications.Aggregates;
 
 /// <summary>
 /// Extension methods for testing with <see cref="AggregateRoot"/>.

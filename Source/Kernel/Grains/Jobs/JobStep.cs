@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Grains.Workers;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
-using Cratis.Jobs;
 using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Jobs;

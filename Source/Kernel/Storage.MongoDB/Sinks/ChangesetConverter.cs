@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
-using Cratis.Events;
-using Cratis.Models;
-using Cratis.Properties;
+using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
-using Cratis.Schemas;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;

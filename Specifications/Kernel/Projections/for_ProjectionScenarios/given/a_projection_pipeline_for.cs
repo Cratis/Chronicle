@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Changes;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
@@ -12,12 +11,8 @@ using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sinks.InMemory;
-using Cratis.Compliance;
-using Cratis.EventSequences;
-using Cratis.Json;
 using Cratis.Json;
 using Cratis.Models;
-using Cratis.Schemas;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Events.Projections.for_ProjectionScenarios.given;

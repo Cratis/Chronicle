@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts.Projections;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Defines a system that holds all <see cref="ProjectionDefinition">projection definitions</see> defined through <see cref="IProjectionBuilderFor{T}"/>.

@@ -3,12 +3,12 @@
 
 using System.Dynamic;
 using System.Text.Json;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.Clients;
-using Cratis.Events;
-using Cratis.EventSequences;
-using Cratis.Json;
-using Cratis.Observation;
-using Cratis.Observation.Reducers;
+using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;

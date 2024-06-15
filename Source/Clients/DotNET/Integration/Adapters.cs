@@ -5,9 +5,8 @@ using System.Collections.Immutable;
 using System.Reflection;
 using AutoMapper;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.DependencyInjection;
 
-namespace Cratis.Integration;
+namespace Cratis.Chronicle.Integration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAdapters"/>.

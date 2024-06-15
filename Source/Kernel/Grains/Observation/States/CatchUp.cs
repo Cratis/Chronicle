@@ -4,10 +4,10 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
+using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Jobs;
-using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.States;

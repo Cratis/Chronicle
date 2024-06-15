@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Changes;
-
 namespace Cratis.Integration.for_ImportBuilderExtensions.given;
 
 public class changes_on_two_properties : no_changes

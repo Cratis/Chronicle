@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
-using Cratis.Connections;
+using Cratis.Chronicle.Connections;
 using Microsoft.Extensions.Logging;
 using Orleans.Utilities;
 

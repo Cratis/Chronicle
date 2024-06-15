@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.Recommendations;
-using Cratis.Recommendations;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Recommendations;

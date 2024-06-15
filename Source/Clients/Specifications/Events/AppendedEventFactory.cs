@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Dynamic;
-using Cratis.Events;
+using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Events;
 
-namespace Cratis.Specifications.Events;
+namespace Cratis.Chronicle.Specifications.Events;
 
 /// <summary>
 /// Represents a factory for creating <see cref="AppendedEvent"/> instances.

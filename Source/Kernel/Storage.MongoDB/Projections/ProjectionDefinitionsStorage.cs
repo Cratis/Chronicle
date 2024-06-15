@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Projections.Json;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.MongoDB;
-using Cratis.Projections.Definitions;
-using Cratis.Projections.Json;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using ProjectionDefinition = Cratis.Chronicle.Projections.Definitions.ProjectionDefinition;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 

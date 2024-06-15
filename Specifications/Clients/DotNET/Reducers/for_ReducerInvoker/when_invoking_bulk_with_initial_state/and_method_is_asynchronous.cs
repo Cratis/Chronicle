@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Auditing;
-using Cratis.Identities;
-
 namespace Cratis.Reducers.for_ReducerInvoker.when_invoking_bulk_with_initial_state;
 
 public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReducer>

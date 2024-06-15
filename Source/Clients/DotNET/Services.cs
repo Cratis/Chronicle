@@ -5,7 +5,7 @@ using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Observation;
 
-namespace Cratis;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Represents an implementation of <see cref="IServices"/>.

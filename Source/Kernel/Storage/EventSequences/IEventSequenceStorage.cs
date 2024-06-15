@@ -3,9 +3,9 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
-using Cratis.Auditing;
-using Cratis.Events;
-using Cratis.Identities;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.Storage.EventSequences;
 

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Infrastructure</AssemblyName>
-        <RootNamespace>Cratis</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Infrastructure</AssemblyName>
+        <RootNamespace>Cratis.Chronicle</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

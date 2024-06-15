@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Jobs;
-using Cratis.Events;
-using Cratis.EventSequences;
-using Cratis.Jobs;
-using Cratis.Observation;
 using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;

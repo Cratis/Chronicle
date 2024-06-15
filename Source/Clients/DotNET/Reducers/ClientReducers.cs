@@ -3,10 +3,10 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Events;
+using Cratis.Chronicle.Events;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Reducers;
+namespace Cratis.Chronicle.Reducers;
 
 /// <summary>
 /// Represents the endpoint called for receiving events from the kernel.
@@ -39,6 +39,6 @@ public class ClientReducers(
         }
 
         logger.UnknownReducer(reducerId);
-        return new(initialAsJson, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
+        return new(initialAsJson, EventSequenceNumber.Unavailable, [], string.Empty);
     }
 }

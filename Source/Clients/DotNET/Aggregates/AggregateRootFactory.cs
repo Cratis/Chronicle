@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Auditing;
-using Cratis.Events;
-using Cratis.EventSequences;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.Aggregates;
+namespace Cratis.Chronicle.Aggregates;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAggregateRootFactory"/>.

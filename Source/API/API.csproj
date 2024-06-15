@@ -2,8 +2,8 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFramework>net8.0</TargetFramework>
-        <AssemblyName>Cratis.Api</AssemblyName>
-        <RootNamespace>Cratis.Api</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Api</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Api</RootNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <ServerGarbageCollection>false</ServerGarbageCollection>

@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Events;
-using Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.States;

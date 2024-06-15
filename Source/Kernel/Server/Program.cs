@@ -39,7 +39,7 @@ public static class Program
             .ConfigureCpuBoundWorkers()
 
             // TODO: Which extension method do we actually want to call here?
-            .UseMongoDB(mongoDBArtifacts: null)
+            .UseMongoDB()
             .ConfigureServices(services => services
                 .AddSingleton(Globals.JsonSerializerOptions)
                 .AddBindingsByConvention()

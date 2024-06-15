@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Contracts.Projections;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Defines the builder for building from expressions.

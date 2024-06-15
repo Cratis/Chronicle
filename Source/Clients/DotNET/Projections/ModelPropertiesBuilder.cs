@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Cratis.Events;
-using Cratis.Projections.Expressions;
-using Cratis.Properties;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Projections.Expressions;
+using Cratis.Chronicle.Properties;
 using Cratis.Reflection;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IModelPropertiesBuilder{TModel, TEvent, TBuilder}"/>.

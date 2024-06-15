@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Keys;
+namespace Cratis.Chronicle.Keys;
 
 /// <summary>
 /// Delegate that gets called when building a key for a specific event.

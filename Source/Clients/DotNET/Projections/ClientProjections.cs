@@ -3,11 +3,10 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.DependencyInjection;
-using Cratis.Integration;
-using Cratis.Rules;
+using Cratis.Chronicle.Integration;
+using Cratis.Chronicle.Rules;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientProjections"/>.

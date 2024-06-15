@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Cratis.Compliance;
+namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
 /// Extension methods for providing compliance details.

@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Dynamic;
-using Cratis.Objects;
-using Cratis.Properties;
+using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Objects;
+using Cratis.Chronicle.Properties;
 
-namespace Cratis.Changes;
+namespace Cratis.Chronicle.Changes;
 
 /// <summary>
 /// Extension methods for working with collections.

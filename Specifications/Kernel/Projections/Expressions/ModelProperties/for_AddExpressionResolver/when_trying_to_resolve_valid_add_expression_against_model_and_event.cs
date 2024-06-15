@@ -3,8 +3,6 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
-using Cratis.EventSequences;
-using Cratis.Properties;
 using Cratis.Strings;
 using NJsonSchema;
 

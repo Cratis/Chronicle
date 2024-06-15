@@ -3,10 +3,10 @@
 
 using System.Collections;
 using System.Dynamic;
-using Cratis.Events;
-using Cratis.Properties;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
-using Cratis.Schemas;
 using Cratis.Types;
 using NJsonSchema;
 

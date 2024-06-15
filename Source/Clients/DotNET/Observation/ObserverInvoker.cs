@@ -3,11 +3,11 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
-using Cratis.Conventions;
-using Cratis.Events;
+using Cratis.Chronicle.Conventions;
+using Cratis.Chronicle.Events;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Observation;
+namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IObserverInvoker"/>.
@@ -68,11 +68,11 @@ public class ObserverInvoker : IObserverInvoker
 
                 if (parameters.Length == 2)
                 {
-                    returnValue = (Task)method.Invoke(actualObserver, new object[] { content, eventContext })!;
+                    returnValue = (Task)method.Invoke(actualObserver, [content, eventContext])!;
                 }
                 else
                 {
-                    returnValue = (Task)method.Invoke(actualObserver, new object[] { content })!;
+                    returnValue = (Task)method.Invoke(actualObserver, [content])!;
                 }
 
                 if (returnValue is not null) await returnValue;

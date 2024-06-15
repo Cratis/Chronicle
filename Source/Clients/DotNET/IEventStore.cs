@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events;
-using Cratis.EventSequences;
-using Cratis.Observation;
-using Cratis.Projections;
-using Cratis.Reducers;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Reducers;
 
-namespace Cratis;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Defines the event store API surface.

@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events;
+using Cratis.Chronicle.Events;
 
-namespace Cratis.Aggregates;
+namespace Cratis.Chronicle.Aggregates;
 
 /// <summary>
 /// Represents a system that is capable of creating instances of <see cref="IAggregateRootEventHandlersFactory"/>.

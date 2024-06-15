@@ -3,7 +3,7 @@
 
 using NJsonSchema;
 
-namespace Cratis.Models;
+namespace Cratis.Chronicle.Models;
 
 /// <summary>
 /// Represents the model used by a projection to project to.

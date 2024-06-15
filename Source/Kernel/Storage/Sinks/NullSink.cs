@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
-using Cratis.Events;
-using Cratis.Sinks;
+using Cratis.Chronicle.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sinks;
 

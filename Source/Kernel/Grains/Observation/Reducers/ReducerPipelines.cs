@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Changes;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Observation.Reducers;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Models;
-using Cratis.Observation.Reducers;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers;

@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.Compliance;
 using Cratis.Collections;
-using Cratis.Compliance;
 using Cratis.Strings;
 using NJsonSchema;
 using NJsonSchema.Generation;
 
-namespace Cratis.Schemas;
+namespace Cratis.Chronicle.Schemas;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISchemaProcessor"/> for handling compliance metadata.

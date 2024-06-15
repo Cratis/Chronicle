@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Objects;
-using Cratis.Properties;
+using Cratis.Chronicle.Objects;
+using Cratis.Chronicle.Properties;
 
-namespace Cratis.Changes;
+namespace Cratis.Chronicle.Changes;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChangeset{TSource, TTarget}"/>.

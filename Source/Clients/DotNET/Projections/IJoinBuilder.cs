@@ -4,7 +4,7 @@
 using System.Linq.Expressions;
 using Cratis.Chronicle.Contracts.Projections;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Defines the builder for building join expressions for relationships.

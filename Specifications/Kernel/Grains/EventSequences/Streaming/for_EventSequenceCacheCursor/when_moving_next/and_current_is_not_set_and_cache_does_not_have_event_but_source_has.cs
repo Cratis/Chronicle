@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Orleans.Streams;
-
 namespace Cratis.Chronicle.Grains.EventSequences.Streaming.for_EventSequenceQueueCacheCursor.when_moving_next;
 
 public class and_current_is_not_set_and_cache_does_not_have_event_but_source_has : given.a_cursor_and_an_empty_cache

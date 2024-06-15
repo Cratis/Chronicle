@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Observation;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation;

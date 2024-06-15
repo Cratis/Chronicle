@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Connections;
+using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Cratis.DependencyInjection;
-using Cratis.Events;
-using Cratis.Observation;
 
 namespace Cratis.Chronicle.Grains.Observation.Clients;
 

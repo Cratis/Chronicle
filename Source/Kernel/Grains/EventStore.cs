@@ -5,8 +5,8 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Cratis.Chronicle.Grains.Observation.Reducers;
 using Cratis.Chronicle.Grains.Projections.Definitions;
+using Cratis.Chronicle.Projections.Json;
 using Cratis.Chronicle.Storage;
-using Cratis.Projections.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

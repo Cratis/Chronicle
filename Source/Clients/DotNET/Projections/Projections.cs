@@ -5,12 +5,12 @@ using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Events;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Schemas;
 using Cratis.Models;
-using Cratis.Schemas;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjections"/>.
@@ -68,15 +68,16 @@ public class Projections : IProjections
                     var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
                     var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
                     var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
-                    return (method.Invoke(null, new object[]
-                    {
-                        _,
-                        modelNameResolver,
-                        eventTypes,
-                        schemaGenerator,
-                        serviceProvider,
-                        jsonSerializerOptions
-                    }) as ProjectionDefinition)!;
+                    return (method.Invoke(
+                        null,
+                        [
+                            _,
+                            modelNameResolver,
+                            eventTypes,
+                            schemaGenerator,
+                            serviceProvider,
+                            jsonSerializerOptions
+                        ]) as ProjectionDefinition)!;
                 }).ToArray();
 
     static class ProjectionDefinitionCreator<TModel>

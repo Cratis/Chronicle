@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Auditing;
-using Cratis.Events;
-using Cratis.EventSequences;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Aggregates;
+namespace Cratis.Chronicle.Aggregates;
 
 #pragma warning disable SA1402 // File may only contain a single type
 
@@ -88,12 +88,12 @@ public class AggregateRoot : IAggregateRoot
         typeof(T).ValidateEventType();
         _uncommittedEvents.Add(@event);
 
-        MutateState(StateProvider.Update(GetState(), new[] { @event }).GetAwaiter().GetResult());
+        MutateState(StateProvider.Update(GetState(), [@event]).GetAwaiter().GetResult());
 
         if (!IsStateful)
         {
             // TODO: We should have the correct event store and namespace, this should be injected into the aggregate root.
-            EventHandlers.Handle(this, new[] { new EventAndContext(@event, EventContext.From(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSourceId, EventSequenceNumber.Unavailable)) }).GetAwaiter().GetResult();
+            EventHandlers.Handle(this, [new EventAndContext(@event, EventContext.From(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSourceId, EventSequenceNumber.Unavailable))]).GetAwaiter().GetResult();
         }
     }
 

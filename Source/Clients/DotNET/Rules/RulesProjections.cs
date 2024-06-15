@@ -5,13 +5,12 @@ using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.DependencyInjection;
-using Cratis.Events;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Schemas;
 using Cratis.Models;
-using Cratis.Projections;
-using Cratis.Schemas;
 
-namespace Cratis.Rules;
+namespace Cratis.Chronicle.Rules;
 
 /// <summary>
 /// Represents an implementation of <see cref="IRulesProjections"/>.
@@ -87,7 +86,7 @@ public class RulesProjections : IRulesProjections
         {
             var parameters = defineStateMethod.GetParameters();
             ThrowIfInvalidSignatureForDefineState(ruleType, parameters);
-            defineStateMethod.Invoke(rule, new object[] { projectionBuilder });
+            defineStateMethod.Invoke(rule, [projectionBuilder]);
         }
 
         var definition = projectionBuilder.Build();

@@ -2,18 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Auditing;
-using Cratis.Events;
-using Cratis.EventSequences;
-using Cratis.Identities;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Schemas;
 using Cratis.Models;
-using Cratis.Observation;
-using Cratis.Projections;
-using Cratis.Reducers;
-using Cratis.Schemas;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStore"/>.

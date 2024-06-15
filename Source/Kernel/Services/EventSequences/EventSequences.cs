@@ -3,11 +3,11 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Auditing;
+using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.EventSequences;
-using Cratis.Events;
-using Cratis.EventSequences;
-using Cratis.Identities;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.Services.EventSequences;
 

@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Specifications.Integration;
-
 namespace Cratis.Chronicle.Projections.Scenarios.when_projecting_from_event_that_adds_child_from_object;
 
 public class with_identified_by_specified_and_two_events_with_children_with_same_identifier : ProjectionSpecificationFor<ModelWithChildren>

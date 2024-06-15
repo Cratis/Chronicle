@@ -3,10 +3,10 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
-using Cratis.Conventions;
-using Cratis.Events;
+using Cratis.Chronicle.Conventions;
+using Cratis.Chronicle.Events;
 
-namespace Cratis.Aggregates;
+namespace Cratis.Chronicle.Aggregates;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAggregateRootEventHandlers"/>.
@@ -49,11 +49,11 @@ public class AggregateRootEventHandlers : IAggregateRootEventHandlers
 
                 if (parameters.Length == 2)
                 {
-                    returnValue = (Task)method.Invoke(target, new object[] { eventAndContext.Event, eventAndContext.Context })!;
+                    returnValue = (Task)method.Invoke(target, [eventAndContext.Event, eventAndContext.Context])!;
                 }
                 else
                 {
-                    returnValue = (Task)method.Invoke(target, new object[] { eventAndContext.Event })!;
+                    returnValue = (Task)method.Invoke(target, [eventAndContext.Event])!;
                 }
 
                 if (returnValue is not null) await returnValue;

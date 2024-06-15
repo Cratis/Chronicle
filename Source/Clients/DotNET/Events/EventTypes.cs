@@ -3,9 +3,9 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts.Events;
-using Cratis.Schemas;
+using Cratis.Chronicle.Schemas;
 
-namespace Cratis.Events;
+namespace Cratis.Chronicle.Events;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypes"/>.

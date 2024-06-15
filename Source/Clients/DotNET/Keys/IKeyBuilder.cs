@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Cratis.Events;
-using Cratis.Projections;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Projections;
 
-namespace Cratis.Keys;
+namespace Cratis.Chronicle.Keys;
 
 /// <summary>
 /// Defines a key builder for a specific event.
