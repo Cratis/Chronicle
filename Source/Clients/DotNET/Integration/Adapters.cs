@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using AutoMapper;
+using Cratis.DependencyInjection;
 using Cratis.Kernel.Contracts.Projections;
 
 namespace Cratis.Integration;

@@ -52,5 +52,5 @@ public class ObserverInformation
     /// Gets or sets the running state of the observer.
     /// </summary>
     [ProtoMember(7)]
-    public ObserverRunningState RunningState { get; set; }
+    public ObserverRunningState RunningState { get; set; }
 }

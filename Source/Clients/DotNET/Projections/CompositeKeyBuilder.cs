@@ -4,6 +4,7 @@
 using System.Linq.Expressions;
 using System.Text;
 using Cratis.Reflection;
+using Cratis.Properties;
 
 namespace Cratis.Projections;
 

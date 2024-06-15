@@ -3,7 +3,7 @@
 
 using System.Linq.Expressions;
 using Cratis.Kernel.Contracts.Projections;
-using Cratis.Reflection;
+using Cratis.Properties;
 
 namespace Cratis.Projections;
 

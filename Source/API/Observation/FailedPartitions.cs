@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Applications.Queries;
 using Cratis.Kernel.Observation;
 using Cratis.Observation;
-using Cratis.Queries;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.API.Observation;

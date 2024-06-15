@@ -52,7 +52,7 @@ public class EventSequenceQueueCacheCursor(
                 eventSequenceId.Value.ToString());
 
             return new EventSequenceBatchContainer(
-                new[] { @event },
+                [@event],
                 streamId,
                 new Dictionary<string, object>());
         }

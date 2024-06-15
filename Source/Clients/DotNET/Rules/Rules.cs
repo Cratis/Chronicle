@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using System.Text.Json;
+using Cratis.DependencyInjection;
 using Cratis.Models;
 using Cratis.Projections;
 using Cratis.Strings;

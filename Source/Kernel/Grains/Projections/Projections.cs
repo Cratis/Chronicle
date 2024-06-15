@@ -1,13 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.EventSequences;
 using Cratis.Kernel.Configuration;
-using Cratis.Kernel.Grains.Observation.States;
-using Cratis.Kernel.Grains.Recommendations;
-using Cratis.Kernel.Observation.Replaying;
-using Cratis.Observation;
-using Cratis.Projections;
 using Cratis.Projections.Definitions;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
@@ -74,7 +68,6 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
         //         }
         //     }
         // }
-
         await Task.CompletedTask;
     }
 

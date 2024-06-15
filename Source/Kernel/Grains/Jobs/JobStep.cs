@@ -193,7 +193,7 @@ public abstract class JobStep<TRequest, TResult, TState> : CpuBoundWorker<TReque
         {
             Status = status,
             Occurred = DateTimeOffset.UtcNow,
-            ExceptionMessages = exceptionMessages ?? Enumerable.Empty<string>(),
+            ExceptionMessages = exceptionMessages ?? [],
             ExceptionStackTrace = exceptionStackTrace ?? string.Empty
         });
         _state.State.Status = status;

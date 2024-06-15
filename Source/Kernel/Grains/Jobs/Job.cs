@@ -270,7 +270,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             Status = status,
             Occurred = DateTimeOffset.UtcNow,
             ExceptionStackTrace = exception?.StackTrace ?? string.Empty,
-            ExceptionMessages = exception?.GetAllMessages() ?? Enumerable.Empty<string>()
+            ExceptionMessages = exception?.GetAllMessages() ?? []
         });
 
         return Task.CompletedTask;

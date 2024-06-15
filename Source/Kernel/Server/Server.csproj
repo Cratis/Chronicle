@@ -17,6 +17,7 @@
         <PackageReference Include="Cratis.Applications.Orleans.MongoDB" />
         <PackageReference Include="Cratis.Applications.Serilog" />
         <PackageReference Include="Microsoft.Orleans.Server" />
+        <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
         <PackageReference Include="OrleansDashboard" />
         <PackageReference Include="OpenTelemetry" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />

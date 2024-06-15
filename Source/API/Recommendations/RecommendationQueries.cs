@@ -1,9 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
+using Cratis.Applications.Queries;
 using Cratis.Kernel.Storage;
 using Cratis.Kernel.Storage.Recommendations;
-using Cratis.Queries;
 using Cratis.Recommendations;
 using Microsoft.AspNetCore.Mvc;
 
@@ -45,9 +46,10 @@ public class RecommendationQueries(IStorage storage) : ControllerBase
         [FromRoute] EventStoreName eventStore,
         [FromRoute] EventStoreNamespaceName @namespace)
     {
-        var clientObservable = new ClientObservable<IEnumerable<RecommendationInformation>>();
         var recommendations = storage.GetEventStore(eventStore).GetNamespace(@namespace).Recommendations;
         var observable = recommendations.ObserveRecommendations();
+        new Subject<IEnumerable<RecommendationInformation>>();
+        var clientObservable = new ClientObservable<IEnumerable<RecommendationInformation>>(observable, new Microsoft.AspNetCore.Mvc.JsonOptions());
         var subscription = observable.Subscribe(recommendations => clientObservable.OnNext(Convert(recommendations)));
         clientObservable.ClientDisconnected = () =>
         {

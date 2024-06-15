@@ -13,12 +13,12 @@
     <ItemGroup>
         <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Kernel/Shared/Shared.csproj" />
-        <ProjectReference Include="../Kernel/Grains.Interfaces/Grains.Interfaces.csproj" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="serilog" />
       <PackageReference Include="Swashbuckle.AspNetCore" />
       <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
+      <PackageReference Include="Cratis.Applications" />
     </ItemGroup>
 </Project>

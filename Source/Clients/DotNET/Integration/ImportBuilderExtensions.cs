@@ -7,7 +7,6 @@ using System.Reflection;
 using AutoMapper;
 using Cratis.Changes;
 using Cratis.Properties;
-using Cratis.Reflection;
 
 namespace Cratis.Integration;
 

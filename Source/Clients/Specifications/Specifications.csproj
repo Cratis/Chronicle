@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Specifications</AssemblyName>
+        <AssemblyName>Cratis.Testing</AssemblyName>
         <RootNamespace>Cratis.Specifications</RootNamespace>
         <IsTestProject>false</IsTestProject>
 
@@ -16,6 +16,5 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Clients/DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../../Kernel/Projections/Projections.csproj"/>
     </ItemGroup>
 </Project>
