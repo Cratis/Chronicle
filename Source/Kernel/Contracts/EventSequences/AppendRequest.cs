@@ -61,7 +61,7 @@ public class AppendRequest
     /// Gets or sets the caused by.
     /// </summary>
     [ProtoMember(8)]
-    public Identity Identity { get; set; }
+    public Identity CausedBy { get; set; }
 
     /// <summary>
     /// Gets or sets the valid from.

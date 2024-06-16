@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.Reducers.for_ReducerInvoker.when_invoking_bulk_with_no_initial_state;

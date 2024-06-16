@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+
 namespace Cratis.Chronicle.Integration.for_ImportOperations;
 
 public class when_applying_external_model_with_no_changes : given.no_changes

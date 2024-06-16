@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Aggregates.for_AggregateRootStateFactory.given;
@@ -16,7 +17,7 @@ public class an_aggregate_root_factory : Specification
     protected Mock<IAggregateRootStateProvider> state_provider;
     protected Mock<ICausationManager> causation_manager;
     protected Mock<IEventSequence> event_sequence;
-    protected Mock<IEventSequences> event_sequences;
+    protected Mock<IEventStore> event_store;
     protected Mock<IEventSerializer> event_serializer;
     protected Mock<IServiceProvider> service_provider;
     protected AggregateRootFactory factory;
@@ -57,8 +58,8 @@ public class an_aggregate_root_factory : Specification
             .Setup(_ => _.GetForEventSourceIdAndEventTypes(IsAny<EventSourceId>(), IsAny<IEnumerable<EventType>>()))
             .ReturnsAsync(appended_events.ToImmutableList());
 
-        event_sequences = new();
-        event_sequences.Setup(_ => _.GetEventSequence(IsAny<EventSequenceId>())).Returns(event_sequence.Object);
+        event_store = new();
+        event_store.Setup(_ => _.GetEventSequence(IsAny<EventSequenceId>())).Returns(event_sequence.Object);
 
         event_serializer = new();
         event_serializer.SetupSequence(_ => _.Deserialize(IsAny<AppendedEvent>()))
@@ -71,7 +72,7 @@ public class an_aggregate_root_factory : Specification
             state_providers.Object,
             event_handlers_factory.Object,
             causation_manager.Object,
-            event_sequences.Object,
+            event_store.Object,
             event_serializer.Object,
             service_provider.Object);
     }

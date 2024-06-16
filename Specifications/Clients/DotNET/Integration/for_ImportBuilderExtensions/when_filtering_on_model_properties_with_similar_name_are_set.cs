@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Properties;
+
 namespace Cratis.Chronicle.Integration.for_ImportBuilderExtensions;
 
 public class when_filtering_on_model_properties_with_similar_name_are_set : given.a_change_on_similarly_named_property
@@ -18,7 +20,7 @@ public class when_filtering_on_model_properties_with_similar_name_are_set : give
             new ImportContext<Model, ExternalModel>(
                 new AdapterProjectionResult<Model>(
                     new(0, default, default),
-                    new PropertyPath[] { new(nameof(Model.SomeString2)) },
+                    [new(nameof(Model.SomeString2))],
                     1),
                 changeset,
                 events_to_append));

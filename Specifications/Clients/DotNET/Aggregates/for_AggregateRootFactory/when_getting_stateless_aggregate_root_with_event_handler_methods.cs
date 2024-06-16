@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+
 namespace Cratis.Chronicle.Aggregates.for_AggregateRootStateFactory;
 
 public class when_getting_stateless_aggregate_root_with_event_handler_methods : given.an_aggregate_root_factory

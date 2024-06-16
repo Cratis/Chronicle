@@ -14,7 +14,7 @@ public class when_getting_current_chain_with_only_root_defined : Specification
 
     public when_getting_current_chain_with_only_root_defined()
     {
-        CausationManager.DefineRoot(new Dictionary<string, string>
+        manager.DefineRoot(new Dictionary<string, string>
         {
             { root_first_property, root_first_property_value },
             { root_second_property, root_second_property_value }

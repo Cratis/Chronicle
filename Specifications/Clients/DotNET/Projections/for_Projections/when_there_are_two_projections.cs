@@ -34,7 +34,7 @@ public class when_there_are_two_projections : given.all_dependencies
         schema_generator.Setup(_ => _.Generate(IsAny<Type>())).Returns(new JsonSchema());
 
         projections = new Projections(
-            event_types.Object,
+            event_store.Object,
             client_artifacts.Object,
             schema_generator.Object,
             model_name_resolver.Object,

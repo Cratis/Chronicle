@@ -32,7 +32,7 @@ public class EventSequences(
             request.EventType.ToKernel(),
             JsonSerializer.Deserialize<JsonNode>(request.Content, jsonSerializerOptions)!.AsObject(),
             request.Causation.ToKernel(),
-            request.Identity.ToKernel(),
+            request.CausedBy.ToKernel(),
             request.ValidFrom);
 
         return new AppendResponse();

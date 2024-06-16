@@ -13,5 +13,5 @@ public class and_it_has_it : given.two_rules_with_projections
     void Because() => result = rules_projections.GetFor(SecondRule.RuleIdentifier);
 
     [Fact] void should_return_a_definition() => result.ShouldNotBeNull();
-    [Fact] void should_return_definition_for_rule() => result.Identifier.ShouldEqual(SecondRule.RuleIdentifier);
+    [Fact] void should_return_definition_for_rule() => result.Identifier.ShouldEqual(SecondRule.RuleIdentifier.Value);
 }

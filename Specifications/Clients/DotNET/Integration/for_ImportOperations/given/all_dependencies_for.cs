@@ -4,6 +4,7 @@
 using AutoMapper;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Integration.for_ImportOperations.given;

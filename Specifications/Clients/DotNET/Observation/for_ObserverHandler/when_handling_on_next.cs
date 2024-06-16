@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.Observation.for_ObserverHandler;
@@ -32,7 +33,7 @@ public class when_handling_on_next : given.an_observer_handler
             .Callback((CausationType _, IDictionary<string, string> properties) => causation_properties = properties);
     }
 
-    async Task Because() => await handler.OnNext(appended_event);
+    async Task Because() => await handler.OnNext(appended_event.Metadata, appended_event.Context, appended_event.Content);
 
     [Fact] void should_add_causation() => causation_manager.Verify(_ => _.Add(ObserverHandler.CausationType, IsAny<IDictionary<string, string>>()), Once);
     [Fact] void should_add_causation_with_observer_id() => causation_properties[ObserverHandler.CausationObserverIdProperty].ShouldEqual(observer_id.ToString());

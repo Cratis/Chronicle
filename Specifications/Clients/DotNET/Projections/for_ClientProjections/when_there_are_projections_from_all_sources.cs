@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Models;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Properties;
@@ -48,16 +49,25 @@ public class when_there_are_projections_from_all_sources : given.all_dependencie
 
     ProjectionDefinition[] CreateProjectionDefinitions() =>
         Enumerable.Range(0, 2).Select(_ => new
-            ProjectionDefinition(
-                Guid.NewGuid(),
-                $"Projection {_}",
-                new ModelDefinition(string.Empty, string.Empty),
-                false,
-                false,
-                [],
-                new Dictionary<EventType, FromDefinition>(),
-                new Dictionary<EventType, JoinDefinition>(),
-                new Dictionary<PropertyPath, ChildrenDefinition>(),
-                [],
-                new AllDefinition(new Dictionary<PropertyPath, string>(), false))).ToArray();
+            ProjectionDefinition
+        {
+            Identifier = Guid.NewGuid(),
+            Name = $"Projection {_}",
+            Model = new ModelDefinition
+            {
+                Name = string.Empty,
+                Schema = string.Empty
+            },
+            IsActive = false,
+            IsRewindable = false,
+            InitialModelState = string.Empty,
+            From = new Dictionary<Contracts.Events.EventType, FromDefinition>(),
+            Join = new Dictionary<Contracts.Events.EventType, JoinDefinition>(),
+            Children = new Dictionary<string, ChildrenDefinition>(),
+            All = new AllDefinition
+            {
+                Properties = new Dictionary<string, string>(),
+                IncludeChildren = false
+            }
+        }).ToArray();
 }

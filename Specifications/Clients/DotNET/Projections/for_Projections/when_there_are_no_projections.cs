@@ -14,7 +14,7 @@ public class when_there_are_no_projections : given.all_dependencies
     {
         client_artifacts.Setup(_ => _.Projections).Returns([]);
         projections = new Projections(
-            event_types.Object,
+            event_store.Object,
             client_artifacts.Object,
             schema_generator.Object,
             model_name_resolver.Object,
