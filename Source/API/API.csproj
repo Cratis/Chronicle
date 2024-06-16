@@ -14,6 +14,7 @@
         <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Kernel/Grains.Interfaces/Grains.Interfaces.csproj" />
         <ProjectReference Include="../Kernel/Shared/Shared.csproj" />
+        <ProjectReference Include="../Kernel/Contracts/Contracts.csproj" />
     </ItemGroup>
 
     <ItemGroup>

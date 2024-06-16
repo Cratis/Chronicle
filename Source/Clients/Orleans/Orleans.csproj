@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Orleans</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Orleans</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
+    </ItemGroup>
+</Project>

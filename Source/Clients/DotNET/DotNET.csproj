@@ -6,9 +6,10 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
+
     </ItemGroup>
 
     <ItemGroup>

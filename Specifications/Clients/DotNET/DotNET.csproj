@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../../Source/Clients/DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../../../Source/Kernel/Contracts/Contracts.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
