@@ -11,4 +11,8 @@
     <ProjectReference Include="..\..\..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Cratis.Applications.MongoDB" />
+  </ItemGroup>
+
 </Project>

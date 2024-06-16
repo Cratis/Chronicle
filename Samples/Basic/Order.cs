@@ -1,13 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Aggregates;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Projections;
+
 namespace Basic;
 
 public class Order : AggregateRoot<OrderState>
 {
     public void DoStuff()
     {
-        Console.WriteLine($"Before : {State.CartItems.Count()}");
+        Console.WriteLine($"Before : {State!.CartItems.Count()}");
 
         Apply(new ItemAddedToCart(
             new(Guid.NewGuid()),

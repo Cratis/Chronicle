@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.EventSequences;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -15,9 +16,7 @@ public class KernelFixtureWithClient : KernelFixture
     {
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var webAppBuilder = WebApplication.CreateBuilder()
-            .UseCratis(_ => _
-                .ForMicroservice(MicroserviceId.Unspecified, "Test"),
-                loggerFactory: new NullLoggerFactory());
+            .UseCratis(loggerFactory: new NullLoggerFactory());
 
         webAppBuilder.Logging.ClearProviders();
         var webApp = webAppBuilder.Build();
@@ -26,17 +25,16 @@ public class KernelFixtureWithClient : KernelFixture
 
         webApp.StartAsync(_cancellationTokenSource.Token);
         EventLog = webApp.Services.GetRequiredService<IEventLog>();
-        Client = webApp.Services.GetRequiredService<IClient>();
+        Client = webApp.Services.GetRequiredService<ICratisClient>();
 
         Task.Delay(5000).GetAwaiter().GetResult();
     }
 
     public IEventLog EventLog { get; }
-    public IClient Client { get; }
+    public ICratisClient Client { get; }
 
     public override void Dispose()
     {
-        Client.Disconnect().GetAwaiter().GetResult();
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();
 

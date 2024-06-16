@@ -12,13 +12,9 @@ CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication
                 .CreateBuilder(args)
-                .UseCratis(_ => _
-                    .MultiTenanted()
-                    .ForMicroservice("cfd2f397-3476-4080-885f-feb36878a307", "Basic"));
+                .UseCratis();
 
-builder.Host
-        .UseMongoDB()
-        .ConfigureServices(services => services.AddMongoDBReadModels());
+builder.Host.UseMongoDB();
 
 var app = builder.Build();
 app.UseRouting();
