@@ -48,7 +48,7 @@ public static class KeyResolvers
             foreach (var keyValue in propertiesWithKeyValueProviders)
             {
                 var actualTarget = key.EnsurePath(keyValue.Key, ArrayIndexers.NoIndexers) as IDictionary<string, object>;
-                actualTarget[keyValue.Key.LastSegment.Value] = keyValue.Value(@event);
+                actualTarget![keyValue.Key.LastSegment.Value] = keyValue.Value(@event);
             }
             return Task.FromResult(new Key(key, ArrayIndexers.NoIndexers));
         };

@@ -27,7 +27,7 @@ public class CartReducer : IReducerFor<Cart>
 
     public Task<Cart> ItemAdded(ItemAddedToCart @event, Cart? initial, EventContext context)
     {
-        initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
+        initial ??= new Cart(context.EventSourceId, []);
         return Task.FromResult(initial with
         {
             Items = initial.Items?.Append(new CartItem(@event.MaterialId, @event.Quantity)) ??
@@ -37,7 +37,7 @@ public class CartReducer : IReducerFor<Cart>
 
     public Task<Cart> ItemRemoved(ItemRemovedFromCart @event, Cart? initial, EventContext context)
     {
-        initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
+        initial ??= new Cart(context.EventSourceId, []);
         return Task.FromResult(initial with
         {
             Items = initial.Items?.Where(_ => _.MaterialId != @event.MaterialId).ToArray() ??
@@ -47,7 +47,7 @@ public class CartReducer : IReducerFor<Cart>
 
     public Task<Cart> QuantityAdjusted(QuantityAdjustedForItemInCart @event, Cart? initial, EventContext context)
     {
-        initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
+        initial ??= new Cart(context.EventSourceId, []);
         return Task.FromResult(initial with
         {
             Items = initial.Items.Select(item => item.MaterialId == @event.MaterialId ? new CartItem(item.MaterialId, @event.Quantity) : item).ToArray()

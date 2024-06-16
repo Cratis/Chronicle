@@ -27,7 +27,7 @@ public static class PropertyMappers
         return (AppendedEvent @event, ExpandoObject target, ArrayIndexers arrayIndexers) =>
         {
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            actualTarget[targetProperty.LastSegment.Value] = eventValueProvider(@event);
+            actualTarget![targetProperty.LastSegment.Value] = eventValueProvider(@event);
         };
     }
 
@@ -43,7 +43,7 @@ public static class PropertyMappers
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            if (!actualTarget.ContainsKey(lastSegment.Value))
+            if (!actualTarget!.ContainsKey(lastSegment.Value))
             {
                 actualTarget[lastSegment.Value] = 0D;
             }
@@ -65,7 +65,7 @@ public static class PropertyMappers
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            if (!actualTarget.ContainsKey(lastSegment.Value))
+            if (!actualTarget!.ContainsKey(lastSegment.Value))
             {
                 actualTarget[lastSegment.Value] = 0D;
             }
@@ -90,7 +90,7 @@ public static class PropertyMappers
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            if (!actualTarget.ContainsKey(lastSegment.Value))
+            if (!actualTarget!.ContainsKey(lastSegment.Value))
             {
                 actualTarget[lastSegment.Value] = 0;
             }
