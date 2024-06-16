@@ -18,8 +18,8 @@ public class all_dependencies : Specification
         collection = new();
         database.Setup(_ => _.GetCollection<MongoDBIdentity>(WellKnownCollectionNames.Identities)).Returns(collection.Object);
 
-        identities_from_database = new();
-        inserted_identities = new();
+        identities_from_database = [];
+        inserted_identities = [];
 
 
         collection
@@ -31,7 +31,7 @@ public class all_dependencies : Specification
                         .ReturnsAsync(true)
                         .ReturnsAsync(false);
                 cursor.SetupGet(_ => _.Current)
-                      .Returns(() => identities_from_database.ToArray());
+                      .Returns(() => [.. identities_from_database]);
 
                 return Task.FromResult(cursor.Object);
             });

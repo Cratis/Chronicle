@@ -16,66 +16,66 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
     {
         reference = new BsonDocument(new BsonElement[]
         {
-            new BsonElement("intValue", 43),
-            new BsonElement("floatValue", 43.43),
-            new BsonElement("doubleValue", 43.43),
-            new BsonElement("guidValue", new BsonBinaryData(Guid.Parse("4f8cef8b-0443-4e4b-9c94-42fac316b241"), GuidRepresentation.Standard))
+            new("intValue", 43),
+            new("floatValue", 43.43),
+            new("doubleValue", 43.43),
+            new("guidValue", new BsonBinaryData(Guid.Parse("4f8cef8b-0443-4e4b-9c94-42fac316b241"), GuidRepresentation.Standard))
         }.AsEnumerable());
 
         child = new BsonDocument(new BsonElement[]
         {
-            new BsonElement("intValue", 44),
-            new BsonElement("floatValue", 44.44),
-            new BsonElement("doubleValue", 44.44),
-            new BsonElement("guidValue", "e0771dc1-0f2a-482a-9c1f-14afaf155716")
+            new("intValue", 44),
+            new("floatValue", 44.44),
+            new("doubleValue", 44.44),
+            new("guidValue", "e0771dc1-0f2a-482a-9c1f-14afaf155716")
         }.AsEnumerable());
 
         source = new BsonDocument(new BsonElement[]
         {
-            new BsonElement("intValue", 42),
-            new BsonElement("floatValue", 42.42),
-            new BsonElement("doubleValue", 42.42),
-            new BsonElement("enumValue", 1),
-            new BsonElement("guidValue", "251b9fbe-83d4-4306-9a5d-9d0e7d4dd456"),
-            new BsonElement("dateTimeValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
-            new BsonElement("dateTimeOffsetValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
-            new BsonElement("dateOnlyValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
-            new BsonElement("timeOnlyValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
-            new BsonElement("reference", reference),
-            new BsonElement("intChildren", new BsonArray(new BsonValue[]
+            new("intValue", 42),
+            new("floatValue", 42.42),
+            new("doubleValue", 42.42),
+            new("enumValue", 1),
+            new("guidValue", "251b9fbe-83d4-4306-9a5d-9d0e7d4dd456"),
+            new("dateTimeValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
+            new("dateTimeOffsetValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
+            new("dateOnlyValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
+            new("timeOnlyValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
+            new("reference", reference),
+            new("intChildren", new BsonArray(new BsonValue[]
             {
                 new BsonInt32(1),
                 new BsonInt32(2),
                 new BsonInt32(3)
             }.AsEnumerable())),
-            new BsonElement("stringChildren", new BsonArray(new BsonValue[]
+            new("stringChildren", new BsonArray(new BsonValue[]
             {
                 new BsonString("first"),
                 new BsonString("second"),
                 new BsonString("third")
             }.AsEnumerable())),
-            new BsonElement("children", new BsonArray(new BsonDocument[]
+            new("children", new BsonArray(new BsonDocument[]
             {
                 child
             })),
-            new BsonElement("stringDictionary", new BsonDocument(new BsonElement[]
+            new("stringDictionary", new BsonDocument(new BsonElement[]
             {
-                new BsonElement("first", "firstValue"),
-                new BsonElement("second", "secondValue")
+                new("first", "firstValue"),
+                new("second", "secondValue")
             }.AsEnumerable())),
-            new BsonElement("intDictionary", new BsonDocument(new BsonElement[]
+            new("intDictionary", new BsonDocument(new BsonElement[]
             {
-                new BsonElement("first", 42),
-                new BsonElement("second", 43)
+                new("first", 42),
+                new("second", 43)
             }.AsEnumerable())),
-            new BsonElement("complexTypeDictionary", new BsonDocument(new BsonElement[]
+            new("complexTypeDictionary", new BsonDocument(new BsonElement[]
             {
-                new BsonElement("first", new BsonDocument(new BsonElement[]
+                new("first", new BsonDocument(new BsonElement[]
                 {
-                    new BsonElement("intValue", 42),
-                    new BsonElement("floatValue", 42.42),
-                    new BsonElement("doubleValue", 42.42),
-                    new BsonElement("guidValue", "251b9fbe-83d4-4306-9a5d-9d0e7d4dd456")
+                    new("intValue", 42),
+                    new("floatValue", 42.42),
+                    new("doubleValue", 42.42),
+                    new("guidValue", "251b9fbe-83d4-4306-9a5d-9d0e7d4dd456")
                 }.AsEnumerable()))
             }.AsEnumerable())),
         }.AsEnumerable());
