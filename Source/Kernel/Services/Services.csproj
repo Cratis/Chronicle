@@ -7,12 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Contracts\Contracts.csproj" />
-      <ProjectReference Include="..\Grains.Interfaces\Grains.Interfaces.csproj" />
+        <ProjectReference Include="..\Contracts\Contracts.csproj"/>
+        <ProjectReference Include="..\Grains.Interfaces\Grains.Interfaces.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="System.Reactive" />
+        <PackageReference Include="System.Reactive" />
     </ItemGroup>
 
 </Project>
