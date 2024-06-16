@@ -129,7 +129,7 @@ curl -X POST http://localhost:8080/api/configuration/tenants/3352d47d-c154-4457-
 ```
 
 For local development and working with a team it can be cumbersome to have startup scripts that needs to run to set
-default configuration values. The `cratis.json` file supports holding these key / value pairs as well, which means you
+default configuration values. The `chronicle.json` file supports holding these key / value pairs as well, which means you
 can check in your configuration for development purposes.
 
 In the tenant object you can add a `configuration` object holding key / value pairs:
@@ -147,5 +147,5 @@ In the tenant object you can add a `configuration` object holding key / value pa
 }
 ```
 
-> Note: Any key/value pairs in the `cratis.json` takes precedence over anything configured in the Kernel using the API.
-> At startup the Kernel will take values in `cratis.json` and import these into the Kernel.
+> Note: Any key/value pairs in the `chronicle.json` takes precedence over anything configured in the Kernel using the API.
+> At startup the Kernel will take values in `chronicle.json` and import these into the Kernel.

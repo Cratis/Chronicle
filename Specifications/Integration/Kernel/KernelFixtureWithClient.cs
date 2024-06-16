@@ -25,13 +25,13 @@ public class KernelFixtureWithClient : KernelFixture
 
         webApp.StartAsync(_cancellationTokenSource.Token);
         EventLog = webApp.Services.GetRequiredService<IEventLog>();
-        Client = webApp.Services.GetRequiredService<ICratisClient>();
+        Client = webApp.Services.GetRequiredService<IChronicleClient>();
 
         Task.Delay(5000).GetAwaiter().GetResult();
     }
 
     public IEventLog EventLog { get; }
-    public ICratisClient Client { get; }
+    public IChronicleClient Client { get; }
 
     public override void Dispose()
     {

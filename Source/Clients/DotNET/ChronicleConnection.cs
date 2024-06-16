@@ -17,14 +17,14 @@ using ProtoBuf.Grpc.Client;
 namespace Cratis.Chronicle;
 
 /// <summary>
-/// Represents an implementation of <see cref="ICratisConnection"/>.
+/// Represents an implementation of <see cref="IChronicleConnection"/>.
 /// </summary>
-public class CratisConnection : ICratisConnection
+public class ChronicleConnection : IChronicleConnection
 {
-    readonly CratisOptions _options;
+    readonly ChronicleOptions _options;
     readonly ITasks _tasks;
     readonly CancellationToken _cancellationToken;
-    readonly ILogger<CratisConnection> _logger;
+    readonly ILogger<ChronicleConnection> _logger;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
@@ -33,19 +33,19 @@ public class CratisConnection : ICratisConnection
     TaskCompletionSource? _connectTcs;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CratisConnection"/> class.
+    /// Initializes a new instance of the <see cref="ChronicleConnection"/> class.
     /// </summary>
-    /// <param name="options"><see cref="CratisOptions"/>.</param>
+    /// <param name="options"><see cref="ChronicleOptions"/>.</param>
     /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
     /// <param name="tasks"><see cref="ITasks"/> to create tasks with.</param>
     /// <param name="logger">Logger for logging.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-    public CratisConnection(
-        CratisOptions options,
+    public ChronicleConnection(
+        ChronicleOptions options,
         IConnectionLifecycle connectionLifecycle,
         ITasks tasks,
-        ILogger<CratisConnection> logger,
+        ILogger<ChronicleConnection> logger,
         CancellationToken cancellationToken)
     {
         GrpcClientFactory.AllowUnencryptedHttp2 = true;

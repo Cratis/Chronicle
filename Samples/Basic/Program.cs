@@ -9,9 +9,9 @@ using var loggerFactory = LoggerFactory.Create(builder => builder
     .SetMinimumLevel(LogLevel.Trace)
     .AddConsole());
 
-using var client = new CratisClient(
-        new CratisOptions(
-            new CratisUrl("cratis://localhost:35000"),
+using var client = new ChronicleClient(
+        new ChronicleOptions(
+            new ChronicleUrl("cratis://localhost:35000"),
             loggerFactory: loggerFactory));
 
 var eventStore = client.GetEventStore(Guid.Empty.ToString());

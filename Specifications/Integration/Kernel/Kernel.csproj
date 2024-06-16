@@ -9,7 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="cratis.json">
+        <None Include="chronicle.json">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>

@@ -14,9 +14,9 @@ namespace Cratis.Chronicle;
 /// Represents the settings for connecting to Cratis.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="CratisOptions"/> class.
+/// Initializes a new instance of the <see cref="ChronicleOptions"/> class.
 /// </remarks>
-/// <param name="url"><see cref="CratisUrl"/> to use.</param>
+/// <param name="url"><see cref="ChronicleUrl"/> to use.</param>
 /// <param name="modelNameConvention">Optional <see cref="IModelNameConvention"/> to use.</param>
 /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/> to use. Will revert to default if not configured.</param>
 /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
@@ -24,8 +24,8 @@ namespace Cratis.Chronicle;
 /// <param name="artifactsProvider">Optional <see cref="IClientArtifactsProvider"/>. If not specified, it will use the <see cref="DefaultClientArtifactsProvider"/> with both project and package referenced assemblies.</param>
 /// <param name="connectTimeout">Optional timeout when connecting in seconds. Defaults to 5.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> to use internally in client for logging.</param>
-public class CratisOptions(
-    CratisUrl url,
+public class ChronicleOptions(
+    ChronicleUrl url,
     IModelNameConvention? modelNameConvention = null,
     IIdentityProvider? identityProvider = null,
     JsonSerializerOptions? jsonSerializerOptions = null,
@@ -35,9 +35,9 @@ public class CratisOptions(
     ILoggerFactory? loggerFactory = null)
 {
     /// <summary>
-    /// Gets the <see cref="CratisUrl"/> to use.
+    /// Gets the <see cref="ChronicleUrl"/> to use.
     /// </summary>
-    public CratisUrl Url { get; init; } = url;
+    public ChronicleUrl Url { get; init; } = url;
 
     /// <summary>
     /// Gets or sets the software version.
@@ -90,16 +90,16 @@ public class CratisOptions(
     public ILoggerFactory LoggerFactory { get; init; } = loggerFactory ?? new LoggerFactory();
 
     /// <summary>
-    /// Create a <see cref="CratisOptions"/> from a connection string.
+    /// Create a <see cref="ChronicleOptions"/> from a connection string.
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>
-    /// <returns>A new <see cref="CratisOptions"/>.</returns>
-    public static CratisOptions FromConnectionString(string connectionString) => FromUrl(new CratisUrl(connectionString));
+    /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
+    public static ChronicleOptions FromConnectionString(string connectionString) => FromUrl(new ChronicleUrl(connectionString));
 
     /// <summary>
-    /// Create a <see cref="CratisOptions"/> from a <see cref="CratisUrl"/>.
+    /// Create a <see cref="ChronicleOptions"/> from a <see cref="ChronicleUrl"/>.
     /// </summary>
-    /// <param name="url"><see cref="CratisUrl"/> to create from.</param>
-    /// <returns>A new <see cref="CratisOptions"/>.</returns>
-    public static CratisOptions FromUrl(CratisUrl url) => new(url);
+    /// <param name="url"><see cref="ChronicleUrl"/> to create from.</param>
+    /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
+    public static ChronicleOptions FromUrl(ChronicleUrl url) => new(url);
 }

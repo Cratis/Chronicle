@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="eventStoreName">Name of the event store.</param>
 /// <param name="namespace">Namespace for the event store.</param>
 /// <param name="eventSequenceId">The identifier of the event sequence.</param>
-/// <param name="connection"><see cref="ICratisConnection"/> for working with the connection to Cratis Kernel.</param>
+/// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Cratis Kernel.</param>
 /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
 /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
@@ -26,7 +26,7 @@ public class EventSequence(
     EventStoreName eventStoreName,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
-    ICratisConnection connection,
+    IChronicleConnection connection,
     IEventTypes eventTypes,
     IEventSerializer eventSerializer,
     ICausationManager causationManager,

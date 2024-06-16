@@ -14,27 +14,27 @@ namespace Cratis.Chronicle;
 /// cratis://<host>[:<port>],<host>[:<port>],<host>[:<port>]/?<options>
 /// ]]>
 /// </remarks>
-public class CratisUrl
+public class ChronicleUrl
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="CratisUrl"/> class.
+    /// Initializes a new instance of the <see cref="ChronicleUrl"/> class.
     /// </summary>
     /// <param name="connectionString">String representation of the connection string.</param>
-    public CratisUrl(string connectionString)
+    public ChronicleUrl(string connectionString)
     {
         var uri = new Uri(connectionString);
         var port = uri.Port == -1 ? 35000 : uri.Port;
-        ServerAddress = new CratisServerAddress(uri.Host, port);
+        ServerAddress = new ChronicleServerAddress(uri.Host, port);
     }
 
     /// <summary>
-    /// Gets the <see cref="CratisServerAddress"/> for the server.
+    /// Gets the <see cref="ChronicleServerAddress"/> for the server.
     /// </summary>
-    public CratisServerAddress ServerAddress { get; } = new("localhost", 35000);
+    public ChronicleServerAddress ServerAddress { get; } = new("localhost", 35000);
 
     /// <summary>
-    /// Implicitly convert from <see cref="string"/> to <see cref="CratisUrl"/>.
+    /// Implicitly convert from <see cref="string"/> to <see cref="ChronicleUrl"/>.
     /// </summary>
     /// <param name="connectionString">String connection string to convert from.</param>
-    public static implicit operator CratisUrl(string connectionString) => new(connectionString);
+    public static implicit operator ChronicleUrl(string connectionString) => new(connectionString);
 }

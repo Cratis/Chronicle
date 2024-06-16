@@ -5,7 +5,7 @@ The reason for this is that projections typically share the storage of what the 
 is built on. To avoid configuring things in multiple places, we have it in the Kernel and the
 client will get this configuration upon startup.
 
-Within the `cratis.json` file you should have a `storage` key and object to hold its configuration:
+Within the `chronicle.json` file you should have a `storage` key and object to hold its configuration:
 
 ```json
 {

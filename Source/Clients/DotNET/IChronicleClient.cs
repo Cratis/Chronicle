@@ -6,7 +6,7 @@ namespace Cratis.Chronicle;
 /// <summary>
 /// Defines the Cratis client API surface.
 /// </summary>
-public interface ICratisClient
+public interface IChronicleClient
 {
     /// <summary>
     /// Get an event store by name and optional namespace.

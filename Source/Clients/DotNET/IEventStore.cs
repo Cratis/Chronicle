@@ -25,9 +25,9 @@ public interface IEventStore
     EventStoreNamespaceName Namespace { get; }
 
     /// <summary>
-    /// Gets the <see cref="ICratisConnection"/> used for the <see cref="IEventStore"/>.
+    /// Gets the <see cref="IChronicleConnection"/> used for the <see cref="IEventStore"/>.
     /// </summary>
-    ICratisConnection Connection { get; }
+    IChronicleConnection Connection { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventTypes"/> for the event store.

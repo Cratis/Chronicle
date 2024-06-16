@@ -72,7 +72,7 @@ Press p to pause, r to resume, q to quit.
 ### Prometheus
 
 [Prometheus](https://prometheus.io) has been configured for collecting metrics from the Kernel in the `docker-compose.yml` file.
-It leverages an Open Telemetry exporter that the Kernel connects to with the configuration in `cratis.json` file as below:
+It leverages an Open Telemetry exporter that the Kernel connects to with the configuration in `chronicle.json` file as below:
 
 ```json
 {
@@ -91,7 +91,7 @@ http://localhost:9090/graph?g0.expr=appended_events&g0.tab=0&g0.stacked=0&g0.sho
 ### Zipkin
 
 [Zipkin](https://zipkin.io) has been configured for collecting metrics from the Kernel in the `docker-compose.yml` file.
-It leverages an Open Telemetry exporter that the Kernel connects to with the configuration in `cratis.json` file as below:
+It leverages an Open Telemetry exporter that the Kernel connects to with the configuration in `chronicle.json` file as below:
 
 ```json
 {

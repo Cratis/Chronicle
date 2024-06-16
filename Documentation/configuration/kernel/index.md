@@ -1,6 +1,6 @@
 # Kernel
 
-Configuration of the Cratis Kernel happens through a file called `cratis.json`.
+Configuration of the Cratis Kernel happens through a file called `chronicle.json`.
 It will look for the file sitting next to it in the same folder or within a folder called `config`.
 
 The file contains a top level set of keys, these keys represent a section each.

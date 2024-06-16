@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// </remarks>
 /// <param name="eventStoreName">Name of the event store.</param>
 /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the sequence is for.</param>
-/// <param name="connection"><see cref="ICratisConnection"/> for getting connections.</param>
+/// <param name="connection"><see cref="IChronicleConnection"/> for getting connections.</param>
 /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
 /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
@@ -23,7 +23,7 @@ namespace Cratis.Chronicle.EventSequences;
 public class EventLog(
      EventStoreName eventStoreName,
      EventStoreNamespaceName @namespace,
-     ICratisConnection connection,
+     IChronicleConnection connection,
      IEventTypes eventTypes,
      IEventSerializer eventSerializer,
      ICausationManager causationManager,

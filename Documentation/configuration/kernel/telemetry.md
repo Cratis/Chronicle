@@ -5,7 +5,7 @@ The Cratis Kernel supports telemetry and has exporters for the following out of 
 * Open Telemetry
 * Azure Monitor (Application Insights)
 
-To add telemetry to the Kernel, all you have to do is configure the `telemetry` option of the `cratis.json`
+To add telemetry to the Kernel, all you have to do is configure the `telemetry` option of the `chronicle.json`
 file:
 
 ```json

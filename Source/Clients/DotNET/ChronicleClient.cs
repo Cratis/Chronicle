@@ -11,9 +11,9 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle;
 
 /// <summary>
-/// Represents an implementation of <see cref="ICratisClient"/>.
+/// Represents an implementation of <see cref="IChronicleClient"/>.
 /// </summary>
-public class CratisClient : ICratisClient, IDisposable
+public class ChronicleClient : IChronicleClient, IDisposable
 {
     const string VersionMetadataKey = "softwareVersion";
     const string CommitMetadataKey = "softwareCommit";
@@ -22,36 +22,36 @@ public class CratisClient : ICratisClient, IDisposable
     const string MachineNameMetadataKey = "machineName";
     const string ProcessMetadataKey = "process";
 
-    readonly CratisOptions _options;
-    readonly ICratisConnection? _connection;
+    readonly ChronicleOptions _options;
+    readonly IChronicleConnection? _connection;
     readonly ICausationManager _causationManager;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly IComplianceMetadataResolver _complianceMetadataResolver;
     readonly IConnectionLifecycle _connectionLifecycle;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CratisClient"/> class.
+    /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
     /// </summary>
     /// <param name="connectionString">Connection string to use.</param>
-    public CratisClient(string connectionString)
-        : this(new CratisUrl(connectionString))
+    public ChronicleClient(string connectionString)
+        : this(new ChronicleUrl(connectionString))
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CratisClient"/> class.
+    /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
     /// </summary>
-    /// <param name="url"><see cref="CratisUrl"/> to connect with.</param>
-    public CratisClient(CratisUrl url)
-        : this(CratisOptions.FromUrl(url))
+    /// <param name="url"><see cref="ChronicleUrl"/> to connect with.</param>
+    public ChronicleClient(ChronicleUrl url)
+        : this(ChronicleOptions.FromUrl(url))
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CratisClient"/> class.
+    /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
     /// </summary>
-    /// <param name="options"><see cref="CratisOptions"/> to use.</param>
-    public CratisClient(CratisOptions options)
+    /// <param name="options"><see cref="ChronicleOptions"/> to use.</param>
+    public ChronicleClient(ChronicleOptions options)
     {
         _options = options;
         var causationManager = new CausationManager();
@@ -72,11 +72,11 @@ public class CratisClient : ICratisClient, IDisposable
             new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, options.ServiceProvider));
         _jsonSchemaGenerator = new JsonSchemaGenerator(_complianceMetadataResolver);
         _connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
-        _connection = new CratisConnection(
+        _connection = new ChronicleConnection(
             options,
             _connectionLifecycle,
             new Tasks.Tasks(),
-            options.LoggerFactory.CreateLogger<CratisConnection>(),
+            options.LoggerFactory.CreateLogger<ChronicleConnection>(),
             CancellationToken.None);
     }
 

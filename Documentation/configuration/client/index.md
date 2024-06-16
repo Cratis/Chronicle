@@ -1,6 +1,6 @@
 # Client
 
-Configuration of the Cratis client happens through a file called `cratis.json`.
+Configuration of the Cratis client happens through a file called `chronicle.json`.
 It will look for the file sitting next to it in the same folder or within a folder called `config`.
 
 If you don't provide a file, it will go with the default settings, which will typically be good for

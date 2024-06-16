@@ -14,7 +14,7 @@ public class all_dependencies : Specification
     protected Mock<IEventSerializer> event_serializer;
     protected Mock<ICausationManager> causation_manager;
     protected Mock<IIdentityProvider> identity_provider;
-    protected Mock<ICratisConnection> connection;
+    protected Mock<IChronicleConnection> connection;
     protected Mock<IEventSequences> event_sequences;
     protected Mock<IServices> services;
 

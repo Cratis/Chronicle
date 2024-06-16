@@ -8,7 +8,7 @@ namespace Cratis.Chronicle;
 /// <summary>
 /// Defines a system that manages the connection to Cratis.
 /// </summary>
-public interface ICratisConnection : IDisposable
+public interface IChronicleConnection : IDisposable
 {
     /// <summary>
     /// Gets the <see cref="IConnectionLifecycle"/> service.

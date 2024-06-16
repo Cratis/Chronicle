@@ -8,4 +8,4 @@ namespace Cratis.Chronicle;
 /// </summary>
 /// <param name="Host">Host name where Cratis Kernel is running.</param>
 /// <param name="Port">The port in which Cratis Kernel is exposed on, defaults to 35000.</param>
-public record CratisServerAddress(string Host, int Port = 35000);
+public record ChronicleServerAddress(string Host, int Port = 35000);

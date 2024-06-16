@@ -1,7 +1,7 @@
 # Inbox
 
 Once events are appended to the [outbox](../outbox/index.md), we can configure Cratis to connect one or more microservices together.
-This is done by configuring the `cratis.json` file and **microservices** key.
+This is done by configuring the `chronicle.json` file and **microservices** key.
 
 > Note: Its assumed that Cratis is being used as a single cluster for multiple microservices. Support for cluster <-> cluster
 > is coming in a future version.

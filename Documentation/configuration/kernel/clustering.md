@@ -4,7 +4,7 @@ The Cratis Kernel is built to support clustering for reliability and scale out s
 It is built on top of [Microsoft Orleans](https://docs.microsoft.com/en-us/dotnet/orleans/) and
 leverages it for clustering.
 
-Within the `cratis.json` file you should have a `cluster` key and object to hold its configuration:
+Within the `chronicle.json` file you should have a `cluster` key and object to hold its configuration:
 
 ```json
 {

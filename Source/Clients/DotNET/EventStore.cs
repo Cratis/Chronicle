@@ -31,7 +31,7 @@ public class EventStore : IEventStore
     /// </summary>
     /// <param name="eventStoreName">Name of the event store.</param>
     /// <param name="namespace">Namespace for the event store.</param>
-    /// <param name="connection"><see cref="ICratisConnection"/> for working with the connection to Cratis Kernel.</param>
+    /// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Cratis Kernel.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
@@ -43,7 +43,7 @@ public class EventStore : IEventStore
     public EventStore(
         EventStoreName eventStoreName,
         EventStoreNamespaceName @namespace,
-        ICratisConnection connection,
+        IChronicleConnection connection,
         IClientArtifactsProvider clientArtifactsProvider,
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
@@ -105,7 +105,7 @@ public class EventStore : IEventStore
     public EventStoreNamespaceName Namespace { get; }
 
     /// <inheritdoc/>
-    public ICratisConnection Connection { get; }
+    public IChronicleConnection Connection { get; }
 
     /// <inheritdoc/>
     public IEventTypes EventTypes { get; }

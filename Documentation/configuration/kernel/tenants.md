@@ -3,7 +3,7 @@
 Cratis is a built for multi-tenancy from the ground up. It needs to know about
 the different tenants.
 
-Within the `cratis.json` file you should have a `tenants` key and object to hold its configuration:
+Within the `chronicle.json` file you should have a `tenants` key and object to hold its configuration:
 
 ```json
 {

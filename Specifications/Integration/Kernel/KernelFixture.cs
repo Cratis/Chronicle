@@ -35,7 +35,7 @@ public class KernelFixture : IDisposable
             .WithPortBinding(30000)
             .WithHostname(HostName)
             .WithNetwork(globalFixture.Network)
-            .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "cratis.json"), "/App/cratis.json")
+            .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "chronicle.json"), "/App/chronicle.json")
             .Build();
 
         KernelContainer.StartAsync().GetAwaiter().GetResult();

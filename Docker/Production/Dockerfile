@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 ####################################
-# Cratis Server
+# Chronicle Server
 # Build runtime image
 ####################################
 FROM mcr.microsoft.com/dotnet/runtime:7.0.8-bullseye-slim
@@ -25,6 +25,6 @@ RUN echo $PWD
 RUN ./copy-server-files.sh
 
 RUN rm appsettings.Development.json
-RUN rm ./cratis.json
+RUN rm ./chronicle.json
 
 ENTRYPOINT ["./Cratis.Chronicle.Server"]
