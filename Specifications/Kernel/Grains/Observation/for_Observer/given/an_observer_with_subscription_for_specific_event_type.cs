@@ -18,6 +18,6 @@ public class an_observer_with_subscription_for_specific_event_type : an_observer
         subscription = new ObserverSubscription(observer_id, observer_key, [event_type], typeof(IObserverSubscriber), null);
         observer.SetSubscription(subscription);
 
-        silo.StorageStats().ResetCounts();
+        storage_stats.ResetCounts();
     }
 }

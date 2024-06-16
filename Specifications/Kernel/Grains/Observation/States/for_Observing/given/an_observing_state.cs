@@ -67,8 +67,9 @@ public class an_observing_state : Specification
         subscription = new ObserverSubscription(
             Guid.NewGuid(),
             new(event_store_name, event_store_namespace, event_sequence_id),
-            Enumerable.Empty<EventType>(),
+            [],
             typeof(object),
+            SiloAddress.Zero,
             string.Empty);
 
         observer.Setup(_ => _.GetSubscription()).Returns(() => Task.FromResult(subscription));

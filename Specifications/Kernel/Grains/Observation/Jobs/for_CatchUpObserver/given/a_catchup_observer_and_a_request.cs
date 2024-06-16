@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
+
 namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver.given;
 
 public class a_catchup_observer_and_a_request : a_catchup_observer
@@ -9,12 +12,12 @@ public class a_catchup_observer_and_a_request : a_catchup_observer
     {
         state_storage.State.Request = new CatchUpObserverRequest(
             Guid.NewGuid(),
-            new ObserverKey(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()),
+            new ObserverKey(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid()),
             ObserverSubscription.Unsubscribed,
             42UL,
-            new[] {
+            [
                 new EventType(Guid.NewGuid(), EventGeneration.First),
                 new EventType(Guid.NewGuid(), EventGeneration.First)
-            });
+            ]);
     }
 }

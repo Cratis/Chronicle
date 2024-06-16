@@ -8,11 +8,11 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
 
 public class and_some_events_has_already_been_handled : given.an_observer_with_subscription_for_specific_event_type
 {
-    readonly IEnumerable<AppendedEvent> events = new[]
-    {
+    readonly IEnumerable<AppendedEvent> events =
+    [
         AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL),
         AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL),
-    };
+    ];
 
     void Establish()
     {
@@ -31,5 +31,5 @@ public class and_some_events_has_already_been_handled : given.an_observer_with_s
     [Fact] void should_forward_last_event_to_subscriber() => subscriber.Verify(_ => _.OnNext(new[] { events.Last() }, IsAny<ObserverSubscriberContext>()), Once());
     [Fact] void should_not_set_next_sequence_number() => state_storage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)44UL);
     [Fact] void should_not_set_last_handled_event_sequence_number() => state_storage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
-    [Fact] void should_write_state_once() => silo.StorageStats().Writes.ShouldEqual(1);
+    [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);
 }

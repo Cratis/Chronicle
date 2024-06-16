@@ -26,7 +26,7 @@ public class CartReducer : IReducerFor<Cart>
         return Task.FromResult(initial with
         {
             Items = initial.Items?.Append(new CartItem(@event.MaterialId, @event.Quantity)) ??
-                new[] { new CartItem(@event.MaterialId, @event.Quantity) }
+                [new CartItem(@event.MaterialId, @event.Quantity)]
         });
     }
 

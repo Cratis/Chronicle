@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation.Jobs;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_CatchUp.when_entering;
@@ -16,19 +18,19 @@ public class and_no_jobs_are_running : given.a_catch_up_state
         stored_state = stored_state with
         {
             NextEventSequenceNumber = 42,
-            EventTypes = new[]
-            {
+            EventTypes =
+            [
                 new EventType("31252720-dcbb-47ae-927d-26070f7ef8ae", EventGeneration.First),
                 new EventType("e433be87-2d05-49b1-b093-f0cec977429b", EventGeneration.First)
-            }
+            ]
         };
         subscription = subscription with
         {
-            EventTypes = new[]
-            {
+            EventTypes =
+            [
                 new EventType("31252720-dcbb-47ae-927d-26070f7ef8ae", EventGeneration.First),
                 new EventType("e433be87-2d05-49b1-b093-f0cec977429b", EventGeneration.First)
-            }
+            ]
         };
 
         jobs_manager

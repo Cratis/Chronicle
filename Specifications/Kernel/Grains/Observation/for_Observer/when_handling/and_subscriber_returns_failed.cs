@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
@@ -15,7 +16,7 @@ public class and_subscriber_returns_failed : given.an_observer_with_subscription
     {
         var failure = ObserverSubscriberResult.Failed(42UL) with
         {
-            ExceptionMessages = new[] { exception_message },
+            ExceptionMessages = [exception_message],
             ExceptionStackTrace = exception_stack_trace
         };
         subscriber
@@ -23,9 +24,9 @@ public class and_subscriber_returns_failed : given.an_observer_with_subscription
             .Returns(Task.FromResult(failure));
     }
 
-    async Task Because() => await observer.Handle(event_source_id, new[] { AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 0) });
+    async Task Because() => await observer.Handle(event_source_id, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 0)]);
 
-    [Fact] void should_write_state_once() => silo.StorageStats().Writes.ShouldEqual(1);
+    [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);
     [Fact] void should_write_failed_partitions_state_once() => written_failed_partitions_states.Count.ShouldEqual(1);
     [Fact] void should_add_failed_partition() => written_failed_partitions_states[0].Partitions.Count().ShouldEqual(1);
     [Fact] void should_capture_partition() => written_failed_partitions_states[0].Partitions.First().Partition.Value.ShouldEqual(event_source_id);

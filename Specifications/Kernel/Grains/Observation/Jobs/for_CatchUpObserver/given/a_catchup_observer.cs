@@ -34,7 +34,7 @@ public class a_catchup_observer : Specification
         storage.Setup(_ => _.GetEventStore(IsAny<EventStoreName>())).Returns(event_store_storage.Object);
         event_store_storage.Setup(_ => _.GetNamespace(IsAny<EventStoreNamespaceName>())).Returns(event_store_namespace_storage.Object);
         event_store_namespace_storage.Setup(_ => _.ObserverKeyIndexes).Returns(observer_key_indexes.Object);
-        state_storage = silo.StorageManager.GetStorage<CatchUpObserverState>();
+        state_storage = silo.StorageManager.GetStorage<CatchUpObserverState>(typeof(Observer).FullName);
 
         silo.AddService(storage.Object);
         silo.AddService(new JsonSerializerOptions());

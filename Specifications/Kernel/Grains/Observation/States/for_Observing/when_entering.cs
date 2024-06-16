@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grains.EventSequences;
 using Orleans.Streams;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_Observing;

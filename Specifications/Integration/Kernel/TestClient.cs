@@ -16,7 +16,7 @@ public class TestClient
 
         if (executable is null)
         {
-            var lastSegmentStart = relativePath.LastIndexOfAny(new[] { '/', '\\' });
+            var lastSegmentStart = relativePath.LastIndexOfAny(['/', '\\']);
             if (lastSegmentStart > 0) lastSegmentStart++;
             if (lastSegmentStart == -1) lastSegmentStart = 0;
             executable = relativePath.Substring(lastSegmentStart);

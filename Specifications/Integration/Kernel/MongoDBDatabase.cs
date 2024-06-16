@@ -22,7 +22,7 @@ public class MongoDBDatabase
         {
             var filter = Builders<ChangeStreamDocument<BsonDocument>>.Filter.In(
                 new StringFieldDefinition<ChangeStreamDocument<BsonDocument>, string>("operationType"),
-                new[] { "insert", "replace", "update", "delete" });
+                ["insert", "replace", "update", "delete"]);
 
             var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<BsonDocument>>().Match(filter);
 

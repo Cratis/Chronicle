@@ -17,6 +17,6 @@ public class an_observer_with_subscription : an_observer
         subscription = new ObserverSubscription(observer_id, observer_key, [], typeof(ObserverSubscriber), null);
         observer.SetSubscription(subscription);
 
-        silo.StorageStats().ResetCounts();
+        storage_stats.ResetCounts();
     }
 }

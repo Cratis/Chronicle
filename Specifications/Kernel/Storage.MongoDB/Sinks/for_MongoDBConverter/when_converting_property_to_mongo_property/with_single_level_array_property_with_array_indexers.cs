@@ -14,7 +14,7 @@ public class with_single_level_array_property_with_array_indexers : given.a_mong
     void Establish()
     {
         key = Guid.NewGuid();
-        array_indexers = new ArrayIndexers(new[] { new ArrayIndexer("[ArrayProperty]", "Identifier", key) });
+        array_indexers = new ArrayIndexers([new ArrayIndexer("[ArrayProperty]", "Identifier", key)]);
     }
 
     void Because() => result = converter.ToMongoDBProperty(new PropertyPath("[ArrayProperty]"), array_indexers);

@@ -3,12 +3,7 @@
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
 
-public class ExceptionWithPreDefinedStackTrace : Exception
+public class ExceptionWithPreDefinedStackTrace(string message, string stackTrace) : Exception(message)
 {
-    public ExceptionWithPreDefinedStackTrace(string message, string stackTrace) : base(message)
-    {
-        StackTrace = stackTrace;
-    }
-
-    public override string StackTrace { get; }
+    public override string StackTrace { get; } = stackTrace;
 }

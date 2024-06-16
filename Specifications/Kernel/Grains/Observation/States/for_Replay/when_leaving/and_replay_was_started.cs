@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Observation;
+
 namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.when_leaving;
 
 public class and_replay_was_started : given.a_replay_state

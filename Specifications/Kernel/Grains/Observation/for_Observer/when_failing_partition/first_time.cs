@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Keys;
+
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_failing_partition;
 
 public class first_time : given.an_observer
@@ -9,7 +12,7 @@ public class first_time : given.an_observer
     const string stack_trace = "This is the stack trace";
     const string message = "Something went wrong";
 
-    async Task Because() => await observer.PartitionFailed(event_source_id, 42UL, new[] { message }, stack_trace);
+    async Task Because() => await observer.PartitionFailed(event_source_id, 42UL, [message], stack_trace);
 
     [Fact] void should_have_only_one_failed_partition() => failed_partitions_state.Partitions.Count().ShouldEqual(1);
     [Fact] void should_have_the_correct_partition() => failed_partitions_state.Partitions.First().Partition.ShouldEqual((Key)event_source_id);

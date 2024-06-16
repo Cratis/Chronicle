@@ -10,14 +10,12 @@ public class an_event_sequence_caches : Specification
 {
     protected Mock<IEventSequenceStorage> event_sequence_storage_provider;
     protected Mock<IEventSequenceCacheFactory> event_sequence_cache_factory;
-    protected KernelConfiguration configuration;
     protected EventSequenceCaches caches;
 
     void Establish()
     {
         event_sequence_storage_provider = new();
         event_sequence_cache_factory = new();
-        configuration = new();
-        caches = new(event_sequence_cache_factory.Object, configuration);
+        caches = new(event_sequence_cache_factory.Object);
     }
 }

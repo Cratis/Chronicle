@@ -65,12 +65,12 @@ public class GlobalFixture : IDisposable
         }
 
         var backupName = $"{prefix}{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.tgz";
-        MongoDBContainer.ExecAsync(new[]
-        {
+        MongoDBContainer.ExecAsync(
+        [
             "mongodump",
             $"--archive=/backups/{backupName}",
             "--gzip"
-        }).GetAwaiter().GetResult();
+        ]).GetAwaiter().GetResult();
     }
 
     public async Task RemoveAllDatabases()

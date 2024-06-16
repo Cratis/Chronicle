@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
@@ -18,9 +19,9 @@ public class and_subscription_is_disconnected_with_last_successful_observation_b
         };
     }
 
-    async Task Because() => await observer.Handle("Something", new[] { AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL) });
+    async Task Because() => await observer.Handle("Something", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL)]);
 
     [Fact] void should_not_set_next_sequence_number() => state_storage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)33UL);
     [Fact] void should_not_set_last_handled_event_sequence_number() => state_storage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)34UL);
-    [Fact] void should_not_write_state() => silo.StorageStats().Writes.ShouldEqual(0);
+    [Fact] void should_not_write_state() => storage_stats.Writes.ShouldEqual(0);
 }

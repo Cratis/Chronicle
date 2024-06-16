@@ -44,8 +44,8 @@ public class when_converting_complex_structure_to_bson_document : given.an_expan
             { "second", 43 }
         };
 
-        expando.intChildren = new int[] { 1, 2, 3 };
-        expando.stringChildren = new string[] { "first", "second", "third" };
+        expando.intChildren = [1, 2, 3];
+        expando.stringChildren = ["first", "second", "third"];
 
         dynamic child_expando = new ExpandoObject();
         child_expando.intValue = 44;
@@ -53,7 +53,7 @@ public class when_converting_complex_structure_to_bson_document : given.an_expan
         child_expando.doubleValue = 44.44;
         child_expando.guidValue = "633f3280-cb69-4a8b-9e03-7fec8c9e7845";
 
-        expando.children = new ExpandoObject[] { child_expando };
+        expando.children = [child_expando];
 
         dynamic complexType = new ExpandoObject();
         complexType.intValue = 45;

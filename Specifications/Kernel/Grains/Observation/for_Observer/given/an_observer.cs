@@ -16,6 +16,7 @@ using Orleans.Core;
 using Orleans.Runtime;
 using Orleans.Streams;
 using Orleans.TestKit;
+using Orleans.TestKit.Storage;
 using IEventSequence = Cratis.Chronicle.Grains.EventSequences.IEventSequence;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.given;
@@ -34,6 +35,7 @@ public class an_observer : Specification
     protected ObserverKey observer_key => new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
     protected TestKitSilo silo = new();
     protected IStorage<ObserverState> state_storage;
+    protected TestStorageStats storage_stats => silo.StorageStats<Observer, ObserverState>();
 
     async Task Establish()
     {
@@ -66,7 +68,7 @@ public class an_observer : Specification
 
         silo.AddService(mapper.Object);
 
-        state_storage = silo.StorageManager.GetStorage<ObserverState>();
+        state_storage = silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
 
         var eventSequence = silo.AddProbe<IEventSequence>(
             observer_key.EventSequenceId,
@@ -77,6 +79,6 @@ public class an_observer : Specification
 
         observer = await silo.CreateGrainAsync<Observer>(observer_id, observer_key);
 
-        silo.StorageStats().ResetCounts();
+        storage_stats.ResetCounts();
     }
 }

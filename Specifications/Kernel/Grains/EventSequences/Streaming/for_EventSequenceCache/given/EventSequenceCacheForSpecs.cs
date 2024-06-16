@@ -7,14 +7,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.EventSequences.Streaming;
 
-public class EventSequenceCacheForSpecs : EventSequenceCache
+public class EventSequenceCacheForSpecs(
+    IEventSequenceStorage eventSequenceStorage,
+    ILogger<EventSequenceCache> logger) : EventSequenceCache(eventSequenceStorage, logger)
 {
-    public EventSequenceCacheForSpecs(
-        IEventSequenceStorage eventSequenceStorage,
-        ILogger<EventSequenceCache> logger) : base(eventSequenceStorage, logger)
-    {
-    }
-
     public IEnumerable<AppendedEvent> Events => _eventsBySequenceNumber.Select(_ => _.Value.Event);
     public CachedAppendedEvent HeadEvent => _head;
     public CachedAppendedEvent TailEvent => _tail;
