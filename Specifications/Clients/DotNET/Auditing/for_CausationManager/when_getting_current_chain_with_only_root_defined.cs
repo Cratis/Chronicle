@@ -14,12 +14,12 @@ public class when_getting_current_chain_with_only_root_defined : Specification
 
     public when_getting_current_chain_with_only_root_defined()
     {
+        manager = new();
         manager.DefineRoot(new Dictionary<string, string>
         {
             { root_first_property, root_first_property_value },
             { root_second_property, root_second_property_value }
         });
-        manager = new();
     }
 
     [Fact] void should_have_one_causation() => manager.GetCurrentChain().Count.ShouldEqual(1);
