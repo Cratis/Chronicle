@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Models;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.for_Projection.given;
@@ -20,6 +21,6 @@ public class a_projection : Specification
             string.Empty,
             new Model(string.Empty, new JsonSchema()),
             true,
-            Array.Empty<IProjection>());
+            []);
     }
 }

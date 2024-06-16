@@ -1,6 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.Projections.for_KeyResolvers;
@@ -38,15 +43,15 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
     {
         return new(
             new(sequenceNumber, type),
-            new(eventSourceId, sequenceNumber, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", Enumerable.Empty<Causation>(), Identity.System),
+            new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", CorrelationId.New(), [], Identity.System),
             content.AsExpandoObject());
     }
 
     Mock<IProjection> SetupProjection(EventType eventType, string key, string childrenProperty = "no-levels", IProjection? parent = null)
     {
         var projection = new Mock<IProjection>();
-        projection.SetupGet(_ => _.EventTypes).Returns(new[] { eventType });
-        projection.SetupGet(_ => _.OwnEventTypes).Returns(new[] { eventType });
+        projection.SetupGet(_ => _.EventTypes).Returns([eventType]);
+        projection.SetupGet(_ => _.OwnEventTypes).Returns([eventType]);
         projection.SetupGet(_ => _.Path).Returns(childrenProperty);
         projection.SetupGet(_ => _.ChildrenPropertyPath).Returns(childrenProperty);
 

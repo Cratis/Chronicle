@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Projections.Expressions.EventValues;

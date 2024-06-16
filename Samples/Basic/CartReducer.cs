@@ -36,7 +36,7 @@ public class CartReducer : IReducerFor<Cart>
         return Task.FromResult(initial with
         {
             Items = initial.Items?.Where(_ => _.MaterialId != @event.MaterialId).ToArray() ??
-                Array.Empty<CartItem>()
+                []
         });
     }
 

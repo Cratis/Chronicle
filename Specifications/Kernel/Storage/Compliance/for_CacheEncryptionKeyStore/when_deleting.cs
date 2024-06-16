@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Storage.Compliance.for_CacheEncryptionKeyStore;
 public class when_deleting : given.a_cache_encryption_key_store
 {
     static EncryptionKeyIdentifier identifier = "5c6cce36-d60d-46db-9db2-e820559962db";
-    static EncryptionKey key = new(Array.Empty<byte>(), Array.Empty<byte>());
+    static EncryptionKey key = new([], []);
 
     Task Establish() => store.SaveFor(string.Empty, string.Empty, identifier, key);
 

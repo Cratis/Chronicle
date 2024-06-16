@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Properties;
+
 namespace Cratis.Chronicle.Projections.for_ProjectionExtensions.when_applying_from_filter;
 
 public class when_handling_remove_with_public_event : given.an_observable_and_event_setup

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Projections.Expressions.EventValues;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Expressions.for_ModelPropertyExpressionResolvers.given;
 

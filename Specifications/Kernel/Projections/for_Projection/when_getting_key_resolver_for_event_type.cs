@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+
 namespace Cratis.Chronicle.Projections.for_Projection;
 
 public class when_getting_key_resolver_for_event_type : given.a_projection
@@ -13,11 +15,10 @@ public class when_getting_key_resolver_for_event_type : given.a_projection
     {
         expected = KeyResolvers.FromEventSourceId;
         projection.SetEventTypesWithKeyResolvers(
-            new EventTypeWithKeyResolver[]
-            {
+            [
                     new EventTypeWithKeyResolver(event_type, expected)
-            },
-            new[] { event_type });
+            ],
+            [event_type]);
     }
 
     void Because() => result = projection.GetKeyResolverFor(event_type);

@@ -2,6 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.for_Projection;
 
@@ -16,18 +20,17 @@ public class when_next_event_is_a_public_event : given.a_projection
     {
         changeset = new();
         projection.SetEventTypesWithKeyResolvers(
-            new EventTypeWithKeyResolver[]
-            {
+            [
                     new EventTypeWithKeyResolver(public_event_type, KeyResolvers.FromEventSourceId)
-            },
-            new[] { public_event_type });
+            ],
+            [public_event_type]);
 
         public_event = new(
             new(0, public_event_type),
-            new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", Enumerable.Empty<Causation>(), Identity.System),
+            new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", CorrelationId.New(), [], Identity.System),
             new ExpandoObject());
 
-        observed_events = new();
+        observed_events = [];
         projection.Event.Subscribe(observed_events.Add);
     }
 

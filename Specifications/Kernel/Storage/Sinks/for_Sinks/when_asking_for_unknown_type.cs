@@ -8,7 +8,7 @@ public class when_asking_for_unknown_type : Specification
     Sinks sinks;
     bool result;
 
-    void Establish() => sinks = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>(Array.Empty<ISinkFactory>()));
+    void Establish() => sinks = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>([]));
 
     void Because() => result = sinks.HasType("bc5e82fd-9845-4464-9802-a7e21bd8a919");
 

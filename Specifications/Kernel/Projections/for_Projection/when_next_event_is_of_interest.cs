@@ -2,6 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.for_Projection;
 
@@ -22,11 +26,10 @@ public class when_next_event_is_of_interest : given.a_projection
     void Establish()
     {
         projection.SetEventTypesWithKeyResolvers(
-            new EventTypeWithKeyResolver[]
-            {
+            [
                     new EventTypeWithKeyResolver(event_b, KeyResolvers.FromEventSourceId)
-            },
-            new[] { event_b });
+            ],
+            [event_b]);
 
         dynamic state = initial_state = new();
         state.Integer = 42;
@@ -36,19 +39,19 @@ public class when_next_event_is_of_interest : given.a_projection
 
         first_event = new(
             new(0, event_a),
-            new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", Enumerable.Empty<Causation>(), Identity.System),
+            new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", CorrelationId.New(), [], Identity.System),
             new ExpandoObject());
 
         first_changeset = new(objects_comparer.Object, first_event, new());
 
         second_event = new(
             new(0, event_b),
-            new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", Enumerable.Empty<Causation>(), Identity.System),
+            new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", CorrelationId.New(), [], Identity.System),
             new ExpandoObject());
 
         second_changeset = new(objects_comparer.Object, second_event, initial_state);
 
-        observed_events = new();
+        observed_events = [];
         projection.Event.Subscribe(observed_events.Add);
     }
 

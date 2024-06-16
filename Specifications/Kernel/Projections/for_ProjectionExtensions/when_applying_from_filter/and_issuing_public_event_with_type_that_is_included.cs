@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+
 namespace Cratis.Chronicle.Projections.for_ProjectionExtensions.when_applying_from_filter;
 
 public class and_issuing_public_event_with_type_that_is_included : given.an_observable_and_event_setup
