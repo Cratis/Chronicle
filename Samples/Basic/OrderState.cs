@@ -3,4 +3,4 @@
 
 namespace Basic;
 
-public record Cart(CartId Id, IEnumerable<CartItem> Items);
+public record OrderState(int Items, IEnumerable<CartItem> CartItems);

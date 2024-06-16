@@ -3,22 +3,9 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reducers;
 
 namespace Basic;
-
-[Observer("4067d8f6-9e10-4f4b-9921-b0b703f106b5")]
-public class MyObserver
-{
-
-    public Task ItemAdded(ItemAddedToCart @event, EventContext context)
-    {
-        Console.WriteLine($"Item added to cart: {@event.MaterialId} - {@event.Quantity}");
-        return Task.CompletedTask;
-    }
-}
-
 
 [Reducer("ff449077-0adb-4c5c-90e6-15631cd9e2b1")]
 public class CartReducer : IReducerFor<Cart>

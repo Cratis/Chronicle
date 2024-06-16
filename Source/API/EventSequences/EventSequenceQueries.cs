@@ -14,7 +14,7 @@ namespace Cratis.API.EventSequences;
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
 [Route("/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
-public class EventSequence(
+public class EventSequenceQueries(
     IGrainFactory grainFactory) : ControllerBase
 {
     /// <summary>
