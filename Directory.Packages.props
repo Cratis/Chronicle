@@ -6,7 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Cratis.Fundamentals" Version="5.2.6" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="5.2.6" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="5.2.7" />
     <PackageVersion Include="Cratis.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.MongoDB" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Orleans" Version="$(ApplicationModel)" />
@@ -65,12 +65,12 @@
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
     <PackageVersion Include="OrleansDashboard" Version="8.0.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.8.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.8.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.8.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.8.1" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.3.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.8.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.9.0" />
     <PackageVersion Include="handlebars.net" Version="2.1.6" />
     <!-- Roslyn-->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.10.0" />
@@ -80,11 +80,11 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.12.4" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.157" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.158" />
     <!-- Specifications -->
     <PackageVersion Include="Cratis.Specifications" Version="3.0.3" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.3" />
-    <PackageVersion Include="Testcontainers" Version="3.8.0" />
+    <PackageVersion Include="Testcontainers" Version="3.9.0" />
     <PackageVersion Include="xunit" Version="2.8.1" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.1" />
     <PackageVersion Include="moq" Version="4.20.70" />
