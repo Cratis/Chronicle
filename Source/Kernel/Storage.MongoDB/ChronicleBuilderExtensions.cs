@@ -35,6 +35,5 @@ public static class ChronicleBuilderExtensions
         BsonSerializer.RegisterSerializer(new UriSerializer());
         builder.ConfigureServices(services => services.AddSingleton<IReminderTable, ReminderTable>());
         return builder;
-
     }
 }
