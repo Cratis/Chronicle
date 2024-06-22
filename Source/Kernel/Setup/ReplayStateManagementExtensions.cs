@@ -2,9 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Grains.Observation;
+using Microsoft.Extensions.DependencyInjection;
 
 #pragma warning disable SA1600
-namespace Cratis.Chronicle.Server;
+namespace Cratis.Chronicle.Setup;
 
 /// <summary>
 /// Extension methods for replay state management initialization.

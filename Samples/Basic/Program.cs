@@ -11,7 +11,7 @@ using var loggerFactory = LoggerFactory.Create(builder => builder
 
 using var client = new ChronicleClient(
         new ChronicleOptions(
-            new ChronicleUrl("cratis://localhost:35000"),
+            new ChronicleUrl("chronicle://localhost:35000"),
             loggerFactory: loggerFactory));
 
 var eventStore = client.GetEventStore(Guid.Empty.ToString());

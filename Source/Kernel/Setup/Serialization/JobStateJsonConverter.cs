@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Json;
 
-namespace Cratis.Chronicle.Server.Serialization;
+namespace Cratis.Chronicle.Setup.Serialization;
 
 /// <summary>
 /// Represents the <see cref="JsonConverter{T}"/> that can convert <see cref="JobState"/>.

@@ -2,9 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using Cratis.Chronicle.Grains;
-using Cratis.Chronicle.Grains.Observation.Placement;
-using Cratis.Chronicle.Server.Serialization;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -37,30 +34,20 @@ public static class Program
                 _.ValidateOnBuild = false;
             })
             .UseLogging()
-            .ConfigureCpuBoundWorkers()
-
-            // TODO: Which extension method do we actually want to call here?
-            .UseMongoDB()
+            .UseMongoDB() // TODO: Which extension method do we actually want to call here?
             .ConfigureServices(services => services
                 .AddSingleton(Globals.JsonSerializerOptions)
                 .AddBindingsByConvention()
                 .AddSelfBindings())
             .UseOrleans(_ => _
-                .UseLocalhostClustering() // TODO: Implement MongoDB clustering
-                .UseTelemetry() // TODO: Fix telemetry
-                .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
-                .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
-                .ConfigureSerialization()
-                .AddReplayStateManagement()
+                .AddChronicleToSilo()
                 .UseDashboard(options =>
                 {
                     options.Host = "*";
                     options.Port = 8081;
                     options.HostSelf = true;
                 })
-                .ConfigureStorage()
-                .UseMongoDB()
-                .AddEventSequenceStreaming())
+                .UseMongoDB())
             .ConfigureWebHostDefaults(_ => _
                 .ConfigureKestrel(options =>
                 {

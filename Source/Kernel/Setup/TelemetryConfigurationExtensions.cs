@@ -3,10 +3,11 @@
 
 using System.Diagnostics.Metrics;
 using Cratis.Metrics;
+using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
-namespace Cratis.Chronicle.Server;
+namespace Cratis.Chronicle.Setup;
 
 /// <summary>
 /// Extension methods for working with the telemetry configuration.
@@ -18,7 +19,7 @@ public static class TelemetryConfigurationExtensions
     /// </summary>
     /// <param name="builder"><see cref="ISiloBuilder"/> to extend.</param>
     /// <returns>Builder for continuation.</returns>
-    public static ISiloBuilder UseTelemetry(this ISiloBuilder builder)
+    public static ISiloBuilder AddTelemetry(this ISiloBuilder builder)
     {
         builder.ConfigureServices(services =>
         {
@@ -34,18 +35,13 @@ public static class TelemetryConfigurationExtensions
                 {
                     tracing
                         .AddSource("Microsoft.Orleans.Runtime")
-                        .AddSource("Microsoft.Orleans.Application")
-                        .AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation();
+                        .AddSource("Microsoft.Orleans.Application");
                 })
                 .WithMetrics(metrics =>
                 {
                     metrics
                         .AddMeter(meter.Name)
-                        .AddMeter("Microsoft.Orleans")
-                        .AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation()
-                        .AddRuntimeInstrumentation();
+                        .AddMeter("Microsoft.Orleans");
                 });
         });
 

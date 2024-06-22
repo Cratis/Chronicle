@@ -23,8 +23,6 @@ public static class SiloBuilderExtensions
     /// <returns><see cref="ISiloBuilder"/> for builder continuation.</returns>
     public static ISiloBuilder UseMongoDB(this ISiloBuilder builder)
     {
-        // TODO: Store Grain state in Mongo
-        builder.AddMemoryGrainStorage("PubSubStore");
         builder.ConfigureServices(services =>
         {
             services.AddSingleton<IDatabase, Database>();
@@ -35,8 +33,6 @@ public static class SiloBuilderExtensions
 
         BsonSerializer.RegisterSerializer(new JsonElementSerializer());
         BsonSerializer.RegisterSerializer(new UriSerializer());
-
-        builder.AddReminders();
         builder.ConfigureServices(services => services.AddSingleton<IReminderTable, ReminderTable>());
         return builder;
     }

@@ -39,10 +39,6 @@ public static class WebApplicationBuilderExtensions
     public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
     {
         app.UseCausation();
-
-        // TODO: Does ExecutionContext exist anymore?
-
-        // app.UseExecutionContext();
         return app;
     }
 }

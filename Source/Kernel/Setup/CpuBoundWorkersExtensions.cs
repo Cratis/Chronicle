@@ -2,10 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Grains.Workers;
-using Serilog;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 #pragma warning disable SA1600
-namespace Cratis.Chronicle.Server;
+namespace Cratis.Chronicle.Setup;
 
 /// <summary>
 /// Extension methods for configuring Cpu bound workers.
@@ -17,17 +18,13 @@ public static class CpuBoundWorkersExtensions
     /// </summary>
     /// <param name="builder">The <see cref="ISiloBuilder"/> to configure.</param>
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
-    public static IHostBuilder ConfigureCpuBoundWorkers(this IHostBuilder builder)
+    public static ISiloBuilder ConfigureCpuBoundWorkers(this ISiloBuilder builder)
     {
-        Log.Logger.Information("Configuring Cpu bound workers");
-
         var maxLevelOfParallelism = Environment.ProcessorCount - 2;
         if (maxLevelOfParallelism <= 0)
         {
             maxLevelOfParallelism = 1;
         }
-
-        Log.Logger.Information("Max level of parallelism for Cpu bound workers: {MaxLevelOfParallelism} - number of processor count {ProcessorCount}", maxLevelOfParallelism, Environment.ProcessorCount);
 
         builder.ConfigureServices((services) => services.AddSingleton(new LimitedConcurrencyLevelTaskScheduler(maxLevelOfParallelism)));
 

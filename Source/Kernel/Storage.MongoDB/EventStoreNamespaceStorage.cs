@@ -31,7 +31,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     readonly IEventStoreNamespaceDatabase _eventStoreNamespaceDatabase;
     readonly IEventConverter _converter;
     readonly IEventTypesStorage _eventTypesStorage;
-    readonly Json.ExpandoObjectConverter _expandoObjectConverter;
+    readonly Json.IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILoggerFactory _loggerFactory;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequenceStorage> _eventSequences = new();
@@ -44,7 +44,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="eventStoreNamespaceDatabase">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
     /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
     /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
-    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
+    /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStoreNamespaceStorage(
@@ -53,7 +53,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         IEventStoreNamespaceDatabase eventStoreNamespaceDatabase,
         IEventConverter converter,
         IEventTypesStorage eventTypesStorage,
-        Json.ExpandoObjectConverter expandoObjectConverter,
+        Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         ILoggerFactory loggerFactory)
     {

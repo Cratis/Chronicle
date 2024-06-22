@@ -2,9 +2,51 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Orleans</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Orleans</RootNamespace>
+        <TargetFramework>net8.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj" />
+        <ProjectReference Include="../DotNET/DotNET.csproj">
+            <Aliases>Client</Aliases>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Services/Services.csproj">
+            <Aliases>Server</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Grains/Grains.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Grains.Interfaces/Grains.Interfaces.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Compliance/Compliance.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.Server" />
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
+        <PackageReference Include="Cratis.Applications.Orleans" />
     </ItemGroup>
 </Project>

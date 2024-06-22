@@ -10,9 +10,10 @@ using Cratis.Chronicle.Projections.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 
-namespace Cratis.Chronicle.Server.Serialization;
+namespace Cratis.Chronicle.Setup.Serialization;
 
 /// <summary>
 /// Extension methods for configuring serialization.

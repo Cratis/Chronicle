@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for handling serialization of projection definitions.</param>
 /// <param name="projectionPipelineSerializer"><see cref="IJsonProjectionPipelineSerializer"/> for handling serialization of projection pipeline definitions.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
-/// <param name="expandoObjectConverter"><see cref="Json.ExpandoObjectConverter"/> for conversions.</param>
+/// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class Storage(
@@ -26,7 +26,7 @@ public class Storage(
     IJsonProjectionSerializer projectionSerializer,
     IJsonProjectionPipelineSerializer projectionPipelineSerializer,
     IJsonComplianceManager complianceManager,
-    Json.ExpandoObjectConverter expandoObjectConverter,
+    Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     ILoggerFactory loggerFactory) : IStorage
 {

@@ -35,6 +35,13 @@ public class ChronicleOptions(
     ILoggerFactory? loggerFactory = null)
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="ChronicleOptions"/> class.
+    /// </summary>
+    public ChronicleOptions() : this(ChronicleUrl.Default)
+    {
+    }
+
+    /// <summary>
     /// Gets the <see cref="ChronicleUrl"/> to use.
     /// </summary>
     public ChronicleUrl Url { get; init; } = url;
