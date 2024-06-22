@@ -12,16 +12,16 @@ using MongoDB.Bson.Serialization;
 namespace Orleans.Hosting;
 
 /// <summary>
-/// Extension methods for <see cref="ISiloBuilder"/> for configuring event sequence stream.
+/// Extension methods for <see cref="IChronicleBuilder"/> for configuring Chronicle to use MongoDB.
 /// </summary>
-public static class SiloBuilderExtensions
+public static class ChronicleBuilderExtensions
 {
     /// <summary>
-    /// Add event sequence stream support.
+    /// Configure Chronicle to use MongoDB.
     /// </summary>
-    /// <param name="builder"><see cref="ISiloBuilder"/> to add for.</param>
-    /// <returns><see cref="ISiloBuilder"/> for builder continuation.</returns>
-    public static ISiloBuilder UseMongoDB(this ISiloBuilder builder)
+    /// <param name="builder"><see cref="IChronicleBuilder"/> to configure.</param>
+    /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
+    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder)
     {
         builder.ConfigureServices(services =>
         {
@@ -35,5 +35,6 @@ public static class SiloBuilderExtensions
         BsonSerializer.RegisterSerializer(new UriSerializer());
         builder.ConfigureServices(services => services.AddSingleton<IReminderTable, ReminderTable>());
         return builder;
+
     }
 }

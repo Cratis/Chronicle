@@ -15,6 +15,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../Setup/Setup.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Compliance/Compliance.csproj" />
     </ItemGroup>

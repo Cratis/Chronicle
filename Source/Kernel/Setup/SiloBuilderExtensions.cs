@@ -17,11 +17,11 @@ public static class SiloBuilderExtensions
     /// Add Chronicle to the silo. This enables running Chronicle in process in the same process as the silo.
     /// </summary>
     /// <param name="builder">The <see cref="ISiloBuilder"/> to add to.</param>
+    /// <param name="configure">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
-    public static ISiloBuilder AddChronicleToSilo(this ISiloBuilder builder)
+    public static ISiloBuilder AddChronicleToSilo(this ISiloBuilder builder, Action<IChronicleBuilder>? configure = default)
     {
         builder
-            .UseLocalhostClustering() // TODO: Implement MongoDB clustering
             .AddEventSequenceStreaming()
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
@@ -33,6 +33,8 @@ public static class SiloBuilderExtensions
             .ConfigureCpuBoundWorkers()
             .ConfigureSerialization();
 
+        var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration);
+        configure?.Invoke(chronicleBuilder);
         return builder;
     }
 }

@@ -40,14 +40,15 @@ public static class Program
                 .AddBindingsByConvention()
                 .AddSelfBindings())
             .UseOrleans(_ => _
-                .AddChronicleToSilo()
+                .UseLocalhostClustering() // TODO: Implement MongoDB clustering
+                .AddChronicleToSilo(_ => _
+                    .WithMongoDB())
                 .UseDashboard(options =>
                 {
                     options.Host = "*";
                     options.Port = 8081;
                     options.HostSelf = true;
-                })
-                .UseMongoDB())
+                }))
             .ConfigureWebHostDefaults(_ => _
                 .ConfigureKestrel(options =>
                 {

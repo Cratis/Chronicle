@@ -34,14 +34,15 @@ public static class SiloBuilderExtensions
     /// Add Chronicle to the silo. This enables running Chronicle in process in the same process as the silo.
     /// </summary>
     /// <param name="builder"><see cref="ISiloBuilder"/> to add to.</param>
+    /// <param name="configureChronicle">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
     /// <param name="configSection">Optional config section.</param>
     /// <returns>The <see cref="ISiloBuilder"/> for continuation.</returns>
-    public static ISiloBuilder AddChronicle(this ISiloBuilder builder, string? configSection = default)
+    public static ISiloBuilder AddChronicle(this ISiloBuilder builder, Action<IChronicleBuilder>? configureChronicle = default, string? configSection = default)
     {
         builder.ConfigureServices(services => AddOptions(services)
                 .BindConfiguration(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths)));
 
-        ConfigureChronicle(builder, new ChronicleOptions());
+        ConfigureChronicle(builder, new ChronicleOptions(), configureChronicle);
 
         return builder;
     }
@@ -51,12 +52,13 @@ public static class SiloBuilderExtensions
     /// </summary>
     /// <param name="builder"><see cref="ISiloBuilder"/> to add to.</param>
     /// <param name="configureOptions">Callback for providing options.</param>
+    /// <param name="configureChronicle">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
     /// <returns>The <see cref="ISiloBuilder"/> for continuation.</returns>
-    public static ISiloBuilder AddChronicle(this ISiloBuilder builder, Action<ChronicleOptions> configureOptions)
+    public static ISiloBuilder AddChronicle(this ISiloBuilder builder, Action<ChronicleOptions> configureOptions, Action<IChronicleBuilder>? configureChronicle = default)
     {
         builder.ConfigureServices(services => AddOptions(services, configureOptions));
         var options = builder.Services.BuildServiceProvider().GetRequiredService<IOptions<ChronicleOptions>>();
-        ConfigureChronicle(builder, options.Value);
+        ConfigureChronicle(builder, options.Value, configureChronicle);
 
         return builder;
     }
@@ -76,9 +78,9 @@ public static class SiloBuilderExtensions
         return builder;
     }
 
-    static void ConfigureChronicle(this ISiloBuilder builder, ChronicleOptions options)
+    static void ConfigureChronicle(this ISiloBuilder builder, ChronicleOptions options, Action<IChronicleBuilder>? configureChronicle = default)
     {
-        builder.AddChronicleToSilo();
+        builder.AddChronicleToSilo(configureChronicle);
         builder.ConfigureServices(services =>
         {
             services.AddTypeDiscovery();

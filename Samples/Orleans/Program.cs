@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Configuration;
 using Cratis.Json;
 using Cratis.MongoDB;
-using Orleans.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.AddConsole();
@@ -23,12 +21,8 @@ builder.Host.UseOrleans(silo =>
     {
         silo
             .UseLocalhostClustering()
-            .AddChronicle()
-            .UseMongoDB();
-
-        silo.Services.AddSerializer(serializerBuilder => serializerBuilder.AddJsonSerializer(
-            _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Cratis") ?? false),
-            Globals.JsonSerializerOptions));
+            .AddChronicle(_ => _
+                .WithMongoDB());
     })
     .UseConsoleLifetime();
 
