@@ -15,28 +15,31 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IProjections"/>.
 /// </summary>
-public class Projections : IProjections
+/// <remarks>
+/// Initializes a new instance of the <see cref="Projections"/> class.
+/// </remarks>
+/// <param name="eventStore"><see cref="IEventStore"/> the projections belongs to.</param>
+/// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
+/// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
+/// <param name="modelNameResolver">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+/// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of projections.</param>
+/// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
+public class Projections(
+    IEventStore eventStore,
+    IClientArtifactsProvider clientArtifacts,
+    IJsonSchemaGenerator schemaGenerator,
+    IModelNameResolver modelNameResolver,
+    IServiceProvider serviceProvider,
+    JsonSerializerOptions jsonSerializerOptions) : IProjections
 {
-    readonly IEventStore _eventStore;
+    readonly IEventStore _eventStore = eventStore;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Projections"/> class.
-    /// </summary>
-    /// <param name="eventStore"><see cref="IEventStore"/> the projections belongs to.</param>
-    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-    /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
-    /// <param name="modelNameResolver">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of projections.</param>
-    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
-    public Projections(
-        IEventStore eventStore,
-        IClientArtifactsProvider clientArtifacts,
-        IJsonSchemaGenerator schemaGenerator,
-        IModelNameResolver modelNameResolver,
-        IServiceProvider serviceProvider,
-        JsonSerializerOptions jsonSerializerOptions)
+    /// <inheritdoc/>
+    public IImmutableList<ProjectionDefinition> Definitions { get; private set; } = ImmutableList<ProjectionDefinition>.Empty;
+
+    /// <inheritdoc/>
+    public Task Discover()
     {
-        _eventStore = eventStore;
         Definitions = FindAllProjectionDefinitions(
             _eventStore.EventTypes,
             clientArtifacts,
@@ -44,13 +47,12 @@ public class Projections : IProjections
             modelNameResolver,
             serviceProvider,
             jsonSerializerOptions).ToImmutableList();
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public IImmutableList<ProjectionDefinition> Definitions { get; }
-
-    /// <inheritdoc/>
-    public Task Discover()
+    public Task Register()
     {
         return Task.CompletedTask;
     }

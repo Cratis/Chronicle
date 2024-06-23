@@ -44,7 +44,7 @@ public class ClientObservers(
                         register.EventSequenceId,
                         register.ConnectionId);
                     clientObserver = grainFactory.GetGrain<IClientObserver>(Guid.Parse(register.ObserverId), keyExtension: key);
-                    clientObserver.Start(register.ObserverName, register.EventTypes.Select(_ => _.ToKernel()).ToArray());
+                    clientObserver.Start(register.ObserverName, register.EventTypes.Select(_ => _.ToChronicle()).ToArray());
 
                     registrationTcs.SetResult(register);
                     break;

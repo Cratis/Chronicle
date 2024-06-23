@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Projections.Definitions;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
@@ -18,7 +17,6 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
 {
     readonly IKernel _kernel;
     readonly IClusterClient _clusterClient;
-    readonly KernelConfiguration _configuration;
     readonly ILogger<Projections> _logger;
     readonly IBroadcastChannelProvider _projectionChangedChannel;
 
@@ -27,23 +25,20 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     /// </summary>
     /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
     /// <param name="clusterClient"><see cref="IClusterClient"/> instance.</param>
-    /// <param name="configuration">The Kernel configuration.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Projections(
         IKernel kernel,
         IClusterClient clusterClient,
-        KernelConfiguration configuration,
         ILogger<Projections> logger)
     {
         _kernel = kernel;
         _clusterClient = clusterClient;
-        _configuration = configuration;
         _logger = logger;
         _projectionChangedChannel = _clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ProjectionChanged);
     }
 
     /// <inheritdoc/>
-    public async Task Rehydrate()
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _logger.Rehydrate();
 
@@ -68,7 +63,8 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
         //         }
         //     }
         // }
-        await Task.CompletedTask;
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

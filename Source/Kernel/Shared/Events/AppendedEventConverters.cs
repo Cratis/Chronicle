@@ -25,12 +25,12 @@ public static class AppendedEventConverters
     };
 
     /// <summary>
-    /// Convert to kernel version of <see cref="AppendedEvent"/>.
+    /// Convert to Chronicle version of <see cref="AppendedEvent"/>.
     /// </summary>
     /// <param name="event"><see cref="Contracts.Events.AppendedEvent"/> to convert.</param>
-    /// <returns>Converted kernel version.</returns>
-    public static AppendedEvent ToKernel(this Contracts.Events.AppendedEvent @event) => new(
-            @event.Metadata.ToKernel(),
-            @event.Context.ToKernel(),
+    /// <returns>Converted Chronicle version.</returns>
+    public static AppendedEvent ToChronicle(this Contracts.Events.AppendedEvent @event) => new(
+            @event.Metadata.ToChronicle(),
+            @event.Context.ToChronicle(),
             JsonSerializer.Deserialize<ExpandoObject>(@event.Content, Globals.JsonSerializerOptions)!);
 }

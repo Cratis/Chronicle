@@ -32,7 +32,7 @@ public static class EventTypeConverters
         types.Select(_ => _.ToContract()).ToArray();
 
     /// <summary>
-    /// Convert to Kernel representation.
+    /// Convert to Chronicle representation.
     /// </summary>
     /// <param name="eventType"><see cref="Chronicle.Contracts.Events.EventType"/> to convert from.</param>
     /// <returns>Converted <see cref="EventType"/>.</returns>

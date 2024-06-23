@@ -25,7 +25,7 @@ public static class EventSequenceStateExtensions
     /// </summary>
     /// <param name="state"><see cref="EventSequenceState"/> to convert.</param>
     /// <returns>Converted <see cref="Chronicle.Storage.EventSequences.EventSequenceState"/>.</returns>
-    public static Chronicle.Storage.EventSequences.EventSequenceState ToKernel(this EventSequenceState state) =>
+    public static Chronicle.Storage.EventSequences.EventSequenceState ToChronicle(this EventSequenceState state) =>
         new()
         {
             SequenceNumber = state.SequenceNumber,

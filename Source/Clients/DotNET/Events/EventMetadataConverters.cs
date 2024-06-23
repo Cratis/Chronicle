@@ -23,7 +23,7 @@ public static class EventMetadataConverters
     }
 
     /// <summary>
-    /// Convert to kernel version of <see cref="EventMetadata"/>.
+    /// Convert to Chronicle version of <see cref="EventMetadata"/>.
     /// </summary>
     /// <param name="metadata"><see cref="Chronicle.Contracts.Events.EventMetadata"/> to convert.</param>
     /// <returns>Converted <see cref="EventMetadata"/>.</returns>

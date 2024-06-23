@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Projections.Definitions;
+using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Sinks;
 
 namespace Cratis.Chronicle.Observation.Reducers;

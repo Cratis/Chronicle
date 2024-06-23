@@ -25,7 +25,7 @@ public class ChildrenDefinition
     [ProtoMember(2)]
     public ModelDefinition Model { get; set; }
 
-     /// <summary>
+    /// <summary>
     /// Gets or sets the initial state to use for new instances of the model.
     /// </summary>
     [ProtoMember(3)]
@@ -56,8 +56,14 @@ public class ChildrenDefinition
     public AllDefinition All { get; set; }
 
     /// <summary>
-    /// Gets or sets the definition of what removes a child, if any.
+    /// Gets or sets the optional <see cref="FromEventPropertyDefinition"/> definition.
     /// </summary>
     [ProtoMember(8)]
+    public FromEventPropertyDefinition? FromEventProperty { get; set; }
+
+    /// <summary>
+    /// Gets or sets the definition of what removes a child, if any.
+    /// </summary>
+    [ProtoMember(9)]
     public RemovedWithDefinition? RemovedWith { get; set; }
 }

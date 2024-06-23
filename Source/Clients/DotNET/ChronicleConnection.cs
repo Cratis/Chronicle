@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventSequences;
@@ -110,7 +111,8 @@ public class ChronicleConnection : IChronicleConnection
                 _channel.CreateGrpcService<IEventSequences>(),
                 _channel.CreateGrpcService<IEventTypes>(),
                 _channel.CreateGrpcService<IObservers>(),
-                _channel.CreateGrpcService<IClientObservers>());
+                _channel.CreateGrpcService<IClientObservers>(),
+                _channel.CreateGrpcService<IProjections>());
 
             await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_options.ConnectTimeout));
             _logger.Connected();

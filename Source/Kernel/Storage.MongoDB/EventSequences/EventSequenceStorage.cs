@@ -52,7 +52,7 @@ public class EventSequenceStorage(
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
         var cursor = await collection.FindAsync(filter).ConfigureAwait(false);
         var state = await cursor.FirstOrDefaultAsync();
-        return state?.ToKernel() ?? new Chronicle.Storage.EventSequences.EventSequenceState();
+        return state?.ToChronicle() ?? new Chronicle.Storage.EventSequences.EventSequenceState();
     }
 
     /// <inheritdoc/>

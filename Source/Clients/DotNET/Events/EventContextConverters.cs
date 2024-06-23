@@ -31,7 +31,7 @@ public static class EventContextConverters
     };
 
     /// <summary>
-    /// Convert to kernel version of <see cref="EventContext"/>.
+    /// Convert to Chronicle version of <see cref="EventContext"/>.
     /// </summary>
     /// <param name="context"><see cref="Chronicle.Contracts.Events.EventContext"/> to convert.</param>
     /// <returns>Converted <see cref="EventContext"/>.</returns>

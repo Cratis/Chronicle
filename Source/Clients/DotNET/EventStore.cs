@@ -123,22 +123,28 @@ public class EventStore : IEventStore
     public IProjections Projections { get; }
 
     /// <inheritdoc/>
-    public Task DiscoverAll()
+    public async Task DiscoverAll()
     {
         _logger.DiscoverAllArtifacts();
-        return Task.WhenAll(
-            EventTypes.Discover(),
+
+        // We need to discover all event types first, as they are used by the other artifacts
+        await EventTypes.Discover();
+
+        await Task.WhenAll(
             Observers.Discover(),
             Reducers.Discover(),
             Projections.Discover());
     }
 
     /// <inheritdoc/>
-    public Task RegisterAll()
+    public async Task RegisterAll()
     {
         _logger.RegisterAllArtifacts();
-        return Task.WhenAll(
-            EventTypes.Register(),
+
+        // We need to register event types first, as they are used by the other artifacts
+        await EventTypes.Register();
+
+        await Task.WhenAll(
             Observers.Register());
     }
 

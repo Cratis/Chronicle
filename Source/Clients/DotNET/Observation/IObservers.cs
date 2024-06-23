@@ -15,7 +15,7 @@ public interface IObservers
     Task Discover();
 
     /// <summary>
-    /// Register all observers with the Cratis Kernel.
+    /// Register all observers with Chronicle.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Register();

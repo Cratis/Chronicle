@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Models;
+using Cratis.Chronicle.Contracts.Primitives;
 using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Projections;
@@ -68,14 +69,32 @@ public class ProjectionDefinition
     public IDictionary<string, ChildrenDefinition> Children { get; set; }
 
     /// <summary>
+    /// Gets or sets all the <see cref="FromAnyDefinition"/> for <see cref="EventType">event types</see>.
+    /// </summary>
+    [ProtoMember(10, IsRequired = true)]
+    public IList<FromAnyDefinition> FromAny { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the full <see cref="AllDefinition"/>.
     /// </summary>
-    [ProtoMember(10)]
+    [ProtoMember(11)]
     public AllDefinition All { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional <see cref="FromEventPropertyDefinition"/> definition.
+    /// </summary>
+    [ProtoMember(12)]
+    public FromEventPropertyDefinition? FromEventProperty { get; set; }
 
     /// <summary>
     /// Gets or sets the definition of what removes a child, if any.
     /// </summary>
-    [ProtoMember(11)]
+    [ProtoMember(13)]
     public RemovedWithDefinition? RemovedWith { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last time the projection definition was updated.
+    /// </summary>
+    [ProtoMember(14)]
+    public SerializableDateTimeOffset? LastUpdated { get; set; }
 }

@@ -18,6 +18,7 @@ public interface IObservers
     /// <param name="request">The rewind request.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
+    [Operation]
     Task Rewind(RewindRequest request, CallContext context = default);
 
     /// <summary>
@@ -26,6 +27,7 @@ public interface IObservers
     /// <param name="request">The rewind request.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
+    [Operation]
     Task RewindPartition(RewindPartitionRequest request, CallContext context = default);
 
     /// <summary>
@@ -34,6 +36,7 @@ public interface IObservers
     /// <param name="request">The retry request.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
+    [Operation]
     Task RetryPartition(RetryPartitionRequest request, CallContext context = default);
 
     /// <summary>

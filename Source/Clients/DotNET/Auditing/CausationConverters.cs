@@ -30,7 +30,7 @@ public static class CausationConverters
         };
 
     /// <summary>
-    /// Convert to Kernel representation.
+    /// Convert to Chronicle representation.
     /// </summary>
     /// <param name="causations">Collection of <see cref="Chronicle.Contracts.Auditing.Causation"/> to convert from..</param>
     /// <returns>Converted collection of <see cref="Causation"/>.</returns>
@@ -38,7 +38,7 @@ public static class CausationConverters
         causations.Select(c => c.ToClient()).ToArray();
 
     /// <summary>
-    /// Convert to Kernel representation.
+    /// Convert to Chronicle representation.
     /// </summary>
     /// <param name="causation"><see cref="Chronicle.Contracts.Auditing.Causation"/> to convert from.</param>
     /// <returns>Converted <see cref="Causation"/>.</returns>

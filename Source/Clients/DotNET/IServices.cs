@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Observation;
@@ -31,4 +32,9 @@ public interface IServices
     /// Gets the <see cref="IClientObservers"/> service.
     /// </summary>
     IClientObservers ClientObservers { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IProjections"/> service.
+    /// </summary>
+    IProjections Projections { get; }
 }

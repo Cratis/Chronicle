@@ -29,10 +29,10 @@ public class EventSequences(
         var eventSequence = GetEventSequence(request.EventStoreName, request.Namespace, request.EventSequenceId);
         await eventSequence.Append(
             request.EventSourceId,
-            request.EventType.ToKernel(),
+            request.EventType.ToChronicle(),
             JsonSerializer.Deserialize<JsonNode>(request.Content, jsonSerializerOptions)!.AsObject(),
-            request.Causation.ToKernel(),
-            request.CausedBy.ToKernel(),
+            request.Causation.ToChronicle(),
+            request.CausedBy.ToChronicle(),
             request.ValidFrom);
 
         return new AppendResponse();

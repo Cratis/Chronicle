@@ -11,12 +11,6 @@ namespace Cratis.Chronicle.Grains.Projections;
 public interface IProjections : IGrainWithIntegerKey
 {
     /// <summary>
-    /// Rehydrate all projections for all event stores and namespaces.
-    /// </summary>
-    /// <returns>Async task.</returns>
-    Task Rehydrate();
-
-    /// <summary>
     /// Register a <see cref="ProjectionDefinition"/> with a <see cref="ProjectionPipelineDefinition"/>.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> to register for.</param>

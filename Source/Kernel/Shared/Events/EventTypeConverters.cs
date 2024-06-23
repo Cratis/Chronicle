@@ -32,11 +32,11 @@ public static class EventTypeConverters
         types.Select(_ => _.ToContract()).ToArray();
 
     /// <summary>
-    /// Convert to Kernel representation.
+    /// Convert to Chronicle representation.
     /// </summary>
     /// <param name="eventType"><see cref="Contracts.Events.EventType"/> to convert from.</param>
     /// <returns>Converted <see cref="EventType"/>.</returns>
-    public static EventType ToKernel(this Contracts.Events.EventType eventType) =>
+    public static EventType ToChronicle(this Contracts.Events.EventType eventType) =>
         new(eventType.Id, eventType.Generation, eventType.IsPublic);
 
     /// <summary>
@@ -44,6 +44,6 @@ public static class EventTypeConverters
     /// </summary>
     /// <param name="types">Collection of <see cref="Contracts.Events.EventType"/> to convert.</param>
     /// <returns>Converted collection of contract version.</returns>
-    public static IEnumerable<EventType> ToKernel(this IEnumerable<Contracts.Events.EventType> types) =>
-        types.Select(_ => _.ToKernel()).ToArray();
+    public static IEnumerable<EventType> ToChronicle(this IEnumerable<Contracts.Events.EventType> types) =>
+        types.Select(_ => _.ToChronicle()).ToArray();
 }

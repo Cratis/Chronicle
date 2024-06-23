@@ -17,7 +17,7 @@ public static class AppendedEventConverters
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to convert.</param>
     /// <returns>Converted contract version.</returns>
-    public static Chronicle.Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event) => new()
+    public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event) => new()
     {
         Metadata = @event.Metadata.ToContract(),
         Context = @event.Context.ToContract(),
@@ -25,11 +25,11 @@ public static class AppendedEventConverters
     };
 
     /// <summary>
-    /// Convert to kernel version of <see cref="AppendedEvent"/>.
+    /// Convert to Chronicle version of <see cref="AppendedEvent"/>.
     /// </summary>
-    /// <param name="event"><see cref="Chronicle.Contracts.Events.AppendedEvent"/> to convert.</param>
-    /// <returns>Converted kernel version.</returns>
-    public static AppendedEvent ToClient(this Chronicle.Contracts.Events.AppendedEvent @event) => new(
+    /// <param name="event"><see cref="Contracts.Events.AppendedEvent"/> to convert.</param>
+    /// <returns>Converted Chronicle version.</returns>
+    public static AppendedEvent ToClient(this Contracts.Events.AppendedEvent @event) => new(
             @event.Metadata.ToClient(),
             @event.Context.ToClient(),
             JsonSerializer.Deserialize<ExpandoObject>(@event.Content, Globals.JsonSerializerOptions)!);
