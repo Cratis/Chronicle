@@ -10,6 +10,13 @@ namespace Cratis.Chronicle.Projections;
 public record ProjectionSinkConfigurationId(Guid Value) : ConceptAs<Guid>(Value)
 {
     /// <summary>
+    /// Implicitly convert from <see cref="Guid"/> to <see cref="ProjectionSinkConfigurationId"/>.
+    /// </summary>
+    /// <param name="value"><see cref="Guid"/> to convert from.</param>
+    /// <returns>Converted <see cref="ProjectionSinkConfigurationId"/> instance.</returns>
+    public static implicit operator ProjectionSinkConfigurationId(Guid value) => new(value);
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> representation of <see cref="Guid"/> to <see cref="ProjectionSinkConfigurationId"/>.
     /// </summary>
     /// <param name="value"><see cref="string"/> representation of <see cref="Guid"/>.</param>

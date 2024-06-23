@@ -20,6 +20,6 @@ public class ProjectionPipelineDefinition
     /// <summary>
     /// Gets or sets the collection of <see cref="ProjectionSinkDefinition"/>.
     /// </summary>
-    [ProtoMember(2)]
-    public IEnumerable<ProjectionSinkDefinition> Sinks { get; set; }
+    [ProtoMember(2, IsRequired = true)]
+    public IEnumerable<ProjectionSinkDefinition> Sinks { get; set; } = [];
 }

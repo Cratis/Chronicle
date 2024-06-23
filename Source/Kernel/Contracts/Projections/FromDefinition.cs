@@ -14,8 +14,8 @@ public class FromDefinition
     /// <summary>
     /// Gets or sets the properties and expressions for each property.
     /// </summary>
-    [ProtoMember(1)]
-    public IDictionary<string, string> Properties { get; set; }
+    [ProtoMember(1, IsRequired = true)]
+    public IDictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
     /// Gets or sets the key expression, represents the key to use for identifying the model instance.

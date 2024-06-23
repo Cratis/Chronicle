@@ -8,6 +8,7 @@ using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;

@@ -145,7 +145,8 @@ public class EventStore : IEventStore
         await EventTypes.Register();
 
         await Task.WhenAll(
-            Observers.Register());
+            Observers.Register(),
+            Projections.Register());
     }
 
     /// <inheritdoc/>

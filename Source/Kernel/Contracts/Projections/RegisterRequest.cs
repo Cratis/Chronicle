@@ -12,8 +12,14 @@ namespace Cratis.Chronicle.Contracts.Projections;
 public class RegisterRequest
 {
     /// <summary>
+    /// Gets or sets the event store name.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStoreName { get; set; }
+
+    /// <summary>
     /// Gets or sets the <see cref="ProjectionAndPipeline"/> instances to register.
     /// </summary>
-    [ProtoMember(1, IsRequired = true)]
+    [ProtoMember(2, IsRequired = true)]
     public IList<ProjectionAndPipeline> ProjectionsAndPipelines { get; set; } = [];
 }

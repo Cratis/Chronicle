@@ -7,6 +7,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Sinks;
 using Cratis.Models;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -52,9 +53,28 @@ public class Projections(
     }
 
     /// <inheritdoc/>
-    public Task Register()
+    public async Task Register()
     {
-        return Task.CompletedTask;
+        await _eventStore.Connection.Services.Projections.Register(new()
+        {
+            EventStoreName = _eventStore.EventStoreName,
+            ProjectionsAndPipelines = Definitions.Select(_ => new ProjectionAndPipeline
+            {
+                Projection = _,
+                Pipeline = new ProjectionPipelineDefinition
+                {
+                    ProjectionId = _.Identifier.ToString(),
+                    Sinks =
+                    [
+                        new ProjectionSinkDefinition
+                        {
+                            ConfigurationId = Guid.Empty,
+                            TypeId = WellKnownSinkTypes.MongoDB
+                        }
+                    ]
+                }
+            }).ToList()
+        });
     }
 
     IEnumerable<ProjectionDefinition> FindAllProjectionDefinitions(

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Projections.Definitions;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Projections;
@@ -16,8 +17,9 @@ public class Projections(IGrainFactory grainFactory) : IProjections
     public Task Register(RegisterRequest request, CallContext context = default)
     {
         var projections = grainFactory.GetGrain<Grains.Projections.IProjections>(0);
-        projections.Register()
+        var projectionAndPipelines = request.ProjectionsAndPipelines.Select(_ => _.ToChronicle()).ToArray();
 
+        _ = Task.Run(() => projections.Register(request.EventStoreName, projectionAndPipelines));
         return Task.CompletedTask;
     }
 }

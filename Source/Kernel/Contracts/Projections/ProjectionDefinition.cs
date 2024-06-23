@@ -53,20 +53,20 @@ public class ProjectionDefinition
     /// <summary>
     /// Gets or sets all the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.
     /// </summary>
-    [ProtoMember(7)]
-    public IDictionary<EventType, FromDefinition> From { get; set; }
+    [ProtoMember(7, IsRequired = true)]
+    public IDictionary<EventType, FromDefinition> From { get; set; } = new Dictionary<EventType, FromDefinition>();
 
     /// <summary>
     /// Gets or sets all the <see cref="JoinDefinition"/> for <see cref="EventType">event types</see>.
     /// </summary>
-    [ProtoMember(8)]
-    public IDictionary<EventType, JoinDefinition> Join { get; set; }
+    [ProtoMember(8, IsRequired = true)]
+    public IDictionary<EventType, JoinDefinition> Join { get; set; } = new Dictionary<EventType, JoinDefinition>();
 
     /// <summary>
     /// Gets or sets all the <see cref="ChildrenDefinition"/> for properties on model.
     /// </summary>
-    [ProtoMember(9)]
-    public IDictionary<string, ChildrenDefinition> Children { get; set; }
+    [ProtoMember(9, IsRequired = true)]
+    public IDictionary<string, ChildrenDefinition> Children { get; set; } = new Dictionary<string, ChildrenDefinition>();
 
     /// <summary>
     /// Gets or sets all the <see cref="FromAnyDefinition"/> for <see cref="EventType">event types</see>.
@@ -96,5 +96,5 @@ public class ProjectionDefinition
     /// Gets or sets the last time the projection definition was updated.
     /// </summary>
     [ProtoMember(14)]
-    public SerializableDateTimeOffset? LastUpdated { get; set; }
+    public SerializableDateTimeOffset? LastUpdated { get; set; }
 }

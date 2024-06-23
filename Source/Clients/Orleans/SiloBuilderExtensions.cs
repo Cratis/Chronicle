@@ -7,7 +7,6 @@ extern alias Client;
 using Client::Cratis.Chronicle;
 using Client::Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Grains.Observation.Clients;
-using Cratis.Chronicle.Grains.Projections;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Cratis.Json;
