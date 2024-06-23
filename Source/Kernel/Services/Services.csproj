@@ -9,6 +9,10 @@
     <ItemGroup>
         <ProjectReference Include="..\Contracts\Contracts.csproj"/>
         <ProjectReference Include="..\Grains.Interfaces\Grains.Interfaces.csproj" />
+
+        <ProjectReference Include="../Shared/Shared.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
