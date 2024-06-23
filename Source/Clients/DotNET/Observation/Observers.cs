@@ -130,50 +130,50 @@ public class Observers : IObservers
             EventTypes = handler.EventTypes.Select(_ => _.ToContract()).ToArray()
         };
 
-        var messages = new BehaviorSubject<ObserverClientMessage>(new(new(registration)));
-
+        using var messages = new BehaviorSubject<ObserverClientMessage>(new(new(registration)));
         var eventsToObserve = _eventStore.Connection.Services.ClientObservers.Observe(messages);
-        eventsToObserve.Subscribe(async events =>
+        eventsToObserve.Subscribe(events => ObserverMethod(messages, handler, events).Wait());
+    }
+
+    async Task ObserverMethod(ISubject<ObserverClientMessage> messages, ObserverHandler handler, EventsToObserve events)
+    {
+        var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
+        var exceptionMessages = Enumerable.Empty<string>();
+        var exceptionStackTrace = string.Empty;
+        var state = ObservationState.Success;
+
+        foreach (var @event in events.Events)
         {
-            var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
-            var exceptionMessages = Enumerable.Empty<string>();
-            var exceptionStackTrace = string.Empty;
-            var state = ObservationState.Success;
+            _logger.EventReceived(@event.Metadata.Type.Id, handler.ObserverId);
 
-            foreach (var @event in events.Events)
+            try
             {
-                _logger.EventReceived(@event.Metadata.Type.Id, handler.ObserverId);
+                var context = @event.Context.ToClient();
+                var metadata = @event.Metadata.ToClient();
 
-                try
-                {
-                    var context = @event.Context.ToClient();
-                    var metadata = @event.Metadata.ToClient();
+                BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
+                var eventType = _eventTypes.GetClrTypeFor(metadata.Type.Id);
 
-                    BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
-                    var eventType = _eventTypes.GetClrTypeFor(metadata.Type.Id);
+                var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
 
-                    var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
-
-                    await handler.OnNext(metadata, context, content);
-                    lastSuccessfullyObservedEvent = @event.Metadata.SequenceNumber;
-                }
-                catch (Exception ex)
-                {
-                    exceptionMessages = ex.GetAllMessages();
-                    exceptionStackTrace = ex.StackTrace ?? string.Empty;
-                    state = ObservationState.Failed;
-                }
+                await handler.OnNext(metadata, context, content);
+                lastSuccessfullyObservedEvent = @event.Metadata.SequenceNumber;
             }
-
-            var result = new ObservationResult
+            catch (Exception ex)
             {
-                State = state,
-                LastSuccessfulObservation = lastSuccessfullyObservedEvent,
-                ExceptionMessages = exceptionMessages.ToList(),
-                ExceptionStackTrace = exceptionStackTrace
-            };
-            messages.OnNext(new(new(result)));
-            await Task.CompletedTask;
-        });
+                exceptionMessages = ex.GetAllMessages();
+                exceptionStackTrace = ex.StackTrace ?? string.Empty;
+                state = ObservationState.Failed;
+            }
+        }
+
+        var result = new ObservationResult
+        {
+            State = state,
+            LastSuccessfulObservation = lastSuccessfullyObservedEvent,
+            ExceptionMessages = exceptionMessages.ToList(),
+            ExceptionStackTrace = exceptionStackTrace
+        };
+        messages.OnNext(new(new(result)));
     }
 }
