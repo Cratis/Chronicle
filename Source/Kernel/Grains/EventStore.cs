@@ -49,7 +49,7 @@ public class EventStore : IEventStore
     public EventStoreName Name { get; }
 
     /// <inheritdoc/>
-    public IEventStoreStorage Storage { get; }
+    public IEventStoreStorage Storage { get; }
 
     /// <inheritdoc/>
     public IProjectionDefinitions ProjectionDefinitions { get; }
