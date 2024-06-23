@@ -20,11 +20,6 @@ public class ConnectedClients(
     ILogger<ConnectedClients> logger,
     IConnectedClientsMetricsFactory metricsFactory) : Grain, IConnectedClients
 {
-    /// <summary>
-    /// Gets the name of the HTTP client for connected clients.
-    /// </summary>
-    public const string ConnectedClientsHttpClient = "connected-clients";
-
     readonly List<ConnectedClient> _clients = [];
     readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger);
     IConnectedClientsMetrics? _metrics;
