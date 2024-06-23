@@ -8,12 +8,12 @@ namespace Cratis.Chronicle.Observation;
 
 internal static partial class ObserversLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Registering observer '{Name}'")]
+    [LoggerMessage(LogLevel.Information, "Registering observer '{Name}'")]
     internal static partial void RegisteringObservers(this ILogger<Observers> logger, ObserverName Name);
 
-    [LoggerMessage(1, LogLevel.Trace, "Discover all observers")]
+    [LoggerMessage(LogLevel.Trace, "Discover all observers")]
     internal static partial void DiscoverAllObservers(this ILogger<Observers> logger);
 
-    [LoggerMessage(2, LogLevel.Trace, "Event of type {EventTypeId} was received for observer {ObserverId}")]
+    [LoggerMessage(LogLevel.Trace, "Event of type {EventTypeId} was received for observer {ObserverId}")]
     internal static partial void EventReceived(this ILogger<Observers> logger, EventTypeId eventTypeId, ObserverId observerId);
 }

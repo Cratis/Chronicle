@@ -10,9 +10,9 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
 internal static partial class ClientReducersLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Registering client reducers")]
+    [LoggerMessage(LogLevel.Information, "Registering client reducers")]
     internal static partial void RegisterReducers(this ILogger<ClientReducers> logger);
 
-    [LoggerMessage(1, LogLevel.Trace, "Registering reducer with id '{ReducerId}' - friendly name {ReducerName}, for event sequence '{EventSequenceId}'")]
+    [LoggerMessage(LogLevel.Trace, "Registering reducer with id '{ReducerId}' - friendly name {ReducerName}, for event sequence '{EventSequenceId}'")]
     internal static partial void RegisterReducer(this ILogger<ClientReducers> logger, ReducerId reducerId, ObserverName reducerName, EventSequenceId eventSequenceId);
 }

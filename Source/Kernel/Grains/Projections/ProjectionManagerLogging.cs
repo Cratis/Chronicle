@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 
 internal static partial class ProjectionManagerLogMessages
 {
-    [LoggerMessage(0, LogLevel.Debug, "Registering projection '{Name} ({Identifier})'")]
+    [LoggerMessage(LogLevel.Debug, "Registering projection '{Name} ({Identifier})'")]
     internal static partial void Registering(this ILogger<ProjectionManager> logger, ProjectionId identifier, ProjectionName name);
 }
 

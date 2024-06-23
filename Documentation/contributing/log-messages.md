@@ -20,28 +20,28 @@ Below is an example:
 
 internal static partial class RoutingLogMessages
 {
-    [LoggerMessage(0, LogLevel.Trace, "Entering routing state")]
+    [LoggerMessage(LogLevel.Trace, "Entering routing state")]
     internal static partial void Entering(this ILogger<Routing> logger);
 
-    [LoggerMessage(1, LogLevel.Trace, "Tail sequence numbers for observer is {TailEventSequenceNumber} and {TailEventSequenceNumberForEventTypes}")]
+    [LoggerMessage(LogLevel.Trace, "Tail sequence numbers for observer is {TailEventSequenceNumber} and {TailEventSequenceNumberForEventTypes}")]
     internal static partial void TailEventSequenceNumbers(this ILogger<Routing> logger, EventSequenceNumber tailEventSequenceNumber, EventSequenceNumber tailEventSequenceNumberForEventTypes);
 
-    [LoggerMessage(2, LogLevel.Trace, "Observer is not subscribed. Transitioning to disconnected state.")]
+    [LoggerMessage(LogLevel.Trace, "Observer is not subscribed. Transitioning to disconnected state.")]
     internal static partial void NotSubscribed(this ILogger<Routing> logger);
 
-    [LoggerMessage(3, LogLevel.Trace, "Observer is indexing. Transitioning to indexing state.")]
+    [LoggerMessage(LogLevel.Trace, "Observer is indexing. Transitioning to indexing state.")]
     internal static partial void Indexing(this ILogger<Routing> logger);
 
-    [LoggerMessage(4, LogLevel.Trace, "Observer is catching up. Transitioning to catch up state.")]
+    [LoggerMessage(LogLevel.Trace, "Observer is catching up. Transitioning to catch up state.")]
     internal static partial void CatchingUp(this ILogger<Routing> logger);
 
-    [LoggerMessage(5, LogLevel.Trace, "Observer is replaying. Transitioning to replay state.")]
+    [LoggerMessage(LogLevel.Trace, "Observer is replaying. Transitioning to replay state.")]
     internal static partial void Replaying(this ILogger<Routing> logger);
 
-    [LoggerMessage(6, LogLevel.Trace, "Observer is ready for observing. Transitioning to observing state.")]
+    [LoggerMessage(LogLevel.Trace, "Observer is ready for observing. Transitioning to observing state.")]
     internal static partial void Observing(this ILogger<Routing> logger);
 
-    [LoggerMessage(7, LogLevel.Trace, "Observer will fast forward to tail of event sequence.")]
+    [LoggerMessage(LogLevel.Trace, "Observer will fast forward to tail of event sequence.")]
     internal static partial void FastForwarding(this ILogger<Routing> logger);
 }
 ```

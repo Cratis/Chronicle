@@ -7,6 +7,6 @@ namespace Cratis.Chronicle.Observation;
 
 internal static partial class ObserverInvokerLogMessages
 {
-    [LoggerMessage(0, LogLevel.Error, "Observer of type '{ObserverName}' failed for event with type '{EventType}'")]
+    [LoggerMessage(LogLevel.Error, "Observer of type '{ObserverName}' failed for event with type '{EventType}'")]
     internal static partial void ObserverFailed(this ILogger<ObserverInvoker> logger, string observerName, string eventType, Exception exception);
 }

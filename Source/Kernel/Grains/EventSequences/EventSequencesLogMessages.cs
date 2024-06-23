@@ -8,6 +8,6 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 
 internal static partial class EventSequencesLogMessages
 {
-    [LoggerMessage(0, LogLevel.Error, "Failed when rehydrating event sequence {EventSequenceId} for event store {EventStore} and namespace {Namespace}")]
+    [LoggerMessage(LogLevel.Error, "Failed when rehydrating event sequence {EventSequenceId} for event store {EventStore} and namespace {Namespace}")]
     internal static partial void FailedRehydratingEventSequence(this ILogger<EventSequences> logger, EventSequenceId eventSequenceId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Exception exception);
 }

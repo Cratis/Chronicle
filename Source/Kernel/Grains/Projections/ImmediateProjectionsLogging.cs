@@ -12,16 +12,16 @@ namespace Cratis.Chronicle.Grains.Projections;
 
 internal static partial class ImmediateProjectionsLogMessages
 {
-    [LoggerMessage(0, LogLevel.Trace, "Getting model instance for projection.")]
+    [LoggerMessage(LogLevel.Trace, "Getting model instance for projection.")]
     internal static partial void GettingModelInstance(this ILogger<ImmediateProjection> logger);
 
-    [LoggerMessage(1, LogLevel.Trace, "Using cached model instance for projection.")]
+    [LoggerMessage(LogLevel.Trace, "Using cached model instance for projection.")]
     internal static partial void UsingCachedModelInstance(this ILogger<ImmediateProjection> logger);
 
-    [LoggerMessage(2, LogLevel.Trace, "No event types for projections, returning empty.")]
+    [LoggerMessage(LogLevel.Trace, "No event types for projections, returning empty.")]
     internal static partial void NoEventTypes(this ILogger<ImmediateProjection> logger);
 
-    [LoggerMessage(4, LogLevel.Error, "Failed getting model instance for projection.")]
+    [LoggerMessage(LogLevel.Error, "Failed getting model instance for projection.")]
     internal static partial void FailedGettingModelInstance(this ILogger<ImmediateProjection> logger, Exception exception);
 }
 

@@ -10,9 +10,9 @@ namespace Cratis.Chronicle.Reducers;
 /// </summary>
 internal static partial class ClientReducersLogMessages
 {
-    [LoggerMessage(0, LogLevel.Trace, "{Count} events was received for reducer {ReducerId}")]
+    [LoggerMessage(LogLevel.Trace, "{Count} events was received for reducer {ReducerId}")]
     internal static partial void EventsReceived(this ILogger<ClientReducers> logger, int count, ReducerId reducerId);
 
-    [LoggerMessage(1, LogLevel.Information, "Reducer with id '{ReducerId}' does not exist.")]
+    [LoggerMessage(LogLevel.Information, "Reducer with id '{ReducerId}' does not exist.")]
     internal static partial void UnknownReducer(this ILogger<ClientReducers> logger, ReducerId reducerId);
 }
