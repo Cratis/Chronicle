@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Configuration;
 using Cratis.Json;
 using Cratis.MongoDB;
 
@@ -11,8 +10,6 @@ builder.UseMongoDB(_ => _
     .WithStaticServer("mongodb://localhost:27017")
     .WithStaticDatabaseName("orleans"));
 
-builder.Services.AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>();
-builder.Services.AddSingleton(new Storage { Type = "mongodb" });
 builder.Host.UseDefaultServiceProvider(_ => _.ValidateOnBuild = false);
 
 builder.Services.AddSingleton(Globals.JsonSerializerOptions);
