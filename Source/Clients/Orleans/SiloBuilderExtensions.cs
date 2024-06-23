@@ -42,7 +42,7 @@ public static class SiloBuilderExtensions
         builder.ConfigureServices(services => AddOptions(services)
                 .BindConfiguration(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths)));
 
-        ConfigureChronicle(builder, new ChronicleOptions(), configureChronicle);
+        ConfigureChronicle(builder, configureChronicle);
 
         return builder;
     }
@@ -57,8 +57,7 @@ public static class SiloBuilderExtensions
     public static ISiloBuilder AddChronicle(this ISiloBuilder builder, Action<ChronicleOptions> configureOptions, Action<IChronicleBuilder>? configureChronicle = default)
     {
         builder.ConfigureServices(services => AddOptions(services, configureOptions));
-        var options = builder.Services.BuildServiceProvider().GetRequiredService<IOptions<ChronicleOptions>>();
-        ConfigureChronicle(builder, options.Value, configureChronicle);
+        ConfigureChronicle(builder, configureChronicle);
 
         return builder;
     }
@@ -78,7 +77,7 @@ public static class SiloBuilderExtensions
         return builder;
     }
 
-    static void ConfigureChronicle(this ISiloBuilder builder, ChronicleOptions options, Action<IChronicleBuilder>? configureChronicle = default)
+    static void ConfigureChronicle(this ISiloBuilder builder, Action<IChronicleBuilder>? configureChronicle = default)
     {
         builder.AddChronicleToSilo(configureChronicle);
         builder.ConfigureServices(services =>
@@ -91,6 +90,7 @@ public static class SiloBuilderExtensions
 
             services.AddSingleton<IChronicleClient>(sp =>
             {
+                var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
                 var services = new Client::Cratis.Chronicle.Services(
                     new EventSequences(sp.GetRequiredService<IGrainFactory>(), Globals.JsonSerializerOptions),
                     new EventTypes(sp.GetRequiredService<IStorage>()),
