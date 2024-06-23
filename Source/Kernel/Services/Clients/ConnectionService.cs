@@ -23,15 +23,15 @@ public class ConnectionService(IGrainFactory grainFactory) : IConnectionService
         CallContext context = default)
     {
         var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
-        connectedClients.OnClientConnected(
-            request.ConnectionId,
-            request.ClientVersion,
-            request.IsRunningWithDebugger).GetAwaiter().GetResult();
-
         var subject = new Subject<ConnectionKeepAlive>();
 
         _ = Task.Run(async () =>
         {
+            await connectedClients.OnClientConnected(
+                request.ConnectionId,
+                request.ClientVersion,
+                request.IsRunningWithDebugger);
+
             while (!context.CancellationToken.IsCancellationRequested)
             {
                 await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);

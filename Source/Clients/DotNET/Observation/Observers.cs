@@ -130,9 +130,13 @@ public class Observers : IObservers
             EventTypes = handler.EventTypes.Select(_ => _.ToContract()).ToArray()
         };
 
-        using var messages = new BehaviorSubject<ObserverClientMessage>(new(new(registration)));
+#pragma warning disable CA2000 // Dispose objects before losing scope
+        var messages = new BehaviorSubject<ObserverClientMessage>(new(new(registration)));
+#pragma warning restore CA2000 // Dispose objects before losing scope
         var eventsToObserve = _eventStore.Connection.Services.ClientObservers.Observe(messages);
-        eventsToObserve.Subscribe(events => ObserverMethod(messages, handler, events).Wait());
+        eventsToObserve.Subscribe(
+            events => ObserverMethod(messages, handler, events).Wait(),
+            messages.Dispose);
     }
 
     async Task ObserverMethod(ISubject<ObserverClientMessage> messages, ObserverHandler handler, EventsToObserve events)

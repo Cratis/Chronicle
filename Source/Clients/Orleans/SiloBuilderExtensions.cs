@@ -90,15 +90,16 @@ public static class SiloBuilderExtensions
 
             services.AddSingleton<IChronicleClient>(sp =>
             {
+                var grainFactory = sp.GetRequiredService<IGrainFactory>();
                 var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
                 var services = new Client::Cratis.Chronicle.Services(
-                    new EventSequences(sp.GetRequiredService<IGrainFactory>(), Globals.JsonSerializerOptions),
+                    new EventSequences(grainFactory, Globals.JsonSerializerOptions),
                     new EventTypes(sp.GetRequiredService<IStorage>()),
                     new Observers(),
                     new Server::Cratis.Chronicle.Services.Observation.ClientObservers(sp.GetRequiredService<IGrainFactory>(), sp.GetRequiredService<IObserverMediator>()));
 
                 var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
-                var connection = new ChronicleConnection(connectionLifecycle, services);
+                var connection = new ChronicleConnection(connectionLifecycle, services, grainFactory);
                 var client = new ChronicleClient(connection, options);
                 var eventStore = client.GetEventStore("some_event_store");
                 eventStore.DiscoverAll().GetAwaiter().GetResult();
