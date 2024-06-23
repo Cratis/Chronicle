@@ -9,6 +9,6 @@ public class MyGrain(IChronicleClient client) : Grain, IMyGrain
     public async Task DoStuff()
     {
         var eventStore = _client.GetEventStore("some_event_store");
-        await eventStore.EventLog.Append("some_event", new MyFirstEvent());
+        await eventStore.EventLog.Append("some_event", new MyFirstEvent("Blah"));
     }
 }
