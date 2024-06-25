@@ -14,6 +14,11 @@ public static class WellKnownCollectionNames
     public const string EventLog = "event-log";
 
     /// <summary>
+    /// The collection that holds all namespaces.
+    /// </summary>
+    public const string Namespaces = "namespaces";
+
+    /// <summary>
     /// The collection that holds <see cref="Event"/> for the system.
     /// </summary>
     public const string System = "system";

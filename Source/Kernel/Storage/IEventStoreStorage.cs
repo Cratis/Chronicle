@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
+using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Projections;
 
 namespace Cratis.Chronicle.Storage;
@@ -16,6 +17,11 @@ public interface IEventStoreStorage
     /// Gets the event store the storage represents.
     /// </summary>
     EventStoreName EventStore { get; }
+
+    /// <summary>
+    /// Gets the <see cref="INamespaceStorage"/> for the event store.
+    /// </summary>
+    INamespaceStorage Namespaces { get; }
 
     /// <summary>
     /// Gets the <see cref="IIdentityStorage"/> for the event store.

@@ -8,7 +8,9 @@ using Cratis.Chronicle.Projections.Json;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Identities;
+using Cratis.Chronicle.Storage.MongoDB.Namespaces;
 using Cratis.Chronicle.Storage.MongoDB.Projections;
+using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Events.MongoDB.EventTypes;
 using Microsoft.Extensions.Logging;
@@ -45,6 +47,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore;
+
+    /// <inheritdoc/>
+    public INamespaceStorage Namespaces { get; } = new NamespaceStorage(database, loggerFactory.CreateLogger<NamespaceStorage>());
 
     /// <inheritdoc/>
     public IIdentityStorage Identities { get; } = new IdentityStorage(database, loggerFactory.CreateLogger<IdentityStorage>());

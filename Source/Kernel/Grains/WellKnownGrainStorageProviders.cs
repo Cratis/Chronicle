@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Grains;
 public static class WellKnownGrainStorageProviders
 {
     /// <summary>
+    /// The name of the storage provider used for namespaces.
+    /// </summary>
+    public const string Namespaces = "namespaces";
+
+    /// <summary>
     /// The name of the storage provider used for event sequences.
     /// </summary>
     public const string EventSequences = "event-sequences";

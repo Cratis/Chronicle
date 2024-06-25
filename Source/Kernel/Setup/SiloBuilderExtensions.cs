@@ -25,6 +25,7 @@ public static class SiloBuilderExtensions
             .AddEventSequenceStreaming()
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
+            .AddBroadcastChannel(WellKnownBroadcastChannelNames.NamespaceAdded, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()
             .AddReminders()
             .AddTelemetry()

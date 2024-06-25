@@ -22,6 +22,7 @@ public static class StorageProviderExtensions
         builder.ConfigureServices(services =>
         {
             // TODO: From Server project we have copied the following, this should be consolidated into a new place
+            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Namespaces, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Namespaces.NamespacesStateStorageProvider>());
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.EventSequences, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.EventSequences.EventSequencesStorageProvider>());
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Observers, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Observation.ObserverGrainStorageProvider>());
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.FailedPartitions, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Storage.Observation.FailedPartitionGrainStorageProvider>());

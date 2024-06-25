@@ -12,4 +12,9 @@ public static class WellKnownBroadcastChannelNames
     /// The name of the channel for when a projection changes definition.
     /// </summary>
     public const string ProjectionChanged = "projection-changed";
+
+    /// <summary>
+    /// The name of the channel for when a namespace is added.
+    /// </summary>
+    public const string NamespaceAdded = "namespace-added";
 }

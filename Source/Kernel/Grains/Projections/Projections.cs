@@ -1,6 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grains.Namespaces;
+using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Grains.Recommendations;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Replaying;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Definitions;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
@@ -19,6 +26,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     readonly IClusterClient _clusterClient;
     readonly ILogger<Projections> _logger;
     readonly IBroadcastChannelProvider _projectionChangedChannel;
+    EventStoreName _eventStoreName = EventStoreName.NotSet;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -38,41 +46,29 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     }
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _logger.Rehydrate();
 
-        // TODO: This needs to register all projections for all event stores and namespaces instead
-
-        // foreach (var microserviceId in _microservices.GetMicroserviceIds())
-        // {
-        //     var eventStore = _kernel.GetEventStore(microserviceId);
-        //     var projectionPipelineDefinitions = await eventStore.ProjectionPipelineDefinitions.GetAll();
-        //     foreach (var pipeline in projectionPipelineDefinitions)
-        //     {
-        //         if (await eventStore.ProjectionDefinitions.TryGetFor(pipeline.ProjectionId) is (true, ProjectionDefinition projectionDefinition))
-        //         {
-        //             foreach (var tenant in _configuration.Tenants.GetTenantIds())
-        //             {
-        //                 var eventStoreNamespace = eventStore.GetNamespace(tenant);
-        //                 await eventStoreNamespace.ProjectionManager.Register(projectionDefinition, pipeline);
-        //                 if (!projectionDefinition.IsActive) continue;
-        //                 var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
-        //                 await GrainFactory.GetGrain<IProjection>(pipeline.ProjectionId, key).Ensure();
-        //             }
-        //         }
-        //     }
-        // }
-
-        return Task.CompletedTask;
+        _eventStoreName = this.GetPrimaryKeyString();
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        var eventStore = _kernel.GetEventStore(_eventStoreName);
+        var projectionDefinitions = await eventStore.ProjectionDefinitions.GetAll();
+        foreach (var namespaceName in namespaces)
+        {
+            await EnsureProjectionPipelinesForNamespace(projectionDefinitions, namespaceName);
+        }
     }
 
     /// <inheritdoc/>
-    public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionAndPipeline> registrations)
+    public async Task Register(IEnumerable<ProjectionAndPipeline> registrations)
     {
         var channelId = ChannelId.Create(WellKnownBroadcastChannelNames.ProjectionChanged, Guid.Empty);
         var channelWriter = _projectionChangedChannel.GetChannelWriter<ProjectionChanged>(channelId);
-        var eventStoreInstance = _kernel.GetEventStore(eventStore);
+        var eventStoreInstance = _kernel.GetEventStore(_eventStoreName);
+
+        var namespaceNames = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        var namespaces = namespaceNames.Select(eventStoreInstance.GetNamespace);
 
         foreach (var registration in registrations)
         {
@@ -80,39 +76,61 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             var pipelineDefinition = registration.Pipeline;
 
             var (isNew, hasChanged) = await eventStoreInstance.ProjectionDefinitions.IsNewOrChanged(projectionDefinition);
-            var existsInAllNamespaces = eventStoreInstance.Namespaces.All(_ => _.ProjectionManager.Exists(projectionDefinition.Identifier));
+            if (isNew)
+            {
+                _logger.ProjectionIsNew(projectionDefinition.Identifier, projectionDefinition.Name);
+            }
 
-            if (hasChanged || isNew || !existsInAllNamespaces)
+            if (hasChanged || isNew)
             {
                 await RegisterProjectionAndPipeline(
-                    eventStore,
                     projectionDefinition,
-                    pipelineDefinition,
-                    isNew);
+                    pipelineDefinition);
 
                 await channelWriter.Publish(
                     new ProjectionChanged(
                         RuntimeIdentity,
-                        eventStore,
                         projectionDefinition,
                         pipelineDefinition,
                         isNew));
+            }
+
+            if (hasChanged)
+            {
+                _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
+                await AddReplayRecommendationForAllNamespaces(projectionDefinition.Identifier, namespaceNames);
+            }
+
+            foreach (var @namespace in namespaces.Where(_ => !_.ProjectionManager.Exists(projectionDefinition.Identifier)))
+            {
+                await EnsureProjectionPipeline(projectionDefinition, @namespace.Name);
             }
         }
     }
 
     /// <inheritdoc/>
-    public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription) => streamSubscription.Attach<ProjectionChanged>(OnProjectionChanged, OnError);
+    public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
+    {
+        streamSubscription.Attach<ProjectionChanged>(OnProjectionChanged, OnError);
+        streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
+
+        return Task.CompletedTask;
+    }
 
     async Task OnProjectionChanged(ProjectionChanged changed)
     {
         if (changed.RuntimeIdentity == RuntimeIdentity) return;
 
         await RegisterProjectionAndPipeline(
-            changed.EventStore,
             changed.Projection,
-            changed.Pipeline,
-            changed.IsNew);
+            changed.Pipeline);
+    }
+
+    async Task OnNamespaceAdded(NamespaceAdded added)
+    {
+        var eventStore = _kernel.GetEventStore(_eventStoreName);
+        var projectionDefinitions = await eventStore.ProjectionDefinitions.GetAll();
+        await EnsureProjectionPipelinesForNamespace(projectionDefinitions, added.Namespace);
     }
 
     Task OnError(Exception exception)
@@ -120,56 +138,48 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
         return Task.CompletedTask;
     }
 
-    async Task RegisterProjectionAndPipeline(
-        EventStoreName eventStoreName,
+    async Task AddReplayRecommendationForAllNamespaces(ProjectionId projectionId, IEnumerable<EventStoreNamespaceName> namespaces)
+    {
+        foreach (var @namespace in namespaces)
+        {
+            var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(_eventStoreName, @namespace));
+            await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
+                "Projection definition has changed.",
+                new ReplayCandidateRequest
+                {
+                    ObserverId = (Guid)projectionId,
+                    ObserverKey = new ObserverKey(_eventStoreName, @namespace, EventSequenceId.Log),
+                    Reasons = [new ProjectionDefinitionChangedReplayCandidateReason()]
+                });
+        }
+    }
+
+    async Task EnsureProjectionPipelinesForNamespace(IEnumerable<ProjectionDefinition> projectionDefinitions, EventStoreNamespaceName namespaceName)
+    {
+        foreach (var projectionDefinition in projectionDefinitions)
+        {
+            await EnsureProjectionPipeline(projectionDefinition, namespaceName);
+        }
+    }
+
+    async Task EnsureProjectionPipeline(
         ProjectionDefinition projectionDefinition,
-        ProjectionPipelineDefinition pipelineDefinition,
-        bool isNew)
+        EventStoreNamespaceName @namespace)
+    {
+        var key = new ProjectionKey(_eventStoreName, @namespace, EventSequenceId.Log);
+        var projection = GrainFactory.GetGrain<IProjection>(projectionDefinition.Identifier, key);
+        await projection.Ensure();
+        await projection.RefreshDefinition();
+    }
+
+    async Task RegisterProjectionAndPipeline(
+        ProjectionDefinition projectionDefinition,
+        ProjectionPipelineDefinition pipelineDefinition)
     {
         _logger.Registering(projectionDefinition.Identifier, projectionDefinition.Name);
 
-        var eventStore = _kernel.GetEventStore(eventStoreName);
+        var eventStore = _kernel.GetEventStore(_eventStoreName);
         await eventStore.ProjectionDefinitions.Register(projectionDefinition);
         await eventStore.ProjectionPipelineDefinitions.Register(pipelineDefinition);
-
-        // TODO: This needs to register all projections for all namespaces.
-        /*
-        foreach (var tenant in _configuration.Tenants.GetTenantIds())
-        {
-            var eventStoreNamespace = eventStore.GetNamespace(tenant);
-            await eventStoreNamespace.ProjectionManager.Register(projectionDefinition, pipelineDefinition);
-
-            if (!projectionDefinition.IsActive) continue;
-
-            var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
-            var projection = GrainFactory.GetGrain<IProjection>(projectionDefinition.Identifier, key);
-            await projection.Ensure();
-            await projection.RefreshDefinition();
-            if (isNew)
-            {
-                _logger.ProjectionIsNew(projectionDefinition.Identifier, projectionDefinition.Name);
-            }
-            else
-            {
-                _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
-
-                foreach (var tenantId in _configuration.Tenants.GetTenantIds())
-                {
-                    var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(microserviceId, tenantId));
-                    await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
-                        "Projection definition has changed.",
-                        new ReplayCandidateRequest
-                        {
-                            ObserverId = (Guid)projectionDefinition.Identifier,
-                            ObserverKey = new ObserverKey(microserviceId, tenantId, EventSequenceId.Log),
-                            Reasons = new[]
-                            {
-                                new ProjectionDefinitionChangedReplayCandidateReason()
-                            }
-                        });
-                }
-            }
-        }
-        */
     }
 }

@@ -13,4 +13,4 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <param name="Projection">The <see cref="ProjectionDefinition"/> for the changed projection.</param>
 /// <param name="Pipeline">The <see cref="ProjectionPipelineDefinition"/> for the changed projection.</param>
 /// <param name="IsNew">Whether or not the projection is new.</param>
-public record ProjectionChanged(string RuntimeIdentity, EventStoreName EventStore, ProjectionDefinition Projection, ProjectionPipelineDefinition Pipeline, bool IsNew);
+public record ProjectionChanged(string RuntimeIdentity, ProjectionDefinition Projection, ProjectionPipelineDefinition Pipeline, bool IsNew);

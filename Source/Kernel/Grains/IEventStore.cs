@@ -21,7 +21,7 @@ public interface IEventStore
     /// <summary>
     /// Gets the <see cref="IEventStoreStorage"/> for the specific event store.
     /// </summary>
-    IEventStoreStorage Storage { get; }
+    IEventStoreStorage Storage { get; }
 
     /// <summary>
     /// Gets the <see cref="IProjectionDefinitions"/>.
