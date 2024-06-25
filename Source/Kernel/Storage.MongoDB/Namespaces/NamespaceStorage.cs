@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Namespaces;
 /// <param name="database"><see cref="IDatabase"/> for storage.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class NamespaceStorage(
-    IDatabase database,
+    IEventStoreDatabase database,
     ILogger<NamespaceStorage> logger) : INamespaceStorage
 {
     /// <inheritdoc/>

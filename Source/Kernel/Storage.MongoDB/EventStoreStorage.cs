@@ -49,7 +49,7 @@ public class EventStoreStorage(
     public EventStoreName EventStore { get; } = eventStore;
 
     /// <inheritdoc/>
-    public INamespaceStorage Namespaces { get; } = new NamespaceStorage(database, loggerFactory.CreateLogger<NamespaceStorage>());
+    public INamespaceStorage Namespaces { get; } = new NamespaceStorage(eventStoreDatabase, loggerFactory.CreateLogger<NamespaceStorage>());
 
     /// <inheritdoc/>
     public IIdentityStorage Identities { get; } = new IdentityStorage(database, loggerFactory.CreateLogger<IdentityStorage>());
