@@ -7,6 +7,7 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
@@ -66,6 +67,9 @@ public class EventSequence(
         var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _stream = streamProvider.GetStream<AppendedEvent>(streamId);
         _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+
+        var namespaces = GrainFactory.GetGrain<INamespaces>(_eventSequenceKey.EventStore);
+        await @namespaces.Ensure(_eventSequenceKey.Namespace);
 
         await base.OnActivateAsync(cancellationToken);
     }
