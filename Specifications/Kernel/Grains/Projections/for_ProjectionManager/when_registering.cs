@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
