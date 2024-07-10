@@ -6,5 +6,6 @@
 
     <ItemGroup>
         <ProjectReference Include="../../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
+        <ProjectReference Include="../../../Source/Kernel/Shared/Shared.csproj"/>
     </ItemGroup>
 </Project>
