@@ -80,7 +80,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.12.4" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.158" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.161" />
     <!-- Specifications -->
     <PackageVersion Include="Cratis.Specifications" Version="3.0.3" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.3" />
