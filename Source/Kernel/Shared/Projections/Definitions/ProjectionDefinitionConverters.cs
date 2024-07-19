@@ -32,6 +32,7 @@ public static class ProjectionDefinitionConverters
             Join = definition.Join.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
             Children = definition.Children.ToDictionary(_ => (string)_.Key, _ => _.Value.ToContract()),
             FromAny = definition.FromAny.Select(_ => _.ToContract()).ToList(),
+            Sink = definition.Sink.ToContract(),
             All = definition.All.ToContract(),
             FromEventProperty = definition.FromEventProperty?.ToContract() ?? null!,
             RemovedWith = definition.RemovedWith?.ToContract() ?? null!,
@@ -58,6 +59,7 @@ public static class ProjectionDefinitionConverters
             contract.Children.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value.ToChronicle()),
             contract.FromAny.Select(_ => _.ToChronicle()),
             contract.All.ToChronicle(),
+            contract.Sink.ToChronicle(),
             contract.FromEventProperty?.ToChronicle() ?? null!,
             contract.RemovedWith?.ToChronicle() ?? null!,
             contract.LastUpdated ?? null!

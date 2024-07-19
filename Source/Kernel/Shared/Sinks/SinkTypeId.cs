@@ -10,6 +10,11 @@ namespace Cratis.Chronicle.Sinks;
 public record SinkTypeId(Guid Value) : ConceptAs<Guid>(Value)
 {
     /// <summary>
+    /// Gets the none representation of <see cref="SinkTypeId"/>.
+    /// </summary>
+    public static readonly SinkTypeId None = Guid.Empty;
+
+    /// <summary>
     /// Implicitly convert from <see cref="Guid"/> to <see cref="SinkTypeId"/>.
     /// </summary>
     /// <param name="value">Guid value to convert from.</param>

@@ -42,5 +42,6 @@ public record ChildrenDefinition(
         Children,
         [],
         All,
+        SinkDefinition.None,
         FromEventProperty,
         RemovedWith);

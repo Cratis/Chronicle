@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Models;
 using Cratis.Chronicle.Contracts.Primitives;
+using Cratis.Chronicle.Contracts.Sinks;
 using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Projections;
@@ -97,4 +98,10 @@ public class ProjectionDefinition
     /// </summary>
     [ProtoMember(14)]
     public SerializableDateTimeOffset? LastUpdated { get; set; }
+
+    /// <summary>
+    /// Gets or sets the projection sink definition.
+    /// </summary>
+    [ProtoMember(15)]
+    public SinkDefinition Sink { get; set; }
 }

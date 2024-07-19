@@ -22,6 +22,7 @@ namespace Cratis.Chronicle.Projections.Definitions;
 /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
 /// <param name="FromAny">All the <see cref="FromAnyDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="All">The full <see cref="AllDefinition"/>.</param>
+/// <param name="Sink">The <see cref="SinkDefinition"/>.</param>
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
 /// <param name="RemovedWith">The definition of what removes a child, if any.</param>
 /// <param name="LastUpdated">The last time the projection definition was updated.</param>
@@ -37,6 +38,7 @@ public record ProjectionDefinition(
     IDictionary<PropertyPath, ChildrenDefinition> Children,
     IEnumerable<FromAnyDefinition> FromAny,
     AllDefinition All,
+    SinkDefinition Sink,
     FromEventPropertyDefinition? FromEventProperty = default,
     RemovedWithDefinition? RemovedWith = default,
     DateTimeOffset? LastUpdated = default)

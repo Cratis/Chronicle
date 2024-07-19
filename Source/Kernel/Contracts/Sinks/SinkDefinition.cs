@@ -3,13 +3,13 @@
 
 using ProtoBuf;
 
-namespace Cratis.Chronicle.Contracts.Projections;
+namespace Cratis.Chronicle.Contracts.Sinks;
 
 /// <summary>
 /// Represents the definition of where to store results from a projection.
 /// </summary>
 [ProtoContract]
-public class ProjectionSinkDefinition
+public class SinkDefinition
 {
     /// <summary>
     /// Gets or sets the unique identifier of the configuration.

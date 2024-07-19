@@ -16,7 +16,7 @@ public interface IEventStoreNamespace
     /// <summary>
     /// Gets the name of the namespace.
     /// </summary>
-    EventStoreNamespaceName Name { get; }
+    EventStoreNamespaceName Name { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventStoreNamespaceStorage"/> for the namespace.

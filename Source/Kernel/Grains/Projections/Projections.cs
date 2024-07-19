@@ -63,8 +63,6 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     /// <inheritdoc/>
     public async Task Register(IEnumerable<ProjectionAndPipeline> registrations)
     {
-        var channelId = ChannelId.Create(WellKnownBroadcastChannelNames.ProjectionChanged, Guid.Empty);
-        var channelWriter = _projectionChangedChannel.GetChannelWriter<ProjectionChanged>(channelId);
         var eventStoreInstance = _kernel.GetEventStore(_eventStoreName);
 
         var namespaceNames = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
@@ -86,13 +84,6 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
                 await RegisterProjectionAndPipeline(
                     projectionDefinition,
                     pipelineDefinition);
-
-                await channelWriter.Publish(
-                    new ProjectionChanged(
-                        RuntimeIdentity,
-                        projectionDefinition,
-                        pipelineDefinition,
-                        isNew));
             }
 
             if (hasChanged)
@@ -111,19 +102,9 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     /// <inheritdoc/>
     public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
     {
-        streamSubscription.Attach<ProjectionChanged>(OnProjectionChanged, OnError);
         streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
 
         return Task.CompletedTask;
-    }
-
-    async Task OnProjectionChanged(ProjectionChanged changed)
-    {
-        if (changed.RuntimeIdentity == RuntimeIdentity) return;
-
-        await RegisterProjectionAndPipeline(
-            changed.Projection,
-            changed.Pipeline);
     }
 
     async Task OnNamespaceAdded(NamespaceAdded added)

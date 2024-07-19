@@ -17,7 +17,7 @@ public class Projections(IGrainFactory grainFactory) : IProjections
     public Task Register(RegisterRequest request, CallContext context = default)
     {
         var projections = grainFactory.GetGrain<Grains.Projections.IProjections>(request.EventStoreName);
-        var projectionAndPipelines = request.ProjectionsAndPipelines.Select(_ => _.ToChronicle()).ToArray();
+        var projectionAndPipelines = request.Projections.Select(_ => _.ToChronicle()).ToArray();
 
         _ = Task.Run(() => projections.Register(projectionAndPipelines));
         return Task.CompletedTask;

@@ -18,8 +18,8 @@ public class RegisterRequest
     public string EventStoreName { get; set; }
 
     /// <summary>
-    /// Gets or sets the <see cref="ProjectionAndPipeline"/> instances to register.
+    /// Gets or sets the <see cref="ProjectionDefinition"/> instances to register.
     /// </summary>
     [ProtoMember(2, IsRequired = true)]
-    public IList<ProjectionAndPipeline> ProjectionsAndPipelines { get; set; } = [];
+    public IList<ProjectionDefinition> Projections { get; set; } = [];
 }

@@ -6,6 +6,7 @@ using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Sinks;
 using Cratis.Models;
 
 namespace Cratis.Chronicle.Projections;
@@ -92,7 +93,12 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
             Join = _joinDefinitions,
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
             All = _allDefinition,
-            RemovedWith = _removedWithEvent == default ? default : new() { Event = _removedWithEvent }
+            RemovedWith = _removedWithEvent == default ? default : new() { Event = _removedWithEvent },
+            Sink = new()
+            {
+                ConfigurationId = Guid.Empty,
+                TypeId = WellKnownSinkTypes.MongoDB
+            }
         };
     }
 }
