@@ -6,7 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Cratis.Fundamentals" Version="5.2.7" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="5.2.7" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="5.3.1" />
     <PackageVersion Include="Cratis.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.MongoDB" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Orleans" Version="$(ApplicationModel)" />
