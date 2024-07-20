@@ -42,7 +42,7 @@ public class Observer(
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
 {
     IStreamProvider _streamProvider = null!;
-    ObserverId _observerId = Guid.Empty;
+    ObserverId _observerId = ObserverId.Unspecified;
     ObserverKey _observerKey = ObserverKey.NotSet;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     IJobsManager _jobsManager = null!;
@@ -61,8 +61,8 @@ public class Observer(
         // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
         DelayDeactivation(TimeSpan.MaxValue);
 
-        _observerId = this.GetPrimaryKey(out var keyAsString);
-        _observerKey = ObserverKey.Parse(keyAsString);
+        _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
+        _observerId = _observerKey.ObserverId;
 
         _streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_observerKey.EventStore, _observerKey.Namespace));
@@ -336,6 +336,7 @@ public class Observer(
                 try
                 {
                     var key = new ObserverSubscriberKey(
+                        _observerKey.ObserverId,
                         _observerKey.EventStore,
                         _observerKey.Namespace,
                         _observerKey.EventSequenceId,
@@ -345,7 +346,7 @@ public class Observer(
                     var firstEvent = events.First();
                     var lastEvent = events.Last();
 
-                    var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, _observerId, key) as IObserverSubscriber)!;
+                    var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                     tailEventSequenceNumber = firstEvent.Metadata.SequenceNumber;
                     var result = await subscriber.OnNext(events, new(_subscription.Arguments));
                     if (result.LastSuccessfulObservation != EventSequenceNumber.Unavailable)

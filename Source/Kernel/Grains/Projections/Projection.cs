@@ -39,7 +39,7 @@ public class Projection(
         // TODO: Compare for changes, if it has changed notify any observers and add a recommendation for replay
         var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
 
-        _observer = GrainFactory.GetGrain<IObserver>(Guid.Parse(key.ProjectionId), new ObserverKey(key.EventStore, key.Namespace, key.EventSequenceId));
+        _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, key.Namespace, key.EventSequenceId));
         var projection = await projectionFactory.CreateFrom(definition);
 
         await _observer.Subscribe<IProjectionObserverSubscriber>(

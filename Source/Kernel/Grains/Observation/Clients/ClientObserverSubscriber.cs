@@ -37,10 +37,9 @@ public class ClientObserverSubscriber(
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        var id = this.GetPrimaryKey(out var keyAsString);
-        var key = ObserverSubscriberKey.Parse(keyAsString);
+        var key = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
+        _observerId = key.ObserverId;
         _eventStore = key.EventStore;
-        _observerId = id;
         _namespace = key.Namespace;
         _eventSequenceId = key.EventSequenceId;
         return Task.CompletedTask;

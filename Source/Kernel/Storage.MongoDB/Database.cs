@@ -68,7 +68,7 @@ public class Database : IDatabase
         }
 
         // TODO: This should be a configurable convention.
-        var databaseName = $"{eventStore}-{@namespace}-rm";
+        var databaseName = $"{eventStore}+{@namespace}-rm";
         var urlBuilder = new MongoUrlBuilder(_configuration.ConnectionDetails.ToString())
         {
             DatabaseName = databaseName

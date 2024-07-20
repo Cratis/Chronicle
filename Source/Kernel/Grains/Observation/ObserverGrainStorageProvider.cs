@@ -25,21 +25,19 @@ public class ObserverGrainStorageProvider(IStorage storage) : IGrainStorage
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var actualGrainState = (grainState as IGrainState<ObserverState>)!;
-        var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
-        var observerKey = ObserverKey.Parse(observerKeyAsString!);
+        var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
         var observers = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).Observers;
-        actualGrainState.State = await observers.GetState(observerId, observerKey);
+        actualGrainState.State = await observers.GetState(observerKey.ObserverId, observerKey);
     }
 
     /// <inheritdoc/>
     public virtual async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var actualGrainState = (grainState as IGrainState<ObserverState>)!;
-        var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
-        var observerKey = ObserverKey.Parse(observerKeyAsString!);
+        var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
         var observers = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).Observers;
-        await observers.SaveState(observerId, observerKey, actualGrainState.State);
+        await observers.SaveState(observerKey.ObserverId, observerKey, actualGrainState.State);
     }
 }

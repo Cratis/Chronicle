@@ -41,8 +41,8 @@ public class ClientReducers(
                     definition.Name,
                     definition.EventSequenceId);
 
-                var key = new ObserverKey(eventStoreName, @namespace, definition.EventSequenceId);
-                var reducer = GrainFactory.GetGrain<IClientReducer>(definition.ReducerId, key);
+                var key = new ObserverKey(definition.ReducerId, eventStoreName, @namespace, definition.EventSequenceId);
+                var reducer = GrainFactory.GetGrain<IClientReducer>(key);
                 await reducer.Start(definition.Name, connectionId, definition.EventTypes);
             }
         }

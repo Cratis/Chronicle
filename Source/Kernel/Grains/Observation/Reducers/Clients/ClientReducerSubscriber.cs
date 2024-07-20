@@ -47,7 +47,7 @@ public class ClientReducerSubscriber(
         var id = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverSubscriberKey.Parse(keyAsString);
         _eventStore = key.EventStore;
-        _reducerId = id;
+        _reducerId = key.ObserverId;
         _namespace = key.Namespace;
         _eventSequenceId = key.EventSequenceId;
 

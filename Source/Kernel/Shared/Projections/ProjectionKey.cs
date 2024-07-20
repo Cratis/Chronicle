@@ -21,7 +21,7 @@ public record ProjectionKey(ProjectionId ProjectionId, EventStoreName EventStore
     public static implicit operator string(ProjectionKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{ProjectionId}-{EventStore}+{Namespace}+{EventSequenceId}";
+    public override string ToString() => $"{ProjectionId}+{EventStore}+{Namespace}+{EventSequenceId}";
 
     /// <summary>
     /// Parse a key into its components.

@@ -12,7 +12,7 @@ public record EventSequenceId(string Value) : ConceptAs<string>(Value)
     /// <summary>
     /// The <see cref="EventSequenceId"/> representing an unspecified value.
     /// </summary>
-    public static readonly EventSequenceId Unspecified = "unspecified";
+    public static readonly EventSequenceId Unspecified = "[unspecified]";
 
     /// <summary>
     /// The <see cref="EventSequenceId"/> representing the event sequence for the default log.

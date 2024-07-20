@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 /// <summary>
 /// Defines a client reducer.
 /// </summary>
-public interface IClientReducer : IGrainWithGuidCompoundKey
+public interface IClientReducer : IGrainWithStringKey
 {
     /// <summary>
     /// Start the observer.

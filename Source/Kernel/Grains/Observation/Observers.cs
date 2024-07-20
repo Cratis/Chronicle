@@ -36,8 +36,8 @@ public class Observers(
 
         foreach (var observerInfo in observers)
         {
-            var observerKey = new ObserverKey(key.EventStore, key.Namespace, observerInfo.EventSequenceId);
-            var observer = grainFactory.GetGrain<IObserver>(observerInfo.ObserverId, keyExtension: observerKey);
+            var observerKey = new ObserverKey(observerInfo.ObserverId, key.EventStore, key.Namespace, observerInfo.EventSequenceId);
+            var observer = grainFactory.GetGrain<IObserver>(observerKey);
             await observer.Ensure();
 
             if ((observerInfo.Handled == EventCount.NotSet ||

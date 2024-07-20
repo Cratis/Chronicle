@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// <summary>
 /// Defines an observer in the system.
 /// </summary>
-public interface IObserver : IStateMachine<ObserverState>, IGrainWithGuidCompoundKey
+public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
 {
     /// <summary>
     /// Ensure the observers existence.

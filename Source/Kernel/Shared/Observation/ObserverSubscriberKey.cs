@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Observation;
 /// <summary>
 /// Represents a key for an observer.
 /// </summary>
+/// <param name="ObserverId">The unique identifier of the observer.</param>
 /// <param name="EventStore">The event store.</param>
 /// <param name="Namespace">The namespace.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// This is to avoid network hops when sending events to an observer, e.g. a client.
 /// </remarks>
 public record ObserverSubscriberKey(
+    ObserverId ObserverId,
     EventStoreName EventStore,
     EventStoreNamespaceName Namespace,
     EventSequenceId EventSequenceId,
@@ -34,7 +36,7 @@ public record ObserverSubscriberKey(
     /// <inheritdoc/>
     public override string ToString()
     {
-        return $"{EventStore}+{Namespace}+{EventSequenceId}+{EventSourceId}+{SiloAddress}";
+        return $"{ObserverId}+{EventStore}+{Namespace}+{EventSequenceId}+{EventSourceId}+{SiloAddress}";
     }
 
     /// <summary>
@@ -45,13 +47,14 @@ public record ObserverSubscriberKey(
     public static ObserverSubscriberKey Parse(string key)
     {
         var elements = key.Split('+');
-        var eventStore = (EventStoreName)elements[0];
-        var @namespace = (EventStoreNamespaceName)elements[1];
-        var eventSequenceId = (EventSequenceId)elements[2];
-        var eventSourceId = (EventSourceId)elements[3];
+        var observerId = (ObserverId)elements[0];
+        var eventStore = (EventStoreName)elements[1];
+        var @namespace = (EventStoreNamespaceName)elements[2];
+        var eventSequenceId = (EventSequenceId)elements[3];
+        var eventSourceId = (EventSourceId)elements[4];
         var siloAddress = elements[4];
 
-        return new(eventStore, @namespace, eventSequenceId, eventSourceId, siloAddress);
+        return new(observerId, eventStore, @namespace, eventSequenceId, eventSourceId, siloAddress);
     }
 
     /// <summary>
@@ -62,5 +65,5 @@ public record ObserverSubscriberKey(
     /// <param name="siloAddress">Name of the silo it should run on.</param>
     /// <returns>An ObserverSubscriber Key.</returns>
     public static ObserverSubscriberKey FromObserverKey(ObserverKey observerKey, EventSourceId eventSourceId, string siloAddress)
-        => new(observerKey.EventStore, observerKey.Namespace, observerKey.EventSequenceId, eventSourceId, siloAddress);
+        => new(observerKey.ObserverId, observerKey.EventStore, observerKey.Namespace, observerKey.EventSequenceId, eventSourceId, siloAddress);
 }

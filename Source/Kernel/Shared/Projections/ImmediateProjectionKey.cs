@@ -34,7 +34,7 @@ public record ImmediateProjectionKey(
     {
         if (CorrelationId != default)
         {
-            return $"{ProjectionId}-{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}+{CorrelationId}";
+            return $"{ProjectionId}+{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}+{CorrelationId}";
         }
 
         return $"{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}";

@@ -22,14 +22,12 @@ public class ClientReducer(
     ILocalSiloDetails localSiloDetails,
     ILogger<ClientReducer> logger) : Grain, IClientReducer, INotifyClientDisconnected
 {
-    ObserverId? _reducerId;
     ObserverKey? _observerKey;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _reducerId = this.GetPrimaryKey(out var keyAsString);
-        _observerKey = ObserverKey.Parse(keyAsString);
+        _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
 
         return Task.CompletedTask;
     }
@@ -37,8 +35,8 @@ public class ClientReducer(
     /// <inheritdoc/>
     public async Task Start(ObserverName name, ConnectionId connectionId, IEnumerable<EventTypeWithKeyExpression> eventTypes)
     {
-        logger.Starting(_observerKey!.EventStore, _reducerId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
-        var observer = GrainFactory.GetGrain<IObserver>(_reducerId!, _observerKey!);
+        logger.Starting(_observerKey!.EventStore, _observerKey.ObserverId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
+        var observer = GrainFactory.GetGrain<IObserver>(_observerKey.ObserverId!, _observerKey!);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
 
         RegisterTimer(HandleConnectedClientsSubscription, null!, TimeSpan.Zero, TimeSpan.FromSeconds(5));
@@ -54,10 +52,9 @@ public class ClientReducer(
     /// <inheritdoc/>
     public void OnClientDisconnected(ConnectedClient client)
     {
-        logger.ClientDisconnected(client.ConnectionId, _observerKey!.EventStore, _reducerId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
-        var id = this.GetPrimaryKey(out var keyAsString);
-        var key = ObserverKey.Parse(keyAsString);
-        var observer = GrainFactory.GetGrain<IObserver>(id, key);
+        logger.ClientDisconnected(client.ConnectionId, _observerKey!.EventStore, _observerKey.ObserverId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
+        var key = ObserverKey.Parse(this.GetPrimaryKeyString());
+        var observer = GrainFactory.GetGrain<IObserver>(key);
         observer.Unsubscribe();
     }
 
