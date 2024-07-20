@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Grains.Observation.Clients;
 /// <summary>
 /// Defines a client observer.
 /// </summary>
-public interface IClientObserver : IGrainWithGuidCompoundKey
+public interface IClientObserver : IGrainWithStringKey
 {
     /// <summary>
     /// Start the observer.

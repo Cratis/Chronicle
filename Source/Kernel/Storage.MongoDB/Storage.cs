@@ -16,7 +16,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </remarks>
 /// <param name="database">The MongoDB <see cref="IDatabase"/>.</param>
 /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for handling serialization of projection definitions.</param>
-/// <param name="projectionPipelineSerializer"><see cref="IJsonProjectionPipelineSerializer"/> for handling serialization of projection pipeline definitions.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
@@ -24,7 +23,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public class Storage(
     IDatabase database,
     IJsonProjectionSerializer projectionSerializer,
-    IJsonProjectionPipelineSerializer projectionPipelineSerializer,
     IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
@@ -45,7 +43,6 @@ public class Storage(
             database,
             database.GetEventStoreDatabase(eventStore),
             projectionSerializer,
-            projectionPipelineSerializer,
             complianceManager,
             expandoObjectConverter,
             jsonSerializerOptions,

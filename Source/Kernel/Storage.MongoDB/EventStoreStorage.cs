@@ -27,7 +27,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="database"><see cref="IDatabase"/> to use.</param>
 /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to use.</param>
 /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for handling serialization of projection definitions.</param>
-/// <param name="projectionPipelineSerializer"><see cref="IJsonProjectionPipelineSerializer"/> for handling serialization of projection pipeline definitions.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
@@ -37,7 +36,6 @@ public class EventStoreStorage(
     IDatabase database,
     IEventStoreDatabase eventStoreDatabase,
     IJsonProjectionSerializer projectionSerializer,
-    IJsonProjectionPipelineSerializer projectionPipelineSerializer,
     IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
@@ -59,9 +57,6 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IProjectionDefinitionsStorage Projections { get; } = new ProjectionDefinitionsStorage(eventStoreDatabase, projectionSerializer);
-
-    /// <inheritdoc/>
-    public IProjectionPipelineDefinitionsStorage ProjectionPipelines { get; } = new ProjectionPipelineDefinitionsStorage(eventStoreDatabase, projectionPipelineSerializer);
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)

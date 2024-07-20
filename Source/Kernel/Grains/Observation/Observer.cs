@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
@@ -11,7 +12,6 @@ using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
@@ -70,8 +70,7 @@ public class Observer(
         await failures.ReadStateAsync();
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
-            Guid.Parse(_observerKey.EventSequenceId),
-            new EventSequenceKey(_observerKey.EventStore, _observerKey.Namespace));
+            new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace));
 
         _metrics = meter.BeginObserverScope(_observerId, _observerKey);
     }

@@ -49,7 +49,7 @@ public class EventSequenceStorage(
     public async Task<Chronicle.Storage.EventSequences.EventSequenceState> GetState()
     {
         var collection = database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
-        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
+        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, string>("_id"), eventSequenceId);
         var cursor = await collection.FindAsync(filter).ConfigureAwait(false);
         var state = await cursor.FirstOrDefaultAsync();
         return state?.ToChronicle() ?? new Chronicle.Storage.EventSequences.EventSequenceState();
@@ -59,7 +59,7 @@ public class EventSequenceStorage(
     public async Task SaveState(Chronicle.Storage.EventSequences.EventSequenceState state)
     {
         var collection = database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
-        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
+        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, string>("_id"), eventSequenceId);
 
         await collection.ReplaceOneAsync(filter, state.ToMongoDB(), new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
@@ -24,15 +25,14 @@ public class ProjectionObserverSubscriber(
     IProjectionFactory projectionFactory,
     IProjectionPipelineFactory projectionPipelineFactory) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
-    ProjectionId _projectionId = ProjectionId.NotSet;
+    ObserverSubscriberKey _key = new(ObserverId.Unspecified, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Unspecified, EventSourceId.Unspecified, string.Empty);
     IProjectionPipeline? _pipeline;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _projectionId = this.GetPrimaryKey(out var keyAsString).ToString();
-        var key = ObserverSubscriberKey.Parse(keyAsString);
-        var projection = GrainFactory.GetGrain<IProjection>(_projectionId, new ProjectionKey(_projectionId, key.EventStore, key.Namespace, key.EventSequenceId));
+        _key = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
+        var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
         await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
         await HandlePipeline();
     }
@@ -75,7 +75,7 @@ public class ProjectionObserverSubscriber(
 
     async Task HandlePipeline()
     {
-        var projection = await projectionFactory.CreateFrom(State);
+        var projection = await projectionFactory.CreateFrom(_key.EventStore, _key.Namespace, State);
         _pipeline = projectionPipelineFactory.CreateFrom(projection, State);
     }
 }

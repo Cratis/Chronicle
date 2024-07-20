@@ -7,22 +7,16 @@ namespace Cratis.Chronicle.Projections;
 /// Represents the unique identifier of a projection.
 /// </summary>
 /// <param name="Value">The value.</param>
-public record ProjectionId(Guid Value) : ConceptAs<Guid>(Value)
+public record ProjectionId(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
     /// The value representing an unset projection identifier.
     /// </summary>
-    public static readonly ProjectionId NotSet = Guid.Empty;
+    public static readonly ProjectionId NotSet = "[not set]";
 
     /// <summary>
-    /// Implicitly convert from <see cref="Guid"/> to <see cref="ProjectionId"/>.
+    /// Implicitly convert from string to <see cref="ProjectionId"/>.
     /// </summary>
-    /// <param name="value"><see cref="Guid"/> to convert from.</param>
-    public static implicit operator ProjectionId(Guid value) => new(value);
-
-    /// <summary>
-    /// Implicitly convert from string representation of a <see cref="Guid"/> to <see cref="ProjectionId"/>.
-    /// </summary>
-    /// <param name="value"><see cref="Guid"/> to convert from.</param>
-    public static implicit operator ProjectionId(string value) => new(Guid.Parse(value));
+    /// <param name="value">String to convert from.</param>
+    public static implicit operator ProjectionId(string value) => new(value);
 }

@@ -47,7 +47,7 @@ public record ConnectedObserverKey(
         var eventStore = (EventStoreName)elements[1];
         var @namespace = (EventStoreNamespaceName)elements[2];
         var eventSequenceId = (EventSequenceId)elements[3];
-        var connectionId = (ConnectionId)elements[3];
+        var connectionId = (ConnectionId)elements[4];
         return new(observerId, eventStore, @namespace, eventSequenceId, connectionId);
     }
 }

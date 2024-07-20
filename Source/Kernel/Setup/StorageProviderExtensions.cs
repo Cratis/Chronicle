@@ -29,6 +29,7 @@ public static class StorageProviderExtensions
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.JobSteps, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Jobs.JobStepGrainStorageProvider>());
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Recommendations, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Recommendations.RecommendationGrainStorageProvider>());
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Projections, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Projections.ProjectionStorageProvider>());
+            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.ProjectionsManager, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Projections.ProjectionsManagerStorageProvider>());
         });
 
         return builder;

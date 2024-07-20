@@ -39,5 +39,5 @@ public class EventSequences(
     }
 
     Grains.EventSequences.IEventSequence GetEventSequence(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
-        grainFactory.GetGrain<Grains.EventSequences.IEventSequence>(eventSequenceId, keyExtension: new EventStoreAndNamespace(eventStore, @namespace));
+        grainFactory.GetGrain<Grains.EventSequences.IEventSequence>(new EventSequenceKey(eventSequenceId, eventStore, @namespace));
 }

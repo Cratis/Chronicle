@@ -13,7 +13,9 @@ public interface IProjectionFactory
     /// <summary>
     /// Create a <see cref="IProjection"/> from a <see cref="ProjectionDefinition"/>.
     /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to create from.</param>
+    /// /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to create from.</param>
     /// <param name="definition"><see cref="ProjectionDefinition"/> to create from.</param>
     /// <returns>A new <see cref="IProjection"/> instance.</returns>
-    Task<IProjection> CreateFrom(ProjectionDefinition definition);
+    Task<IProjection> CreateFrom(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition);
 }

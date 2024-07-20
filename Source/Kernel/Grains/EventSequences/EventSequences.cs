@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Storage.EventSequences;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
@@ -36,10 +35,10 @@ public class EventSequences(ILogger<EventSequences> logger) : Grain, IEventSeque
             EventSequenceId.System,
         };
 
-        var eventSequenceKey = new EventSequenceKey(_key.EventStore, _key.Namespace);
         foreach (var eventSequence in eventSequences)
         {
-            var grain = GrainFactory.GetGrain<IEventSequence>(Guid.Parse(eventSequence), eventSequenceKey);
+            var eventSequenceKey = new EventSequenceKey(eventSequence, _key.EventStore, _key.Namespace);
+            var grain = GrainFactory.GetGrain<IEventSequence>(eventSequenceKey);
             try
             {
                 await grain.Rehydrate();

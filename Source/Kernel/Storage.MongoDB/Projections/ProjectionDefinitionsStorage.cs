@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Json;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.MongoDB;
@@ -39,15 +40,20 @@ public class ProjectionDefinitionsStorage(
     }
 
     /// <inheritdoc/>
+    public Task<ProjectionDefinition> Get(ProjectionId id) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task Delete(ProjectionId id) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
     public async Task Save(ProjectionDefinition definition)
     {
         var json = projectionSerializer.Serialize(definition);
         var document = BsonDocument.Parse(json.ToJsonString());
-        var id = new BsonBinaryData(definition.Identifier.Value, GuidRepresentation.Standard);
-        document["_id"] = id;
+        document["_id"] = definition.Identifier.Value;
 
         await Collection.ReplaceOneAsync(
-            filter: new BsonDocument("_id", id),
+            filter: new BsonDocument("_id", definition.Identifier.Value),
             replacement: document,
             options: new ReplaceOptions { IsUpsert = true });
     }

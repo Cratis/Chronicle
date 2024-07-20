@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Projections.Definitions;
@@ -14,6 +13,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.DependencyInjection;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections;
@@ -29,26 +29,30 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
 /// <param name="storage"><see cref="IEventStoreNamespaceStorage"/> for accessing underlying storage for the specific namespace.</param>
+[Singleton]
 public class ProjectionFactory(
     IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
     IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers,
     IKeyExpressionResolvers keyExpressionResolvers,
     IExpandoObjectConverter expandoObjectConverter,
-    IEventStoreNamespaceStorage storage) : IProjectionFactory
+    IStorage storage) : IProjectionFactory
 {
-    readonly IEventSequenceStorage _eventSequenceStorage = storage.GetEventSequence(EventSequenceId.Log);
-
     /// <inheritdoc/>
-    public Task<IProjection> CreateFrom(ProjectionDefinition definition) =>
-        CreateProjectionFrom(
+    public Task<IProjection> CreateFrom(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition)
+    {
+        var eventSequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(definition.EventSequenceId);
+        return CreateProjectionFrom(
+            eventSequenceStorage,
             definition.Name,
             definition,
             PropertyPath.Root,
             PropertyPath.Root,
             ProjectionPath.GetRootFor(definition.Identifier),
             false);
+    }
 
     async Task<IProjection> CreateProjectionFrom(
+        IEventSequenceStorage eventSequenceStorage,
         ProjectionName name,
         ProjectionDefinition projectionDefinition,
         PropertyPath childrenAccessorProperty,
@@ -62,6 +66,7 @@ public class ProjectionFactory(
         var actualIdentifiedByProperty = identifiedByProperty.IsRoot && hasIdProperty ? new PropertyPath("id") : identifiedByProperty;
 
         var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
+                eventSequenceStorage,
                 name,
                 kvp.Value,
                 childrenAccessorProperty.AddArrayIndex(kvp.Key),
@@ -112,7 +117,7 @@ public class ProjectionFactory(
         var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
-            SetupFromSubscription(projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromDefinition);
+            SetupFromSubscription(eventSequenceStorage, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromDefinition);
         }
 
         if (projectionDefinition.FromAny is not null)
@@ -121,7 +126,7 @@ public class ProjectionFactory(
             {
                 foreach (var eventType in fromAnyDefinition.EventTypes)
                 {
-                    SetupFromSubscription(projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromAnyDefinition.From);
+                    SetupFromSubscription(eventSequenceStorage, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromAnyDefinition.From);
                 }
             }
         }
@@ -160,6 +165,7 @@ public class ProjectionFactory(
     }
 
     void SetupFromSubscription(
+        IEventSequenceStorage eventSequenceStorage,
         ProjectionDefinition projectionDefinition,
         PropertyPath childrenAccessorProperty,
         PropertyPath actualIdentifiedByProperty,
@@ -184,7 +190,7 @@ public class ProjectionFactory(
             {
                 var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
                 projected = projected
-                    .ResolveJoin(_eventSequenceStorage, joinEventType, joinDefinition.On)
+                    .ResolveJoin(eventSequenceStorage, joinEventType, joinDefinition.On)
                                     .Project(
                                         childrenAccessorProperty,
                                         actualIdentifiedByProperty,

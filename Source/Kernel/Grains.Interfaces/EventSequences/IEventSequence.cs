@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// <summary>
 /// Defines the event sequence.
 /// </summary>
-public interface IEventSequence : IGrainWithGuidCompoundKey
+public interface IEventSequence : IGrainWithStringKey
 {
     /// <summary>
     /// Rehydrate the event sequence.

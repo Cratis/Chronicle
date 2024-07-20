@@ -39,11 +39,12 @@ public class ClientObservers(
             {
                 case RegisterObserver register:
                     var key = new ConnectedObserverKey(
+                        register.ObserverId,
                         register.EventStoreName,
                         register.Namespace,
                         register.EventSequenceId,
                         register.ConnectionId);
-                    clientObserver = grainFactory.GetGrain<IClientObserver>(Guid.Parse(register.ObserverId), keyExtension: key);
+                    clientObserver = grainFactory.GetGrain<IClientObserver>(key);
                     clientObserver.Start(register.ObserverName, register.EventTypes.Select(_ => _.ToChronicle()).ToArray());
 
                     registrationTcs.SetResult(register);

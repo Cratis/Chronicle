@@ -49,12 +49,7 @@ public static class WellKnownGrainStorageProviders
     public const string Projections = "projections";
 
     /// <summary>
-    /// The name of the storage provider used for projection-manager.
+    /// The name of the storage provider used for projections manager.
     /// </summary>
-    public const string ProjectionManager = "projection-manager";
-
-    /// <summary>
-    /// The name of the storage provider used for projection subscribers.
-    /// </summary>
-    public const string ProjectionSubscribers = "projection-subscribers";
+    public const string ProjectionsManager = "projections-manager";
 }

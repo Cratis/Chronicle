@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Grains.Namespaces;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Definitions;
 using Orleans.BroadcastChannel;
+using Orleans.Providers;
 
 namespace Cratis.Chronicle.Grains.Projections;
 
@@ -13,52 +15,23 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionsManager"/> class.
 /// </remarks>
-public class ProjectionsManager : Grain, IProjectionsManager, IOnBroadcastChannelSubscribed
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
+public class ProjectionsManager : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed
 {
+    EventStoreName _eventStoreName = EventStoreName.NotSet;
+
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        var eventStoreName = this.GetPrimaryKeyString();
-        var namespaces = await GrainFactory.GetGrain<INamespaces>(eventStoreName).GetAll();
-        foreach (var namespaceName in namespaces)
-        {
-        }
+        _eventStoreName = this.GetPrimaryKeyString();
+        await SetDefinitionForAllProjectionsInAllNamespaces();
     }
 
     /// <inheritdoc/>
     public async Task Register(IEnumerable<ProjectionDefinition> definitions)
     {
-        var eventStoreName = this.GetPrimaryKeyString();
-        var namespaceNames = await GrainFactory.GetGrain<INamespaces>(eventStoreName).GetAll();
-
-        foreach (var registration in definitions)
-        {
-            // var projectionDefinition = registration.Projection;
-            // var pipelineDefinition = registration.Pipeline;
-
-            // var (isNew, hasChanged) = await eventStoreInstance.ProjectionDefinitions.IsNewOrChanged(projectionDefinition);
-            // if (isNew)
-            // {
-            //     _logger.ProjectionIsNew(projectionDefinition.Identifier, projectionDefinition.Name);
-            // }
-
-            // if (hasChanged || isNew)
-            // {
-            //     await RegisterProjectionAndPipeline(
-            //         projectionDefinition,
-            //         pipelineDefinition);
-            // }
-
-            // if (hasChanged)
-            // {
-            //     _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
-            //     await AddReplayRecommendationForAllNamespaces(projectionDefinition.Identifier, namespaceNames);
-            // }
-
-            foreach (var @namespace in namespaceNames)
-            {
-            }
-        }
+        State.Projections = definitions;
+        await SetDefinitionForAllProjectionsInAllNamespaces();
     }
 
     /// <inheritdoc/>
@@ -70,7 +43,31 @@ public class ProjectionsManager : Grain, IProjectionsManager, IOnBroadcastChanne
 
     async Task OnNamespaceAdded(NamespaceAdded added)
     {
-        await Task.CompletedTask;
+        foreach (var projectionDefinition in State.Projections)
+        {
+            var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName, added.Namespace, projectionDefinition.EventSequenceId);
+            var projection = GrainFactory.GetGrain<IProjection>(key);
+            await projection.Ensure();
+        }
+    }
+
+    async Task SetDefinitionForAllProjectionsInAllNamespaces()
+    {
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        foreach (var namespaceName in namespaces)
+        {
+            await SetDefinitionForAllProjectionsForNamespace(namespaceName);
+        }
+    }
+
+    async Task SetDefinitionForAllProjectionsForNamespace(EventStoreNamespaceName namespaceName)
+    {
+        foreach (var projectionDefinition in State.Projections)
+        {
+            var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName, namespaceName, projectionDefinition.EventSequenceId);
+            var projection = GrainFactory.GetGrain<IProjection>(key);
+            await projection.SetDefinition(projectionDefinition);
+        }
     }
 
     Task OnError(Exception exception)
