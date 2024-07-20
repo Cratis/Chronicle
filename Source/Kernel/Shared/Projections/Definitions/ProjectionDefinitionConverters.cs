@@ -22,6 +22,7 @@ public static class ProjectionDefinitionConverters
     {
         return new()
         {
+            EventSequenceId = definition.EventSequenceId,
             Identifier = definition.Identifier,
             Name = definition.Name,
             Model = definition.Model.ToContract(),
@@ -48,6 +49,7 @@ public static class ProjectionDefinitionConverters
     public static ProjectionDefinition ToChronicle(this Contracts.Projections.ProjectionDefinition contract)
     {
         return new(
+            contract.EventSequenceId,
             contract.Identifier,
             contract.Name,
             contract.Model.ToChronicle(),

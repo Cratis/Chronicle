@@ -4,64 +4,37 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Cratis.Chronicle.Grains.Observation.Reducers;
-using Cratis.Chronicle.Grains.Projections.Definitions;
-using Cratis.Chronicle.Projections.Json;
 using Cratis.Chronicle.Storage;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStore"/>.
 /// </summary>
-public class EventStore : IEventStore
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventStore"/> class.
+/// </remarks>
+/// <param name="name">Name of the event store.</param>
+/// <param name="storage"><see cref="IEventStoreStorage"/> for accessing underlying storage for the specific event store.</param>
+/// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
+public class EventStore(
+    EventStoreName name,
+    IEventStoreStorage storage,
+    IServiceProvider serviceProvider) : IEventStore
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespace> _namespaces = new();
-    readonly IServiceProvider _serviceProvider;
-    readonly ILoggerFactory _loggerFactory;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventStore"/> class.
-    /// </summary>
-    /// <param name="name">Name of the event store.</param>
-    /// <param name="storage"><see cref="IEventStoreStorage"/> for accessing underlying storage for the specific event store.</param>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
-    /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-    public EventStore(
-        EventStoreName name,
-        IEventStoreStorage storage,
-        IServiceProvider serviceProvider,
-        ILoggerFactory loggerFactory)
-    {
-        Name = name;
-        Storage = storage;
-        _serviceProvider = serviceProvider;
-        _loggerFactory = loggerFactory;
-        var projectionSerializer = serviceProvider.GetRequiredService<IJsonProjectionSerializer>();
-        ProjectionDefinitions = new ProjectionDefinitions(storage.Projections, projectionSerializer);
-        ProjectionPipelineDefinitions = new ProjectionPipelineDefinitions(storage.ProjectionPipelines);
-        ReducerPipelineDefinitions = new ReducerPipelineDefinitions();
-        Namespaces = ImmutableList<IEventStoreNamespace>.Empty;
-    }
 
     /// <inheritdoc/>
-    public EventStoreName Name { get; }
+    public EventStoreName Name { get; } = name;
 
     /// <inheritdoc/>
-    public IEventStoreStorage Storage { get; }
+    public IEventStoreStorage Storage { get; } = storage;
 
     /// <inheritdoc/>
-    public IProjectionDefinitions ProjectionDefinitions { get; }
+    public IReducerPipelineDefinitions ReducerPipelineDefinitions { get; } = new ReducerPipelineDefinitions();
 
     /// <inheritdoc/>
-    public IProjectionPipelineDefinitions ProjectionPipelineDefinitions { get; }
-
-    /// <inheritdoc/>
-    public IReducerPipelineDefinitions ReducerPipelineDefinitions { get; }
-
-    /// <inheritdoc/>
-    public IImmutableList<IEventStoreNamespace> Namespaces { get; private set; }
+    public IImmutableList<IEventStoreNamespace> Namespaces { get; private set; } = ImmutableList<IEventStoreNamespace>.Empty;
 
     /// <inheritdoc/>
     public IEventStoreNamespace GetNamespace(EventStoreNamespaceName @namespace)
@@ -72,8 +45,7 @@ public class EventStore : IEventStore
                 Name,
                 @namespace,
                 Storage.GetNamespace(@namespace),
-                _serviceProvider,
-                _loggerFactory);
+                serviceProvider);
             _namespaces[@namespace] = namespaceInstance;
             Namespaces = Namespaces.Add(namespaceInstance);
         }

@@ -24,12 +24,12 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
     /// <inheritdoc/>
     public IObservable<IEnumerable<ObserverInformation>> ObserveAll()
     {
-        var observerInformation = GetAllObservers().GetAwaiter().GetResult();
+        var observerInformation = GetAll().GetAwaiter().GetResult();
         return Collection.Observe(observerInformation, HandleChangesForObservers);
     }
 
     /// <inheritdoc/>
-    public Task<ObserverInformation> GetObserver(ObserverId observerId) =>
+    public Task<ObserverInformation> Get(ObserverId observerId) =>
         Collection
             .Aggregate()
             .Match(_ => _.ObserverId == observerId)
@@ -37,7 +37,7 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
             .FirstAsync();
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ObserverInformation>> GetObserversForEventTypes(IEnumerable<EventType> eventTypes)
+    public async Task<IEnumerable<ObserverInformation>> GetForEventTypes(IEnumerable<EventType> eventTypes)
     {
         var eventTypeIds = eventTypes.Select(_ => _.Id).ToArray();
         return await Collection
@@ -48,7 +48,7 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ObserverInformation>> GetAllObservers()
+    public async Task<IEnumerable<ObserverInformation>> GetAll()
     {
         var aggregation = Collection.Aggregate().JoinWithFailedPartitions();
         var cursor = await aggregation.ToCursorAsync();

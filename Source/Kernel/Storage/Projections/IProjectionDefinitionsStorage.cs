@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Definitions;
 
 namespace Cratis.Chronicle.Storage.Projections;
@@ -15,6 +16,20 @@ public interface IProjectionDefinitionsStorage
     /// </summary>
     /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
     Task<IEnumerable<ProjectionDefinition>> GetAll();
+
+    /// <summary>
+    /// Get a specific <see cref="ProjectionDefinition"/> by its <see cref="ProjectionId"/>.
+    /// </summary>
+    /// <param name="id"><see cref="ProjectionId"/> to get for.</param>
+    /// <returns><see cref="ProjectionDefinition"/>.</returns>
+    Task<ProjectionDefinition> Get(ProjectionId id);
+
+    /// <summary>
+    /// Delete a <see cref="ProjectionDefinition"/> by its <see cref="ProjectionId"/>.
+    /// </summary>
+    /// <param name="id"><see cref="ProjectionId"/> of the <see cref="ProjectionDefinition"/> to delete.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Delete(ProjectionId id);
 
     /// <summary>
     /// Save a <see cref="ProjectionDefinition"/>.

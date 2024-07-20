@@ -61,9 +61,10 @@ public class EventSequence(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _eventSequenceId = this.GetPrimaryKey(out var key);
+        var id = this.GetPrimaryKey(out var key);
+        _eventSequenceId = id.ToString();
         _eventSequenceKey = (EventSequenceKey)key;
-        var streamId = StreamId.Create(_eventSequenceKey, (Guid)_eventSequenceId);
+        var streamId = StreamId.Create(_eventSequenceKey, id);
         var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _stream = streamProvider.GetStream<AppendedEvent>(streamId);
         _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
@@ -200,7 +201,7 @@ public class EventSequence(
                 _eventSequenceKey.EventStore,
                 _eventSequenceKey.Namespace,
                 eventType,
-                ex.StreamId,
+                ex.EventSequenceId,
                 ex.EventSourceId,
                 ex.SequenceNumber,
                 ex);
@@ -315,7 +316,7 @@ public class EventSequence(
         EventSourceId eventSourceId,
         IEnumerable<EventType> affectedEventTypes)
     {
-        var observers = await ObserverStorage.GetObserversForEventTypes(affectedEventTypes);
+        var observers = await ObserverStorage.GetForEventTypes(affectedEventTypes);
         foreach (var observer in observers)
         {
             var key = new ObserverKey(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);

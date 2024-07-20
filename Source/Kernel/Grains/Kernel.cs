@@ -16,12 +16,10 @@ namespace Cratis.Chronicle.Grains;
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
-/// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [Singleton]
 public class Kernel(
     IStorage storage,
-    IServiceProvider serviceProvider,
-    ILoggerFactory loggerFactory) : IKernel
+    IServiceProvider serviceProvider) : IKernel
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStore> _eventStores = new();
 
@@ -36,8 +34,7 @@ public class Kernel(
             eventStore = new EventStore(
                 name,
                 Storage.GetEventStore(name),
-                serviceProvider,
-                loggerFactory);
+                serviceProvider);
             _eventStores[name] = eventStore;
         }
 

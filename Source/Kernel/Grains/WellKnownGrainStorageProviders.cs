@@ -42,4 +42,19 @@ public static class WellKnownGrainStorageProviders
     /// The name of the storage provider used for recommendations.
     /// </summary>
     public const string Recommendations = "recommendations";
+
+    /// <summary>
+    /// The name of the storage provider used for projections.
+    /// </summary>
+    public const string Projections = "projections";
+
+    /// <summary>
+    /// The name of the storage provider used for projection-manager.
+    /// </summary>
+    public const string ProjectionManager = "projection-manager";
+
+    /// <summary>
+    /// The name of the storage provider used for projection subscribers.
+    /// </summary>
+    public const string ProjectionSubscribers = "projection-subscribers";
 }

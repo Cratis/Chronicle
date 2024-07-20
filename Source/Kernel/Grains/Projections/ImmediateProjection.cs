@@ -40,14 +40,12 @@ public class ImmediateProjection(
     ImmediateProjectionKey? _projectionKey;
     EventSequenceNumber _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
     ExpandoObject? _initialState;
-    ProjectionId _projectionId = ProjectionId.NotSet;
     DateTimeOffset _lastUpdated = DateTimeOffset.MinValue;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _projectionId = this.GetPrimaryKey(out var keyAsString);
-        _projectionKey = ImmediateProjectionKey.Parse(keyAsString);
+        _projectionKey = ImmediateProjectionKey.Parse(this.GetPrimaryKeyString());
         _eventSequenceStorage = storage
                                     .GetEventStore(_projectionKey.EventStore)
                                     .GetNamespace(_projectionKey.Namespace)
@@ -59,97 +57,99 @@ public class ImmediateProjection(
     /// <inheritdoc/>
     public async Task<ImmediateProjectionResult> GetModelInstance()
     {
-        using var scope = logger.BeginImmediateProjectionScope(_projectionId, _projectionKey!);
+        throw new NotImplementedException();
+        // using var scope = logger.BeginImmediateProjectionScope(_projectionKey.ProjectionId, _projectionKey!);
 
-        logger.GettingModelInstance();
+        // logger.GettingModelInstance();
 
-        try
-        {
-            var eventStore = kernel.GetEventStore(_projectionKey!.EventStore);
-            var @namespace = eventStore.GetNamespace(_projectionKey!.Namespace);
+        // try
+        // {
+        //     var eventStore = kernel.GetEventStore(_projectionKey!.EventStore);
+        //     var @namespace = eventStore.GetNamespace(_projectionKey!.Namespace);
 
-            var projectionChanged = false;
+        //     var projectionChanged = false;
 
-            var projection = @namespace.ProjectionManager.Get(_projectionId);
-            var (foundProjection, definition) = await eventStore.ProjectionDefinitions.TryGetFor(_projectionId);
+        //     var projection = @namespace.ProjectionManager.Get(_projectionId);
+        //     var (foundProjection, definition) = await eventStore.ProjectionDefinitions.TryGetFor(_projectionId);
 
-            var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
-            if (foundProjection && definition is not null)
-            {
-                projectionChanged = definition.LastUpdated > _lastUpdated;
-                _lastUpdated = definition.LastUpdated ?? DateTimeOffset.UtcNow;
-                fromSequenceNumber = EventSequenceNumber.First;
-            }
+        //     var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
+        //     if (foundProjection && definition is not null)
+        //     {
+        //         projectionChanged = definition.LastUpdated > _lastUpdated;
+        //         _lastUpdated = definition.LastUpdated ?? DateTimeOffset.UtcNow;
+        //         fromSequenceNumber = EventSequenceNumber.First;
+        //     }
 
-            var eventSequence = GrainFactory.GetGrain<IEventSequence>(_projectionKey.EventSequenceId, new EventStoreAndNamespace(_projectionKey.EventStore, _projectionKey.Namespace));
-            var tail = await eventSequence.GetTailSequenceNumberForEventTypes(projection.EventTypes);
-            if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null && !projectionChanged)
-            {
-                logger.UsingCachedModelInstance();
-                var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, projection.Model.Schema);
-                return new(initialStateAsJson, [], 0);
-            }
+        //     var eventSequence = GrainFactory.GetGrain<IEventSequence>(_projectionKey.EventSequenceId, new EventStoreAndNamespace(_projectionKey.EventStore, _projectionKey.Namespace));
+        //     var tail = await eventSequence.GetTailSequenceNumberForEventTypes(projection.EventTypes);
+        //     if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null && !projectionChanged)
+        //     {
+        //         logger.UsingCachedModelInstance();
+        //         var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, projection.Model.Schema);
+        //         return new(initialStateAsJson, [], 0);
+        //     }
 
-            if (!projection.EventTypes.Any())
-            {
-                logger.NoEventTypes();
-                return ImmediateProjectionResult.Empty;
-            }
+        //     if (!projection.EventTypes.Any())
+        //     {
+        //         logger.NoEventTypes();
+        //         return ImmediateProjectionResult.Empty;
+        //     }
 
-            var affectedProperties = new HashSet<PropertyPath>();
+        //     var affectedProperties = new HashSet<PropertyPath>();
 
-            var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
-            var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(fromSequenceNumber, modelKey, projection.EventTypes);
-            var projectedEventsCount = 0;
-            var state = GetInitialState(projection, definition);
-            while (await cursor.MoveNext())
-            {
-                if (!cursor.Current.Any())
-                {
-                    break;
-                }
+        //     var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
+        //     var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(fromSequenceNumber, modelKey, projection.EventTypes);
+        //     var projectedEventsCount = 0;
+        //     var state = GetInitialState(projection, definition);
+        //     while (await cursor.MoveNext())
+        //     {
+        //         if (!cursor.Current.Any())
+        //         {
+        //             break;
+        //         }
 
-                var events = cursor.Current.ToArray();
-                var result = await HandleEvents(projection, affectedProperties, state, events);
-                projectedEventsCount += result.ProjectedEventsCount;
-                state = result.State;
+        //         var events = cursor.Current.ToArray();
+        //         var result = await HandleEvents(projection, affectedProperties, state, events);
+        //         projectedEventsCount += result.ProjectedEventsCount;
+        //         state = result.State;
 
-                _lastHandledEventSequenceNumber = events[^1].Metadata.SequenceNumber;
-            }
+        //         _lastHandledEventSequenceNumber = events[^1].Metadata.SequenceNumber;
+        //     }
 
-            _initialState = state;
-            var jsonObject = expandoObjectConverter.ToJsonObject(state, projection.Model.Schema);
-            return new(jsonObject, affectedProperties, projectedEventsCount);
-        }
-        catch (Exception ex)
-        {
-            logger.FailedGettingModelInstance(ex);
-            return ImmediateProjectionResult.Empty;
-        }
+        //     _initialState = state;
+        //     var jsonObject = expandoObjectConverter.ToJsonObject(state, projection.Model.Schema);
+        //     return new(jsonObject, affectedProperties, projectedEventsCount);
+        // }
+        // catch (Exception ex)
+        // {
+        //     logger.FailedGettingModelInstance(ex);
+        //     return ImmediateProjectionResult.Empty;
+        // }
     }
 
     /// <inheritdoc/>
     public async Task<ImmediateProjectionResult> GetCurrentModelInstanceWithAdditionalEventsApplied(IEnumerable<EventToApply> events)
     {
-        var @namespace = kernel.GetEventStore(_projectionKey!.EventStore).GetNamespace(_projectionKey!.Namespace);
+        throw new NotImplementedException();
+        // var @namespace = kernel.GetEventStore(_projectionKey!.EventStore).GetNamespace(_projectionKey!.Namespace);
 
-        var projection = @namespace.ProjectionManager.Get(_projectionId);
-        var affectedProperties = new HashSet<PropertyPath>();
+        // var projection = @namespace.ProjectionManager.Get(_projectionId);
+        // var affectedProperties = new HashSet<PropertyPath>();
 
-        var eventTypesStorage = storage.GetEventStore(_projectionKey!.EventStore).EventTypes;
-        var eventsToApplyTasks = events.Select(async _ =>
-        {
-            var eventSchema = await eventTypesStorage.GetFor(_.EventType.Id, _.EventType.Generation);
-            return AppendedEvent.EmptyWithEventType(_.EventType) with
-            {
-                Content = expandoObjectConverter.ToExpandoObject(_.Content, eventSchema.Schema)
-            };
-        }).ToArray();
-        var eventsToApply = await Task.WhenAll(eventsToApplyTasks);
-        var initialState = _initialState ?? new ExpandoObject();
-        var result = await HandleEvents(projection, affectedProperties, initialState, eventsToApply);
-        var jsonObject = expandoObjectConverter.ToJsonObject(result.State, projection.Model.Schema);
-        return new(jsonObject, affectedProperties, result.ProjectedEventsCount);
+        // var eventTypesStorage = storage.GetEventStore(_projectionKey!.EventStore).EventTypes;
+        // var eventsToApplyTasks = events.Select(async _ =>
+        // {
+        //     var eventSchema = await eventTypesStorage.GetFor(_.EventType.Id, _.EventType.Generation);
+        //     return AppendedEvent.EmptyWithEventType(_.EventType) with
+        //     {
+        //         Content = expandoObjectConverter.ToExpandoObject(_.Content, eventSchema.Schema)
+        //     };
+        // }).ToArray();
+        // var eventsToApply = await Task.WhenAll(eventsToApplyTasks);
+        // var initialState = _initialState ?? new ExpandoObject();
+        // var result = await HandleEvents(projection, affectedProperties, initialState, eventsToApply);
+        // var jsonObject = expandoObjectConverter.ToJsonObject(result.State, projection.Model.Schema);
+        // return new(jsonObject, affectedProperties, result.ProjectedEventsCount);
     }
 
     /// <inheritdoc/>

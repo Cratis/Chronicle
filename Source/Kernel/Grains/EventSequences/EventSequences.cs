@@ -39,7 +39,7 @@ public class EventSequences(ILogger<EventSequences> logger) : Grain, IEventSeque
         var eventSequenceKey = new EventSequenceKey(_key.EventStore, _key.Namespace);
         foreach (var eventSequence in eventSequences)
         {
-            var grain = GrainFactory.GetGrain<IEventSequence>(eventSequence, eventSequenceKey);
+            var grain = GrainFactory.GetGrain<IEventSequence>(Guid.Parse(eventSequence), eventSequenceKey);
             try
             {
                 await grain.Rehydrate();

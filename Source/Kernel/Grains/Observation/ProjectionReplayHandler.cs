@@ -11,8 +11,7 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ReducerReplayHandler"/> class.
 /// </remarks>
-/// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
-public class ProjectionReplayHandler(IKernel kernel) : ICanHandleReplayForObserver
+public class ProjectionReplayHandler : ICanHandleReplayForObserver
 {
     /// <inheritdoc/>
     public Task<bool> CanHandle(ObserverDetails observerDetails) => Task.FromResult(observerDetails.Type == ObserverType.Projection);
@@ -20,16 +19,14 @@ public class ProjectionReplayHandler(IKernel kernel) : ICanHandleReplayForObserv
     /// <inheritdoc/>
     public async Task BeginReplayFor(ObserverDetails observerDetails)
     {
-        var @namespace = kernel.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
-        var pipeline = @namespace.ProjectionManager.GetPipeline(observerDetails.Identifier.Value);
-        await pipeline.BeginReplay();
+        // TODO: Get projection instance and start replay
+        throw new NotImplementedException();
     }
 
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails)
     {
-        var @namespace = kernel.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
-        var pipeline = @namespace.ProjectionManager.GetPipeline(observerDetails.Identifier.Value);
-        await pipeline.EndReplay();
+        // TODO: Get projection instance and start replay
+        throw new NotImplementedException();
     }
 }

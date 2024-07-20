@@ -30,7 +30,7 @@ public class Observers(
         var key = ObserversKey.Parse(keyAsString!);
 
         var observerStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Observers;
-        var observers = await observerStorage.GetAllObservers();
+        var observers = await observerStorage.GetAll();
 
         var observersForConsolidation = new List<ObserverIdAndKey>();
 

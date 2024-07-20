@@ -9,12 +9,14 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Represents the compound key for an immediate projection.
 /// </summary>
+/// <param name="ProjectionId">The projection identifier.</param>
 /// <param name="EventStore">The event store name.</param>
 /// <param name="Namespace">The namespace within the event store.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
 /// <param name="ModelKey">The event source identifier.</param>
 /// <param name="CorrelationId">The optional correlation identifier.</param>
 public record ImmediateProjectionKey(
+    ProjectionId ProjectionId,
     EventStoreName EventStore,
     EventStoreNamespaceName Namespace,
     EventSequenceId EventSequenceId,
@@ -32,7 +34,7 @@ public record ImmediateProjectionKey(
     {
         if (CorrelationId != default)
         {
-            return $"{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}+{CorrelationId}";
+            return $"{ProjectionId}-{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}+{CorrelationId}";
         }
 
         return $"{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}";
@@ -46,15 +48,16 @@ public record ImmediateProjectionKey(
     public static ImmediateProjectionKey Parse(string key)
     {
         var elements = key.Split('+');
-        var eventStore = (EventStoreName)elements[0];
-        var @namespace = (EventStoreNamespaceName)elements[1];
-        var eventSequenceId = (EventSequenceId)elements[2];
-        var modelKey = (ModelKey)elements[3];
-        if (elements.Length == 5)
+        var projectionId = (ProjectionId)elements[0];
+        var eventStore = (EventStoreName)elements[1];
+        var @namespace = (EventStoreNamespaceName)elements[2];
+        var eventSequenceId = (EventSequenceId)elements[3];
+        var modelKey = (ModelKey)elements[4];
+        if (elements.Length == 6)
         {
-            var correlationId = (CorrelationId)elements[4];
-            return new(eventStore, @namespace, eventSequenceId, modelKey, correlationId);
+            var correlationId = (CorrelationId)elements[5];
+            return new(projectionId, eventStore, @namespace, eventSequenceId, modelKey, correlationId);
         }
-        return new(eventStore, @namespace, eventSequenceId, modelKey);
+        return new(projectionId, eventStore, @namespace, eventSequenceId, modelKey);
     }
 }

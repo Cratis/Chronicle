@@ -24,7 +24,7 @@ public class ObserverKeyIndexes(
         ObserverId observerId,
         ObserverKey observerKey)
     {
-        var observer = await observerStorage.GetObserver(observerId);
+        var observer = await observerStorage.Get(observerId);
         var database = eventStoreDatabase;
         var collection = database.GetEventSequenceCollectionFor(observerKey.EventSequenceId);
         return new EventSourceKeyIndex(collection, observer.EventTypes);

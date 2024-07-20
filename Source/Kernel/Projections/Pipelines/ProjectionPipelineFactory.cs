@@ -4,14 +4,13 @@
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections.Definitions;
-using Cratis.Chronicle.Projections.Pipelines;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
-namespace Cratis.Chronicle.Grains.Projections.Pipelines;
+namespace Cratis.Chronicle.Projections.Pipelines;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionPipelineFactory"/>.
@@ -32,14 +31,9 @@ public class ProjectionPipelineFactory(
     ILoggerFactory loggerFactory) : IProjectionPipelineFactory
 {
     /// <inheritdoc/>
-    public IProjectionPipeline CreateFrom(EngineProjection projection, ProjectionPipelineDefinition definition)
+    public IProjectionPipeline CreateFrom(EngineProjection projection, ProjectionDefinition definition)
     {
-        ISink sink = default!;
-        if (definition.Sinks.Any())
-        {
-            var sinkDefinition = definition.Sinks.First();
-            sink = sinks.GetFor(sinkDefinition.TypeId, projection.Model);
-        }
+        var sink = sinks.GetFor(definition.Sink.TypeId, projection.Model);
 
         return new ProjectionPipeline(
             projection,

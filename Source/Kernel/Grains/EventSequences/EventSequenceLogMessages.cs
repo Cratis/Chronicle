@@ -18,8 +18,8 @@ internal static partial class EventSequenceLogMessages
     [LoggerMessage(LogLevel.Debug, "Compensating event @ {SequenceNumber} in event sequence {EventSequenceId} - event type '{EventType}' for event store '{EventStore}' on namespace {Namespace}")]
     internal static partial void Compensating(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventType eventType, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber);
 
-    [LoggerMessage(LogLevel.Critical, "Failed appending event type '{EventType}' at sequence {SequenceNumber} for event source {EventSourceId} to stream {StreamId} for event store '{EventStore}' on namespace {Namespace}")]
-    internal static partial void FailedAppending(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventType eventType, Guid streamId, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, Exception exception);
+    [LoggerMessage(LogLevel.Critical, "Failed appending event type '{EventType}' at sequence {SequenceNumber} for event source {EventSourceId} to stream {EventSequenceId} for event store '{EventStore}' on namespace {Namespace}")]
+    internal static partial void FailedAppending(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventType eventType, EventSequenceId eventSequenceId, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, Exception exception);
 
     [LoggerMessage(LogLevel.Error, "Error when appending event at sequence {SequenceNumber} for event source {EventSourceId} to event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
     internal static partial void ErrorAppending(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, Exception exception);

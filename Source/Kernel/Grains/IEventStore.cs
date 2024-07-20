@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Grains.Observation.Reducers;
-using Cratis.Chronicle.Grains.Projections.Definitions;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Grains;
@@ -22,16 +21,6 @@ public interface IEventStore
     /// Gets the <see cref="IEventStoreStorage"/> for the specific event store.
     /// </summary>
     IEventStoreStorage Storage { get; }
-
-    /// <summary>
-    /// Gets the <see cref="IProjectionDefinitions"/>.
-    /// </summary>
-    IProjectionDefinitions ProjectionDefinitions { get; }
-
-    /// <summary>
-    /// Gets the <see cref="IProjectionPipelineDefinitions"/>.
-    /// </summary>
-    IProjectionPipelineDefinitions ProjectionPipelineDefinitions { get; }
 
     /// <summary>
     /// Gets the <see cref="IReducerPipelineDefinitions"/>.

@@ -7,30 +7,22 @@ namespace Cratis.Chronicle.EventSequences;
 /// Represents the unique identifier of an event sequence.
 /// </summary>
 /// <param name="Value">Actual value.</param>
-public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
+public record EventSequenceId(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
     /// The <see cref="EventSequenceId"/> representing an unspecified value.
     /// </summary>
-    public static readonly EventSequenceId Unspecified = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
+    public static readonly EventSequenceId Unspecified = "unspecified";
 
     /// <summary>
     /// The <see cref="EventSequenceId"/> representing the event sequence for the default log.
     /// </summary>
-    public static readonly EventSequenceId Log = Guid.Empty;
-
-    /// <summary>
-    /// The name of the sequence representing the system sequence.
-    /// </summary>
-    /// <remarks>
-    /// This is represented as a string name, as part of the transition away from GUIDs representing sequences to strings: https://github.com/Cratis/Cratis/issues/921.
-    /// </remarks>
-    public const string System = "system";
+    public static readonly EventSequenceId Log = "event-log";
 
     /// <summary>
     /// The <see cref="EventSequenceId"/> representing the system event sequence.
     /// </summary>
-    public static readonly EventSequenceId SystemId = Guid.Parse("cf3612a4-48fe-462a-af3e-2bd9ad6f6825");
+    public static readonly EventSequenceId System = "system ";
 
     /// <summary>
     /// Get whether or not this is the default log event sequence.
@@ -38,25 +30,8 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     public bool IsEventLog => this == Log;
 
     /// <summary>
-    /// Implicitly convert from a string representation of a <see cref="Guid"/> to <see cref="EventSequenceId"/>.
+    /// Implicitly convert from a string to <see cref="EventSequenceId"/>.
     /// </summary>
-    /// <param name="id"><see cref="Guid"/> to convert from.</param>
-    public static implicit operator EventSequenceId(string id)
-    {
-        // TODO: We're doing this explicit check for well-known type "system" until we have completed the transition from GUIDs to strings: https://github.com/Cratis/Cratis/issues/921
-        if (id == System) return SystemId;
-        return new(Guid.Parse(id));
-    }
-
-    /// <summary>
-    /// Implicitly convert from <see cref="Guid"/> to <see cref="EventSequenceId"/>.
-    /// </summary>
-    /// <param name="id"><see cref="Guid"/> to convert from.</param>
-    public static implicit operator EventSequenceId(Guid id) => new(id);
-
-    /// <summary>
-    /// Implicitly convert from bytes representing a <see cref="Guid"/> to <see cref="EventSequenceId"/>.
-    /// </summary>
-    /// <param name="bytes">Bytes to convert from.</param>
-    public static implicit operator EventSequenceId(ReadOnlyMemory<byte> bytes) => new(new Guid(bytes.Span));
+    /// <param name="id">String to convert from.</param>
+    public static implicit operator EventSequenceId(string id) => new(id);
 }

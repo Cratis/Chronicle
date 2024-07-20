@@ -3,19 +3,10 @@
 
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Grains.Observation.Reducers;
-using Cratis.Chronicle.Grains.Projections;
-using Cratis.Chronicle.Grains.Projections.Pipelines;
-using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Projections.Expressions;
-using Cratis.Chronicle.Projections.Expressions.EventValues;
-using Cratis.Chronicle.Projections.Expressions.Keys;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains;
 
@@ -31,39 +22,16 @@ public class EventStoreNamespace : IEventStoreNamespace
     /// <param name="name">The <see cref="EventStoreNamespaceName"/>.</param>
     /// <param name="storage"><see cref="IEventStoreNamespaceStorage"/> for accessing underlying storage for the specific namespace.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
-    /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStoreNamespace(
         EventStoreName eventStore,
         EventStoreNamespaceName name,
         IEventStoreNamespaceStorage storage,
-        IServiceProvider serviceProvider,
-        ILoggerFactory loggerFactory)
+        IServiceProvider serviceProvider)
     {
         Name = name;
         Storage = storage;
 
         Sinks = new Storage.Sinks.Sinks(eventStore, name, serviceProvider.GetRequiredService<IInstancesOf<ISinkFactory>>());
-        var projectionFactory = new ProjectionFactory(
-            serviceProvider.GetRequiredService<IModelPropertyExpressionResolvers>(),
-            serviceProvider.GetRequiredService<IEventValueProviderExpressionResolvers>(),
-            serviceProvider.GetRequiredService<IKeyExpressionResolvers>(),
-            serviceProvider.GetRequiredService<IExpandoObjectConverter>(),
-            storage);
-
-        var pipelineFactory = new ProjectionPipelineFactory(
-            Sinks,
-            storage,
-            serviceProvider.GetRequiredService<IObjectComparer>(),
-            serviceProvider.GetRequiredService<ITypeFormats>(),
-            loggerFactory);
-
-        ProjectionManager = new ProjectionManager(
-            eventStore,
-            name,
-            projectionFactory,
-            pipelineFactory,
-            loggerFactory.CreateLogger<ProjectionManager>());
-
         var sinks = new Storage.Sinks.Sinks(
             eventStore,
             name,
@@ -78,9 +46,6 @@ public class EventStoreNamespace : IEventStoreNamespace
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage Storage { get; }
-
-    /// <inheritdoc/>
-    public IProjectionManager ProjectionManager { get; }
 
     /// <inheritdoc/>
     public IReducerPipelines ReducerPipelines { get; }

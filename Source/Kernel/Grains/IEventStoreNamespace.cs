@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Grains.Observation.Reducers;
-using Cratis.Chronicle.Grains.Projections;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
 
@@ -22,11 +21,6 @@ public interface IEventStoreNamespace
     /// Gets the <see cref="IEventStoreNamespaceStorage"/> for the namespace.
     /// </summary>
     IEventStoreNamespaceStorage Storage { get; }
-
-    /// <summary>
-    /// Gets the <see cref="IProjectionManager"/>.
-    /// </summary>
-    IProjectionManager ProjectionManager { get; }
 
     /// <summary>
     /// Gets the <see cref="IReducerPipelines"/>.

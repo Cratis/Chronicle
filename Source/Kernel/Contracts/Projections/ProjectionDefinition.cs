@@ -16,10 +16,15 @@ namespace Cratis.Chronicle.Contracts.Projections;
 public class ProjectionDefinition
 {
     /// <summary>
+    /// Gets or sets the event sequence identifier the projection projects from.
+    /// </summary>
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the unique identifier of the projection.
     /// </summary>
     [ProtoMember(1)]
-    public Guid Identifier { get; set; }
+    public string Identifier { get; set; }
 
     /// <summary>
     /// Gets or sets the friendly display name of the projection.

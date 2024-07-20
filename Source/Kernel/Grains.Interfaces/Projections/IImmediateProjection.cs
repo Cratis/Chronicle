@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// This ensures that we can run multiple of these in a cluster for a specific type without
 /// having to wait for turn if its not the same identifier.
 /// </remarks>
-public interface IImmediateProjection : IGrainWithGuidCompoundKey
+public interface IImmediateProjection : IGrainWithStringKey
 {
     /// <summary>
     /// Get the model instance.

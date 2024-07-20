@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Properties;
 
@@ -11,6 +12,7 @@ namespace Cratis.Chronicle.Projections.Definitions;
 /// <summary>
 /// Represents the definition of a projection.
 /// </summary>
+/// <param name="EventSequenceId"><see cref="EventSequenceId">Event sequence identifier</see> the projection projects from.</param>
 /// <param name="Identifier"><see cref="ProjectionId">Identifier</see> of the projection.</param>
 /// <param name="Name">Friendly display name of the projection.</param>
 /// <param name="Model">The target <see cref="ModelDefinition"/>.</param>
@@ -27,6 +29,7 @@ namespace Cratis.Chronicle.Projections.Definitions;
 /// <param name="RemovedWith">The definition of what removes a child, if any.</param>
 /// <param name="LastUpdated">The last time the projection definition was updated.</param>
 public record ProjectionDefinition(
+    EventSequenceId EventSequenceId,
     ProjectionId Identifier,
     ProjectionName Name,
     ModelDefinition Model,

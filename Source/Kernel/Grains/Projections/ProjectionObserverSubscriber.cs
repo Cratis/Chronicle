@@ -5,7 +5,9 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.Definitions;
 using Cratis.Chronicle.Projections.Pipelines;
+using Orleans.Providers;
 
 namespace Cratis.Chronicle.Grains.Projections;
 
@@ -15,31 +17,31 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
 /// </remarks>
-/// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
-public class ProjectionObserverSubscriber(IKernel kernel) : Grain, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
+/// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
+/// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> for creating projection pipelines.</param>
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
+public class ProjectionObserverSubscriber(
+    IProjectionFactory projectionFactory,
+    IProjectionPipelineFactory projectionPipelineFactory) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
     ProjectionId _projectionId = ProjectionId.NotSet;
     IProjectionPipeline? _pipeline;
-    EventStoreName _eventStore = EventStoreName.NotSet;
-    EventStoreNamespaceName _namespace = EventStoreNamespaceName.NotSet;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _projectionId = this.GetPrimaryKey(out var keyAsString);
+        _projectionId = this.GetPrimaryKey(out var keyAsString).ToString();
         var key = ObserverSubscriberKey.Parse(keyAsString);
-        _eventStore = key.EventStore;
-        _namespace = key.Namespace;
-        var projection = GrainFactory.GetGrain<IProjection>(_projectionId, new ProjectionKey(key.EventStore, key.Namespace, key.EventSequenceId));
+        var projection = GrainFactory.GetGrain<IProjection>(_projectionId, new ProjectionKey(_projectionId, key.EventStore, key.Namespace, key.EventSequenceId));
         await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
-
-        HandleDefinitionsAndInstances();
+        await HandlePipeline();
     }
 
     /// <inheritdoc/>
     public void OnProjectionDefinitionsChanged()
     {
-        HandleDefinitionsAndInstances();
+        ReadStateAsync().Wait();
+        HandlePipeline().Wait();
     }
 
     /// <inheritdoc/>
@@ -71,9 +73,9 @@ public class ProjectionObserverSubscriber(IKernel kernel) : Grain, IProjectionOb
         }
     }
 
-    void HandleDefinitionsAndInstances()
+    async Task HandlePipeline()
     {
-        var projectionManager = kernel.GetEventStore(_eventStore).GetNamespace(_namespace).ProjectionManager;
-        _pipeline = projectionManager.GetPipeline(_projectionId);
+        var projection = await projectionFactory.CreateFrom(State);
+        _pipeline = projectionPipelineFactory.CreateFrom(projection, State);
     }
 }

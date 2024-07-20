@@ -21,7 +21,6 @@ public static class StorageProviderExtensions
     {
         builder.ConfigureServices(services =>
         {
-            // TODO: From Server project we have copied the following, this should be consolidated into a new place
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Namespaces, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Namespaces.NamespacesStateStorageProvider>());
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.EventSequences, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.EventSequences.EventSequencesStorageProvider>());
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Observers, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Observation.ObserverGrainStorageProvider>());
@@ -29,6 +28,7 @@ public static class StorageProviderExtensions
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Jobs, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Jobs.JobGrainStorageProvider>());
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.JobSteps, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Jobs.JobStepGrainStorageProvider>());
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Recommendations, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Recommendations.RecommendationGrainStorageProvider>());
+            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Projections, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Projections.ProjectionStorageProvider>());
         });
 
         return builder;

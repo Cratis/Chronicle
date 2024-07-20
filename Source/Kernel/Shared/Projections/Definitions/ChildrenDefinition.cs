@@ -31,7 +31,8 @@ public record ChildrenDefinition(
     FromEventPropertyDefinition? FromEventProperty = default,
     RemovedWithDefinition? RemovedWith = default) :
     ProjectionDefinition(
-        Guid.Empty,
+        EventSequences.EventSequenceId.Unspecified,
+        ProjectionId.NotSet,
         string.Empty,
         Model,
         true,

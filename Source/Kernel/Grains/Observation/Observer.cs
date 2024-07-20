@@ -70,7 +70,7 @@ public class Observer(
         await failures.ReadStateAsync();
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
-            _observerKey.EventSequenceId,
+            Guid.Parse(_observerKey.EventSequenceId),
             new EventSequenceKey(_observerKey.EventStore, _observerKey.Namespace));
 
         _metrics = meter.BeginObserverScope(_observerId, _observerKey);

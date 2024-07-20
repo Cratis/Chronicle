@@ -16,7 +16,7 @@ public class Projections(IGrainFactory grainFactory) : IProjections
     /// <inheritdoc/>
     public Task Register(RegisterRequest request, CallContext context = default)
     {
-        var projections = grainFactory.GetGrain<Grains.Projections.IProjections>(request.EventStoreName);
+        var projections = grainFactory.GetGrain<Grains.Projections.IProjectionsManager>(request.EventStoreName);
         var projectionAndPipelines = request.Projections.Select(_ => _.ToChronicle()).ToArray();
 
         _ = Task.Run(() => projections.Register(projectionAndPipelines));

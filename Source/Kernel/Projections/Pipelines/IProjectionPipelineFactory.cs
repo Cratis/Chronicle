@@ -2,10 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Projections.Definitions;
-using Cratis.Chronicle.Projections.Pipelines;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
-namespace Cratis.Chronicle.Grains.Projections.Pipelines;
+namespace Cratis.Chronicle.Projections.Pipelines;
 
 /// <summary>
 /// Defines a system for working with <see cref="IProjectionPipeline">projection pipelines</see>.
@@ -13,10 +12,10 @@ namespace Cratis.Chronicle.Grains.Projections.Pipelines;
 public interface IProjectionPipelineFactory
 {
     /// <summary>
-    /// Get a projection pipeline based on <see cref="ProjectionPipelineDefinition"/>.
+    /// Get a projection pipeline for a given <see cref="EngineProjection"/>.
     /// </summary>
     /// <param name="projection"><see cref="EngineProjection"/> the pipeline is for.</param>
-    /// <param name="definition">The <see cref="ProjectionPipelineDefinition"/> to register.</param>
+    /// <param name="definition">The <see cref="ProjectionDefinition"/> to register.</param>
     /// <returns>The <see cref="IProjectionPipeline"/> instance.</returns>
-    IProjectionPipeline CreateFrom(EngineProjection projection, ProjectionPipelineDefinition definition);
+    IProjectionPipeline CreateFrom(EngineProjection projection, ProjectionDefinition definition);
 }
