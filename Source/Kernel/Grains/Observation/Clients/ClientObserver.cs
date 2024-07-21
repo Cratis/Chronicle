@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Clients;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 using Microsoft.Extensions.Logging;
 using Orleans.Placement;
 using Orleans.Runtime;

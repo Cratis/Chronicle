@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;

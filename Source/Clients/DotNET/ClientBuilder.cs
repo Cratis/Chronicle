@@ -10,7 +10,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Integration;
 using Cratis.Chronicle.Net;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
@@ -133,10 +133,10 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton(clientArtifacts)
             .AddSingleton(_modelNameConvention ?? new DefaultModelNameConvention())
             .AddSingleton<IModelNameResolver, ModelNameResolver>()
-            .AddObservers(clientArtifacts)
+            .AddReactions(clientArtifacts)
             .AddSingleton(Globals.JsonSerializerOptions)
             .AddSingleton<IConnectionLifecycle, ConnectionLifecycle>()
-            .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
+            .AddSingleton<IReactionMiddlewares, ReactionMiddlewares>()
             .AddSingleton<IReducersRegistrar, ReducersRegistrar>()
             .AddSingleton<IReducerValidator, ReducerValidator>()
             .AddTransient<IClientReducers, ClientReducers>()

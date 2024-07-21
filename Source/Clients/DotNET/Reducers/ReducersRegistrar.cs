@@ -5,7 +5,7 @@ using System.Reflection;
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
 using Cratis.Models;
@@ -63,7 +63,6 @@ public class ReducersRegistrar : IReducersRegistrar
                                     var reducer = reducerType.GetCustomAttribute<ReducerAttribute>()!;
                                     return new ReducerHandler(
                                         reducerType.GetReducerId(),
-                                        reducerType.FullName ?? $"{reducerType.Namespace}.{reducerType.Name}",
                                         reducer.EventSequenceId,
                                         new ReducerInvoker(
                                             serviceProvider,
@@ -84,7 +83,7 @@ public class ReducersRegistrar : IReducersRegistrar
     /// <inheritdoc/>
     public IReducerHandler GetById(ReducerId reducerId)
     {
-        var reducer = _handlers.Values.SingleOrDefault(_ => _.ReducerId == reducerId);
+        var reducer = _handlers.Values.SingleOrDefault(_ => _.Id == reducerId);
         ReducerDoesNotExist.ThrowIfDoesNotExist(reducerId, reducer);
         return reducer!;
     }
@@ -92,14 +91,14 @@ public class ReducersRegistrar : IReducersRegistrar
     /// <inheritdoc/>
     public IReducerHandler GetByType(Type reducerType)
     {
-        ThrowIfTypeIsNotAnObserver(reducerType);
+        ThrowIfTypeIsNotAReducer(reducerType);
         return _handlers[reducerType];
     }
 
     /// <inheritdoc/>
     public Type GetClrType(ReducerId reducerId)
     {
-        var reducer = _handlers.SingleOrDefault(_ => _.Value.ReducerId == reducerId);
+        var reducer = _handlers.SingleOrDefault(_ => _.Value.Id == reducerId);
         ReducerDoesNotExist.ThrowIfDoesNotExist(reducerId, reducer.Value);
         return reducer.Key;
     }
@@ -118,16 +117,14 @@ public class ReducersRegistrar : IReducersRegistrar
         foreach (var reducerHandler in _handlers.Values)
         {
             _logger.RegisterReducer(
-                reducerHandler.ReducerId,
-                reducerHandler.Name,
+                reducerHandler.Id,
                 reducerHandler.EventSequenceId);
         }
 
         // var route = $"/api/events/store/{eventStore}/reducers/register/{_connection.ConnectionId}";
         var registrations = _handlers.Values.Select(_ => new ReducerDefinition()
         {
-            ReducerId = _.ReducerId,
-            Name = _.Name,
+            ReducerId = _.Id,
             EventSequenceId = _.EventSequenceId,
             EventTypes = _.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray(),
             ReadModel = new()
@@ -152,7 +149,7 @@ public class ReducersRegistrar : IReducersRegistrar
         return reducerAttribute.IsActive;
     }
 
-    void ThrowIfTypeIsNotAnObserver(Type reducerType)
+    void ThrowIfTypeIsNotAReducer(Type reducerType)
     {
         if (!_handlers.ContainsKey(reducerType))
         {

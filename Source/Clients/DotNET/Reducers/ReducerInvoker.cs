@@ -21,7 +21,7 @@ public class ReducerInvoker : IReducerInvoker
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerInvoker"/> class.
     /// </summary>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances of actual observer.</param>
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances of actual reducer.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
     /// <param name="targetType">Type of reducer.</param>
     /// <param name="readModelType">Type of read model for the reducer.</param>

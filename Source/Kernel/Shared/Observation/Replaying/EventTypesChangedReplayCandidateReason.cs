@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Observation.Replaying;
+namespace Cratis.Chronicle.Reactions.Replaying;
 
 /// <summary>
 /// Represents a reason for a replay candidate when event types have changed.

@@ -4,7 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Observation.Reducers;
+namespace Cratis.Chronicle.Reactions.Reducers;
 
 /// <summary>
 /// Represents the result of a reduce operation.

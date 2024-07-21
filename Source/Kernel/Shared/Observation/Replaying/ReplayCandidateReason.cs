@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Observation.Replaying;
+namespace Cratis.Chronicle.Reactions.Replaying;
 
 /// <summary>
 /// Represents the base for a reason for a replay candidate.

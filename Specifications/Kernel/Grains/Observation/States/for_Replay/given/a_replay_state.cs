@@ -6,7 +6,7 @@ using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;

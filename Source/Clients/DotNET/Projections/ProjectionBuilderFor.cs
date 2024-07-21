@@ -80,7 +80,6 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
         return new()
         {
             Identifier = _identifier,
-            Name = _name ?? modelType.FullName ?? "[N/A]",
             Model = new()
             {
                 Name = _modelName,

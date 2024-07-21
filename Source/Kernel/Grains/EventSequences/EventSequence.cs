@@ -10,7 +10,7 @@ using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;

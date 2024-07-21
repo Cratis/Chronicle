@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.when_entering;
 

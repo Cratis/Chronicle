@@ -1,8 +1,8 @@
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 
 namespace Orleans;
 
-[Observer]
+[Reaction]
 public class MyObserver
 {
     public Task StuffHappened(MyFirstEvent @event)

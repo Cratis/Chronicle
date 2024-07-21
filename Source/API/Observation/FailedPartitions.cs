@@ -3,7 +3,7 @@
 
 using Cratis.Applications.Queries;
 using Cratis.Chronicle;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.API.Observation;

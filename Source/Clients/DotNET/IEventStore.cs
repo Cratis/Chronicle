@@ -3,8 +3,8 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Reducers;
 
 namespace Cratis.Chronicle;
@@ -40,9 +40,9 @@ public interface IEventStore
     IEventLog EventLog { get; }
 
     /// <summary>
-    /// Gets the <see cref="IObservers"/> for the event store.
+    /// Gets the <see cref="IReactions"/> for the event store.
     /// </summary>
-    IObservers Observers { get; }
+    IReactions Reactions { get; }
 
     /// <summary>
     /// Gets the <see cref="IReducers"/> for the event store.

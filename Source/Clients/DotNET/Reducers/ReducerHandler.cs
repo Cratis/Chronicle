@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -14,24 +13,19 @@ namespace Cratis.Chronicle.Reducers;
 /// Initializes a new instance of the <see cref="ReducerHandler"/> class.
 /// </remarks>
 /// <param name="reducerId">The identifier of the reducer.</param>
-/// <param name="name">The name of the reducer.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the reducer is for.</param>
 /// <param name="invoker">The actual invoker.</param>
 /// <param name="eventSerializer">The event serializer to use.</param>
 /// <param name="isActive">Whether or not reducer should be actively running on the Kernel.</param>
 public class ReducerHandler(
     ReducerId reducerId,
-    ObserverName name,
     EventSequenceId eventSequenceId,
     IReducerInvoker invoker,
     IEventSerializer eventSerializer,
     bool isActive) : IReducerHandler
 {
     /// <inheritdoc/>
-    public ReducerId ReducerId { get; } = reducerId;
-
-    /// <inheritdoc/>
-    public ObserverName Name { get; } = name;
+    public ReducerId Id { get; } = reducerId;
 
     /// <inheritdoc/>
     public EventSequenceId EventSequenceId { get; } = eventSequenceId;

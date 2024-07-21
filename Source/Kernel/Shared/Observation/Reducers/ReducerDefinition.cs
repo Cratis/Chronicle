@@ -5,7 +5,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Sinks;
 
-namespace Cratis.Chronicle.Observation.Reducers;
+namespace Cratis.Chronicle.Reactions.Reducers;
 
 /// <summary>
 /// Represents the registration of a single client observer.

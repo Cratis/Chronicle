@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Definitions;
 using Cratis.Chronicle.Projections.Pipelines;

@@ -6,8 +6,8 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
 using Cratis.Models;
@@ -77,15 +77,15 @@ public class EventStore : IEventStore
             causationManager,
             identityProvider);
 
-        Observers = new Observers(
+        Reactions = new Reactions.Reactions(
             this,
             EventTypes,
             clientArtifactsProvider,
             serviceProvider,
-            new ObserverMiddlewares(clientArtifactsProvider, serviceProvider),
+            new ReactionMiddlewares(clientArtifactsProvider, serviceProvider),
             _eventSerializer,
             causationManager,
-            loggerFactory.CreateLogger<Observers>(),
+            loggerFactory.CreateLogger<Reactions.Reactions>(),
             loggerFactory);
 
         Reducers = new Reducers.Reducers(this, clientArtifactsProvider);
@@ -114,7 +114,7 @@ public class EventStore : IEventStore
     public IEventLog EventLog { get; }
 
     /// <inheritdoc/>
-    public IObservers Observers { get; }
+    public IReactions Reactions { get; }
 
     /// <inheritdoc/>
     public IReducers Reducers { get; }
@@ -131,7 +131,7 @@ public class EventStore : IEventStore
         await EventTypes.Discover();
 
         await Task.WhenAll(
-            Observers.Discover(),
+            Reactions.Discover(),
             Reducers.Discover(),
             Projections.Discover());
     }
@@ -145,7 +145,7 @@ public class EventStore : IEventStore
         await EventTypes.Register();
 
         await Task.WhenAll(
-            Observers.Register(),
+            Reactions.Register(),
             Projections.Register());
     }
 

@@ -29,9 +29,9 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> Adapters { get; }
 
     /// <summary>
-    /// Gets all the available observer types.
+    /// Gets all the available reaction types.
     /// </summary>
-    IEnumerable<Type> Observers { get; }
+    IEnumerable<Type> Reactions { get; }
 
     /// <summary>
     /// Gets all the available reducer types.
@@ -39,9 +39,9 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> Reducers { get; }
 
     /// <summary>
-    /// Gets all the available observer middleware types.
+    /// Gets all the available reaction middleware types.
     /// </summary>
-    IEnumerable<Type> ObserverMiddlewares { get; }
+    IEnumerable<Type> ReactionMiddlewares { get; }
 
     /// <summary>
     /// Gets all the available providers of compliance metadata for types.

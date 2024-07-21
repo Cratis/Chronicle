@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Chronicle.Observation;
+namespace Cratis.Chronicle.Reactions;
 
 /// <summary>
 /// Represents a key for a partitioned observer.

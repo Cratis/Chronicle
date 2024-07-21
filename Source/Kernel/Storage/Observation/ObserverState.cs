@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 
 namespace Cratis.Chronicle.Storage.Observation;
 

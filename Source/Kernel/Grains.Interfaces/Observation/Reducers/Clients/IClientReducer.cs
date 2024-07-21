@@ -3,8 +3,8 @@
 
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Observation.Reducers;
+using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Reactions.Reducers;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 

@@ -7,7 +7,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Clients;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Observation;

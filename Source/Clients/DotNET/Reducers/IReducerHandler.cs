@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -15,12 +14,7 @@ public interface IReducerHandler
     /// <summary>
     /// Gets the unique identifier of the reducer.
     /// </summary>
-    ReducerId ReducerId { get; }
-
-    /// <summary>
-    /// Gets the name of the reducer.
-    /// </summary>
-    ObserverName Name { get; }
+    ReducerId Id { get; }
 
     /// <summary>
     /// Gets the event sequence the reducer is reducing from.
@@ -45,7 +39,7 @@ public interface IReducerHandler
     /// <summary>
     /// Gets the <see cref="IReducerInvoker"/> that will perform the invocations.
     /// </summary>
-    IReducerInvoker Invoker { get; }
+    IReducerInvoker Invoker { get; }
 
     /// <summary>
     /// Handle next events as bulk.

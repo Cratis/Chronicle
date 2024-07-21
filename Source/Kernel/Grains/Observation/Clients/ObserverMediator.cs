@@ -4,7 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Grains.Observation.Clients;

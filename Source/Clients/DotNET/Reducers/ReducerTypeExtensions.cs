@@ -6,7 +6,7 @@ using System.Reflection;
 namespace Cratis.Chronicle.Reducers;
 
 /// <summary>
-/// Extension methods for working with observer types.
+/// Extension methods for working with reducer types.
 /// </summary>
 public static class ReducerTypeExtensions
 {

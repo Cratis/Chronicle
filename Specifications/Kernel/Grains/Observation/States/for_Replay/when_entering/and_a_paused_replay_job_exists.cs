@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Storage.Jobs;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.when_entering;

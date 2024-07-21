@@ -27,86 +27,80 @@ public class ProjectionDefinition
     public string Identifier { get; set; }
 
     /// <summary>
-    /// Gets or sets the friendly display name of the projection.
-    /// </summary>
-    [ProtoMember(2)]
-    public string Name { get; set; }
-
-    /// <summary>
     /// Gets or sets the target <see cref="ModelDefinition"/>.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(2)]
     public ModelDefinition Model { get; set; }
 
     /// <summary>
     /// Gets or sets whether or not the projection is an actively observing projection.
     /// </summary>
-    [ProtoMember(4)]
+    [ProtoMember(3)]
     public bool IsActive { get; set; }
 
     /// <summary>
     /// Gets or sets whether or not the projection is rewindable.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(4)]
     public bool IsRewindable { get; set; }
 
     /// <summary>
     /// Gets or sets the initial state to use for new instances of the model.
     /// </summary>
-    [ProtoMember(6)]
+    [ProtoMember(5)]
     public string InitialModelState { get; set; }
 
     /// <summary>
     /// Gets or sets all the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.
     /// </summary>
-    [ProtoMember(7, IsRequired = true)]
+    [ProtoMember(6, IsRequired = true)]
     public IDictionary<EventType, FromDefinition> From { get; set; } = new Dictionary<EventType, FromDefinition>();
 
     /// <summary>
     /// Gets or sets all the <see cref="JoinDefinition"/> for <see cref="EventType">event types</see>.
     /// </summary>
-    [ProtoMember(8, IsRequired = true)]
+    [ProtoMember(7, IsRequired = true)]
     public IDictionary<EventType, JoinDefinition> Join { get; set; } = new Dictionary<EventType, JoinDefinition>();
 
     /// <summary>
     /// Gets or sets all the <see cref="ChildrenDefinition"/> for properties on model.
     /// </summary>
-    [ProtoMember(9, IsRequired = true)]
+    [ProtoMember(8, IsRequired = true)]
     public IDictionary<string, ChildrenDefinition> Children { get; set; } = new Dictionary<string, ChildrenDefinition>();
 
     /// <summary>
     /// Gets or sets all the <see cref="FromAnyDefinition"/> for <see cref="EventType">event types</see>.
     /// </summary>
-    [ProtoMember(10, IsRequired = true)]
+    [ProtoMember(9, IsRequired = true)]
     public IList<FromAnyDefinition> FromAny { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the full <see cref="AllDefinition"/>.
     /// </summary>
-    [ProtoMember(11)]
+    [ProtoMember(10)]
     public AllDefinition All { get; set; }
 
     /// <summary>
     /// Gets or sets the optional <see cref="FromEventPropertyDefinition"/> definition.
     /// </summary>
-    [ProtoMember(12)]
+    [ProtoMember(11)]
     public FromEventPropertyDefinition? FromEventProperty { get; set; }
 
     /// <summary>
     /// Gets or sets the definition of what removes a child, if any.
     /// </summary>
-    [ProtoMember(13)]
+    [ProtoMember(12)]
     public RemovedWithDefinition? RemovedWith { get; set; }
 
     /// <summary>
     /// Gets or sets the last time the projection definition was updated.
     /// </summary>
-    [ProtoMember(14)]
+    [ProtoMember(13)]
     public SerializableDateTimeOffset? LastUpdated { get; set; }
 
     /// <summary>
     /// Gets or sets the projection sink definition.
     /// </summary>
-    [ProtoMember(15)]
+    [ProtoMember(14)]
     public SinkDefinition Sink { get; set; }
 }

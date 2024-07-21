@@ -20,32 +20,26 @@ public class ReducerDefinition
     public string ReducerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the observer.
-    /// </summary>
-    [ProtoMember(2)]
-    public string Name { get; set; }
-
-    /// <summary>
     /// Gets or sets the event sequence the reducer is for.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(2)]
     public string EventSequenceId { get; set; }
 
     /// <summary>
     /// Gets or sets the event types the reducer is interested in.
     /// </summary>
-    [ProtoMember(4, IsRequired = true)]
+    [ProtoMember(3, IsRequired = true)]
     public IEnumerable<EventTypeWithKeyExpression> EventTypes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the <see cref="ModelDefinition"/> of the read model.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(4)]
     public ModelDefinition ReadModel { get; set; }
 
     /// <summary>
     /// Gets or sets the <see cref="SinkTypeId"/> of the target sink.
     /// </summary>
-    [ProtoMember(6)]
+    [ProtoMember(5)]
     public Guid SinkTypeId { get; set; }
 }

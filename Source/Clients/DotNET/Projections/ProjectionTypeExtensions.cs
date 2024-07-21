@@ -6,7 +6,7 @@ using System.Reflection;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Extension methods for working with observer types.
+/// Extension methods for working with projection types.
 /// </summary>
 public static class ProjectionTypeExtensions
 {

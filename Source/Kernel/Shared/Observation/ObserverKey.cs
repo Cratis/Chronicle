@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Chronicle.Observation;
+namespace Cratis.Chronicle.Reactions;
 
 /// <summary>
 /// Represents a key for an observer.

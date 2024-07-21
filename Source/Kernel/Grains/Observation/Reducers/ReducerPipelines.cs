@@ -4,7 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Models;
-using Cratis.Chronicle.Observation.Reducers;
+using Cratis.Chronicle.Reactions.Reducers;
 using Cratis.Chronicle.Storage.Sinks;
 using NJsonSchema;
 
