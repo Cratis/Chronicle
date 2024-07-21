@@ -3,7 +3,6 @@
 
 using System.Diagnostics;
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventSequences;
