@@ -6,8 +6,7 @@ using Cratis.Chronicle.Reactions;
 
 namespace Basic;
 
-[Reaction("986b3b82-19b8-43ae-8c85-d68a79628018")]
-public class CartObserver
+public class CartObserver : IReaction
 {
     public Task ItemAdded(ItemAddedToCart @event, EventContext context)
     {

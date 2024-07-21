@@ -5,8 +5,8 @@ using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration;
-using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Reflection;
@@ -36,7 +36,7 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
         Adapters = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAdapterFor<,>)) && !_.IsGenericType).ToArray();
         Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
         ImmediateProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IImmediateProjectionFor<>))).ToArray();
-        Reactions = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<ReactionAttribute>()).ToArray();
+        Reactions = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReaction)) && !_.IsGenericType).ToArray();
         ReactionMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReactionMiddleware))).ToArray();
         Reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
         AdditionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(ICanProvideAdditionalEventInformation))).ToArray();

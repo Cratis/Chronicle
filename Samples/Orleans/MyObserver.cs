@@ -2,8 +2,7 @@ using Cratis.Chronicle.Reactions;
 
 namespace Orleans;
 
-[Reaction]
-public class MyObserver
+public class MyObserver : IReaction
 {
     public Task StuffHappened(MyFirstEvent @event)
     {

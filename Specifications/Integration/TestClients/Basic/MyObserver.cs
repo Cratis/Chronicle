@@ -5,8 +5,7 @@ using Cratis.Chronicle.Reactions;
 
 namespace Basic;
 
-[Reaction("bf9d2ee4-5557-43e0-9d95-ad8aa9f4013e")]
-public class MyObserver
+public class MyObserver : IReaction
 {
     public Task MyEventHandler(MyEvent @event)
     {
