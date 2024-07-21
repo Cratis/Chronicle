@@ -62,7 +62,7 @@ public class Projection(
         if (!_subscribed)
         {
             _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, key.Namespace, key.EventSequenceId));
-            var projection = await projectionFactory.CreateFrom(key.EventStore, key.Namespace, definition);
+            var projection = await projectionFactory.Create(key.EventStore, key.Namespace, definition);
 
             await _observer.Subscribe<IProjectionObserverSubscriber>(
                 State.Name.Value,

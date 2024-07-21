@@ -14,8 +14,10 @@ public interface IProjectionPipelineFactory
     /// <summary>
     /// Get a projection pipeline for a given <see cref="EngineProjection"/>.
     /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the pipeline is for.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the pipeline is for.</param>
     /// <param name="projection"><see cref="EngineProjection"/> the pipeline is for.</param>
     /// <param name="definition">The <see cref="ProjectionDefinition"/> to register.</param>
     /// <returns>The <see cref="IProjectionPipeline"/> instance.</returns>
-    IProjectionPipeline CreateFrom(EngineProjection projection, ProjectionDefinition definition);
+    IProjectionPipeline Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection, ProjectionDefinition definition);
 }

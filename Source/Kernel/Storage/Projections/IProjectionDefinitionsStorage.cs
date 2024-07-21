@@ -18,6 +18,13 @@ public interface IProjectionDefinitionsStorage
     Task<IEnumerable<ProjectionDefinition>> GetAll();
 
     /// <summary>
+    /// Check if a <see cref="ProjectionDefinition"/> exists by its <see cref="ProjectionId"/>.
+    /// </summary>
+    /// <param name="id"><see cref="ProjectionId"/> to check for.</param>
+    /// <returns>True if it exists, false if not.</returns>
+    Task<bool> Has(ProjectionId id);
+
+    /// <summary>
     /// Get a specific <see cref="ProjectionDefinition"/> by its <see cref="ProjectionId"/>.
     /// </summary>
     /// <param name="id"><see cref="ProjectionId"/> to get for.</param>

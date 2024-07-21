@@ -4,6 +4,8 @@
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Projections.Json;
+using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
@@ -19,6 +21,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
+/// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class Storage(
     IDatabase database,
@@ -26,6 +29,7 @@ public class Storage(
     IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
+    IInstancesOf<ISinkFactory> sinkFactories,
     ILoggerFactory loggerFactory) : IStorage
 {
     readonly Dictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
@@ -46,6 +50,7 @@ public class Storage(
             complianceManager,
             expandoObjectConverter,
             jsonSerializerOptions,
+            sinkFactories,
             loggerFactory);
     }
 }

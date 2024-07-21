@@ -75,7 +75,7 @@ public class ProjectionObserverSubscriber(
 
     async Task HandlePipeline()
     {
-        var projection = await projectionFactory.CreateFrom(_key.EventStore, _key.Namespace, State);
-        _pipeline = projectionPipelineFactory.CreateFrom(projection, State);
+        var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State);
+        _pipeline = projectionPipelineFactory.Create(_key.EventStore, _key.Namespace, projection, State);
     }
 }

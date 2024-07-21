@@ -17,6 +17,8 @@ using Cratis.Chronicle.Storage.MongoDB.Projections;
 using Cratis.Chronicle.Storage.MongoDB.Recommendations;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Recommendations;
+using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
@@ -46,6 +48,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
     /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
+    /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStoreNamespaceStorage(
         EventStoreName eventStore,
@@ -55,6 +58,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         IEventTypesStorage eventTypesStorage,
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
+        IInstancesOf<ISinkFactory> sinkFactories,
         ILoggerFactory loggerFactory)
     {
         _eventStore = eventStore;
@@ -72,6 +76,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
         Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
         ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, Observers);
+        Sinks = new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);
     }
 
     /// <inheritdoc/>
@@ -94,6 +99,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IObserverKeyIndexes ObserverKeyIndexes { get; }
+
+    /// <inheritdoc/>
+    public ISinks Sinks { get; }
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId)

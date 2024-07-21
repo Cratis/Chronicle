@@ -40,10 +40,20 @@ public class ProjectionDefinitionsStorage(
     }
 
     /// <inheritdoc/>
-    public Task<ProjectionDefinition> Get(ProjectionId id) => throw new NotImplementedException();
+    public Task<bool> Has(ProjectionId id) =>
+        Collection.Find(new BsonDocument("_id", id.Value)).AnyAsync();
 
     /// <inheritdoc/>
-    public Task Delete(ProjectionId id) => throw new NotImplementedException();
+    public async Task<ProjectionDefinition> Get(ProjectionId id)
+    {
+        var result = await Collection.FindAsync(filter: new BsonDocument("_id", id.Value));
+        var document = result.Single();
+        return projectionSerializer.Deserialize(JsonNode.Parse(document.ToJson())!);
+    }
+
+    /// <inheritdoc/>
+    public Task Delete(ProjectionId id) =>
+        Collection.DeleteOneAsync(new BsonDocument("_id", id.Value));
 
     /// <inheritdoc/>
     public async Task Save(ProjectionDefinition definition)

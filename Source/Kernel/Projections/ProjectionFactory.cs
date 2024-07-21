@@ -38,7 +38,7 @@ public class ProjectionFactory(
     IStorage storage) : IProjectionFactory
 {
     /// <inheritdoc/>
-    public Task<IProjection> CreateFrom(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition)
+    public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition)
     {
         var eventSequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(definition.EventSequenceId);
         return CreateProjectionFrom(
