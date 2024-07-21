@@ -11,14 +11,14 @@ namespace Cratis.API.Server;
 
 public class EnumSchemaFilter : ISchemaFilter
 {
-    public void Apply(OpenApiSchema model, SchemaFilterContext context)
+    public void Apply(OpenApiSchema schema, SchemaFilterContext context)
     {
         if (context.Type.IsEnum)
         {
-            model.Enum.Clear();
+            schema.Enum.Clear();
             Enum.GetNames(context.Type)
                 .ToList()
-                .ForEach(name => model.Enum.Add(new OpenApiString(name)));
+                .ForEach(name => schema.Enum.Add(new OpenApiString(name)));
         }
     }
 }
