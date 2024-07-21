@@ -4,7 +4,6 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains;
 
