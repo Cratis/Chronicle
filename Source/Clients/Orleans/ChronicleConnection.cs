@@ -26,6 +26,8 @@ public class ChronicleConnection(
     IServices services,
     IGrainFactory grainFactory) : IChronicleConnection
 {
+    IConnectionService? _connectionService;
+
     /// <inheritdoc/>
     public IConnectionLifecycle Lifecycle { get; } = lifecycle;
 
@@ -54,8 +56,8 @@ public class ChronicleConnection(
 
     void Connect()
     {
-        var connectionService = new ConnectionService(grainFactory);
-        connectionService.Connect(new()
+        _connectionService = new ConnectionService(grainFactory);
+        _connectionService.Connect(new()
         {
             ConnectionId = Lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
@@ -64,5 +66,6 @@ public class ChronicleConnection(
 
     void HandleConnection(ConnectionKeepAlive keepAlive)
     {
+        _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
     }
 }
