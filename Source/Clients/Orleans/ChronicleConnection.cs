@@ -62,6 +62,7 @@ public class ChronicleConnection(
             ConnectionId = Lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
         }).Subscribe(HandleConnection);
+        Lifecycle.Connected();
     }
 
     void HandleConnection(ConnectionKeepAlive keepAlive)
