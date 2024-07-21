@@ -49,6 +49,7 @@ public class EventSequence(
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
     IMeterScope<EventSequence>? _metrics;
+    IAppendedEventsQueues? _appendedEventsQueues;
 
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
@@ -64,6 +65,8 @@ public class EventSequence(
 
         var namespaces = GrainFactory.GetGrain<INamespaces>(_eventSequenceKey.EventStore);
         await @namespaces.Ensure(_eventSequenceKey.Namespace);
+
+        _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);
 
         await base.OnActivateAsync(cancellationToken);
     }
@@ -156,13 +159,15 @@ public class EventSequence(
             {
                 try
                 {
+                    var occurred = DateTimeOffset.UtcNow;
+                    var actualValidFrom = validFrom ?? DateTimeOffset.MinValue;
                     var appendedEvent = new AppendedEvent(
                         new(State.SequenceNumber, eventType),
                         new(
                             eventSourceId,
                             State.SequenceNumber,
-                            DateTimeOffset.UtcNow,
-                            validFrom ?? DateTimeOffset.MinValue,
+                            occurred,
+                            actualValidFrom,
                             _eventSequenceKey.EventStore,
                             _eventSequenceKey.Namespace,
                             CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
@@ -171,6 +176,10 @@ public class EventSequence(
                         compliantEventAsExpandoObject);
 
                     _metrics?.AppendedEvent(eventSourceId, eventName);
+                    // await EventSequenceStorage.Append(State.SequenceNumber, eventSourceId, eventType, causation, [], occurred, actualValidFrom, compliantEventAsExpandoObject);
+
+                    var appendedEvents = new[] { appendedEvent }.ToList();
+                    await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
 
                     State.TailSequenceNumberPerEventType[eventType.Id] = State.SequenceNumber;
 

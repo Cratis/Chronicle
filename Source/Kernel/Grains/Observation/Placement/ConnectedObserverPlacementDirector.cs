@@ -15,8 +15,7 @@ public class ConnectedObserverPlacementDirector : IPlacementDirector
     /// <inheritdoc/>
     public Task<SiloAddress> OnAddActivation(PlacementStrategy strategy, PlacementTarget target, IPlacementContext context)
     {
-        target.GrainIdentity.GetGuidKey(out var key);
-        var connectedObserverKey = ObserverSubscriberKey.Parse(key!);
+        var connectedObserverKey = ObserverSubscriberKey.Parse(target.GrainIdentity.Key.ToString()!);
         var targetSiloAddress = SiloAddress.FromParsableString(connectedObserverKey.SiloAddress);
         return Task.FromResult(targetSiloAddress);
     }

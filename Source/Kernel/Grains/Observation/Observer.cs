@@ -46,6 +46,7 @@ public class Observer(
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
     IEventSequence _eventSequence = null!;
+    IAppendedEventsQueues _appendedEventsQueues = null!;
     IMeterScope<Observer>? _metrics;
 
     /// <inheritdoc/>
@@ -69,6 +70,8 @@ public class Observer(
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
             new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace));
 
+        var eventSequenceKey = new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace);
+        _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(eventSequenceKey);
         _metrics = meter.BeginObserverScope(_observerId, _observerKey);
     }
 
@@ -170,6 +173,7 @@ public class Observer(
         new Indexing(),
 
         new Observing(
+            _appendedEventsQueues,
             _observerKey.EventStore,
             _observerKey.Namespace,
             _observerKey.EventSequenceId,

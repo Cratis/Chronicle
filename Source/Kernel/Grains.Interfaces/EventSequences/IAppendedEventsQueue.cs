@@ -22,8 +22,9 @@ public interface IAppendedEventsQueue : IGrainWithIntegerCompoundKey
     /// Subscribe an observer to the queue.
     /// </summary>
     /// <param name="observerKey"><see cref="ObserverKey"/> for the subscriber to subscribe.</param>
+    /// <param name="eventTypes">Collection of <see cref="EventType"/> to subscribe to.</param>
     /// <returns>Awaitable task.</returns>
-    Task Subscribe(ObserverKey observerKey);
+    Task Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes);
 
     /// <summary>
     /// Unsubscribe an observer from the queue.

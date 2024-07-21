@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
@@ -15,16 +16,20 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Observing"/> class.
 /// </remarks>
+/// <param name="appendedEventsQueues"><see cref="IAppendedEventsQueue"/> for the observer.</param>
 /// <param name="eventStore"><see cref="EventStoreName"/> the state is for.</param>
 /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the state is for.</param>
 /// <param name="eventSequenceId"><see cref="EventSequenceId"/> being observed.</param>
 /// <param name="logger">Logger for logging.</param>
 public class Observing(
+    IAppendedEventsQueues appendedEventsQueues,
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
     ILogger<Observing> logger) : BaseObserverState
 {
+    AppendedEventsQueueSubscription? _subscription;
+
     /// <inheritdoc/>
     public override ObserverRunningState RunningState => ObserverRunningState.Active;
 
@@ -44,11 +49,10 @@ public class Observing(
         using var scope = logger.BeginObservingScope(state, eventStore, @namespace, eventSequenceId);
         logger.Entering();
 
-        var eventStoreAndNamespace = new EventStoreAndNamespace(eventStore, @namespace);
-
         logger.SubscribingToStream(state.NextEventSequenceNumber);
 
-        await Task.CompletedTask;
+        var key = new ObserverKey(state.ObserverId, eventStore, @namespace, eventSequenceId);
+        _subscription = await appendedEventsQueues.Subscribe(key, state.EventTypes);
 
         return state;
     }
@@ -56,7 +60,7 @@ public class Observing(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnLeave(ObserverState state)
     {
-        await Task.CompletedTask;
+        await appendedEventsQueues.Unsubscribe(_subscription!);
         return state;
     }
 }

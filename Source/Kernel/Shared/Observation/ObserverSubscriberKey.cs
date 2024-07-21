@@ -52,7 +52,7 @@ public record ObserverSubscriberKey(
         var @namespace = (EventStoreNamespaceName)elements[2];
         var eventSequenceId = (EventSequenceId)elements[3];
         var eventSourceId = (EventSourceId)elements[4];
-        var siloAddress = elements[4];
+        var siloAddress = elements[5];
 
         return new(observerId, eventStore, @namespace, eventSequenceId, eventSourceId, siloAddress);
     }

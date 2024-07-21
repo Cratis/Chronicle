@@ -9,9 +9,10 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IAppendedEventsQueues"/>.
 /// </summary>
-public class AppendedEventsQueues : Grain<AppendedEventsQueuesState>, IAppendedEventsQueues
+public class AppendedEventsQueues : Grain, IAppendedEventsQueues
 {
     readonly IAppendedEventsQueue[] _queues;
+    int _nextQueue;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendedEventsQueues"/> class.
@@ -19,25 +20,24 @@ public class AppendedEventsQueues : Grain<AppendedEventsQueuesState>, IAppendedE
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
     public AppendedEventsQueues(IGrainFactory grainFactory)
     {
-        _queues = Enumerable.Range(0, 8).Select(_ => grainFactory.GetGrain<IAppendedEventsQueue>(_, this.GetPrimaryKeyString())).ToArray();
+        _queues = Enumerable.Range(0, 1).Select(_ => grainFactory.GetGrain<IAppendedEventsQueue>(_, this.GetPrimaryKeyString())).ToArray();
     }
 
     /// <inheritdoc/>
     public Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
-        Parallel.ForEach(_queues, queue => queue.Enqueue(appendedEvents));
+        Parallel.ForEachAsync(_queues, async (queue, ctx) => await queue.Enqueue(appendedEvents));
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task<AppendedEventsQueueSubscription> Subscribe(ObserverKey observerKey)
+    public async Task<AppendedEventsQueueSubscription> Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes)
     {
-        var currentQueue = State.NextQueue % _queues.Length;
+        var currentQueue = _nextQueue % _queues.Length;
         var subscription = new AppendedEventsQueueSubscription(observerKey, currentQueue);
-        await _queues[currentQueue].Subscribe(observerKey);
+        await _queues[currentQueue].Subscribe(observerKey, eventTypes);
 
-        State.NextQueue++;
-        await WriteStateAsync();
+        _nextQueue++;
 
         return subscription;
     }
