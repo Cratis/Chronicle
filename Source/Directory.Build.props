@@ -56,4 +56,15 @@
         <None Include="$(MSBuildThisFileDirectory)/../logo.png" Pack="true" PackagePath="/"/>
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalAssemblyInfo.cs"/>
     </ItemGroup>
+
+    <ItemGroup Condition="'$(IsTestProject)'=='true'">
+        <PackageReference Include="Cratis.Specifications.XUnit" />
+        <PackageReference Include="moq" />
+        <PackageReference Include="NSubstitute" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.Specs.cs"/>
+    </ItemGroup>
+
 </Project>
