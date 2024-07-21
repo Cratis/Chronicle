@@ -17,9 +17,15 @@ builder.Services.AddSingleton(Globals.JsonSerializerOptions);
 builder.Host.UseOrleans(silo =>
     {
         silo
+            .UseDashboard(options =>
+            {
+                options.Host = "*";
+                options.Port = 8081;
+                options.HostSelf = true;
+            })
             .UseLocalhostClustering()
-            .AddChronicle(_ => _
-                .WithMongoDB());
+                .AddChronicle(_ => _
+                    .WithMongoDB());
     })
     .UseConsoleLifetime();
 
