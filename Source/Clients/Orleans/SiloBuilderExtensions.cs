@@ -80,6 +80,7 @@ public static class SiloBuilderExtensions
     static void ConfigureChronicle(this ISiloBuilder builder, Action<IChronicleBuilder>? configureChronicle = default)
     {
         builder.AddChronicleToSilo(configureChronicle);
+        builder.AddStartupTask<ChronicleStartupTask>();
         builder.ConfigureServices(services =>
         {
             services.AddTypeDiscovery();
@@ -101,11 +102,7 @@ public static class SiloBuilderExtensions
 
                 var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
                 var connection = new ChronicleConnection(connectionLifecycle, services, grainFactory);
-                var client = new ChronicleClient(connection, options);
-                var eventStore = client.GetEventStore("some_event_store");
-                eventStore.DiscoverAll().GetAwaiter().GetResult();
-                eventStore.RegisterAll().GetAwaiter().GetResult();
-                return client;
+                return new ChronicleClient(connection, options);
             });
         });
     }
