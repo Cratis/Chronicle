@@ -6,7 +6,7 @@ using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
@@ -47,7 +47,7 @@ public class an_observing_state : Specification
                 return stream_subscription.Object;
             });
 
-        observer_id = Guid.NewGuid();
+        observer_id = Guid.NewGuid().ToString();
         event_store_name = "some_event_store";
         event_store_namespace = "some_namespace";
         event_sequence_id = EventSequenceId.Log;
@@ -65,8 +65,8 @@ public class an_observing_state : Specification
         };
 
         subscription = new ObserverSubscription(
-            Guid.NewGuid(),
-            new(event_store_name, event_store_namespace, event_sequence_id),
+            observer_id,
+            new(observer_id, event_store_name, event_store_namespace, event_sequence_id),
             [],
             typeof(object),
             SiloAddress.Zero,

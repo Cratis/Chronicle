@@ -12,7 +12,7 @@ public class EventSequenceCacheForSpecs(
     ILogger<EventSequenceCache> logger) : EventSequenceCache(eventSequenceStorage, logger)
 {
     public IEnumerable<AppendedEvent> Events => _eventsBySequenceNumber.Select(_ => _.Value.Event);
-    public CachedAppendedEvent HeadEvent => _head;
-    public CachedAppendedEvent TailEvent => _tail;
+    public CachedAppendedEvent HeadEvent => _head!;
+    public CachedAppendedEvent TailEvent => _tail!;
     public Dictionary<EventSequenceNumber, CachedAppendedEvent> EventsBySequenceNumber => _eventsBySequenceNumber;
 }

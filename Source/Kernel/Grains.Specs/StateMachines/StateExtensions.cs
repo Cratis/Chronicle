@@ -14,9 +14,10 @@ public static class StateExtensions
     /// <param name="state">State to set it for.</param>
     /// <param name="stateMachine">The state machine to set.</param>
     /// <typeparam name="TStoredState">Type of stored state.</typeparam>
+    /// <exception cref="NotImplementedException">Thrown when this method is called.</exception>
     public static void SetStateMachine<TStoredState>(this State<TStoredState> state, IStateMachine<TStoredState> stateMachine)
         where TStoredState : class
     {
-        state._stateMachine = stateMachine;
+        throw new NotImplementedException("This should be in the application model");
     }
 }

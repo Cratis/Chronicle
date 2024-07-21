@@ -22,7 +22,7 @@ public class and_a_paused_catch_up_job_exists : given.a_catch_up_state
                             observer_key,
                             subscription,
                             42,
-                            [new EventType(Guid.NewGuid(), EventGeneration.First)]),
+                            [new EventType(Guid.NewGuid().ToString(), EventGeneration.First)]),
             StatusChanges =
             [
                 new JobStatusChanged

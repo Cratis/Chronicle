@@ -6,7 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Json;
@@ -31,11 +31,11 @@ public class an_observer : Specification
     protected Mock<IObserverServiceClient> observer_service_client;
     protected List<FailedPartitions> written_failed_partitions_states = [];
     protected FailedPartitions failed_partitions_state;
-    protected ObserverId observer_id => Guid.Parse("d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e");
-    protected ObserverKey observer_key => new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
+    protected ObserverId observer_id => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
+    protected ObserverKey observer_key => new(observer_id, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
     protected TestKitSilo silo = new();
     protected IStorage<ObserverState> state_storage;
-    protected TestStorageStats storage_stats => silo.StorageStats<Observer, ObserverState>();
+    protected TestStorageStats storage_stats => silo.StorageStats<Observer, ObserverState>()!;
 
     async Task Establish()
     {
@@ -71,13 +71,12 @@ public class an_observer : Specification
         state_storage = silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
 
         var eventSequence = silo.AddProbe<IEventSequence>(
-            observer_key.EventSequenceId,
-            new EventSequenceKey(observer_key.EventStore, observer_key.Namespace));
+            new EventSequenceKey(observer_key.EventSequenceId, observer_key.EventStore, observer_key.Namespace));
 
         eventSequence.Setup(_ => _.GetTailSequenceNumber()).ReturnsAsync(EventSequenceNumber.Unavailable);
         eventSequence.Setup(_ => _.GetTailSequenceNumberForEventTypes(IsAny<IEnumerable<EventType>>())).ReturnsAsync(EventSequenceNumber.Unavailable);
 
-        observer = await silo.CreateGrainAsync<Observer>(observer_id, observer_key);
+        observer = await silo.CreateGrainAsync<Observer>(observer_key);
 
         storage_stats.ResetCounts();
     }

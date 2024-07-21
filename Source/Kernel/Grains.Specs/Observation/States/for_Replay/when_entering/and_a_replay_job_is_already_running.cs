@@ -24,7 +24,7 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
                             stored_state.ObserverId,
                             observer_key,
                             subscription,
-                            [new EventType(Guid.NewGuid(), EventGeneration.First)]),
+                            [new EventType(Guid.NewGuid().ToString(), EventGeneration.First)]),
                         StatusChanges =
                         [
                             new JobStatusChanged

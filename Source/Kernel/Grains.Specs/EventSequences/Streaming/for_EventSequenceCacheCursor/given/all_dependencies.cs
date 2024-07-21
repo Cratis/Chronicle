@@ -17,6 +17,6 @@ public class all_dependencies : Specification
         cache = new();
         event_store_name = Guid.NewGuid().ToString();
         event_store_namespace = Guid.NewGuid().ToString();
-        event_sequence_id = Guid.NewGuid();
+        event_sequence_id = Guid.NewGuid().ToString();
     }
 }

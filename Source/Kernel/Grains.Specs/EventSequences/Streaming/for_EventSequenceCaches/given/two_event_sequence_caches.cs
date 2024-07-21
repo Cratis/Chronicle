@@ -9,10 +9,10 @@ public class two_event_sequence_caches : an_event_sequence_caches
 {
     protected static readonly EventStoreName first_event_store = Guid.NewGuid().ToString();
     protected static readonly EventStoreNamespaceName first_namespace = Guid.NewGuid().ToString();
-    protected static readonly EventSequenceId first_event_sequence_id = Guid.NewGuid();
+    protected static readonly EventSequenceId first_event_sequence_id = Guid.NewGuid().ToString();
     protected static readonly EventStoreName second_event_store = Guid.NewGuid().ToString();
     protected static readonly EventStoreNamespaceName second_namespace = Guid.NewGuid().ToString();
-    protected static readonly EventSequenceId second_event_sequence_id = Guid.NewGuid();
+    protected static readonly EventSequenceId second_event_sequence_id = Guid.NewGuid().ToString();
 
     protected Mock<IEventSequenceCache> first_cache;
     protected Mock<IEventSequenceCache> second_cache;

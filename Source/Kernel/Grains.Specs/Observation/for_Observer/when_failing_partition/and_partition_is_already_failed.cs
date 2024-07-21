@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_failing_partition;
 

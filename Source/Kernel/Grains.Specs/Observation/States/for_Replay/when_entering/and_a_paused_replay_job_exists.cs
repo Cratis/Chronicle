@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Jobs;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.when_entering;
@@ -29,7 +29,7 @@ public class and_a_paused_replay_job_exists : given.a_replay_state
                             stored_state.ObserverId,
                             observer_key,
                             subscription,
-                            [new EventType(Guid.NewGuid(), EventGeneration.First)]),
+                            [new EventType(Guid.NewGuid().ToString(), EventGeneration.First)]),
             StatusChanges =
             [
                 new JobStatusChanged

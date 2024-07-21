@@ -4,7 +4,7 @@
 using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
@@ -25,21 +25,21 @@ public class a_catch_up_state : Specification
     void Establish()
     {
         observer = new();
-        observer_id = Guid.NewGuid();
-        observer_key = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid());
+        observer_id = Guid.NewGuid().ToString();
+        observer_key = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
         jobs_manager = new();
         state = new CatchUp(observer_id, observer_key, jobs_manager.Object, Mock.Of<ILogger<CatchUp>>());
         state.SetStateMachine(observer.Object);
 
         stored_state = new ObserverState
         {
-            ObserverId = Guid.NewGuid(),
+            ObserverId = Guid.NewGuid().ToString(),
             RunningState = ObserverRunningState.CatchingUp,
         };
 
         subscription = new ObserverSubscription(
             stored_state.ObserverId,
-            new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
+            new(stored_state.ObserverId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
             [],
             typeof(object),
             SiloAddress.Zero,

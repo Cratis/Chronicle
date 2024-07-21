@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
@@ -30,7 +30,7 @@ public class a_routing_state : Specification
     {
         observer = new();
         event_sequence = new();
-        observer_key = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid());
+        observer_key = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
         replay_evaluator = new();
         state = new Routing(
             observer_key,
@@ -44,8 +44,8 @@ public class a_routing_state : Specification
         };
 
         subscription = new ObserverSubscription(
-            Guid.NewGuid(),
-            new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
+            observer_key.ObserverId,
+            observer_key,
             [],
             typeof(object),
             SiloAddress.Zero,

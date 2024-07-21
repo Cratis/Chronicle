@@ -13,7 +13,7 @@ public class when_event_for_type_handled_by_observer_is_received : given.an_obse
 
     async Task Establish()
     {
-        event_type = new(Guid.NewGuid(), EventGeneration.First);
+        event_type = new(Guid.NewGuid().ToString(), EventGeneration.First);
         stored_state = stored_state with { EventTypes = [event_type] };
 
         event_published = AppendedEvent.EmptyWithEventType(event_type);

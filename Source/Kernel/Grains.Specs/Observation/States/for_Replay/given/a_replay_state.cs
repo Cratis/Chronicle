@@ -6,7 +6,7 @@ using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
@@ -29,8 +29,8 @@ public class a_replay_state : Specification
     void Establish()
     {
         observer = new();
-        observer_id = Guid.NewGuid();
-        observer_key = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid());
+        observer_id = Guid.NewGuid().ToString();
+        observer_key = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
         observer_service_client = new();
         jobs_manager = new();
         state = new Replay(
@@ -49,7 +49,7 @@ public class a_replay_state : Specification
 
         subscription = new ObserverSubscription(
             stored_state.ObserverId,
-            new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
+            new(stored_state.ObserverId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
             [],
             typeof(object),
             SiloAddress.Zero,
