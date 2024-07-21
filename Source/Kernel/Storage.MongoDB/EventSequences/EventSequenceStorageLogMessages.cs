@@ -49,5 +49,5 @@ internal static partial class EventSequenceStorageLogMessages
     internal static partial void RedactionAlreadyApplied(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
 
     [LoggerMessage(LogLevel.Debug, "Getting tail sequence number for event sequence {EventSequenceId} for event types {EventTypes}")]
-    internal static partial void GettingTailSequenceNumbersForEventTypes(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, IEnumerable<Guid> eventTypes);
+    internal static partial void GettingTailSequenceNumbersForEventTypes(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, IEnumerable<string> eventTypes);
 }

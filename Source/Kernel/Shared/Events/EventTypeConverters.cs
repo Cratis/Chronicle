@@ -17,7 +17,7 @@ public static class EventTypeConverters
     {
         return new()
         {
-            Id = type.Id.Value.ToString(),
+            Id = type.Id.Value,
             Generation = type.Generation.Value,
             IsPublic = type.IsPublic
         };

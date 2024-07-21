@@ -68,5 +68,14 @@ public static class EventTypeExtensions
     /// </summary>
     /// <param name="type"><see cref="Type"/> to get for. </param>
     /// <returns>The <see cref="EventType"/>.</returns>
-    public static EventType GetEventType(this Type type) => type.GetCustomAttribute<EventTypeAttribute>()!.Type!;
+    public static EventType GetEventType(this Type type)
+    {
+        var attribute = type.GetCustomAttribute<EventTypeAttribute>()!;
+        var id = attribute.Id.Value switch
+        {
+            "" => type.Name,
+            _ => attribute.Id.Value
+        };
+        return new EventType(new EventTypeId(id), attribute.Generation, attribute.IsPublic);
+    }
 }

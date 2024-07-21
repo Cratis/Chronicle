@@ -318,7 +318,7 @@ public class EventSequenceStorage(
 
         var collection = database.GetEventSequenceCollectionAsBsonFor(eventSequenceId);
 
-        var eventTypesFilter = Builders<BsonDocument>.Filter.In(new StringFieldDefinition<BsonDocument, Guid>(nameof(Event.Type).ToCamelCase()), eventTypeIds);
+        var eventTypesFilter = Builders<BsonDocument>.Filter.In(new StringFieldDefinition<BsonDocument, string>(nameof(Event.Type).ToCamelCase()), eventTypeIds);
         var sortDefinition = Builders<BsonDocument>.Sort.Descending("_id");
         var groupDefinitions = new BsonDocument
         {
@@ -349,7 +349,7 @@ public class EventSequenceStorage(
         var resultAsDictionary = eventTypes.ToDictionary(_ => _, _ => EventSequenceNumber.Unavailable);
         foreach (var item in result)
         {
-            var eventType = eventTypes.FirstOrDefault(_ => _.Id == (EventTypeId)item["_id"].AsGuid);
+            var eventType = eventTypes.FirstOrDefault(_ => _.Id == (EventTypeId)item["_id"].AsString);
             if (eventType != null)
             {
                 resultAsDictionary[eventType] = new EventSequenceNumber((ulong)item["items"][0].AsInt64);
