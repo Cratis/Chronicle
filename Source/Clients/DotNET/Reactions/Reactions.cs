@@ -77,7 +77,7 @@ public class Reactions : IReactions
                                     var reaction = reactionType.GetCustomAttribute<ReactionAttribute>()!;
                                     return new ReactionHandler(
                                         reactionType.GetReactionId(),
-                                        reaction.EventSequenceId,
+                                        reactionType.GetEventSequenceId(),
                                         new ReactionInvoker(_serviceProvider, _eventStore.EventTypes, _middlewares, reactionType, logger),
                                         _causationManager);
                                 });
