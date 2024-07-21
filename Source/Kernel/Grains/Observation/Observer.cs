@@ -17,7 +17,6 @@ using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Runtime;
-using Orleans.Streams;
 
 namespace Cratis.Chronicle.Grains.Observation;
 
@@ -41,7 +40,6 @@ public class Observer(
     IMeter<Observer> meter,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
 {
-    IStreamProvider _streamProvider = null!;
     ObserverId _observerId = ObserverId.Unspecified;
     ObserverKey _observerKey = ObserverKey.NotSet;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
@@ -64,7 +62,6 @@ public class Observer(
         _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
         _observerId = _observerKey.ObserverId;
 
-        _streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_observerKey.EventStore, _observerKey.Namespace));
 
         await failures.ReadStateAsync();
@@ -173,7 +170,6 @@ public class Observer(
         new Indexing(),
 
         new Observing(
-            _streamProvider,
             _observerKey.EventStore,
             _observerKey.Namespace,
             _observerKey.EventSequenceId,

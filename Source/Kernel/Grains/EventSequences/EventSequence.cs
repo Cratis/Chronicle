@@ -19,8 +19,6 @@ using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
-using Orleans.Runtime;
-using Orleans.Streams;
 using IObserver = Cratis.Chronicle.Grains.Observation.IObserver;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
@@ -50,7 +48,6 @@ public class EventSequence(
     IObserverStorage? _observerStorage;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
-    IAsyncStream<AppendedEvent>? _stream;
     IMeterScope<EventSequence>? _metrics;
 
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
@@ -63,9 +60,6 @@ public class EventSequence(
     {
         _eventSequenceKey = EventSequenceKey.Parse(this.GetPrimaryKeyString());
         _eventSequenceId = _eventSequenceKey.EventSequenceId;
-        var streamId = StreamId.Create(_eventSequenceKey, _eventSequenceId);
-        var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-        _stream = streamProvider.GetStream<AppendedEvent>(streamId);
         _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
 
         var namespaces = GrainFactory.GetGrain<INamespaces>(_eventSequenceKey.EventStore);
@@ -175,8 +169,6 @@ public class EventSequence(
                             causation,
                             causedBy),
                         compliantEventAsExpandoObject);
-
-                    await _stream!.OnNextAsync(appendedEvent, new EventSequenceNumberToken(State.SequenceNumber));
 
                     _metrics?.AppendedEvent(eventSourceId, eventName);
 

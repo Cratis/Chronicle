@@ -2,14 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
-using Orleans.Runtime;
-using Orleans.Streams;
 
 namespace Cratis.Chronicle.Grains.Observation.States;
 
@@ -19,20 +15,16 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Observing"/> class.
 /// </remarks>
-/// <param name="streamProvider"><see cref="IStreamProvider"/> to use to work with streams.</param>
 /// <param name="eventStore"><see cref="EventStoreName"/> the state is for.</param>
 /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the state is for.</param>
 /// <param name="eventSequenceId"><see cref="EventSequenceId"/> being observed.</param>
 /// <param name="logger">Logger for logging.</param>
 public class Observing(
-    IStreamProvider streamProvider,
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
     ILogger<Observing> logger) : BaseObserverState
 {
-    StreamSubscriptionHandle<AppendedEvent>? _streamSubscription;
-
     /// <inheritdoc/>
     public override ObserverRunningState RunningState => ObserverRunningState.Active;
 
@@ -53,16 +45,10 @@ public class Observing(
         logger.Entering();
 
         var eventStoreAndNamespace = new EventStoreAndNamespace(eventStore, @namespace);
-        var streamId = StreamId.Create(eventStoreAndNamespace, eventSequenceId);
-        var stream = streamProvider.GetStream<AppendedEvent>(streamId);
 
         logger.SubscribingToStream(state.NextEventSequenceNumber);
 
-        _streamSubscription = await stream.SubscribeAsync(
-            async (@event, _) => await Observer.Handle(@event.Context.EventSourceId, [@event]),
-            new EventSequenceNumberToken(state.NextEventSequenceNumber));
-
-        await stream.WarmUp();
+        await Task.CompletedTask;
 
         return state;
     }
@@ -70,8 +56,7 @@ public class Observing(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnLeave(ObserverState state)
     {
-        await (_streamSubscription?.UnsubscribeAsync() ?? Task.CompletedTask);
-        _streamSubscription = null;
+        await Task.CompletedTask;
         return state;
     }
 }
