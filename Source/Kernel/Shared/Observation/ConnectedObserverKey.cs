@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Chronicle.Reactions;
+namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Represents a key for an observer.

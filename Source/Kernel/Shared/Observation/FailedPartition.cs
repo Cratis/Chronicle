@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Keys;
 
-namespace Cratis.Chronicle.Reactions;
+namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Holds the state for the job to recover a failed partition.

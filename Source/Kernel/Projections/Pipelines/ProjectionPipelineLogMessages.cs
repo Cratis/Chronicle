@@ -23,6 +23,6 @@ internal static partial class ProjectionPipelineLogMessages
     [LoggerMessage(LogLevel.Trace, "Saving result for event with sequence number {SequenceNumber}")]
     internal static partial void SavingResult(this ILogger<ProjectionPipeline> logger, ulong sequenceNumber);
 
-    [LoggerMessage(LogLevel.Trace, "Projection '{Name} - {Path}' is not accepting event of type '{EventType}' at sequence number {SequenceNumber}")]
-    internal static partial void EventNotAccepted(this ILogger<ProjectionPipeline> logger, ulong sequenceNumber, ProjectionName name, ProjectionPath path, EventType eventType);
+    [LoggerMessage(LogLevel.Trace, "Projection '{Id} - {Path}' is not accepting event of type '{EventType}' at sequence number {SequenceNumber}")]
+    internal static partial void EventNotAccepted(this ILogger<ProjectionPipeline> logger, ulong sequenceNumber, ProjectionId id, ProjectionPath path, EventType eventType);
 }

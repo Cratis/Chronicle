@@ -24,11 +24,6 @@ public interface IProjection
     ExpandoObject InitialModelState { get; }
 
     /// <summary>
-    /// Gets the name of the projection.
-    /// </summary>
-    ProjectionName Name { get; }
-
-    /// <summary>
     /// Gets the fully qualified path for the projection. Typically for child relationships, this will show the full path it applies to.
     /// </summary>
     ProjectionPath Path { get; }

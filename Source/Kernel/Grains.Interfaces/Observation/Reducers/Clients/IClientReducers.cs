@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Reactions.Reducers;
+using Cratis.Chronicle.Observation.Reducers;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 

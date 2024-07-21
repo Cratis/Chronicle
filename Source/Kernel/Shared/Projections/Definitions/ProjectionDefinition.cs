@@ -14,7 +14,6 @@ namespace Cratis.Chronicle.Projections.Definitions;
 /// </summary>
 /// <param name="EventSequenceId"><see cref="EventSequenceId">Event sequence identifier</see> the projection projects from.</param>
 /// <param name="Identifier"><see cref="ProjectionId">Identifier</see> of the projection.</param>
-/// <param name="Name">Friendly display name of the projection.</param>
 /// <param name="Model">The target <see cref="ModelDefinition"/>.</param>
 /// <param name="IsActive">Whether or not the projection is an actively observing projection.</param>
 /// <param name="IsRewindable">Whether or not the projection is rewindable.</param>
@@ -31,7 +30,6 @@ namespace Cratis.Chronicle.Projections.Definitions;
 public record ProjectionDefinition(
     EventSequenceId EventSequenceId,
     ProjectionId Identifier,
-    ProjectionName Name,
     ModelDefinition Model,
     bool IsActive,
     bool IsRewindable,

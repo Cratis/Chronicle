@@ -4,14 +4,13 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Chronicle.Reactions;
+namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Represents information about an observer.
 /// </summary>
 /// <param name="ObserverId">The unique identifier of the observer.</param>
 /// <param name="EventSequenceId">The event sequence the observer is observing.</param>
-/// <param name="Name">Name of the observer.</param>
 /// <param name="Type">Type of observer.</param>
 /// <param name="EventTypes">Types of events the observer is observing.</param>
 /// <param name="NextEventSequenceNumber">The next event sequence number the observer will observe.</param>
@@ -22,7 +21,6 @@ namespace Cratis.Chronicle.Reactions;
 public record ObserverInformation(
     ObserverId ObserverId,
     EventSequenceId EventSequenceId,
-    ObserverName Name,
     ObserverType Type,
     IEnumerable<EventType> EventTypes,
     EventSequenceNumber NextEventSequenceNumber,

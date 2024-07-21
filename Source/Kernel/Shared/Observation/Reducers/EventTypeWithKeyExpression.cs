@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections;
 
-namespace Cratis.Chronicle.Reactions.Reducers;
+namespace Cratis.Chronicle.Observation.Reducers;
 
 /// <summary>
 /// Represents the definition of an event type with key.

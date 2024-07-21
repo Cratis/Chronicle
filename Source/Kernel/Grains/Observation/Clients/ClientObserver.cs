@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Clients;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Placement;
 using Orleans.Runtime;
@@ -34,7 +34,7 @@ public class ClientObserver(
     }
 
     /// <inheritdoc/>
-    public async Task Start(ObserverName name, IEnumerable<EventType> eventTypes)
+    public async Task Start(IEnumerable<EventType> eventTypes)
     {
         logger.Starting(_observerKey!.EventStore, _observerKey.ObserverId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
         var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
@@ -42,7 +42,7 @@ public class ClientObserver(
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
         await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
         var connectedClient = await connectedClients.GetConnectedClient(_observerKey.ConnectionId!);
-        await observer.Subscribe<IClientObserverSubscriber>(name, ObserverType.Client, eventTypes, localSiloDetails.SiloAddress, connectedClient);
+        await observer.Subscribe<IClientObserverSubscriber>(ObserverType.Client, eventTypes, localSiloDetails.SiloAddress, connectedClient);
     }
 
     /// <inheritdoc/>

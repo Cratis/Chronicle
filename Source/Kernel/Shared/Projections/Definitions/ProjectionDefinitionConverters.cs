@@ -24,7 +24,6 @@ public static class ProjectionDefinitionConverters
         {
             EventSequenceId = definition.EventSequenceId,
             Identifier = definition.Identifier,
-            Name = definition.Name,
             Model = definition.Model.ToContract(),
             IsActive = definition.IsActive,
             IsRewindable = definition.IsRewindable,
@@ -51,7 +50,6 @@ public static class ProjectionDefinitionConverters
         return new(
             contract.EventSequenceId,
             contract.Identifier,
-            contract.Name,
             contract.Model.ToChronicle(),
             contract.IsActive,
             contract.IsRewindable,

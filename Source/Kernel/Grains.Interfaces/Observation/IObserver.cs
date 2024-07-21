@@ -4,7 +4,7 @@
 using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Orleans.Runtime;
 
@@ -57,14 +57,12 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// Subscribe to observer.
     /// </summary>
     /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>
-    /// <param name="name">Friendly name of the observer.</param>
     /// <param name="type"><see cref="ObserverType"/>.</param>
     /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
     /// <param name="siloAddress"><see cref="SiloAddress"/> the subscriber is connected to.</param>
     /// <param name="subscriberArgs">Optional arguments associated with the subscription.</param>
     /// <returns>Awaitable task.</returns>
     Task Subscribe<TObserverSubscriber>(
-        ObserverName name,
         ObserverType type,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,

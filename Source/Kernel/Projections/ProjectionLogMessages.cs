@@ -10,9 +10,9 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 internal static partial class ProjectionLogMessages
 {
-    [LoggerMessage(LogLevel.Debug, "Running projection pipeline with identifier '{Identifier}' - name '{Name}'")]
-    internal static partial void Running(this ILogger<Projection> logger, ProjectionId identifier, ProjectionName name);
+    [LoggerMessage(LogLevel.Debug, "Running projection pipeline with identifier '{Identifier}'")]
+    internal static partial void Running(this ILogger<Projection> logger, ProjectionId identifier);
 
-    [LoggerMessage(LogLevel.Debug, "Stopping the running og projection pipeline with identifier '{Identifier}' - name '{Name}'")]
-    internal static partial void StopRunning(this ILogger<Projection> logger, ProjectionId identifier, ProjectionName name);
+    [LoggerMessage(LogLevel.Debug, "Stopping the running og projection pipeline with identifier '{Identifier}'")]
+    internal static partial void StopRunning(this ILogger<Projection> logger, ProjectionId identifier);
 }

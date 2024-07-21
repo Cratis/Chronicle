@@ -23,7 +23,6 @@ public class Projection : IProjection
     /// </summary>
     /// <param name="identifier">The unique identifier of the projection.</param>
     /// <param name="initialModelState">The initial state to use for new model instances.</param>
-    /// <param name="name">The name of the projection.</param>
     /// <param name="path">The qualified path of the projection.</param>
     /// <param name="childrenPropertyPath">The fully qualified path of the array that holds the children, if this is a child projection.</param>
     /// <param name="model">The target <see cref="Model"/>.</param>
@@ -32,7 +31,6 @@ public class Projection : IProjection
     public Projection(
         ProjectionId identifier,
         ExpandoObject initialModelState,
-        ProjectionName name,
         ProjectionPath path,
         PropertyPath childrenPropertyPath,
         Model model,
@@ -41,7 +39,6 @@ public class Projection : IProjection
     {
         Identifier = identifier;
         InitialModelState = initialModelState;
-        Name = name;
         Model = model;
         IsRewindable = rewindable;
         Event = FilterEventTypes(_subject);
@@ -55,9 +52,6 @@ public class Projection : IProjection
 
     /// <inheritdoc/>
     public ExpandoObject InitialModelState { get; }
-
-    /// <inheritdoc/>
-    public ProjectionName Name { get; }
 
     /// <inheritdoc/>
     public ProjectionPath Path { get; }

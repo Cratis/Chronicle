@@ -4,17 +4,15 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Chronicle.Reactions;
+namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Represents the registration of a single client observer.
 /// </summary>
 /// <param name="ObserverId"><see cref="ObserverId"/> of the observer.</param>
-/// <param name="Name">The <see cref="ObserverName"/> of the observer.</param>
 /// <param name="EventSequenceId">The <see cref="EventSequenceId"/> the observer is for.</param>
 /// <param name="EventTypes">The type of events the observer is interested in.</param>
 public record ClientObserverRegistration(
     ObserverId ObserverId,
-    ObserverName Name,
     EventSequenceId EventSequenceId,
     IEnumerable<EventType> EventTypes);

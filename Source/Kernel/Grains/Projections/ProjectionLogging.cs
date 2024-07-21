@@ -11,14 +11,14 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// </summary>
 internal static partial class ProjectionLogging
 {
-    [LoggerMessage(LogLevel.Information, "Registering projection '{Name} ({Identifier})'")]
-    internal static partial void Registering(this ILogger<Projection> logger, ProjectionId identifier, ProjectionName name);
+    [LoggerMessage(LogLevel.Information, "Registering projection '{Identifier}'")]
+    internal static partial void Registering(this ILogger<Projection> logger, ProjectionId identifier);
 
-    [LoggerMessage(LogLevel.Information, "Projection '{Name} ({Identifier})' is a new projection")]
-    internal static partial void ProjectionIsNew(this ILogger<Projection> logger, ProjectionId identifier, ProjectionName name);
+    [LoggerMessage(LogLevel.Information, "Projection '{Identifier}' is a new projection")]
+    internal static partial void ProjectionIsNew(this ILogger<Projection> logger, ProjectionId identifier);
 
-    [LoggerMessage(LogLevel.Information, "Registering projection '{Name} ({Identifier})' has changed its definition")]
-    internal static partial void ProjectionHasChanged(this ILogger<Projection> logger, ProjectionId identifier, ProjectionName name);
+    [LoggerMessage(LogLevel.Information, "Registering projection '{Identifier}' has changed its definition")]
+    internal static partial void ProjectionHasChanged(this ILogger<Projection> logger, ProjectionId identifier);
 
     [LoggerMessage(LogLevel.Information, "Rehydrating projections and pipelines")]
     internal static partial void Rehydrate(this ILogger<Projection> logger);

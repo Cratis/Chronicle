@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
 
-namespace Cratis.Chronicle.Reactions;
+namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Represents the state of all failed partitions within an observer.

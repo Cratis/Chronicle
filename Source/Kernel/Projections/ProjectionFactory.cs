@@ -43,7 +43,6 @@ public class ProjectionFactory(
         var eventSequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(definition.EventSequenceId);
         return CreateProjectionFrom(
             eventSequenceStorage,
-            definition.Name,
             definition,
             PropertyPath.Root,
             PropertyPath.Root,
@@ -53,7 +52,6 @@ public class ProjectionFactory(
 
     async Task<IProjection> CreateProjectionFrom(
         IEventSequenceStorage eventSequenceStorage,
-        ProjectionName name,
         ProjectionDefinition projectionDefinition,
         PropertyPath childrenAccessorProperty,
         PropertyPath identifiedByProperty,
@@ -67,7 +65,6 @@ public class ProjectionFactory(
 
         var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
                 eventSequenceStorage,
-                name,
                 kvp.Value,
                 childrenAccessorProperty.AddArrayIndex(kvp.Key),
                 kvp.Value.IdentifiedBy,
@@ -89,7 +86,6 @@ public class ProjectionFactory(
         var projection = new Projection(
             projectionDefinition.Identifier,
             initialState,
-            name,
             path,
             childrenAccessorProperty,
             model,

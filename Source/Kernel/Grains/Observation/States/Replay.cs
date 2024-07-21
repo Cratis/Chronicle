@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;

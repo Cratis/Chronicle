@@ -3,8 +3,8 @@
 
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Grains.Clients;
-using Cratis.Chronicle.Reactions;
-using Cratis.Chronicle.Reactions.Reducers;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 
@@ -33,7 +33,7 @@ public class ClientReducer(
     }
 
     /// <inheritdoc/>
-    public async Task Start(ObserverName name, ConnectionId connectionId, IEnumerable<EventTypeWithKeyExpression> eventTypes)
+    public async Task Start(ConnectionId connectionId, IEnumerable<EventTypeWithKeyExpression> eventTypes)
     {
         logger.Starting(_observerKey!.EventStore, _observerKey.ObserverId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
         var observer = GrainFactory.GetGrain<IObserver>(_observerKey.ObserverId!, _observerKey!);
@@ -42,7 +42,6 @@ public class ClientReducer(
         RegisterTimer(HandleConnectedClientsSubscription, null!, TimeSpan.Zero, TimeSpan.FromSeconds(5));
         var connectedClient = await connectedClients.GetConnectedClient(connectionId);
         await observer.Subscribe<IClientReducerSubscriber>(
-            name,
             ObserverType.Reducer,
             eventTypes.Select(_ => _.EventType).ToArray(),
             localSiloDetails.SiloAddress,

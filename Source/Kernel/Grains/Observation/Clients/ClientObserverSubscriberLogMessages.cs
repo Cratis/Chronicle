@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.Clients;

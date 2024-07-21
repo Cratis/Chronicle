@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Storage.Observation;
 
@@ -13,7 +13,6 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="EventTypes">The event types the observer is observing.</param>
 /// <param name="EventSequenceId">The <see cref="EventSequenceId"/> for the sequence being observed.</param>
 /// <param name="ObserverId">The <see cref="ObserverId"/> representing the observer uniquely.</param>
-/// <param name="Name">The name of the observer.</param>
 /// <param name="Type">The type of observer.</param>
 /// <param name="NextEventSequenceNumberForEventTypes">The next <see cref="EventSequenceNumber"/> for the event types the observer is for.</param>
 /// <param name="LastHandledEventSequenceNumber">The <see cref="EventSequenceNumber"/> of the last event the observer handled.</param>
@@ -23,7 +22,6 @@ public record ObserverState(
     IEnumerable<EventType> EventTypes,
     EventSequenceId EventSequenceId,
     ObserverId ObserverId,
-    ObserverName Name,
     ObserverType Type,
     EventSequenceNumber NextEventSequenceNumberForEventTypes,
     EventSequenceNumber LastHandledEventSequenceNumber,
@@ -40,7 +38,6 @@ public record ObserverState(
               [],
               EventSequenceId.Unspecified,
               ObserverId.Unspecified,
-              ObserverName.NotSpecified,
               ObserverType.Unknown,
               EventSequenceNumber.Unavailable,
               EventSequenceNumber.Unavailable,

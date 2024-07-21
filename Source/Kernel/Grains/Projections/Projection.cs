@@ -5,8 +5,8 @@ using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Grains.Recommendations;
-using Cratis.Chronicle.Reactions;
-using Cratis.Chronicle.Reactions.Replaying;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Replaying;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Definitions;
 using Microsoft.Extensions.Logging;
@@ -65,7 +65,6 @@ public class Projection(
             var projection = await projectionFactory.Create(key.EventStore, key.Namespace, definition);
 
             await _observer.Subscribe<IProjectionObserverSubscriber>(
-                State.Name.Value,
                 ObserverType.Projection,
                 projection.EventTypes,
                 localSiloDetails.SiloAddress);

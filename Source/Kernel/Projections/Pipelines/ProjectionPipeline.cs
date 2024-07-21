@@ -103,7 +103,7 @@ public class ProjectionPipeline(
         }
         else
         {
-            logger.EventNotAccepted(context.Event.Metadata.SequenceNumber, projection.Name, projection.Path, context.Event.Metadata.Type);
+            logger.EventNotAccepted(context.Event.Metadata.SequenceNumber, projection.Identifier, projection.Path, context.Event.Metadata.Type);
         }
         foreach (var child in projection.ChildProjections)
         {

@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Reactions;
-using Cratis.Chronicle.Reactions.Reducers;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
@@ -38,12 +38,11 @@ public class ClientReducers(
             {
                 logger.RegisterReducer(
                     definition.ReducerId,
-                    definition.Name,
                     definition.EventSequenceId);
 
                 var key = new ObserverKey(definition.ReducerId, eventStoreName, @namespace, definition.EventSequenceId);
                 var reducer = GrainFactory.GetGrain<IClientReducer>(key);
-                await reducer.Start(definition.Name, connectionId, definition.EventTypes);
+                await reducer.Start(connectionId, definition.EventTypes);
             }
         }
     }

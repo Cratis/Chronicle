@@ -33,7 +33,6 @@ public record ChildrenDefinition(
     ProjectionDefinition(
         EventSequences.EventSequenceId.Unspecified,
         ProjectionId.NotSet,
-        string.Empty,
         Model,
         true,
         false,

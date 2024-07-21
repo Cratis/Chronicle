@@ -7,8 +7,8 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.Clients;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Reactions;
-using Cratis.Chronicle.Reactions.Reducers;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;

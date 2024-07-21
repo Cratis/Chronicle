@@ -11,7 +11,7 @@ using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
@@ -113,7 +113,6 @@ public class Observer(
 
     /// <inheritdoc/>
     public async Task Subscribe<TObserverSubscriber>(
-        ObserverName name,
         ObserverType type,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
@@ -124,7 +123,7 @@ public class Observer(
 
         logger.Subscribing();
 
-        State = State with { Name = name, Type = type };
+        State = State with { Type = type };
 
         _subscription = new ObserverSubscription(
             _observerId,
