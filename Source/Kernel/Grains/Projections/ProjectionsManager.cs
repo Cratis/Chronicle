@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionsManager"/> class.
 /// </remarks>
+[ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
 public class ProjectionsManager : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed
 {
@@ -47,7 +48,7 @@ public class ProjectionsManager : Grain<ProjectionsManagerState>, IProjectionsMa
         {
             var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName, added.Namespace, projectionDefinition.EventSequenceId);
             var projection = GrainFactory.GetGrain<IProjection>(key);
-            await projection.Ensure();
+            await projection.SetDefinition(projectionDefinition);
         }
     }
 
