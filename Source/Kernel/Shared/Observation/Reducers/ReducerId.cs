@@ -12,7 +12,7 @@ public record ReducerId(string value) : ConceptAs<string>(value)
     /// <summary>
     /// Gets the representation of an unspecified <see cref="ReducerId"/>.
     /// </summary>
-    public static readonly ReducerId Unspecified = "[unspecified]";
+    public static readonly ReducerId Unspecified = ObserverId.Unspecified;
 
     /// <summary>
     /// Implicitly convert from a string to <see cref="ReducerId"/>.

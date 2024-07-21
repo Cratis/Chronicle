@@ -9,20 +9,20 @@ using Microsoft.Extensions.Logging;
 using Orleans.Placement;
 using Orleans.Runtime;
 
-namespace Cratis.Chronicle.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClientObserver"/>.
+/// Represents an implementation of <see cref="IReaction"/>.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ClientObserver"/> class.
+/// Initializes a new instance of the <see cref="Reaction"/> class.
 /// </remarks>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [PreferLocalPlacement]
-public class ClientObserver(
+public class Reaction(
     ILocalSiloDetails localSiloDetails,
-    ILogger<ClientObserver> logger) : Grain, IClientObserver, INotifyClientDisconnected
+    ILogger<Reaction> logger) : Grain, IReaction, INotifyClientDisconnected
 {
     ConnectedObserverKey? _observerKey;
 
@@ -42,7 +42,7 @@ public class ClientObserver(
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
         await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
         var connectedClient = await connectedClients.GetConnectedClient(_observerKey.ConnectionId!);
-        await observer.Subscribe<IClientObserverSubscriber>(ObserverType.Client, eventTypes, localSiloDetails.SiloAddress, connectedClient);
+        await observer.Subscribe<IReactionSubscriber>(ObserverType.Client, eventTypes, localSiloDetails.SiloAddress, connectedClient);
     }
 
     /// <inheritdoc/>

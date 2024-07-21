@@ -4,13 +4,13 @@
 using Cratis.Chronicle.Contracts.Events;
 using ProtoBuf;
 
-namespace Cratis.Chronicle.Contracts.Observation;
+namespace Cratis.Chronicle.Contracts.Observation.Reactions;
 
 /// <summary>
 /// Represents the payload for registering an observer.
 /// </summary>
 [ProtoContract]
-public class RegisterObserver
+public class RegisterReaction
 {
     /// <summary>
     /// Gets or sets the connection identifier.
@@ -43,14 +43,8 @@ public class RegisterObserver
     public string ObserverId { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>
-    /// Gets or sets the observer name.
-    /// </summary>
-    [ProtoMember(6)]
-    public string ObserverName { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets a collection of event types to observe.
     /// </summary>
-    [ProtoMember(7, IsRequired = true)]
+    [ProtoMember(6, IsRequired = true)]
     public IList<EventType> EventTypes { get; set; } = [];
 }

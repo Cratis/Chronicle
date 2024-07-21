@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Observation.Reactions;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Microsoft.Extensions.Logging;
@@ -118,7 +119,7 @@ public class Reactions : IReactions
     void RegisterReaction(ReactionHandler handler)
     {
         _logger.RegisteringReaction(handler.Id);
-        var registration = new RegisterObserver
+        var registration = new RegisterReaction
         {
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStoreName = _eventStore.EventStoreName,
@@ -129,15 +130,15 @@ public class Reactions : IReactions
         };
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
-        var messages = new BehaviorSubject<ObserverClientMessage>(new(new(registration)));
+        var messages = new BehaviorSubject<ReactionMessage>(new(new(registration)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
-        var eventsToObserve = _eventStore.Connection.Services.ClientObservers.Observe(messages);
+        var eventsToObserve = _eventStore.Connection.Services.Reactions.Observe(messages);
         eventsToObserve.Subscribe(
             events => ObserverMethod(messages, handler, events).Wait(),
             messages.Dispose);
     }
 
-    async Task ObserverMethod(ISubject<ObserverClientMessage> messages, ReactionHandler handler, EventsToObserve events)
+    async Task ObserverMethod(ISubject<ReactionMessage> messages, ReactionHandler handler, EventsToObserve events)
     {
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();
@@ -169,7 +170,7 @@ public class Reactions : IReactions
             }
         }
 
-        var result = new ObservationResult
+        var result = new ReactionResult
         {
             State = state,
             LastSuccessfulObservation = lastSuccessfullyObservedEvent,

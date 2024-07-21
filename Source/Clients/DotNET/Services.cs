@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Observation.Reactions;
 using Cratis.Chronicle.Contracts.Projections;
 
 namespace Cratis.Chronicle;
@@ -14,11 +15,11 @@ namespace Cratis.Chronicle;
 /// <param name="EventSequences"><see cref="IEventSequences"/> instance.</param>
 /// <param name="EventTypes"><see cref="IEventTypes"/> instance.</param>
 /// <param name="Observers"><see cref="IObservers"/> instance.</param>
-/// <param name="ClientObservers"><see cref="IClientObservers"/> instance.</param>
+/// <param name="Reactions"><see cref="IReactions"/> instance.</param>
 /// <param name="Projections"><see cref="IProjections"/> instance.</param>
 public record Services(
     IEventSequences EventSequences,
     IEventTypes EventTypes,
     IObservers Observers,
-    IClientObservers ClientObservers,
+    IReactions Reactions,
     IProjections Projections) : IServices;

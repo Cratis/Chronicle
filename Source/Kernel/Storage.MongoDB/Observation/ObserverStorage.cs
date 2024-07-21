@@ -64,7 +64,6 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
             [],
             observerKey.EventSequenceId,
             observerId,
-            ObserverName.NotSpecified,
             ObserverType.Unknown,
             EventSequenceNumber.First,
             EventSequenceNumber.First,
@@ -103,7 +102,6 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
     ObserverInformation ToObserverInformation(ObserverState state) => new(
         state.ObserverId,
         state.EventSequenceId,
-        state.Name,
         state.Type,
         state.EventTypes,
         state.NextEventSequenceNumber,

@@ -6,7 +6,7 @@ extern alias Client;
 
 using Client::Cratis.Chronicle;
 using Client::Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Grains.Observation.Clients;
+using Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Cratis.Json;
@@ -86,7 +86,7 @@ public static class SiloBuilderExtensions
             services.AddBindingsByConvention();
             services.AddSelfBindings();
 
-            services.AddSingleton<IObserverMediator, ObserverMediator>();
+            services.AddSingleton<IReactionMediator, ReactionMediator>();
 
             services.AddSingleton<IChronicleClient>(sp =>
             {
@@ -96,7 +96,7 @@ public static class SiloBuilderExtensions
                     new EventSequences(grainFactory, Globals.JsonSerializerOptions),
                     new EventTypes(sp.GetRequiredService<IStorage>()),
                     new Observers(),
-                    new Server::Cratis.Chronicle.Services.Observation.ClientObservers(grainFactory, sp.GetRequiredService<IObserverMediator>()),
+                    new Server::Cratis.Chronicle.Services.Observation.Reactions.Reactions(grainFactory, sp.GetRequiredService<IReactionMediator>()),
                     new Server::Cratis.Chronicle.Services.Projections.Projections(grainFactory));
 
                 var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());

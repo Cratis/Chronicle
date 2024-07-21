@@ -3,13 +3,13 @@
 
 using ProtoBuf;
 
-namespace Cratis.Chronicle.Contracts.Observation;
+namespace Cratis.Chronicle.Contracts.Observation.Reactions;
 
 /// <summary>
 /// Represents the result of an observation.
 /// </summary>
 [ProtoContract]
-public class ObservationResult
+public class ReactionResult
 {
     /// <summary>
     /// Gets or sets the state of the observer.

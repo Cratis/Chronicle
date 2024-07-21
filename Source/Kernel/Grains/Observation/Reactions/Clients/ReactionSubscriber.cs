@@ -8,10 +8,10 @@ using Cratis.Chronicle.Grains.Observation.Placement;
 using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Chronicle.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClientObserverSubscriber"/>.
+/// Represents an implementation of <see cref="IReactionSubscriber"/>.
 /// </summary>
 /// <remarks>
 /// We want this grain to be local to its activation. When a client connects, the service instance that
@@ -20,14 +20,14 @@ namespace Cratis.Chronicle.Grains.Observation.Clients;
 /// will make the observer unique per connection, helping us to achieve this.
 /// </remarks>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ClientObserverSubscriber"/> class.
+/// Initializes a new instance of the <see cref="ReactionSubscriber"/> class.
 /// </remarks>
-/// <param name="observerMediator"><see cref="IObserverMediator"/> for notifying actual clients.</param>
+/// <param name="observerMediator"><see cref="IReactionMediator"/> for notifying actual clients.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [ConnectedObserverPlacement]
-public class ClientObserverSubscriber(
-    IObserverMediator observerMediator,
-    ILogger<ClientObserverSubscriber> logger) : Grain, IClientObserverSubscriber
+public class ReactionSubscriber(
+    IReactionMediator observerMediator,
+    ILogger<ReactionSubscriber> logger) : Grain, IReactionSubscriber
 {
     EventStoreName _eventStore = EventStoreName.NotSet;
     ObserverId _observerId = ObserverId.Unspecified;
@@ -61,7 +61,7 @@ public class ClientObserverSubscriber(
 
         if (context.Metadata is not ConnectedClient connectedClient)
         {
-            throw new MissingStateForObserverSubscriber(_observerId);
+            throw new MissingStateForReactionSubscriber(_observerId);
         }
         var tcs = new TaskCompletionSource<ObserverSubscriberResult>();
         try

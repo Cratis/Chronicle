@@ -4,26 +4,26 @@
 using Cratis.Chronicle.Contracts.Primitives;
 using ProtoBuf;
 
-namespace Cratis.Chronicle.Contracts.Observation;
+namespace Cratis.Chronicle.Contracts.Observation.Reactions;
 
 /// <summary>
 /// Represents a message from the observer client.
 /// </summary>
 [ProtoContract]
-public class ObserverClientMessage
+public class ReactionMessage
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverClientMessage"/> class.
+    /// Initializes a new instance of the <see cref="ReactionMessage"/> class.
     /// </summary>
-    public ObserverClientMessage()
+    public ReactionMessage()
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverClientMessage"/> class.
+    /// Initializes a new instance of the <see cref="ReactionMessage"/> class.
     /// </summary>
     /// <param name="content">The actual content.</param>
-    public ObserverClientMessage(OneOf<RegisterObserver, ObservationResult> content)
+    public ReactionMessage(OneOf<RegisterReaction, ReactionResult> content)
     {
         Content = content;
     }
@@ -32,5 +32,5 @@ public class ObserverClientMessage
     /// Gets or sets the content of the message.
     /// </summary>
     [ProtoMember(1)]
-    public OneOf<RegisterObserver, ObservationResult> Content { get; set; }
+    public OneOf<RegisterReaction, ReactionResult> Content { get; set; }
 }

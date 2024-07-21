@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Observation.Reactions;
 using Cratis.Chronicle.Contracts.Projections;
 
 namespace Cratis.Chronicle;
@@ -29,9 +30,9 @@ public interface IServices
     IObservers Observers { get; }
 
     /// <summary>
-    /// Gets the <see cref="IClientObservers"/> service.
+    /// Gets the <see cref="IReactions"/> service.
     /// </summary>
-    IClientObservers ClientObservers { get; }
+    IReactions Reactions { get; }
 
     /// <summary>
     /// Gets the <see cref="IProjections"/> service.

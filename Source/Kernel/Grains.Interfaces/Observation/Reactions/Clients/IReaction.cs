@@ -3,12 +3,12 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 
 /// <summary>
 /// Defines a client observer.
 /// </summary>
-public interface IClientObserver : IGrainWithStringKey
+public interface IReaction : IGrainWithStringKey
 {
     /// <summary>
     /// Start the observer.

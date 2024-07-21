@@ -14,7 +14,7 @@ public record ProjectionId(string Value) : ConceptAs<string>(Value)
     /// <summary>
     /// The value representing an unset projection identifier.
     /// </summary>
-    public static readonly ProjectionId NotSet = "[not set]";
+    public static readonly ProjectionId Unspecified = ObserverId.Unspecified;
 
     /// <summary>
     /// Implicitly convert from <see cref="Guid"/> to <see cref="ProjectionId"/>.

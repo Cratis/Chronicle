@@ -3,15 +3,15 @@
 
 using Cratis.Chronicle.Observation;
 
-namespace Cratis.Chronicle.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 
 /// <summary>
 /// Exception that gets thrown when there is no state for an observer subscriber.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="MissingStateForObserverSubscriber"/> class.
+/// Initializes a new instance of the <see cref="MissingStateForReactionSubscriber"/> class.
 /// </remarks>
 /// <param name="observerId"><see cref="ObserverId"/> that has missing state.</param>
-public class MissingStateForObserverSubscriber(ObserverId observerId) : Exception($"Missing state for observer subscriber with id {observerId}")
+public class MissingStateForReactionSubscriber(ObserverId observerId) : Exception($"Missing state for observer subscriber with id {observerId}")
 {
 }

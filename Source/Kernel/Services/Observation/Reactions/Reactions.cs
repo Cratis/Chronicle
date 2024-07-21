@@ -4,53 +4,54 @@
 using System.Reactive.Linq;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Observation.Reactions;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.Grains.Observation.Clients;
+using Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 using Cratis.Chronicle.Observation;
 using ProtoBuf.Grpc;
 
-namespace Cratis.Chronicle.Services.Observation;
+namespace Cratis.Chronicle.Services.Observation.Reactions;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClientObservers"/>.
+/// Represents an implementation of <see cref="IReactions"/>.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="Observers"/> class.
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-/// <param name="observerMediator"><see cref="IObserverMediator"/> for observing actual events as they are made available.</param>
-public class ClientObservers(
+/// <param name="observerMediator"><see cref="IReactionMediator"/> for observing actual events as they are made available.</param>
+public class Reactions(
     IGrainFactory grainFactory,
-    IObserverMediator observerMediator) : IClientObservers
+    IReactionMediator observerMediator) : IReactions
 {
     /// <inheritdoc/>
-    public IObservable<EventsToObserve> Observe(IObservable<ObserverClientMessage> messages, CallContext context = default)
+    public IObservable<EventsToObserve> Observe(IObservable<ReactionMessage> messages, CallContext context = default)
     {
-        var registrationTcs = new TaskCompletionSource<RegisterObserver>();
+        var registrationTcs = new TaskCompletionSource<RegisterReaction>();
         TaskCompletionSource<ObserverSubscriberResult>? observationResultTcs = null;
         TaskCompletionSource<IEnumerable<AppendedEvent>>? eventsTcs;
 
-        IClientObserver clientObserver = null!;
+        IReaction clientObserver = null!;
 
         messages.Subscribe(message =>
         {
             switch (message.Content.Value)
             {
-                case RegisterObserver register:
+                case RegisterReaction register:
                     var key = new ConnectedObserverKey(
                         register.ObserverId,
                         register.EventStoreName,
                         register.Namespace,
                         register.EventSequenceId,
                         register.ConnectionId);
-                    clientObserver = grainFactory.GetGrain<IClientObserver>(key);
-                    clientObserver.Start(register.ObserverName, register.EventTypes.Select(_ => _.ToChronicle()).ToArray());
+                    clientObserver = grainFactory.GetGrain<IReaction>(key);
+                    clientObserver.Start(register.EventTypes.Select(_ => _.ToChronicle()).ToArray());
 
                     registrationTcs.SetResult(register);
                     break;
 
-                case ObservationResult result:
+                case ReactionResult result:
                     var state = result.State switch
                     {
                         ObservationState.None => ObserverSubscriberState.None,

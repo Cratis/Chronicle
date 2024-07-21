@@ -4,13 +4,13 @@
 using ProtoBuf.Grpc;
 using ProtoBuf.Grpc.Configuration;
 
-namespace Cratis.Chronicle.Contracts.Observation;
+namespace Cratis.Chronicle.Contracts.Observation.Reactions;
 
 /// <summary>
 /// Defines the contract for working with client observers.
 /// </summary>
 [Service]
-public interface IClientObservers
+public interface IReactions
 {
     /// <summary>
     /// Observer an event sequence.
@@ -19,5 +19,5 @@ public interface IClientObservers
     /// <param name="context">gRPC call context.</param>
     /// <returns>An observable of <see cref="EventsToObserve"/>.</returns>
     [Operation]
-    IObservable<EventsToObserve> Observe(IObservable<ObserverClientMessage> messages, CallContext context = default);
+    IObservable<EventsToObserve> Observe(IObservable<ReactionMessage> messages, CallContext context = default);
 }

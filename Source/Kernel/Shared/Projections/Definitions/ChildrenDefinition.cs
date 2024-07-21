@@ -32,7 +32,7 @@ public record ChildrenDefinition(
     RemovedWithDefinition? RemovedWith = default) :
     ProjectionDefinition(
         EventSequences.EventSequenceId.Unspecified,
-        ProjectionId.NotSet,
+        ProjectionId.Unspecified,
         Model,
         true,
         false,

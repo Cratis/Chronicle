@@ -18,7 +18,7 @@ public static class EventSequenceStateExtensions
     public static EventSequenceState ToMongoDB(this Chronicle.Storage.EventSequences.EventSequenceState state)
         => new(
             state.SequenceNumber,
-            state.TailSequenceNumberPerEventType?.ToDictionary(_ => _.Key.Value.ToString(), _ => _.Value) ?? []);
+            state.TailSequenceNumberPerEventType?.ToDictionary(_ => _.Key.Value, _ => _.Value) ?? []);
 
     /// <summary>
     /// Convert to <see cref="Chronicle.Storage.EventSequences.EventSequenceState"/>.
