@@ -7,7 +7,6 @@ using Cratis.Chronicle.Reducers;
 
 namespace Basic;
 
-[Reducer("ff449077-0adb-4c5c-90e6-15631cd9e2b1")]
 public class CartReducer : IReducerFor<Cart>
 {
     public Key<ItemAddedToCart> Key => _ => _.UsingKey(_ => _.PersonId);

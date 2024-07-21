@@ -62,7 +62,7 @@ public class ReducersRegistrar : IReducersRegistrar
                                     reducerValidator.Validate(reducerType);
                                     var reducer = reducerType.GetCustomAttribute<ReducerAttribute>()!;
                                     return new ReducerHandler(
-                                        reducer.ReducerId,
+                                        reducerType.GetReducerId(),
                                         reducerType.FullName ?? $"{reducerType.Namespace}.{reducerType.Name}",
                                         reducer.EventSequenceId,
                                         new ReducerInvoker(

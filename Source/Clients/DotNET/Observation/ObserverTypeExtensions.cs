@@ -17,11 +17,12 @@ public static class ObserverTypeExtensions
     /// <returns>The <see cref="ObserverId"/> for the type.</returns>
     public static ObserverId GetObserverId(this Type type)
     {
-        var observerAttribute = type.GetCustomAttribute<ObserverAttribute>()!;
-        return observerAttribute.Id.Value switch
+        var observerAttribute = type.GetCustomAttribute<ObserverAttribute>();
+        var id = observerAttribute?.Id.Value ?? string.Empty;
+        return id switch
         {
             "" => new ObserverId(type.FullName ?? $"{type.Namespace}.{type.Name}"),
-            _ => new ObserverId(observerAttribute.Id)
+            _ => new ObserverId(id)
         };
     }
 }
