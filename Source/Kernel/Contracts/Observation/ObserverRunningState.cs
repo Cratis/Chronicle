@@ -14,57 +14,57 @@ public enum ObserverRunningState
     New = 0,
 
     /// <summary>
-    /// Observer is subscribing.
+    /// Observer is in the routing state. This is the state in which it will figure out what state it should be in.
     /// </summary>
-    Subscribing = 1,
-
-    /// <summary>
-    /// Observer is in rewind mode for all.
-    /// </summary>
-    Rewinding = 2,
+    Routing = 1,
 
     /// <summary>
     /// Observer is replaying.
     /// </summary>
-    Replaying = 3,
+    Replaying = 2,
 
     /// <summary>
     /// Observer is catching up due to being behind current sequence number in event log.
     /// </summary>
-    CatchingUp = 4,
+    CatchingUp = 3,
 
     /// <summary>
     /// Observer is active and waiting for new events.
     /// </summary>
-    Active = 5,
+    Active = 4,
 
     /// <summary>
     /// Observer is paused.
     /// </summary>
-    Paused = 6,
+    Paused = 5,
 
     /// <summary>
     /// Observer is stopped.
     /// </summary>
-    Stopped = 7,
+    Stopped = 6,
 
     /// <summary>
     /// Observer is suspended.
     /// </summary>
-    Suspended = 8,
+    Suspended = 7,
 
     /// <summary>
     /// Observer is failed.
     /// </summary>
-    Failed = 9,
+    Failed = 8,
 
     /// <summary>
     /// Observer is at the tail of replay.
     /// </summary>
-    TailOfReplay = 10,
+    TailOfReplay = 9,
 
     /// <summary>
     /// Observer is disconnected.
     /// </summary>
-    Disconnected = 11,
+    Disconnected = 10,
+
+    /// <summary>
+    /// Observer is disconnected.
+    /// </summary>
+    Indexing = 11,
 }
