@@ -11,15 +11,15 @@ namespace Cratis.Chronicle.Observation;
 /// <remarks>
 /// Initializes a new instance of <see cref="ObserverAttribute"/>.
 /// </remarks>
-/// <param name="observerIdAsString"><see cref="ObserverId"/> represented as string. Must be a valid Guid.</param>
+/// <param name="id">Optional <see cref="Id"/> represented as string, if not used it will default to the fully qualified type name.</param>
 /// <param name="eventSequence">Optional the name of the event sequence to observe. Defaults to the event log.</param>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-public sealed class ObserverAttribute(string observerIdAsString, string? eventSequence = default) : Attribute
+public sealed class ObserverAttribute(string id = "", string? eventSequence = default) : Attribute
 {
     /// <summary>
     /// Gets the unique identifier for an observer.
     /// </summary>
-    public ObserverId ObserverId { get; } = observerIdAsString;
+    public ObserverId Id { get; } = id;
 
     /// <summary>
     /// Gets the unique identifier for an event log.

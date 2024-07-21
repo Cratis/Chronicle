@@ -15,8 +15,8 @@ public record ProjectionId(string Value) : ConceptAs<string>(Value)
     public static readonly ProjectionId NotSet = "[not set]";
 
     /// <summary>
-    /// Implicitly convert from string to <see cref="ProjectionId"/>.
+    /// Implicitly convert from <see cref="Guid"/> to <see cref="ProjectionId"/>.
     /// </summary>
-    /// <param name="value">String to convert from.</param>
+    /// <param name="value"><see cref="Guid"/> to convert from.</param>
     public static implicit operator ProjectionId(string value) => new(value);
 }

@@ -22,7 +22,7 @@ public record EventSequenceId(string Value) : ConceptAs<string>(Value)
     /// <summary>
     /// The <see cref="EventSequenceId"/> representing the system event sequence.
     /// </summary>
-    public static readonly EventSequenceId System = "system ";
+    public static readonly EventSequenceId System = "system";
 
     /// <summary>
     /// Get whether or not this is the default log event sequence.

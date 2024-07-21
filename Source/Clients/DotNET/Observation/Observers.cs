@@ -75,7 +75,7 @@ public class Observers : IObservers
                                 {
                                     var observer = observerType.GetCustomAttribute<ObserverAttribute>()!;
                                     return new ObserverHandler(
-                                        observer.ObserverId,
+                                        observerType.GetObserverId(),
                                         observerType.FullName ?? $"{observerType.Namespace}.{observerType.Name}",
                                         observer.EventSequenceId,
                                         new ObserverInvoker(_serviceProvider, _eventStore.EventTypes, _middlewares, observerType, logger),
@@ -124,8 +124,8 @@ public class Observers : IObservers
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStoreName = _eventStore.EventStoreName,
             Namespace = _eventStore.Namespace,
-            EventSequenceId = handler.EventSequenceId.ToString(),
-            ObserverId = handler.ObserverId.ToString(),
+            EventSequenceId = handler.EventSequenceId,
+            ObserverId = handler.ObserverId,
             ObserverName = handler.Name,
             EventTypes = handler.EventTypes.Select(_ => _.ToContract()).ToArray()
         };

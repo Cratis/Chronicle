@@ -48,11 +48,11 @@ public class EventSequence(
         {
             EventStoreName = eventStoreName,
             Namespace = @namespace,
-            EventSequenceId = eventSequenceId.ToString(),
+            EventSequenceId = eventSequenceId,
             EventSourceId = eventSourceId,
             EventType = new()
             {
-                Id = eventType.Id.ToString(),
+                Id = eventType.Id,
                 Generation = eventType.Generation
             },
             Content = content.ToJsonString(),

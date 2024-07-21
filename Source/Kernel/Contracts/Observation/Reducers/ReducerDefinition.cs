@@ -17,7 +17,7 @@ public class ReducerDefinition
     /// Gets or sets the <see cref="ReducerId"/>.
     /// </summary>
     [ProtoMember(1)]
-    public Guid ReducerId { get; set; }
+    public string ReducerId { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the observer.
@@ -29,7 +29,7 @@ public class ReducerDefinition
     /// Gets or sets the event sequence the reducer is for.
     /// </summary>
     [ProtoMember(3)]
-    public Guid EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; }
 
     /// <summary>
     /// Gets or sets the event types the reducer is interested in.
