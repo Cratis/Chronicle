@@ -4,6 +4,7 @@
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
@@ -21,6 +22,11 @@ public interface IEventStoreNamespaceStorage
     /// Gets the <see cref="IEventSequenceStorage"/> for the event store namespace.
     /// </summary>
     IChangesetStorage Changesets { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IIdentityStorage"/> for the event store.
+    /// </summary>
+    IIdentityStorage Identities { get; }
 
     /// <summary>
     /// Gets the <see cref="IJobStorage"/> for the event store namespace.

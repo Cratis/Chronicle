@@ -44,7 +44,6 @@ public class Storage(
 
         return _eventStores[eventStore] = new EventStoreStorage(
             eventStore,
-            database,
             database.GetEventStoreDatabase(eventStore),
             projectionSerializer,
             complianceManager,

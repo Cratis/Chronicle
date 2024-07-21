@@ -3,13 +3,16 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
+using Cratis.Chronicle.Storage.MongoDB.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Jobs;
 using Cratis.Chronicle.Storage.MongoDB.Keys;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
@@ -44,8 +47,8 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="eventStore"><see cref="EventStoreName"/> the storage is for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the storage is for.</param>
     /// <param name="eventStoreNamespaceDatabase">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
-    /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
     /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
+    /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
     /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
@@ -54,8 +57,8 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         IEventStoreNamespaceDatabase eventStoreNamespaceDatabase,
-        IEventConverter converter,
         IEventTypesStorage eventTypesStorage,
+        IJsonComplianceManager complianceManager,
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         IInstancesOf<ISinkFactory> sinkFactories,
@@ -64,12 +67,12 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         _eventStore = eventStore;
         _namespace = @namespace;
         _eventStoreNamespaceDatabase = eventStoreNamespaceDatabase;
-        _converter = converter;
         _eventTypesStorage = eventTypesStorage;
         _expandoObjectConverter = expandoObjectConverter;
         _jsonSerializerOptions = jsonSerializerOptions;
         _loggerFactory = loggerFactory;
         Changesets = new ChangesetStorage();
+        Identities = new IdentityStorage(eventStoreNamespaceDatabase, loggerFactory.CreateLogger<IdentityStorage>());
         Jobs = new JobStorage(eventStoreNamespaceDatabase);
         JobSteps = new JobStepStorage(eventStoreNamespaceDatabase);
         Observers = new ObserverStorage(eventStoreNamespaceDatabase);
@@ -77,10 +80,21 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
         ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, Observers);
         Sinks = new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);
+
+        _converter = new EventConverter(
+            eventStore,
+            @namespace,
+            eventTypesStorage,
+            Identities,
+            complianceManager,
+            expandoObjectConverter);
     }
 
     /// <inheritdoc/>
     public IChangesetStorage Changesets { get; }
+
+    /// <inheritdoc/>
+    public IIdentityStorage Identities { get; }
 
     /// <inheritdoc/>
     public IJobStorage Jobs { get; }
@@ -118,6 +132,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             _eventStoreNamespaceDatabase,
             _converter,
             _eventTypesStorage,
+            Identities,
             _expandoObjectConverter,
             _jsonSerializerOptions,
             _loggerFactory.CreateLogger<EventSequenceStorage>());

@@ -10,6 +10,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Identities;
 using Cratis.Strings;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
@@ -31,6 +32,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
 /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
 /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
+/// /// <param name="identityStorage"><see cref="IIdentityStorage"/>.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
@@ -41,6 +43,7 @@ public class EventSequenceStorage(
     IEventStoreNamespaceDatabase database,
     IEventConverter converter,
     IEventTypesStorage eventTypesStorage,
+    IIdentityStorage identityStorage,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
@@ -89,7 +92,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task Append(
+    public async Task<AppendedEvent> Append(
         EventSequenceNumber sequenceNumber,
         EventSourceId eventSourceId,
         EventType eventType,
@@ -99,6 +102,7 @@ public class EventSequenceStorage(
         DateTimeOffset validFrom,
         ExpandoObject content)
     {
+        var correlationId = CorrelationId.New(); // TODO: Fix this when we have a proper correlation id
         try
         {
             var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
@@ -111,7 +115,7 @@ public class EventSequenceStorage(
                 @namespace);
             var @event = new Event(
                 sequenceNumber,
-                CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
+                correlationId,
                 causation,
                 causedByChain,
                 eventType.Id,
@@ -120,11 +124,25 @@ public class EventSequenceStorage(
                 eventSourceId,
                 new Dictionary<string, BsonDocument>
                 {
-                        { eventType.Generation.ToString(), document }
+                    { eventType.Generation.ToString(), document }
                 },
                 []);
             var collection = GetCollection();
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
+
+            return new AppendedEvent(
+                new(sequenceNumber, eventType),
+                new(
+                    eventSourceId,
+                    sequenceNumber,
+                    occurred,
+                    validFrom,
+                    eventStore,
+                    @namespace,
+                    correlationId,
+                    causation,
+                    await identityStorage.GetFor(causedByChain)),
+                content);
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {

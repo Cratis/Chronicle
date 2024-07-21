@@ -53,7 +53,7 @@ public class EventSequence(
 
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
-    IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).Identities;
+    IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
     IObserverStorage ObserverStorage => _observerStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Observers;
 
     /// <inheritdoc/>
@@ -151,7 +151,6 @@ public class EventSequence(
                 State.SequenceNumber);
 
             var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
-
             var compliantEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
 
             var appending = true;
@@ -161,22 +160,17 @@ public class EventSequence(
                 {
                     var occurred = DateTimeOffset.UtcNow;
                     var actualValidFrom = validFrom ?? DateTimeOffset.MinValue;
-                    var appendedEvent = new AppendedEvent(
-                        new(State.SequenceNumber, eventType),
-                        new(
-                            eventSourceId,
-                            State.SequenceNumber,
-                            occurred,
-                            actualValidFrom,
-                            _eventSequenceKey.EventStore,
-                            _eventSequenceKey.Namespace,
-                            CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
-                            causation,
-                            causedBy),
-                        compliantEventAsExpandoObject);
 
                     _metrics?.AppendedEvent(eventSourceId, eventName);
-                    // await EventSequenceStorage.Append(State.SequenceNumber, eventSourceId, eventType, causation, [], occurred, actualValidFrom, compliantEventAsExpandoObject);
+                    var appendedEvent = await EventSequenceStorage.Append(
+                        State.SequenceNumber,
+                        eventSourceId,
+                        eventType,
+                        causation,
+                        await IdentityStorage.GetFor(causedBy),
+                        occurred,
+                        actualValidFrom,
+                        compliantEventAsExpandoObject);
 
                     var appendedEvents = new[] { appendedEvent }.ToList();
                     await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);

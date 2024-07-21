@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.EventTypes;
-using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Projections;
 
@@ -22,11 +21,6 @@ public interface IEventStoreStorage
     /// Gets the <see cref="INamespaceStorage"/> for the event store.
     /// </summary>
     INamespaceStorage Namespaces { get; }
-
-    /// <summary>
-    /// Gets the <see cref="IIdentityStorage"/> for the event store.
-    /// </summary>
-    IIdentityStorage Identities { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventTypesStorage"/> for the event store.
