@@ -18,7 +18,7 @@ public class a_resolver : Specification
     {
         model = new("Something", new JsonSchema());
         projection = new();
-        projection.SetupGet(_ => _.Identifier).Returns(Guid.NewGuid());
+        projection.SetupGet(_ => _.Identifier).Returns((ProjectionId)Guid.NewGuid().ToString());
         projection.SetupGet(_ => _.Model).Returns(model);
         event_value_provider_resolvers = new();
         resolver = new CompositeKeyExpressionResolver(event_value_provider_resolvers.Object);

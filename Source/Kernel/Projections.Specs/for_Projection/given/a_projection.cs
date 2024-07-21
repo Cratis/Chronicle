@@ -18,7 +18,6 @@ public class a_projection : Specification
             new ExpandoObject(),
             string.Empty,
             string.Empty,
-            string.Empty,
             new Model(string.Empty, new JsonSchema()),
             true,
             []);
