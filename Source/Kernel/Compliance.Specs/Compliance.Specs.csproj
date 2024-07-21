@@ -2,11 +2,12 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Compliance.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Compliance</RootNamespace>
+        <IsTestProject>true</IsTestProject>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../../Source/Kernel/Compliance/Compliance.csproj"/>
-        <ProjectReference Include="../../../Source/Kernel/Shared/Shared.csproj"/>
+        <ProjectReference Include="../Compliance/Compliance.csproj"/>
+        <ProjectReference Include="../Shared/Shared.csproj"/>
     </ItemGroup>
 
 </Project>

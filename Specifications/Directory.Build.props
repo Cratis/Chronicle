@@ -1,6 +1,5 @@
 <Project>
     <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
-    <Import Project="$(MSBuildThisFileDirectory)WarningsToIgnore.props"/>
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <IsTestProject>true</IsTestProject>

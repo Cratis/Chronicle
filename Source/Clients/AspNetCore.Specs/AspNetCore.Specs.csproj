@@ -2,6 +2,7 @@
     <PropertyGroup>
         <AssemblyName>Cratis.AspNetCore.Specs</AssemblyName>
         <RootNamespace>Cratis.AspNetCore</RootNamespace>
+        <IsTestProject>true</IsTestProject>
     </PropertyGroup>
 
     <ItemGroup>

@@ -2,12 +2,12 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Grains.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Grains</RootNamespace>
+        <IsTestProject>true</IsTestProject>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../../Source/Kernel/Grains/Grains.csproj" />
-        <ProjectReference Include="../../../Source/Kernel/Shared/Shared.csproj"/>
-        <ProjectReference Include="../../Common/Common.csproj" />
+        <ProjectReference Include="../Grains/Grains.csproj" />
+        <ProjectReference Include="../Shared/Shared.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -2,11 +2,12 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Storage.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Storage</RootNamespace>
+        <IsTestProject>true</IsTestProject>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../../Source/Kernel/Storage/Storage.csproj"/>
-        <ProjectReference Include="../../../Source/Kernel/Shared/Shared.csproj"/>
+        <ProjectReference Include="../Storage/Storage.csproj"/>
+        <ProjectReference Include="../Shared/Shared.csproj"/>
     </ItemGroup>
 
 </Project>

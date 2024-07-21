@@ -2,10 +2,11 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Shared.Specs</AssemblyName>
         <RootNamespace>Cratis</RootNamespace>
+        <IsTestProject>true</IsTestProject>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../../Source/Kernel/Shared/Shared.csproj"/>
+        <ProjectReference Include="../Shared/Shared.csproj"/>
     </ItemGroup>
 
 </Project>
