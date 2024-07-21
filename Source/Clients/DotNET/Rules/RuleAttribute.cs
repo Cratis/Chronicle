@@ -16,7 +16,7 @@ public abstract class RuleAttribute : ValidationAttribute, IRule
     /// <summary>
     /// Gets the unique identifier for the business rules.
     /// </summary>
-    public abstract RuleId Identifier { get; }
+    public virtual RuleId Identifier => GetType().GetRuleId();
 
     /// <summary>
     /// Gets whether or not value adorned represents the <see cref="ModelKey"/>.

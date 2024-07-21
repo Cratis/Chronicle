@@ -77,7 +77,8 @@ public class RulesProjections : IRulesProjections
 
     ProjectionDefinition CreateProjection<TTarget>(IRule rule)
     {
-        var projectionBuilder = new ProjectionBuilderFor<TTarget>(rule.Identifier.Value, _modelNameResolver, _eventTypes, _jsonSchemaGenerator, _serializerOptions);
+        var identifier = rule.GetType().GetRuleId();
+        var projectionBuilder = new ProjectionBuilderFor<TTarget>(identifier.Value, _modelNameResolver, _eventTypes, _jsonSchemaGenerator, _serializerOptions);
 
         var ruleType = typeof(TTarget);
 

@@ -8,8 +8,4 @@ namespace Cratis.Chronicle.Rules;
 /// </summary>
 public interface IRule
 {
-    /// <summary>
-    /// Gets the unique identifier of the rule.
-    /// </summary>
-    RuleId Identifier { get; }
 }

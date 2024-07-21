@@ -39,10 +39,11 @@ public class Rules(
     /// <inheritdoc/>
     public void ProjectTo(IRule rule, object? modelIdentifier = default)
     {
-        if (!rulesProjections.HasFor(rule.Identifier)) return;
+        var identifier = rule.GetType().GetRuleId();
+        if (!rulesProjections.HasFor(identifier)) return;
 
         var result = immediateProjections.GetInstanceById(
-            rule.Identifier.Value,
+            identifier.Value,
             modelIdentifier is null ? ModelKey.Unspecified : modelIdentifier.ToString()!).GetAwaiter().GetResult();
 
         var properties = rule.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty);
