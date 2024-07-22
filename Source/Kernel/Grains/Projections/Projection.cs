@@ -38,7 +38,7 @@ public class Projection(
     bool _subscribed;
 
     /// <inheritdoc/>
-    public async Task SetDefinition(ProjectionDefinition definition)
+    public async Task SetDefinitionAndSubscribe(ProjectionDefinition definition)
     {
         var compareResult = projectionDefinitionComparer.Compare(State, definition);
 

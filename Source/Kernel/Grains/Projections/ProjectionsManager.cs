@@ -48,7 +48,7 @@ public class ProjectionsManager : Grain<ProjectionsManagerState>, IProjectionsMa
         {
             var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName, added.Namespace, projectionDefinition.EventSequenceId);
             var projection = GrainFactory.GetGrain<IProjection>(key);
-            await projection.SetDefinition(projectionDefinition);
+            await projection.SetDefinitionAndSubscribe(projectionDefinition);
         }
     }
 
@@ -67,7 +67,7 @@ public class ProjectionsManager : Grain<ProjectionsManagerState>, IProjectionsMa
         {
             var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName, namespaceName, projectionDefinition.EventSequenceId);
             var projection = GrainFactory.GetGrain<IProjection>(key);
-            await projection.SetDefinition(projectionDefinition);
+            await projection.SetDefinitionAndSubscribe(projectionDefinition);
         }
     }
 

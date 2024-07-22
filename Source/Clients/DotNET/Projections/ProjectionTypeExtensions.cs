@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -24,5 +25,16 @@ public static class ProjectionTypeExtensions
             "" => new ProjectionId(type.FullName ?? $"{type.Namespace}.{type.Name}"),
             _ => new ProjectionId(id)
         };
+    }
+
+    /// <summary>
+    /// Get the event sequence id for a reaction type.
+    /// </summary>
+    /// <param name="type"><see cref="Type"/> to get from.</param>
+    /// <returns>The <see cref="EventSequenceId"/> for the type.</returns>
+    public static EventSequenceId GetEventSequenceId(this Type type)
+    {
+        var reactionAttribute = type.GetCustomAttribute<ProjectionAttribute>();
+        return reactionAttribute?.EventSequenceId.Value ?? EventSequenceId.Log;
     }
 }

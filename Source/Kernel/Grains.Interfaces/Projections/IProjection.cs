@@ -11,11 +11,11 @@ namespace Cratis.Chronicle.Grains.Projections;
 public interface IProjection : IGrainWithStringKey
 {
     /// <summary>
-    /// Refresh the projection definition.
+    /// Set the projection definition and subscribe as an observer.
     /// </summary>
     /// <param name="definition"><see cref="ProjectionDefinition"/> to refresh with.</param>
     /// <returns>Awaitable task.</returns>
-    Task SetDefinition(ProjectionDefinition definition);
+    Task SetDefinitionAndSubscribe(ProjectionDefinition definition);
 
     /// <summary>
     /// Ensure the projection exists and is started.

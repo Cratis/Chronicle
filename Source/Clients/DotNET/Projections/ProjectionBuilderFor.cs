@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
@@ -20,9 +21,8 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
     readonly ProjectionId _identifier;
     readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _schemaGenerator;
+    EventSequenceId _eventSequenceId = EventSequenceId.Log;
     bool _isRewindable = true;
-
-    string? _name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
@@ -44,12 +44,13 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
         _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
         _modelName = modelNameResolver.GetNameFor(typeof(TModel));
+        _eventSequenceId = GetType().GetEventSequenceId();
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> WithName(string name)
+    public IProjectionBuilderFor<TModel> FromEventSequence(EventSequenceId eventSequenceId)
     {
-        _name = name;
+        _eventSequenceId = eventSequenceId;
         return this;
     }
 
@@ -79,6 +80,7 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
 
         return new()
         {
+            EventSequenceId = _eventSequenceId,
             Identifier = _identifier,
             Model = new()
             {
