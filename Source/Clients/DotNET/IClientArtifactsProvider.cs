@@ -19,11 +19,6 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> Projections { get; }
 
     /// <summary>
-    /// Gets all the available immediate projection types.
-    /// </summary>
-    IEnumerable<Type> ImmediateProjections { get; }
-
-    /// <summary>
     /// Gets all the available adapters types.
     /// </summary>
     IEnumerable<Type> Adapters { get; }
@@ -66,5 +61,5 @@ public interface IClientArtifactsProvider
     /// <summary>
     /// Gets all the available aggregate root types.
     /// </summary>
-    IEnumerable<Type> AggregateRoots { get; }
+    IEnumerable<Type> AggregateRoots { get; }
 }

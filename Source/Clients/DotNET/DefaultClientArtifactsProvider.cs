@@ -35,7 +35,6 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
         Rules = assembliesProvider.DefinedTypes.Where(_ => _.BaseType?.IsGenericType == true && _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
         Adapters = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAdapterFor<,>)) && !_.IsGenericType).ToArray();
         Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
-        ImmediateProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IImmediateProjectionFor<>))).ToArray();
         Reactions = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReaction)) && !_.IsGenericType).ToArray();
         ReactionMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReactionMiddleware))).ToArray();
         Reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
@@ -48,9 +47,6 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
 
     /// <inheritdoc/>
     public IEnumerable<Type> Projections { get; }
-
-    /// <inheritdoc/>
-    public IEnumerable<Type> ImmediateProjections { get; }
 
     /// <inheritdoc/>
     public IEnumerable<Type> Adapters { get; }

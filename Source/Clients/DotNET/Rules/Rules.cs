@@ -17,13 +17,13 @@ namespace Cratis.Chronicle.Rules;
 /// </remarks>
 /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
 /// <param name="rulesProjections">All <see cref="IRulesProjections"/>.</param>
-/// <param name="immediateProjections"><see cref="IImmediateProjections"/> client.</param>
+/// <param name="immediateProjections"><see cref="IProjections"/> client.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
 [Singleton]
 public class Rules(
     JsonSerializerOptions serializerOptions,
     IRulesProjections rulesProjections,
-    IImmediateProjections immediateProjections,
+    IProjections immediateProjections,
     IClientArtifactsProvider clientArtifacts) : IRules
 {
     readonly IDictionary<Type, IEnumerable<Type>> _rulesPerCommand = clientArtifacts.Rules

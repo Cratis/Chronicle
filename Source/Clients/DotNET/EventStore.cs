@@ -91,9 +91,11 @@ public class EventStore : IEventStore
         Reducers = new Reducers.Reducers(this, clientArtifactsProvider);
         Projections = new Projections.Projections(
             this,
+            EventTypes,
             clientArtifactsProvider,
             schemaGenerator,
             new ModelNameResolver(modelNameConvention),
+            _eventSerializer,
             serviceProvider,
             jsonSerializerOptions);
     }

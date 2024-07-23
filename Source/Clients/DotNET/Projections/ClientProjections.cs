@@ -18,18 +18,15 @@ public class ClientProjections : IClientProjections
     /// Initializes a new instance of the <see cref="ClientProjections"/> class.
     /// </summary>
     /// <param name="projections"><see cref="IProjections"/> for projections defined by <see cref="IProjectionBuilderFor{T}"/>.</param>
-    /// <param name="immediateProjections">All the <see cref="IImmediateProjections"/>.</param>
     /// <param name="adapters"><see cref="IAdapters"/> for getting adapters projection definitions.</param>
     /// <param name="rulesProjections"><see cref="IRulesProjections"/> for getting projection definitions related to rules.</param>
     public ClientProjections(
         IProjections projections,
-        IImmediateProjections immediateProjections,
         IAdapters adapters,
         IRulesProjections rulesProjections)
     {
         var projectionDefinitions = new List<ProjectionDefinition>();
         projectionDefinitions.AddRange(projections.Definitions);
-        projectionDefinitions.AddRange(immediateProjections.Definitions);
         projectionDefinitions.AddRange(adapters.Definitions);
         projectionDefinitions.AddRange(rulesProjections.Definitions);
         Definitions = projectionDefinitions.ToImmutableList();

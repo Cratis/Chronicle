@@ -12,15 +12,15 @@ namespace Cratis.Chronicle.Aggregates;
 /// Initializes a new instance of the <see cref="ProjectionAggregateRootStateProvider"/> class.
 /// </remarks>
 /// <param name="aggregateRoot">The <see cref="AggregateRoot"/> the state is for.</param>
-/// <param name="immediateProjections"><see cref="IImmediateProjections"/> to use for getting state.</param>
+/// <param name="projections"><see cref="IProjections"/> to use for getting state.</param>
 public class ProjectionAggregateRootStateProvider(
     AggregateRoot aggregateRoot,
-    IImmediateProjections immediateProjections) : IAggregateRootStateProvider
+    IProjections projections) : IAggregateRootStateProvider
 {
     /// <inheritdoc/>
     public async Task<object?> Provide()
     {
-        var result = await immediateProjections.GetInstanceByIdForSession(
+        var result = await projections.GetInstanceByIdForSession(
             aggregateRoot.CorrelationId,
             aggregateRoot.StateType,
             aggregateRoot._eventSourceId);
@@ -30,7 +30,7 @@ public class ProjectionAggregateRootStateProvider(
     /// <inheritdoc/>
     public async Task<object?> Update(object? initialState, IEnumerable<object> events)
     {
-        var result = await immediateProjections.GetInstanceByIdForSessionWithEventsApplied(
+        var result = await projections.GetInstanceByIdForSessionWithEventsApplied(
             aggregateRoot.CorrelationId,
             aggregateRoot.StateType,
             aggregateRoot._eventSourceId,
@@ -40,7 +40,7 @@ public class ProjectionAggregateRootStateProvider(
 
     /// <inheritdoc/>
     public Task Dehydrate() =>
-        immediateProjections.DehydrateSession(
+        projections.DehydrateSession(
             aggregateRoot.CorrelationId,
             aggregateRoot.StateType,
             aggregateRoot._eventSourceId);

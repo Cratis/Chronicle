@@ -13,10 +13,10 @@ namespace Cratis.Chronicle.Aggregates;
 /// Initializes a new instance of the <see cref="AggregateRootStateProviders"/> class.
 /// </remarks>
 /// <param name="reducersRegistrar">All the reducers in the system.</param>
-/// <param name="immediateProjections"><see cref="IImmediateProjections"/> to possibly get state from.</param>
+/// <param name="projections"><see cref="IProjections"/> to possibly get state from.</param>
 public class AggregateRootStateProviders(
     IReducersRegistrar reducersRegistrar,
-    IImmediateProjections immediateProjections) : IAggregateRootStateProviders
+    IProjections projections) : IAggregateRootStateProviders
 {
     /// <inheritdoc/>
     public Task<IAggregateRootStateProvider> CreateFor(AggregateRoot aggregateRoot)
@@ -27,7 +27,7 @@ public class AggregateRootStateProviders(
         }
 
         var hasReducer = reducersRegistrar.HasReducerFor(aggregateRoot.StateType);
-        var hasProjection = immediateProjections.HasProjectionFor(aggregateRoot.StateType);
+        var hasProjection = projections.HasProjectionFor(aggregateRoot.StateType);
 
         if (!hasReducer && !hasProjection)
         {
@@ -45,6 +45,6 @@ public class AggregateRootStateProviders(
             return Task.FromResult<IAggregateRootStateProvider>(new ReducerAggregateRootStateProvider(aggregateRoot, reducer));
         }
 
-        return Task.FromResult<IAggregateRootStateProvider>(new ProjectionAggregateRootStateProvider(aggregateRoot, immediateProjections));
+        return Task.FromResult<IAggregateRootStateProvider>(new ProjectionAggregateRootStateProvider(aggregateRoot, projections));
     }
 }
