@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.Json;
@@ -41,7 +40,6 @@ public static class SerializationConfigurationExtensions
         options.Converters.Add(new PropertyExpressionDictionaryConverter());
         options.Converters.Add(new FromDefinitionsConverter());
         options.Converters.Add(new JoinDefinitionsConverter());
-        options.Converters.Add(new EventSequenceNumberTokenJsonConverter());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<JobStateJsonConverter, JobState>());

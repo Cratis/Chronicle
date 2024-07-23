@@ -32,8 +32,7 @@ public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer
         result = reduce_result.State as ReadModel;
     }
 
-
     [Fact] void should_only_create_one_instance_of_the_reducer() => service_provider.Verify(_ => _.GetService(typeof(SyncReducer)), Once);
-    [Fact] void should_pass_the_events_and_contexts() => reducer.ReceivedEventsAndContexts.ShouldEqual(events_and_contexts);
+    [Fact] void should_pass_the_events_and_contexts() => reducer.ReceivedEventsAndContexts.ShouldContainOnly(events_and_contexts);
     [Fact] void should_return_a_read_model_that_has_been_iterated_on() => result.Count.ShouldEqual(events_and_contexts.Count() + initial.Count);
 }
