@@ -5,7 +5,7 @@ using Cratis.Chronicle.Projections;
 
 namespace Basic;
 
-public class OrderStateProjection : IImmediateProjectionFor<OrderState>
+public class OrderStateProjection : IProjectionFor<OrderState>
 {
     public ProjectionId Identifier => "4c6f7eac-d74d-425b-b2fd-e32e8e365b32";
 
