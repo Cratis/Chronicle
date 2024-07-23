@@ -6,6 +6,4 @@ namespace Cratis.Chronicle.Rules;
 /// <summary>
 /// Defines the minimum of a business rule.
 /// </summary>
-public interface IRule
-{
-}
+public interface IRule;

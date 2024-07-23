@@ -5,7 +5,6 @@ using System.Reflection;
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
 using Cratis.Models;

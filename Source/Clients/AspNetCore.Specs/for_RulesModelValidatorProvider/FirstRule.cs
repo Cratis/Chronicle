@@ -5,6 +5,4 @@ using Cratis.Chronicle.Rules;
 
 namespace Cratis.Chronicle.AspNetCore.Rules.for_RulesModelValidatorProvider;
 
-public class FirstRule : IRule
-{
-}
+public class FirstRule : IRule;
