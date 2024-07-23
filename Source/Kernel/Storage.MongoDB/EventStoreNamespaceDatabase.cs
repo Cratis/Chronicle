@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.MongoDB;
+using Cratis.Applications.MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
 

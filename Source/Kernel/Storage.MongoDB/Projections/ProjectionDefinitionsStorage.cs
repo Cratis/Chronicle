@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Json;
 using Cratis.Chronicle.Storage.Projections;
-using Cratis.MongoDB;
+using Cratis.Applications.MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using ProjectionDefinition = Cratis.Chronicle.Projections.Definitions.ProjectionDefinition;

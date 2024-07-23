@@ -34,7 +34,7 @@ public static class Program
                 _.ValidateOnBuild = false;
             })
             .UseLogging()
-            .UseMongoDB() // TODO: Which extension method do we actually want to call here?
+            .UseCratisMongoDB() // TODO: Which extension method do we actually want to call here?
             .ConfigureServices(services => services
                 .AddSingleton(Globals.JsonSerializerOptions)
                 .AddBindingsByConvention()

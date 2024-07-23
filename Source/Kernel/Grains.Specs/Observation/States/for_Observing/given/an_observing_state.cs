@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Grains.Observation.States.for_Observing.given;
 public class an_observing_state : Specification
 {
     protected Mock<IObserver> observer;
-    protected Mock<IStreamProvider> stream_provider;
+    protected Mock<IAppendedEventsQueues> appended_events_queues;
     protected Mock<IAsyncStream<AppendedEvent>> stream;
     protected Mock<StreamSubscriptionHandle<AppendedEvent>> stream_subscription;
     protected Observing state;
@@ -35,9 +35,8 @@ public class an_observing_state : Specification
     void Establish()
     {
         observer = new();
-        stream_provider = new();
+        appended_events_queues = new();
         stream = new();
-        stream_provider.Setup(_ => _.GetStream<AppendedEvent>(IsAny<StreamId>())).Returns(stream.Object);
         stream_subscription = new();
         stream.Setup(_ => _
             .SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<EventSequenceNumberToken>(), null))
@@ -53,7 +52,7 @@ public class an_observing_state : Specification
         event_sequence_id = EventSequenceId.Log;
 
         state = new Observing(
-            stream_provider.Object,
+            appended_events_queues.Object,
             event_store_name,
             event_store_namespace,
             event_sequence_id,

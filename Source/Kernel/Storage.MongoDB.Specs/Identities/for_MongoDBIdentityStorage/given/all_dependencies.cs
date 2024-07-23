@@ -1,13 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Grains;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Identities.for_MongoDBIdentityStorage.given;
 
 public class all_dependencies : Specification
 {
-    protected Mock<IDatabase> database;
+    protected Mock<IEventStoreNamespaceDatabase> database;
     protected Mock<IMongoCollection<MongoDBIdentity>> collection;
     protected List<MongoDBIdentity> identities_from_database;
     protected List<MongoDBIdentity> inserted_identities;

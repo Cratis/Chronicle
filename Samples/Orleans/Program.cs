@@ -1,14 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Applications.MongoDB;
 using Cratis.Json;
-using Cratis.MongoDB;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.AddConsole();
-builder.UseMongoDB(_ => _
-    .WithStaticServer("mongodb://localhost:27017")
-    .WithStaticDatabaseName("orleans"));
+
+builder.UseCratisMongoDB(
+    mongo =>
+    {
+        mongo.Server = "mongodb://localhost:27017";
+        mongo.Database = "orleans";
+    });
 
 builder.Host.UseDefaultServiceProvider(_ => _.ValidateOnBuild = false);
 
