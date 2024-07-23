@@ -1,12 +1,12 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>10.3.4</ApplicationModel>
+    <ApplicationModel>11.2.0</ApplicationModel>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Cratis.Fundamentals" Version="5.2.7" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="5.2.7" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="5.3.1" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="5.3.1" />
     <PackageVersion Include="Cratis.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.MongoDB" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Orleans" Version="$(ApplicationModel)" />
@@ -29,9 +29,9 @@
     </PackageVersion>
     <PackageVersion Include="protobuf-net.Grpc" Version="1.1.1" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.1.1" />
-    <PackageVersion Include="Grpc.Net.Client" Version="2.63.0" />
+    <PackageVersion Include="Grpc.Net.Client" Version="2.64.0" />
     <PackageVersion Include="mongodb.driver" Version="2.26.0" />
-    <PackageVersion Include="OrleansTestKit" Version="8.1.0" />
+    <PackageVersion Include="OrleansTestKit" Version="8.2.0" />
     <PackageVersion Include="serilog" Version="4.0.0" />
     <PackageVersion Include="Serilog.AspNetCore" Version="8.0.1" />
     <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
@@ -47,7 +47,7 @@
     <PackageVersion Include="System.Reactive" Version="6.0.1" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageVersion Include="automapper" Version="13.0.1" />
-    <PackageVersion Include="Azure.Data.Tables" Version="12.8.3" />
+    <PackageVersion Include="Azure.Data.Tables" Version="12.9.0" />
     <PackageVersion Include="FluentValidation" Version="11.9.2" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
@@ -63,7 +63,7 @@
     <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
-    <PackageVersion Include="OrleansDashboard" Version="8.0.0" />
+    <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.9.0" />
@@ -80,7 +80,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.12.4" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.158" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.161" />
     <!-- Specifications -->
     <PackageVersion Include="Cratis.Specifications" Version="3.0.3" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.3" />
