@@ -5,7 +5,7 @@
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Cratis.Fundamentals" Version="5.3.1" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="5.3.2" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="5.3.1" />
     <PackageVersion Include="Cratis.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.MongoDB" Version="$(ApplicationModel)" />
