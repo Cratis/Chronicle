@@ -17,7 +17,7 @@
     <PackageVersion Include="docfx.console" Version="2.59.3" />
     <PackageVersion Include="humanizer" Version="2.14.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="8.0.1" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
@@ -63,7 +63,7 @@
     <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
-    <PackageVersion Include="OrleansDashboard" Version="8.0.0" />
+    <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.9.0" />
@@ -85,8 +85,8 @@
     <PackageVersion Include="Cratis.Specifications" Version="3.0.3" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.3" />
     <PackageVersion Include="Testcontainers" Version="3.9.0" />
-    <PackageVersion Include="xunit" Version="2.8.1" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.1" />
+    <PackageVersion Include="xunit" Version="2.9.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="moq" Version="4.20.70" />
     <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.10.0" />
   </ItemGroup>
