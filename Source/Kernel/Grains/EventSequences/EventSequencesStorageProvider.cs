@@ -6,7 +6,6 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
-using Orleans.Runtime;
 using Orleans.Storage;
 
 namespace Cratis.Chronicle.Grains.EventSequences;

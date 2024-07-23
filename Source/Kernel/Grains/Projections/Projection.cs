@@ -11,7 +11,6 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Definitions;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
-using Orleans.Runtime;
 using Orleans.Utilities;
 
 namespace Cratis.Chronicle.Grains.Projections;

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage;
-using Orleans.Runtime;
 using Orleans.Storage;
 
 namespace Cratis.Chronicle.Grains.Projections;

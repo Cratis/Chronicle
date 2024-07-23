@@ -16,7 +16,6 @@ using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation;
 

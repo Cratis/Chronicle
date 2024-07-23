@@ -6,7 +6,6 @@ using Cratis.Chronicle.Grains.Clients;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers;
 using Microsoft.Extensions.Logging;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
@@ -39,7 +38,7 @@ public class ClientReducer(
         var observer = GrainFactory.GetGrain<IObserver>(_observerKey.ObserverId!, _observerKey!);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
 
-        RegisterTimer(HandleConnectedClientsSubscription, null!, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+        this.RegisterGrainTimer(HandleConnectedClientsSubscription, new() { DueTime = TimeSpan.Zero, Period = TimeSpan.FromSeconds(5) });
         var connectedClient = await connectedClients.GetConnectedClient(connectionId);
         await observer.Subscribe<IClientReducerSubscriber>(
             ObserverType.Reducer,
@@ -57,7 +56,7 @@ public class ClientReducer(
         observer.Unsubscribe();
     }
 
-    async Task HandleConnectedClientsSubscription(object state)
+    async Task HandleConnectedClientsSubscription(CancellationToken cancellationToken)
     {
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
         await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());

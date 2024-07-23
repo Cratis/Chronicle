@@ -4,7 +4,6 @@
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation;
 

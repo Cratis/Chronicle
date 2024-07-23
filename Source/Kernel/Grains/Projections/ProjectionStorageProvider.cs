@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Definitions;
 using Cratis.Chronicle.Storage;
-using Orleans.Runtime;
 using Orleans.Storage;
 
 namespace Cratis.Chronicle.Grains.Projections;

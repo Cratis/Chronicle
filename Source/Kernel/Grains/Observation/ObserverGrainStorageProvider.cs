@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
-using Orleans.Runtime;
 using Orleans.Storage;
 
 namespace Cratis.Chronicle.Grains.Observation;

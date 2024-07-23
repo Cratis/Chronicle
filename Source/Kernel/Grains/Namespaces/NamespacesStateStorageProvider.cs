@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Namespaces;
-using Orleans.Runtime;
 using Orleans.Storage;
 
 namespace Cratis.Chronicle.Grains.Namespaces;

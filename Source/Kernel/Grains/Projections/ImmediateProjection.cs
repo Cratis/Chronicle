@@ -5,7 +5,6 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections;

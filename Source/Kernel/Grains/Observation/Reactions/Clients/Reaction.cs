@@ -7,7 +7,6 @@ using Cratis.Chronicle.Grains.Clients;
 using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.Placement;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 
