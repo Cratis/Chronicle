@@ -6,6 +6,7 @@ using System.Dynamic;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Objects;
 using Cratis.Reflection;
 using Cratis.Strings;
