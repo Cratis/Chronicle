@@ -20,8 +20,8 @@ public class when_comparing_complex_nested_object_with_null_changes : given.an_o
 
     void Establish()
     {
-        left = new TopLevel(null, 42, new("FortyThree", 43, new(null, 44)));
-        right = new TopLevel("FortyFive", 45, new(null, 46, new("FortySeven", 47)));
+        left = new TopLevel(null!, 42, new("FortyThree", 43, new(null!, 44)));
+        right = new TopLevel("FortyFive", 45, new(null!, 46, new("FortySeven", 47)));
     }
 
     void Because() => result = comparer.Equals(left, right, out differences);

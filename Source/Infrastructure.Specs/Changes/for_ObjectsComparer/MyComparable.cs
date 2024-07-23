@@ -5,5 +5,5 @@ namespace Cratis.Chronicle.Changes.for_ObjectComparer;
 #pragma warning disable CS0144, CA1036
 public class MyComparable(int desiredResult) : IComparable
 {
-    public int CompareTo(object obj) => desiredResult;
+    public int CompareTo(object? obj) => desiredResult;
 }

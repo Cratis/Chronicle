@@ -16,7 +16,7 @@ public class when_comparing_expando_objects_and_left_is_null_and_right_is_empty 
 
     void Establish()
     {
-        left = null;
+        left = null!;
         right = new ExpandoObject();
     }
 

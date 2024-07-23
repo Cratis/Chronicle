@@ -16,7 +16,7 @@ public class when_comparing_expando_objects_and_left_has_properties_and_right_is
 
     void Establish()
     {
-        right = null;
+        right = null!;
         left = new ExpandoObject();
         left.StringValue = "FortyTwo";
         left.IntValue = 44;

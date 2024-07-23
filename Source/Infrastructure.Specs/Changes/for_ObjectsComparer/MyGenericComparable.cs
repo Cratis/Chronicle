@@ -6,5 +6,5 @@ namespace Cratis.Chronicle.Changes.for_ObjectComparer;
 #pragma warning disable CS0144, CA1036
 public class MyGenericComparable(int desiredResult) : IComparable<MyGenericComparable>
 {
-    public int CompareTo(MyGenericComparable other) => desiredResult;
+    public int CompareTo(MyGenericComparable? other) => desiredResult;
 }
