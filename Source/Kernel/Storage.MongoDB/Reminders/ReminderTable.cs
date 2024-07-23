@@ -7,7 +7,6 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Newtonsoft.Json;
 using Orleans.Configuration;
-using Orleans.Runtime;
 using Orleans.Serialization;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Reminders;
