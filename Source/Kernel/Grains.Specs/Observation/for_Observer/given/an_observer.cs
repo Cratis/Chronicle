@@ -27,34 +27,22 @@ public class an_observer : Specification
     protected Mock<IStreamProvider> stream_provider;
     protected Mock<IStreamProvider> sequence_stream_provider;
     protected Mock<IObserverSubscriber> subscriber;
-    protected Mock<IPersistentState<FailedPartitions>> failed_partitions_persistent_state;
     protected Mock<IObserverServiceClient> observer_service_client;
-    protected List<FailedPartitions> written_failed_partitions_states = [];
     protected FailedPartitions failed_partitions_state;
     protected ObserverId observer_id => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
     protected ObserverKey observer_key => new(observer_id, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
     protected TestKitSilo silo = new();
     protected IStorage<ObserverState> state_storage;
     protected TestStorageStats storage_stats => silo.StorageStats<Observer, ObserverState>()!;
+    protected IStorage<FailedPartitions> failed_partitions_storage;
+    protected TestStorageStats failed_partitions_storage_stats => silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
 
     async Task Establish()
     {
         subscriber = new();
         silo.AddProbe((_) => subscriber.Object);
 
-        failed_partitions_persistent_state = silo.AddServiceProbe<IPersistentState<FailedPartitions>>();
         failed_partitions_state = new();
-        failed_partitions_persistent_state.SetupGet(_ => _.State).Returns(failed_partitions_state);
-
-        var jsonSerializerOptions = new JsonSerializerOptions(Globals.JsonSerializerOptions);
-        jsonSerializerOptions.Converters.Add(new KeyJsonConverter());
-
-        failed_partitions_persistent_state.Setup(_ => _.WriteStateAsync()).Callback(() =>
-            {
-                var serialized = JsonSerializer.Serialize(failed_partitions_state, jsonSerializerOptions);
-                var clone = JsonSerializer.Deserialize<FailedPartitions>(serialized, jsonSerializerOptions);
-                written_failed_partitions_states.Add(clone);
-            }).Returns(Task.CompletedTask);
 
         observer_service_client = silo.AddServiceProbe<IObserverServiceClient>();
 
@@ -62,13 +50,9 @@ public class an_observer : Specification
         var loggerFactory = silo.AddServiceProbe<ILoggerFactory>();
         loggerFactory.Setup(_ => _.CreateLogger(IsAny<string>())).Returns(logger);
 
-        var mapper = new Mock<IAttributeToFactoryMapper<PersistentStateAttribute>>();
-        mapper.Setup(_ => _.GetFactory(IsAny<ParameterInfo>(), IsAny<PersistentStateAttribute>())).Returns(
-            context => failed_partitions_persistent_state.Object);
-
-        silo.AddService(mapper.Object);
-
         state_storage = silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
+        failed_partitions_storage = silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
+        failed_partitions_storage.State = failed_partitions_state;
 
         var eventSequence = silo.AddProbe<IEventSequence>(
             new EventSequenceKey(observer_key.EventSequenceId, observer_key.EventStore, observer_key.Namespace));
@@ -79,5 +63,6 @@ public class an_observer : Specification
         observer = await silo.CreateGrainAsync<Observer>(observer_key);
 
         storage_stats.ResetCounts();
+        failed_partitions_storage_stats.ResetCounts();
     }
 }

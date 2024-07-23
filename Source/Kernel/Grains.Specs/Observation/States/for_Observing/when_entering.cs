@@ -14,5 +14,5 @@ public class when_entering : given.an_observing_state
 
     async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
 
-    [Fact] void should_subscribe_to_stream() => stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), new EventSequenceNumberToken(stored_state.NextEventSequenceNumber), null), Once());
+    [Fact] void should_subscribe_to_stream() => appended_events_queues.Verify(_ => _.Subscribe(observer_key, event_types), Once());
 }

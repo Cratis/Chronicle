@@ -18,9 +18,8 @@ namespace Cratis.Chronicle.Grains.Observation.States.for_Observing.given;
 public class an_observing_state : Specification
 {
     protected Mock<IObserver> observer;
+
     protected Mock<IAppendedEventsQueues> appended_events_queues;
-    protected Mock<IAsyncStream<AppendedEvent>> stream;
-    protected Mock<StreamSubscriptionHandle<AppendedEvent>> stream_subscription;
     protected Observing state;
     protected ObserverState stored_state;
     protected ObserverState resulting_stored_state;
@@ -29,27 +28,34 @@ public class an_observing_state : Specification
     protected EventStoreName event_store_name;
     protected EventStoreNamespaceName event_store_namespace;
     protected EventSequenceId event_sequence_id;
-    protected IAsyncObserver<AppendedEvent> observed_stream;
     protected ObserverSubscription subscription;
+    protected AppendedEventsQueueSubscription queue_subscription;
+    protected ObserverKey observer_key;
+    protected Mock<IAppendedEventsQueue> appended_events_queue;
+    protected IEnumerable<EventType> event_types = [
+        new EventType(Guid.NewGuid().ToString(), 0),
+        new EventType(Guid.NewGuid().ToString(), 1)
+    ];
 
     void Establish()
     {
-        observer = new();
-        appended_events_queues = new();
-        stream = new();
-        stream_subscription = new();
-        stream.Setup(_ => _
-            .SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<EventSequenceNumberToken>(), null))
-            .ReturnsAsync((IAsyncObserver<AppendedEvent> o, EventSequenceNumberToken _, string __) =>
-            {
-                observed_stream = o;
-                return stream_subscription.Object;
-            });
-
-        observer_id = Guid.NewGuid().ToString();
         event_store_name = "some_event_store";
         event_store_namespace = "some_namespace";
         event_sequence_id = EventSequenceId.Log;
+
+        observer = new();
+        appended_events_queues = new();
+        appended_events_queue = new();
+        observer_id = Guid.NewGuid().ToString();
+        observer_key = new ObserverKey(
+            observer_id,
+            event_store_name,
+            event_store_namespace,
+            event_sequence_id);
+        appended_events_queues.Setup(_ => _.Subscribe(observer_key, IsAny<IEnumerable<EventType>>())).Returns(Task.FromResult(queue_subscription));
+        queue_subscription = new(observer_key, 0);
+        appended_events_queues.Setup(_ => _.Subscribe(IsAny<ObserverKey>(), event_types)).Returns(Task.FromResult(queue_subscription));
+
 
         state = new Observing(
             appended_events_queues.Object,
@@ -60,13 +66,15 @@ public class an_observing_state : Specification
         state.SetStateMachine(observer.Object);
         stored_state = new ObserverState
         {
+            ObserverId = observer_id,
+            EventTypes = event_types,
             RunningState = ObserverRunningState.Active,
         };
 
         subscription = new ObserverSubscription(
             observer_id,
             new(observer_id, event_store_name, event_store_namespace, event_sequence_id),
-            [],
+            event_types,
             typeof(object),
             SiloAddress.Zero,
             string.Empty);

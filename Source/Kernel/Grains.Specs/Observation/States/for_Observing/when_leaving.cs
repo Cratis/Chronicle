@@ -9,5 +9,5 @@ public class when_leaving : given.an_observing_state
 
     async Task Because() => await state.OnLeave(stored_state);
 
-    [Fact] void should_unsubscribe_from_stream() => stream_subscription.Verify(_ => _.UnsubscribeAsync(), Once());
+    [Fact] void should_unsubscribe_from_stream() => appended_events_queues.Verify(_ => _.Unsubscribe(queue_subscription), Once());
 }

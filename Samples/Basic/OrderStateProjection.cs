@@ -7,8 +7,6 @@ namespace Basic;
 
 public class OrderStateProjection : IProjectionFor<OrderState>
 {
-    public ProjectionId Identifier => "4c6f7eac-d74d-425b-b2fd-e32e8e365b32";
-
     public void Define(IProjectionBuilderFor<OrderState> builder) => builder
         .Children(_ => _.CartItems, cb => cb
             .IdentifiedBy(m => m.MaterialId)

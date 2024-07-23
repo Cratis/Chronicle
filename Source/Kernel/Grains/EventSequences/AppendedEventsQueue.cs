@@ -53,7 +53,9 @@ public class AppendedEventsQueue(IGrainFactory grainFactory) : Grain, IAppendedE
     /// <inheritdoc/>
     public Task Unsubscribe(ObserverKey observerKey)
     {
+#pragma warning disable MA0160 // Use ContainsKey instead of TryGetValue
         if (_observersByObserverKey.TryGetValue(observerKey, out _))
+#pragma warning restore MA0160 // Use ContainsKey instead of TryGetValue
         {
             _observersByObserverKey.Remove(observerKey);
             _subscriptionsByObserverKey[observerKey].Dispose();
