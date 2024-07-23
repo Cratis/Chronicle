@@ -8,8 +8,6 @@ namespace Cratis.Chronicle.Rules.for_Rules.for_RuleAttribute;
 public class MyRuleAttribute : RuleAttribute
 {
     public const string error_message = "The Error Message";
-    public override RuleId Identifier => "8ee57f0d-07b8-4255-a163-ef43aff0a52d";
-
     public bool simple_is_valid_return = true;
     public bool simple_is_valid_called;
     public object value_validated;

@@ -15,9 +15,11 @@ public class when_there_are_no_projections : given.all_dependencies
         client_artifacts.Setup(_ => _.Projections).Returns([]);
         projections = new Projections(
             event_store.Object,
+            event_types.Object,
             client_artifacts.Object,
             schema_generator.Object,
             model_name_resolver.Object,
+            event_serializer.Object,
             service_provider.Object,
             json_serializer_options);
     }

@@ -67,10 +67,10 @@ public class Projections : IProjections
 
         _clientArtifacts.Projections.ForEach(_ =>
         {
-            var immediateProjectionType = _.GetInterfaces().Single(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IProjectionFor<>));
+            var projectionType = _.GetInterfaces().Single(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IProjectionFor<>));
             GetType()
                 .GetMethod(nameof(HandleProjectionTypeCache), BindingFlags.NonPublic | BindingFlags.Instance)!
-                .MakeGenericMethod(immediateProjectionType.GetGenericArguments()[0])!
+                .MakeGenericMethod(projectionType.GetGenericArguments()[0])!
                 .Invoke(this, null);
         });
 
@@ -135,7 +135,7 @@ public class Projections : IProjections
 
         var eventsToApply = await Task.WhenAll(eventsToApplyTasks);
 
-        var immediateProjection = new ImmediateProjectionWithEventsToApply(
+        var projection = new ImmediateProjectionWithEventsToApply(
             projectionDefinition.Identifier,
             EventSequenceId.Log,
             modelKey,
@@ -143,7 +143,7 @@ public class Projections : IProjections
 
         // var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}/session/{correlationId}/with-events";
 
-        // var response = await _connection.PerformCommand(route, immediateProjection);
+        // var response = await _connection.PerformCommand(route, projection);
         // var element = (JsonElement)response.Response!;
         // var result = element.Deserialize<ImmediateProjectionResultRaw>(_jsonSerializerOptions)!;
 
@@ -156,13 +156,13 @@ public class Projections : IProjections
     public async Task DehydrateSession(CorrelationId correlationId, Type modelType, ModelKey modelKey)
     {
         var projectionDefinition = _definitionsByModelType[modelType];
-        var immediateProjection = new ImmediateProjection(
+        var projection = new ImmediateProjection(
             projectionDefinition.Identifier,
             EventSequenceId.Log,
             modelKey);
 
         // var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}/session/{correlationId}/dehydrate";
-        // await _connection.PerformCommand(route, immediateProjection);
+        // await _connection.PerformCommand(route, projection);
         throw new NotImplementedException();
     }
 
@@ -192,7 +192,7 @@ public class Projections : IProjections
 
     async Task<ImmediateProjectionResultRaw> GetInstanceByIdImplementation(ProjectionId identifier, ModelKey modelKey, CorrelationId? correlationId = default)
     {
-        var immediateProjection = new ImmediateProjection(
+        var projection = new ImmediateProjection(
             identifier,
             EventSequenceId.Log,
             modelKey);
@@ -202,7 +202,7 @@ public class Projections : IProjections
         // {
         //     route = $"{route}/session/{correlationId}";
         // }
-        // var result = await _connection.PerformCommand(route, immediateProjection);
+        // var result = await _connection.PerformCommand(route, projection);
         // var element = (JsonElement)result.Response!;
         // return element.Deserialize<ImmediateProjectionResultRaw>(_jsonSerializerOptions)!;
         throw new NotImplementedException();

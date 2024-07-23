@@ -19,7 +19,7 @@ public class when_filtering_on_model_properties_with_similar_name_are_set : give
         subject.OnNext(
             new ImportContext<Model, ExternalModel>(
                 new AdapterProjectionResult<Model>(
-                    new(0, default, default),
+                    new(0, default!, default!),
                     [new(nameof(Model.SomeString2))],
                     1),
                 changeset,

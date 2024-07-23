@@ -17,5 +17,5 @@ public class without_state : given.no_rules
 
     void Because() => rules.ProjectTo(rule, model_identifier);
 
-    [Fact] void should_not_get_instance_from_immediate_projection() => immediate_projections.Verify(_ => _.GetInstanceById(rule.Identifier.Value, IsAny<ModelKey>()), Never);
+    [Fact] void should_not_get_instance_from_immediate_projection() => projections.Verify(_ => _.GetInstanceById(rule.GetRuleId().Value, IsAny<ModelKey>()), Never);
 }

@@ -6,7 +6,7 @@ using ProtoBuf;
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
-/// Represents the result of an immediate projection.
+/// Represents the result of an projection.
 /// </summary>
 [ProtoContract]
 public class ImmediateProjectionResult

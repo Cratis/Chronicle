@@ -4,6 +4,8 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reducers;
 
+#nullable disable
+
 namespace Cratis.Chronicle.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method.with_nullable_disabled;
 
 public class and_signature_is_a_valid_synchronous_method_without_context : Specification
@@ -12,7 +14,7 @@ public class and_signature_is_a_valid_synchronous_method_without_context : Speci
     {
         public ReducerId Id => "55753433-5bbd-4a79-91b6-7b6231c52183";
 
-        public ReadModel Something(ValidEvent @event, ReadModel? current) => current;
+        public ReadModel Something(ValidEvent @event, ReadModel? current) => current!;
     }
 
     bool result;

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections;
 #pragma warning disable SA1402 // File may only contain a single type
 
 /// <summary>
-/// Represents the result of an immediate projection.
+/// Represents the result of an projection.
 /// </summary>
 /// <param name="Model">The instance of the Model.</param>
 /// <param name="AffectedProperties">Collection of properties that was set.</param>
@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Projections;
 public record ImmediateProjectionResult(object Model, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount);
 
 /// <summary>
-/// Represents the result of an immediate projection.
+/// Represents the result of an projection.
 /// </summary>
 /// <typeparam name="T">Type of model.</typeparam>
 /// <param name="Model">The instance of the model.</param>

@@ -10,7 +10,7 @@ public class when_creating_for_an_aggregate_without_state_provider : given.an_ag
     void Establish()
     {
         reducers_registrar.Setup(_ => _.HasReducerFor(typeof(StateForAggregateRoot))).Returns(false);
-        immediate_projections.Setup(_ => _.HasProjectionFor(typeof(StateForAggregateRoot))).Returns(false);
+        projections.Setup(_ => _.HasProjectionFor(typeof(StateForAggregateRoot))).Returns(false);
     }
 
     async Task Because() => result = await Catch.Exception(() => state_providers.CreateFor(aggregate_root));

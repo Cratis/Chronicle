@@ -13,7 +13,6 @@ public class all_dependencies : Specification
     protected EventSequenceId event_sequence_id;
     protected Mock<IReactionInvoker> reaction_invoker;
     protected Mock<ICausationManager> causation_manager;
-    protected Mock<IEventSerializer> event_serializer;
 
     void Establish()
     {
@@ -21,6 +20,5 @@ public class all_dependencies : Specification
         event_sequence_id = Guid.NewGuid().ToString();
         reaction_invoker = new();
         causation_manager = new();
-        event_serializer = new();
     }
 }

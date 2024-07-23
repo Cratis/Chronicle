@@ -7,7 +7,7 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents the result of an immediate projection.
+/// Represents the result of an projection.
 /// </summary>
 /// <param name="Model">The instance of the Model as <see cref="JsonObject"/>.</param>
 /// <param name="AffectedProperties">Collection of properties that was set.</param>

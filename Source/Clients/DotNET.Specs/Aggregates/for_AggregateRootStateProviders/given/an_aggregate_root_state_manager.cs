@@ -10,18 +10,18 @@ public class an_aggregate_root_state_manager : Specification
 {
     protected AggregateRootStateProviders state_providers;
     protected Mock<IReducersRegistrar> reducers_registrar;
-    protected Mock<IImmediateProjections> immediate_projections;
+    protected Mock<IProjections> projections;
 
     protected StatefulAggregateRoot aggregate_root;
 
     void Establish()
     {
         reducers_registrar = new();
-        immediate_projections = new();
+        projections = new();
 
         state_providers = new(
             reducers_registrar.Object,
-            immediate_projections.Object);
+            projections.Object);
 
         aggregate_root = new()
         {

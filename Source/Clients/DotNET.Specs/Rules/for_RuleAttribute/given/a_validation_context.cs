@@ -19,6 +19,6 @@ public class a_validation_context : Specification
         service_provider.Setup(_ => _.GetService(typeof(IRules))).Returns(rules.Object);
 
         model_instance = new();
-        validation_context = new(model_instance, service_provider.Object, new Dictionary<object, object>());
+        validation_context = new(model_instance, service_provider.Object, new Dictionary<object, object?>());
     }
 }

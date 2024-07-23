@@ -7,7 +7,7 @@ public class and_it_has_it : given.two_rules_with_projections
 {
     bool result;
 
-    void Because() => result = rules_projections.HasFor(SecondRule.RuleIdentifier);
+    void Because() => result = rules_projections.HasFor(typeof(SecondRule).GetRuleId());
 
     [Fact] void should_return_true() => result.ShouldBeTrue();
 }

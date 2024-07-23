@@ -18,7 +18,7 @@ public class when_filtering_on_properties_and_next_value_with_similar_name_is_ch
     void Because() =>
         subject.OnNext(
             new ImportContext<Model, ExternalModel>(
-                new AdapterProjectionResult<Model>(new(0, default, default), [], 0),
+                new AdapterProjectionResult<Model>(new(0, default!, default!), [], 0),
                 changeset,
                 events_to_append));
 

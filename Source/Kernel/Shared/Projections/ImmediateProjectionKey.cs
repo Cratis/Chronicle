@@ -7,7 +7,7 @@ using Cratis.Chronicle.Models;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents the compound key for an immediate projection.
+/// Represents the compound key for an projection.
 /// </summary>
 /// <param name="ProjectionId">The projection identifier.</param>
 /// <param name="EventStore">The event store name.</param>

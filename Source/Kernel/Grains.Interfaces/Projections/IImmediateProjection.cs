@@ -6,7 +6,7 @@ using Cratis.Chronicle.Projections;
 namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
-/// Defines an immediate projection.
+/// Defines an projection.
 /// </summary>
 /// <remarks>
 /// The compound identity is based on the actual event source id.
@@ -29,7 +29,7 @@ public interface IImmediateProjection : IGrainWithStringKey
     Task<ImmediateProjectionResult> GetCurrentModelInstanceWithAdditionalEventsApplied(IEnumerable<EventToApply> events);
 
     /// <summary>
-    /// Dehydrate the immediate projection instance.
+    /// Dehydrate the projection instance.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Dehydrate();

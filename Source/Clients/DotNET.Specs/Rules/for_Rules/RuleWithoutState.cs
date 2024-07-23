@@ -3,7 +3,4 @@
 
 namespace Cratis.Chronicle.Rules.for_Rules;
 
-public class RuleWithoutState : IRule
-{
-    public RuleId Identifier => "06185a2b-b024-4f31-aea9-0f7f11f99299";
-}
+public class RuleWithoutState : IRule;

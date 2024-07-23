@@ -11,18 +11,22 @@ namespace Cratis.Chronicle.Projections.for_Projections.given;
 public class all_dependencies : Specification
 {
     protected Mock<IEventStore> event_store;
+    protected Mock<IEventTypes> event_types;
     protected Mock<IClientArtifactsProvider> client_artifacts;
     protected Mock<IJsonSchemaGenerator> schema_generator;
     protected Mock<IModelNameResolver> model_name_resolver;
+    protected Mock<IEventSerializer> event_serializer;
     protected Mock<IServiceProvider> service_provider;
     protected JsonSerializerOptions json_serializer_options;
 
     void Establish()
     {
         event_store = new();
+        event_types = new();
         client_artifacts = new();
         schema_generator = new();
         model_name_resolver = new();
+        event_serializer = new();
         service_provider = new();
         json_serializer_options = new();
     }

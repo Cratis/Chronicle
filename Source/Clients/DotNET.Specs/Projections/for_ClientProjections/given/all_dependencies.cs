@@ -9,14 +9,12 @@ namespace Cratis.Chronicle.Projections.for_ClientProjections.given;
 public class all_dependencies : Specification
 {
     protected Mock<IProjections> projections;
-    protected Mock<IImmediateProjections> immediate_projections;
     protected Mock<IAdapters> adapters;
     protected Mock<IRulesProjections> rules_projections;
 
     void Establish()
     {
         projections = new();
-        immediate_projections = new();
         adapters = new();
         rules_projections = new();
     }

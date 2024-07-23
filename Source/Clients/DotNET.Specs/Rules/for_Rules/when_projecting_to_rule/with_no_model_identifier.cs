@@ -21,7 +21,7 @@ public class with_no_model_identifier : given.no_rules
     void Establish()
     {
         rule = new();
-        rules_projections.Setup(_ => _.HasFor(rule.Identifier)).Returns(true);
+        rules_projections.Setup(_ => _.HasFor(rule.GetRuleId())).Returns(true);
 
         var jsonObject = new JsonObject
         {
@@ -34,8 +34,8 @@ public class with_no_model_identifier : given.no_rules
             }
         };
 
-        immediate_projections
-            .Setup(_ => _.GetInstanceById(rule.Identifier.Value, IsAny<ModelKey>()))
+        projections
+            .Setup(_ => _.GetInstanceById(rule.GetRuleId().Value, IsAny<ModelKey>()))
             .Returns(Task.FromResult(new ImmediateProjectionResultRaw(jsonObject, [], 0)));
     }
 

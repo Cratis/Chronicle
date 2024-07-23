@@ -35,7 +35,11 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
     {
-        var eventType = eventTypes.GetEventTypeFor(@event.GetType());
+        var eventClrType = @event.GetType();
+
+        ThrowIfUnknownEventType(eventTypes, eventClrType);
+
+        var eventType = eventTypes.GetEventTypeFor(eventClrType);
         var content = await eventSerializer.Serialize(@event);
         var causationChain = causationManager.GetCurrentChain().Select(_ => new Contracts.Auditing.Causation
         {
@@ -85,4 +89,12 @@ public class EventSequence(
 
     /// <inheritdoc/>
     public Task Redact(EventSourceId eventSourceId, RedactionReason? reason = null, params Type[] eventTypes) => throw new NotImplementedException();
+
+    void ThrowIfUnknownEventType(IEventTypes eventTypes, Type eventClrType)
+    {
+        if (!eventTypes.HasFor(eventClrType))
+        {
+            throw new UnknownEventType(eventClrType);
+        }
+    }
 }

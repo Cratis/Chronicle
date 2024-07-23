@@ -19,11 +19,6 @@ public abstract class RulesFor<TSelf, TCommand> : AbstractValidator<TCommand>, I
     readonly InlineValidator<TSelf> _selfValidator = [];
 
     /// <summary>
-    /// Gets the unique identifier for the business rules.
-    /// </summary>
-    public abstract RuleId Identifier { get; }
-
-    /// <summary>
     /// Define state that will be used by rules.
     /// </summary>
     /// <param name="builder"><see cref="IProjectionBuilderFor{T}"/> for building the state.</param>

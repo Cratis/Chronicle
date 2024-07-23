@@ -7,7 +7,7 @@ using Cratis.Chronicle.Models;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents the payload for performing an immediate projection.
+/// Represents the payload for performing an projection.
 /// </summary>
 /// <param name="ProjectionId">The unique identifier of the projection.</param>
 /// <param name="EventSequenceId">The event sequence to project from.</param>

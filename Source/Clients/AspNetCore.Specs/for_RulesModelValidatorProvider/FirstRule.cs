@@ -7,5 +7,4 @@ namespace Cratis.Chronicle.AspNetCore.Rules.for_RulesModelValidatorProvider;
 
 public class FirstRule : IRule
 {
-    public RuleId Identifier => "9bd24e00-13c2-4f05-a17d-5f937eee3397";
 }

@@ -35,9 +35,11 @@ public class when_there_are_two_projections : given.all_dependencies
 
         projections = new Projections(
             event_store.Object,
+            event_types.Object,
             client_artifacts.Object,
             schema_generator.Object,
             model_name_resolver.Object,
+            event_serializer.Object,
             service_provider.Object,
             json_serializer_options);
     }

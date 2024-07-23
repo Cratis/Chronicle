@@ -17,25 +17,21 @@ public class when_there_are_projections_from_all_sources : given.all_dependencie
     ClientProjections definitions;
     IEnumerable<ProjectionDefinition> all;
     IEnumerable<ProjectionDefinition> projections_from_projections;
-    IEnumerable<ProjectionDefinition> projections_from_immediate_projections;
     IEnumerable<ProjectionDefinition> projections_from_adapters;
     IEnumerable<ProjectionDefinition> projections_from_rules_projections;
 
     void Establish()
     {
         projections_from_projections = CreateProjectionDefinitions();
-        projections_from_immediate_projections = CreateProjectionDefinitions();
         projections_from_adapters = CreateProjectionDefinitions();
         projections_from_rules_projections = CreateProjectionDefinitions();
 
         projections.Setup(_ => _.Definitions).Returns(projections_from_projections.ToImmutableList());
-        immediate_projections.Setup(_ => _.Definitions).Returns(projections_from_immediate_projections.ToImmutableList());
         adapters.Setup(_ => _.Definitions).Returns(projections_from_adapters.ToImmutableList());
         rules_projections.Setup(_ => _.Definitions).Returns(projections_from_rules_projections.ToImmutableList());
 
         definitions = new(
             projections.Object,
-            immediate_projections.Object,
             adapters.Object,
             rules_projections.Object);
     }
@@ -43,7 +39,6 @@ public class when_there_are_projections_from_all_sources : given.all_dependencie
     void Because() => all = definitions.Definitions;
 
     [Fact] void should_contain_projections_from_projections() => all.ShouldContain(projections_from_projections);
-    [Fact] void should_contain_projections_from_immediate_projections() => all.ShouldContain(projections_from_immediate_projections);
     [Fact] void should_contain_projections_from_adapters() => all.ShouldContain(projections_from_adapters);
     [Fact] void should_contain_projections_from_rules_projections() => all.ShouldContain(projections_from_rules_projections);
 

@@ -3,9 +3,4 @@
 
 namespace Cratis.Chronicle.Rules.for_RulesProjections;
 
-public class SecondRule : RulesFor<SecondRule, object>
-{
-    public static RuleId RuleIdentifier = "f97e4ff5-7b86-4927-ae14-d6c567b78851";
-
-    public override RuleId Identifier => RuleIdentifier;
-}
+public class SecondRule : RulesFor<SecondRule, object>;
