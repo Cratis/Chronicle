@@ -17,7 +17,7 @@ public class when_asking_for_known_type : Specification
 
     void Establish()
     {
-        model = new("Something", null);
+        model = new("Something", null!);
         store = new();
         factory = new();
         factory.SetupGet(_ => _.TypeId).Returns(type);
