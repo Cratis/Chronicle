@@ -2,11 +2,11 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <ApplicationModel>11.2.0</ApplicationModel>
-    <Orleans>8.1.0</Orleans>
+    <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Cratis.Fundamentals" Version="5.3.1" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="5.2.7" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="5.3.1" />
     <PackageVersion Include="Cratis.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.MongoDB" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Orleans" Version="$(ApplicationModel)" />
@@ -29,9 +29,9 @@
     </PackageVersion>
     <PackageVersion Include="protobuf-net.Grpc" Version="1.1.1" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.1.1" />
-    <PackageVersion Include="Grpc.Net.Client" Version="2.63.0" />
+    <PackageVersion Include="Grpc.Net.Client" Version="2.64.0" />
     <PackageVersion Include="mongodb.driver" Version="2.26.0" />
-    <PackageVersion Include="OrleansTestKit" Version="8.1.0" />
+    <PackageVersion Include="OrleansTestKit" Version="8.2.0" />
     <PackageVersion Include="serilog" Version="4.0.0" />
     <PackageVersion Include="Serilog.AspNetCore" Version="8.0.1" />
     <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
@@ -47,7 +47,7 @@
     <PackageVersion Include="System.Reactive" Version="6.0.1" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageVersion Include="automapper" Version="13.0.1" />
-    <PackageVersion Include="Azure.Data.Tables" Version="12.8.3" />
+    <PackageVersion Include="Azure.Data.Tables" Version="12.9.0" />
     <PackageVersion Include="FluentValidation" Version="11.9.2" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
