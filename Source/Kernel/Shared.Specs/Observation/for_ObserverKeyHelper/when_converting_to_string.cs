@@ -14,5 +14,5 @@ public class when_converting_to_string : Specification
 
     void Because() => result = input.ToString();
 
-    [Fact] void should_combine_correctly() => result.ShouldEqual($"{input.EventStore}+{input.Namespace}+{input.EventSequenceId}");
+    [Fact] void should_combine_correctly() => result.ShouldEqual($"{input.ObserverId}+{input.EventStore}+{input.Namespace}+{input.EventSequenceId}");
 }
