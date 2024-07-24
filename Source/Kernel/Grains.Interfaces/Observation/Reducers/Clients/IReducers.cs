@@ -7,9 +7,9 @@ using Cratis.Chronicle.Observation.Reducers;
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
 /// <summary>
-/// Defines a grain for working with all <see cref="IClientReducer">client reducers</see>.
+/// Defines a grain for working with all <see cref="IReducer">client reducers</see>.
 /// </summary>
-public interface IClientReducers : IGrainWithStringKey
+public interface IReducers : IGrainWithStringKey
 {
     /// <summary>
     /// Register a collection of client reducers.

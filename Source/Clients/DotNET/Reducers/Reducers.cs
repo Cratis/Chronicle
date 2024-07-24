@@ -87,7 +87,7 @@ public class Reducers(
         }
 
         // var route = $"/api/events/store/{eventStore}/reducers/register/{_connection.ConnectionId}";
-        var registrations = _handlers.Values.Select(_ => new ReducerDefinition()
+        var registrations = _handlers.Values.Select(_ => new RegisterReducer()
         {
             ReducerId = _.Id,
             EventSequenceId = _.EventSequenceId,

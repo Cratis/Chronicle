@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grains.Observation.Clients;
 using Cratis.Chronicle.Grains.Observation.Placement;
 using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.Logging;
@@ -22,11 +23,11 @@ namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ReactionSubscriber"/> class.
 /// </remarks>
-/// <param name="observerMediator"><see cref="IReactionMediator"/> for notifying actual clients.</param>
+/// <param name="observerMediator"><see cref="IObserverMediator"/> for notifying actual clients.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [ConnectedObserverPlacement]
 public class ReactionSubscriber(
-    IReactionMediator observerMediator,
+    IObserverMediator observerMediator,
     ILogger<ReactionSubscriber> logger) : Grain, IReactionSubscriber
 {
     EventStoreName _eventStore = EventStoreName.NotSet;

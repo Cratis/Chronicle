@@ -7,15 +7,15 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
 using Cratis.DependencyInjection;
 
-namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Clients;
 
 /// <summary>
-/// Represents an implementation of <see cref="IReactionMediator"/>.
+/// Represents an implementation of <see cref="IObserverMediator"/>.
 /// </summary>
 [Singleton]
-public class ReactionMediator : IReactionMediator
+public class ObserverMediator : IObserverMediator
 {
-    readonly ConcurrentDictionary<ReactionMediatorKey, EventsObserver> _observers = new();
+    readonly ConcurrentDictionary<ObserverMediatorKey, EventsObserver> _observers = new();
 
     /// <inheritdoc/>
     public void Subscribe(

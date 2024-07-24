@@ -5,12 +5,12 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
 
-namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Clients;
 
 /// <summary>
 /// Defines a system that acts as an in-memory mediator between the actual client connected and an observer subscriber.
 /// </summary>
-public interface IReactionMediator
+public interface IObserverMediator
 {
     /// <summary>
     /// Subscribe to events for a specific <see cref="ConnectionId"/>.

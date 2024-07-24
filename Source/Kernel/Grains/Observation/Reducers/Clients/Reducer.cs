@@ -10,16 +10,16 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClientReducer"/>.
+/// Represents an implementation of <see cref="IReducer"/>.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ClientReducer"/>.
+/// Initializes a new instance of the <see cref="Reducer"/>.
 /// </remarks>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class ClientReducer(
+public class Reducer(
     ILocalSiloDetails localSiloDetails,
-    ILogger<ClientReducer> logger) : Grain, IClientReducer, INotifyClientDisconnected
+    ILogger<Reducer> logger) : Grain, IReducer, INotifyClientDisconnected
 {
     ObserverKey? _observerKey;
 
@@ -32,19 +32,20 @@ public class ClientReducer(
     }
 
     /// <inheritdoc/>
-    public async Task Start(ConnectionId connectionId, IEnumerable<EventTypeWithKeyExpression> eventTypes)
+    public async Task Start(IEnumerable<EventTypeWithKeyExpression> eventTypes)
     {
         logger.Starting(_observerKey!.EventStore, _observerKey.ObserverId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
-        var observer = GrainFactory.GetGrain<IObserver>(_observerKey.ObserverId!, _observerKey!);
-        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
 
-        this.RegisterGrainTimer(HandleConnectedClientsSubscription, new() { DueTime = TimeSpan.Zero, Period = TimeSpan.FromSeconds(5) });
-        var connectedClient = await connectedClients.GetConnectedClient(connectionId);
-        await observer.Subscribe<IClientReducerSubscriber>(
-            ObserverType.Reducer,
-            eventTypes.Select(_ => _.EventType).ToArray(),
-            localSiloDetails.SiloAddress,
-            connectedClient);
+        // var observer = GrainFactory.GetGrain<IObserver>(_observerKey.ObserverId!, _observerKey!);
+        // var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
+        // this.RegisterGrainTimer(HandleConnectedClientsSubscription, new() { DueTime = TimeSpan.Zero, Period = TimeSpan.FromSeconds(5) });
+        // var connectedClient = await connectedClients.GetConnectedClient(connectionId);
+        // await observer.Subscribe<IReducerSubscriber>(
+        //     ObserverType.Reducer,
+        //     eventTypes.Select(_ => _.EventType).ToArray(),
+        //     localSiloDetails.SiloAddress,
+        //     connectedClient);
+        await Task.CompletedTask;
     }
 
     /// <inheritdoc/>

@@ -9,16 +9,16 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClientReducers"/>.
+/// Represents an implementation of <see cref="IReducers"/>.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ClientReducers"/> class.
+/// Initializes a new instance of the <see cref="Reducers"/> class.
 /// </remarks>
 /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class ClientReducers(
+public class Reducers(
     IKernel kernel,
-    ILogger<ClientReducers> logger) : Grain, IClientReducers
+    ILogger<Reducers> logger) : Grain, IReducers
 {
     /// <inheritdoc/>
     public async Task Register(
@@ -41,8 +41,8 @@ public class ClientReducers(
                     definition.EventSequenceId);
 
                 var key = new ObserverKey(definition.ReducerId, eventStoreName, @namespace, definition.EventSequenceId);
-                var reducer = GrainFactory.GetGrain<IClientReducer>(key);
-                await reducer.Start(connectionId, definition.EventTypes);
+                var reducer = GrainFactory.GetGrain<IReducer>(key);
+                await reducer.Start(definition.EventTypes);
             }
         }
     }

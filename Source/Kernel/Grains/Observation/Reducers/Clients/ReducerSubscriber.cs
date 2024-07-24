@@ -14,22 +14,22 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClientReducerSubscriber"/>.
+/// Represents an implementation of <see cref="IReducerSubscriber"/>.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ClientReducerSubscriber"/> class.
+/// Initializes a new instance of the <see cref="ReducerSubscriber"/> class.
 /// </remarks>
 /// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
 /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> for connecting to the client.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and <see cref="ExpandoObject"/>.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class ClientReducerSubscriber(
+public class ReducerSubscriber(
     IKernel kernel,
     IHttpClientFactory httpClientFactory,
     IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<ClientReducerSubscriber> logger) : Grain, IClientReducerSubscriber
+    ILogger<ReducerSubscriber> logger) : Grain, IReducerSubscriber
 {
     readonly IKernel _kernel = kernel;
     EventStoreName _eventStore = EventStoreName.NotSet;

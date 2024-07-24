@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
-internal static partial class ClientReducerSubscriberLogMessages
+internal static partial class ReducerSubscriberLogMessages
 {
     [LoggerMessage(LogLevel.Trace, "Reducer {ReducerId} in event store {EventStore} for namespace {Namespace} received event of type {EventTypeId} in sequence {EventSequenceId} with sequence number {EventSequenceNumber}")]
-    internal static partial void EventReceived(this ILogger<ClientReducerSubscriber> logger, ReducerId reducerId, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventTypeId eventTypeId, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
+    internal static partial void EventReceived(this ILogger<ReducerSubscriber> logger, ReducerId reducerId, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventTypeId eventTypeId, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
 }
