@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Namespaces;
+using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
 
 namespace Cratis.Chronicle.Storage;
@@ -26,6 +27,11 @@ public interface IEventStoreStorage
     /// Gets the <see cref="IEventTypesStorage"/> for the event store.
     /// </summary>
     IEventTypesStorage EventTypes { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IReducerDefinitionsStorage"/> for the event store.
+    /// </summary>
+    IReducerDefinitionsStorage Reducers { get; }
 
     /// <summary>
     /// Gets the <see cref="IProjectionDefinitionsStorage"/> for the event store.

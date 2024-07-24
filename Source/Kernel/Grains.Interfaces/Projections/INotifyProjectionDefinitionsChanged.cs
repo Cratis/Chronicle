@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 public interface INotifyProjectionDefinitionsChanged : IGrainObserver
 {
     /// <summary>
-    /// Called when either the projection or the pipeline definition is changed.
+    /// Called when a projection definition is changed.
     /// </summary>
     void OnProjectionDefinitionsChanged();
 }

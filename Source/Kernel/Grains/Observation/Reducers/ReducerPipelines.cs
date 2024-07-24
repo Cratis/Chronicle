@@ -27,10 +27,10 @@ public class ReducerPipelines(
     /// <inheritdoc/>
     public async Task<IReducerPipeline> GetFor(ReducerDefinition definition)
     {
-        if (!_pipelines.TryGetValue(definition.ReducerId, out var pipeline))
+        if (!_pipelines.TryGetValue(definition.Identifier, out var pipeline))
         {
             pipeline = await CreatePipeline(definition);
-            _pipelines[definition.ReducerId] = pipeline;
+            _pipelines[definition.Identifier] = pipeline;
         }
         return pipeline;
     }

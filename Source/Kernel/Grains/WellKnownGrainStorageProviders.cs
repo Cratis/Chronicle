@@ -52,4 +52,14 @@ public static class WellKnownGrainStorageProviders
     /// The name of the storage provider used for projections manager.
     /// </summary>
     public const string ProjectionsManager = "projections-manager";
+
+    /// <summary>
+    /// The name of the storage provider used for reducers.
+    /// </summary>
+    public const string Reducers = "reducers";
+
+    /// <summary>
+    /// The name of the storage provider used for reducers manager.
+    /// </summary>
+    public const string ReducersManager = "reducers-manager";
 }

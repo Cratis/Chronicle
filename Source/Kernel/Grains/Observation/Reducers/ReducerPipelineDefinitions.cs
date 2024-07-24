@@ -26,7 +26,7 @@ public class ReducerPipelineDefinitions : IReducerPipelineDefinitions
     /// <inheritdoc/>
     public Task Register(ReducerDefinition definition)
     {
-        _definitions[definition.ReducerId] = definition;
+        _definitions[definition.Identifier] = definition;
         return Task.CompletedTask;
     }
 

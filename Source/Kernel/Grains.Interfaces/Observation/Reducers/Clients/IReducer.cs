@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation.Reducers;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
@@ -12,9 +11,16 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 public interface IReducer : IGrainWithStringKey
 {
     /// <summary>
-    /// Start the observer.
+    /// Set the reducer definition and subscribe as an observer.
     /// </summary>
-    /// <param name="eventTypes">The <see cref="EventType">event types</see> the observer is expecting.</param>
+    /// <param name="definition"><see cref="ReducerDefinition"/> to refresh with.</param>
     /// <returns>Awaitable task.</returns>
-    Task Start(IEnumerable<EventTypeWithKeyExpression> eventTypes);
+    Task SetDefinitionAndSubscribe(ReducerDefinition definition);
+
+    /// <summary>
+    /// Subscribe to changes in reducer definition changes.
+    /// </summary>
+    /// <param name="subscriber"><see cref="INotifyReducerDefinitionsChanged"/> to subscribe.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SubscribeDefinitionsChanged(INotifyReducerDefinitionsChanged subscriber);
 }
