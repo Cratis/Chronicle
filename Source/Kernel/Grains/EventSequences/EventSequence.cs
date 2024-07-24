@@ -221,6 +221,7 @@ public class EventSequence(
 
     /// <inheritdoc/>
     public async Task AppendMany(
+        EventSourceId eventSourceId,
         IEnumerable<EventToAppend> events,
         IEnumerable<Causation> causation,
         Identity causedBy)
@@ -228,7 +229,7 @@ public class EventSequence(
         foreach (var @event in events)
         {
             await Append(
-                @event.EventSourceId,
+                eventSourceId,
                 @event.EventType,
                 @event.Content,
                 causation,

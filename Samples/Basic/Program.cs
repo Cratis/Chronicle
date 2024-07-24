@@ -18,6 +18,11 @@ var eventStore = client.GetEventStore(Guid.Empty.ToString());
 await eventStore.DiscoverAll();
 await eventStore.RegisterAll();
 
+var order = await eventStore.AggregateRootFactory.Get<Order>("91541f83-ae49-4d50-a88d-18fb29d2b98f");
+order.DoStuff();
+order.DoOtherStuff();
+await order.Commit();
+
 async Task AddItemToCart()
 {
     await eventStore.EventLog.Append(
@@ -91,10 +96,6 @@ while (true)
             break;
 
         case ConsoleKey.A:
-            var order = await eventStore.AggregateRootFactory.Get<Order>("91541f83-ae49-4d50-a88d-18fb29d2b98f");
-            order.DoStuff();
-            order.DoOtherStuff();
-            await order.Commit();
             break;
     }
 }

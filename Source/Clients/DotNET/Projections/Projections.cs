@@ -220,7 +220,7 @@ public class Projections : IProjections
         JsonSerializerOptions jsonSerializerOptions) =>
         clientArtifacts.Projections
                 .ToDictionary(
-                    _ => _,
+                    _ => _.GetReadModelType(),
                     _ =>
                     {
                         var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;

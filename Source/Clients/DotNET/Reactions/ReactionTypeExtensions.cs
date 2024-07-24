@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Reactions.Validators;
 using Cratis.Reflection;
 
 namespace Cratis.Chronicle.Reactions;
@@ -10,7 +11,7 @@ namespace Cratis.Chronicle.Reactions;
 /// <summary>
 /// Extension methods for working with reactions and type discovery.
 /// </summary>
-public static class TypesExtensions
+public static class ReactionTypeExtensions
 {
     /// <summary>
     /// Get the reaction id for a reaction type.
@@ -19,6 +20,7 @@ public static class TypesExtensions
     /// <returns>The <see cref="ReactionId"/> for the type.</returns>
     public static ReactionId GetReactionId(this Type type)
     {
+        TypeMustImplementReaction.ThrowIfTypeDoesNotImplementReaction(type);
         var reactionAttribute = type.GetCustomAttribute<ReactionAttribute>();
         var id = reactionAttribute?.Id.Value ?? string.Empty;
         return id switch
@@ -35,6 +37,7 @@ public static class TypesExtensions
     /// <returns>The <see cref="EventSequenceId"/> for the type.</returns>
     public static EventSequenceId GetEventSequenceId(this Type type)
     {
+        TypeMustImplementReaction.ThrowIfTypeDoesNotImplementReaction(type);
         var reactionAttribute = type.GetCustomAttribute<ReactionAttribute>();
         return reactionAttribute?.EventSequenceId.Value ?? EventSequenceId.Log;
     }

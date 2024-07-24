@@ -41,12 +41,7 @@ public class EventSequence(
 
         var eventType = eventTypes.GetEventTypeFor(eventClrType);
         var content = await eventSerializer.Serialize(@event);
-        var causationChain = causationManager.GetCurrentChain().Select(_ => new Contracts.Auditing.Causation
-        {
-            Occurred = _.Occurred!,
-            Type = _.Type,
-            Properties = _.Properties
-        }).ToList();
+        var causationChain = causationManager.GetCurrentChain().ToContract();
         var identity = identityProvider.GetCurrent();
         await connection.Services.EventSequences.Append(new()
         {
@@ -66,7 +61,30 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events) => throw new NotImplementedException();
+    public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events)
+    {
+        var eventsToAppend = events.Select(@event =>
+        {
+            var eventType = eventTypes.GetEventTypeFor(@event.GetType());
+            return new Contracts.Events.EventToAppend
+            {
+                EventType = eventType.ToContract(),
+                Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString()
+            };
+        }).ToList();
+        var causationChain = causationManager.GetCurrentChain().ToContract();
+        var identity = identityProvider.GetCurrent();
+        await connection.Services.EventSequences.AppendMany(new()
+        {
+            EventStoreName = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = eventSourceId,
+            Events = eventsToAppend,
+            Causation = causationChain,
+            CausedBy = identity.ToContract()
+        });
+    }
 
     /// <inheritdoc/>
     public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes) => throw new NotImplementedException();

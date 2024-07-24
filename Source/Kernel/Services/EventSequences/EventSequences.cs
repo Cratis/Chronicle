@@ -8,6 +8,7 @@ using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
+using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.EventSequences;
 
@@ -24,7 +25,7 @@ public class EventSequences(
     JsonSerializerOptions jsonSerializerOptions) : IEventSequences
 {
     /// <inheritdoc/>
-    public async Task<AppendResponse> Append(AppendRequest request)
+    public async Task<AppendResponse> Append(AppendRequest request, CallContext context = default)
     {
         var eventSequence = GetEventSequence(request.EventStoreName, request.Namespace, request.EventSequenceId);
         await eventSequence.Append(
@@ -35,6 +36,19 @@ public class EventSequences(
             request.CausedBy.ToChronicle());
 
         return new AppendResponse();
+    }
+
+    /// <inheritdoc/>
+    public async Task<AppendManyResponse> AppendMany(AppendManyRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequence(request.EventStoreName, request.Namespace, request.EventSequenceId);
+        await eventSequence.AppendMany(
+            request.EventSourceId,
+            request.Events.ToChronicle(),
+            request.Causation.ToChronicle(),
+            request.CausedBy.ToChronicle());
+
+        return new AppendManyResponse();
     }
 
     Grains.EventSequences.IEventSequence GetEventSequence(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>

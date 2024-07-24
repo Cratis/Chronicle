@@ -53,7 +53,7 @@ public class Reducers(
 
         _handlers = clientArtifacts.Reducers
                             .ToDictionary(
-                                _ => _,
+                                _ => _.GetReadModelType(),
                                 reducerType =>
                                 {
                                     var readModelType = reducerType.GetReadModelType();

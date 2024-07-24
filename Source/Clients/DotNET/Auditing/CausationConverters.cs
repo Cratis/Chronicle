@@ -13,8 +13,8 @@ public static class CausationConverters
     /// </summary>
     /// <param name="causations">Collection of <see cref="Causation"/> to convert.</param>
     /// <returns>Converted collection of <see cref="Contracts.Auditing.Causation"/>.</returns>
-    public static IEnumerable<Contracts.Auditing.Causation> ToContract(this IEnumerable<Causation> causations) =>
-        causations.Select(c => c.ToContract()).ToArray();
+    public static IList<Contracts.Auditing.Causation> ToContract(this IEnumerable<Causation> causations) =>
+        causations.Select(c => c.ToContract()).ToList();
 
     /// <summary>
     /// Convert to contract representation.

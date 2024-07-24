@@ -45,7 +45,6 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
         _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
         _modelName = modelNameResolver.GetNameFor(typeof(TModel));
-        _eventSequenceId = GetType().GetEventSequenceId();
     }
 
     /// <inheritdoc/>

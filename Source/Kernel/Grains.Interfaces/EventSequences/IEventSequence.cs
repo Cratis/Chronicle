@@ -71,11 +71,12 @@ public interface IEventSequence : IGrainWithStringKey
     /// <summary>
     /// Append a single event to the event store.
     /// </summary>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="events">Collection of <see cref="EventToAppend">events</see> to append.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the events, defined by <see cref="Identity"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task AppendMany(IEnumerable<EventToAppend> events, IEnumerable<Causation> causation, Identity causedBy);
+    Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventToAppend> events, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Compensate a specific event in the event store.

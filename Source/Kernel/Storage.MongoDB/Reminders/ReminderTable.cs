@@ -43,7 +43,7 @@ public class ReminderTable(
         var key = GetKeyFrom(grainId, reminderName);
         var filter = GetKeyFilterFor(key);
 
-        logger.ReadingSpecificReminderForGrain(grainId.GetGuidKey().ToString(), reminderName);
+        logger.ReadingSpecificReminderForGrain(grainId.Key.ToString()!, reminderName);
 
         var result = await GetCollection().FindAsync(filter);
         var entries = result.ToList();
@@ -54,11 +54,12 @@ public class ReminderTable(
     /// <inheritdoc/>
     public async Task<ReminderTableData> ReadRows(GrainId grainId)
     {
-        logger.ReadingAllRemindersForGrain(grainId.GetGuidKey().ToString());
+        var key = grainId.Key.ToString()!;
+        logger.ReadingAllRemindersForGrain(key);
 
         var filter = Builders<BsonDocument>.Filter.And(
             Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(ServiceIdProperty), clusterOptions.Value.ServiceId),
-            Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(GrainKeyProperty), grainId.GetGuidKey().ToString()));
+            Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(GrainKeyProperty), key));
 
         var result = await GetCollection().FindAsync(filter);
         var entries = result.ToList().Select(Deserialize);
@@ -117,7 +118,7 @@ public class ReminderTable(
             var bson = BsonDocument.Parse(json);
             var hash = (long)entry.GrainId.GetUniformHashCode();
             bson[ETagProperty] = "1"; // TODO: What do we do with ETag ??
-            bson[GrainKeyProperty] = entry.GrainId.GetGuidKey().ToString();
+            bson[GrainKeyProperty] = entry.GrainId.Key.ToString();
             bson[GrainHashProperty] = hash;
             bson[ServiceIdProperty] = clusterOptions.Value.ServiceId;
 
@@ -145,5 +146,5 @@ public class ReminderTable(
 
     FilterDefinition<BsonDocument> GetKeyFilterFor(string key) => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>("_id"), key);
 
-    string GetKeyFrom(GrainId grainId, string reminderName) => $"{grainId.GetGuidKey()} : {reminderName}";
+    string GetKeyFrom(GrainId grainId, string reminderName) => $"{grainId.Key} : {reminderName}";
 }

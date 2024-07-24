@@ -9,7 +9,6 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// <summary>
 /// Represents the payload for appending an event.
 /// </summary>
-/// <param name="EventSourceId">The <see cref="EventSourceId"/> to append for.</param>
 /// <param name="EventType">The <see cref="EventType">type of event</see> to append.</param>
 /// <param name="Content">The JSON payload of the event.</param>
-public record EventToAppend(EventSourceId EventSourceId, EventType EventType, JsonObject Content);
+public record EventToAppend(EventType EventType, JsonObject Content);

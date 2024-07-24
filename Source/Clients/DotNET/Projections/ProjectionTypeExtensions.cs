@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Projections.Validators;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -18,6 +19,7 @@ public static class ProjectionTypeExtensions
     /// <returns>The <see cref="ProjectionId"/> for the type.</returns>
     public static ProjectionId GetProjectionId(this Type type)
     {
+        TypeMustImplementProjection.ThrowIfTypeDoesNotImplementProjection(type);
         var projectionAttribute = type.GetCustomAttribute<ProjectionAttribute>();
         var id = projectionAttribute?.Id.Value ?? string.Empty;
         return id switch
@@ -34,7 +36,21 @@ public static class ProjectionTypeExtensions
     /// <returns>The <see cref="EventSequenceId"/> for the type.</returns>
     public static EventSequenceId GetEventSequenceId(this Type type)
     {
+        TypeMustImplementProjection.ThrowIfTypeDoesNotImplementProjection(type);
         var projectionAttribute = type.GetCustomAttribute<ProjectionAttribute>();
         return projectionAttribute?.EventSequenceId.Value ?? EventSequenceId.Log;
+    }
+
+    /// <summary>
+    /// Get the type of the read model for a reducer.
+    /// </summary>
+    /// <param name="type">Reducer type to get for.</param>
+    /// <returns>Type of read model.</returns>
+    public static Type GetReadModelType(this Type type)
+    {
+        TypeMustImplementProjection.ThrowIfTypeDoesNotImplementProjection(type);
+        var interfaces = type.GetInterfaces();
+        var reducerInterface = interfaces.Single(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IProjectionFor<>));
+        return reducerInterface.GetGenericArguments()[0];
     }
 }
