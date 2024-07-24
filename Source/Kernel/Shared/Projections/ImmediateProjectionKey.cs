@@ -14,14 +14,14 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="Namespace">The namespace within the event store.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
 /// <param name="ModelKey">The event source identifier.</param>
-/// <param name="CorrelationId">The optional correlation identifier.</param>
+/// <param name="SessionId">Optional projection session identifier.</param>
 public record ImmediateProjectionKey(
     ProjectionId ProjectionId,
     EventStoreName EventStore,
     EventStoreNamespaceName Namespace,
     EventSequenceId EventSequenceId,
     ModelKey ModelKey,
-    CorrelationId? CorrelationId = default)
+    ProjectionSessionId? SessionId = default)
 {
     /// <summary>
     /// Implicitly convert from <see cref="ProjectionKey"/> to string.
@@ -32,9 +32,9 @@ public record ImmediateProjectionKey(
     /// <inheritdoc/>
     public override string ToString()
     {
-        if (CorrelationId != default)
+        if (SessionId != default)
         {
-            return $"{ProjectionId}+{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}+{CorrelationId}";
+            return $"{ProjectionId}+{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}+{SessionId}";
         }
 
         return $"{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}";
@@ -55,8 +55,8 @@ public record ImmediateProjectionKey(
         var modelKey = (ModelKey)elements[4];
         if (elements.Length == 6)
         {
-            var correlationId = (CorrelationId)elements[5];
-            return new(projectionId, eventStore, @namespace, eventSequenceId, modelKey, correlationId);
+            var sessionId = (ProjectionSessionId)elements[5];
+            return new(projectionId, eventStore, @namespace, eventSequenceId, modelKey, sessionId);
         }
         return new(projectionId, eventStore, @namespace, eventSequenceId, modelKey);
     }

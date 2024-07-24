@@ -36,7 +36,7 @@ public class with_no_model_identifier : given.no_rules
 
         projections
             .Setup(_ => _.GetInstanceById(rule.GetRuleId().Value, IsAny<ModelKey>()))
-            .Returns(Task.FromResult(new ImmediateProjectionResultRaw(jsonObject, [], 0)));
+            .Returns(Task.FromResult(new ProjectionResultRaw(jsonObject, [], 0)));
     }
 
     void Because() => rules.ProjectTo(rule);

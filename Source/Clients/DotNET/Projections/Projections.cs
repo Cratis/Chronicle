@@ -84,7 +84,7 @@ public class Projections : IProjections
     public bool HasProjectionFor(Type modelType) => _definitionsByModelType.ContainsKey(modelType);
 
     /// <inheritdoc/>
-    public async Task<ImmediateProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey)
+    public async Task<ProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey)
     {
         var projectionDefinition = _definitionsByModelType[modelType];
         var result = await GetInstanceById(projectionDefinition.Identifier, modelKey);
@@ -93,36 +93,64 @@ public class Projections : IProjections
     }
 
     /// <inheritdoc/>
-    public async Task<ImmediateProjectionResult<TModel>> GetInstanceById<TModel>(ModelKey modelKey)
+    public async Task<ProjectionResult<TModel>> GetInstanceById<TModel>(ModelKey modelKey)
     {
         var projectionDefinition = _definitionsByModelType[typeof(TModel)];
-        var result = await GetInstanceById(
-            projectionDefinition.Identifier,
-            modelKey);
+        var request = new GetInstanceByIdRequest
+        {
+            ProjectionId = projectionDefinition.Identifier,
+            EventStoreName = _eventStore.EventStoreName,
+            Namespace = _eventStore.Namespace,
+            EventSequenceId = EventSequenceId.Log,
+            ModelKey = modelKey,
+        };
 
-        var model = result.Model.Deserialize<TModel>(_jsonSerializerOptions)!;
-        return new(model, result.AffectedProperties, result.ProjectedEventsCount);
+        var result = await _eventStore.Connection.Services.Projections.GetInstanceById(request);
+        return result.ToClient<TModel>();
     }
 
     /// <inheritdoc/>
-    public Task<ImmediateProjectionResultRaw> GetInstanceById(ProjectionId identifier, ModelKey modelKey) =>
-            GetInstanceByIdImplementation(identifier, modelKey);
+    public async Task<ProjectionResultRaw> GetInstanceById(ProjectionId identifier, ModelKey modelKey)
+    {
+        var projectionDefinition = _definitions.Single(_ => _.Identifier == identifier);
+        var request = new GetInstanceByIdRequest
+        {
+            ProjectionId = projectionDefinition.Identifier,
+            EventStoreName = _eventStore.EventStoreName,
+            Namespace = _eventStore.Namespace,
+            EventSequenceId = EventSequenceId.Log,
+            ModelKey = modelKey,
+        };
+
+        var result = await _eventStore.Connection.Services.Projections.GetInstanceById(request);
+        return result.ToClient();
+    }
 
     /// <inheritdoc/>
-    public async Task<ImmediateProjectionResult> GetInstanceByIdForSession(
-        CorrelationId correlationId,
+    public async Task<ProjectionResult> GetInstanceByIdForSession(
+        ProjectionSessionId sessionId,
         Type modelType,
         ModelKey modelKey)
     {
         var projectionDefinition = _definitionsByModelType[modelType];
-        var result = await GetInstanceByIdImplementation(projectionDefinition.Identifier, modelKey, correlationId);
-        var model = result.Model.Deserialize(modelType, _jsonSerializerOptions)!;
-        return new(model, result.AffectedProperties, result.ProjectedEventsCount);
+
+        var request = new GetInstanceByIdForSessionRequest
+        {
+            ProjectionId = projectionDefinition.Identifier,
+            EventStoreName = _eventStore.EventStoreName,
+            Namespace = _eventStore.Namespace,
+            EventSequenceId = EventSequenceId.Log,
+            ModelKey = modelKey,
+            SessionId = sessionId
+        };
+
+        var result = await _eventStore.Connection.Services.Projections.GetInstanceByIdForSession(request);
+        return result.ToClient(modelType);
     }
 
     /// <inheritdoc/>
-    public async Task<ImmediateProjectionResult> GetInstanceByIdForSessionWithEventsApplied(
-        CorrelationId correlationId,
+    public async Task<ProjectionResult> GetInstanceByIdForSessionWithEventsApplied(
+        ProjectionSessionId sessionId,
         Type modelType,
         ModelKey modelKey,
         IEnumerable<object> events)
@@ -135,35 +163,37 @@ public class Projections : IProjections
 
         var eventsToApply = await Task.WhenAll(eventsToApplyTasks);
 
-        var projection = new ImmediateProjectionWithEventsToApply(
-            projectionDefinition.Identifier,
-            EventSequenceId.Log,
-            modelKey,
-            eventsToApply);
+        var request = new GetInstanceByIdForSessionWithEventsAppliedRequest
+        {
+            ProjectionId = projectionDefinition.Identifier,
+            EventStoreName = _eventStore.EventStoreName,
+            Namespace = _eventStore.Namespace,
+            EventSequenceId = EventSequenceId.Log,
+            ModelKey = modelKey,
+            SessionId = sessionId,
+            Events = eventsToApply.ToContract()
+        };
 
-        // var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}/session/{correlationId}/with-events";
-
-        // var response = await _connection.PerformCommand(route, projection);
-        // var element = (JsonElement)response.Response!;
-        // var result = element.Deserialize<ImmediateProjectionResultRaw>(_jsonSerializerOptions)!;
-
-        // var model = result.Model.Deserialize(modelType, _jsonSerializerOptions)!;
-        // return new(model, result.AffectedProperties, result.ProjectedEventsCount);
-        throw new NotImplementedException();
+        var result = await _eventStore.Connection.Services.Projections.GetInstanceByIdFOrSessionWithEventsApplied(request);
+        return result.ToClient(modelType);
     }
 
     /// <inheritdoc/>
-    public async Task DehydrateSession(CorrelationId correlationId, Type modelType, ModelKey modelKey)
+    public async Task DehydrateSession(ProjectionSessionId sessionId, Type modelType, ModelKey modelKey)
     {
         var projectionDefinition = _definitionsByModelType[modelType];
-        var projection = new ImmediateProjection(
-            projectionDefinition.Identifier,
-            EventSequenceId.Log,
-            modelKey);
 
-        // var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}/session/{correlationId}/dehydrate";
-        // await _connection.PerformCommand(route, projection);
-        throw new NotImplementedException();
+        var request = new DehydrateSessionRequest
+        {
+            ProjectionId = projectionDefinition.Identifier,
+            EventStoreName = _eventStore.EventStoreName,
+            Namespace = _eventStore.Namespace,
+            EventSequenceId = EventSequenceId.Log,
+            ModelKey = modelKey,
+            SessionId = sessionId
+        };
+
+        await _eventStore.Connection.Services.Projections.DehydrateSession(request);
     }
 
     /// <inheritdoc/>
@@ -188,24 +218,6 @@ public class Projections : IProjections
             EventStoreName = _eventStore.EventStoreName,
             Projections = [.. Definitions]
         });
-    }
-
-    async Task<ImmediateProjectionResultRaw> GetInstanceByIdImplementation(ProjectionId identifier, ModelKey modelKey, CorrelationId? correlationId = default)
-    {
-        var projection = new ImmediateProjection(
-            identifier,
-            EventSequenceId.Log,
-            modelKey);
-
-        // var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}";
-        // if (correlationId is not null)
-        // {
-        //     route = $"{route}/session/{correlationId}";
-        // }
-        // var result = await _connection.PerformCommand(route, projection);
-        // var element = (JsonElement)result.Response!;
-        // return element.Deserialize<ImmediateProjectionResultRaw>(_jsonSerializerOptions)!;
-        throw new NotImplementedException();
     }
 
     void HandleProjectionTypeCache<TModel>()

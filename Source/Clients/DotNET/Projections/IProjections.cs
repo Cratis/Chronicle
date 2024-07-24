@@ -29,52 +29,52 @@ public interface IProjections
     /// </summary>
     /// <param name="modelType">Type of model the projection is for.</param>
     /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
-    /// <returns>The result of the projection in the form of an <see cref="ImmediateProjectionResult"/>.</returns>
-    Task<ImmediateProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey);
+    /// <returns>The result of the projection in the form of an <see cref="ProjectionResult"/>.</returns>
+    Task<ProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey);
 
     /// <summary>
     /// Get an instance by a specific <see cref="ModelKey"/> for a specific <see cref="ProjectionId"/>.
     /// </summary>
     /// <param name="identifier"><see cref="ProjectionId"/> to get for.</param>
     /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
-    /// <returns>The raw result of the projection in the form of an <see cref="ImmediateProjectionResultRaw"/>.</returns>
-    Task<ImmediateProjectionResultRaw> GetInstanceById(ProjectionId identifier, ModelKey modelKey);
+    /// <returns>The raw result of the projection in the form of an <see cref="ProjectionResultRaw"/>.</returns>
+    Task<ProjectionResultRaw> GetInstanceById(ProjectionId identifier, ModelKey modelKey);
 
     /// <summary>
     /// Get an instance by a specific <see cref="ModelKey"/> and type specified as generic parameter.
     /// </summary>
     /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
     /// <typeparam name="TModel">Type of model.</typeparam>
-    /// <returns>The result of the projection in the form of an <see cref="ImmediateProjectionResult"/>.</returns>
-    Task<ImmediateProjectionResult<TModel>> GetInstanceById<TModel>(ModelKey modelKey);
+    /// <returns>The result of the projection in the form of an <see cref="ProjectionResult"/>.</returns>
+    Task<ProjectionResult<TModel>> GetInstanceById<TModel>(ModelKey modelKey);
 
     /// <summary>
     /// Get an instance by a specific <see cref="ModelKey"/> and type for the current session.
     /// </summary>
-    /// <param name="correlationId">The correlation identifier for the session.</param>
+    /// <param name="sessionId">The <see cref="ProjectionSessionId"/> to get for.</param>
     /// <param name="modelType">Type of model the projection is for.</param>
     /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
-    /// <returns>The result of the projection in the form of an <see cref="ImmediateProjectionResult"/>.</returns>
-    Task<ImmediateProjectionResult> GetInstanceByIdForSession(CorrelationId correlationId, Type modelType, ModelKey modelKey);
+    /// <returns>The result of the projection in the form of an <see cref="ProjectionResult"/>.</returns>
+    Task<ProjectionResult> GetInstanceByIdForSession(ProjectionSessionId sessionId, Type modelType, ModelKey modelKey);
 
     /// <summary>
     /// Get the current instance for a specific <see cref="ModelKey"/> and type for the current session and apply events to it.
     /// </summary>
-    /// <param name="correlationId">The correlation identifier for the session.</param>
+    /// <param name="sessionId">The <see cref="ProjectionSessionId"/> to get for.</param>
     /// <param name="modelType">Type of model the projection is for.</param>
     /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
     /// <param name="events">Collection of events to apply.</param>
-    /// <returns>The result of the projection in the form of an <see cref="ImmediateProjectionResult"/>.</returns>
-    Task<ImmediateProjectionResult> GetInstanceByIdForSessionWithEventsApplied(CorrelationId correlationId, Type modelType, ModelKey modelKey, IEnumerable<object> events);
+    /// <returns>The result of the projection in the form of an <see cref="ProjectionResult"/>.</returns>
+    Task<ProjectionResult> GetInstanceByIdForSessionWithEventsApplied(ProjectionSessionId sessionId, Type modelType, ModelKey modelKey, IEnumerable<object> events);
 
     /// <summary>
     /// Dehydrate a session.
     /// </summary>
-    /// <param name="correlationId">The correlation identifier for the session.</param>
+    /// <param name="sessionId">The <see cref="ProjectionSessionId"/> to dehydrate.</param>
     /// <param name="modelType">Type of model the projection is for.</param>
     /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
     /// <returns>Awaitable task.</returns>
-    Task DehydrateSession(CorrelationId correlationId, Type modelType, ModelKey modelKey);
+    Task DehydrateSession(ProjectionSessionId sessionId, Type modelType, ModelKey modelKey);
 
     /// <summary>
     /// Discover all projections from entry assembly and dependencies.

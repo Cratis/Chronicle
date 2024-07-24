@@ -21,5 +21,5 @@ public class RegisterEventTypesRequest
     /// Gets or sets the collection of types to register.
     /// </summary>
     [ProtoMember(2, IsRequired = true)]
-    public IList<EventTypeRegistration> Types { get; set; } = [];
+    public IEnumerable<EventTypeRegistration> Types { get; set; } = [];
 }

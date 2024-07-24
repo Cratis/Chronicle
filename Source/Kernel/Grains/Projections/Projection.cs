@@ -79,9 +79,6 @@ public class Projection(
         return Task.CompletedTask;
     }
 
-    /// <inheritdoc/>
-    public Task Ensure() => Task.CompletedTask;
-
     async Task AddReplayRecommendationForAllNamespaces(ProjectionKey key, IEnumerable<EventStoreNamespaceName> namespaces)
     {
         foreach (var @namespace in namespaces)

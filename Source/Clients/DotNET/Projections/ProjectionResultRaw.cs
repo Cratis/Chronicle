@@ -12,4 +12,4 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="Model">The instance of the Model as <see cref="JsonObject"/>.</param>
 /// <param name="AffectedProperties">Collection of properties that was set.</param>
 /// <param name="ProjectedEventsCount">Number of events that caused projection.</param>
-public record ImmediateProjectionResultRaw(JsonObject Model, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount);
+public record ProjectionResultRaw(JsonObject Model, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount);

@@ -5,7 +5,6 @@ extern alias Server;
 extern alias Client;
 
 using Client::Cratis.Chronicle;
-using Orleans.Runtime;
 
 namespace Orleans.Hosting;
 

@@ -34,6 +34,6 @@ internal static class ImmediateProjectionScopes
             ["EventStore"] = projectionKey.EventStore,
             ["Namespace"] = projectionKey.Namespace,
             ["EventSequenceId"] = projectionKey.EventSequenceId,
-            ["SessionId"] = projectionKey.CorrelationId ?? string.Empty
+            ["SessionId"] = projectionKey.SessionId ?? string.Empty
         });
 }

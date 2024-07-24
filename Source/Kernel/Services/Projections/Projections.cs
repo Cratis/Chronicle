@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Definitions;
 using ProtoBuf.Grpc;
 
@@ -21,5 +22,71 @@ public class Projections(IGrainFactory grainFactory) : IProjections
 
         _ = Task.Run(() => projectionsManager.Register(projections));
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ProjectionResult> GetInstanceById(GetInstanceByIdRequest request, CallContext context = default)
+    {
+        var projectionKey = new ImmediateProjectionKey(
+            request.ProjectionId,
+            request.EventStoreName,
+            request.Namespace,
+            request.EventSequenceId,
+            request.ModelKey);
+
+        var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
+
+        var result = await projection.GetModelInstance();
+        return result.ToContract();
+    }
+
+    /// <inheritdoc/>
+    public async Task<ProjectionResult> GetInstanceByIdForSession(GetInstanceByIdForSessionRequest request, CallContext context = default)
+    {
+        var projectionKey = new ImmediateProjectionKey(
+            request.ProjectionId,
+            request.EventStoreName,
+            request.Namespace,
+            request.EventSequenceId,
+            request.ModelKey,
+            request.SessionId);
+
+        var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
+
+        var result = await projection.GetModelInstance();
+        return result.ToContract();
+    }
+
+    /// <inheritdoc/>
+    public async Task<ProjectionResult> GetInstanceByIdFOrSessionWithEventsApplied(GetInstanceByIdForSessionWithEventsAppliedRequest request, CallContext context = default)
+    {
+        var projectionKey = new ImmediateProjectionKey(
+            request.ProjectionId,
+            request.EventStoreName,
+            request.Namespace,
+            request.EventSequenceId,
+            request.ModelKey,
+            request.SessionId);
+
+        var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
+
+        var eventsToApply = request.Events.Select(_ => _.ToChronicle()).ToArray();
+        var result = await projection.GetCurrentModelInstanceWithAdditionalEventsApplied(eventsToApply);
+        return result.ToContract();
+    }
+
+    /// <inheritdoc/>
+    public async Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default)
+    {
+        var projectionKey = new ImmediateProjectionKey(
+            request.ProjectionId,
+            request.EventStoreName,
+            request.Namespace,
+            request.EventSequenceId,
+            request.ModelKey,
+            request.SessionId);
+
+        var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
+        await projection.Dehydrate();
     }
 }

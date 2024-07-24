@@ -18,12 +18,6 @@ public interface IProjection : IGrainWithStringKey
     Task SetDefinitionAndSubscribe(ProjectionDefinition definition);
 
     /// <summary>
-    /// Ensure the projection exists and is started.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    Task Ensure();
-
-    /// <summary>
     /// Subscribe to changes in projection or pipeline definition changes.
     /// </summary>
     /// <param name="subscriber"><see cref="INotifyProjectionDefinitionsChanged"/> to subscribe.</param>

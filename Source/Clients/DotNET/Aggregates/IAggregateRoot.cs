@@ -13,7 +13,7 @@ public interface IAggregateRoot
     /// <summary>
     /// Gets whether or not the aggregate root is stateful.
     /// </summary>
-    public bool IsStateful { get; }
+    bool IsStateful { get; }
 
     /// <summary>
     /// Gets the <see cref="EventSequenceId"/> for the aggregate root.

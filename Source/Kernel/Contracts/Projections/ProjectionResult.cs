@@ -6,25 +6,25 @@ using ProtoBuf;
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
-/// Represents the result of an projection.
+/// Represents the result of performing a projection.
 /// </summary>
 [ProtoContract]
-public class ImmediateProjectionResult
+public class ProjectionResult
 {
     /// <summary>
-    /// The JSON representation of the model.
+    /// Gets or sets the result of the projection.
     /// </summary>
     [ProtoMember(1)]
     public string Model { get; set; } = string.Empty;
 
     /// <summary>
-    /// Collection of properties that was set.
+    /// Gets or sets the affected properties.
     /// </summary>
     [ProtoMember(2, IsRequired = true)]
     public IEnumerable<string> AffectedProperties { get; set; } = [];
 
     /// <summary>
-    /// Number of events that caused projection.
+    /// Gets or sets the number of projected events.
     /// </summary>
     [ProtoMember(3)]
     public int ProjectedEventsCount { get; set; }

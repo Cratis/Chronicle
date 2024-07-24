@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="Model">The instance of the Model.</param>
 /// <param name="AffectedProperties">Collection of properties that was set.</param>
 /// <param name="ProjectedEventsCount">Number of events that caused projection.</param>
-public record ImmediateProjectionResult(object Model, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount);
+public record ProjectionResult(object Model, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount);
 
 /// <summary>
 /// Represents the result of an projection.
@@ -22,4 +22,4 @@ public record ImmediateProjectionResult(object Model, IEnumerable<PropertyPath> 
 /// <param name="Model">The instance of the model.</param>
 /// <param name="AffectedProperties">Collection of properties that was set.</param>
 /// <param name="ProjectedEventsCount">Number of events that caused projection.</param>
-public record ImmediateProjectionResult<T>(T Model, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount);
+public record ProjectionResult<T>(T Model, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount);

@@ -26,7 +26,7 @@ public class ChronicleConnection(
     IServices services,
     IGrainFactory grainFactory) : IChronicleConnection
 {
-    IConnectionService? _connectionService;
+    ConnectionService? _connectionService;
 
     /// <inheritdoc/>
     public IConnectionLifecycle Lifecycle { get; } = lifecycle;

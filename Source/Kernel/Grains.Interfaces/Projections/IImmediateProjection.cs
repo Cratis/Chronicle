@@ -18,15 +18,15 @@ public interface IImmediateProjection : IGrainWithStringKey
     /// <summary>
     /// Get the model instance.
     /// </summary>
-    /// <returns>The <see cref="ImmediateProjectionResult"/>.</returns>
-    Task<ImmediateProjectionResult> GetModelInstance();
+    /// <returns>The <see cref="ProjectionResult"/>.</returns>
+    Task<ProjectionResult> GetModelInstance();
 
     /// <summary>
     /// Get the current model instance with additional events applied. Ignoring any new events from the event store.
     /// </summary>
     /// <param name="events">Collection of events to apply.</param>
-    /// <returns>The <see cref="ImmediateProjectionResult"/>.</returns>
-    Task<ImmediateProjectionResult> GetCurrentModelInstanceWithAdditionalEventsApplied(IEnumerable<EventToApply> events);
+    /// <returns>The <see cref="ProjectionResult"/>.</returns>
+    Task<ProjectionResult> GetCurrentModelInstanceWithAdditionalEventsApplied(IEnumerable<EventToApply> events);
 
     /// <summary>
     /// Dehydrate the projection instance.
