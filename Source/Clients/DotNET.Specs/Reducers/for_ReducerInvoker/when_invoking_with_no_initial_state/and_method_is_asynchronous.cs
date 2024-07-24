@@ -15,7 +15,7 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
     void Establish()
     {
         @event = new();
-        event_context = new(Guid.Empty, 0, DateTimeOffset.Now, DateTimeOffset.Now, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System);
+        event_context = new(Guid.Empty, 0, DateTimeOffset.UtcNow, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System);
     }
 
     async Task Because() => reduce_result = (await invoker.Invoke([new(@event, event_context)], null))!;

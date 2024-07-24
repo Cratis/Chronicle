@@ -15,12 +15,10 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="Causation">The chain of causation.</param>
 /// <param name="CausedBy">Who or what caused the event.</param>
 /// <param name="Occurred">The time the compensation occurred.</param>
-/// <param name="ValidFrom">The date and time the compensation is valid from.</param>
 /// <param name="Content">The content per event type generation.</param>
 public record EventCompensation(
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,
     IdentityId CausedBy,
     DateTimeOffset Occurred,
-    DateTimeOffset ValidFrom,
     IDictionary<EventGeneration, BsonDocument> Content);

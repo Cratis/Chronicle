@@ -15,7 +15,6 @@ public class when_creating_copy_with_new_desired_state : Specification
         Guid.NewGuid().ToString(),
         42,
         DateTimeOffset.UtcNow,
-        DateTimeOffset.MinValue,
         Guid.NewGuid().ToString(),
         Guid.NewGuid().ToString(),
         CorrelationId.New(),
@@ -28,7 +27,6 @@ public class when_creating_copy_with_new_desired_state : Specification
     [Fact] void should_have_same_event_source_id() => copy.EventSourceId.ShouldEqual(original.EventSourceId);
     [Fact] void should_have_same_event_sequence_number() => copy.SequenceNumber.ShouldEqual(original.SequenceNumber);
     [Fact] void should_have_same_occurred() => copy.Occurred.ShouldEqual(original.Occurred);
-    [Fact] void should_have_same_valid_from() => copy.ValidFrom.ShouldEqual(original.ValidFrom);
     [Fact] void should_have_same_event_store() => copy.EventStore.ShouldEqual(original.EventStore);
     [Fact] void should_have_same_namespace() => copy.Namespace.ShouldEqual(original.Namespace);
     [Fact] void should_have_same_correlation_id() => copy.CorrelationId.ShouldEqual(original.CorrelationId);

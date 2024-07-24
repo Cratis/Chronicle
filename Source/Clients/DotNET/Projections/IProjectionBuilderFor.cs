@@ -33,6 +33,12 @@ public interface IProjectionBuilderFor<TModel> : IProjectionBuilder<TModel, IPro
     IProjectionBuilderFor<TModel> NotRewindable();
 
     /// <summary>
+    /// Set the projection not be active, meaning that it won't actively observe.
+    /// </summary>
+    /// <returns>Builder continuation.</returns>
+    IProjectionBuilderFor<TModel> Passive();
+
+    /// <summary>
     /// Build a <see cref="ProjectionDefinition"/>.
     /// </summary>
     /// <returns>A new <see cref="ProjectionDefinition"/>.</returns>

@@ -18,10 +18,10 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
         initial = new(42);
         events_and_contexts =
         [
-            new(new ValidEvent(), new(Guid.Empty, 1, DateTimeOffset.Now, DateTimeOffset.Now, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System)),
-            new(new ValidEvent(), new(Guid.Empty, 0, DateTimeOffset.Now, DateTimeOffset.Now, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System)),
-            new(new ValidEvent(), new(Guid.Empty, 2, DateTimeOffset.Now, DateTimeOffset.Now, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System)),
-            new(new ValidEvent(), new(Guid.Empty, 3, DateTimeOffset.Now, DateTimeOffset.Now, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System))
+            new(new ValidEvent(), new(Guid.Empty, 1, DateTimeOffset.UtcNow, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System)),
+            new(new ValidEvent(), new(Guid.Empty, 0, DateTimeOffset.UtcNow, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System)),
+            new(new ValidEvent(), new(Guid.Empty, 2, DateTimeOffset.UtcNow, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System)),
+            new(new ValidEvent(), new(Guid.Empty, 3, DateTimeOffset.UtcNow, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System))
         ];
     }
 

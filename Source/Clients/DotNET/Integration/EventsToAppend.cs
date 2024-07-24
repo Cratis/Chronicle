@@ -8,22 +8,21 @@ namespace Cratis.Chronicle.Integration;
 /// <summary>
 /// Represents the translated events from <see cref="AdapterFor{TModel, TExternalModel}"/>.
 /// </summary>
-public class EventsToAppend : IEnumerable<EventToAppend>
+public class EventsToAppend : IEnumerable<object>
 {
-    readonly List<EventToAppend> _events = [];
+    readonly List<object> _events = [];
 
     /// <summary>
     /// Add an event.
     /// </summary>
     /// <param name="event">The actual event to append.</param>
-    /// <param name="validFrom">Optional date and time for when the event is valid from. </param>
-    public void Add(object @event, DateTimeOffset? validFrom = default)
+    public void Add(object @event)
     {
-        _events.Add(new(@event, validFrom));
+        _events.Add(@event);
     }
 
     /// <inheritdoc/>
-    public IEnumerator<EventToAppend> GetEnumerator() => _events.GetEnumerator();
+    public IEnumerator<object> GetEnumerator() => _events.GetEnumerator();
 
     /// <inheritdoc/>
     IEnumerator IEnumerable.GetEnumerator() => _events.GetEnumerator();

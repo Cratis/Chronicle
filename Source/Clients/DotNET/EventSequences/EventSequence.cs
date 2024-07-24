@@ -33,7 +33,7 @@ public class EventSequence(
     IIdentityProvider identityProvider) : IEventSequence
 {
     /// <inheritdoc/>
-    public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
+    public async Task Append(EventSourceId eventSourceId, object @event)
     {
         var eventClrType = @event.GetType();
 
@@ -61,16 +61,12 @@ public class EventSequence(
             },
             Content = content.ToJsonString(),
             Causation = causationChain,
-            CausedBy = identity.ToContract(),
-            ValidFrom = validFrom
+            CausedBy = identity.ToContract()
         });
     }
 
     /// <inheritdoc/>
     public Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events) => throw new NotImplementedException();
-
-    /// <inheritdoc/>
-    public Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventAndValidFrom> events) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes) => throw new NotImplementedException();

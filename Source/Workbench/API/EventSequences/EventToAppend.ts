@@ -16,7 +16,4 @@ export class EventToAppend {
 
     @field(Object)
     content!: any;
-
-    @field(Date)
-    validFrom?: Date;
 }

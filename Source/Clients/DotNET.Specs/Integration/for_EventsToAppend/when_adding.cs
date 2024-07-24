@@ -16,5 +16,5 @@ public class when_adding : Specification
 
     void Because() => events.Add(@event);
 
-    [Fact] void should_hold_the_added_event() => events.First().Event.ShouldEqual(@event);
+    [Fact] void should_hold_the_added_event() => events.First().ShouldEqual(@event);
 }

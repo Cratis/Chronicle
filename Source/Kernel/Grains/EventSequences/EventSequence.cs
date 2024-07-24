@@ -132,8 +132,7 @@ public class EventSequence(
         EventType eventType,
         JsonObject content,
         IEnumerable<Causation> causation,
-        Identity causedBy,
-        DateTimeOffset? validFrom = default)
+        Identity causedBy)
     {
         bool updateSequenceNumber;
         var eventName = "[N/A]";
@@ -159,7 +158,6 @@ public class EventSequence(
                 try
                 {
                     var occurred = DateTimeOffset.UtcNow;
-                    var actualValidFrom = validFrom ?? DateTimeOffset.MinValue;
 
                     _metrics?.AppendedEvent(eventSourceId, eventName);
                     var appendedEvent = await EventSequenceStorage.Append(
@@ -169,7 +167,6 @@ public class EventSequence(
                         causation,
                         await IdentityStorage.GetFor(causedBy),
                         occurred,
-                        actualValidFrom,
                         compliantEventAsExpandoObject);
 
                     var appendedEvents = new[] { appendedEvent }.ToList();
@@ -235,8 +232,7 @@ public class EventSequence(
                 @event.EventType,
                 @event.Content,
                 causation,
-                causedBy,
-                @event.ValidFrom);
+                causedBy);
         }
     }
 
@@ -246,8 +242,7 @@ public class EventSequence(
         EventType eventType,
         JsonObject content,
         IEnumerable<Causation> causation,
-        Identity causedBy,
-        DateTimeOffset? validFrom = default)
+        Identity causedBy)
     {
         logger.Compensating(
             _eventSequenceKey.EventStore,

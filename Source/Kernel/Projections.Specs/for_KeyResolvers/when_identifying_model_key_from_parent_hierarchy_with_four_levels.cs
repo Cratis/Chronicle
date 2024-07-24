@@ -43,7 +43,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
     {
         return new(
             new(sequenceNumber, type),
-            new(eventSourceId, 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", CorrelationId.New(), [], Identity.System),
+            new(eventSourceId, 0, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", CorrelationId.New(), [], Identity.System),
             content.AsExpandoObject());
     }
 

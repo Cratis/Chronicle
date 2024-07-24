@@ -32,8 +32,7 @@ public class EventSequences(
             request.EventType.ToChronicle(),
             JsonSerializer.Deserialize<JsonNode>(request.Content, jsonSerializerOptions)!.AsObject(),
             request.Causation.ToChronicle(),
-            request.CausedBy.ToChronicle(),
-            request.ValidFrom);
+            request.CausedBy.ToChronicle());
 
         return new AppendResponse();
     }

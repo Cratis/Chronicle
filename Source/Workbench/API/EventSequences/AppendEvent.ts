@@ -27,7 +27,4 @@ export class AppendEvent {
 
     @field(Identity)
     causedBy!: Identity;
-
-    @field(Date)
-    validFrom?: Date;
 }

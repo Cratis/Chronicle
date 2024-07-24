@@ -10,7 +10,7 @@ public class Order : AggregateRoot<OrderState>
 {
     public void DoStuff()
     {
-        //Console.WriteLine($"Before : {State!.CartItems.Count()}");
+        Console.WriteLine($"Before : {State!.CartItems.Count()}");
 
         Apply(new ItemAddedToCart(
             new(Guid.NewGuid()),
@@ -19,7 +19,7 @@ public class Order : AggregateRoot<OrderState>
             null,
             null));
 
-        //Console.WriteLine($"After : {State.CartItems.Count()}");
+        Console.WriteLine($"After : {State.CartItems.Count()}");
     }
 
     public void DoOtherStuff()

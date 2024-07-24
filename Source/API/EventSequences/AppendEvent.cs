@@ -16,11 +16,9 @@ namespace Cratis.API.EventSequences;
 /// <param name="Content">The content of the event represented as <see cref="JsonObject"/>.</param>
 /// <param name="Causation">Optional Collection of <see cref="Causation"/>.</param>
 /// <param name="CausedBy">Optional <see cref="CausedBy"/> to identify the person, system or service that caused the event.</param>
-/// <param name="ValidFrom">Optional valid from.</param>
 public record AppendEvent(
     string EventSourceId,
     EventType EventType,
     JsonObject Content,
     IEnumerable<Causation>? Causation,
-    Identity? CausedBy,
-    DateTimeOffset? ValidFrom);
+    Identity? CausedBy);

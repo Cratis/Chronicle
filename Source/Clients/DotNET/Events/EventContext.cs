@@ -12,7 +12,6 @@ namespace Cratis.Chronicle.Events;
 /// <param name="EventSourceId">The <see cref="EventSourceId"/>.</param>
 /// <param name="SequenceNumber">The <see cref="EventSequenceNumber"/> of the event as persisted in the event sequence.</param>
 /// <param name="Occurred"><see cref="DateTimeOffset">When</see> it occurred.</param>
-/// <param name="ValidFrom"><see cref="DateTimeOffset">When</see> event is considered valid from.</param>
 /// <param name="EventStore">The <see cref="EventStoreName"/> the event belongs to.</param>
 /// <param name="Namespace">The <see cref="EventStoreNamespaceName"/> the event belongs to.</param>
 /// <param name="CorrelationId">The <see cref="CorrelationId"/> for the event.</param>
@@ -23,7 +22,6 @@ public record EventContext(
     EventSourceId EventSourceId,
     EventSequenceNumber SequenceNumber,
     DateTimeOffset Occurred,
-    DateTimeOffset ValidFrom,
     EventStoreName EventStore,
     EventStoreNamespaceName Namespace,
     CorrelationId CorrelationId,
@@ -45,15 +43,13 @@ public record EventContext(
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to create from.</param>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event as persisted in the event sequence.</param>
     /// <param name="occurred">Optional occurred.</param>
-    /// <param name="validFrom">Optional valid from.</param>
     /// <returns>A new <see cref="EventContext"/>.</returns>
-    public static EventContext From(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, DateTimeOffset? occurred = default, DateTimeOffset? validFrom = default)
+    public static EventContext From(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, DateTimeOffset? occurred = default)
     {
         return new(
             eventSourceId,
             sequenceNumber,
             occurred ?? DateTimeOffset.Now,
-            validFrom ?? DateTimeOffset.MinValue,
             eventStore,
             @namespace,
             CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
@@ -74,5 +70,5 @@ public record EventContext(
     /// <param name="desiredState">The desired state.</param>
     /// <returns>A new copy with the desired state set.</returns>
     public EventContext WithState(EventObservationState desiredState) =>
-        new(EventSourceId, SequenceNumber, Occurred, ValidFrom, EventStore, Namespace, CorrelationId, Causation, CausedBy, desiredState);
+        new(EventSourceId, SequenceNumber, Occurred, EventStore, Namespace, CorrelationId, Causation, CausedBy, desiredState);
 }

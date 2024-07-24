@@ -11,5 +11,4 @@ namespace Cratis.API.EventSequences;
 /// </summary>
 /// <param name="EventType">The <see cref="EventType">type of event</see> to append.</param>
 /// <param name="Content">The JSON payload of the event.</param>
-/// <param name="ValidFrom">Optional date and time for when the compensation is valid from. </param>
-public record EventToAppend(EventType EventType, JsonObject Content, DateTimeOffset? ValidFrom = default);
+public record EventToAppend(EventType EventType, JsonObject Content);

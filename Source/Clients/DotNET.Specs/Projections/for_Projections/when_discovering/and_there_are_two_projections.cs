@@ -4,9 +4,9 @@
 using Cratis.Chronicle.Contracts.Projections;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.for_Projections;
+namespace Cratis.Chronicle.Projections.for_Projections.when_discovering;
 
-public class when_there_are_two_projections : given.all_dependencies
+public class and_there_are_two_projections : given.all_dependencies
 {
     public record FirstModel();
     public record SecondModel();
@@ -44,7 +44,11 @@ public class when_there_are_two_projections : given.all_dependencies
             json_serializer_options);
     }
 
-    void Because() => result = projections.Definitions;
+    async Task Because()
+    {
+        await projections.Discover();
+        result = projections.Definitions;
+    }
 
     [Fact] void should_return_two_definitions() => result.Count().ShouldEqual(2);
     [Fact] void should_call_define_on_first_model_builder() => first_projection.Verify(_ => _.Define(IsAny<IProjectionBuilderFor<FirstModel>>()), Once);

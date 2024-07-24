@@ -23,6 +23,7 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
     readonly IJsonSchemaGenerator _schemaGenerator;
     EventSequenceId _eventSequenceId = EventSequenceId.Log;
     bool _isRewindable = true;
+    bool _isActive = true;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
@@ -69,6 +70,13 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
     }
 
     /// <inheritdoc/>
+    public IProjectionBuilderFor<TModel> Passive()
+    {
+        _isActive = false;
+        return this;
+    }
+
+    /// <inheritdoc/>
     public ProjectionDefinition Build()
     {
         var modelType = typeof(TModel);
@@ -87,7 +95,7 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
                 Name = _modelName,
                 Schema = modelSchema.ToJson()
             },
-            IsActive = true,
+            IsActive = _isActive,
             IsRewindable = _isRewindable,
             InitialModelState = _initialValues.ToJsonString(),
             From = _fromDefinitions,

@@ -22,7 +22,7 @@ public class when_handling_on_next : given.an_reaction_handler
 
         event_content = new("Forty two");
         metadata = new(0, new(Guid.NewGuid().ToString(), 1));
-        context = new(Guid.NewGuid(), 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Guid.NewGuid().ToString(), [], Identity.NotSet);
+        context = new(Guid.NewGuid(), 0, DateTimeOffset.UtcNow, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Guid.NewGuid().ToString(), [], Identity.NotSet);
 
         causation_manager
             .Setup(_ => _.Add(ReactionHandler.CausationType, IsAny<IDictionary<string, string>>()))

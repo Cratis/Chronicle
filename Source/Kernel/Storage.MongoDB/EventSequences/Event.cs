@@ -17,7 +17,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="CausedBy">Chain of person, system or service that caused the event.</param>
 /// <param name="Type">The <see cref="EventTypeId">type identifier</see> of the event.</param>
 /// <param name="Occurred">The time the event occurred.</param>
-/// <param name="ValidFrom">The date and time the event is considered valid from.</param>
 /// <param name="EventSourceId">The <see cref="EventSourceId"/> for the event.</param>
 /// <param name="Content">The content per event type generation.</param>
 /// <param name="Compensations">Any compensations for the event.</param>
@@ -28,7 +27,6 @@ public record Event(
     IEnumerable<IdentityId> CausedBy,
     EventTypeId Type,
     DateTimeOffset Occurred,
-    DateTimeOffset ValidFrom,
     EventSourceId EventSourceId,
     IDictionary<string, BsonDocument> Content,
     IEnumerable<EventCompensation> Compensations);

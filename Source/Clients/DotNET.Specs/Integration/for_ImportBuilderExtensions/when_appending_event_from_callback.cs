@@ -19,5 +19,5 @@ public class when_appending_event_from_callback : given.no_changes
                 events_to_append));
 
     [Fact]
-    void should_append_event() => events_to_append.First().Event.ShouldEqual(event_to_append);
+    void should_append_event() => events_to_append.First().ShouldEqual(event_to_append);
 }

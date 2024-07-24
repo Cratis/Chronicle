@@ -69,10 +69,10 @@ public class an_aggregate_root_factory : Specification
         service_provider = new();
 
         factory = new(
+            event_store.Object,
             state_providers.Object,
             event_handlers_factory.Object,
             causation_manager.Object,
-            event_store.Object,
             event_serializer.Object,
             service_provider.Object);
     }

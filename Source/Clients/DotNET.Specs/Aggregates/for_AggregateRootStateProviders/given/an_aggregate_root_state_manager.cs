@@ -9,18 +9,18 @@ namespace Cratis.Chronicle.Aggregates.for_AggregateRootStateProviders.given;
 public class an_aggregate_root_state_manager : Specification
 {
     protected AggregateRootStateProviders state_providers;
-    protected Mock<IReducersRegistrar> reducers_registrar;
+    protected Mock<IReducers> reducers;
     protected Mock<IProjections> projections;
 
     protected StatefulAggregateRoot aggregate_root;
 
     void Establish()
     {
-        reducers_registrar = new();
+        reducers = new();
         projections = new();
 
         state_providers = new(
-            reducers_registrar.Object,
+            reducers.Object,
             projections.Object);
 
         aggregate_root = new()

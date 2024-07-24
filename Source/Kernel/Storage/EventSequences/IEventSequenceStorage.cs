@@ -44,10 +44,9 @@ public interface IEventSequenceStorage
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
     /// <param name="occurred">The date and time the event occurred.</param>
-    /// <param name="validFrom">Date and time for when the compensation is valid from. </param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<AppendedEvent> Append(EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, DateTimeOffset validFrom, ExpandoObject content);
+    Task<AppendedEvent> Append(EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
 
     /// <summary>
     /// Compensate a single event to the event store.
@@ -57,10 +56,9 @@ public interface IEventSequenceStorage
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
     /// <param name="occurred">The date and time the compensation occurred.</param>
-    /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, DateTimeOffset validFrom, ExpandoObject content);
+    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
 
     /// <summary>
     /// Redact an event at a specific sequence number.

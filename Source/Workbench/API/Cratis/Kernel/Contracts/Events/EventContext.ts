@@ -23,9 +23,6 @@ export class EventContext {
     @field(SerializableDateTimeOffset)
     occurred!: SerializableDateTimeOffset;
 
-    @field(SerializableDateTimeOffset)
-    validFrom!: SerializableDateTimeOffset;
-
     @field(String)
     eventStore!: string;
 

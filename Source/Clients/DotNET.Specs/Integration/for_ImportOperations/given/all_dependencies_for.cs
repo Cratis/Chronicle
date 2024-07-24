@@ -22,8 +22,6 @@ public class all_dependencies_for<TEvent> : Specification
     protected AdapterId adapter_id;
     protected IDictionary<string, string> causation_properties;
 
-    protected virtual DateTimeOffset? valid_from_to_append_with { get; }
-
     void Establish()
     {
         adapter = new();
@@ -38,7 +36,7 @@ public class all_dependencies_for<TEvent> : Specification
         adapter.SetupGet(_ => _.KeyResolver).Returns((ExternalModel _) => new EventSourceId(key));
         adapter.Setup(_ => _.DefineImport(IsAny<IImportBuilderFor<Model, ExternalModel>>()))
             .Callback((IImportBuilderFor<Model, ExternalModel> builder)
-                => builder.WithProperties(_ => _.SomeInteger, _ => _.SomeString).AppendEvent<Model, ExternalModel, TEvent>(valid_from_to_append_with));
+                => builder.WithProperties(_ => _.SomeInteger, _ => _.SomeString).AppendEvent<Model, ExternalModel, TEvent>());
 
         causation_manager
             .Setup(_ => _.Add(ImportOperations<string, string>.CausationType, IsAny<IDictionary<string, string>>()))

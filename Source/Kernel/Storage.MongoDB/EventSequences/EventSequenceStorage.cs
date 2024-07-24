@@ -99,7 +99,6 @@ public class EventSequenceStorage(
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
-        DateTimeOffset validFrom,
         ExpandoObject content)
     {
         var correlationId = CorrelationId.New(); // TODO: Fix this when we have a proper correlation id
@@ -120,7 +119,6 @@ public class EventSequenceStorage(
                 causedByChain,
                 eventType.Id,
                 occurred,
-                validFrom,
                 eventSourceId,
                 new Dictionary<string, BsonDocument>
                 {
@@ -136,7 +134,6 @@ public class EventSequenceStorage(
                     eventSourceId,
                     sequenceNumber,
                     occurred,
-                    validFrom,
                     eventStore,
                     @namespace,
                     correlationId,
@@ -173,7 +170,6 @@ public class EventSequenceStorage(
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
-        DateTimeOffset validFrom,
         ExpandoObject content) => throw new NotImplementedException();
 
     /// <inheritdoc/>

@@ -9,9 +9,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Schemas;
-using Cratis.Collections;
 using Cratis.Models;
-using Cratis.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Projections;
@@ -33,7 +31,7 @@ public class Projections : IProjections
     readonly IServiceProvider _serviceProvider;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly List<ProjectionDefinition> _definitions = [];
-    readonly IDictionary<Type, ProjectionDefinition> _definitionsByModelType = new Dictionary<Type, ProjectionDefinition>();
+    IDictionary<Type, ProjectionDefinition> _definitionsByModelType = new Dictionary<Type, ProjectionDefinition>();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -190,22 +188,15 @@ public class Projections : IProjections
     /// <inheritdoc/>
     public Task Discover()
     {
-        _clientArtifacts.Projections.ForEach(_ =>
-        {
-            var projectionType = _.GetInterfaces().Single(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IProjectionFor<>));
-            GetType()
-                .GetMethod(nameof(HandleProjectionTypeCache), BindingFlags.NonPublic | BindingFlags.Instance)!
-                .MakeGenericMethod(projectionType.GetGenericArguments()[0])!
-                .Invoke(this, null);
-        });
-
-        Definitions = FindAllProjectionDefinitions(
-            _eventStore.EventTypes,
+        _definitionsByModelType = FindAllProjectionDefinitions(
+            _eventTypes,
             _clientArtifacts,
             _schemaGenerator,
             _modelNameResolver,
             _serviceProvider,
-            _jsonSerializerOptions).ToImmutableList();
+            _jsonSerializerOptions);
+
+        Definitions = _definitionsByModelType.Values.ToImmutableList();
 
         return Task.CompletedTask;
     }
@@ -220,34 +211,7 @@ public class Projections : IProjections
         });
     }
 
-    void HandleProjectionTypeCache<TModel>()
-    {
-        var modelType = typeof(TModel);
-        if (!_definitionsByModelType.ContainsKey(modelType))
-        {
-            var projectionType = _clientArtifacts.Projections.Single(_ => _.HasInterface<IProjectionFor<TModel>>())
-                ?? throw new MissingImmediateProjectionForModel(modelType);
-
-            var instance = (_serviceProvider.GetService(projectionType) as IProjectionFor<TModel>)!;
-            var builder = new ProjectionBuilderFor<TModel>(
-                projectionType.GetProjectionId(),
-                _modelNameResolver,
-                _eventTypes,
-                _schemaGenerator,
-                _jsonSerializerOptions);
-
-            instance.Define(builder);
-
-            var projectionDefinition = builder.Build();
-            projectionDefinition.IsActive = false;
-            _definitions.Add(projectionDefinition);
-            _definitionsByModelType[typeof(TModel)] = projectionDefinition;
-
-            Definitions = _definitions.ToImmutableList();
-        }
-    }
-
-    IEnumerable<ProjectionDefinition> FindAllProjectionDefinitions(
+    IDictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
         IJsonSchemaGenerator schemaGenerator,
@@ -255,22 +219,24 @@ public class Projections : IProjections
         IServiceProvider serviceProvider,
         JsonSerializerOptions jsonSerializerOptions) =>
         clientArtifacts.Projections
-                .Select(_ =>
-                {
-                    var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
-                    var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
-                    var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
-                    return (method.Invoke(
-                        null,
-                        [
-                            _,
-                            modelNameResolver,
-                            eventTypes,
-                            schemaGenerator,
-                            serviceProvider,
-                            jsonSerializerOptions
-                        ]) as ProjectionDefinition)!;
-                }).ToArray();
+                .ToDictionary(
+                    _ => _,
+                    _ =>
+                    {
+                        var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
+                        var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
+                        var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
+                        return (method.Invoke(
+                            null,
+                            [
+                                _,
+                                modelNameResolver,
+                                eventTypes,
+                                schemaGenerator,
+                                serviceProvider,
+                                jsonSerializerOptions
+                            ]) as ProjectionDefinition)!;
+                    });
 
     static class ProjectionDefinitionCreator<TModel>
     {

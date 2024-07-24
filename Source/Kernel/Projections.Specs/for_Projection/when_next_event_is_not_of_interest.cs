@@ -28,7 +28,7 @@ public class when_next_event_is_not_of_interest : given.a_projection
         @event = new(
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
-            new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", CorrelationId.New(), [], Identity.System),
+            new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", CorrelationId.New(), [], Identity.System),
             new ExpandoObject());
 
         objects_comparer = new();

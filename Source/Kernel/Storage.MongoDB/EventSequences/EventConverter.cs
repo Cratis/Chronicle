@@ -50,7 +50,6 @@ public class EventConverter(
                 @event.EventSourceId,
                 @event.SequenceNumber,
                 @event.Occurred,
-                @event.ValidFrom,
                 eventStoreName,
                 eventStoreNamespace,
                 @event.CorrelationId,

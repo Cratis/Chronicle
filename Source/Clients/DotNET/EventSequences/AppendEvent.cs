@@ -16,11 +16,9 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="Content">The content to of the event append.</param>
 /// <param name="Causation">Causation associated with appending.</param>
 /// <param name="CausedBy">The <see cref="Identity"/> of a person, system or service that caused the event.</param>
-/// <param name="ValidFrom">Optional valid from.</param>
 public record AppendEvent(
     EventSourceId EventSourceId,
     EventType EventType,
     JsonObject Content,
     IEnumerable<Causation> Causation,
-    Identity CausedBy,
-    DateTimeOffset? ValidFrom);
+    Identity CausedBy);
