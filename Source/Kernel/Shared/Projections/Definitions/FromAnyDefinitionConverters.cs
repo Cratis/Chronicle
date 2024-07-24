@@ -20,7 +20,7 @@ public static class FromAnyDefinitionConverters
     {
         return new()
         {
-            EventTypes = fromAny.EventTypes.Select(_ => _.ToContract()),
+            EventTypes = fromAny.EventTypes.Select(_ => _.ToContract()).ToList(),
             From = fromAny.From.ToContract()
         };
     }

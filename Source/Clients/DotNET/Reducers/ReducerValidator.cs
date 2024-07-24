@@ -15,6 +15,5 @@ public class ReducerValidator : IReducerValidator
     {
         TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(reducerType);
         TypeMustImplementOnlyOneReducer.ThrowIfTypeImplementsMoreThanOneReducer(reducerType);
-        TypeMustBeAdornedWithReducerAttribute.ThrowIfReducerAttributeMissing(reducerType);
     }
 }

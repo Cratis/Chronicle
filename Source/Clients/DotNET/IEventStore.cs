@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
@@ -28,6 +29,11 @@ public interface IEventStore
     /// Gets the <see cref="IChronicleConnection"/> used for the <see cref="IEventStore"/>.
     /// </summary>
     IChronicleConnection Connection { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IAggregateRootFactory"/>.
+    /// </summary>
+    IAggregateRootFactory AggregateRootFactory { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventTypes"/> for the event store.

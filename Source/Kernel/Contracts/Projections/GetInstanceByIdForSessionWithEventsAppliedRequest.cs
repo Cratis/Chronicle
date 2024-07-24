@@ -51,5 +51,5 @@ public class GetInstanceByIdForSessionWithEventsAppliedRequest
     /// Gets or sets the events to apply.
     /// </summary>
     [ProtoMember(7, IsRequired = true)]
-    public IEnumerable<EventToApply> Events { get; set; } = [];
+    public IList<EventToApply> Events { get; set; } = [];
 }

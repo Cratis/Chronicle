@@ -55,7 +55,7 @@ public class AppendRequest
     /// Gets or sets the causation.
     /// </summary>
     [ProtoMember(7)]
-    public IEnumerable<Causation> Causation { get; set; }
+    public IList<Causation> Causation { get; set; }
 
     /// <summary>
     /// Gets or sets the caused by.

@@ -15,17 +15,17 @@ namespace Cratis.Chronicle.Aggregates;
 /// <remarks>
 /// Initializes a new instance of the <see cref="AggregateRootFactory"/> class.
 /// </remarks>
+/// <param name="eventStore"><see cref="IEventStore"/> to get event sequence to work with.</param>
 /// <param name="aggregateRootStateProviders"><see cref="IAggregateRootStateProvider"/> for managing state for an aggregate root.</param>
 /// <param name="aggregateRootEventHandlersFactory"><see cref="IAggregateRootEventHandlersFactory"/> for creating <see cref="IAggregateRootEventHandlers"/>.</param>
 /// <param name="causationManager">The <see cref="ICausationManager"/> for handling causation.</param>
-/// <param name="eventStore"><see cref="IEventStore"/> to get event sequence to work with.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances.</param>
 public class AggregateRootFactory(
+    IEventStore eventStore,
     IAggregateRootStateProviders aggregateRootStateProviders,
     IAggregateRootEventHandlersFactory aggregateRootEventHandlersFactory,
     ICausationManager causationManager,
-    IEventStore eventStore,
     IEventSerializer eventSerializer,
     IServiceProvider serviceProvider) : IAggregateRootFactory
 {

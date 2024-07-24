@@ -65,15 +65,6 @@ public class Projections : IProjections
         _serviceProvider = serviceProvider;
         _jsonSerializerOptions = jsonSerializerOptions;
 
-        _clientArtifacts.Projections.ForEach(_ =>
-        {
-            var projectionType = _.GetInterfaces().Single(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IProjectionFor<>));
-            GetType()
-                .GetMethod(nameof(HandleProjectionTypeCache), BindingFlags.NonPublic | BindingFlags.Instance)!
-                .MakeGenericMethod(projectionType.GetGenericArguments()[0])!
-                .Invoke(this, null);
-        });
-
         Definitions = _definitions.ToImmutableList();
     }
 
@@ -199,6 +190,15 @@ public class Projections : IProjections
     /// <inheritdoc/>
     public Task Discover()
     {
+        _clientArtifacts.Projections.ForEach(_ =>
+        {
+            var projectionType = _.GetInterfaces().Single(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IProjectionFor<>));
+            GetType()
+                .GetMethod(nameof(HandleProjectionTypeCache), BindingFlags.NonPublic | BindingFlags.Instance)!
+                .MakeGenericMethod(projectionType.GetGenericArguments()[0])!
+                .Invoke(this, null);
+        });
+
         Definitions = FindAllProjectionDefinitions(
             _eventStore.EventTypes,
             _clientArtifacts,

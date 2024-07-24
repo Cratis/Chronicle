@@ -27,7 +27,7 @@ public class ReactionResult
     /// Gets or sets the exception messages.
     /// </summary>
     [ProtoMember(3, IsRequired = true)]
-    public IEnumerable<string> ExceptionMessages { get; set; } = [];
+    public IList<string> ExceptionMessages { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the exception stack trace.

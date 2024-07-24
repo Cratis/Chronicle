@@ -21,5 +21,5 @@ public class RegisterRequest
     /// Gets or sets the <see cref="ProjectionDefinition"/> instances to register.
     /// </summary>
     [ProtoMember(2, IsRequired = true)]
-    public IEnumerable<ProjectionDefinition> Projections { get; set; } = [];
+    public IList<ProjectionDefinition> Projections { get; set; } = [];
 }

@@ -60,12 +60,6 @@ public class ClientBuilder : IClientBuilder
         _metadata["machineName"] = Environment.MachineName;
         _metadata["process"] = Environment.ProcessPath ?? string.Empty;
         _identityProviderType = typeof(BaseIdentityProvider);
-
-        // _optionsBuilder = services.AddOptions<ClientOptions>();
-        // SetDefaultOptions();
-        // _optionsBuilder.BindConfiguration("cratis")
-        //     .ValidateDataAnnotations()
-        //     .ValidateOnStart();
         Services = services;
         _logger = logger;
     }
@@ -122,7 +116,6 @@ public class ClientBuilder : IClientBuilder
     {
         _logger.Configuring();
 
-        // var options = Services.BuildServiceProvider().GetRequiredService<IOptions<ClientOptions>>();
         var clientArtifacts = _clientArtifactsProvider ?? new DefaultClientArtifactsProvider(
              new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
@@ -137,7 +130,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton(Globals.JsonSerializerOptions)
             .AddSingleton<IConnectionLifecycle, ConnectionLifecycle>()
             .AddSingleton<IReactionMiddlewares, ReactionMiddlewares>()
-            .AddSingleton<IReducersRegistrar, ReducersRegistrar>()
+            .AddSingleton<IReducers, Reducers.Reducers>()
             .AddSingleton<IReducerValidator, ReducerValidator>()
             .AddTransient<IClientReducers, ClientReducers>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
@@ -170,12 +163,4 @@ public class ClientBuilder : IClientBuilder
         clientArtifacts.ComplianceForTypesProviders.ForEach(_ => Services.AddTransient(_));
         clientArtifacts.ComplianceForPropertiesProviders.ForEach(_ => Services.AddTransient(_));
     }
-
-    // void SetDefaultOptions()
-    // {
-    //     _optionsBuilder
-    //         .Configure(options =>
-    //         {
-    //         });
-    // }
 }

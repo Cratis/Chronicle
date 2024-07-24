@@ -25,7 +25,7 @@ public static class EventContextConverters
         EventStore = context.EventStore,
         Namespace = context.Namespace,
         CorrelationId = context.CorrelationId,
-        Causation = context.Causation.Select(_ => _.ToContract()),
+        Causation = context.Causation.Select(_ => _.ToContract()).ToList(),
         CausedBy = context.CausedBy.ToContract(),
         ObservationState = context.ObservationState.ToContract()
     };

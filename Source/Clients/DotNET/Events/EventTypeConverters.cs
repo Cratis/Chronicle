@@ -28,8 +28,8 @@ public static class EventTypeConverters
     /// </summary>
     /// <param name="types">Collection of <see cref="EventType"/> to convert.</param>
     /// <returns>Converted collection of contract version.</returns>
-    public static IEnumerable<Contracts.Events.EventType> ToContract(this IEnumerable<EventType> types) =>
-        types.Select(_ => _.ToContract()).ToArray();
+    public static IList<Contracts.Events.EventType> ToContract(this IEnumerable<EventType> types) =>
+        types.Select(_ => _.ToContract()).ToList();
 
     /// <summary>
     /// Convert to Chronicle representation.

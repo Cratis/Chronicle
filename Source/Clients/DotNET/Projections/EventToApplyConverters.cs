@@ -29,6 +29,6 @@ public static class EventToApplyConverters
     /// </summary>
     /// <param name="eventsToApply">Collection <see cref="EventToApply"/> to convert from.</param>
     /// <returns>Converted collection of <see cref="Contracts.Projections.EventToApply"/>.</returns>
-    public static IEnumerable<Contracts.Projections.EventToApply> ToContract(this IEnumerable<EventToApply> eventsToApply) =>
-        eventsToApply.Select(_ => _.ToContract());
+    public static IList<Contracts.Projections.EventToApply> ToContract(this IEnumerable<EventToApply> eventsToApply) =>
+        eventsToApply.Select(_ => _.ToContract()).ToList();
 }

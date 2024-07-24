@@ -68,6 +68,7 @@ while (true)
     Console.WriteLine("I - Add item to cart");
     Console.WriteLine("B - Add a bulk of items to cart");
     Console.WriteLine("M - Add many items to cart");
+    Console.WriteLine("A - Do stuff to Aggregate");
     Console.WriteLine("---------------------");
     Console.WriteLine("Q - Exit");
     Console.WriteLine("****** Menu *******");
@@ -87,6 +88,13 @@ while (true)
 
         case ConsoleKey.M:
             await AddManyItemsToCart();
+            break;
+
+        case ConsoleKey.A:
+            var order = await eventStore.AggregateRootFactory.Get<Order>("91541f83-ae49-4d50-a88d-18fb29d2b98f");
+            order.DoStuff();
+            order.DoOtherStuff();
+            await order.Commit();
             break;
     }
 }

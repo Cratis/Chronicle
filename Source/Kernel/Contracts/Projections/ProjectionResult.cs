@@ -21,7 +21,7 @@ public class ProjectionResult
     /// Gets or sets the affected properties.
     /// </summary>
     [ProtoMember(2, IsRequired = true)]
-    public IEnumerable<string> AffectedProperties { get; set; } = [];
+    public IList<string> AffectedProperties { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the number of projected events.

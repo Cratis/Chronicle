@@ -28,13 +28,13 @@ public static class ProjectionTypeExtensions
     }
 
     /// <summary>
-    /// Get the event sequence id for a reaction type.
+    /// Get the event sequence id for a projection type.
     /// </summary>
     /// <param name="type"><see cref="Type"/> to get from.</param>
     /// <returns>The <see cref="EventSequenceId"/> for the type.</returns>
     public static EventSequenceId GetEventSequenceId(this Type type)
     {
-        var reactionAttribute = type.GetCustomAttribute<ProjectionAttribute>();
-        return reactionAttribute?.EventSequenceId.Value ?? EventSequenceId.Log;
+        var projectionAttribute = type.GetCustomAttribute<ProjectionAttribute>();
+        return projectionAttribute?.EventSequenceId.Value ?? EventSequenceId.Log;
     }
 }

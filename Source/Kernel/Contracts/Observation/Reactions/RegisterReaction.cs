@@ -46,5 +46,5 @@ public class RegisterReaction
     /// Gets or sets a collection of event types to observe.
     /// </summary>
     [ProtoMember(6, IsRequired = true)]
-    public IEnumerable<EventType> EventTypes { get; set; } = [];
+    public IList<EventType> EventTypes { get; set; } = [];
 }

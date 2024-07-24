@@ -46,7 +46,7 @@ public class EventSequence(
             Occurred = _.Occurred!,
             Type = _.Type,
             Properties = _.Properties
-        });
+        }).ToList();
         var identity = identityProvider.GetCurrent();
         await connection.Services.EventSequences.Append(new()
         {

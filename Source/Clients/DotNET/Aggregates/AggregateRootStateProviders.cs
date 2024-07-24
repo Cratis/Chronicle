@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Aggregates;
 /// <param name="reducersRegistrar">All the reducers in the system.</param>
 /// <param name="projections"><see cref="IProjections"/> to possibly get state from.</param>
 public class AggregateRootStateProviders(
-    IReducersRegistrar reducersRegistrar,
+    IReducers reducersRegistrar,
     IProjections projections) : IAggregateRootStateProviders
 {
     /// <inheritdoc/>

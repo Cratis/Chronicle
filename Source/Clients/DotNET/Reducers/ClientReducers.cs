@@ -14,11 +14,11 @@ namespace Cratis.Chronicle.Reducers;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ClientReducers"/> class.
 /// </remarks>
-/// <param name="reducers">The <see cref="IReducersRegistrar"/> in the system.</param>
+/// <param name="reducers">The <see cref="IReducers"/> in the system.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class ClientReducers(
-    IReducersRegistrar reducers,
+    IReducers reducers,
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<ClientReducers> logger) : IClientReducers
 {

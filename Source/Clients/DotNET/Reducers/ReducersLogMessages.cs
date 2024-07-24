@@ -6,11 +6,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reducers;
 
-internal static partial class ReducersRegistrarLogMessages
+internal static partial class ReducersLogMessages
 {
     [LoggerMessage(LogLevel.Information, "Registering reducers")]
-    internal static partial void RegisterReducers(this ILogger<ReducersRegistrar> logger);
+    internal static partial void RegisterReducers(this ILogger<Reducers> logger);
 
     [LoggerMessage(LogLevel.Trace, "Registering reducer with id '{ReducerId}', for event sequence '{EventSequenceId}'")]
-    internal static partial void RegisterReducer(this ILogger<ReducersRegistrar> logger, ReducerId reducerId, EventSequenceId eventSequenceId);
+    internal static partial void RegisterReducer(this ILogger<Reducers> logger, ReducerId reducerId, EventSequenceId eventSequenceId);
 }

@@ -29,7 +29,7 @@ public class ReducerDefinition
     /// Gets or sets the event types the reducer is interested in.
     /// </summary>
     [ProtoMember(3, IsRequired = true)]
-    public IEnumerable<EventTypeWithKeyExpression> EventTypes { get; set; } = [];
+    public IList<EventTypeWithKeyExpression> EventTypes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the <see cref="ModelDefinition"/> of the read model.

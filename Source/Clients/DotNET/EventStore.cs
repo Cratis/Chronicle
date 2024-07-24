@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -88,16 +89,36 @@ public class EventStore : IEventStore
             loggerFactory.CreateLogger<Reactions.Reactions>(),
             loggerFactory);
 
-        Reducers = new Reducers.Reducers(this, clientArtifactsProvider);
+        var modelNameResolver = new ModelNameResolver(modelNameConvention);
+
+        Reducers = new Reducers.Reducers(
+            this,
+            clientArtifactsProvider,
+            serviceProvider,
+            new ReducerValidator(),
+            EventTypes,
+            _eventSerializer,
+            modelNameResolver,
+            schemaGenerator,
+            loggerFactory.CreateLogger<Reducers.Reducers>());
+
         Projections = new Projections.Projections(
             this,
             EventTypes,
             clientArtifactsProvider,
             schemaGenerator,
-            new ModelNameResolver(modelNameConvention),
+            modelNameResolver,
             _eventSerializer,
             serviceProvider,
             jsonSerializerOptions);
+
+        AggregateRootFactory = new AggregateRootFactory(
+            this,
+            new AggregateRootStateProviders(Reducers, Projections),
+            new AggregateRootEventHandlersFactory(EventTypes),
+            causationManager,
+            _eventSerializer,
+            serviceProvider);
     }
 
     /// <inheritdoc/>
@@ -108,6 +129,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IChronicleConnection Connection { get; }
+
+    /// <inheritdoc/>
+    public IAggregateRootFactory AggregateRootFactory { get; }
 
     /// <inheritdoc/>
     public IEventTypes EventTypes { get; }
