@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Keys;
@@ -77,7 +78,8 @@ public class ImmediateProjection(
             _lastUpdated = State.LastUpdated ?? DateTimeOffset.UtcNow;
             fromSequenceNumber = EventSequenceNumber.First;
 
-            var eventSequence = GrainFactory.GetGrain<IEventSequence>(_projectionKey.EventSequenceId, new EventStoreAndNamespace(_projectionKey.EventStore, _projectionKey.Namespace));
+            var eventSequenceKey = new EventSequenceKey(_projectionKey!.EventSequenceId, _projectionKey!.EventStore, _projectionKey!.Namespace);
+            var eventSequence = GrainFactory.GetGrain<IEventSequence>(eventSequenceKey);
             var tail = await eventSequence.GetTailSequenceNumberForEventTypes(_projection!.EventTypes);
             if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null && !projectionChanged)
             {
