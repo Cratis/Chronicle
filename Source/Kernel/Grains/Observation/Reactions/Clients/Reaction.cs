@@ -54,5 +54,6 @@ public class Reaction(
         var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         var observer = GrainFactory.GetGrain<IObserver>(key);
         observer.Unsubscribe();
+        DeactivateOnIdle();
     }
 }
