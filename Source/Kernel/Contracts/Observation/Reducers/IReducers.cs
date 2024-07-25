@@ -19,5 +19,5 @@ public interface IReducers
     /// <param name="context">gRPC call context.</param>
     /// <returns>An observable of <see cref="EventsToObserve"/>.</returns>
     [Operation]
-    IObservable<EventsToObserve> Observe(IObservable<ReducerMessage> messages, CallContext context = default);
+    IObservable<ReduceOperationMessage> Observe(IObservable<ReducerMessage> messages, CallContext context = default);
 }

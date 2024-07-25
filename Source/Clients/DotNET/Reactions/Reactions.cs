@@ -122,7 +122,7 @@ public class Reactions : IReactions
         var registration = new RegisterReaction
         {
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
-            EventStoreName = _eventStore.EventStoreName,
+            EventStoreName = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             EventSequenceId = handler.EventSequenceId,
             ObserverId = handler.Id,

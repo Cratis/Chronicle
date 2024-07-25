@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.Json;
 /// <summary>
 /// Defines a parser for JSON definition of a projection.
 /// </summary>
-public interface IJsonProjectionSerializer
+public interface IJsonProjectionDefinitionSerializer
 {
     /// <summary>
     /// Deserialize a JSON string definition into <see cref="ProjectionDefinition"/>.

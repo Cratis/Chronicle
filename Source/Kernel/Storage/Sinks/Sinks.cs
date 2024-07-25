@@ -16,13 +16,13 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// </remarks>
 /// <param name="eventStoreName"><see cref="EventStoreName"/> the <see cref="Sinks"/> are for.</param>
 /// <param name="eventStoreNamespaceName"><see cref="EventStoreNamespaceName"/> the <see cref="Sinks"/> are for.</param>
-/// <param name="stores"><see cref="IInstancesOf{T}"/> of <see cref="ISinkFactory"/>.</param>
+/// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> of <see cref="ISinkFactory"/>.</param>
 public class Sinks(
     EventStoreName eventStoreName,
     EventStoreNamespaceName eventStoreNamespaceName,
-    IInstancesOf<ISinkFactory> stores) : ISinks
+    IInstancesOf<ISinkFactory> sinkFactories) : ISinks
 {
-    readonly IDictionary<SinkTypeId, ISinkFactory> _factories = stores.ToDictionary(_ => _.TypeId, _ => _);
+    readonly IDictionary<SinkTypeId, ISinkFactory> _factories = sinkFactories.ToDictionary(_ => _.TypeId, _ => _);
     readonly ConcurrentDictionary<SinkKey, ISink> _sinks = new();
 
     /// <inheritdoc/>

@@ -2,9 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Observation.Reducers;
 
-namespace Cratis.Chronicle.Objects.Reducers;
+namespace Cratis.Chronicle.Observation.Reducers;
 
 /// <summary>
 /// Represents the compound key for a reducer.

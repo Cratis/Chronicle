@@ -16,9 +16,9 @@ namespace Cratis.Chronicle;
 public interface IEventStore
 {
     /// <summary>
-    /// Gets the <see cref="EventStoreName"/> for the event store.
+    /// Gets the <see cref="Name"/> for the event store.
     /// </summary>
-    EventStoreName EventStoreName { get; }
+    EventStoreName Name { get; }
 
     /// <summary>
     /// Gets the namespace for the event store.

@@ -58,7 +58,7 @@ public class EventStore : IEventStore
         _eventStoreName = eventStoreName;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
-        EventStoreName = eventStoreName;
+        Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
         EventTypes = new Events.EventTypes(this, schemaGenerator, clientArtifactsProvider);
@@ -100,6 +100,7 @@ public class EventStore : IEventStore
             _eventSerializer,
             modelNameResolver,
             schemaGenerator,
+            jsonSerializerOptions,
             loggerFactory.CreateLogger<Reducers.Reducers>());
 
         Projections = new Projections.Projections(
@@ -122,7 +123,7 @@ public class EventStore : IEventStore
     }
 
     /// <inheritdoc/>
-    public EventStoreName EventStoreName { get; }
+    public EventStoreName Name { get; }
 
     /// <inheritdoc/>
     public EventStoreNamespaceName Namespace { get; }

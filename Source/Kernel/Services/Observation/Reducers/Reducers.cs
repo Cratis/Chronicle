@@ -15,7 +15,7 @@ using ProtoBuf.Grpc;
 namespace Cratis.Chronicle.Services.Observation.Reducers;
 
 /// <summary>
-/// Represents an implementation of <see cref="Contracts.Observation.Reducers.IReducers"/>.
+/// Represents an implementation of <see cref="IReducers"/>.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="Observers"/> class.
@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="observerMediator"><see cref="IObserverMediator"/> for observing actual events as they are made available.</param>
 public class Reducers(
     IGrainFactory grainFactory,
-    IObserverMediator observerMediator) : Contracts.Observation.Reducers.IReducers
+    IObserverMediator observerMediator) : IReducers
 {
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ReducerMessage> messages, CallContext context = default)
@@ -41,13 +41,13 @@ public class Reducers(
             {
                 case RegisterReducer register:
                     var key = new ConnectedObserverKey(
-                        register.ReducerId,
+                        register.Reducer.ReducerId,
                         register.EventStoreName,
                         register.Namespace,
-                        register.EventSequenceId,
+                        register.Reducer.EventSequenceId,
                         register.ConnectionId);
                     clientObserver = grainFactory.GetGrain<IReducer>(key);
-                    clientObserver.Start(register.EventTypes.Select(_ => _.ToChronicle()).ToArray());
+                    clientObserver.SetDefinitionAndSubscribe(register.Reducer.ToChronicle());
 
                     registrationTcs.SetResult(register);
                     break;
@@ -80,11 +80,11 @@ public class Reducers(
             {
                 var registration = await registrationTcs.Task;
                 connectionId = registration.ConnectionId;
-                observerId = registration.ReducerId;
+                observerId = registration.Reducer.ReducerId;
 
                 eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>();
                 observerMediator.Subscribe(
-                    registration.ReducerId,
+                    registration.Reducer.ReducerId,
                     registration.ConnectionId,
                     (events, tcs) =>
                     {

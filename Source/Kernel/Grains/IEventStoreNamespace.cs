@@ -23,9 +23,9 @@ public interface IEventStoreNamespace
     IEventStoreNamespaceStorage Storage { get; }
 
     /// <summary>
-    /// Gets the <see cref="IReducerPipelines"/>.
+    /// Gets the <see cref="IReducerPipelineFactory"/>.
     /// </summary>
-    IReducerPipelines ReducerPipelines { get; }
+    IReducerPipelineFactory ReducerPipelines { get; }
 
     /// <summary>
     /// Gets the sinks for the namespace.

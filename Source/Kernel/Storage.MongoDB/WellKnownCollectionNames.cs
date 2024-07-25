@@ -77,4 +77,14 @@ public static class WellKnownCollectionNames
     /// The collection that holds recommendations.
     /// </summary>
     public const string Recommendations = "recommendations";
+
+    /// <summary>
+    /// The collection that holds projection definitions.
+    /// </summary>
+    public const string ProjectionDefinitions = "projection-definitions";
+
+    /// <summary>
+    /// The collection that holds reducer definitions.
+    /// </summary>
+    public const string ReducerDefinitions = "reducer-definitions";
 }

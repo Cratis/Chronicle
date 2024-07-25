@@ -11,8 +11,7 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ReducerReplayHandler"/> class.
 /// </remarks>
-/// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
-public class ReducerReplayHandler(IKernel kernel) : ICanHandleReplayForObserver
+public class ReducerReplayHandler : ICanHandleReplayForObserver
 {
     /// <inheritdoc/>
     public Task<bool> CanHandle(ObserverDetails observerDetails) => Task.FromResult(observerDetails.Type == ObserverType.Reducer);
@@ -20,28 +19,14 @@ public class ReducerReplayHandler(IKernel kernel) : ICanHandleReplayForObserver
     /// <inheritdoc/>
     public async Task BeginReplayFor(ObserverDetails observerDetails)
     {
-        var eventStore = kernel.GetEventStore(observerDetails.Key.EventStore);
-        var @namespace = eventStore.GetNamespace(observerDetails.Key.Namespace);
-
-        if (await eventStore.ReducerPipelineDefinitions.HasFor(observerDetails.Identifier))
-        {
-            var definition = await eventStore.ReducerPipelineDefinitions.GetFor(observerDetails.Identifier);
-            var pipeline = await @namespace.ReducerPipelines.GetFor(definition);
-            await pipeline.BeginReplay();
-        }
+        // TODO: Get reducer instance and start replay
+        throw new NotImplementedException();
     }
 
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails)
     {
-        var eventStore = kernel.GetEventStore(observerDetails.Key.EventStore);
-        var @namespace = eventStore.GetNamespace(observerDetails.Key.Namespace);
-
-        if (await eventStore.ReducerPipelineDefinitions.HasFor(observerDetails.Identifier))
-        {
-            var definition = await eventStore.ReducerPipelineDefinitions.GetFor(observerDetails.Identifier);
-            var pipeline = await @namespace.ReducerPipelines.GetFor(definition);
-            await pipeline.EndReplay();
-        }
+        // TODO: Get reducer instance and end replay
+        throw new NotImplementedException();
     }
 }

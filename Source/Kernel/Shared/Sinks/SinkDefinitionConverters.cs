@@ -1,14 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Sinks;
-
-namespace Cratis.Chronicle.Projections.Definitions;
+namespace Cratis.Chronicle.Sinks;
 
 /// <summary>
 /// Converter methods for <see cref="SinkDefinition"/>.
 /// </summary>
-public static class SinkDefinitionExtensions
+public static class SinkDefinitionConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="SinkDefinition"/>.

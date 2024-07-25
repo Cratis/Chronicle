@@ -106,7 +106,7 @@ public class AggregateRoot : IAggregateRoot
             { CausationEventSequenceIdProperty, EventSequenceId.ToString() }
         });
 
-        await EventSequence.AppendMany(_eventSourceId, _uncommittedEvents.ToArray());
+        await EventSequence.AppendMany(_eventSourceId, [.. _uncommittedEvents]);
 
         var result = new AggregateRootCommitResult(true, _uncommittedEvents.ToImmutableList());
         _uncommittedEvents.Clear();

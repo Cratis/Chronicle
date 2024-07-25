@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Sinks;
 
 namespace Cratis.Chronicle.Projections.Definitions;
 

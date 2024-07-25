@@ -10,16 +10,16 @@ using Cratis.Json;
 namespace Cratis.Chronicle.Projections.Json;
 
 /// <summary>
-/// Represents an implementation of <see cref="IJsonProjectionSerializer"/>.
+/// Represents an implementation of <see cref="IJsonProjectionDefinitionSerializer"/>.
 /// </summary>
-public class JsonProjectionSerializer : IJsonProjectionSerializer
+public class JsonProjectionDefinitionSerializer : IJsonProjectionDefinitionSerializer
 {
     readonly JsonSerializerOptions _serializerOptions;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="JsonProjectionSerializer"/>.
+    /// Initializes a new instance of the <see cref="JsonProjectionDefinitionSerializer"/>.
     /// </summary>
-    public JsonProjectionSerializer()
+    public JsonProjectionDefinitionSerializer()
     {
         _serializerOptions = new()
         {

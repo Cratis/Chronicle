@@ -3,31 +3,30 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Applications.MongoDB;
-using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Projections.Json;
-using Cratis.Chronicle.Storage.Projections;
+using Cratis.Chronicle.Observation.Reducers;
+using Cratis.Chronicle.Observation.Reducers.Json;
+using Cratis.Chronicle.Storage.Observation.Reducers;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using ProjectionDefinition = Cratis.Chronicle.Projections.Definitions.ProjectionDefinition;
 
-namespace Cratis.Chronicle.Storage.MongoDB.Projections;
+namespace Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;
 
 /// <summary>
-/// Represents a <see cref="IProjectionDefinitionsStorage"/> for projection definitions in MongoDB.
+/// Represents a <see cref="IReducerDefinitionsStorage"/> for projection definitions in MongoDB.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
 /// </remarks>
 /// <param name="eventStoreDatabase">The <see cref="IEventStoreDatabase"/>.</param>
-/// <param name="projectionDefinitionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
-public class ProjectionDefinitionsStorage(
+/// <param name="reducerDefinitionSerializer">Serializer for <see cref="ReducerDefinition"/>.</param>
+public class ReducerDefinitionsStorage(
     IEventStoreDatabase eventStoreDatabase,
-    IJsonProjectionDefinitionSerializer projectionDefinitionSerializer) : IProjectionDefinitionsStorage
+    IJsonReducerDefinitionSerializer reducerDefinitionSerializer) : IReducerDefinitionsStorage
 {
-    IMongoCollection<BsonDocument> Collection => eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.ProjectionDefinitions);
+    IMongoCollection<BsonDocument> Collection => eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.ReducerDefinitions);
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ProjectionDefinition>> GetAll()
+    public async Task<IEnumerable<ReducerDefinition>> GetAll()
     {
         var result = await Collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
         var definitionsAsBson = result.ToList();
@@ -35,30 +34,30 @@ public class ProjectionDefinitionsStorage(
         {
             _.Remove("_id");
             var definitionAsJson = _.ToJson();
-            return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(definitionAsJson)!);
+            return reducerDefinitionSerializer.Deserialize(JsonNode.Parse(definitionAsJson)!);
         }).ToArray();
     }
 
     /// <inheritdoc/>
-    public Task<bool> Has(ProjectionId id) =>
+    public Task<bool> Has(ReducerId id) =>
         Collection.Find(new BsonDocument("_id", id.Value)).AnyAsync();
 
     /// <inheritdoc/>
-    public async Task<ProjectionDefinition> Get(ProjectionId id)
+    public async Task<ReducerDefinition> Get(ReducerId id)
     {
         var result = await Collection.FindAsync(filter: new BsonDocument("_id", id.Value));
         var document = result.Single();
-        return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(document.ToJson())!);
+        return reducerDefinitionSerializer.Deserialize(JsonNode.Parse(document.ToJson())!);
     }
 
     /// <inheritdoc/>
-    public Task Delete(ProjectionId id) =>
+    public Task Delete(ReducerId id) =>
         Collection.DeleteOneAsync(new BsonDocument("_id", id.Value));
 
     /// <inheritdoc/>
-    public async Task Save(ProjectionDefinition definition)
+    public async Task Save(ReducerDefinition definition)
     {
-        var json = projectionDefinitionSerializer.Serialize(definition);
+        var json = reducerDefinitionSerializer.Serialize(definition);
         var document = BsonDocument.Parse(json.ToJsonString());
         document["_id"] = definition.Identifier.Value;
 

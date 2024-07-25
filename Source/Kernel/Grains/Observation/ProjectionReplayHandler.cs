@@ -26,7 +26,7 @@ public class ProjectionReplayHandler : ICanHandleReplayForObserver
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails)
     {
-        // TODO: Get projection instance and start replay
+        // TODO: Get projection instance and end replay
         throw new NotImplementedException();
     }
 }

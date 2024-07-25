@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Projections.Pipelines;
 public interface IProjectionPipelineFactory
 {
     /// <summary>
-    /// Get a projection pipeline for a given <see cref="EngineProjection"/>.
+    /// Create a projection pipeline for a given <see cref="EngineProjection"/>.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> the pipeline is for.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the pipeline is for.</param>

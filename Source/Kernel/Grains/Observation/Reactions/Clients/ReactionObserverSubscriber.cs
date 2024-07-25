@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 
 /// <summary>
-/// Represents an implementation of <see cref="IReactionSubscriber"/>.
+/// Represents an implementation of <see cref="IReactionObserverSubscriber"/>.
 /// </summary>
 /// <remarks>
 /// We want this grain to be local to its activation. When a client connects, the service instance that
@@ -21,14 +21,14 @@ namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 /// will make the observer unique per connection, helping us to achieve this.
 /// </remarks>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ReactionSubscriber"/> class.
+/// Initializes a new instance of the <see cref="ReactionObserverSubscriber"/> class.
 /// </remarks>
 /// <param name="observerMediator"><see cref="IObserverMediator"/> for notifying actual clients.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [ConnectedObserverPlacement]
-public class ReactionSubscriber(
+public class ReactionObserverSubscriber(
     IObserverMediator observerMediator,
-    ILogger<ReactionSubscriber> logger) : Grain, IReactionSubscriber
+    ILogger<ReactionObserverSubscriber> logger) : Grain, IReactionObserverSubscriber
 {
     EventStoreName _eventStore = EventStoreName.NotSet;
     ObserverId _observerId = ObserverId.Unspecified;

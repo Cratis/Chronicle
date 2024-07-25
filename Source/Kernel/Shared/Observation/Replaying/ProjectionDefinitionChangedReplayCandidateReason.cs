@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Observation.Replaying;
 
 /// <summary>
-/// Represents a reason for a replay candidate when event types have changed.
+/// Represents a reason for a replay candidate when projection definition have changed.
 /// </summary>
 public record ProjectionDefinitionChangedReplayCandidateReason()
     : ReplayCandidateReason(ReplayCandidateReasonType.ProjectionDefinitionChanged);

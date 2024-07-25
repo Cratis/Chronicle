@@ -34,4 +34,10 @@ public class ReducerResult
     /// </summary>
     [ProtoMember(4)]
     public string ExceptionStackTrace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the resulting state.
+    /// </summary>
+    [ProtoMember(5)]
+    public string ModelState { get; set; }
 }

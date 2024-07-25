@@ -6,4 +6,4 @@ namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 /// <summary>
 /// Defines a client observer subscriber that will receive all events.
 /// </summary>
-public interface IReactionSubscriber : IObserverSubscriber;
+public interface IReactionObserverSubscriber : IObserverSubscriber;

@@ -88,7 +88,7 @@ public class Projections : IProjections
         var request = new GetInstanceByIdRequest
         {
             ProjectionId = projectionDefinition.Identifier,
-            EventStoreName = _eventStore.EventStoreName,
+            EventStoreName = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
             ModelKey = modelKey,
@@ -105,7 +105,7 @@ public class Projections : IProjections
         var request = new GetInstanceByIdRequest
         {
             ProjectionId = projectionDefinition.Identifier,
-            EventStoreName = _eventStore.EventStoreName,
+            EventStoreName = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
             ModelKey = modelKey,
@@ -126,7 +126,7 @@ public class Projections : IProjections
         var request = new GetInstanceByIdForSessionRequest
         {
             ProjectionId = projectionDefinition.Identifier,
-            EventStoreName = _eventStore.EventStoreName,
+            EventStoreName = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
             ModelKey = modelKey,
@@ -155,7 +155,7 @@ public class Projections : IProjections
         var request = new GetInstanceByIdForSessionWithEventsAppliedRequest
         {
             ProjectionId = projectionDefinition.Identifier,
-            EventStoreName = _eventStore.EventStoreName,
+            EventStoreName = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
             ModelKey = modelKey,
@@ -175,7 +175,7 @@ public class Projections : IProjections
         var request = new DehydrateSessionRequest
         {
             ProjectionId = projectionDefinition.Identifier,
-            EventStoreName = _eventStore.EventStoreName,
+            EventStoreName = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
             ModelKey = modelKey,
@@ -206,7 +206,7 @@ public class Projections : IProjections
     {
         await _eventStore.Connection.Services.Projections.Register(new()
         {
-            EventStoreName = _eventStore.EventStoreName,
+            EventStoreName = _eventStore.Name,
             Projections = [.. Definitions]
         });
     }

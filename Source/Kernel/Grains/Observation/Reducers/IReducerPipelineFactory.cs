@@ -8,12 +8,14 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers;
 /// <summary>
 /// Defines a system that manages <see cref="IReducerPipeline"/> instances.
 /// </summary>
-public interface IReducerPipelines
+public interface IReducerPipelineFactory
 {
     /// <summary>
     /// Create a <see cref="IReducerPipeline"/> from a <see cref="ReducerDefinition"/>.
     /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the pipeline is for.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the pipeline is for.</param>
     /// <param name="definition"><see cref="ReducerDefinition"/> to create from.</param>
     /// <returns><see cref="IReducerPipeline"/> instance.</returns>
-    Task<IReducerPipeline> GetFor(ReducerDefinition definition);
+    Task<IReducerPipeline> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerDefinition definition);
 }

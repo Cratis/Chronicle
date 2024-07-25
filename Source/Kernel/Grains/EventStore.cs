@@ -3,8 +3,10 @@
 
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using Cratis.Chronicle.Grains.Observation.Reducers;
+using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Types;
 
 namespace Cratis.Chronicle.Grains;
 
@@ -14,13 +16,15 @@ namespace Cratis.Chronicle.Grains;
 /// <remarks>
 /// Initializes a new instance of the <see cref="EventStore"/> class.
 /// </remarks>
+/// <param name="storage">The <see cref="IStorage"/>.</param>
 /// <param name="name">Name of the event store.</param>
-/// <param name="storage"><see cref="IEventStoreStorage"/> for accessing underlying storage for the specific event store.</param>
-/// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
+/// <param name="objectComparer">The <see cref="IObjectComparer"/>.</param>
+/// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> of <see cref="ISinkFactory"/>.</param>
 public class EventStore(
+    IStorage storage,
     EventStoreName name,
-    IEventStoreStorage storage,
-    IServiceProvider serviceProvider) : IEventStore
+    IObjectComparer objectComparer,
+    IInstancesOf<ISinkFactory> sinkFactories) : IEventStore
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespace> _namespaces = new();
 
@@ -28,10 +32,7 @@ public class EventStore(
     public EventStoreName Name { get; } = name;
 
     /// <inheritdoc/>
-    public IEventStoreStorage Storage { get; } = storage;
-
-    /// <inheritdoc/>
-    public IReducerPipelineDefinitions ReducerPipelineDefinitions { get; } = new ReducerPipelineDefinitions();
+    public IEventStoreStorage Storage { get; } = storage.GetEventStore(name);
 
     /// <inheritdoc/>
     public IImmutableList<IEventStoreNamespace> Namespaces { get; private set; } = ImmutableList<IEventStoreNamespace>.Empty;
@@ -42,10 +43,11 @@ public class EventStore(
         if (!_namespaces.TryGetValue(@namespace, out var namespaceInstance))
         {
             namespaceInstance = new EventStoreNamespace(
+                storage,
                 Name,
                 @namespace,
-                Storage.GetNamespace(@namespace),
-                serviceProvider);
+                objectComparer,
+                sinkFactories);
             _namespaces[@namespace] = namespaceInstance;
             Namespaces = Namespaces.Add(namespaceInstance);
         }

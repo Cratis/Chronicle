@@ -41,7 +41,7 @@ public class Reaction(
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
         await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
         var connectedClient = await connectedClients.GetConnectedClient(_observerKey.ConnectionId!);
-        await observer.Subscribe<IReactionSubscriber>(ObserverType.Client, eventTypes, localSiloDetails.SiloAddress, connectedClient);
+        await observer.Subscribe<IReactionObserverSubscriber>(ObserverType.Client, eventTypes, localSiloDetails.SiloAddress, connectedClient);
     }
 
     /// <inheritdoc/>
