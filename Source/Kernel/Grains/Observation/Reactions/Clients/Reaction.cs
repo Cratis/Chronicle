@@ -26,8 +26,11 @@ public class Reaction(
     ConnectedObserverKey? _observerKey;
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
+        await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
+
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
         return Task.CompletedTask;
     }
