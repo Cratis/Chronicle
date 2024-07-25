@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Grains.Observation.Clients;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers;
@@ -21,12 +20,12 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 /// Initializes a new instance of the <see cref="ReducerObserverSubscriber"/> class.
 /// </remarks>
 /// <param name="reducerPipelineFactory"><see cref="IReducerPipelineFactory"/> for creating pipelines.</param>
-/// <param name="observerMediator"><see cref="IObserverMediator"/> for notifying actual clients.</param>
+/// <param name="reducerMediator"><see cref="IReducerMediator"/> for notifying actual clients.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class ReducerObserverSubscriber(
     IReducerPipelineFactory reducerPipelineFactory,
-    IObserverMediator observerMediator,
+    IReducerMediator reducerMediator,
     ILogger<ReducerObserverSubscriber> logger) : Grain<ReducerDefinition>, IReducerObserverSubscriber, INotifyReducerDefinitionsChanged
 {
     ObserverSubscriberKey _key = new(ObserverId.Unspecified, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Unspecified, EventSourceId.Unspecified, string.Empty);
@@ -82,23 +81,28 @@ public class ReducerObserverSubscriber(
         var tcs = new TaskCompletionSource<ObserverSubscriberResult>();
         try
         {
-            observerMediator.OnNext(
-                _observerId,
-                connectedClient.ConnectionId,
-                events,
-                tcs);
-
             var firstEvent = events.First();
             var reducerContext = new ReducerContext(
                 events,
                 new Key(firstEvent.Context.EventSourceId, ArrayIndexers.NoIndexers));
 
-            _pipeline?.Handle(reducerContext, (events, initialState) =>
+            await (_pipeline?.Handle(reducerContext, async (events, initialState) =>
             {
-                throw new NotImplementedException();
-            });
+                var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>();
 
-            return await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                reducerMediator.OnNext(
+                    _observerId,
+                    connectedClient.ConnectionId,
+                    new(events, initialState),
+                    reducerSubscriberResultTCS);
+
+                await reducerSubscriberResultTCS.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+                return (await reducerSubscriberResultTCS.Task).ModelState;
+            }) ?? Task.CompletedTask);
+
+            await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            return await tcs.Task;
         }
         catch (TaskCanceledException)
         {
@@ -108,76 +112,6 @@ public class ReducerObserverSubscriber(
         {
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Timeout");
         }
-
-        /*
-        if (context.Metadata is ConnectedClient connectedClient)
-        {
-            using var httpClient = _httpClientFactory.CreateClient(ConnectedClients.ConnectedClientsHttpClient);
-            httpClient.BaseAddress = connectedClient.ClientUri;
-            var state = ObserverSubscriberState.Ok;
-            var commandResult = CommandResult.Success;
-
-            var firstEvent = events.First();
-            var reducerContext = new ReducerContext(
-                events,
-                new Key(firstEvent.Context.EventSourceId, ArrayIndexers.NoIndexers));
-
-            var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
-
-            ReduceResult? reduceResult = null;
-
-            await (_pipeline?.Handle(reducerContext, async (_, initial) =>
-            {
-                var reduce = new Reduce(
-                    events,
-                    initial is not null ? _expandoObjectConverter.ToJsonObject(initial, _pipeline.ReadModel.Schema) : null);
-                using var jsonContent = JsonContent.Create(reduce, options: _jsonSerializerOptions);
-                httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _namespace.ToString());
-                var response = await httpClient.PostAsync($"/.cratis/reducers/{_reducerId}", jsonContent);
-
-                var contentAsString = string.Empty;
-
-                try
-                {
-                    contentAsString = await response.Content.ReadAsStringAsync();
-                    commandResult = JsonSerializer.Deserialize<CommandResult>(contentAsString, _jsonSerializerOptions)!;
-                }
-                catch
-                {
-                    throw new InvalidReturnContentFromReducer(response.StatusCode, response.ReasonPhrase ?? "[n/a]", contentAsString);
-                }
-
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                {
-                    await ConnectedClientsGrain.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
-                    state = ObserverSubscriberState.Disconnected;
-                }
-                else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)
-                {
-                    state = ObserverSubscriberState.Failed;
-                }
-
-                if (commandResult.Response is not null && commandResult.Response is JsonElement jsonElement)
-                {
-                    reduceResult = jsonElement.Deserialize<ReduceResult>(_jsonSerializerOptions)!;
-                    return _expandoObjectConverter.ToExpandoObject(reduceResult.State ?? new JsonObject(), _pipeline.ReadModel.Schema);
-                }
-
-                return new ExpandoObject();
-            }) ?? Task.CompletedTask);
-
-#pragma warning disable CA1508 // Avoid dead conditional code - false positive
-            if (reduceResult is null)
-            {
-                return new ObserverSubscriberResult(state, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
-            }
-#pragma warning restore CA1508 // Avoid dead conditional code
-
-            return new ObserverSubscriberResult(state, reduceResult.LastSuccessfullyObservedEvent, reduceResult.ErrorMessages, reduceResult.StackTrace);
-        }
-
-        return new ObserverSubscriberResult(ObserverSubscriberState.Disconnected, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
-        */
     }
 
     async Task HandlePipeline()

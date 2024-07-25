@@ -48,7 +48,6 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
         {
             CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
-                    request.ObserverId,
                     request.ObserverKey,
                     request.ObserverSubscription,
                     request.Key,

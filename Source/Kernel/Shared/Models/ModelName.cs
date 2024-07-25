@@ -10,6 +10,11 @@ namespace Cratis.Chronicle.Models;
 public record ModelName(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
+    /// Gets a value representing an unset model name.
+    /// </summary>
+    public static readonly ModelName NotSet = "NotSet";
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ModelName"/>.
     /// </summary>
     /// <param name="value"><see cref="string"/> to convert from.</param>

@@ -173,6 +173,7 @@ public class EventStore : IEventStore
 
         await Task.WhenAll(
             Reactions.Register(),
+            Reducers.Register(),
             Projections.Register());
     }
 

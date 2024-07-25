@@ -6,11 +6,11 @@ using Cratis.Chronicle.Reactions;
 
 namespace Basic;
 
-public class MyObserver : IReaction
-{
-    public Task ItemAdded(ItemAddedToCart @event, EventContext context)
-    {
-        Console.WriteLine($"Item added to cart: {@event.MaterialId} - {@event.Quantity}");
-        return Task.CompletedTask;
-    }
-}
+// public class MyObserver : IReaction
+// {
+//     public Task ItemAdded(ItemAddedToCart @event, EventContext context)
+//     {
+//         Console.WriteLine($"Item added to cart: {@event.MaterialId} - {@event.Quantity}");
+//         return Task.CompletedTask;
+//     }
+// }

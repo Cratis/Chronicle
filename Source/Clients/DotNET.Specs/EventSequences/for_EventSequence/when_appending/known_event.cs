@@ -8,6 +8,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
+using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending;
 
@@ -41,7 +42,7 @@ public class known_event : given.an_event_sequence
         event_types.Setup(_ => _.HasFor(typeof(string))).Returns(true);
         event_types.Setup(_ => _.GetEventTypeFor(typeof(string))).Returns(event_type);
         event_sequences
-            .Setup(_ => _.Append(IsAny<AppendRequest>()))
+            .Setup(_ => _.Append(IsAny<AppendRequest>(), CallContext.Default))
             .Callback((AppendRequest _) => command = _);
         causation_manager.Setup(_ => _.GetCurrentChain()).Returns(causation.ToImmutableList());
         identity_provider.Setup(_ => _.GetCurrent()).Returns(caused_by);

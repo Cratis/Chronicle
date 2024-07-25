@@ -35,7 +35,7 @@ public class HandleEventsForPartition(
     public override Task Prepare(HandleEventsForPartitionArguments request)
     {
         var eventSourceId = (EventSourceId)(request.Partition.Value.ToString() ?? string.Empty);
-        _observer = GrainFactory.GetGrain<IObserver>(request.ObserverId, request.ObserverKey);
+        _observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
 
         State.NextEventSequenceNumber = request.StartEventSequenceNumber;
 

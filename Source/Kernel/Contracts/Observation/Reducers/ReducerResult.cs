@@ -39,5 +39,5 @@ public class ReducerResult
     /// Gets or sets the resulting state.
     /// </summary>
     [ProtoMember(5)]
-    public string ModelState { get; set; }
+    public string? ModelState { get; set; }
 }

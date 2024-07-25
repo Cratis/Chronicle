@@ -3,25 +3,15 @@
 
 using Basic;
 using Cratis.Chronicle;
-using Microsoft.Extensions.Logging;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Logging.AddConsole();
 
 using var loggerFactory = LoggerFactory.Create(builder => builder
     .SetMinimumLevel(LogLevel.Trace)
     .AddConsole());
 
-using var client = new ChronicleClient(
-        new ChronicleOptions(
-            new ChronicleUrl("chronicle://localhost:35000"),
-            loggerFactory: loggerFactory));
-
-var eventStore = client.GetEventStore(Guid.Empty.ToString());
-await eventStore.DiscoverAll();
-await eventStore.RegisterAll();
-
-var order = await eventStore.AggregateRootFactory.Get<Order>("91541f83-ae49-4d50-a88d-18fb29d2b98f");
-order.DoStuff();
-order.DoOtherStuff();
-await order.Commit();
+IEventStore eventStore = null!;
 
 async Task AddItemToCart()
 {
@@ -35,67 +25,87 @@ async Task AddItemToCart()
             Description: "This is a description"));
 }
 
-async Task AddBulkOfItemsToCart()
+// async Task AddBulkOfItemsToCart()
+// {
+//     var events = Enumerable.Range(1, 1000).Select(_ => new ItemAddedToCart(
+//         PersonId: new(Guid.NewGuid()),
+//         MaterialId: new(Guid.NewGuid()),
+//         Quantity: 1,
+//         Price: 42,
+//         Description: "This is a description"));
+
+//     foreach (var @event in events)
+//     {
+//         await eventStore.EventLog.Append(
+//             eventSourceId: Guid.NewGuid(),
+//             @event);
+//     }
+// }
+
+// async Task AddManyItemsToCart()
+// {
+//     var events = Enumerable.Range(1, 1000).Select(_ => new ItemAddedToCart(
+//         PersonId: new(Guid.NewGuid()),
+//         MaterialId: new(Guid.NewGuid()),
+//         Quantity: 1,
+//         Price: 42,
+//         Description: "This is a description"));
+
+//     await eventStore.EventLog.AppendMany(
+//         eventSourceId: Guid.NewGuid(),
+//         events);
+// }
+
+var app = builder.Build();
+
+app.MapGet("/init", async () =>
 {
-    var events = Enumerable.Range(1, 1000).Select(_ => new ItemAddedToCart(
-        PersonId: new(Guid.NewGuid()),
-        MaterialId: new(Guid.NewGuid()),
-        Quantity: 1,
-        Price: 42,
-        Description: "This is a description"));
+    var client = new ChronicleClient(
+            new ChronicleOptions(
+                new ChronicleUrl("chronicle://localhost:35000"),
+                loggerFactory: loggerFactory));
 
-    foreach (var @event in events)
-    {
-        await eventStore.EventLog.Append(
-            eventSourceId: Guid.NewGuid(),
-            @event);
-    }
-}
+    eventStore = client.GetEventStore("basic");
+    await eventStore.DiscoverAll();
+    await eventStore.RegisterAll();
+});
 
-async Task AddManyItemsToCart()
-{
-    var events = Enumerable.Range(1, 1000).Select(_ => new ItemAddedToCart(
-        PersonId: new(Guid.NewGuid()),
-        MaterialId: new(Guid.NewGuid()),
-        Quantity: 1,
-        Price: 42,
-        Description: "This is a description"));
+app.MapGet(
+    "/",
+    async () => await AddItemToCart());
 
-    await eventStore.EventLog.AppendMany(
-        eventSourceId: Guid.NewGuid(),
-        events);
-}
+await app.RunAsync();
 
-while (true)
-{
-    Console.WriteLine("\n\n****** Menu *******");
-    Console.WriteLine("---------------------");
-    Console.WriteLine("I - Add item to cart");
-    Console.WriteLine("B - Add a bulk of items to cart");
-    Console.WriteLine("M - Add many items to cart");
-    Console.WriteLine("A - Do stuff to Aggregate");
-    Console.WriteLine("---------------------");
-    Console.WriteLine("Q - Exit");
-    Console.WriteLine("****** Menu *******");
-    var key = Console.ReadKey();
-    switch (key.Key)
-    {
-        case ConsoleKey.Q:
-            return;
+// while (true)
+// {
+//     Console.WriteLine("\n\n****** Menu *******");
+//     Console.WriteLine("---------------------");
+//     Console.WriteLine("I - Add item to cart");
+//     Console.WriteLine("B - Add a bulk of items to cart");
+//     Console.WriteLine("M - Add many items to cart");
+//     Console.WriteLine("A - Do stuff to Aggregate");
+//     Console.WriteLine("---------------------");
+//     Console.WriteLine("Q - Exit");
+//     Console.WriteLine("****** Menu *******");
+//     var key = Console.ReadKey();
+//     switch (key.Key)
+//     {
+//         case ConsoleKey.Q:
+//             return;
 
-        case ConsoleKey.I:
-            await AddItemToCart();
-            break;
+//         case ConsoleKey.I:
+//             await AddItemToCart();
+//             break;
 
-        case ConsoleKey.B:
-            await AddBulkOfItemsToCart();
-            break;
+//         case ConsoleKey.B:
+//             await AddBulkOfItemsToCart();
+//             break;
 
-        case ConsoleKey.M:
-            await AddManyItemsToCart();
-            break;
+//         case ConsoleKey.M:
+//             await AddManyItemsToCart();
+//             break;
 
-        case ConsoleKey.A:
-            break;
-    }
-}
+//         case ConsoleKey.A:
+//             break;
+//     }
+// }

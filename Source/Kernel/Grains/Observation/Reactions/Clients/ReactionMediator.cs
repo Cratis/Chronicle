@@ -4,36 +4,36 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Reactions;
 using Cratis.DependencyInjection;
 
-namespace Cratis.Chronicle.Grains.Observation.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 
 /// <summary>
-/// Represents an implementation of <see cref="IObserverMediator"/>.
+/// Represents an implementation of <see cref="IReactionMediator"/>.
 /// </summary>
 [Singleton]
-public class ObserverMediator : IObserverMediator
+public class ReactionMediator : IReactionMediator
 {
-    readonly ConcurrentDictionary<ObserverMediatorKey, EventsObserver> _observers = new();
+    readonly ConcurrentDictionary<ReactionMediatorKey, ReactionEventsObserver> _observers = new();
 
     /// <inheritdoc/>
     public void Subscribe(
-        ObserverId observerId,
+        ReactionId reactionId,
         ConnectionId connectionId,
-        EventsObserver target)
+        ReactionEventsObserver target)
     {
-        _observers[new(observerId, connectionId)] = target;
+        _observers[new(reactionId, connectionId)] = target;
     }
 
     /// <inheritdoc/>
     public void OnNext(
-        ObserverId observerId,
+        ReactionId reactionId,
         ConnectionId connectionId,
         IEnumerable<AppendedEvent> events,
         TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource)
     {
-        if (_observers.TryGetValue(new(observerId, connectionId), out var observable))
+        if (_observers.TryGetValue(new(reactionId, connectionId), out var observable))
         {
             observable(events, taskCompletionSource);
         }
@@ -45,9 +45,9 @@ public class ObserverMediator : IObserverMediator
 
     /// <inheritdoc/>
     public void Disconnected(
-        ObserverId observerId,
+        ReactionId reactionId,
         ConnectionId connectionId)
     {
-        _observers.TryRemove(new(observerId, connectionId), out var _);
+        _observers.TryRemove(new(reactionId, connectionId), out var _);
     }
 }

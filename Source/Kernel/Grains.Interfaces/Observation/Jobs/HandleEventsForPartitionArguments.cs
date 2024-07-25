@@ -10,7 +10,6 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// <summary>
 /// Represents the arguments passed along to a job step representing a specific key on an observer.
 /// </summary>
-/// <param name="ObserverId"><see cref="ObserverId"/> for the observer.</param>
 /// <param name="ObserverKey">The <see cref="ObserverKey"/> with extended details about the observer.</param>
 /// <param name="ObserverSubscription">The <see cref="ObserverSubscription"/> for the observer.</param>
 /// <param name="Partition">The partition in the form a <see cref="Key"/>.</param>
@@ -18,7 +17,6 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// <param name="EventObservationState">The event observation state to set for the events.</param>
 /// <param name="EventTypes">The event types that are to replay.</param>
 public record HandleEventsForPartitionArguments(
-    ObserverId ObserverId,
     ObserverKey ObserverKey,
     ObserverSubscription ObserverSubscription,
     Key Partition,

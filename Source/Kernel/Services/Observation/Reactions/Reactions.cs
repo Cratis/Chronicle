@@ -7,7 +7,6 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactions;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.Grains.Observation.Clients;
 using Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 using Cratis.Chronicle.Observation;
 using ProtoBuf.Grpc;
@@ -21,10 +20,10 @@ namespace Cratis.Chronicle.Services.Observation.Reactions;
 /// Initializes a new instance of the <see cref="Observers"/> class.
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-/// <param name="observerMediator"><see cref="IObserverMediator"/> for observing actual events as they are made available.</param>
+/// <param name="reactionMediator"><see cref="IReactionMediator"/> for observing actual events as they are made available.</param>
 public class Reactions(
     IGrainFactory grainFactory,
-    IObserverMediator observerMediator) : IReactions
+    IReactionMediator reactionMediator) : IReactions
 {
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ReactionMessage> messages, CallContext context = default)
@@ -83,7 +82,7 @@ public class Reactions(
                 observerId = registration.ObserverId;
 
                 eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>();
-                observerMediator.Subscribe(
+                reactionMediator.Subscribe(
                     registration.ObserverId,
                     registration.ConnectionId,
                     (events, tcs) =>
@@ -107,13 +106,13 @@ public class Reactions(
             }
             catch (OperationCanceledException)
             {
-                observerMediator.Disconnected(observerId, connectionId);
+                reactionMediator.Disconnected(observerId, connectionId);
                 observationResultTcs?.SetResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable));
                 observer.OnCompleted();
             }
             catch (Exception ex)
             {
-                observerMediator.Disconnected(observerId, connectionId);
+                reactionMediator.Disconnected(observerId, connectionId);
                 observationResultTcs?.SetResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable));
                 observer.OnError(ex);
             }
