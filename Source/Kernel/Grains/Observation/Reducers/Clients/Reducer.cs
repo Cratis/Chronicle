@@ -31,6 +31,7 @@ public class Reducer(
     ILocalSiloDetails localSiloDetails,
     ILogger<Reducer> logger) : Grain<ReducerDefinition>, IReducer, INotifyClientDisconnected
 {
+    IConnectedClients? _connectedClients;
     IObserver? _observer;
     bool _subscribed;
     ConnectedObserverKey? _observerKey;
@@ -38,8 +39,8 @@ public class Reducer(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
-        await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
+        _connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
+        await _connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
 
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
     }
@@ -69,8 +70,7 @@ public class Reducer(
         {
             _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId));
 
-            var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
-            var connectedClient = await connectedClients.GetConnectedClient(_observerKey!.ConnectionId!);
+            var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey!.ConnectionId!);
 
             await _observer.Subscribe<IReducerObserverSubscriber>(
                 ObserverType.Reducer,
@@ -85,10 +85,13 @@ public class Reducer(
     /// <inheritdoc/>
     public void OnClientDisconnected(ConnectedClient client)
     {
+        if (client.ConnectionId != _observerKey!.ConnectionId) return;
+
         logger.ClientDisconnected(client.ConnectionId, _observerKey!.EventStore, _observerKey.ObserverId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
         var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         var observer = GrainFactory.GetGrain<IObserver>(key);
         observer.Unsubscribe();
+        _connectedClients!.UnsubscribeDisconnected(this.AsReference<INotifyClientDisconnected>()).Wait();
         DeactivateOnIdle();
     }
 

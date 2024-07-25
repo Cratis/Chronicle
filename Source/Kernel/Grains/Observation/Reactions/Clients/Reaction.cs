@@ -23,16 +23,16 @@ public class Reaction(
     ILocalSiloDetails localSiloDetails,
     ILogger<Reaction> logger) : Grain, IReaction, INotifyClientDisconnected
 {
+    IConnectedClients? _connectedClients;
     ConnectedObserverKey? _observerKey;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
-        await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
+        _connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
+        await _connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
 
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -41,19 +41,21 @@ public class Reaction(
         logger.Starting(_observerKey!.EventStore, _observerKey.ObserverId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
         var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         var observer = GrainFactory.GetGrain<IObserver>(key);
-        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
-        await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
-        var connectedClient = await connectedClients.GetConnectedClient(_observerKey.ConnectionId!);
+        await _connectedClients!.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
+        var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId!);
         await observer.Subscribe<IReactionObserverSubscriber>(ObserverType.Client, eventTypes, localSiloDetails.SiloAddress, connectedClient);
     }
 
     /// <inheritdoc/>
     public void OnClientDisconnected(ConnectedClient client)
     {
+        if (client.ConnectionId != _observerKey!.ConnectionId) return;
+
         logger.ClientDisconnected(client.ConnectionId, _observerKey!.EventStore, _observerKey.ObserverId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
         var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         var observer = GrainFactory.GetGrain<IObserver>(key);
         observer.Unsubscribe();
+        _connectedClients!.UnsubscribeDisconnected(this.AsReference<INotifyClientDisconnected>()).Wait();
         DeactivateOnIdle();
     }
 }
