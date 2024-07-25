@@ -193,6 +193,7 @@ public class Reducers(
                 initialState);
 
             modelState = JsonSerializer.Serialize(reduceResult.ModelState, jsonSerializerOptions);
+            lastSuccessfullyObservedEvent = appendedEvents.Last().Metadata.SequenceNumber;
         }
         catch (Exception ex)
         {
