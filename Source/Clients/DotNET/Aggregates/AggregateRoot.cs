@@ -31,37 +31,37 @@ public class AggregateRoot : IAggregateRoot
     public static readonly CausationType CausationType = "AggregateRoot";
 
     /// <summary>
-    /// Cratis Internal: The uncommitted events for the aggregate root.
+    /// Chronicle Internal: The uncommitted events for the aggregate root.
     /// </summary>
     internal readonly List<object> _uncommittedEvents = [];
 
     /// <summary>
-    /// Cratis Internal: The event handlers for the aggregate root.
+    /// Chronicle Internal: The event handlers for the aggregate root.
     /// </summary>
     internal IAggregateRootEventHandlers EventHandlers = default!;
 
     /// <summary>
-    /// Cratis Internal: The state provider for the aggregate root.
+    /// Chronicle Internal: The state provider for the aggregate root.
     /// </summary>
     internal IAggregateRootStateProvider StateProvider = default!;
 
     /// <summary>
-    /// Cratis Internal: The event sequence for the aggregate root.
+    /// Chronicle Internal: The event sequence for the aggregate root.
     /// </summary>
     internal IEventSequence EventSequence = default!;
 
     /// <summary>
-    /// Cratis Internal: The <see cref="ICausationManager"/> to use with the aggregate root when committing.
+    /// Chronicle Internal: The <see cref="ICausationManager"/> to use with the aggregate root when committing.
     /// </summary>
     internal ICausationManager CausationManager = default!;
 
     /// <summary>
-    /// Cratis Internal: The <see cref="_eventSourceId"/> for the aggregate root.
+    /// Chronicle Internal: The <see cref="_eventSourceId"/> for the aggregate root.
     /// </summary>
     internal EventSourceId _eventSourceId = EventSourceId.Unspecified;
 
     /// <summary>
-    /// Cratis Internal: The <see cref="CorrelationId"/> for the aggregate root.
+    /// Chronicle Internal: The <see cref="CorrelationId"/> for the aggregate root.
     /// </summary>
     internal CorrelationId CorrelationId = CorrelationId.New();
 
@@ -72,7 +72,7 @@ public class AggregateRoot : IAggregateRoot
     public virtual EventSequenceId EventSequenceId => EventSequenceId.Log;
 
     /// <summary>
-    /// Cratis Internal: The type of state for the aggregate root.
+    /// Chronicle Internal: The type of state for the aggregate root.
     /// </summary>
     internal virtual Type StateType => typeof(object);
 
@@ -116,7 +116,7 @@ public class AggregateRoot : IAggregateRoot
     }
 
     /// <summary>
-    /// Cratis Internal: Set the state for the aggregate root.
+    /// Chronicle Internal: Set the state for the aggregate root.
     /// </summary>
     /// <param name="state">State to set.</param>
     internal virtual void MutateState(object? state)
@@ -124,13 +124,13 @@ public class AggregateRoot : IAggregateRoot
     }
 
     /// <summary>
-    /// Cratis Internal: Get the state for the aggregate root.
+    /// Chronicle Internal: Get the state for the aggregate root.
     /// </summary>
     /// <returns>The current state.</returns>
     internal virtual object? GetState() => null;
 
     /// <summary>
-    /// Cratis Internal: Invoke the OnActivate method.
+    /// Chronicle Internal: Invoke the OnActivate method.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     internal Task InternalOnActivate() => OnActivate();
@@ -150,7 +150,7 @@ public class AggregateRoot<TState> : AggregateRoot
     where TState : class
 {
     /// <summary>
-    /// State of the aggregate root - accessible only to Cratis internally.
+    /// State of the aggregate root - accessible only to Chronicle Internally.
     /// </summary>
     internal TState _state = default!;
 
