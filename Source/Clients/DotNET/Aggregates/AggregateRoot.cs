@@ -82,18 +82,24 @@ public class AggregateRoot : IAggregateRoot
     protected EventSourceId EventSourceId => _eventSourceId;
 
     /// <inheritdoc/>
-    public void Apply<T>(T @event)
+    public async Task Apply<T>(T @event)
         where T : class
     {
         typeof(T).ValidateEventType();
         _uncommittedEvents.Add(@event);
 
-        MutateState(StateProvider.Update(GetState(), [@event]).GetAwaiter().GetResult());
+        MutateState(await StateProvider.Update(GetState(), [@event]));
 
         if (!IsStateful)
         {
             // TODO: We should have the correct event store and namespace, this should be injected into the aggregate root.
-            EventHandlers.Handle(this, [new EventAndContext(@event, EventContext.From(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSourceId, EventSequenceNumber.Unavailable))]).GetAwaiter().GetResult();
+            await EventHandlers.Handle(
+                this,
+                [
+                    new EventAndContext(
+                        @event,
+                        EventContext.From(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSourceId, EventSequenceNumber.Unavailable))
+                ]);
         }
     }
 
