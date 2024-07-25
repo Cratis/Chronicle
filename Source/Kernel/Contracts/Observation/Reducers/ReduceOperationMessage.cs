@@ -16,7 +16,7 @@ public class ReduceOperationMessage
     /// Gets or sets the initial state.
     /// </summary>
     [ProtoMember(1)]
-    public string InitialState { get; set; }
+    public string? InitialState { get; set; }
 
     /// <summary>
     /// Gets or sets a collection of <see cref="AppendedEvent"/>.

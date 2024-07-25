@@ -21,7 +21,7 @@ public class ReducerAggregateRootStateProvider(AggregateRoot aggregateRoot, IRed
     {
         var events = await aggregateRoot.EventSequence.GetForEventSourceIdAndEventTypes(aggregateRoot._eventSourceId, aggregateRoot.EventHandlers.EventTypes);
         var result = await reducer.OnNext(events, null);
-        return result.State;
+        return result.ModelState;
     }
 
     /// <inheritdoc/>
@@ -29,7 +29,7 @@ public class ReducerAggregateRootStateProvider(AggregateRoot aggregateRoot, IRed
     {
         var eventsWithContext = events.Select(_ => new EventAndContext(_, EventContext.EmptyWithEventSourceId(aggregateRoot._eventSourceId)));
         var result = await reducer.Invoker.Invoke(eventsWithContext, initialState);
-        return result.State;
+        return result.ModelState;
     }
 
     /// <inheritdoc/>

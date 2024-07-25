@@ -1,10 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Grains.Namespaces;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers;
 using Microsoft.Extensions.Logging;
-using Orleans.BroadcastChannel;
 using Orleans.Providers;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
@@ -16,65 +17,41 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 /// Initializes a new instance of the <see cref="Reducers"/> class.
 /// </remarks>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-[ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ReducersManager)]
-public class ReducersManager(ILogger<ReducersManager> logger) : Grain<ReducersManagerState>, IReducersManager, IOnBroadcastChannelSubscribed
+public class ReducersManager(ILogger<ReducersManager> logger) : Grain<ReducersManagerState>, IReducersManager
 {
     EventStoreName _eventStoreName = EventStoreName.NotSet;
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _eventStoreName = this.GetPrimaryKeyString();
-        await SetDefinitionForAllProjectionsInAllNamespaces();
-    }
-
-    /// <inheritdoc/>
-    public async Task Register(IEnumerable<ReducerDefinition> definitions)
-    {
-        logger.RegisterReducers();
-
-        await Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
-    {
-        streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
         return Task.CompletedTask;
     }
 
-    async Task OnNamespaceAdded(NamespaceAdded added)
+    /// <inheritdoc/>
+    public async Task Register(ConnectionId connectionId, IEnumerable<ReducerDefinition> definitions)
     {
-        foreach (var reducerDefinition in State.Reducers)
-        {
-            var key = new ReducerKey(reducerDefinition.Identifier, _eventStoreName, added.Namespace, reducerDefinition.EventSequenceId);
-            var reducer = GrainFactory.GetGrain<IReducer>(key);
-            await reducer.SetDefinitionAndSubscribe(reducerDefinition);
-        }
+        logger.RegisterReducers();
+        await SetDefinitionForAllProjectionsInAllNamespaces(connectionId);
     }
 
-    async Task SetDefinitionForAllProjectionsInAllNamespaces()
+    async Task SetDefinitionForAllProjectionsInAllNamespaces(ConnectionId connectionId)
     {
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         foreach (var namespaceName in namespaces)
         {
-            await SetDefinitionForAllProjectionsForNamespace(namespaceName);
+            await SetDefinitionForAllProjectionsForNamespace(connectionId, namespaceName);
         }
     }
 
-    async Task SetDefinitionForAllProjectionsForNamespace(EventStoreNamespaceName namespaceName)
+    async Task SetDefinitionForAllProjectionsForNamespace(ConnectionId connectionId, EventStoreNamespaceName namespaceName)
     {
-        foreach (var projectionDefinition in State.Reducers)
+        foreach (var reducerDefinition in State.Reducers)
         {
-            var key = new ReducerKey(projectionDefinition.Identifier, _eventStoreName, namespaceName, projectionDefinition.EventSequenceId);
+            var key = new ConnectedObserverKey(reducerDefinition.Identifier, _eventStoreName, namespaceName, reducerDefinition.EventSequenceId, connectionId);
             var projection = GrainFactory.GetGrain<IReducer>(key);
-            await projection.SetDefinitionAndSubscribe(projectionDefinition);
+            await projection.SetDefinitionAndSubscribe(reducerDefinition);
         }
-    }
-
-    Task OnError(Exception exception)
-    {
-        return Task.CompletedTask;
     }
 }

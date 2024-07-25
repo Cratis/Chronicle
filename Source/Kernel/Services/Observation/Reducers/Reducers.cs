@@ -37,7 +37,7 @@ public class Reducers(
     {
         var registrationTcs = new TaskCompletionSource<RegisterReducer>();
         TaskCompletionSource<ReducerSubscriberResult>? reducerResultTcs = null;
-        TaskCompletionSource<ReduceOperation>? reduceContextTcs;
+        TaskCompletionSource<ReduceOperation>? reduceOperationTcs;
 
         IReducer clientObserver = null!;
 
@@ -99,23 +99,24 @@ public class Reducers(
                 connectionId = registration.ConnectionId;
                 observerId = registration.Reducer.ReducerId;
 
-                reduceContextTcs = new TaskCompletionSource<ReduceOperation>();
+                reduceOperationTcs = new TaskCompletionSource<ReduceOperation>();
                 reducerMediator.Subscribe(
                     registration.Reducer.ReducerId,
                     registration.ConnectionId,
-                    (events, tcs) =>
+                    (reduceOperation, tcs) =>
                     {
                         reducerResultTcs = tcs;
-                        reduceContextTcs.SetResult(events);
+                        reduceOperationTcs.SetResult(reduceOperation);
                     });
 
                 while (!context.CancellationToken.IsCancellationRequested)
                 {
-                    var operationContext = await reduceContextTcs.Task;
+                    var reduceOperation = await reduceOperationTcs.Task;
+                    var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.Schema).ToString();
                     var message = new ReduceOperationMessage()
                     {
-                        InitialState = expandoObjectConverter.ToJsonObject(operationContext.InitialState, model.Schema).ToString(),
-                        Events = operationContext.Events.Select(_ => _.ToContract()).ToArray()
+                        InitialState = initialState,
+                        Events = reduceOperation.Events.Select(_ => _.ToContract()).ToArray()
                     };
 
                     observer.OnNext(message);
@@ -124,7 +125,7 @@ public class Reducers(
                         break;
                     }
 
-                    reduceContextTcs = new TaskCompletionSource<ReduceOperation>();
+                    reduceOperationTcs = new TaskCompletionSource<ReduceOperation>();
                 }
             }
             catch (OperationCanceledException)

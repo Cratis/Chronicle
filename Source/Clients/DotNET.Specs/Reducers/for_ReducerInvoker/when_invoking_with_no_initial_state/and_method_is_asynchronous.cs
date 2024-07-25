@@ -10,7 +10,7 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
 {
     ValidEvent @event;
     EventContext event_context;
-    InternalReduceResult reduce_result;
+    ReduceResult reduce_result;
 
     void Establish()
     {
@@ -23,5 +23,5 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
     [Fact] void should_pass_the_event() => reducer.ReceivedEvents.First().ShouldEqual(@event);
     [Fact] void should_pass_no_read_model() => reducer.ReceivedReadModels.First().ShouldBeNull();
     [Fact] void should_pass_the_event_context() => reducer.ReceivedEventContexts.First().ShouldEqual(event_context);
-    [Fact] void should_return_the_read_model() => reduce_result.State.ShouldEqual(reducer.ReturnedReadModel);
+    [Fact] void should_return_the_read_model() => reduce_result.ModelState.ShouldEqual(reducer.ReturnedReadModel);
 }

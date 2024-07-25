@@ -170,6 +170,7 @@ public class Reducers(
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var state = ObservationState.Success;
+        string? modelState = null;
 
         var appendedEvents = operation.Events.Select(@event =>
         {
@@ -186,9 +187,12 @@ public class Reducers(
         try
         {
             BaseIdentityProvider.SetCurrentIdentity(Identity.System);
+            var initialState = operation.InitialState is null ? null : JsonSerializer.Deserialize(operation.InitialState, handler.ReadModelType, jsonSerializerOptions);
             var reduceResult = await handler.OnNext(
                 appendedEvents,
-                JsonSerializer.Deserialize(operation.InitialState, handler.ReadModelType, jsonSerializerOptions));
+                initialState);
+
+            modelState = JsonSerializer.Serialize(reduceResult.ModelState, jsonSerializerOptions);
         }
         catch (Exception ex)
         {
@@ -199,6 +203,7 @@ public class Reducers(
 
         var result = new ReducerResult
         {
+            ModelState = modelState,
             State = state,
             LastSuccessfulObservation = lastSuccessfullyObservedEvent,
             ExceptionMessages = exceptionMessages.ToList(),

@@ -43,7 +43,7 @@ public class ReducerHandler(
     public IReducerInvoker Invoker => invoker;
 
     /// <inheritdoc/>
-    public async Task<InternalReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial)
+    public async Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial)
     {
         var tasks = events.Select(async @event =>
         {

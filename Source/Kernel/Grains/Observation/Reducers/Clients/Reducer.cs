@@ -12,7 +12,6 @@ using Cratis.Chronicle.Observation.Replaying;
 using Microsoft.Extensions.Logging;
 using Orleans.Placement;
 using Orleans.Providers;
-using Orleans.Utilities;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
@@ -32,7 +31,6 @@ public class Reducer(
     ILocalSiloDetails localSiloDetails,
     ILogger<Reducer> logger) : Grain<ReducerDefinition>, IReducer, INotifyClientDisconnected
 {
-    readonly ObserverManager<INotifyReducerDefinitionsChanged> _definitionObservers = new(TimeSpan.FromMinutes(1), logger);
     IObserver? _observer;
     bool _subscribed;
     ConnectedObserverKey? _observerKey;
@@ -61,7 +59,6 @@ public class Reducer(
                 await _observer!.Unsubscribe();
                 _subscribed = false;
             }
-            _definitionObservers.Notify(_ => _.OnReducerDefinitionsChanged());
             var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
             await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
         }
@@ -82,9 +79,6 @@ public class Reducer(
             _subscribed = true;
         }
     }
-
-    /// <inheritdoc/>
-    public Task SubscribeDefinitionsChanged(INotifyReducerDefinitionsChanged subscriber) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public void OnClientDisconnected(ConnectedClient client)

@@ -35,7 +35,7 @@ public class when_updating_with_new_events : given.an_aggregate_root_that_handle
             {
                 initial_state_invoked_with = initial as StateForAggregateRoot;
                 events_invoked_with = ev.Select(_ => _.Event);
-                return new InternalReduceResult(state, EventSequenceNumber.Unavailable, [], string.Empty);
+                return new ReduceResult(state, EventSequenceNumber.Unavailable, [], string.Empty);
             });
     }
 

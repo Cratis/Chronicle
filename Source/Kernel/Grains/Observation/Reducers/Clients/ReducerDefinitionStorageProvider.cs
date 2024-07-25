@@ -11,10 +11,10 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling reducer state storage.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ReducerStorageProvider"/> class.
+/// Initializes a new instance of the <see cref="ReducerDefinitionStorageProvider"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class ReducerStorageProvider(IStorage storage) : IGrainStorage
+public class ReducerDefinitionStorageProvider(IStorage storage) : IGrainStorage
 {
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)

@@ -16,11 +16,4 @@ public interface IReducer : IGrainWithStringKey
     /// <param name="definition"><see cref="ReducerDefinition"/> to refresh with.</param>
     /// <returns>Awaitable task.</returns>
     Task SetDefinitionAndSubscribe(ReducerDefinition definition);
-
-    /// <summary>
-    /// Subscribe to changes in reducer definition changes.
-    /// </summary>
-    /// <param name="subscriber"><see cref="INotifyReducerDefinitionsChanged"/> to subscribe.</param>
-    /// <returns>Awaitable task.</returns>
-    Task SubscribeDefinitionsChanged(INotifyReducerDefinitionsChanged subscriber);
 }

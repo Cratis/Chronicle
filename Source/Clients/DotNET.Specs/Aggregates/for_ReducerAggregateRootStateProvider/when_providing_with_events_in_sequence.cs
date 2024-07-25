@@ -17,7 +17,7 @@ public class when_providing_with_events_in_sequence : given.an_aggregate_root_th
 
         reducer
             .Setup(_ => _.OnNext(events, null))
-            .ReturnsAsync(new InternalReduceResult(state, EventSequenceNumber.Unavailable, [], string.Empty));
+            .ReturnsAsync(new ReduceResult(state, EventSequenceNumber.Unavailable, [], string.Empty));
     }
 
     async Task Because() => result = await provider.Provide() as StateForAggregateRoot;

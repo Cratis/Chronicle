@@ -22,11 +22,11 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 /// <param name="reducerPipelineFactory"><see cref="IReducerPipelineFactory"/> for creating pipelines.</param>
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for notifying actual clients.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
 public class ReducerObserverSubscriber(
     IReducerPipelineFactory reducerPipelineFactory,
     IReducerMediator reducerMediator,
-    ILogger<ReducerObserverSubscriber> logger) : Grain<ReducerDefinition>, IReducerObserverSubscriber, INotifyReducerDefinitionsChanged
+    ILogger<ReducerObserverSubscriber> logger) : Grain<ReducerDefinition>, IReducerObserverSubscriber
 {
     ObserverSubscriberKey _key = new(ObserverId.Unspecified, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Unspecified, EventSourceId.Unspecified, string.Empty);
     EventStoreName _eventStore = EventStoreName.NotSet;
@@ -44,17 +44,7 @@ public class ReducerObserverSubscriber(
         _namespace = _key.Namespace;
         _eventSequenceId = _key.EventSequenceId;
 
-        var reducer = GrainFactory.GetGrain<IReducer>(new ReducerKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
-        await reducer.SubscribeDefinitionsChanged(this.AsReference<INotifyReducerDefinitionsChanged>());
-
         await HandlePipeline();
-    }
-
-    /// <inheritdoc/>
-    public void OnReducerDefinitionsChanged()
-    {
-        ReadStateAsync().Wait();
-        HandlePipeline().Wait();
     }
 
     /// <inheritdoc/>
@@ -97,8 +87,9 @@ public class ReducerObserverSubscriber(
                     reducerSubscriberResultTCS);
 
                 await reducerSubscriberResultTCS.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
-                return (await reducerSubscriberResultTCS.Task).ModelState;
+                var result = await reducerSubscriberResultTCS.Task;
+                tcs.SetResult(result.ObserverResult);
+                return result.ModelState;
             }) ?? Task.CompletedTask);
 
             await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));

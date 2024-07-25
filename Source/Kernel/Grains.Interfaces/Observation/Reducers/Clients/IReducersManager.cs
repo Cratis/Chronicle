@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Observation.Reducers;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
@@ -11,9 +12,10 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 public interface IReducersManager : IGrainWithStringKey
 {
     /// <summary>
-    /// Register a collection of reducers.
+    /// Register a collection of reducers for a specific connection.
     /// </summary>
+    /// <param name="connectionId"><see cref="ConnectionId"/> to register for.</param>
     /// <param name="definitions">Collection of <see cref="ReducerDefinition"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task Register(IEnumerable<ReducerDefinition> definitions);
+    Task Register(ConnectionId connectionId, IEnumerable<ReducerDefinition> definitions);
 }

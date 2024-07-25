@@ -47,5 +47,5 @@ public interface IReducerHandler
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to handle.</param>
     /// <param name="initial">Initial read model value.</param>
     /// <returns>Reduced read model.</returns>
-    Task<InternalReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial);
+    Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial);
 }

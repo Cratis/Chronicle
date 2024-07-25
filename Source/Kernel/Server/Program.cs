@@ -33,6 +33,7 @@ public static class Program
                 _.ValidateScopes = false;
                 _.ValidateOnBuild = false;
             })
+            .UseCratisApplicationModel()
             .UseLogging()
             .UseCratisMongoDB(mongo =>
             {
@@ -49,16 +50,16 @@ public static class Program
                     .WithMongoDB())
                 .UseDashboard(options =>
                 {
-        options.Host = "*";
-        options.Port = 8081;
-        options.HostSelf = true;
-    }))
+                    options.Host = "*";
+                    options.Port = 8081;
+                    options.HostSelf = true;
+                }))
             .ConfigureWebHostDefaults(_ => _
                 .ConfigureKestrel(options =>
                 {
-        options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
-        options.Limits.Http2.MaxStreamsPerConnection = 100;
-    })
+                    options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+                    options.Limits.Http2.MaxStreamsPerConnection = 100;
+                })
                 .UseStartup<Startup>());
 
     static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)

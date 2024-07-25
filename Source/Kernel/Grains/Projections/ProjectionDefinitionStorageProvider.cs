@@ -12,10 +12,10 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling projection state storage.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ProjectionStorageProvider"/> class.
+/// Initializes a new instance of the <see cref="ProjectionDefinitionStorageProvider"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class ProjectionStorageProvider(IStorage storage) : IGrainStorage
+public class ProjectionDefinitionStorageProvider(IStorage storage) : IGrainStorage
 {
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)

@@ -132,7 +132,6 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IReactionMiddlewares, ReactionMiddlewares>()
             .AddSingleton<IReducers, Reducers.Reducers>()
             .AddSingleton<IReducerValidator, ReducerValidator>()
-            .AddTransient<IClientReducers, ClientReducers>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
             .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
             .AddSingleton<IEventTypes, Events.EventTypes>()

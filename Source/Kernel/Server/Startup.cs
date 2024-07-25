@@ -21,5 +21,6 @@ public class Startup
     {
         app.UseRouting();
         app.MapGrpcServices();
+        app.UseCratisApplicationModel();
     }
 }
