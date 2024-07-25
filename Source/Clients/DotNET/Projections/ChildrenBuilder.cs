@@ -30,9 +30,14 @@ public class ChildrenBuilder<TParentModel, TChildModel>(
     ProjectionBuilder<TChildModel, IChildrenBuilder<TParentModel, TChildModel>>(eventTypes, schemaGenerator, jsonSerializerOptions),
     IChildrenBuilder<TParentModel, TChildModel>
 {
+    readonly IJsonSchemaGenerator _schemaGenerator = schemaGenerator;
     PropertyPath _identifiedBy = PropertyPath.NotSet;
+
+#pragma warning disable IDE0052 // Remove unread private members
+    // TODO: This is not used, but it should be - figure out what the purpose was. The FromEventProperty method is called from ModelPropertiesBuilder
     EventType? _fromEventPropertyEventType;
     IEventValueExpression? _fromEventPropertyExpression;
+#pragma warning restore IDE0052 // Remove unread private members
 
     /// <inheritdoc/>
     public IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy(PropertyPath propertyPath)
@@ -65,7 +70,7 @@ public class ChildrenBuilder<TParentModel, TChildModel>(
             Model = new()
             {
                 Name = _modelName,
-                Schema = schemaGenerator.Generate(typeof(TChildModel)).ToJson()
+                Schema = _schemaGenerator.Generate(typeof(TChildModel)).ToJson()
             },
             InitialModelState = _initialValues.ToJsonString(),
             From = _fromDefinitions,

@@ -91,13 +91,15 @@ public class SetBuilder<TModel, TEvent, TParentBuilder>(TParentBuilder parent, P
 public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty, bool forceEventProperty = false)
     : SetBuilder<TModel, TEvent, TParentBuilder>(parent, targetProperty, forceEventProperty), ISetBuilder<TModel, TEvent, TProperty, TParentBuilder>
 {
+    readonly TParentBuilder _parent = parent;
+
     /// <inheritdoc/>
     public TParentBuilder ToValue(TProperty value)
     {
         if (value is null)
         {
             _expression = ValueExpression.Null;
-            return parent;
+            return _parent;
         }
 
         object actualValue = value!;
@@ -130,20 +132,20 @@ public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder>(TParentBuilde
         };
 
         _expression = new ValueExpression(invariantString);
-        return parent;
+        return _parent;
     }
 
     /// <inheritdoc/>
     public TParentBuilder To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
         _expression = new EventContentPropertyExpression(eventPropertyAccessor.GetPropertyPath());
-        return parent;
+        return _parent;
     }
 
     /// <inheritdoc/>
     public TParentBuilder ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor)
     {
         _expression = new EventContextPropertyExpression(eventContextPropertyAccessor.GetPropertyPath());
-        return parent;
+        return _parent;
     }
 }
