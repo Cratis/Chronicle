@@ -20,13 +20,13 @@ public class ReducerReplayHandler : ICanHandleReplayForObserver
     public async Task BeginReplayFor(ObserverDetails observerDetails)
     {
         // TODO: Get reducer instance and start replay
-        throw new NotImplementedException();
+        await Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails)
     {
         // TODO: Get reducer instance and end replay
-        throw new NotImplementedException();
+        await Task.CompletedTask;
     }
 }
