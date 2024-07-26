@@ -13,11 +13,13 @@ namespace Cratis.Chronicle.Aggregates;
 /// <param name="eventSourceId">The <see cref="EventSourceId"/> for the context.</param>
 /// <param name="eventSequence">The <see cref="IEventSequence"/> for the context.</param>
 /// <param name="aggregateRoot">The <see cref="IAggregateRoot"/> for the context.</param>
+/// <param name="autoCommit">A value indicating whether or not to automatically commit changes on every apply.</param>
 public class AggregateRootContext(
     CorrelationId correlationId,
     EventSourceId eventSourceId,
     IEventSequence eventSequence,
-    IAggregateRoot aggregateRoot) : IAggregateRootContext
+    IAggregateRoot aggregateRoot,
+    bool autoCommit) : IAggregateRootContext
 {
     /// <inheritdoc/>
     public CorrelationId CorrelationId { get; } = correlationId;
@@ -30,4 +32,7 @@ public class AggregateRootContext(
 
     /// <inheritdoc/>
     public IAggregateRoot AggregateRoot { get; } = aggregateRoot;
+
+    /// <inheritdoc/>
+    public bool AutoCommit { get; } = autoCommit;
 }

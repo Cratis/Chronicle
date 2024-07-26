@@ -115,9 +115,11 @@ public class EventStore : IEventStore
 
         AggregateRootFactory = new AggregateRootFactory(
             this,
-            new AggregateRootStateProviders(Reducers, Projections),
-            new AggregateRootEventHandlersFactory(EventTypes),
-            _eventSerializer,
+            new AggregateRootMutatorFactory(
+                this,
+                new AggregateRootStateProviders(Reducers, Projections),
+                new AggregateRootEventHandlersFactory(EventTypes),
+                _eventSerializer),
             causationManager,
             serviceProvider);
     }

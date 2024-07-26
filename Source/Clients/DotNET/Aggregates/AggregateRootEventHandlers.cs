@@ -39,6 +39,8 @@ public class AggregateRootEventHandlers : IAggregateRootEventHandlers
     /// <inheritdoc/>
     public async Task Handle(IAggregateRoot target, IEnumerable<EventAndContext> events)
     {
+        if (_methodsByEventType.Count == 0) return;
+
         foreach (var eventAndContext in events)
         {
             var eventType = eventAndContext.Event.GetType();

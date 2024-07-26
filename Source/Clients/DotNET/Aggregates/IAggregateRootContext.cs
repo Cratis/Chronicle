@@ -32,4 +32,9 @@ public interface IAggregateRootContext
     /// Gets the <see cref="IAggregateRoot"/> for the context.
     /// </summary>
     IAggregateRoot AggregateRoot { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether or not to automatically commit changes on every apply.
+    /// </summary>
+    bool AutoCommit { get; }
 }
