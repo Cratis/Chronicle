@@ -11,12 +11,12 @@ namespace Cratis.Chronicle.Aggregates;
 /// <summary>
 /// Represents an implementation of <see cref="IAggregateRootMutation"/>.
 /// </summary>
-/// <param name="eventSourceId">The <see cref="EventSourceId"/> for the aggregate root.</param>
+/// <param name="aggregateRootContext">The <see cref="IAggregateRootContext"/> for the aggregate root.</param>
 /// <param name="mutator">The <see cref="IAggregateRootMutator"/> for the aggregate root.</param>
 /// <param name="eventSequence">The <see cref="IEventSequence"/> for the aggregate root.</param>
 /// <param name="causationManager">The <see cref="ICausationManager"/> for the aggregate root.</param>
 public class AggregateRootMutation(
-    EventSourceId eventSourceId,
+    IAggregateRootContext aggregateRootContext,
     IAggregateRootMutator mutator,
     IEventSequence eventSequence,
     ICausationManager causationManager) : IAggregateRootMutation
@@ -39,7 +39,7 @@ public class AggregateRootMutation(
     readonly IList<object> _uncommittedEvents = [];
 
     /// <inheritdoc/>
-    public EventSourceId EventSourceId => eventSourceId;
+    public EventSourceId EventSourceId => aggregateRootContext.EventSourceId;
 
     /// <inheritdoc/>
     public IImmutableList<object> UncommittedEvents => _uncommittedEvents.ToImmutableList();
@@ -59,13 +59,18 @@ public class AggregateRootMutation(
     {
         causationManager.Add(CausationType, new Dictionary<string, string>
         {
-            { CausationAggregateRootTypeProperty, GetType().AssemblyQualifiedName! },
+            { CausationAggregateRootTypeProperty, aggregateRootContext.AggregateRoot.GetType().AssemblyQualifiedName! },
             { CausationEventSequenceIdProperty, eventSequence.Id }
         });
 
-        await eventSequence.AppendMany(eventSourceId, [.. _uncommittedEvents]);
+        if (_uncommittedEvents.Count == 0)
+        {
+            return AggregateRootCommitResult.Successful(ImmutableList<object>.Empty);
+        }
 
-        var result = new AggregateRootCommitResult(true, _uncommittedEvents.ToImmutableList());
+        await eventSequence.AppendMany(aggregateRootContext.EventSourceId, [.. _uncommittedEvents]);
+
+        var result = AggregateRootCommitResult.Successful(_uncommittedEvents.ToImmutableList());
         _uncommittedEvents.Clear();
 
         await mutator.Dehydrate();

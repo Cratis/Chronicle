@@ -43,7 +43,7 @@ public class known_event : given.an_event_sequence
         event_types.Setup(_ => _.GetEventTypeFor(typeof(string))).Returns(event_type);
         event_sequences
             .Setup(_ => _.Append(IsAny<AppendRequest>(), CallContext.Default))
-            .Callback((AppendRequest _) => command = _);
+            .Callback((AppendRequest _, CallContext __) => command = _);
         causation_manager.Setup(_ => _.GetCurrentChain()).Returns(causation.ToImmutableList());
         identity_provider.Setup(_ => _.GetCurrent()).Returns(caused_by);
     }

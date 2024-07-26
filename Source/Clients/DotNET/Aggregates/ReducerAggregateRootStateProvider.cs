@@ -14,19 +14,16 @@ namespace Cratis.Chronicle.Aggregates;
 /// </remarks>
 /// <typeparam name="TState">Type of state for the aggregate root.</typeparam>
 /// <param name="aggregateRootContext">The <see cref="IAggregateRootContext"/> the state is for.</param>
-/// <param name="aggregateRootEventHandlersFactory"><see cref="IAggregateRootEventHandlersFactory"/> for getting <see cref="IAggregateRootEventHandlers"/>.</param>
 /// <param name="reducer"><see cref="IReducerHandler"/> to use for creating the state.</param>
 public class ReducerAggregateRootStateProvider<TState>(
     IAggregateRootContext aggregateRootContext,
-    IAggregateRootEventHandlersFactory aggregateRootEventHandlersFactory,
     IReducerHandler reducer) : IAggregateRootStateProvider<TState>
     where TState : class
 {
     /// <inheritdoc/>
     public async Task<TState?> Provide()
     {
-        var eventHandlers = aggregateRootEventHandlersFactory.GetFor(aggregateRootContext.AggregateRoot);
-        var events = await aggregateRootContext.EventSequence.GetForEventSourceIdAndEventTypes(aggregateRootContext.EventSourceId, eventHandlers.EventTypes);
+        var events = await aggregateRootContext.EventSequence.GetForEventSourceIdAndEventTypes(aggregateRootContext.EventSourceId, reducer.EventTypes);
         var result = await reducer.OnNext(events, null);
         return result.ModelState as TState;
     }

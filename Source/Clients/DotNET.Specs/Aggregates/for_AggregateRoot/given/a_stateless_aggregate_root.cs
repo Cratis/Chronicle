@@ -9,19 +9,15 @@ public class a_stateless_aggregate_root : all_dependencies
 {
     protected AggregateRoot aggregate_root;
     protected EventSourceId event_source_id;
-    protected Mock<IAggregateRootStateProvider> state_provider;
+    protected IAggregateRootContext aggregate_root_context;
 
     void Establish()
     {
         aggregate_root = new();
-
         event_source_id = Guid.NewGuid().ToString();
-        state_provider = new();
+        aggregate_root_context = new AggregateRootContext(CorrelationId.New(), event_source_id, event_sequence.Object, aggregate_root);
 
-        aggregate_root._eventSourceId = event_source_id;
-        aggregate_root.EventHandlers = event_handlers.Object;
-        aggregate_root.EventSequence = event_sequence.Object;
-        aggregate_root.CausationManager = causation_manager.Object;
-        aggregate_root.StateProvider = state_provider.Object;
+        aggregate_root._context = aggregate_root_context;
+        aggregate_root._mutation = mutation.Object;
     }
 }

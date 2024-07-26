@@ -4,20 +4,23 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Aggregates.for_ReducerAggregateRootStateProvider.given;
+namespace Cratis.Chronicle.Aggregates.for_ProjectionAggregateRootStateProvider.given;
 
-public class an_aggregate_root_that_handles_two_event_types : a_reducer_aggregate_root_state_provider
+public class an_aggregate_root_that_handles_two_event_types : a_projection_aggregate_root_state_provider
 {
     protected StatefulAggregateRoot _aggregateRoot;
     protected EventSourceId _eventSourceId;
     protected IImmutableList<EventType> _eventTypes;
     protected IAggregateRootContext _aggregateRootContext;
+    protected CorrelationId _correlationId;
 
     void Establish()
     {
         _aggregateRoot = new StatefulAggregateRoot();
         _eventSourceId = EventSourceId.New();
+        _correlationId = CorrelationId.New();
         _aggregateRootContext = Substitute.For<IAggregateRootContext>();
+        _aggregateRootContext.CorrelationId.Returns(_correlationId);
         _aggregateRootContext.EventSourceId.Returns(_eventSourceId);
         _aggregateRootContext.AggregateRoot.Returns(_aggregateRoot);
         _aggregateRootContext.EventSequence.Returns(_eventSequence);
@@ -28,10 +31,8 @@ public class an_aggregate_root_that_handles_two_event_types : a_reducer_aggregat
             SecondEventType.EventTypeId
         }.ToImmutableList();
 
-        _reducer.EventTypes.Returns(_eventTypes);
-
-        _provider = new ReducerAggregateRootStateProvider<StateForAggregateRoot>(
+        _provider = new ProjectionAggregateRootStateProvider<StateForAggregateRoot>(
             _aggregateRootContext,
-            _reducer);
+            _projections);
     }
 }

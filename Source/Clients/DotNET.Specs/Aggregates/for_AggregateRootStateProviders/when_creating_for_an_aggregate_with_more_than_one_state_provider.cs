@@ -3,17 +3,17 @@
 
 namespace Cratis.Chronicle.Aggregates.for_AggregateRootStateProviders;
 
-public class when_creating_for_an_aggregate_with_more_than_one_state_provider : given.an_aggregate_root_state_manager
+public class when_creating_for_an_aggregate_with_more_than_one_state_provider : given.aggregate_root_state_providers
 {
     Exception result;
 
     void Establish()
     {
-        reducers.Setup(_ => _.HasReducerFor(typeof(StateForAggregateRoot))).Returns(true);
-        projections.Setup(_ => _.HasProjectionFor(typeof(StateForAggregateRoot))).Returns(true);
+        _reducers.HasReducerFor(typeof(StateForAggregateRoot)).Returns(true);
+        _projections.HasProjectionFor(typeof(StateForAggregateRoot)).Returns(true);
     }
 
-    async Task Because() => result = await Catch.Exception(() => state_providers.CreateFor(aggregate_root));
+    async Task Because() => result = await Catch.Exception(() => _stateProviders.CreateFor<StateForAggregateRoot>(_aggregateRootContext));
 
     [Fact] void should_throw_ambiguous_state_provider_exception() => result.ShouldBeOfExactType<AmbiguousAggregateRootStateProvider>();
 }

@@ -2,9 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reducers;
 
-namespace Cratis.Chronicle.Aggregates.for_ReducerAggregateRootStateProvider;
+namespace Cratis.Chronicle.Aggregates.for_ProjectionAggregateRootStateProvider;
 
 public class when_updating_with_new_events : given.an_aggregate_root_that_handles_two_event_types
 {
@@ -14,14 +15,14 @@ public class when_updating_with_new_events : given.an_aggregate_root_that_handle
 
     IEnumerable<object> _events;
 
-    StateForAggregateRoot _initialStateInvokedWith;
     IEnumerable<object> _eventsInvokedWith;
-
+    ProjectionResult _projectionResult;
 
     void Establish()
     {
         _initialState = new(Guid.NewGuid().ToString());
         _state = new(Guid.NewGuid().ToString());
+        _projectionResult = new(_state, [], 0);
 
         _events =
         [
@@ -29,21 +30,17 @@ public class when_updating_with_new_events : given.an_aggregate_root_that_handle
             AppendedEvent.EmptyWithEventType(SecondEventType.EventTypeId)
         ];
 
-        _invoker
-            .Invoke(Arg.Any<IEnumerable<EventAndContext>>(), Arg.Any<object>())
+        _projections
+            .GetInstanceByIdForSessionWithEventsApplied(_correlationId, typeof(StateForAggregateRoot), _eventSourceId, _events)
             .Returns((CallInfo callInfo) =>
             {
-                var ev = callInfo.ArgAt<IEnumerable<EventAndContext>>(0);
-                var initial = callInfo.ArgAt<object?>(1);
-                _initialStateInvokedWith = initial as StateForAggregateRoot;
-                _eventsInvokedWith = ev.Select(_ => _.Event);
-                return new ReduceResult(_state, EventSequenceNumber.Unavailable, [], string.Empty);
+                _eventsInvokedWith = callInfo.ArgAt<IEnumerable<object>>(3);
+                return _projectionResult;
             });
     }
 
     async Task Because() => _result = await _provider.Update(_initialState, _events);
 
-    [Fact] void should_invoke_the_reducer_with_the_events() => _eventsInvokedWith.ShouldEqual(_events);
-    [Fact] void should_invoke_the_reducer_with_the_initial_state() => _initialStateInvokedWith.ShouldEqual(_initialState);
+    [Fact] void should_invoke_the_projection_with_the_events() => _eventsInvokedWith.ShouldEqual(_events);
     [Fact] void should_return_the_state() => _result.ShouldEqual(_state);
 }

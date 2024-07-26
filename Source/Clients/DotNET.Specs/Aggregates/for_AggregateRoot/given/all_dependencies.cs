@@ -11,11 +11,13 @@ public class all_dependencies : Specification
     protected Mock<IAggregateRootEventHandlers> event_handlers;
     protected Mock<IEventSequence> event_sequence;
     protected Mock<ICausationManager> causation_manager;
+    protected Mock<IAggregateRootMutation> mutation;
 
     void Establish()
     {
         event_handlers = new();
         event_sequence = new();
         causation_manager = new();
+        mutation = new();
     }
 }

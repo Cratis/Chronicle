@@ -34,6 +34,8 @@ public class AggregateRootFactory(
     {
         var aggregateRoot = ActivatorUtilities.CreateInstance<TAggregateRoot>(serviceProvider);
         var eventSequence = eventStore.GetEventSequence(aggregateRoot.EventSequenceId);
+
+        // TODO: Fix CorrelationId to be a real value from the current context
         var context = new AggregateRootContext(CorrelationId.New(), id, eventSequence, aggregateRoot);
 
         IAggregateRootMutator mutator = null!;
@@ -59,7 +61,7 @@ public class AggregateRootFactory(
 
         if (aggregateRoot is AggregateRoot knownAggregateRoot)
         {
-            knownAggregateRoot._mutation = new AggregateRootMutation(id, mutator, eventSequence, causationManager);
+            knownAggregateRoot._mutation = new AggregateRootMutation(context, mutator, eventSequence, causationManager);
             knownAggregateRoot._context = context;
             await knownAggregateRoot.InternalOnActivate();
         }

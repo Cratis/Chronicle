@@ -17,4 +17,18 @@ public record AggregateRootCommitResult(bool Success, IImmutableList<object> Eve
     /// </summary>
     /// <param name="result">The <see cref="AggregateRootCommitResult"/>.</param>
     public static implicit operator bool(AggregateRootCommitResult result) => result.Success;
+
+    /// <summary>
+    /// Create a successful <see cref="AggregateRootCommitResult"/>.
+    /// </summary>
+    /// <param name="events">Collection of events.</param>
+    /// <returns><see cref="AggregateRootCommitResult"/>.</returns>
+    public static AggregateRootCommitResult Successful(IImmutableList<object> events) => new(true, events);
+
+    /// <summary>
+    /// Create a failed <see cref="AggregateRootCommitResult"/>.
+    /// </summary>
+    /// <param name="events">Collection of events.</param>
+    /// <returns><see cref="AggregateRootCommitResult"/>.</returns>
+    public static AggregateRootCommitResult Failed(IImmutableList<object> events) => new(false, events);
 }

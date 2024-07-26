@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Aggregates.for_ReducerAggregateRootStateProvider.given;
+namespace Cratis.Chronicle.Aggregates.for_ProjectionAggregateRootStateProvider.given;
 
 public class an_aggregate_root_that_handles_two_event_types_and_two_appended_events : an_aggregate_root_that_handles_two_event_types
 {
