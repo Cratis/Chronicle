@@ -17,7 +17,7 @@ public class a_stateful_aggregate_root : all_dependencies
 
         event_source_id = Guid.NewGuid().ToString();
 
-        aggregate_root_context = new AggregateRootContext(CorrelationId.New(), event_source_id, event_sequence.Object, aggregate_root);
+        aggregate_root_context = new AggregateRootContext(CorrelationId.New(), event_source_id, event_sequence.Object, aggregate_root, false);
         aggregate_root._context = aggregate_root_context;
         aggregate_root._mutation = mutation.Object;
     }
