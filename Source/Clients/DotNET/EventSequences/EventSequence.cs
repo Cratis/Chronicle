@@ -33,6 +33,9 @@ public class EventSequence(
     IIdentityProvider identityProvider) : IEventSequence
 {
     /// <inheritdoc/>
+    public EventSequenceId Id => eventSequenceId;
+
+    /// <inheritdoc/>
     public async Task Append(EventSourceId eventSourceId, object @event)
     {
         var eventClrType = @event.GetType();

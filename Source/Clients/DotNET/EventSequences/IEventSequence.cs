@@ -12,6 +12,11 @@ namespace Cratis.Chronicle.EventSequences;
 public interface IEventSequence
 {
     /// <summary>
+    /// Gets the <see cref="EventSequenceId"/> for the event sequence.
+    /// </summary>
+    EventSequenceId Id { get; }
+
+    /// <summary>
     /// Get all events for a specific <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>

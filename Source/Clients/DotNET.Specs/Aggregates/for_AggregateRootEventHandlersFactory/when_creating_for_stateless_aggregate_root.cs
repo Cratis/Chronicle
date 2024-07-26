@@ -17,7 +17,7 @@ public class when_creating_for_stateless_aggregate_root : Specification
         factory = new(event_types);
     }
 
-    void Because() => result = factory.CreateFor(new StatelessAggregateRoot());
+    void Because() => result = factory.GetFor(new StatelessAggregateRoot());
 
     [Fact] void should_the_default_implementation() => result.ShouldBeOfExactType<AggregateRootEventHandlers>();
 }

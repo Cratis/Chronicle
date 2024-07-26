@@ -6,13 +6,15 @@ namespace Cratis.Chronicle.Aggregates;
 /// <summary>
 /// Defines a system that can manage state for an <see cref="AggregateRoot"/>.
 /// </summary>
-public interface IAggregateRootStateProvider
+/// <typeparam name="TState">Type of state to manage.</typeparam>
+public interface IAggregateRootStateProvider<TState>
+    where TState : class
 {
     /// <summary>
     /// Handle state for an <see cref="AggregateRoot"/>.
     /// </summary>
     /// <returns>State provided.</returns>
-    Task<object?> Provide();
+    Task<TState?> Provide();
 
     /// <summary>
     /// Update the state of an <see cref="AggregateRoot"/> with events.
@@ -20,7 +22,7 @@ public interface IAggregateRootStateProvider
     /// <param name="initialState">The initial state to update from.</param>
     /// <param name="events">The events to update with.</param>
     /// <returns>Updated state.</returns>
-    Task<object?> Update(object? initialState, IEnumerable<object> events);
+    Task<TState?> Update(TState? initialState, IEnumerable<object> events);
 
     /// <summary>
     /// Dehydrate any state.

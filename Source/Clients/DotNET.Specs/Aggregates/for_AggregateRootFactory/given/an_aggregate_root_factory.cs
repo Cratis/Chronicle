@@ -40,7 +40,7 @@ public class an_aggregate_root_factory : Specification
         event_handlers_factory = new();
         event_handlers = new();
         event_handlers.Setup(_ => _.EventTypes).Returns(event_types.ToImmutableList());
-        event_handlers_factory.Setup(_ => _.CreateFor(IsAny<IAggregateRoot>())).Returns(event_handlers.Object);
+        event_handlers_factory.Setup(_ => _.GetFor(IsAny<IAggregateRoot>())).Returns(event_handlers.Object);
 
         state_providers = new();
         state_providers.Setup(_ => _.CreateFor(IsAny<AggregateRoot>())).ReturnsAsync(NullAggregateRootStateProvider.Instance);

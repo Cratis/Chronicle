@@ -13,38 +13,37 @@ namespace Cratis.Chronicle.Aggregates;
 /// Initializes a new instance of the <see cref="AggregateRootStateProviders"/> class.
 /// </remarks>
 /// <param name="reducersRegistrar">All the reducers in the system.</param>
+/// <param name="aggregateRootEventHandlersFactory"><see cref="IAggregateRootEventHandlersFactory"/> for getting <see cref="IAggregateRootEventHandlers"/>.</param>
 /// <param name="projections"><see cref="IProjections"/> to possibly get state from.</param>
 public class AggregateRootStateProviders(
     IReducers reducersRegistrar,
+    IAggregateRootEventHandlersFactory aggregateRootEventHandlersFactory,
     IProjections projections) : IAggregateRootStateProviders
 {
     /// <inheritdoc/>
-    public Task<IAggregateRootStateProvider> CreateFor(AggregateRoot aggregateRoot)
+    public Task<IAggregateRootStateProvider<TState>> CreateFor<TState>(IAggregateRootContext aggregateRootContext)
+        where TState : class
     {
-        if (!aggregateRoot.IsStateful)
-        {
-            return Task.FromResult<IAggregateRootStateProvider>(NullAggregateRootStateProvider.Instance);
-        }
-
-        var hasReducer = reducersRegistrar.HasReducerFor(aggregateRoot.StateType);
-        var hasProjection = projections.HasProjectionFor(aggregateRoot.StateType);
+        var stateType = typeof(TState);
+        var hasReducer = reducersRegistrar.HasReducerFor(stateType);
+        var hasProjection = projections.HasProjectionFor(stateType);
 
         if (!hasReducer && !hasProjection)
         {
-            throw new MissingAggregateRootStateProvider(aggregateRoot.GetType());
+            throw new MissingAggregateRootStateProvider(aggregateRootContext.AggregateRoot.GetType());
         }
 
         if (hasReducer && hasProjection)
         {
-            throw new AmbiguousAggregateRootStateProvider(aggregateRoot.GetType());
+            throw new AmbiguousAggregateRootStateProvider(aggregateRootContext.AggregateRoot.GetType());
         }
 
         if (hasReducer)
         {
-            var reducer = reducersRegistrar.GetForModelType(aggregateRoot.StateType);
-            return Task.FromResult<IAggregateRootStateProvider>(new ReducerAggregateRootStateProvider(aggregateRoot, reducer));
+            var reducer = reducersRegistrar.GetForModelType(stateType);
+            return Task.FromResult<IAggregateRootStateProvider<TState>>(new ReducerAggregateRootStateProvider<TState>(aggregateRootContext, aggregateRootEventHandlersFactory, reducer));
         }
 
-        return Task.FromResult<IAggregateRootStateProvider>(new ProjectionAggregateRootStateProvider(aggregateRoot, projections));
+        return Task.FromResult<IAggregateRootStateProvider<TState>>(new ProjectionAggregateRootStateProvider<TState>(aggregateRootContext, projections));
     }
 }

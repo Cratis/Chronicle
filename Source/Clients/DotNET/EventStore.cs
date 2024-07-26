@@ -113,12 +113,13 @@ public class EventStore : IEventStore
             serviceProvider,
             jsonSerializerOptions);
 
+        var aggregateRootEventHandlersFactory = new AggregateRootEventHandlersFactory(EventTypes);
         AggregateRootFactory = new AggregateRootFactory(
             this,
-            new AggregateRootStateProviders(Reducers, Projections),
-            new AggregateRootEventHandlersFactory(EventTypes),
-            causationManager,
+            new AggregateRootStateProviders(Reducers, aggregateRootEventHandlersFactory, Projections),
+            aggregateRootEventHandlersFactory,
             _eventSerializer,
+            causationManager,
             serviceProvider);
     }
 
