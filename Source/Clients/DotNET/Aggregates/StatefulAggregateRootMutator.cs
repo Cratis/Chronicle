@@ -17,12 +17,9 @@ public class StatefulAggregateRootMutator<TState>(
     /// <inheritdoc/>
     public async Task Rehydrate()
     {
-        var aggregateRootState = new AggregateRootState<TState>();
-        aggregateRootState.SetState((await stateProvider.Provide())!);
-
-        if (stateProvider is IAggregateRootStateModifier<object> modifier)
+        if (state is IAggregateRootStateModifier<object> modifier)
         {
-            modifier.SetState(aggregateRootState.State);
+            modifier.SetState((await stateProvider.Provide())!);
         }
     }
 
