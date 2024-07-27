@@ -5,7 +5,7 @@ using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Aggregates.for_AggregateRootMutation.when_applying;
 
-public class a_valid_event : given.an_aggregate_mutation
+public class a_valid_event_and_auto_commit_not_enabled : given.an_aggregate_mutation
 {
     [EventType]
     class SomeEvent;
@@ -21,4 +21,5 @@ public class a_valid_event : given.an_aggregate_mutation
 
     [Fact] void should_call_mutator() => _mutator.Received().Mutate(Arg.Any<SomeEvent>());
     [Fact] void should_have_the_event_in_uncommitted_events() => _mutation.UncommittedEvents.ShouldContainOnly(_event);
+    [Fact] void should_not_auto_commit() => _mutator.DidNotReceive().Dehydrate();
 }

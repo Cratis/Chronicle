@@ -62,4 +62,9 @@ public interface IClientArtifactsProvider
     /// Gets all the available aggregate root types.
     /// </summary>
     IEnumerable<Type> AggregateRoots { get; }
+
+    /// <summary>
+    /// Gets all the available aggregate root state types.
+    /// </summary>
+    IEnumerable<Type> AggregateRootStateTypes { get; }
 }

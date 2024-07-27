@@ -12,12 +12,11 @@ namespace Cratis.Chronicle.Aggregates;
 public class StatefulAggregateRootMutator<TState>(
     IAggregateRootState<TState> state,
     IAggregateRootStateProvider<TState> stateProvider) : IAggregateRootMutator
-    where TState : class
 {
     /// <inheritdoc/>
     public async Task Rehydrate()
     {
-        if (state is IAggregateRootStateModifier<object> modifier)
+        if (state is IAggregateRootStateModifier<TState> modifier)
         {
             modifier.SetState((await stateProvider.Provide())!);
         }

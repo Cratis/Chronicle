@@ -16,6 +16,5 @@ public interface IAggregateRootStateProviders
     /// <returns>A new <see cref="IAggregateRootStateProvider{State}"/> instance.</returns>
     /// <exception cref="MissingAggregateRootStateProvider">Thrown if it can't resolve a state provider for the aggregate root.</exception>
     /// <exception cref="AmbiguousAggregateRootStateProvider">Thrown if there are multiple state providers for the same aggregate root, this is not allowed.</exception>
-    Task<IAggregateRootStateProvider<TState>> CreateFor<TState>(IAggregateRootContext aggregateRootContext)
-        where TState : class;
+    Task<IAggregateRootStateProvider<TState>> CreateFor<TState>(IAggregateRootContext aggregateRootContext);
 }

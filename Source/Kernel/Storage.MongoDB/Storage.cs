@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Observation.Reducers.Json;
@@ -35,7 +36,7 @@ public class Storage(
     IInstancesOf<ISinkFactory> sinkFactories,
     ILoggerFactory loggerFactory) : IStorage
 {
-    readonly Dictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
+    readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
 
     /// <inheritdoc/>
     public IEventStoreStorage GetEventStore(EventStoreName eventStore)

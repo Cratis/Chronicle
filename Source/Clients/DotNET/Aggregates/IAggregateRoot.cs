@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
-
 namespace Cratis.Chronicle.Aggregates;
 
 /// <summary>
@@ -11,16 +8,6 @@ namespace Cratis.Chronicle.Aggregates;
 /// </summary>
 public interface IAggregateRoot
 {
-    /// <summary>
-    /// Gets the <see cref="EventSourceId"/> for the aggregate root.
-    /// </summary>
-    EventSourceId EventSourceId { get; }
-
-    /// <summary>
-    /// Gets the <see cref="EventSequenceId"/> for the aggregate root.
-    /// </summary>
-    EventSequenceId EventSequenceId { get; }
-
     /// <summary>
     /// Apply a single event to the aggregate root.
     /// </summary>

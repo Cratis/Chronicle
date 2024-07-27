@@ -8,6 +8,7 @@ using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Storage;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.EventSequences;
@@ -19,9 +20,11 @@ namespace Cratis.Chronicle.Services.EventSequences;
 /// Initializes a new instance of the <see cref="EventSequences"/> class.
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
+/// <param name="storage"><see cref="IStorage"/> for storing events.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 public class EventSequences(
     IGrainFactory grainFactory,
+    IStorage storage,
     JsonSerializerOptions jsonSerializerOptions) : IEventSequences
 {
     /// <inheritdoc/>
@@ -49,6 +52,31 @@ public class EventSequences(
             request.CausedBy.ToChronicle());
 
         return new AppendManyResponse();
+    }
+
+    /// <inheritdoc/>
+    public async Task<GetForEventSourceIdAndEventTypesResponse> GetForEventSourceIdAndEventTypes(GetForEventSourceIdAndEventTypesRequest request, CallContext context = default)
+    {
+        var eventSequence = storage
+            .GetEventStore(request.EventStoreName)
+            .GetNamespace(request.Namespace)
+           .GetEventSequence(request.EventSequenceId);
+
+        var cursor = await eventSequence.GetFromSequenceNumber(
+            EventSequenceNumber.First,
+            request.EventSourceId,
+            request.EventTypes.ToChronicle());
+
+        var events = new List<Contracts.Events.AppendedEvent>();
+        while (await cursor.MoveNext())
+        {
+            var current = cursor.Current;
+            events.AddRange(current.ToContract());
+        }
+        return new()
+        {
+            Events = events
+        };
     }
 
     Grains.EventSequences.IEventSequence GetEventSequence(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>

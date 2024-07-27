@@ -90,7 +90,19 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes) => throw new NotImplementedException();
+    public async Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes)
+    {
+        var result = await connection.Services.EventSequences.GetForEventSourceIdAndEventTypes(new()
+        {
+            EventStoreName = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = eventSourceId,
+            EventTypes = eventTypes.ToContract()
+        });
+
+        return result.Events.ToClient();
+    }
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetNextSequenceNumber() => throw new NotImplementedException();

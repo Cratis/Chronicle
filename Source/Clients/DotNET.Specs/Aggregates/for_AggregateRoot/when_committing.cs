@@ -17,7 +17,7 @@ public class when_committing : given.a_stateless_aggregate_root
         mutation.Setup(_ => _.Commit()).Returns(Task.FromResult(expected_result));
     }
 
-    async Task Because() => result = await aggregate_root.Commit();
+    async Task Because() => result = await _aggregateRoot.Commit();
 
     [Fact] void should_call_commit_on_mutation() => mutation.Verify(_ => _.Commit(), Once);
     [Fact] void should_return_the_result_from_mutation() => result.ShouldEqual(expected_result);

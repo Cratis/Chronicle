@@ -2,15 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias Server;
-extern alias Client;
 
 using System.Diagnostics;
-using Client::Cratis.Chronicle;
-using Client::Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Clients;
 using Server::Cratis.Chronicle.Services.Clients;
 
-namespace Orleans.Hosting;
+namespace Cratis.Chronicle.Orleans;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/> for Orleans in-process.

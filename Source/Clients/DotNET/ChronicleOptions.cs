@@ -79,7 +79,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="IClientArtifactsProvider"/> to use.
     /// </summary>
-    public IClientArtifactsProvider ArtifactsProvider { get; init; } = artifactsProvider ?? new DefaultClientArtifactsProvider(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
+    public IClientArtifactsProvider ArtifactsProvider { get; set; } = artifactsProvider ?? new DefaultClientArtifactsProvider(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
     /// <summary>
     /// Gets the <see cref="IModelNameConvention"/> to use.

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Applications.MongoDB;
+using Cratis.Chronicle.Orleans.Aggregates;
 using Cratis.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,10 +39,10 @@ var f = app.Services.GetRequiredService<IMongoDBClientFactory>();
 
 app.MapGet(
     "/",
-    (IGrainFactory grains) =>
+    async (IAggregateRootFactory aggregateRootFactory) =>
     {
-        var grain = grains.GetGrain<IMyGrain>(Guid.NewGuid());
-        return grain.DoStuff();
+        var aggregateRoot = await aggregateRootFactory.Get<IMyAggregateRoot>("6fbd1b71-923d-4fa7-bf44-777dcb091218");
+        await aggregateRoot.DoStuff();
     });
 
 await app.RunAsync();

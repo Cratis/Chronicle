@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Aggregates.for_AggregateRootFactory;
 
 public class when_getting_aggregate_root : given.an_aggregate_root_factory
 {
-    AggregateRoot _result;
+    StatelessAggregateRoot _result;
     EventSourceId _eventSourceId;
 
     void Establish() => _eventSourceId = EventSourceId.New();
@@ -22,4 +22,5 @@ public class when_getting_aggregate_root : given.an_aggregate_root_factory
     [Fact] void should_set_context_with_correct_auto_commit() => _result._context.AutoCommit.ShouldBeTrue();
     [Fact] void should_set_mutation() => _result._mutation.ShouldNotBeNull();
     [Fact] void should_rehydrate() => _mutator.Received(1).Rehydrate();
+    [Fact] void should_call_on_activate_once() => _result.OnActivateCount.ShouldEqual(1);
 }

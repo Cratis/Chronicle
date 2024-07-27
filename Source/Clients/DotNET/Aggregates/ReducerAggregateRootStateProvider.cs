@@ -18,14 +18,13 @@ namespace Cratis.Chronicle.Aggregates;
 public class ReducerAggregateRootStateProvider<TState>(
     IAggregateRootContext aggregateRootContext,
     IReducerHandler reducer) : IAggregateRootStateProvider<TState>
-    where TState : class
 {
     /// <inheritdoc/>
     public async Task<TState?> Provide()
     {
         var events = await aggregateRootContext.EventSequence.GetForEventSourceIdAndEventTypes(aggregateRootContext.EventSourceId, reducer.EventTypes);
         var result = await reducer.OnNext(events, null);
-        return result.ModelState as TState;
+        return (TState?)result.ModelState;
     }
 
     /// <inheritdoc/>
@@ -33,7 +32,7 @@ public class ReducerAggregateRootStateProvider<TState>(
     {
         var eventsWithContext = events.Select(_ => new EventAndContext(_, EventContext.EmptyWithEventSourceId(aggregateRootContext.EventSourceId)));
         var result = await reducer.Invoker.Invoke(eventsWithContext, initialState);
-        return result.ModelState as TState;
+        return (TState?)result.ModelState;
     }
 
     /// <inheritdoc/>

@@ -52,6 +52,11 @@ public class AggregateRootMutation(
         _uncommittedEvents.Add(@event);
 
         await mutator.Mutate(@event);
+
+        if (aggregateRootContext.AutoCommit)
+        {
+            await Commit();
+        }
     }
 
     /// <inheritdoc/>

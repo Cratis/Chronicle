@@ -39,39 +39,47 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
         ReactionMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReactionMiddleware))).ToArray();
         Reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
         AdditionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(ICanProvideAdditionalEventInformation))).ToArray();
-        AggregateRoots = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAggregateRoot))).ToArray();
+        var aggregateRoots = AggregateRoots = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAggregateRoot))).ToArray();
+        AggregateRootStateTypes = aggregateRoots
+                                            .SelectMany(_ => _.AllBaseAndImplementingTypes())
+                                            .Where(_ => _.IsDerivedFromOpenGeneric(typeof(AggregateRoot<>)))
+                                            .Select(_ => _.GetGenericArguments()[0])
+                                            .ToArray();
     }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> EventTypes { get; }
+    public virtual IEnumerable<Type> EventTypes { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Projections { get; }
+    public virtual IEnumerable<Type> Projections { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Adapters { get; }
+    public virtual IEnumerable<Type> Adapters { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Reactions { get; }
+    public virtual IEnumerable<Type> Reactions { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Reducers { get; }
+    public virtual IEnumerable<Type> Reducers { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> ReactionMiddlewares { get; }
+    public virtual IEnumerable<Type> ReactionMiddlewares { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> ComplianceForTypesProviders { get; }
+    public virtual IEnumerable<Type> ComplianceForTypesProviders { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> ComplianceForPropertiesProviders { get; }
+    public virtual IEnumerable<Type> ComplianceForPropertiesProviders { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Rules { get; }
+    public virtual IEnumerable<Type> Rules { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> AdditionalEventInformationProviders { get; }
+    public virtual IEnumerable<Type> AdditionalEventInformationProviders { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> AggregateRoots { get; }
+    public virtual IEnumerable<Type> AggregateRoots { get; }
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> AggregateRootStateTypes { get; }
 }

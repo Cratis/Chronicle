@@ -2,16 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias Server;
-extern alias Client;
 
-using Client::Cratis.Chronicle;
-using Client::Cratis.Chronicle.Connections;
+using Cratis.Chronicle;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Orleans;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Cratis.Json;
+using Cratis.Types;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -92,22 +93,44 @@ public static class SiloBuilderExtensions
             services.AddSingleton<IReactionMediator, ReactionMediator>();
             services.AddSingleton<IReducerMediator, ReducerMediator>();
 
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ArtifactsProvider);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ModelNameConvention);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.IdentityProvider);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.JsonSerializerOptions);
+
             services.AddSingleton<IChronicleClient>(sp =>
             {
                 var grainFactory = sp.GetRequiredService<IGrainFactory>();
                 var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
-                var services = new Client::Cratis.Chronicle.Services(
-                    new EventSequences(grainFactory, Globals.JsonSerializerOptions),
-                    new EventTypes(sp.GetRequiredService<IStorage>()),
+                var storage = sp.GetRequiredService<IStorage>();
+                var services = new Cratis.Chronicle.Services(
+                    new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
+                    new EventTypes(storage),
                     new Observers(),
                     new Server::Cratis.Chronicle.Services.Observation.Reactions.Reactions(grainFactory, sp.GetRequiredService<IReactionMediator>()),
                     new Server::Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IExpandoObjectConverter>()),
                     new Server::Cratis.Chronicle.Services.Projections.Projections(grainFactory));
 
                 var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
-                var connection = new ChronicleConnection(connectionLifecycle, services, grainFactory);
+                var connection = new Cratis.Chronicle.Orleans.ChronicleConnection(connectionLifecycle, services, grainFactory);
+                options.ArtifactsProvider = new DefaultOrleansClientArtifactsProvider(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
                 return new ChronicleClient(connection, options);
             });
+
+            services.AddSingleton(sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
+                var client = sp.GetRequiredService<IChronicleClient>();
+                return client.GetEventStore("some_event_store");
+            });
+
+            services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Connection);
+            services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().AggregateRootFactory);
+            services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().EventTypes);
+            services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().EventLog);
+            services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Reactions);
+            services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Reducers);
+            services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Projections);
         });
     }
 }

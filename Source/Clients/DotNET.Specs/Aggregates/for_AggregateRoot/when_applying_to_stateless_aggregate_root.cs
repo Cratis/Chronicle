@@ -14,7 +14,7 @@ public class when_applying_to_stateless_aggregate_root : given.a_stateless_aggre
         state = new StateForAggregateRoot(Guid.NewGuid().ToString());
     }
 
-    void Because() => aggregate_root.Apply(event_to_apply);
+    void Because() => _aggregateRoot.Apply(event_to_apply);
 
     [Fact] void should_forward_to_mutation() => mutation.Verify(_ => _.Apply(event_to_apply), Once);
 }

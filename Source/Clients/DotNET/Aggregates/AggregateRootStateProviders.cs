@@ -20,7 +20,6 @@ public class AggregateRootStateProviders(
 {
     /// <inheritdoc/>
     public Task<IAggregateRootStateProvider<TState>> CreateFor<TState>(IAggregateRootContext aggregateRootContext)
-        where TState : class
     {
         var stateType = typeof(TState);
         var hasReducer = reducers.HasReducerFor(stateType);

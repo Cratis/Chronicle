@@ -52,7 +52,6 @@ public class AggregateRootMutatorFactory(
                                     type.GetGenericTypeDefinition() == typeof(AggregateRoot<>));
 
     static class InternalStatefulFactory<TState>
-        where TState : class
     {
         public static async Task<IAggregateRootMutator> CreateMutator(IAggregateRootStateProviders stateProviders, IAggregateRootContext context)
         {

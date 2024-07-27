@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
-
 #pragma warning disable SA1402 // File may only contain a single type
 
 namespace Cratis.Chronicle.Aggregates;
@@ -22,12 +19,6 @@ public class AggregateRoot : IAggregateRoot
     /// Mutation of the aggregate root - accessible only to Chronicle Internally.
     /// </summary>
     internal IAggregateRootMutation _mutation = default!;
-
-    /// <inheritdoc/>
-    public EventSourceId EventSourceId => _context.EventSourceId;
-
-    /// <inheritdoc/>
-    public virtual EventSequenceId EventSequenceId { get; } = EventSequenceId.Log;
 
     /// <inheritdoc/>
     public Task Apply<T>(T @event)
@@ -54,7 +45,6 @@ public class AggregateRoot : IAggregateRoot
 /// </summary>
 /// <typeparam name="TState">Type of state for the aggregate root.</typeparam>
 public class AggregateRoot<TState> : AggregateRoot
-    where TState : class
 {
     /// <summary>
     /// State of the aggregate root - accessible only to Chronicle Internally.

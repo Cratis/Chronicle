@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Aggregates;
@@ -28,7 +29,7 @@ public class AggregateRootFactory(
         where TAggregateRoot : IAggregateRoot
     {
         var aggregateRoot = ActivatorUtilities.CreateInstance<TAggregateRoot>(serviceProvider);
-        var eventSequence = eventStore.GetEventSequence(aggregateRoot.EventSequenceId);
+        var eventSequence = eventStore.GetEventSequence(EventSequenceId.Log);
 
         // TODO: Fix CorrelationId to be a real value from the current context
         var context = new AggregateRootContext(CorrelationId.New(), id, eventSequence, aggregateRoot, autoCommit);

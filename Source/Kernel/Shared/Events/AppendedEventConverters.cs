@@ -25,6 +25,13 @@ public static class AppendedEventConverters
     };
 
     /// <summary>
+    /// Convert a collection of <see cref="AppendedEvent"/> to a collection of <see cref="Contracts.Events.AppendedEvent"/>.
+    /// </summary>
+    /// <param name="events">Collection of <see cref="AppendedEvent"/> to convert.</param>
+    /// <returns>Converted collection of <see cref="Contracts.Events.AppendedEvent"/>.</returns>
+    public static IEnumerable<Contracts.Events.AppendedEvent> ToContract(this IEnumerable<AppendedEvent> events) => events.Select(ToContract);
+
+    /// <summary>
     /// Convert to Chronicle version of <see cref="AppendedEvent"/>.
     /// </summary>
     /// <param name="event"><see cref="Contracts.Events.AppendedEvent"/> to convert.</param>

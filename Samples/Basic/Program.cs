@@ -13,10 +13,20 @@ using var loggerFactory = LoggerFactory.Create(builder => builder
 
 IEventStore eventStore = null!;
 
+var random = new Random();
+
+var carts = new string[]
+{
+    "6c10b7f4-8da3-4ecd-bb09-84b4915c26f7",
+    "023e2719-9410-481d-8c40-a78555575c09",
+    "966abc16-b881-42e6-95db-4422773d5131",
+    "f5bb4d9c-c5bb-42de-aad0-5f263f15caac"
+};
+
 async Task AddItemToCart()
 {
     await eventStore.EventLog.Append(
-        eventSourceId: Guid.NewGuid(),
+        eventSourceId: carts[random.Next(0, carts.Length)],
         new ItemAddedToCart(
             PersonId: new(Guid.NewGuid()),
             MaterialId: new(Guid.NewGuid()),

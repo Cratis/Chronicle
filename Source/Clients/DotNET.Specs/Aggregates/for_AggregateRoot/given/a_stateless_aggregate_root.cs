@@ -7,17 +7,17 @@ namespace Cratis.Chronicle.Aggregates.for_AggregateRoot.given;
 
 public class a_stateless_aggregate_root : all_dependencies
 {
-    protected AggregateRoot aggregate_root;
-    protected EventSourceId event_source_id;
-    protected IAggregateRootContext aggregate_root_context;
+    protected StatelessAggregateRoot _aggregateRoot;
+    protected EventSourceId _eventSourceId;
+    protected IAggregateRootContext _aggregateRootContext;
 
     void Establish()
     {
-        aggregate_root = new();
-        event_source_id = Guid.NewGuid().ToString();
-        aggregate_root_context = new AggregateRootContext(CorrelationId.New(), event_source_id, event_sequence.Object, aggregate_root, false);
+        _aggregateRoot = new();
+        _eventSourceId = Guid.NewGuid().ToString();
+        _aggregateRootContext = new AggregateRootContext(CorrelationId.New(), _eventSourceId, event_sequence.Object, _aggregateRoot, false);
 
-        aggregate_root._context = aggregate_root_context;
-        aggregate_root._mutation = mutation.Object;
+        _aggregateRoot._context = _aggregateRootContext;
+        _aggregateRoot._mutation = mutation.Object;
     }
 }

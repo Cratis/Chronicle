@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventTypes;
@@ -27,7 +28,7 @@ public class EventTypesStorage(
     IEventStoreDatabase sharedDatabase,
     ILogger<EventTypesStorage> logger) : IEventTypesStorage
 {
-    Dictionary<EventTypeId, Dictionary<EventGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = [];
+    ConcurrentDictionary<EventTypeId, Dictionary<EventGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = [];
 
     /// <inheritdoc/>
     public async Task Populate()
@@ -37,11 +38,11 @@ public class EventTypesStorage(
         var findResult = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var allSchemas = findResult.ToList();
 
-        _schemasByTypeAndGeneration =
+        _schemasByTypeAndGeneration = new(
             allSchemas!.GroupBy(_ => _.EventType)
             .ToDictionary(
                 _ => (EventTypeId)_.Key,
-                _ => _.ToDictionary(es => (EventGeneration)es.Generation, es => es.ToEventSchema()));
+                _ => _.ToDictionary(es => (EventGeneration)es.Generation, es => es.ToEventSchema())));
     }
 
     /// <inheritdoc/>

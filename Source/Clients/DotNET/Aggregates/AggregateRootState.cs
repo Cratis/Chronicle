@@ -8,7 +8,6 @@ namespace Cratis.Chronicle.Aggregates;
 /// </summary>
 /// <typeparam name="TState">Type of state.</typeparam>
 public class AggregateRootState<TState> : IAggregateRootState<TState>, IAggregateRootStateModifier<TState>
-    where TState : class
 {
     /// <inheritdoc/>
     public TState State { get; private set; } = default!;

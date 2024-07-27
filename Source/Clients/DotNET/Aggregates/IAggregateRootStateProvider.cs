@@ -8,7 +8,6 @@ namespace Cratis.Chronicle.Aggregates;
 /// </summary>
 /// <typeparam name="TState">Type of state to manage.</typeparam>
 public interface IAggregateRootStateProvider<TState>
-    where TState : class
 {
     /// <summary>
     /// Handle state for an <see cref="AggregateRoot"/>.

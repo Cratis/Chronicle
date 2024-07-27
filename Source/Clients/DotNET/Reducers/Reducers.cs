@@ -4,7 +4,6 @@
 using System.Dynamic;
 using System.Reactive.Subjects;
 using System.Text.Json;
-using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Sinks;
@@ -13,7 +12,6 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
 using Cratis.Models;
-using Cratis.Reflection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reducers;
@@ -52,13 +50,7 @@ public class Reducers(
     /// <inheritdoc/>
     public Task Discover()
     {
-        _aggregateRootStateTypes = clientArtifacts
-                                            .AggregateRoots
-                                            .SelectMany(_ => _.AllBaseAndImplementingTypes())
-                                            .Where(_ => _.IsDerivedFromOpenGeneric(typeof(AggregateRoot<>)))
-                                            .Select(_ => _.GetGenericArguments()[0])
-                                            .ToArray();
-
+        _aggregateRootStateTypes = clientArtifacts.AggregateRootStateTypes;
         _handlers = clientArtifacts.Reducers
                             .ToDictionary(
                                 _ => _.GetReadModelType(),
@@ -87,7 +79,7 @@ public class Reducers(
     {
         logger.RegisterReducers();
 
-        foreach (var handler in _handlers.Values)
+        foreach (var handler in _handlers.Values.Where(_ => _.IsActive))
         {
             RegisterReducer(handler);
         }

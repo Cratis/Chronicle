@@ -17,7 +17,6 @@ namespace Cratis.Chronicle.Aggregates;
 public class ProjectionAggregateRootStateProvider<TState>(
     IAggregateRootContext aggregateRootContext,
     IProjections projections) : IAggregateRootStateProvider<TState>
-    where TState : class
 {
     /// <inheritdoc/>
     public async Task<TState?> Provide()
@@ -26,7 +25,7 @@ public class ProjectionAggregateRootStateProvider<TState>(
             aggregateRootContext.CorrelationId,
             typeof(TState),
             aggregateRootContext.EventSourceId);
-        return result.Model as TState;
+        return (TState?)result.Model;
     }
 
     /// <inheritdoc/>
@@ -37,7 +36,7 @@ public class ProjectionAggregateRootStateProvider<TState>(
             typeof(TState),
             aggregateRootContext.EventSourceId,
             events);
-        return result.Model as TState;
+        return (TState?)result.Model;
     }
 
     /// <inheritdoc/>

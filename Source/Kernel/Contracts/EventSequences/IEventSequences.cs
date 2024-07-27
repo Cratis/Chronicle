@@ -27,5 +27,15 @@ public interface IEventSequences
     /// <param name="request">The <see cref="AppendManyRequest"/> with all the details and events.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>The <see cref="AppendManyResponse"/>.</returns>
+    [Operation]
     Task<AppendManyResponse> AppendMany(AppendManyRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get events for an event source id and specific event types.
+    /// </summary>
+    /// <param name="request">The <see cref="GetForEventSourceIdAndEventTypesRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="GetForEventSourceIdAndEventTypesResponse"/>.</returns>
+    [Operation]
+    Task<GetForEventSourceIdAndEventTypesResponse> GetForEventSourceIdAndEventTypes(GetForEventSourceIdAndEventTypesRequest request, CallContext context = default);
 }
