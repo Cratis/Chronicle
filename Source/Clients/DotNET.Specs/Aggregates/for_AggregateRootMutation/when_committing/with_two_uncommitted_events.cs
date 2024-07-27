@@ -39,5 +39,4 @@ public class with_two_uncommitted_events : given.an_aggregate_mutation
     [Fact] void should_add_causation_information_for_aggregate_root_type_to_the_causation_manager() => _causations.ShouldContain(kvp => kvp.Key == AggregateRootMutation.CausationAggregateRootTypeProperty && kvp.Value == _aggregateRoot.GetType().AssemblyQualifiedName);
     [Fact] void should_add_causation_information_for_event_sequence_to_the_causation_manager() => _causations.ShouldContain(kvp => kvp.Key == AggregateRootMutation.CausationEventSequenceIdProperty && kvp.Value == _eventSequenceId);
     [Fact] void should_clear_the_uncommitted_events() => _mutation.UncommittedEvents.ShouldBeEmpty();
-    [Fact] void should_dehydrate_the_mutation() => _mutator.Received(1).Dehydrate();
 }

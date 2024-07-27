@@ -25,6 +25,7 @@ public class ProjectionAggregateRootStateProvider<TState>(
             aggregateRootContext.CorrelationId,
             typeof(TState),
             aggregateRootContext.EventSourceId);
+
         return (TState?)result.Model;
     }
 
@@ -40,9 +41,11 @@ public class ProjectionAggregateRootStateProvider<TState>(
     }
 
     /// <inheritdoc/>
-    public Task Dehydrate() =>
-        projections.DehydrateSession(
+    public async Task Dehydrate()
+    {
+        await projections.DehydrateSession(
             aggregateRootContext.CorrelationId,
             typeof(TState),
             aggregateRootContext.EventSourceId);
+    }
 }

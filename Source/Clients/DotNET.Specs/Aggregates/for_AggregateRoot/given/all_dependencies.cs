@@ -8,16 +8,20 @@ namespace Cratis.Chronicle.Aggregates.for_AggregateRoot.given;
 
 public class all_dependencies : Specification
 {
-    protected Mock<IAggregateRootEventHandlers> event_handlers;
-    protected Mock<IEventSequence> event_sequence;
-    protected Mock<ICausationManager> causation_manager;
-    protected Mock<IAggregateRootMutation> mutation;
+    protected IAggregateRootEventHandlers _eventHandlers;
+    protected IEventSequence _eventSequence;
+    protected ICausationManager _causationManager;
+    protected IAggregateRootMutation _mutation;
+    protected IAggregateRootMutator _mutator;
+
 
     void Establish()
     {
-        event_handlers = new();
-        event_sequence = new();
-        causation_manager = new();
-        mutation = new();
+        _eventHandlers = Substitute.For<IAggregateRootEventHandlers>();
+        _eventSequence = Substitute.For<IEventSequence>();
+        _causationManager = Substitute.For<ICausationManager>();
+        _mutation = Substitute.For<IAggregateRootMutation>();
+        _mutator = Substitute.For<IAggregateRootMutator>();
+        _mutation.Mutator.Returns(_mutator);
     }
 }

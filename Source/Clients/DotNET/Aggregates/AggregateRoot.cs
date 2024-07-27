@@ -25,7 +25,12 @@ public class AggregateRoot : IAggregateRoot
         where T : class => _mutation.Apply(@event);
 
     /// <inheritdoc/>
-    public Task<AggregateRootCommitResult> Commit() => _mutation.Commit();
+    public async Task<AggregateRootCommitResult> Commit()
+    {
+        var result = await _mutation.Commit();
+        await _mutation.Mutator.Dehydrate();
+        return result;
+    }
 
     /// <summary>
     /// Chronicle Internal: Invoke the OnActivate method.

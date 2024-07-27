@@ -45,6 +45,9 @@ public class AggregateRootMutation(
     public IImmutableList<object> UncommittedEvents => _uncommittedEvents.ToImmutableList();
 
     /// <inheritdoc/>
+    public IAggregateRootMutator Mutator => mutator;
+
+    /// <inheritdoc/>
     public async Task Apply<TEvent>(TEvent @event)
         where TEvent : class
     {
@@ -73,12 +76,10 @@ public class AggregateRootMutation(
             return AggregateRootCommitResult.Successful(ImmutableList<object>.Empty);
         }
 
-        await eventSequence.AppendMany(aggregateRootContext.EventSourceId, [.. _uncommittedEvents]);
+        await eventSequence.AppendMany(aggregateRootContext.EventSourceId, new List<object>(_uncommittedEvents));
 
         var result = AggregateRootCommitResult.Successful(_uncommittedEvents.ToImmutableList());
         _uncommittedEvents.Clear();
-
-        await mutator.Dehydrate();
         return result;
     }
 }

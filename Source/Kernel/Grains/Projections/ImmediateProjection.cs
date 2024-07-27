@@ -145,6 +145,7 @@ public class ImmediateProjection(
         var eventsToApply = await Task.WhenAll(eventsToApplyTasks);
         var initialState = _initialState ?? new ExpandoObject();
         var result = await HandleEvents(affectedProperties, initialState, eventsToApply);
+        _initialState = result.State;
         var jsonObject = expandoObjectConverter.ToJsonObject(result.State, _projection!.Model.Schema);
         return new(jsonObject, affectedProperties, result.ProjectedEventsCount);
     }

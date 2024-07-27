@@ -23,6 +23,11 @@ public interface IAggregateRootMutation
     IImmutableList<object> UncommittedEvents { get; }
 
     /// <summary>
+    /// Gets the mutator for the aggregate root.
+    /// </summary>
+    IAggregateRootMutator Mutator { get; }
+
+    /// <summary>
     /// Apply a single event to the aggregate root mutation.
     /// </summary>
     /// <typeparam name="TEvent">Type of event to apply.</typeparam>
