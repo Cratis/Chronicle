@@ -41,7 +41,7 @@ app.MapGet(
     "/",
     async (IAggregateRootFactory aggregateRootFactory) =>
     {
-        var aggregateRoot = await aggregateRootFactory.Get<IMyAggregateRoot>("6fbd1b71-923d-4fa7-bf44-777dcb091218");
+        var aggregateRoot = await aggregateRootFactory.Get<IOrder>("6fbd1b71-923d-4fa7-bf44-777dcb091218");
         await aggregateRoot.DoStuff();
     });
 

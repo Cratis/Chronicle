@@ -83,6 +83,11 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot
     AggregateRootMutation? _mutation;
     AggregateRootState<TState>? _state;
 
+    /// <summary>
+    /// Gets the current state of the aggregate root.
+    /// </summary>
+    public TState State => _state!.State;
+
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
