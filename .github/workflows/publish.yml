@@ -112,6 +112,7 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/package.json') }}
 
       - name: Yarn install
+        working-directory: ./Source/Workbench
         run: yarn install
 
       - name: Build JS/TS
