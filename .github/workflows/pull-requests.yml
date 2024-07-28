@@ -144,7 +144,7 @@ jobs:
         with:
           message: |
             NuGet packages for this PR, e.g. Cratis:
-            https://github.com/Cratis/Cratis/packages/1655206?version=${{ needs.release.outputs.version }}
+            https://github.com/cratis/chronicle/packages/1655206?version=${{ needs.release.outputs.version }}
           allow-repeats: false
 
   publish-npm-packages:
@@ -238,7 +238,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/cratis/cratis:${{ needs.release.outputs.version }}
+            ghcr.io/cratis/chronicle:${{ needs.release.outputs.version }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
             ENTRYPOINT=pr_entrypoint.sh
@@ -250,7 +250,7 @@ jobs:
         with:
           message: |
             Docker Image for this PR:
-            https://ghcr.io/cratis/cratis:${{ needs.release.outputs.version }}
+            https://ghcr.io/cratis/chronicle:${{ needs.release.outputs.version }}
 
-            docker run ghcr.io/cratis/cratis:${{ needs.release.outputs.version }}
+            docker run ghcr.io/cratis/chronicle:${{ needs.release.outputs.version }}
           allow-repeats: false

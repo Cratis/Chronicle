@@ -15,7 +15,7 @@ To consume the packages, you'll need to configure the sources in your local repo
 All Docker container images can be found [here](https://github.com/orgs/cratis/packages?ecosystem=container).
 
 For Docker there is no need to configure anything locally, all you need to do is change the image you're using
-from for instance `cratis/cratis:latest-development` to the specific one @ GitHub, e.g. : `ghcr.io/cratis/cratis:6.11.6-pr537.adedc72`.
+from for instance `cratis/chronicle:latest-development` to the specific one @ GitHub, e.g. : `ghcr.io/cratis/chronicle:6.11.6-pr537.adedc72`.
 
 ## NuGet
 

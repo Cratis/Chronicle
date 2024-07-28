@@ -35,7 +35,7 @@ docker run -d \
     -p 8080:80 \
     -p 8081:81 \
     --add-host="host.docker.internal:host-gateway" \
-    cratis/cratis:latest-development
+    cratis/chronicle:latest-development
 ```
 
 This should yield something like the following:
@@ -46,7 +46,7 @@ e04e1c02819a96ae3f85a2b4579cb1cab8623625fc272ece857ef37397dcd322
 
 The **development** image of Cratis comes with a built in MongoDB instance.
 For production workloads you would typically use the regular image.
-All Cratis images can be found [here](https://hub.docker.com/r/cratis/cratis).
+All Cratis images can be found [here](https://hub.docker.com/r/cratis/chronicle).
 
 > Note: Cratis is as of version 9.4.3 using an HTTP based protocol. This requires the
 > Cratis server to be able to call the client using HTTP as well. Therefor we add the

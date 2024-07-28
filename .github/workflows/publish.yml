@@ -215,8 +215,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            cratis/cratis:${{ needs.release.outputs.version }}
-            cratis/cratis:latest
+            cratis/chronicle:${{ needs.release.outputs.version }}
+            cratis/chronicle:latest
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 
@@ -258,8 +258,8 @@ jobs:
           file: ./Docker/Workbench/Dockerfile
           push: true
           tags: |
-            cratis/cratis:${{ needs.release.outputs.version }}-workbench
-            cratis/cratis:latest-workbench
+            cratis/chronicle:${{ needs.release.outputs.version }}-workbench
+            cratis/chronicle:latest-workbench
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 
@@ -314,7 +314,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            cratis/cratis:${{ needs.release.outputs.version }}-development
-            cratis/cratis:latest-development
+            cratis/chronicle:${{ needs.release.outputs.version }}-development
+            cratis/chronicle:latest-development
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
