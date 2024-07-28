@@ -41,7 +41,10 @@ public static class SiloBuilderExtensions
     /// <param name="configureChronicle">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
     /// <param name="configSection">Optional config section.</param>
     /// <returns>The <see cref="ISiloBuilder"/> for continuation.</returns>
-    public static ISiloBuilder AddChronicle(this ISiloBuilder builder, Action<IChronicleBuilder>? configureChronicle = default, string? configSection = default)
+    public static ISiloBuilder AddCratisChronicle(
+        this ISiloBuilder builder,
+        Action<IChronicleBuilder>? configureChronicle = default,
+        string? configSection = default)
     {
         builder.ConfigureServices(services => AddOptions(services)
                 .BindConfiguration(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths)));
@@ -58,7 +61,10 @@ public static class SiloBuilderExtensions
     /// <param name="configureOptions">Callback for providing options.</param>
     /// <param name="configureChronicle">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
     /// <returns>The <see cref="ISiloBuilder"/> for continuation.</returns>
-    public static ISiloBuilder AddChronicle(this ISiloBuilder builder, Action<ChronicleOptions> configureOptions, Action<IChronicleBuilder>? configureChronicle = default)
+    public static ISiloBuilder AddCratisChronicle(
+        this ISiloBuilder builder,
+        Action<ChronicleOrleansInProcessOptions> configureOptions,
+        Action<IChronicleBuilder>? configureChronicle = default)
     {
         builder.ConfigureServices(services => AddOptions(services, configureOptions));
         ConfigureChronicle(builder, configureChronicle);
@@ -66,10 +72,10 @@ public static class SiloBuilderExtensions
         return builder;
     }
 
-    static OptionsBuilder<ChronicleOptions> AddOptions(this IServiceCollection services, Action<ChronicleOptions>? configure = default)
+    static OptionsBuilder<ChronicleOrleansInProcessOptions> AddOptions(this IServiceCollection services, Action<ChronicleOrleansInProcessOptions>? configure = default)
     {
         var builder = services
-            .AddOptions<ChronicleOptions>()
+            .AddOptions<ChronicleOrleansInProcessOptions>()
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
@@ -121,9 +127,9 @@ public static class SiloBuilderExtensions
 
             services.AddSingleton(sp =>
             {
-                var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
+                var options = sp.GetRequiredService<IOptions<ChronicleOrleansInProcessOptions>>().Value;
                 var client = sp.GetRequiredService<IChronicleClient>();
-                return client.GetEventStore("some_event_store");
+                return client.GetEventStore(options.EventStoreName);
             });
 
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Connection);

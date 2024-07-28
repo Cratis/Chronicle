@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle;
 
 /// <summary>
-/// Represents the settings for connecting to Cratis.
+/// Represents the settings for connecting to Chronicle.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="ChronicleOptions"/> class.
