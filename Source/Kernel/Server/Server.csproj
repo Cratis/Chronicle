@@ -7,6 +7,7 @@
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <ServerGarbageCollection>true</ServerGarbageCollection>
         <NoWarn>$(NoWarn);RCS1093</NoWarn>
+        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../../Workbench/Api</CratisProxiesOutputPath>
     </PropertyGroup>
 
     <!-- 3rd party package references -->
@@ -16,6 +17,7 @@
         <PackageReference Include="Cratis.Applications.Orleans" />
         <PackageReference Include="Cratis.Applications.Orleans.MongoDB" />
         <PackageReference Include="Cratis.Applications.Serilog" />
+        <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="OrleansDashboard" />
         <PackageReference Include="OpenTelemetry" />

@@ -1,11 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { Page } from '../../../../../WBTemp/Components/Common/Page';
 
-function App() {
-    return (
-        <></>
-    );
-}
-
-export default App;
+export const Projections = () => {
+    return <Page title='Projections' />;
+};
