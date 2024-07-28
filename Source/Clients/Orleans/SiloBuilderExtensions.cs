@@ -10,6 +10,7 @@ using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Orleans;
 using Cratis.Chronicle.Rules;
+using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Cratis.Json;

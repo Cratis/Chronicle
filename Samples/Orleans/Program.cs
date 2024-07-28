@@ -3,6 +3,7 @@
 
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Orleans.Aggregates;
+using Cratis.Chronicle.Setup;
 using Cratis.Json;
 
 var builder = WebApplication.CreateBuilder(args);
