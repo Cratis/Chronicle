@@ -18,11 +18,7 @@ public static class RulesServiceCollectionExtensions
     /// <returns><see cref="MvcOptions"/> for building continuation.</returns>
     public static IServiceCollection AddRules(this IServiceCollection services)
     {
-        services.Configure<MvcOptions>(options =>
-        {
-            var serviceProvider = services.BuildServiceProvider();
-            options.ModelValidatorProviders.Add(new RulesModelValidatorProvider());
-        });
+        services.Configure<MvcOptions>(options => options.ModelValidatorProviders.Insert(0, new RulesModelValidatorProvider()));
 
         return services;
     }

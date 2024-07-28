@@ -9,6 +9,7 @@ using Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Orleans;
+using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Cratis.Json;
@@ -92,6 +93,7 @@ public static class SiloBuilderExtensions
 
             services.AddSingleton<IReactionMediator, ReactionMediator>();
             services.AddSingleton<IReducerMediator, ReducerMediator>();
+            services.AddSingleton<IRules, Rules>();
 
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ArtifactsProvider);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ModelNameConvention);

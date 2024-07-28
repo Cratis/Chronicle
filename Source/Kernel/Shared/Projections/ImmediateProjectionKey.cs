@@ -37,7 +37,7 @@ public record ImmediateProjectionKey(
             return $"{ProjectionId}+{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}+{SessionId}";
         }
 
-        return $"{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}";
+        return $"{ProjectionId}+{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}";
     }
 
     /// <summary>

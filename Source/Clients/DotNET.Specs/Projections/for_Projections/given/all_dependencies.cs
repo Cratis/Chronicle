@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
 using Cratis.Models;
 
@@ -13,6 +14,7 @@ public class all_dependencies : Specification
     protected Mock<IEventStore> event_store;
     protected Mock<IEventTypes> event_types;
     protected Mock<IClientArtifactsProvider> client_artifacts;
+    protected Mock<IRulesProjections> rules_projections;
     protected Mock<IJsonSchemaGenerator> schema_generator;
     protected Mock<IModelNameResolver> model_name_resolver;
     protected Mock<IEventSerializer> event_serializer;
@@ -24,6 +26,7 @@ public class all_dependencies : Specification
         event_store = new();
         event_types = new();
         client_artifacts = new();
+        rules_projections = new();
         schema_generator = new();
         model_name_resolver = new();
         event_serializer = new();

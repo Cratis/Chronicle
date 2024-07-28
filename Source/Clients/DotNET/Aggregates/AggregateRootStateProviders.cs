@@ -23,7 +23,7 @@ public class AggregateRootStateProviders(
     {
         var stateType = typeof(TState);
         var hasReducer = reducers.HasReducerFor(stateType);
-        var hasProjection = projections.HasProjectionFor(stateType);
+        var hasProjection = projections.HasFor(stateType);
 
         if (!hasReducer && !hasProjection)
         {

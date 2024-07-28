@@ -15,7 +15,6 @@ public class one_rule_for_type : all_dependencies
 
         rules = new(
             json_serializer_options,
-            rules_projections.Object,
             projections.Object,
             client_artifacts.Object);
     }

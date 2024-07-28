@@ -18,6 +18,8 @@ builder.UseCratisMongoDB(
 builder.Host.UseDefaultServiceProvider(_ => _.ValidateOnBuild = false);
 
 builder.Services.AddSingleton(Globals.JsonSerializerOptions);
+builder.Services.AddControllers();
+builder.UseCratisChronicle();
 
 builder.Host.UseOrleans(silo =>
     {
@@ -36,7 +38,8 @@ builder.Host.UseOrleans(silo =>
 
 var app = builder.Build();
 var f = app.Services.GetRequiredService<IMongoDBClientFactory>();
-
+app.UseCratisChronicle();
+app.MapControllers();
 app.MapGet(
     "/",
     async (IAggregateRootFactory aggregateRootFactory) =>

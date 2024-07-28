@@ -18,11 +18,18 @@ public interface IProjections
     IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
+    /// Check if there is a definition for a specific projection identifier.
+    /// </summary>
+    /// <param name="projectionId">Identifier of projection.</param>
+    /// <returns>True if it exists, false if not.</returns>
+    bool HasFor(ProjectionId projectionId);
+
+    /// <summary>
     /// Check if there is a definition for a specific type.
     /// </summary>
     /// <param name="modelType">Type of model to check for.</param>
     /// <returns>True if it exists, false if not.</returns>
-    bool HasProjectionFor(Type modelType);
+    bool HasFor(Type modelType);
 
     /// <summary>
     /// Get an instance by a specific <see cref="ModelKey"/> and type.

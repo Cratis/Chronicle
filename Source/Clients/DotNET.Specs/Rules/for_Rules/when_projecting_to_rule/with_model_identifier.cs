@@ -23,7 +23,7 @@ public class with_model_identifier : given.no_rules
     void Establish()
     {
         rule = new();
-        rules_projections.Setup(_ => _.HasFor(rule.GetRuleId())).Returns(true);
+        projections.Setup(_ => _.HasFor(rule.GetRuleId().Value)).Returns(true);
 
         var jsonObject = new JsonObject
         {

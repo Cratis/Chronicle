@@ -16,13 +16,11 @@ namespace Cratis.Chronicle.Rules;
 /// Initializes a new instance of the <see cref="Rules"/> class.
 /// </remarks>
 /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
-/// <param name="rulesProjections">All <see cref="IRulesProjections"/>.</param>
 /// <param name="projections"><see cref="IProjections"/> client.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
 [Singleton]
 public class Rules(
     JsonSerializerOptions serializerOptions,
-    IRulesProjections rulesProjections,
     IProjections projections,
     IClientArtifactsProvider clientArtifacts) : IRules
 {
@@ -40,7 +38,7 @@ public class Rules(
     public void ProjectTo(IRule rule, object? modelIdentifier = default)
     {
         var identifier = rule.GetType().GetRuleId();
-        if (!rulesProjections.HasFor(identifier)) return;
+        if (!projections.HasFor(identifier.Value)) return;
 
         var result = projections.GetInstanceById(
             identifier.Value,

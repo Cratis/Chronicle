@@ -10,6 +10,7 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
 using Cratis.Models;
 using Microsoft.Extensions.Logging;
@@ -107,6 +108,13 @@ public class EventStore : IEventStore
             this,
             EventTypes,
             clientArtifactsProvider,
+            new RulesProjections(
+                serviceProvider,
+                clientArtifactsProvider,
+                EventTypes,
+                modelNameResolver,
+                schemaGenerator,
+                jsonSerializerOptions),
             schemaGenerator,
             modelNameResolver,
             _eventSerializer,

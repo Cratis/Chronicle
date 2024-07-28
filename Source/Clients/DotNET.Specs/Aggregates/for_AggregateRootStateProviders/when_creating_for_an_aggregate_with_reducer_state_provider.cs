@@ -10,7 +10,7 @@ public class when_creating_for_an_aggregate_with_reducer_state_provider : given.
     void Establish()
     {
         _reducers.HasReducerFor(typeof(StateForAggregateRoot)).Returns(true);
-        _projections.HasProjectionFor(typeof(StateForAggregateRoot)).Returns(false);
+        _projections.HasFor(typeof(StateForAggregateRoot)).Returns(false);
     }
 
     async Task Because() => result = await _stateProviders.CreateFor<StateForAggregateRoot>(_aggregateRootContext);
