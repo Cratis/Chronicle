@@ -115,11 +115,6 @@ jobs:
         working-directory: ./Source/Workbench
         run: yarn install
 
-      - name: Build JS/TS
-        run: |
-          export NODE_OPTIONS="--max-old-space-size=4096"
-          yarn build
-
       - name: Build Workbench
         working-directory: ./Source/Workbench
         run: |
