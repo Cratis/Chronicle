@@ -31,8 +31,9 @@ builder.Host.UseOrleans(silo =>
                 options.HostSelf = true;
             })
             .UseLocalhostClustering()
-                .AddChronicle(_ => _
-                    .WithMongoDB());
+                .AddCratisChronicle(
+                    options => options.EventStoreName = "sample",
+                    _ => _.WithMongoDB());
     })
     .UseConsoleLifetime();
 
