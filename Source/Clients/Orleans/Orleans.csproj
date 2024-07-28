@@ -8,7 +8,6 @@
 
     <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../../Kernel/Setup/Setup.csproj"/>
         <ProjectReference Include="../../Kernel/Services/Services.csproj">
             <Aliases>Server</Aliases>
             <PrivateAssets>all</PrivateAssets>
@@ -16,19 +15,36 @@
 
         <ProjectReference Include="../../Kernel/Shared/Shared.csproj">
             <Aliases>Server</Aliases>
+            <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj"/>
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Storage/Storage.csproj"/>
+        <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Grains/Grains.csproj"/>
+        <ProjectReference Include="../../Kernel/Grains/Grains.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Grains.Interfaces/Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../../Kernel/Grains.Interfaces/Grains.Interfaces.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Compliance/Compliance.csproj"/>
+        <ProjectReference Include="../../Kernel/Compliance/Compliance.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
 
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
