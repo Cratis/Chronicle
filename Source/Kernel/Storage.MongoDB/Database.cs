@@ -66,8 +66,8 @@ public class Database : IDatabase
             return database;
         }
 
-        // TODO: This should be a configurable convention.
-        var databaseName = $"{eventStore}+{@namespace}-rm";
+        // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
+        var databaseName = (@namespace == EventStoreNamespaceName.Default) ? $"{eventStore}" : $"{eventStore}+{@namespace}";
         var urlBuilder = new MongoUrlBuilder(_configuration.ConnectionDetails.ToString())
         {
             DatabaseName = databaseName

@@ -30,7 +30,8 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         IMongoDBClientManager clientManager,
         Configuration.Storage configuration)
     {
-        var databaseName = $"{eventStore}+{@namespace}";
+        // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
+        var databaseName = $"{eventStore}+es+{@namespace}";
 
         var urlBuilder = new MongoUrlBuilder(configuration.ConnectionDetails.ToString())
         {
