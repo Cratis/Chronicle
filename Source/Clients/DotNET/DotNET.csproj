@@ -9,7 +9,6 @@
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
-
     </ItemGroup>
 
     <ItemGroup>
