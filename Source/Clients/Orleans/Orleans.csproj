@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../../Kernel/Setup/Setup.csproj"/>
         <ProjectReference Include="../../Kernel/Services/Services.csproj">
             <Aliases>Server</Aliases>
             <PrivateAssets>all</PrivateAssets>
@@ -39,10 +40,6 @@
         </ProjectReference>
 
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
     </ItemGroup>

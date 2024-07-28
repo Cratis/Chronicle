@@ -12,9 +12,15 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Grains/Grains.csproj" />
-        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
-        <ProjectReference Include="../Storage/Storage.csproj" />
+        <ProjectReference Include="../Grains/Grains.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../Storage/Storage.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="../Shared/Shared.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>

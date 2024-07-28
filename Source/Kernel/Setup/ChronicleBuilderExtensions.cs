@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Orleans.Hosting;
+namespace Cratis.Chronicle.Setup;
 
 /// <summary>
 /// Extension methods for <see cref="IChronicleBuilder"/>.

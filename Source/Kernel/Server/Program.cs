@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Microsoft.AspNetCore.Server.Kestrel.Core;

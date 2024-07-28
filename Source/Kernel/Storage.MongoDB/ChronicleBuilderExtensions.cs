@@ -9,7 +9,7 @@ using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson.Serialization;
 
-namespace Orleans.Hosting;
+namespace Cratis.Chronicle.Setup;
 
 /// <summary>
 /// Extension methods for <see cref="IChronicleBuilder"/> for configuring Chronicle to use MongoDB.
@@ -28,7 +28,7 @@ public static class ChronicleBuilderExtensions
             services.AddSingleton<IDatabase, Database>();
             services.AddSingleton<IMongoDBClientManager, MongoDBClientManager>();
             services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
-            services.AddSingleton<IStorage, Cratis.Chronicle.Storage.MongoDB.Storage>();
+            services.AddSingleton<IStorage, Storage.MongoDB.Storage>();
         });
 
         BsonSerializer.RegisterSerializer(new JsonElementSerializer());

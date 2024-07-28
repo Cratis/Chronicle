@@ -4,7 +4,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Orleans.Hosting;
+namespace Cratis.Chronicle.Setup;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleBuilder"/>.
