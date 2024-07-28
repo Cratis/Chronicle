@@ -19,6 +19,7 @@ public class ConnectedClients() : Controller
     /// Get and observe all connected clients for a specific event store.
     /// </summary>
     /// <returns>Client observable of a collection of <see cref="ConnectedClient"/>.</returns>
+    /// <exception cref="NotImplementedException">Not implemented.</exception>
     [HttpGet]
     public Task<IEnumerable<ConnectedClient>> AllConnectedClients()
     {

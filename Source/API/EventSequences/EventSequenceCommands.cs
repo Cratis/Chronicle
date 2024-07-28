@@ -11,10 +11,8 @@ namespace Cratis.API.EventSequences;
 /// <remarks>
 /// Initializes a new instance of the <see cref="EventSequenceCommands"/> class.
 /// </remarks>
-/// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
 [Route("/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
-public class EventSequenceCommands(
-    IGrainFactory grainFactory) : ControllerBase
+public class EventSequenceCommands : ControllerBase
 {
     /// <summary>
     /// Appends an event to the event log.

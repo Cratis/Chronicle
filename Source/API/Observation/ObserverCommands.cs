@@ -11,9 +11,8 @@ namespace Cratis.API.Observation;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ObserverCommands"/> class.
 /// </remarks>
-/// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
 [Route("/api/events/store/{eventStore}/observers")]
-public class ObserverCommands(IGrainFactory grainFactory) : ControllerBase
+public class ObserverCommands : ControllerBase
 {
     /// <summary>
     /// Rewind a specific observer in an event store and specific namespace.

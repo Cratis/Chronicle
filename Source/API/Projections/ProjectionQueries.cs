@@ -20,6 +20,7 @@ public class ProjectionQueries() : ControllerBase
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get projections for.</param>
     /// <returns><see cref="Projection"/> containing all projections.</returns>
+    /// <exception cref="NotImplementedException">Not implemented.</exception>
     [HttpGet]
     public async Task<IEnumerable<Projection>> AllProjections([FromRoute] EventStoreName eventStore)
     {

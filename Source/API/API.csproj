@@ -8,6 +8,7 @@
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <ServerGarbageCollection>false</ServerGarbageCollection>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);RCS1140;CS1998</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

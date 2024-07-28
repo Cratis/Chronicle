@@ -10,12 +10,10 @@ namespace Cratis.API.EventSequences;
 /// Represents the API for working with the event log.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="EventSequence"/> class.
+/// Initializes a new instance of the <see cref="EventSequenceQueries"/> class.
 /// </remarks>
-/// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
 [Route("/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
-public class EventSequenceQueries(
-    IGrainFactory grainFactory) : ControllerBase
+public class EventSequenceQueries : ControllerBase
 {
     /// <summary>
     /// Get the head sequence number.
