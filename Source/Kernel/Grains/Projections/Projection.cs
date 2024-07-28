@@ -58,7 +58,7 @@ public class Projection(
             await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
         }
 
-        if (!_subscribed)
+        if (!_subscribed && definition.IsActive)
         {
             _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, key.Namespace, key.EventSequenceId));
             var projection = await projectionFactory.Create(key.EventStore, key.Namespace, definition);
