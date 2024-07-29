@@ -10,7 +10,7 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);RCS1140;CS1998</NoWarn>
         <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../Workbench/Api</CratisProxiesOutputPath>
-        <CratisProxiesSegmentsToSkip>1</CratisProxiesSegmentsToSkip>
+        <CratisProxiesSegmentsToSkip>2</CratisProxiesSegmentsToSkip>
     </PropertyGroup>
 
     <ItemGroup>
