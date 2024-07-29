@@ -8,10 +8,16 @@
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="automapper" />
         <PackageReference Include="Azure.Data.Tables" />
@@ -20,4 +26,22 @@
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />
     </ItemGroup>
+
+  <Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+        <InputAssemblies Include="$(TargetPath)"/>
+        <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle.*.dll"/>
+        <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
+    </ItemGroup>
+
+    <ILRepack
+        AllowDuplicateResources="false"
+        DebugInfo="true"
+        Internalize="true"
+        InputAssemblies="@(InputAssemblies)"
+        OutputFile="$(TargetPath)"
+        Parallel="true"
+        LibraryPath="@(LibraryPath)"
+        TargetKind="SameAsPrimaryAssembly" />
+  </Target>
 </Project>

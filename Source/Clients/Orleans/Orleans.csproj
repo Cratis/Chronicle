@@ -7,22 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../../Kernel/Services/Services.csproj">
-            <Aliases>Server</Aliases>
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Shared/Shared.csproj">
-            <Aliases>Server</Aliases>
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
+        <ProjectReference Include="../../Kernel/Compliance/Compliance.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
 
@@ -34,10 +24,6 @@
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Compliance/Compliance.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
@@ -45,12 +31,48 @@
         <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Services/Services.csproj">
+            <Aliases>Server</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Shared/Shared.csproj">
+            <Aliases>Server</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Cratis.Applications.Orleans" />
     </ItemGroup>
+
+  <Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+        <InputAssemblies Include="$(TargetPath)"/>
+        <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle.*.dll"/>
+        <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
+    </ItemGroup>
+
+    <ILRepack
+        AllowDuplicateResources="false"
+        DebugInfo="true"
+        Internalize="true"
+        InputAssemblies="@(InputAssemblies)"
+        OutputFile="$(TargetPath)"
+        Parallel="true"
+        LibraryPath="@(LibraryPath)"
+        TargetKind="SameAsPrimaryAssembly" />
+  </Target>
 </Project>
