@@ -57,22 +57,4 @@
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Cratis.Applications.Orleans" />
     </ItemGroup>
-
-  <Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <ItemGroup>
-        <InputAssemblies Include="$(TargetPath)"/>
-        <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle.*.dll"/>
-        <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
-    </ItemGroup>
-
-    <ILRepack
-        AllowDuplicateResources="false"
-        DebugInfo="true"
-        Internalize="true"
-        InputAssemblies="@(InputAssemblies)"
-        OutputFile="$(TargetPath)"
-        Parallel="true"
-        LibraryPath="@(LibraryPath)"
-        TargetKind="SameAsPrimaryAssembly" />
-  </Target>
 </Project>

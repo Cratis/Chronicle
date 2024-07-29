@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+        <InputAssemblies Include="$(TargetPath)"/>
+        <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle.*.dll"/>
+        <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
+    </ItemGroup>
+
+    <RemoveDuplicates Inputs="@(InputAssemblies)">
+      <Output TaskParameter="Filtered" ItemName="DistinctInputAssemblies" />
+    </RemoveDuplicates>
+
+    <Message Text="$(InputAssemblies)" Importance="high" />
+    <Message Text="$(DistinctInputAssemblies)" Importance="high" />
+
+    <ILRepack
+        AllowDuplicateResources="false"
+        DebugInfo="true"
+        Internalize="true"
+        InputAssemblies="@(DistinctInputAssemblies)"
+        OutputFile="$(TargetPath)"
+        Parallel="false"
+        LibraryPath="@(LibraryPath)"
+        TargetKind="SameAsPrimaryAssembly" />
+  </Target>
+</Project>
