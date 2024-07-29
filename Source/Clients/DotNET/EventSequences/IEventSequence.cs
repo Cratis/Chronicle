@@ -25,6 +25,13 @@ public interface IEventSequence
     Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
 
     /// <summary>
+    /// Check if there are events for a specific <see cref="EventSourceId"/>.
+    /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to check for.</param>
+    /// <returns>True if it has, false if not.</returns>
+    Task<bool> HasEventsFor(EventSourceId eventSourceId);
+
+    /// <summary>
     /// Get the next sequence number.
     /// </summary>
     /// <returns>Next sequence number.</returns>

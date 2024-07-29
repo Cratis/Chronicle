@@ -11,16 +11,19 @@ public class an_aggregate_root_that_handles_two_event_types : a_reducer_aggregat
     protected StatefulAggregateRoot _aggregateRoot;
     protected EventSourceId _eventSourceId;
     protected IImmutableList<EventType> _eventTypes;
-    protected IAggregateRootContext _aggregateRootContext;
+    protected AggregateRootContext _aggregateRootContext;
 
     void Establish()
     {
         _aggregateRoot = new StatefulAggregateRoot();
         _eventSourceId = EventSourceId.New();
-        _aggregateRootContext = Substitute.For<IAggregateRootContext>();
-        _aggregateRootContext.EventSourceId.Returns(_eventSourceId);
-        _aggregateRootContext.AggregateRoot.Returns(_aggregateRoot);
-        _aggregateRootContext.EventSequence.Returns(_eventSequence);
+        _aggregateRootContext = new AggregateRootContext(
+            CorrelationId.New(),
+            _eventSourceId,
+            _eventSequence,
+            _aggregateRoot,
+            true,
+            false);
 
         _eventTypes = new EventType[]
         {

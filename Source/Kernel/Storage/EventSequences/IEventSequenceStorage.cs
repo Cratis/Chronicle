@@ -127,11 +127,18 @@ public interface IEventSequenceStorage
     Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
 
     /// <summary>
+    /// Check if there are any events for an event source.
+    /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to check for.</param>
+    /// <returns>True if it has, false if not.</returns>
+    Task<bool> HasEventsFor(EventSourceId eventSourceId);
+
+    /// <summary>
     /// Check if there is an instance of a specific event type for an event source.
     /// </summary>
-    /// <param name="eventTypeId"><see cref="EventTypeId"/> to get for.</param>
-    /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
-    /// <returns>The <see cref="AppendedEvent"/> found.</returns>
+    /// <param name="eventTypeId"><see cref="EventTypeId"/> to check for.</param>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to check for.</param>
+    /// <returns>True if it has, false if not.</returns>
     Task<bool> HasInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId);
 
     /// <summary>

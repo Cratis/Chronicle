@@ -20,6 +20,11 @@ public class AggregateRoot : IAggregateRoot
     /// </summary>
     internal IAggregateRootMutation _mutation = default!;
 
+    /// <summary>
+    /// Gets a value indicating whether the aggregate root is new.
+    /// </summary>
+    protected bool IsNew => _context.HasEvents;
+
     /// <inheritdoc/>
     public Task Apply<T>(T @event)
         where T : class => _mutation.Apply(@event);

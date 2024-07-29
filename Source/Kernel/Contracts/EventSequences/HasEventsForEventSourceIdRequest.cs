@@ -1,16 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Events;
 using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.EventSequences;
 
 /// <summary>
-/// Represents the payload for getting events for an event source id and specific event types.
+/// Represents the request for checkinf if there are events for a specific event source identifier.
 /// </summary>
 [ProtoContract]
-public class GetForEventSourceIdAndEventTypesRequest : IEventSequenceRequest
+public class HasEventsForEventSourceIdRequest : IEventSequenceRequest
 {
     /// <inheritdoc/>
     [ProtoMember(1)]
@@ -29,10 +28,4 @@ public class GetForEventSourceIdAndEventTypesRequest : IEventSequenceRequest
     /// </summary>
     [ProtoMember(4)]
     public string EventSourceId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the event types to get.
-    /// </summary>
-    [ProtoMember(5, IsRequired = true)]
-    public IList<EventType> EventTypes { get; set; } = [];
 }

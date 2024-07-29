@@ -64,6 +64,20 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> HasEventsFor(EventSourceId eventSourceId)
+    {
+        var result = await connection.Services.EventSequences.HasEventsForEventSourceId(new()
+        {
+            EventStoreName = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = eventSourceId
+        });
+
+        return result.HasEvents;
+    }
+
+    /// <inheritdoc/>
     public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events)
     {
         var eventsToAppend = events.Select(@event =>

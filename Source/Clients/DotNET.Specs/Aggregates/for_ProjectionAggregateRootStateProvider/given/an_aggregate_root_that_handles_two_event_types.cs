@@ -11,7 +11,7 @@ public class an_aggregate_root_that_handles_two_event_types : a_projection_aggre
     protected StatefulAggregateRoot _aggregateRoot;
     protected EventSourceId _eventSourceId;
     protected IImmutableList<EventType> _eventTypes;
-    protected IAggregateRootContext _aggregateRootContext;
+    protected AggregateRootContext _aggregateRootContext;
     protected CorrelationId _correlationId;
 
     void Establish()
@@ -19,11 +19,13 @@ public class an_aggregate_root_that_handles_two_event_types : a_projection_aggre
         _aggregateRoot = new StatefulAggregateRoot();
         _eventSourceId = EventSourceId.New();
         _correlationId = CorrelationId.New();
-        _aggregateRootContext = Substitute.For<IAggregateRootContext>();
-        _aggregateRootContext.CorrelationId.Returns(_correlationId);
-        _aggregateRootContext.EventSourceId.Returns(_eventSourceId);
-        _aggregateRootContext.AggregateRoot.Returns(_aggregateRoot);
-        _aggregateRootContext.EventSequence.Returns(_eventSequence);
+        _aggregateRootContext = new AggregateRootContext(
+            _correlationId,
+            _eventSourceId,
+            _eventSequence,
+            _aggregateRoot,
+            true,
+            false);
 
         _eventTypes = new EventType[]
         {

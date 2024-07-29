@@ -12,23 +12,17 @@ namespace Cratis.Chronicle.Contracts.EventSequences;
 /// Represents the payload for appending an event.
 /// </summary>
 [ProtoContract]
-public class AppendManyRequest
+public class AppendManyRequest : IEventSequenceRequest
 {
-    /// <summary>
-    /// Gets or sets the event store name.
-    /// </summary>
+    /// <inheritdoc/>
     [ProtoMember(1)]
     public string EventStoreName { get; set; }
 
-    /// <summary>
-    /// Gets or sets the namespace.
-    /// </summary>
+    /// <inheritdoc/>
     [ProtoMember(2)]
     public string Namespace { get; set; }
 
-    /// <summary>
-    /// Gets or sets the event sequence identifier.
-    /// </summary>
+    /// <inheritdoc/>
     [ProtoMember(3)]
     public string EventSequenceId { get; set; }
 

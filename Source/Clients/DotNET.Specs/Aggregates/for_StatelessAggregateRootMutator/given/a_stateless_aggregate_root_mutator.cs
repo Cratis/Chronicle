@@ -12,7 +12,7 @@ public class a_stateless_aggregate_root_mutator : Specification
 
     protected IEventStore _eventStore;
     protected EventSourceId _eventSourceId;
-    protected IAggregateRootContext _aggregateRootContext;
+    protected AggregateRootContext _aggregateRootContext;
     protected IAggregateRootMutator _mutator;
     protected IEventSerializer _eventSerializer;
     protected IAggregateRootEventHandlers _eventHandlers;
@@ -25,10 +25,14 @@ public class a_stateless_aggregate_root_mutator : Specification
         _eventSourceId = EventSourceId.New();
         _eventSerializer = Substitute.For<IEventSerializer>();
         _eventSequence = Substitute.For<IEventSequence>();
-        _aggregateRootContext = Substitute.For<IAggregateRootContext>();
-        _aggregateRootContext.EventSourceId.Returns(_eventSourceId);
-        _aggregateRootContext.AggregateRoot.Returns(_aggregateRoot);
-        _aggregateRootContext.EventSequence.Returns(_eventSequence);
+        _aggregateRootContext = new AggregateRootContext(
+            CorrelationId.New(),
+            _eventSourceId,
+            _eventSequence,
+            _aggregateRoot,
+            true,
+            false);
+
         _eventSerializer = Substitute.For<IEventSerializer>();
         _eventHandlers = Substitute.For<IAggregateRootEventHandlers>();
 

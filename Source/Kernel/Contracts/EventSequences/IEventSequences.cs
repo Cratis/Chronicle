@@ -38,4 +38,13 @@ public interface IEventSequences
     /// <returns>The <see cref="GetForEventSourceIdAndEventTypesResponse"/>.</returns>
     [Operation]
     Task<GetForEventSourceIdAndEventTypesResponse> GetForEventSourceIdAndEventTypes(GetForEventSourceIdAndEventTypesRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Check if there are events for an event source id.
+    /// </summary>
+    /// <param name="request"><see cref="HasEventsForEventSourceIdRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>True if it has, false if not.</returns>
+    [Operation]
+    Task<HasEventsForEventSourceIdResponse> HasEventsForEventSourceId(HasEventsForEventSourceIdRequest request, CallContext context = default);
 }

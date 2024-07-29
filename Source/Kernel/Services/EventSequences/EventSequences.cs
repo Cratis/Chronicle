@@ -9,6 +9,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.EventSequences;
@@ -30,7 +31,7 @@ public class EventSequences(
     /// <inheritdoc/>
     public async Task<AppendResponse> Append(AppendRequest request, CallContext context = default)
     {
-        var eventSequence = GetEventSequence(request.EventStoreName, request.Namespace, request.EventSequenceId);
+        var eventSequence = GetEventSequenceGrain(request);
         await eventSequence.Append(
             request.EventSourceId,
             request.EventType.ToChronicle(),
@@ -44,7 +45,7 @@ public class EventSequences(
     /// <inheritdoc/>
     public async Task<AppendManyResponse> AppendMany(AppendManyRequest request, CallContext context = default)
     {
-        var eventSequence = GetEventSequence(request.EventStoreName, request.Namespace, request.EventSequenceId);
+        var eventSequence = GetEventSequenceGrain(request);
         await eventSequence.AppendMany(
             request.EventSourceId,
             request.Events.ToChronicle(),
@@ -57,10 +58,7 @@ public class EventSequences(
     /// <inheritdoc/>
     public async Task<GetForEventSourceIdAndEventTypesResponse> GetForEventSourceIdAndEventTypes(GetForEventSourceIdAndEventTypesRequest request, CallContext context = default)
     {
-        var eventSequence = storage
-            .GetEventStore(request.EventStoreName)
-            .GetNamespace(request.Namespace)
-           .GetEventSequence(request.EventSequenceId);
+        var eventSequence = GetEventSequenceStorage(request);
 
         var cursor = await eventSequence.GetFromSequenceNumber(
             EventSequenceNumber.First,
@@ -79,6 +77,19 @@ public class EventSequences(
         };
     }
 
-    Grains.EventSequences.IEventSequence GetEventSequence(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
-        grainFactory.GetGrain<Grains.EventSequences.IEventSequence>(new EventSequenceKey(eventSequenceId, eventStore, @namespace));
+    /// <inheritdoc/>
+    public async Task<HasEventsForEventSourceIdResponse> HasEventsForEventSourceId(HasEventsForEventSourceIdRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceStorage(request);
+        return new()
+        {
+            HasEvents = await eventSequence.HasEventsFor(request.EventSourceId)
+        };
+    }
+
+    IEventSequenceStorage GetEventSequenceStorage(IEventSequenceRequest request) =>
+        storage.GetEventStore(request.EventStoreName).GetNamespace(request.Namespace).GetEventSequence(request.EventSequenceId);
+
+    Grains.EventSequences.IEventSequence GetEventSequenceGrain(IEventSequenceRequest request) =>
+        grainFactory.GetGrain<Grains.EventSequences.IEventSequence>(new EventSequenceKey(request.EventSequenceId, request.EventStoreName, request.Namespace));
 }

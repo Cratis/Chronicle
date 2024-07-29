@@ -22,6 +22,11 @@ public class AggregateRoot : Grain, IAggregateRoot
     IAggregateRootContext? _context;
     AggregateRootMutation? _mutation;
 
+    /// <summary>
+    /// Gets a value indicating whether the aggregate root is new.
+    /// </summary>
+    protected bool IsNew => _context?.HasEvents ?? true;
+
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
@@ -87,6 +92,11 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot
     /// Gets the current state of the aggregate root.
     /// </summary>
     public TState State => _state!.State;
+
+    /// <summary>
+    /// Gets a value indicating whether the aggregate root is new.
+    /// </summary>
+    protected bool IsNew => _context?.HasEvents ?? true;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)

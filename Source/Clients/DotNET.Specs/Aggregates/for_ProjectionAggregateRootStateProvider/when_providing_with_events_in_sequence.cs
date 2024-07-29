@@ -19,7 +19,7 @@ public class when_providing_with_events_in_sequence : given.an_aggregate_root_th
     {
         _state = new(Guid.NewGuid().ToString());
 
-        _projectionResult = new(_state, [], 0);
+        _projectionResult = new(_state, [], 2);
         _projections
             .GetInstanceByIdForSession(_correlationId, typeof(StateForAggregateRoot), _eventSourceId)
             .Returns(_projectionResult);
@@ -28,4 +28,5 @@ public class when_providing_with_events_in_sequence : given.an_aggregate_root_th
     async Task Because() => _result = await _provider.Provide();
 
     [Fact] void should_return_the_state() => _result.ShouldEqual(_state);
+    [Fact] void should_set_has_events_to_true() => _aggregateRootContext.HasEvents.ShouldBeTrue();
 }

@@ -24,6 +24,12 @@ public class ReducerAggregateRootStateProvider<TState>(
     {
         var events = await aggregateRootContext.EventSequence.GetForEventSourceIdAndEventTypes(aggregateRootContext.EventSourceId, reducer.EventTypes);
         var result = await reducer.OnNext(events, null);
+
+        if (result.LastSuccessfullyObservedEvent.IsActualValue && aggregateRootContext is AggregateRootContext actualContext)
+        {
+            actualContext.HasEvents = true;
+        }
+
         return (TState?)result.ModelState;
     }
 

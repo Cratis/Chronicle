@@ -37,4 +37,9 @@ public interface IAggregateRootContext
     /// Gets a value indicating whether or not to automatically commit changes on every apply.
     /// </summary>
     bool AutoCommit { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether or not the context has events.
+    /// </summary>
+    bool HasEvents { get; }
 }

@@ -404,6 +404,17 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> HasEventsFor(EventSourceId eventSourceId)
+    {
+        var filter = Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId);
+        var collection = GetCollection();
+        var count = await collection.Find(filter)
+                                    .CountDocumentsAsync()
+                                    .ConfigureAwait(false);
+        return count > 0;
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> HasInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId)
     {
         var filter = Builders<Event>.Filter.And(
