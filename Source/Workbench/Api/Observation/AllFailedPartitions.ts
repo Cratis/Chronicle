@@ -5,7 +5,7 @@
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import { FailedPartition } from '../Chronicle/Observation/FailedPartition';
+import { FailedPartition } from './FailedPartition';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/failed-partitions/{observerId}');
@@ -108,7 +108,7 @@ export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], A
         return this._sortBy;
     }
 
-    static use(args?: AllFailedPartitionsArguments, sorting?: Sorting): [QueryResultWithState<FailedPartition[]>] {
+    static use(args?: AllFailedPartitionsArguments, sorting?: Sorting): [QueryResultWithState<FailedPartition[]>, SetSorting] {
         return useObservableQuery<FailedPartition[], AllFailedPartitions, AllFailedPartitionsArguments>(AllFailedPartitions, args, sorting);
     }
 

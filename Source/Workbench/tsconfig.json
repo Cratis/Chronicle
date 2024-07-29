@@ -23,8 +23,8 @@
         "emitDecoratorMetadata": true,
         "baseUrl": "./",
         "paths": {
-            "API/*": [
-                "./API/*"
+            "Api/*": [
+                "./Api/*"
             ],
             "Infrastructure/*": [
                 "./Infrastructure/*"

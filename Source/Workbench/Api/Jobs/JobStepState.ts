@@ -20,7 +20,7 @@ export class JobStepState {
     @field(String)
     name!: string;
 
-    @field(JobStepStatus)
+    @field(Number)
     status!: JobStepStatus;
 
     @field(JobStepStatusChanged, true)

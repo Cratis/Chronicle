@@ -23,7 +23,7 @@ export class JobState {
     @field(String)
     details!: string;
 
-    @field(JobStatus)
+    @field(Number)
     status!: JobStatus;
 
     @field(JobStatusChanged, true)

@@ -115,7 +115,7 @@ export class AllJobs extends ObservableQueryFor<JobState[], AllJobsArguments> {
         return this._sortBy;
     }
 
-    static use(args?: AllJobsArguments, sorting?: Sorting): [QueryResultWithState<JobState[]>] {
+    static use(args?: AllJobsArguments, sorting?: Sorting): [QueryResultWithState<JobState[]>, SetSorting] {
         return useObservableQuery<JobState[], AllJobs, AllJobsArguments>(AllJobs, args, sorting);
     }
 

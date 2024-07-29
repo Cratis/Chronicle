@@ -78,11 +78,11 @@ export class AllProjections extends QueryFor<Projection[], AllProjectionsArgumen
         return this._sortBy;
     }
 
-    static use(args?: AllProjectionsArguments, sorting?: Sorting): [QueryResultWithState<Projection[]>, PerformQuery<AllProjectionsArguments>] {
+    static use(args?: AllProjectionsArguments, sorting?: Sorting): [QueryResultWithState<Projection[]>, PerformQuery<AllProjectionsArguments>, SetSorting] {
         return useQuery<Projection[], AllProjections, AllProjectionsArguments>(AllProjections, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllProjectionsArguments, sorting?: Sorting): [QueryResultWithState<Projection[]>, number, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllProjectionsArguments, sorting?: Sorting): [QueryResultWithState<Projection[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<Projection[], AllProjections>(AllProjections, new Paging(0, pageSize), args, sorting);
     }
 }

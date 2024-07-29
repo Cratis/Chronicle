@@ -68,7 +68,7 @@ export class Histogram extends QueryFor<EventHistogramEntry[]> {
         return useQuery<EventHistogramEntry[], Histogram>(Histogram, undefined, sorting);
     }
 
-    static useWithPaging(pageSize: number, sorting?: Sorting): [QueryResultWithState<EventHistogramEntry[]>, number, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, sorting?: Sorting): [QueryResultWithState<EventHistogramEntry[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<EventHistogramEntry[], Histogram>(Histogram, new Paging(0, pageSize), undefined, sorting);
     }
 }

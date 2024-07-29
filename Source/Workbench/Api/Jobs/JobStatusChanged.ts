@@ -8,7 +8,7 @@ import { JobStatus } from './JobStatus';
 
 export class JobStatusChanged {
 
-    @field(JobStatus)
+    @field(Number)
     status!: JobStatus;
 
     @field(Date)

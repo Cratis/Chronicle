@@ -4,12 +4,8 @@
 
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
-import { EventMetadata } from '../Chronicle/Events/EventMetadata';
-import { EventType } from '../Chronicle/Events/EventType';
-import { EventContext } from '../Chronicle/Events/EventContext';
-import { Causation } from '../Chronicle/Auditing/Causation';
-import { Identity } from '../Chronicle/Identities/Identity';
-import { EventObservationState } from '../Chronicle/Events/EventObservationState';
+import { EventMetadata } from '../Events/EventMetadata';
+import { EventContext } from '../Events/EventContext';
 
 export class AppendedEventWithJsonAsContent {
 

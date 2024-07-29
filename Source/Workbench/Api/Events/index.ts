@@ -3,4 +3,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 // eslint-disable-next-line header/header
+export * from './EventType';
 export * from './Register';
+export * from './EventMetadata';
+export * from './EventObservationState';
+export * from './EventContext';

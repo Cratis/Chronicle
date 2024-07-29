@@ -78,11 +78,11 @@ export class AllEventTypes extends QueryFor<EventType[], AllEventTypesArguments>
         return this._sortBy;
     }
 
-    static use(args?: AllEventTypesArguments, sorting?: Sorting): [QueryResultWithState<EventType[]>, PerformQuery<AllEventTypesArguments>] {
+    static use(args?: AllEventTypesArguments, sorting?: Sorting): [QueryResultWithState<EventType[]>, PerformQuery<AllEventTypesArguments>, SetSorting] {
         return useQuery<EventType[], AllEventTypes, AllEventTypesArguments>(AllEventTypes, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllEventTypesArguments, sorting?: Sorting): [QueryResultWithState<EventType[]>, number, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllEventTypesArguments, sorting?: Sorting): [QueryResultWithState<EventType[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<EventType[], AllEventTypes>(AllEventTypes, new Paging(0, pageSize), args, sorting);
     }
 }

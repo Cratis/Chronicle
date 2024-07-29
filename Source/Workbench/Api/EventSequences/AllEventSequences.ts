@@ -68,7 +68,7 @@ export class AllEventSequences extends QueryFor<EventSequenceInformation[]> {
         return useQuery<EventSequenceInformation[], AllEventSequences>(AllEventSequences, undefined, sorting);
     }
 
-    static useWithPaging(pageSize: number, sorting?: Sorting): [QueryResultWithState<EventSequenceInformation[]>, number, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, sorting?: Sorting): [QueryResultWithState<EventSequenceInformation[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<EventSequenceInformation[], AllEventSequences>(AllEventSequences, new Paging(0, pageSize), undefined, sorting);
     }
 }

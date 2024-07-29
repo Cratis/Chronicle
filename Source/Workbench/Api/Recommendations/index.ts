@@ -7,3 +7,4 @@ export * from './AllRecommendations';
 export * from './Perform';
 export * from './GetRecommendations';
 export * from './Ignore';
+export * from './RecommendationInformation';

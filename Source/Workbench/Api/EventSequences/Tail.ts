@@ -4,7 +4,7 @@
 
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState } from '@cratis/applications/queries';
-import { useQuery, PerformQuery, SetSorting} from '@cratis/applications.react/queries';
+import { useQuery, PerformQuery } from '@cratis/applications.react/queries';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}/tail-sequence-number');
@@ -34,7 +34,8 @@ export class Tail extends QueryFor<number, TailArguments> {
     }
 
 
-    static use(args?: TailArguments, sorting?: Sorting): [QueryResultWithState<number[]>, PerformQuery<TailArguments>] {
-        return useQuery<number[], Tail, TailArguments>(Tail, args, sorting);
+    static use(args?: TailArguments): [QueryResultWithState<number>, PerformQuery<TailArguments>] {
+        const [result, perform] = useQuery<number, Tail, TailArguments>(Tail, args);
+        return [result, perform];
     }
 }

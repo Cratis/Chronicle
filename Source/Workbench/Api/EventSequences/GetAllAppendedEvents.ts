@@ -84,11 +84,11 @@ export class GetAllAppendedEvents extends QueryFor<AppendedEventWithJsonAsConten
         return this._sortBy;
     }
 
-    static use(args?: GetAllAppendedEventsArguments, sorting?: Sorting): [QueryResultWithState<AppendedEventWithJsonAsContent[]>, PerformQuery<GetAllAppendedEventsArguments>] {
+    static use(args?: GetAllAppendedEventsArguments, sorting?: Sorting): [QueryResultWithState<AppendedEventWithJsonAsContent[]>, PerformQuery<GetAllAppendedEventsArguments>, SetSorting] {
         return useQuery<AppendedEventWithJsonAsContent[], GetAllAppendedEvents, GetAllAppendedEventsArguments>(GetAllAppendedEvents, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: GetAllAppendedEventsArguments, sorting?: Sorting): [QueryResultWithState<AppendedEventWithJsonAsContent[]>, number, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: GetAllAppendedEventsArguments, sorting?: Sorting): [QueryResultWithState<AppendedEventWithJsonAsContent[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<AppendedEventWithJsonAsContent[], GetAllAppendedEvents>(GetAllAppendedEvents, new Paging(0, pageSize), args, sorting);
     }
 }

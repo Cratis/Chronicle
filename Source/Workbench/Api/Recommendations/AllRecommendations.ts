@@ -5,7 +5,7 @@
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import { RecommendationInformation } from '../Chronicle/Recommendations/RecommendationInformation';
+import { RecommendationInformation } from './RecommendationInformation';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/recommendations/observe');
@@ -97,7 +97,7 @@ export class AllRecommendations extends ObservableQueryFor<RecommendationInforma
         return this._sortBy;
     }
 
-    static use(args?: AllRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<RecommendationInformation[]>] {
+    static use(args?: AllRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<RecommendationInformation[]>, SetSorting] {
         return useObservableQuery<RecommendationInformation[], AllRecommendations, AllRecommendationsArguments>(AllRecommendations, args, sorting);
     }
 

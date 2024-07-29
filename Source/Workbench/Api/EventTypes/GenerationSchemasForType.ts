@@ -52,11 +52,11 @@ export class GenerationSchemasForType extends QueryFor<any[], GenerationSchemasF
         return this._sortBy;
     }
 
-    static use(args?: GenerationSchemasForTypeArguments, sorting?: Sorting): [QueryResultWithState<any[]>, PerformQuery<GenerationSchemasForTypeArguments>] {
+    static use(args?: GenerationSchemasForTypeArguments, sorting?: Sorting): [QueryResultWithState<any[]>, PerformQuery<GenerationSchemasForTypeArguments>, SetSorting] {
         return useQuery<any[], GenerationSchemasForType, GenerationSchemasForTypeArguments>(GenerationSchemasForType, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: GenerationSchemasForTypeArguments, sorting?: Sorting): [QueryResultWithState<any[]>, number, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: GenerationSchemasForTypeArguments, sorting?: Sorting): [QueryResultWithState<any[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<any[], GenerationSchemasForType>(GenerationSchemasForType, new Paging(0, pageSize), args, sorting);
     }
 }

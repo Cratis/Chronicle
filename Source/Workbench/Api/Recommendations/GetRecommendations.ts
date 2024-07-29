@@ -5,7 +5,7 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import { RecommendationInformation } from '../Chronicle/Recommendations/RecommendationInformation';
+import { RecommendationInformation } from './RecommendationInformation';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/recommendations');
@@ -98,11 +98,11 @@ export class GetRecommendations extends QueryFor<RecommendationInformation[], Ge
         return this._sortBy;
     }
 
-    static use(args?: GetRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<RecommendationInformation[]>, PerformQuery<GetRecommendationsArguments>] {
+    static use(args?: GetRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<RecommendationInformation[]>, PerformQuery<GetRecommendationsArguments>, SetSorting] {
         return useQuery<RecommendationInformation[], GetRecommendations, GetRecommendationsArguments>(GetRecommendations, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: GetRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<RecommendationInformation[]>, number, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: GetRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<RecommendationInformation[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<RecommendationInformation[], GetRecommendations>(GetRecommendations, new Paging(0, pageSize), args, sorting);
     }
 }

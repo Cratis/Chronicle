@@ -5,7 +5,7 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import { ConnectedClient } from '../Chronicle/Contracts/Clients/ConnectedClient';
+import { ConnectedClient } from '../Contracts/Clients/ConnectedClient';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/clients');
@@ -86,7 +86,7 @@ export class AllConnectedClients extends QueryFor<ConnectedClient[]> {
         return useQuery<ConnectedClient[], AllConnectedClients>(AllConnectedClients, undefined, sorting);
     }
 
-    static useWithPaging(pageSize: number, sorting?: Sorting): [QueryResultWithState<ConnectedClient[]>, number, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, sorting?: Sorting): [QueryResultWithState<ConnectedClient[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<ConnectedClient[], AllConnectedClients>(AllConnectedClients, new Paging(0, pageSize), undefined, sorting);
     }
 }

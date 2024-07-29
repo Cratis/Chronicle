@@ -132,11 +132,11 @@ export class SearchForPeople extends QueryFor<Person[], SearchForPeopleArguments
         return this._sortBy;
     }
 
-    static use(args?: SearchForPeopleArguments, sorting?: Sorting): [QueryResultWithState<Person[]>, PerformQuery<SearchForPeopleArguments>] {
+    static use(args?: SearchForPeopleArguments, sorting?: Sorting): [QueryResultWithState<Person[]>, PerformQuery<SearchForPeopleArguments>, SetSorting] {
         return useQuery<Person[], SearchForPeople, SearchForPeopleArguments>(SearchForPeople, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: SearchForPeopleArguments, sorting?: Sorting): [QueryResultWithState<Person[]>, number, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: SearchForPeopleArguments, sorting?: Sorting): [QueryResultWithState<Person[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<Person[], SearchForPeople>(SearchForPeople, new Paging(0, pageSize), args, sorting);
     }
 }

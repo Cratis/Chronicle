@@ -4,7 +4,7 @@
 
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState } from '@cratis/applications/queries';
-import { useQuery, PerformQuery, SetSorting} from '@cratis/applications.react/queries';
+import { useQuery, PerformQuery } from '@cratis/applications.react/queries';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}/next-sequence-number');
@@ -34,7 +34,8 @@ export class Next extends QueryFor<number, NextArguments> {
     }
 
 
-    static use(args?: NextArguments, sorting?: Sorting): [QueryResultWithState<number[]>, PerformQuery<NextArguments>] {
-        return useQuery<number[], Next, NextArguments>(Next, args, sorting);
+    static use(args?: NextArguments): [QueryResultWithState<number>, PerformQuery<NextArguments>] {
+        const [result, perform] = useQuery<number, Next, NextArguments>(Next, args);
+        return [result, perform];
     }
 }

@@ -69,11 +69,11 @@ export class AllEventTypesWithSchemas extends QueryFor<EventTypeWithSchemas[], A
         return this._sortBy;
     }
 
-    static use(args?: AllEventTypesWithSchemasArguments, sorting?: Sorting): [QueryResultWithState<EventTypeWithSchemas[]>, PerformQuery<AllEventTypesWithSchemasArguments>] {
+    static use(args?: AllEventTypesWithSchemasArguments, sorting?: Sorting): [QueryResultWithState<EventTypeWithSchemas[]>, PerformQuery<AllEventTypesWithSchemasArguments>, SetSorting] {
         return useQuery<EventTypeWithSchemas[], AllEventTypesWithSchemas, AllEventTypesWithSchemasArguments>(AllEventTypesWithSchemas, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllEventTypesWithSchemasArguments, sorting?: Sorting): [QueryResultWithState<EventTypeWithSchemas[]>, number, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllEventTypesWithSchemasArguments, sorting?: Sorting): [QueryResultWithState<EventTypeWithSchemas[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<EventTypeWithSchemas[], AllEventTypesWithSchemas>(AllEventTypesWithSchemas, new Paging(0, pageSize), args, sorting);
     }
 }

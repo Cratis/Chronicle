@@ -5,7 +5,7 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import { ObserverInformation } from '../Chronicle/Contracts/Observation/ObserverInformation';
+import { ObserverInformation } from '../Contracts/Observation/ObserverInformation';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/observers');
@@ -107,11 +107,11 @@ export class GetObservers extends QueryFor<ObserverInformation[], GetObserversAr
         return this._sortBy;
     }
 
-    static use(args?: GetObserversArguments, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, PerformQuery<GetObserversArguments>] {
+    static use(args?: GetObserversArguments, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, PerformQuery<GetObserversArguments>, SetSorting] {
         return useQuery<ObserverInformation[], GetObservers, GetObserversArguments>(GetObservers, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: GetObserversArguments, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, number, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: GetObserversArguments, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<ObserverInformation[], GetObservers>(GetObservers, new Paging(0, pageSize), args, sorting);
     }
 }
