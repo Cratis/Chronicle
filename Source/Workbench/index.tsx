@@ -12,7 +12,6 @@ import App from "./App";
 import { configure as configureMobx } from 'mobx';
 import { Bindings } from '@cratis/applications.react.mvvm';
 import { FakeData } from './FakeData';
-import { container } from 'tsyringe';
 
 Bindings.initialize();
 FakeData.initialize();
