@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.Queries;
+using System.Reactive.Subjects;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.API.Jobs;
@@ -20,9 +20,9 @@ public class JobQueries() : ControllerBase
     /// </summary>
     /// <param name="eventStore">Name of the event store the job is for.</param>
     /// <param name="namespace">Namespace within the event store the job is for.</param>
-    /// <returns>A <see cref="ClientObservable{T}"/> for observing a collection of <see cref="JobState"/>.</returns>
+    /// <returns>An observable for observing a collection of <see cref="JobState"/>.</returns>
     [HttpGet]
-    public ClientObservable<IEnumerable<JobState>> AllJobs(
+    public ISubject<IEnumerable<JobState>> AllJobs(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
         throw new NotImplementedException();
@@ -33,9 +33,9 @@ public class JobQueries() : ControllerBase
     /// <param name="eventStore">Name of the event store the job is for.</param>
     /// <param name="namespace">Namespace within the event store the job is for.</param>
     /// <param name="jobId">Identifier of the job to observe for.</param>
-    /// <returns>A <see cref="ClientObservable{T}"/> for observing a collection of <see cref="JobStepState"/>.</returns>
+    /// <returns>An observable for observing a collection of <see cref="JobStepState"/>.</returns>
     [HttpGet("{jobId}/steps")]
-    public ClientObservable<IEnumerable<JobStepState>> AllJobSteps(
+    public ISubject<IEnumerable<JobStepState>> AllJobSteps(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid jobId) =>

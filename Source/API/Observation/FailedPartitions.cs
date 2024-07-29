@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.Queries;
+using System.Reactive.Subjects;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Observation;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +25,7 @@ public class FailedPartitions() : ControllerBase
     /// <param name="observerId">Optional <see cref="ObserverId"/> to filter down which observer it is for.</param>
     /// <returns>Client observable of a collection of <see cref="FailedPartitions"/>.</returns>
     [HttpGet("{observerId}")]
-    public Task<ClientObservable<IEnumerable<FailedPartition>>> AllFailedPartitions(
+    public ISubject<IEnumerable<FailedPartition>> AllFailedPartitions(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string? observerId = default)

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.Queries;
+using System.Reactive.Subjects;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Recommendations;
 using Microsoft.AspNetCore.Mvc;
@@ -36,9 +36,9 @@ public class RecommendationQueries() : ControllerBase
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the recommendations are for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the recommendations are for.</param>
-    /// <returns>Client observable of a collection of <see cref="RecommendationInformation"/>.</returns>
+    /// <returns>An observable of a collection of <see cref="RecommendationInformation"/>.</returns>
     [HttpGet("observe")]
-    public Task<ClientObservable<IEnumerable<RecommendationInformation>>> AllRecommendations(
+    public ISubject<IEnumerable<RecommendationInformation>> AllRecommendations(
         [FromRoute] EventStoreName eventStore,
         [FromRoute] EventStoreNamespaceName @namespace)
     {

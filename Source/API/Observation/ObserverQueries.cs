@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.Queries;
 using Cratis.Chronicle.Contracts.Observation;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,9 +32,9 @@ public class ObserverQueries() : ControllerBase
     /// </summary>
     /// <param name="eventStore">The event store the observers are for.</param>
     /// <param name="namespace">The namespace within the event store the observers are for.</param>
-    /// <returns>Client observable of a collection of <see cref="ObserverInformation"/>.</returns>
+    /// <returns>An observable of a collection of <see cref="ObserverInformation"/>.</returns>
     [HttpGet("observe")]
-    public Task<ClientObservable<IEnumerable<ObserverInformation>>> AllObservers(
+    public IEnumerable<ObserverInformation> AllObservers(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace)
     {

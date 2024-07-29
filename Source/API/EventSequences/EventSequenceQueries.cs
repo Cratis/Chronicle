@@ -76,7 +76,7 @@ public class EventSequenceQueries : ControllerBase
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet]
-    public async Task<PagedQueryResult<AppendedEventWithJsonAsContent>> GetAppendedEvents(
+    public async Task<IQueryable<AppendedEventWithJsonAsContent>> GetAppendedEvents(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string eventSequenceId,
@@ -98,7 +98,7 @@ public class EventSequenceQueries : ControllerBase
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet("range")]
-    public async Task<PagedQueryResult<AppendedEventWithJsonAsContent>> GetAppendedEventsInRange(
+    public async Task<IQueryable<AppendedEventWithJsonAsContent>> GetAppendedEventsInRange(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string eventSequenceId,

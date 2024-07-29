@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.Queries;
+using System.Reactive.Subjects;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.API.Compliance.GDPR;
@@ -18,9 +18,9 @@ public class People() : ControllerBase
     /// <summary>
     /// Get all people.
     /// </summary>
-    /// <returns>Client observable of a collection of <see cref="Person">people</see>.</returns>
+    /// <returns>An observable of a collection of <see cref="Person">people</see>.</returns>
     [HttpGet]
-    public Task<ClientObservable<IEnumerable<Person>>> AllPeople() => throw new NotImplementedException();
+    public ISubject<IEnumerable<Person>> AllPeople() => throw new NotImplementedException();
 
     /// <summary>
     /// Search for people by an arbitrary string.
