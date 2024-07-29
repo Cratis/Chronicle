@@ -7,21 +7,20 @@
         <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
     </ItemGroup>
 
-    <RemoveDuplicates Inputs="@(InputAssemblies)">
-      <Output TaskParameter="Filtered" ItemName="DistinctInputAssemblies" />
-    </RemoveDuplicates>
-
-    <Message Text="$(InputAssemblies)" Importance="high" />
-    <Message Text="$(DistinctInputAssemblies)" Importance="high" />
+        <ItemGroup>
+            <DoNotInternalizeAssemblies Include="Cratis.Chronicle.Setup" />
+        </ItemGroup>
 
     <ILRepack
         AllowDuplicateResources="false"
         DebugInfo="true"
         Internalize="true"
-        InputAssemblies="@(DistinctInputAssemblies)"
+        InputAssemblies="@(InputAssemblies)"
+        InternalizeExclude="@(DoNotInternalizeAssemblies)"
         OutputFile="$(TargetPath)"
         Parallel="false"
         LibraryPath="@(LibraryPath)"
+        LogFile="$(OutputPath)/ILRepack.log"
         TargetKind="SameAsPrimaryAssembly" />
   </Target>
 </Project>
