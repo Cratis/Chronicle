@@ -3,13 +3,9 @@
   <Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
     <ItemGroup>
         <InputAssemblies Include="$(TargetPath)"/>
-        <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle.*.dll"/>
+        <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle.*.dll" Exclude="$(OutputPath)/Cratis.Chronicle.Setup.dll"/>
         <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
     </ItemGroup>
-
-        <ItemGroup>
-            <DoNotInternalizeAssemblies Include="Cratis.Chronicle.Setup" />
-        </ItemGroup>
 
     <ILRepack
         AllowDuplicateResources="false"
