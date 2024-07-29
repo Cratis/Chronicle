@@ -18,9 +18,17 @@ namespace Cratis.Chronicle.Orleans.Aggregates;
 /// </summary>
 public class AggregateRoot : Grain, IAggregateRoot
 {
+    /// <summary>
+    /// Context of the aggregate root - accessible only to Chronicle Internally.
+    /// </summary>
+    internal IAggregateRootContext? _context;
+
+    /// <summary>
+    /// Mutation of the aggregate root - accessible only to Chronicle Internally.
+    /// </summary>
+    internal AggregateRootMutation? _mutation;
+
     StatelessAggregateRootMutator? _mutator;
-    IAggregateRootContext? _context;
-    AggregateRootMutation? _mutation;
 
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
@@ -83,10 +91,22 @@ public class AggregateRoot : Grain, IAggregateRoot
 /// <typeparam name="TState">Type of state for the grain.</typeparam>
 public class AggregateRoot<TState> : Grain, IAggregateRoot
 {
+    /// <summary>
+    /// Context of the aggregate root - accessible only to Chronicle Internally.
+    /// </summary>
+    internal IAggregateRootContext? _context;
+
+    /// <summary>
+    /// Mutation of the aggregate root - accessible only to Chronicle Internally.
+    /// </summary>
+    internal AggregateRootMutation? _mutation;
+
+    /// <summary>
+    /// State of the aggregate root - accessible only to Chronicle Internally.
+    /// </summary>
+    internal AggregateRootState<TState>? _state;
+
     StatefulAggregateRootMutator<TState>? _mutator;
-    IAggregateRootContext? _context;
-    AggregateRootMutation? _mutation;
-    AggregateRootState<TState>? _state;
 
     /// <summary>
     /// Gets the current state of the aggregate root.
