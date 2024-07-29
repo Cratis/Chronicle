@@ -32,11 +32,11 @@ public static class ConnectedClientConverters
         connectedClients.Select(ToContract);
 
     /// <summary>
-    /// Convert to kernel version of <see cref="ConnectedClient"/>.
+    /// Convert to Chronicle version of <see cref="ConnectedClient"/>.
     /// </summary>
     /// <param name="connectedClient"><see cref="Contracts.Clients.ConnectedClient"/> to convert.</param>
-    /// <returns>Converted kernel version.</returns>
-    public static ConnectedClient ToKernel(this Contracts.Clients.ConnectedClient connectedClient)
+    /// <returns>Converted Chronicle version.</returns>
+    public static ConnectedClient ToChronicle(this Contracts.Clients.ConnectedClient connectedClient)
     {
         return new()
         {

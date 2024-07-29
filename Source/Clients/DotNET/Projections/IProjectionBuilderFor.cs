@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -12,11 +13,11 @@ namespace Cratis.Chronicle.Projections;
 public interface IProjectionBuilderFor<TModel> : IProjectionBuilder<TModel, IProjectionBuilderFor<TModel>>
 {
     /// <summary>
-    /// Names the projection. Default behavior is to use the type of the models full name.
+    /// Specifies the <see cref="EventSequenceId"/> to use as source.
     /// </summary>
-    /// <param name="name">The name of the projection to use.</param>
+    /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to use.</param>
     /// <returns>Builder continuation.</returns>
-    IProjectionBuilderFor<TModel> WithName(string name);
+    IProjectionBuilderFor<TModel> FromEventSequence(EventSequenceId eventSequenceId);
 
     /// <summary>
     /// Names the model - typically used by storage as name of storage unit (collection, table etc.)
@@ -30,6 +31,12 @@ public interface IProjectionBuilderFor<TModel> : IProjectionBuilder<TModel, IPro
     /// </summary>
     /// <returns>Builder continuation.</returns>
     IProjectionBuilderFor<TModel> NotRewindable();
+
+    /// <summary>
+    /// Set the projection not be active, meaning that it won't actively observe.
+    /// </summary>
+    /// <returns>Builder continuation.</returns>
+    IProjectionBuilderFor<TModel> Passive();
 
     /// <summary>
     /// Build a <see cref="ProjectionDefinition"/>.

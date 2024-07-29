@@ -30,14 +30,14 @@ public class Observers(
         var key = ObserversKey.Parse(keyAsString!);
 
         var observerStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Observers;
-        var observers = await observerStorage.GetAllObservers();
+        var observers = await observerStorage.GetAll();
 
         var observersForConsolidation = new List<ObserverIdAndKey>();
 
         foreach (var observerInfo in observers)
         {
-            var observerKey = new ObserverKey(key.EventStore, key.Namespace, observerInfo.EventSequenceId);
-            var observer = grainFactory.GetGrain<IObserver>(observerInfo.ObserverId, keyExtension: observerKey);
+            var observerKey = new ObserverKey(observerInfo.ObserverId, key.EventStore, key.Namespace, observerInfo.EventSequenceId);
+            var observer = grainFactory.GetGrain<IObserver>(observerKey);
             await observer.Ensure();
 
             if ((observerInfo.Handled == EventCount.NotSet ||

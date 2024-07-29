@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Grains.Interfaces.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Grains.Interfaces</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
+        <ProjectReference Include="../Shared/Shared.csproj" />
+    </ItemGroup>
+
+</Project>

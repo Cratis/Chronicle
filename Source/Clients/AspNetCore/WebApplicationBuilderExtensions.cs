@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle;
+using Cratis.Chronicle.AspNetCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -17,17 +17,15 @@ public static class WebApplicationBuilderExtensions
     /// Configures the usage of Cratis for the app.
     /// </summary>
     /// <param name="webApplicationBuilder"><see cref="WebApplicationBuilder"/> to build on.</param>
-    /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
     /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
-    public static WebApplicationBuilder UseCratis(
+    public static WebApplicationBuilder UseCratisChronicle(
         this WebApplicationBuilder webApplicationBuilder,
-        Action<IClientBuilder>? configureDelegate = default,
         ILoggerFactory? loggerFactory = default)
     {
         webApplicationBuilder.Services.AddRules();
         webApplicationBuilder.Services.AddHttpContextAccessor();
-        webApplicationBuilder.Host.UseCratis(configureDelegate, loggerFactory);
+        webApplicationBuilder.Host.UseCratisChronicle(loggerFactory);
         return webApplicationBuilder;
     }
 
@@ -36,13 +34,13 @@ public static class WebApplicationBuilderExtensions
     /// </summary>
     /// <param name="app"><see cref="IApplicationBuilder"/> to extend.</param>
     /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
-    public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
+    public static IApplicationBuilder UseCratisChronicle(this IApplicationBuilder app)
     {
         app.UseCausation();
 
-        // TODO: Does ExecutionContext exist anymore?
+        var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
+        appLifetime.ApplicationStarted.Register(() => GlobalInstances.ServiceProvider = app.ApplicationServices);
 
-        // app.UseExecutionContext();
         return app;
     }
 }

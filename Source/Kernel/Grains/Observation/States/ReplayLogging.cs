@@ -12,16 +12,16 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 
 internal static partial class ReplayLogMessages
 {
-    [LoggerMessage(0, LogLevel.Trace, "Entering replay state")]
+    [LoggerMessage(LogLevel.Trace, "Entering replay state")]
     internal static partial void Entering(this ILogger<Replay> logger);
 
-    [LoggerMessage(1, LogLevel.Trace, "Existing replay job running, will let it finish")]
+    [LoggerMessage(LogLevel.Trace, "Existing replay job running, will let it finish")]
     internal static partial void FinishingExistingReplayJob(this ILogger<Replay> logger);
 
-    [LoggerMessage(2, LogLevel.Trace, "Existing replay job found - resuming")]
+    [LoggerMessage(LogLevel.Trace, "Existing replay job found - resuming")]
     internal static partial void ResumingReplayJob(this ILogger<Replay> logger);
 
-    [LoggerMessage(3, LogLevel.Trace, "Start new replay job")]
+    [LoggerMessage(LogLevel.Trace, "Start new replay job")]
     internal static partial void StartReplayJob(this ILogger<Replay> logger);
 }
 

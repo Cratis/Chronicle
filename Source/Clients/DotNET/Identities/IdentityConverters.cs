@@ -22,7 +22,7 @@ public static class IdentityConverters
     };
 
     /// <summary>
-    /// Convert to Kernel representation.
+    /// Convert to Chronicle representation.
     /// </summary>
     /// <param name="identity"><see cref="Chronicle.Contracts.Identities.Identity"/> to convert from.</param>
     /// <returns>Converted <see cref="Identity"/>.</returns>

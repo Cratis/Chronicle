@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { withViewModel } from 'Infrastructure/MVVM';
+import { withViewModel } from '@cratis/applications.react.mvvm';
 import { ObserversViewModel } from './ObserversViewModel';
 import { DataTable, DataTableFilterMeta } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { ObserverType } from 'API/Cratis/Kernel/Contracts/Observation/ObserverType';
+import { ObserverType } from 'Api/Contracts/Observation/ObserverType';
 import { Page } from 'Components/Common/Page';
-import { ObserverInformation } from 'API/Cratis/Kernel/Contracts/Observation/ObserverInformation';
+import { ObserverInformation } from 'Api/Contracts/Observation/ObserverInformation';
 import { FilterMatchMode } from 'primereact/api';
 import { useState } from 'react';
 import { ColumnFilterProps } from 'Components/ColumnFilter/ColumnFilter';
@@ -19,7 +19,6 @@ import { Menubar } from 'primereact/menubar';
 import { MenuItem } from 'primereact/menuitem';
 import { FaArrowsRotate } from "react-icons/fa6";
 import strings from 'Strings';
-import { Button } from 'primereact/button';
 
 const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {

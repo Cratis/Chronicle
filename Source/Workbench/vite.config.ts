@@ -4,12 +4,16 @@
 import { defineConfig } from 'vite';
 import react from "@vitejs/plugin-react";
 import path from 'path';
-import { VitePluginEmitMetadata } from './ViteEmitMetadataPlugin';
+import { EmitMetadataPlugin } from '@cratis/applications.vite';
 
 export default defineConfig({
     build: {
         outDir: './wwwroot',
         assetsDir: '',
+        modulePreload: false,
+        target: 'esnext',
+        minify: false,
+        cssCodeSplit: false,
         rollupOptions: {
             external: [
             ],
@@ -17,7 +21,7 @@ export default defineConfig({
     },
     plugins: [
         react(),
-        VitePluginEmitMetadata() as any
+        EmitMetadataPlugin() as any
     ],
     server: {
         port: 9000,
@@ -34,7 +38,7 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            'API': path.resolve('./API'),
+            'Api': path.resolve('./Api'),
             'MVVM': path.resolve('./MVVM'),
             'assets': path.resolve('./assets'),
             'Components': path.resolve('./Components'),

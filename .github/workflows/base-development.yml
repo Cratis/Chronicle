@@ -81,7 +81,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            cratis/cratis-base:${{ needs.release.outputs.version }}
-            cratis/cratis-base:latest
+            cratis/base:${{ needs.release.outputs.version }}
+            cratis/base:latest
           build-args: |
             VERSION=${{ needs.release.outputs.version }}

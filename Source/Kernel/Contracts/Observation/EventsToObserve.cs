@@ -16,5 +16,5 @@ public class EventsToObserve
     /// Gets or sets a collection of <see cref="AppendedEvent"/>.
     /// </summary>
     [ProtoMember(1)]
-    public IEnumerable<AppendedEvent> Events { get; set; }
+    public IList<AppendedEvent> Events { get; set; }
 }

@@ -20,11 +20,6 @@ public class ConnectedClients(
     ILogger<ConnectedClients> logger,
     IConnectedClientsMetricsFactory metricsFactory) : Grain, IConnectedClients
 {
-    /// <summary>
-    /// Gets the name of the HTTP client for connected clients.
-    /// </summary>
-    public const string ConnectedClientsHttpClient = "connected-clients";
-
     readonly List<ConnectedClient> _clients = [];
     readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger);
     IConnectedClientsMetrics? _metrics;
@@ -33,8 +28,7 @@ public class ConnectedClients(
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _metrics = metricsFactory.Create();
-        RegisterTimer(ReviseConnectedClients, null!, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-
+        this.RegisterGrainTimer(ReviseConnectedClients, new() { DueTime = TimeSpan.Zero, Period = TimeSpan.FromSeconds(1) });
         return Task.CompletedTask;
     }
 
@@ -111,7 +105,7 @@ public class ConnectedClients(
     /// <inheritdoc/>
     public Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId) => Task.FromResult(_clients.First(_ => _.ConnectionId == connectionId));
 
-    async Task ReviseConnectedClients(object state)
+    async Task ReviseConnectedClients(CancellationToken cancellationToken)
     {
         if (Debugger.IsAttached) return;
 

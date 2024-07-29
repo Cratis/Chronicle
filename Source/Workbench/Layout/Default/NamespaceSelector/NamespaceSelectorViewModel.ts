@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { inject, injectable } from 'tsyringe';
-import { AllNamespaces, Namespace } from 'API/Namespaces';
-import { ILocalStorage, INavigation } from 'Browser';
+import { AllNamespaces, Namespace } from 'Api/Namespaces';
+import { ILocalStorage, INavigation } from '@cratis/applications.react.mvvm/browser';
 
 export interface INamespaceSelectorProps {
     onNamespaceSelected: (namespace: Namespace) => void;

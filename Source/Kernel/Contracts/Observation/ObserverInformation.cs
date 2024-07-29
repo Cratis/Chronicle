@@ -25,32 +25,26 @@ public class ObserverInformation
     public Guid EventSequenceId { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the observer.
-    /// </summary>
-    [ProtoMember(3)]
-    public string Name { get; set; }
-
-    /// <summary>
     /// Gets or sets the type of observer.
     /// </summary>
-    [ProtoMember(4)]
+    [ProtoMember(3)]
     public ObserverType Type { get; set; }
 
     /// <summary>
     /// Gets or sets the types of events the observer is observing.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(4)]
     public IEnumerable<EventType> EventTypes { get; set; }
 
     /// <summary>
     /// Gets or sets the next event sequence number the observer will observe.
     /// </summary>
-    [ProtoMember(6)]
+    [ProtoMember(5)]
     public ulong NextEventSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the running state of the observer.
     /// </summary>
-    [ProtoMember(7)]
+    [ProtoMember(6)]
     public ObserverRunningState RunningState { get; set; }
 }

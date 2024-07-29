@@ -15,69 +15,39 @@ namespace Cratis.Chronicle.Rules;
 /// <summary>
 /// Represents an implementation of <see cref="IRulesProjections"/>.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="RulesProjections"/> class.
+/// </remarks>
+/// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances.</param>
+/// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
+/// <param name="eventTypes"><see cref="IEventTypes"/> used for generating projection definitions.</param>
+/// <param name="modelNameResolver">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+/// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> used for generating projection definitions.</param>
+/// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
 [Singleton]
-public class RulesProjections : IRulesProjections
+public class RulesProjections(
+    IServiceProvider serviceProvider,
+    IClientArtifactsProvider clientArtifacts,
+    IEventTypes eventTypes,
+    IModelNameResolver modelNameResolver,
+    IJsonSchemaGenerator jsonSchemaGenerator,
+    JsonSerializerOptions serializerOptions) : IRulesProjections
 {
-    readonly IEventTypes _eventTypes;
-    readonly IModelNameResolver _modelNameResolver;
-    readonly IJsonSchemaGenerator _jsonSchemaGenerator;
-    readonly JsonSerializerOptions _serializerOptions;
-    readonly Dictionary<RuleId, ProjectionDefinition> _projectionDefinitionsPerRuleId;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RulesProjections"/> class.
-    /// </summary>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances.</param>
-    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> used for generating projection definitions.</param>
-    /// <param name="modelNameResolver">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
-    /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> used for generating projection definitions.</param>
-    /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
-    public RulesProjections(
-        IServiceProvider serviceProvider,
-        IClientArtifactsProvider clientArtifacts,
-        IEventTypes eventTypes,
-        IModelNameResolver modelNameResolver,
-        IJsonSchemaGenerator jsonSchemaGenerator,
-        JsonSerializerOptions serializerOptions)
+    /// <inheritdoc/>
+    public IImmutableList<ProjectionDefinition> Discover()
     {
-        _eventTypes = eventTypes;
-        _modelNameResolver = modelNameResolver;
-        _jsonSchemaGenerator = jsonSchemaGenerator;
-        _serializerOptions = serializerOptions;
-
         var createProjectionMethod = typeof(RulesProjections).GetMethod(nameof(CreateProjection), BindingFlags.NonPublic | BindingFlags.Instance)!;
-        _projectionDefinitionsPerRuleId = clientArtifacts.Rules.Select(ruleType =>
+        return clientArtifacts.Rules.Select(ruleType =>
         {
             var rule = serviceProvider.GetService(ruleType);
             return (createProjectionMethod!.MakeGenericMethod(ruleType).Invoke(this, [rule]) as ProjectionDefinition)!;
-        }).ToDictionary(_ => (RuleId)_.Identifier, _ => _);
-
-        Definitions = _projectionDefinitionsPerRuleId.Values.ToImmutableList();
-    }
-
-    /// <inheritdoc/>
-    public IImmutableList<ProjectionDefinition> Definitions { get; }
-
-    /// <inheritdoc/>
-    public bool HasFor(RuleId ruleId) => _projectionDefinitionsPerRuleId.ContainsKey(ruleId);
-
-    /// <inheritdoc/>
-    public ProjectionDefinition GetFor(RuleId ruleId)
-    {
-        ThrowIfMissingProjectionForRule(ruleId);
-
-        return _projectionDefinitionsPerRuleId[ruleId];
-    }
-
-    void ThrowIfMissingProjectionForRule(RuleId ruleId)
-    {
-        if (!HasFor(ruleId)) throw new MissingProjectionForRule(ruleId);
+        }).ToImmutableList();
     }
 
     ProjectionDefinition CreateProjection<TTarget>(IRule rule)
     {
-        var projectionBuilder = new ProjectionBuilderFor<TTarget>(rule.Identifier.Value, _modelNameResolver, _eventTypes, _jsonSchemaGenerator, _serializerOptions);
+        var identifier = rule.GetType().GetRuleId();
+        var projectionBuilder = new ProjectionBuilderFor<TTarget>(identifier.Value, modelNameResolver, eventTypes, jsonSchemaGenerator, serializerOptions);
 
         var ruleType = typeof(TTarget);
 

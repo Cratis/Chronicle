@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Grains.Observation.Reducers;
-using Cratis.Chronicle.Grains.Projections.Definitions;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Grains;
@@ -21,22 +19,7 @@ public interface IEventStore
     /// <summary>
     /// Gets the <see cref="IEventStoreStorage"/> for the specific event store.
     /// </summary>
-    IEventStoreStorage Storage { get; }
-
-    /// <summary>
-    /// Gets the <see cref="IProjectionDefinitions"/>.
-    /// </summary>
-    IProjectionDefinitions ProjectionDefinitions { get; }
-
-    /// <summary>
-    /// Gets the <see cref="IProjectionPipelineDefinitions"/>.
-    /// </summary>
-    IProjectionPipelineDefinitions ProjectionPipelineDefinitions { get; }
-
-    /// <summary>
-    /// Gets the <see cref="IReducerPipelineDefinitions"/>.
-    /// </summary>
-    IReducerPipelineDefinitions ReducerPipelineDefinitions { get; }
+    IEventStoreStorage Storage { get; }
 
     /// <summary>
     /// Gets the <see cref="IImmutableList{T}"/> of <see cref="EventStoreNamespace"/> instances.

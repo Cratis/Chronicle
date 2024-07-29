@@ -16,14 +16,12 @@ namespace Cratis.Chronicle.Rules;
 /// Initializes a new instance of the <see cref="Rules"/> class.
 /// </remarks>
 /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
-/// <param name="rulesProjections">All <see cref="IRulesProjections"/>.</param>
-/// <param name="immediateProjections"><see cref="IImmediateProjections"/> client.</param>
+/// <param name="projections"><see cref="IProjections"/> client.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
 [Singleton]
 public class Rules(
     JsonSerializerOptions serializerOptions,
-    IRulesProjections rulesProjections,
-    IImmediateProjections immediateProjections,
+    IProjections projections,
     IClientArtifactsProvider clientArtifacts) : IRules
 {
     readonly IDictionary<Type, IEnumerable<Type>> _rulesPerCommand = clientArtifacts.Rules
@@ -39,10 +37,11 @@ public class Rules(
     /// <inheritdoc/>
     public void ProjectTo(IRule rule, object? modelIdentifier = default)
     {
-        if (!rulesProjections.HasFor(rule.Identifier)) return;
+        var identifier = rule.GetType().GetRuleId();
+        if (!projections.HasFor(identifier.Value)) return;
 
-        var result = immediateProjections.GetInstanceById(
-            rule.Identifier.Value,
+        var result = projections.GetInstanceById(
+            identifier.Value,
             modelIdentifier is null ? ModelKey.Unspecified : modelIdentifier.ToString()!).GetAwaiter().GetResult();
 
         var properties = rule.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty);

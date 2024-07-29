@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { injectable } from 'tsyringe';
-import { AllObservers } from 'API/Observation';
-import { ObserverInformation } from 'API/Cratis/Kernel/Contracts/Observation/ObserverInformation';
+import { AllObservers } from 'Api/Observation';
+import { ObserverInformation } from 'Api/Contracts/Observation/ObserverInformation';
 
 @injectable()
 export class ObserversViewModel {

@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle;
 
 /// <summary>
-/// Represents the settings for connecting to Cratis.
+/// Represents the settings for connecting to Chronicle.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="ChronicleOptions"/> class.
@@ -20,7 +20,7 @@ namespace Cratis.Chronicle;
 /// <param name="modelNameConvention">Optional <see cref="IModelNameConvention"/> to use.</param>
 /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/> to use. Will revert to default if not configured.</param>
 /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
-/// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving instances of things like observers, reducers and other artifacts. Will revert to <see cref="DefaultServiceProvider"/> if not configured.</param>
+/// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving instances of things like event types, reactions, reducers, projections and other artifacts. Will revert to <see cref="DefaultServiceProvider"/> if not configured.</param>
 /// <param name="artifactsProvider">Optional <see cref="IClientArtifactsProvider"/>. If not specified, it will use the <see cref="DefaultClientArtifactsProvider"/> with both project and package referenced assemblies.</param>
 /// <param name="connectTimeout">Optional timeout when connecting in seconds. Defaults to 5.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> to use internally in client for logging.</param>
@@ -34,6 +34,13 @@ public class ChronicleOptions(
     int connectTimeout = 5,
     ILoggerFactory? loggerFactory = null)
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChronicleOptions"/> class.
+    /// </summary>
+    public ChronicleOptions() : this(ChronicleUrl.Default)
+    {
+    }
+
     /// <summary>
     /// Gets the <see cref="ChronicleUrl"/> to use.
     /// </summary>
@@ -72,7 +79,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="IClientArtifactsProvider"/> to use.
     /// </summary>
-    public IClientArtifactsProvider ArtifactsProvider { get; init; } = artifactsProvider ?? new DefaultClientArtifactsProvider(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
+    public IClientArtifactsProvider ArtifactsProvider { get; set; } = artifactsProvider ?? new DefaultClientArtifactsProvider(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
     /// <summary>
     /// Gets the <see cref="IModelNameConvention"/> to use.

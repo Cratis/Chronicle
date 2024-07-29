@@ -29,7 +29,6 @@ public class ReplayObserverPartition : Job<ReplayObserverPartitionRequest, JobSt
         {
             CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
-                    request.ObserverId,
                     request.ObserverKey,
                     request.ObserverSubscription,
                     request.Key,

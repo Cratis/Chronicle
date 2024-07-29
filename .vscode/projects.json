@@ -20,6 +20,11 @@
         "outputPath": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll"
     },
     {
+        "name": "Orleans Sample",
+        "path": "${workspaceFolder}/Samples/Orleans",
+        "outputPath": "${workspaceFolder}/Samples/Orleans/bin/Debug/net8.0/Orleans.dll"
+    },
+    {
         "name": "DotNET Client",
         "path": "${workspaceFolder}/Source/Clients/DotNET"
     }

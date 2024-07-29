@@ -3,88 +3,41 @@
 
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Grains.Observation.Reducers;
-using Cratis.Chronicle.Grains.Projections;
-using Cratis.Chronicle.Grains.Projections.Pipelines;
-using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Projections.Expressions;
-using Cratis.Chronicle.Projections.Expressions.EventValues;
-using Cratis.Chronicle.Projections.Expressions.Keys;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreNamespace"/>.
 /// </summary>
-public class EventStoreNamespace : IEventStoreNamespace
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventStoreNamespace"/> class.
+/// </remarks>
+/// <param name="storage">The <see cref="IStorage"/>.</param>
+/// <param name="eventStore">The <see cref="EventStoreName"/>.</param>
+/// <param name="name">The <see cref="EventStoreNamespaceName"/>.</param>
+/// <param name="objectComparer">The <see cref="IObjectComparer"/>.</param>
+/// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> of <see cref="ISinkFactory"/>.</param>
+public class EventStoreNamespace(
+    IStorage storage,
+    EventStoreName eventStore,
+    EventStoreNamespaceName name,
+    IObjectComparer objectComparer,
+    IInstancesOf<ISinkFactory> sinkFactories) : IEventStoreNamespace
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventStoreNamespace"/> class.
-    /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/>.</param>
-    /// <param name="name">The <see cref="EventStoreNamespaceName"/>.</param>
-    /// <param name="storage"><see cref="IEventStoreNamespaceStorage"/> for accessing underlying storage for the specific namespace.</param>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
-    /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-    public EventStoreNamespace(
-        EventStoreName eventStore,
-        EventStoreNamespaceName name,
-        IEventStoreNamespaceStorage storage,
-        IServiceProvider serviceProvider,
-        ILoggerFactory loggerFactory)
-    {
-        Name = name;
-        Storage = storage;
+    /// <inheritdoc/>
+    public EventStoreNamespaceName Name { get; } = name;
 
-        Sinks = new Storage.Sinks.Sinks(eventStore, name, serviceProvider.GetRequiredService<IInstancesOf<ISinkFactory>>());
-        var projectionFactory = new ProjectionFactory(
-            serviceProvider.GetRequiredService<IModelPropertyExpressionResolvers>(),
-            serviceProvider.GetRequiredService<IEventValueProviderExpressionResolvers>(),
-            serviceProvider.GetRequiredService<IKeyExpressionResolvers>(),
-            serviceProvider.GetRequiredService<IExpandoObjectConverter>(),
-            storage);
+    /// <inheritdoc/>
+    public IEventStoreNamespaceStorage Storage { get; } = storage.GetEventStore(eventStore).GetNamespace(name);
 
-        var pipelineFactory = new ProjectionPipelineFactory(
-            Sinks,
+    /// <inheritdoc/>
+    public IReducerPipelineFactory ReducerPipelines { get; } = new ReducerPipelineFactory(
             storage,
-            serviceProvider.GetRequiredService<IObjectComparer>(),
-            serviceProvider.GetRequiredService<ITypeFormats>(),
-            loggerFactory);
-
-        ProjectionManager = new ProjectionManager(
-            eventStore,
-            name,
-            projectionFactory,
-            pipelineFactory,
-            loggerFactory.CreateLogger<ProjectionManager>());
-
-        var sinks = new Storage.Sinks.Sinks(
-            eventStore,
-            name,
-            serviceProvider.GetRequiredService<IInstancesOf<ISinkFactory>>());
-        ReducerPipelines = new ReducerPipelines(
-            sinks,
-            serviceProvider.GetRequiredService<IObjectComparer>());
-    }
+            objectComparer);
 
     /// <inheritdoc/>
-    public EventStoreNamespaceName Name { get; }
-
-    /// <inheritdoc/>
-    public IEventStoreNamespaceStorage Storage { get; }
-
-    /// <inheritdoc/>
-    public IProjectionManager ProjectionManager { get; }
-
-    /// <inheritdoc/>
-    public IReducerPipelines ReducerPipelines { get; }
-
-    /// <inheritdoc/>
-    public ISinks Sinks { get; }
+    public ISinks Sinks { get; } = new Storage.Sinks.Sinks(eventStore, name, sinkFactories);
 }

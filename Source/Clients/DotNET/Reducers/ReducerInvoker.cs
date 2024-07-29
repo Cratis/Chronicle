@@ -21,7 +21,7 @@ public class ReducerInvoker : IReducerInvoker
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerInvoker"/> class.
     /// </summary>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances of actual observer.</param>
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances of actual reducer.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
     /// <param name="targetType">Type of reducer.</param>
     /// <param name="readModelType">Type of read model for the reducer.</param>
@@ -49,7 +49,7 @@ public class ReducerInvoker : IReducerInvoker
     public Type ReadModelType { get; }
 
     /// <inheritdoc/>
-    public Task<InternalReduceResult> Invoke(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
+    public Task<ReduceResult> Invoke(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
     {
         var actualReducer = _serviceProvider.GetRequiredService(_targetType);
 
@@ -91,7 +91,7 @@ public class ReducerInvoker : IReducerInvoker
             catch (Exception ex)
             {
                 return Task.FromResult(
-                        new InternalReduceResult(
+                        new ReduceResult(
                             initialReadModelContent,
                             lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                             ex.GetAllMessages(),
@@ -100,7 +100,7 @@ public class ReducerInvoker : IReducerInvoker
         }
 
         return Task.FromResult(
-            new InternalReduceResult(
+            new ReduceResult(
                 initialReadModelContent,
                 lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 [],

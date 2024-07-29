@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Connections;
@@ -22,12 +23,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
     const string MachineNameMetadataKey = "machineName";
     const string ProcessMetadataKey = "process";
 
-    readonly ChronicleOptions _options;
     readonly IChronicleConnection? _connection;
+    readonly ChronicleOptions _options;
     readonly ICausationManager _causationManager;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
-    readonly IComplianceMetadataResolver _complianceMetadataResolver;
-    readonly IConnectionLifecycle _connectionLifecycle;
+    readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
@@ -54,30 +54,31 @@ public class ChronicleClient : IChronicleClient, IDisposable
     public ChronicleClient(ChronicleOptions options)
     {
         _options = options;
-        var causationManager = new CausationManager();
-        causationManager.DefineRoot(new Dictionary<string, string>
-        {
-            { VersionMetadataKey, options.SoftwareVersion },
-            { CommitMetadataKey, options.SoftwareCommit },
-            { ProgramIdentifierMetadataKey, options.ProgramIdentifier },
-            { OperatingSystemMetadataKey, Environment.OSVersion.ToString() },
-            { MachineNameMetadataKey, Environment.MachineName },
-            { ProcessMetadataKey, Environment.ProcessPath ?? string.Empty }
-        });
+        var result = Initialize();
+        _causationManager = result.CausationManager;
+        _jsonSchemaGenerator = result.JsonSchemaGenerator;
 
-        _causationManager = causationManager;
-
-        _complianceMetadataResolver = new ComplianceMetadataResolver(
-            new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, options.ServiceProvider),
-            new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, options.ServiceProvider));
-        _jsonSchemaGenerator = new JsonSchemaGenerator(_complianceMetadataResolver);
-        _connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
+        var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
         _connection = new ChronicleConnection(
             options,
-            _connectionLifecycle,
+            connectionLifecycle,
             new Tasks.Tasks(),
             options.LoggerFactory.CreateLogger<ChronicleConnection>(),
             CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
+    /// </summary>
+    /// <param name="connection"><see cref="IChronicleConnection"/> to use.</param>
+    /// <param name="options">Optional <see cref="ChronicleOptions"/>.</param>
+    public ChronicleClient(IChronicleConnection connection, ChronicleOptions options)
+    {
+        _options = options;
+        var result = Initialize();
+        _causationManager = result.CausationManager;
+        _jsonSchemaGenerator = result.JsonSchemaGenerator;
+        _connection = connection;
     }
 
     /// <inheritdoc/>
@@ -87,10 +88,18 @@ public class ChronicleClient : IChronicleClient, IDisposable
     }
 
     /// <inheritdoc/>
-    public IEventStore GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace = null) =>
-        new EventStore(
+    public IEventStore GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace = null)
+    {
+        @namespace ??= EventStoreNamespaceName.Default;
+        var key = new EventStoreKey(name, @namespace);
+        if (_eventStores.TryGetValue(key, out var eventStore))
+        {
+            return eventStore;
+        }
+
+        eventStore = new EventStore(
             name,
-            @namespace ?? EventStoreNamespaceName.Default,
+            @namespace,
             _connection!,
             _options.ArtifactsProvider,
             _causationManager,
@@ -101,6 +110,33 @@ public class ChronicleClient : IChronicleClient, IDisposable
             _options.JsonSerializerOptions,
             _options.LoggerFactory);
 
+        _eventStores[key] = eventStore;
+        return eventStore;
+    }
+
     /// <inheritdoc/>
     public IAsyncEnumerable<EventStoreName> ListEventStores(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+    (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator) Initialize()
+    {
+        var causationManager = new CausationManager();
+        causationManager.DefineRoot(new Dictionary<string, string>
+        {
+            { VersionMetadataKey, _options.SoftwareVersion },
+            { CommitMetadataKey, _options.SoftwareCommit },
+            { ProgramIdentifierMetadataKey, _options.ProgramIdentifier },
+            { OperatingSystemMetadataKey, Environment.OSVersion.ToString() },
+            { MachineNameMetadataKey, Environment.MachineName },
+            { ProcessMetadataKey, Environment.ProcessPath ?? string.Empty }
+        });
+
+        var complianceMetadataResolver = new ComplianceMetadataResolver(
+            new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, _options.ServiceProvider),
+            new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, _options.ServiceProvider));
+        var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver);
+
+        return (causationManager, jsonSchemaGenerator);
+    }
+
+    record EventStoreKey(EventStoreName Name, EventStoreNamespaceName Namespace);
 }

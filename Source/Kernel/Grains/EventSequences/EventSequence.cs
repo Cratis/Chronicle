@@ -7,6 +7,7 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
@@ -18,8 +19,6 @@ using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
-using Orleans.Runtime;
-using Orleans.Streams;
 using IObserver = Cratis.Chronicle.Grains.Observation.IObserver;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
@@ -49,23 +48,25 @@ public class EventSequence(
     IObserverStorage? _observerStorage;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
-    IAsyncStream<AppendedEvent>? _stream;
     IMeterScope<EventSequence>? _metrics;
+    IAppendedEventsQueues? _appendedEventsQueues;
 
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
-    IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).Identities;
+    IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
     IObserverStorage ObserverStorage => _observerStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Observers;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _eventSequenceId = this.GetPrimaryKey(out var key);
-        _eventSequenceKey = (EventSequenceKey)key;
-        var streamId = StreamId.Create(_eventSequenceKey, (Guid)_eventSequenceId);
-        var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-        _stream = streamProvider.GetStream<AppendedEvent>(streamId);
+        _eventSequenceKey = EventSequenceKey.Parse(this.GetPrimaryKeyString());
+        _eventSequenceId = _eventSequenceKey.EventSequenceId;
         _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+
+        var namespaces = GrainFactory.GetGrain<INamespaces>(_eventSequenceKey.EventStore);
+        await @namespaces.Ensure(_eventSequenceKey.Namespace);
+
+        _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);
 
         await base.OnActivateAsync(cancellationToken);
     }
@@ -131,8 +132,7 @@ public class EventSequence(
         EventType eventType,
         JsonObject content,
         IEnumerable<Causation> causation,
-        Identity causedBy,
-        DateTimeOffset? validFrom = default)
+        Identity causedBy)
     {
         bool updateSequenceNumber;
         var eventName = "[N/A]";
@@ -150,7 +150,6 @@ public class EventSequence(
                 State.SequenceNumber);
 
             var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
-
             var compliantEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
 
             var appending = true;
@@ -158,23 +157,20 @@ public class EventSequence(
             {
                 try
                 {
-                    var appendedEvent = new AppendedEvent(
-                        new(State.SequenceNumber, eventType),
-                        new(
-                            eventSourceId,
-                            State.SequenceNumber,
-                            DateTimeOffset.UtcNow,
-                            validFrom ?? DateTimeOffset.MinValue,
-                            _eventSequenceKey.EventStore,
-                            _eventSequenceKey.Namespace,
-                            CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
-                            causation,
-                            causedBy),
-                        compliantEventAsExpandoObject);
-
-                    await _stream!.OnNextAsync(appendedEvent, new EventSequenceNumberToken(State.SequenceNumber));
+                    var occurred = DateTimeOffset.UtcNow;
 
                     _metrics?.AppendedEvent(eventSourceId, eventName);
+                    var appendedEvent = await EventSequenceStorage.Append(
+                        State.SequenceNumber,
+                        eventSourceId,
+                        eventType,
+                        causation,
+                        await IdentityStorage.GetFor(causedBy),
+                        occurred,
+                        compliantEventAsExpandoObject);
+
+                    var appendedEvents = new[] { appendedEvent }.ToList();
+                    await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
 
                     State.TailSequenceNumberPerEventType[eventType.Id] = State.SequenceNumber;
 
@@ -196,7 +192,7 @@ public class EventSequence(
                 _eventSequenceKey.EventStore,
                 _eventSequenceKey.Namespace,
                 eventType,
-                ex.StreamId,
+                ex.EventSequenceId,
                 ex.EventSourceId,
                 ex.SequenceNumber,
                 ex);
@@ -225,6 +221,7 @@ public class EventSequence(
 
     /// <inheritdoc/>
     public async Task AppendMany(
+        EventSourceId eventSourceId,
         IEnumerable<EventToAppend> events,
         IEnumerable<Causation> causation,
         Identity causedBy)
@@ -232,12 +229,11 @@ public class EventSequence(
         foreach (var @event in events)
         {
             await Append(
-                @event.EventSourceId,
+                eventSourceId,
                 @event.EventType,
                 @event.Content,
                 causation,
-                causedBy,
-                @event.ValidFrom);
+                causedBy);
         }
     }
 
@@ -247,8 +243,7 @@ public class EventSequence(
         EventType eventType,
         JsonObject content,
         IEnumerable<Causation> causation,
-        Identity causedBy,
-        DateTimeOffset? validFrom = default)
+        Identity causedBy)
     {
         logger.Compensating(
             _eventSequenceKey.EventStore,
@@ -311,11 +306,11 @@ public class EventSequence(
         EventSourceId eventSourceId,
         IEnumerable<EventType> affectedEventTypes)
     {
-        var observers = await ObserverStorage.GetObserversForEventTypes(affectedEventTypes);
+        var observers = await ObserverStorage.GetForEventTypes(affectedEventTypes);
         foreach (var observer in observers)
         {
-            var key = new ObserverKey(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
-            await GrainFactory.GetGrain<IObserver>(observer.ObserverId, key).ReplayPartition(eventSourceId);
+            var key = new ObserverKey(observer.ObserverId, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
+            await GrainFactory.GetGrain<IObserver>(key).ReplayPartition(eventSourceId);
         }
     }
 }

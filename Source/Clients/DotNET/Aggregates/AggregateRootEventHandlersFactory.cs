@@ -14,13 +14,13 @@ namespace Cratis.Chronicle.Aggregates;
 /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
 public class AggregateRootEventHandlersFactory(IEventTypes eventTypes) : IAggregateRootEventHandlersFactory
 {
+    readonly Dictionary<Type, AggregateRootEventHandlers> _handlers = [];
+
     /// <inheritdoc/>
-    public IAggregateRootEventHandlers CreateFor(IAggregateRoot aggregateRoot)
+    public IAggregateRootEventHandlers GetFor(IAggregateRoot aggregateRoot)
     {
-        if (aggregateRoot.IsStateful)
-        {
-            return NullAggregateRootEventHandlers.Instance;
-        }
-        return new AggregateRootEventHandlers(eventTypes, aggregateRoot.GetType());
+        var aggregateRootType = aggregateRoot.GetType();
+        if (_handlers.TryGetValue(aggregateRootType, out var handlers)) return handlers;
+        return _handlers[aggregateRootType] = new AggregateRootEventHandlers(eventTypes, aggregateRoot.GetType());
     }
 }

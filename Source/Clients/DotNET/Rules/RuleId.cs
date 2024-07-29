@@ -9,17 +9,11 @@ namespace Cratis.Chronicle.Rules;
 /// Represents the unique identifier of a projection.
 /// </summary>
 /// <param name="Value">The value.</param>
-public record RuleId(Guid Value) : ConceptAs<Guid>(Value)
+public record RuleId(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
-    /// Implicitly convert from <see cref="Guid"/> to <see cref="ProjectionId"/>.
+    /// Implicitly convert from string to <see cref="ProjectionId"/>.
     /// </summary>
-    /// <param name="value"><see cref="Guid"/> to convert from.</param>
-    public static implicit operator RuleId(Guid value) => new(value);
-
-    /// <summary>
-    /// Implicitly convert from string representation of a <see cref="Guid"/> to <see cref="ProjectionId"/>.
-    /// </summary>
-    /// <param name="value"><see cref="Guid"/> to convert from.</param>
-    public static implicit operator RuleId(string value) => new(Guid.Parse(value));
+    /// <param name="value">String to convert from.</param>
+    public static implicit operator RuleId(string value) => new(value);
 }

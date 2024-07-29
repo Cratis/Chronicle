@@ -15,31 +15,29 @@ public static class EventContextConverters
     /// Convert to contract version of <see cref="EventContext"/>.
     /// </summary>
     /// <param name="context"><see cref="EventContext"/> to convert.</param>
-    /// <returns>Converted <see cref="Chronicle.Contracts.Events.EventContext"/>.</returns>
-    public static Chronicle.Contracts.Events.EventContext ToContract(this EventContext context) => new()
+    /// <returns>Converted <see cref="Contracts.Events.EventContext"/>.</returns>
+    public static Contracts.Events.EventContext ToContract(this EventContext context) => new()
     {
         EventSourceId = context.EventSourceId,
         SequenceNumber = context.SequenceNumber,
         Occurred = context.Occurred!,
-        ValidFrom = context.ValidFrom!,
         EventStore = context.EventStore,
         Namespace = context.Namespace,
         CorrelationId = context.CorrelationId,
-        Causation = context.Causation.Select(_ => _.ToContract()),
+        Causation = context.Causation.Select(_ => _.ToContract()).ToList(),
         CausedBy = context.CausedBy.ToContract(),
         ObservationState = context.ObservationState.ToContract()
     };
 
     /// <summary>
-    /// Convert to kernel version of <see cref="EventContext"/>.
+    /// Convert to Chronicle version of <see cref="EventContext"/>.
     /// </summary>
-    /// <param name="context"><see cref="Chronicle.Contracts.Events.EventContext"/> to convert.</param>
+    /// <param name="context"><see cref="Contracts.Events.EventContext"/> to convert.</param>
     /// <returns>Converted <see cref="EventContext"/>.</returns>
-    public static EventContext ToClient(this Chronicle.Contracts.Events.EventContext context) => new(
+    public static EventContext ToClient(this Contracts.Events.EventContext context) => new(
         context.EventSourceId,
         context.SequenceNumber,
         context.Occurred,
-        context.ValidFrom,
         context.EventStore,
         context.Namespace,
         context.CorrelationId,

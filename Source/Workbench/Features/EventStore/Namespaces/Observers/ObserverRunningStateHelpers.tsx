@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ObserverRunningState } from 'API/Cratis/Kernel/Contracts/Observation/ObserverRunningState';
+import { ObserverRunningState } from 'Api/Contracts/Observation/ObserverRunningState';
 import { ColumnFilterElementTemplateOptions } from 'primereact/column';
 import { MultiSelect, MultiSelectChangeEvent } from 'primereact/multiselect';
 
@@ -11,10 +11,8 @@ export const getObserverRunningStateAsText = (
     switch (runningState) {
         case ObserverRunningState.new:
             return 'New';
-        case ObserverRunningState.subscribing:
-            return 'Subscribing';
-        case ObserverRunningState.rewinding:
-            return 'Rewinding';
+        case ObserverRunningState.routing:
+            return 'Routing';
         case ObserverRunningState.replaying:
             return 'Replaying';
         case ObserverRunningState.catchingUp:
@@ -33,6 +31,8 @@ export const getObserverRunningStateAsText = (
             return 'TailOfReplay';
         case ObserverRunningState.disconnected:
             return 'Disconnected';
+        case ObserverRunningState.indexing:
+            return 'Indexing';
     }
     return '[N/A]';
 };

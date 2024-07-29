@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Events;
 /// <param name="CorrelationId">The unique identifier used to correlation.</param>
 /// <param name="Causation">The chain of causation.</param>
 /// <param name="CausedBy">Who or what caused the event.</param>
-[EventType(GlobalEventTypes.Redaction)]
+[EventType]
 public record EventRedacted(
     RedactionReason Reason,
     Type OriginalEventType,

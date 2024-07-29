@@ -14,6 +14,10 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@cratis/applications": "^12.1.5",
+        "@cratis/applications.react": "^12.1.5",
+        "@cratis/applications.react.mvvm": "^12.1.5",
+        "@cratis/applications.vite": "^12.1.5",
         "allotment": "^1.20.0",
         "echarts": "5.4.3",
         "mobx": "6.12.0",
@@ -59,7 +63,7 @@
         "sinon-chai": "3.7.0",
         "tailwindcss": "3.4.1",
         "ts-node": "10.9.1",
-        "typescript": "5.3.3",
-        "vite": "5.1.3"
+        "typescript": "5.5.4",
+        "vite": "5.3.5"
     }
 }

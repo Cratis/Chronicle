@@ -30,18 +30,18 @@ public static class CausationConverters
         };
 
     /// <summary>
-    /// Convert to Kernel representation.
+    /// Convert to Chronicle representation.
     /// </summary>
     /// <param name="causations">Collection of <see cref="Contracts.Auditing.Causation"/> to convert from..</param>
     /// <returns>Converted collection of <see cref="Causation"/>.</returns>
-    public static IEnumerable<Causation> ToKernel(this IEnumerable<Contracts.Auditing.Causation> causations) =>
-        causations.Select(c => c.ToKernel()).ToArray();
+    public static IEnumerable<Causation> ToChronicle(this IEnumerable<Contracts.Auditing.Causation> causations) =>
+        causations.Select(c => c.ToChronicle()).ToArray();
 
     /// <summary>
-    /// Convert to Kernel representation.
+    /// Convert to Chronicle representation.
     /// </summary>
     /// <param name="causation"><see cref="Contracts.Auditing.Causation"/> to convert from.</param>
     /// <returns>Converted <see cref="Causation"/>.</returns>
-    public static Causation ToKernel(this Contracts.Auditing.Causation causation) =>
+    public static Causation ToChronicle(this Contracts.Auditing.Causation causation) =>
         new(causation.Occurred, causation.Type, causation.Properties ?? new Dictionary<string, string>());
 }

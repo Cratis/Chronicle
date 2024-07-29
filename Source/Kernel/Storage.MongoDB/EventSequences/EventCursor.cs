@@ -39,7 +39,7 @@ public class EventCursor(
         var result = _innerCursor.MoveNext(_cancellationToken);
         if (_innerCursor.Current is not null)
         {
-            Current = [.. await Task.WhenAll(_innerCursor.Current.Select(_converter.ToAppendedEvent))];
+            Current = await Task.WhenAll(_innerCursor.Current.Select(_converter.ToAppendedEvent));
         }
         else
         {

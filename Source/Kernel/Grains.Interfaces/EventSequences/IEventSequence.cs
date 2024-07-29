@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// <summary>
 /// Defines the event sequence.
 /// </summary>
-public interface IEventSequence : IGrainWithGuidCompoundKey
+public interface IEventSequence : IGrainWithStringKey
 {
     /// <summary>
     /// Rehydrate the event sequence.
@@ -65,18 +65,18 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <param name="content">The JSON payload of the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the event, defined by <see cref="Identity"/>.</param>
-    /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, IEnumerable<Causation> causation, Identity causedBy, DateTimeOffset? validFrom = default);
+    Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Append a single event to the event store.
     /// </summary>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="events">Collection of <see cref="EventToAppend">events</see> to append.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the events, defined by <see cref="Identity"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task AppendMany(IEnumerable<EventToAppend> events, IEnumerable<Causation> causation, Identity causedBy);
+    Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventToAppend> events, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Compensate a specific event in the event store.
@@ -86,13 +86,12 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <param name="content">The JSON payload of the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the compensation, defined by <see cref="Identity"/>.</param>
-    /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     /// <remarks>
     /// The type of the event has to be the same as the original event at the sequence number.
     /// Its generational information is taken into account when compensating.
     /// </remarks>
-    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content, IEnumerable<Causation> causation, Identity causedBy, DateTimeOffset? validFrom = default);
+    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Redact an event at a specific sequence number.

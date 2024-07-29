@@ -33,43 +33,76 @@ public class EventSequence(
     IIdentityProvider identityProvider) : IEventSequence
 {
     /// <inheritdoc/>
-    public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
+    public EventSequenceId Id => eventSequenceId;
+
+    /// <inheritdoc/>
+    public async Task Append(EventSourceId eventSourceId, object @event)
     {
-        var eventType = eventTypes.GetEventTypeFor(@event.GetType());
+        var eventClrType = @event.GetType();
+
+        ThrowIfUnknownEventType(eventTypes, eventClrType);
+
+        var eventType = eventTypes.GetEventTypeFor(eventClrType);
         var content = await eventSerializer.Serialize(@event);
-        var causationChain = causationManager.GetCurrentChain().Select(_ => new Contracts.Auditing.Causation
-        {
-            Occurred = _.Occurred!,
-            Type = _.Type,
-            Properties = _.Properties
-        });
+        var causationChain = causationManager.GetCurrentChain().ToContract();
         var identity = identityProvider.GetCurrent();
         await connection.Services.EventSequences.Append(new()
         {
             EventStoreName = eventStoreName,
             Namespace = @namespace,
-            EventSequenceId = eventSequenceId.ToString(),
+            EventSequenceId = eventSequenceId,
             EventSourceId = eventSourceId,
             EventType = new()
             {
-                Id = eventType.Id.ToString(),
+                Id = eventType.Id,
                 Generation = eventType.Generation
             },
             Content = content.ToJsonString(),
             Causation = causationChain,
-            CausedBy = identity.ToContract(),
-            ValidFrom = validFrom
+            CausedBy = identity.ToContract()
         });
     }
 
     /// <inheritdoc/>
-    public Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events) => throw new NotImplementedException();
+    public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events)
+    {
+        var eventsToAppend = events.Select(@event =>
+        {
+            var eventType = eventTypes.GetEventTypeFor(@event.GetType());
+            return new Contracts.Events.EventToAppend
+            {
+                EventType = eventType.ToContract(),
+                Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString()
+            };
+        }).ToList();
+        var causationChain = causationManager.GetCurrentChain().ToContract();
+        var identity = identityProvider.GetCurrent();
+        await connection.Services.EventSequences.AppendMany(new()
+        {
+            EventStoreName = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = eventSourceId,
+            Events = eventsToAppend,
+            Causation = causationChain,
+            CausedBy = identity.ToContract()
+        });
+    }
 
     /// <inheritdoc/>
-    public Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventAndValidFrom> events) => throw new NotImplementedException();
+    public async Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes)
+    {
+        var result = await connection.Services.EventSequences.GetForEventSourceIdAndEventTypes(new()
+        {
+            EventStoreName = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = eventSourceId,
+            EventTypes = eventTypes.ToContract()
+        });
 
-    /// <inheritdoc/>
-    public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes) => throw new NotImplementedException();
+        return result.Events.ToClient();
+    }
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetNextSequenceNumber() => throw new NotImplementedException();
@@ -85,4 +118,12 @@ public class EventSequence(
 
     /// <inheritdoc/>
     public Task Redact(EventSourceId eventSourceId, RedactionReason? reason = null, params Type[] eventTypes) => throw new NotImplementedException();
+
+    void ThrowIfUnknownEventType(IEventTypes eventTypes, Type eventClrType)
+    {
+        if (!eventTypes.HasFor(eventClrType))
+        {
+            throw new UnknownEventType(eventClrType);
+        }
+    }
 }

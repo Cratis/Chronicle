@@ -27,7 +27,7 @@ public class EventSchemaMongoDB
     /// <summary>
     /// Gets the identifier part of <see cref="EventType"/>.
     /// </summary>
-    public Guid EventType { get; init; } = EventTypeId.Unknown.Value;
+    public string EventType { get; init; } = EventTypeId.Unknown.Value;
 
     /// <summary>
     /// Gets the generation part of the <see cref="EventType"/>>.

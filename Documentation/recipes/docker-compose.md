@@ -25,7 +25,7 @@ services:
       - 27017:27017
 
   cratis:
-    image: cratis/cratis:latest
+    image: cratis/chronicle:latest
     ports:
       - 27017:27017
       - 8080:80

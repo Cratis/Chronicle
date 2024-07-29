@@ -30,7 +30,7 @@ public class UnableToAppendToEventSequence(
     /// <summary>
     /// Gets the stream identifier.
     /// </summary>
-    public Guid StreamId { get; } = eventSequenceId;
+    public EventSequenceId EventSequenceId { get; } = eventSequenceId;
 
     /// <summary>
     /// Gets the namespace.

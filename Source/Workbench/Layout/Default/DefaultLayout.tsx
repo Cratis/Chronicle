@@ -13,7 +13,7 @@ import { Footer } from './Footer';
 import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
 import { useContext, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Namespace } from 'API/Namespaces';
+import { Namespace } from 'Api/Namespaces';
 
 interface IDefaultLayoutProps {
     menu?: IMenuItemGroup[];

@@ -21,29 +21,27 @@ public static class EventContextConverters
         EventSourceId = context.EventSourceId,
         SequenceNumber = context.SequenceNumber,
         Occurred = context.Occurred!,
-        ValidFrom = context.ValidFrom!,
         EventStore = context.EventStore,
         Namespace = context.Namespace,
         CorrelationId = context.CorrelationId,
-        Causation = context.Causation.Select(_ => _.ToContract()),
+        Causation = context.Causation.Select(_ => _.ToContract()).ToList(),
         CausedBy = context.CausedBy.ToContract(),
         ObservationState = context.ObservationState.ToContract()
     };
 
     /// <summary>
-    /// Convert to kernel version of <see cref="EventContext"/>.
+    /// Convert to Chronicle version of <see cref="EventContext"/>.
     /// </summary>
     /// <param name="context"><see cref="Contracts.Events.EventContext"/> to convert.</param>
     /// <returns>Converted <see cref="EventContext"/>.</returns>
-    public static EventContext ToKernel(this Contracts.Events.EventContext context) => new(
+    public static EventContext ToChronicle(this Contracts.Events.EventContext context) => new(
         context.EventSourceId,
         context.SequenceNumber,
         context.Occurred,
-        context.ValidFrom,
         context.EventStore,
         context.Namespace,
         context.CorrelationId,
-        context.Causation.Select(_ => _.ToKernel()),
-        context.CausedBy.ToKernel(),
-        context.ObservationState.ToKernel());
+        context.Causation.Select(_ => _.ToChronicle()),
+        context.CausedBy.ToChronicle(),
+        context.ObservationState.ToChronicle());
 }

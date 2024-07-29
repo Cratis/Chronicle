@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Contracts.Auditing;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Identities;
-using Cratis.Chronicle.Contracts.Primitives;
 using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.EventSequences;
@@ -55,17 +54,11 @@ public class AppendRequest
     /// Gets or sets the causation.
     /// </summary>
     [ProtoMember(7)]
-    public IEnumerable<Causation> Causation { get; set; }
+    public IList<Causation> Causation { get; set; }
 
     /// <summary>
     /// Gets or sets the caused by.
     /// </summary>
     [ProtoMember(8)]
     public Identity CausedBy { get; set; }
-
-    /// <summary>
-    /// Gets or sets the valid from.
-    /// </summary>
-    [ProtoMember(9)]
-    public SerializableDateTimeOffset? ValidFrom { get; set; }
 }

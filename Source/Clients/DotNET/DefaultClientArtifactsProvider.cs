@@ -5,8 +5,8 @@ using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Reflection;
@@ -35,47 +35,51 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
         Rules = assembliesProvider.DefinedTypes.Where(_ => _.BaseType?.IsGenericType == true && _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
         Adapters = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAdapterFor<,>)) && !_.IsGenericType).ToArray();
         Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
-        ImmediateProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IImmediateProjectionFor<>))).ToArray();
-        Observers = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<ObserverAttribute>()).ToArray();
-        ObserverMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IObserverMiddleware))).ToArray();
+        Reactions = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReaction)) && !_.IsGenericType).ToArray();
+        ReactionMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReactionMiddleware))).ToArray();
         Reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
         AdditionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(ICanProvideAdditionalEventInformation))).ToArray();
-        AggregateRoots = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAggregateRoot))).ToArray();
+        var aggregateRoots = AggregateRoots = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAggregateRoot))).ToArray();
+        AggregateRootStateTypes = aggregateRoots
+                                            .SelectMany(_ => _.AllBaseAndImplementingTypes())
+                                            .Where(_ => _.IsDerivedFromOpenGeneric(typeof(AggregateRoot<>)))
+                                            .Select(_ => _.GetGenericArguments()[0])
+                                            .ToArray();
     }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> EventTypes { get; }
+    public virtual IEnumerable<Type> EventTypes { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Projections { get; }
+    public virtual IEnumerable<Type> Projections { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> ImmediateProjections { get; }
+    public virtual IEnumerable<Type> Adapters { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Adapters { get; }
+    public virtual IEnumerable<Type> Reactions { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Observers { get; }
+    public virtual IEnumerable<Type> Reducers { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Reducers { get; }
+    public virtual IEnumerable<Type> ReactionMiddlewares { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> ObserverMiddlewares { get; }
+    public virtual IEnumerable<Type> ComplianceForTypesProviders { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> ComplianceForTypesProviders { get; }
+    public virtual IEnumerable<Type> ComplianceForPropertiesProviders { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> ComplianceForPropertiesProviders { get; }
+    public virtual IEnumerable<Type> Rules { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Rules { get; }
+    public virtual IEnumerable<Type> AdditionalEventInformationProviders { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> AdditionalEventInformationProviders { get; }
+    public virtual IEnumerable<Type> AggregateRoots { get; }
 
     /// <inheritdoc/>
-    public IEnumerable<Type> AggregateRoots { get; }
+    public virtual IEnumerable<Type> AggregateRootStateTypes { get; }
 }

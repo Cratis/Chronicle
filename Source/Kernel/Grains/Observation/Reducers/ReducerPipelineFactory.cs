@@ -1,0 +1,37 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Observation.Reducers;
+using Cratis.Chronicle.Storage;
+using NJsonSchema;
+
+namespace Cratis.Chronicle.Grains.Observation.Reducers;
+
+/// <summary>
+/// Represents an implementation of <see cref="IReducerPipelineFactory"/>.
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ReducerPipelineFactory"/> class.
+/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
+/// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
+public class ReducerPipelineFactory(
+    IStorage storage,
+    IObjectComparer objectComparer) : IReducerPipelineFactory
+{
+    /// <inheritdoc/>
+    public async Task<IReducerPipeline> Create(
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        ReducerDefinition definition)
+    {
+        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
+        var modelSchema = await JsonSchema.FromJsonAsync(definition.Model.Schema);
+        var model = new Model(definition.Model.Name, modelSchema);
+        var sink = namespaceStorage.Sinks.GetFor(definition.Sink.TypeId, model);
+        var readModel = new Model(definition.Model.Name, modelSchema);
+        return new ReducerPipeline(readModel, sink, objectComparer);
+    }
+}

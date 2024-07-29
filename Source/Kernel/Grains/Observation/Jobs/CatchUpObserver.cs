@@ -66,7 +66,6 @@ public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, Cat
         {
             steps.Add(CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
-                    request.ObserverId,
                     request.ObserverKey,
                     request.ObserverSubscription,
                     key,

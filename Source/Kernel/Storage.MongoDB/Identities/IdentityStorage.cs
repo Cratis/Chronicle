@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Identities;
 /// <param name="database">The cluster database.</param>
 /// <param name="logger">Logger for logging.</param>
 public class IdentityStorage(
-    IDatabase database,
+    IEventStoreNamespaceDatabase database,
     ILogger<IdentityStorage> logger) : IIdentityStorage
 {
     Dictionary<IdentityId, Identity> _identitiesByIdentityId = [];

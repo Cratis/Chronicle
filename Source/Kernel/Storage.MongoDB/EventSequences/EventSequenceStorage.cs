@@ -10,6 +10,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Identities;
 using Cratis.Strings;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
@@ -31,6 +32,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
 /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
 /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
+/// /// <param name="identityStorage"><see cref="IIdentityStorage"/>.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
@@ -41,6 +43,7 @@ public class EventSequenceStorage(
     IEventStoreNamespaceDatabase database,
     IEventConverter converter,
     IEventTypesStorage eventTypesStorage,
+    IIdentityStorage identityStorage,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
@@ -49,17 +52,17 @@ public class EventSequenceStorage(
     public async Task<Chronicle.Storage.EventSequences.EventSequenceState> GetState()
     {
         var collection = database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
-        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
+        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, string>("_id"), eventSequenceId);
         var cursor = await collection.FindAsync(filter).ConfigureAwait(false);
         var state = await cursor.FirstOrDefaultAsync();
-        return state?.ToKernel() ?? new Chronicle.Storage.EventSequences.EventSequenceState();
+        return state?.ToChronicle() ?? new Chronicle.Storage.EventSequences.EventSequenceState();
     }
 
     /// <inheritdoc/>
     public async Task SaveState(Chronicle.Storage.EventSequences.EventSequenceState state)
     {
         var collection = database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
-        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
+        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, string>("_id"), eventSequenceId);
 
         await collection.ReplaceOneAsync(filter, state.ToMongoDB(), new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
@@ -89,16 +92,16 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task Append(
+    public async Task<AppendedEvent> Append(
         EventSequenceNumber sequenceNumber,
         EventSourceId eventSourceId,
         EventType eventType,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
-        DateTimeOffset validFrom,
         ExpandoObject content)
     {
+        var correlationId = CorrelationId.New(); // TODO: Fix this when we have a proper correlation id
         try
         {
             var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
@@ -111,20 +114,32 @@ public class EventSequenceStorage(
                 @namespace);
             var @event = new Event(
                 sequenceNumber,
-                CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
+                correlationId,
                 causation,
                 causedByChain,
                 eventType.Id,
                 occurred,
-                validFrom,
                 eventSourceId,
                 new Dictionary<string, BsonDocument>
                 {
-                        { eventType.Generation.ToString(), document }
+                    { eventType.Generation.ToString(), document }
                 },
                 []);
             var collection = GetCollection();
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
+
+            return new AppendedEvent(
+                new(sequenceNumber, eventType),
+                new(
+                    eventSourceId,
+                    sequenceNumber,
+                    occurred,
+                    eventStore,
+                    @namespace,
+                    correlationId,
+                    causation,
+                    await identityStorage.GetFor(causedByChain)),
+                content);
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
@@ -155,7 +170,6 @@ public class EventSequenceStorage(
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
-        DateTimeOffset validFrom,
         ExpandoObject content) => throw new NotImplementedException();
 
     /// <inheritdoc/>
@@ -318,7 +332,7 @@ public class EventSequenceStorage(
 
         var collection = database.GetEventSequenceCollectionAsBsonFor(eventSequenceId);
 
-        var eventTypesFilter = Builders<BsonDocument>.Filter.In(new StringFieldDefinition<BsonDocument, Guid>(nameof(Event.Type).ToCamelCase()), eventTypeIds);
+        var eventTypesFilter = Builders<BsonDocument>.Filter.In(new StringFieldDefinition<BsonDocument, string>(nameof(Event.Type).ToCamelCase()), eventTypeIds);
         var sortDefinition = Builders<BsonDocument>.Sort.Descending("_id");
         var groupDefinitions = new BsonDocument
         {
@@ -349,7 +363,7 @@ public class EventSequenceStorage(
         var resultAsDictionary = eventTypes.ToDictionary(_ => _, _ => EventSequenceNumber.Unavailable);
         foreach (var item in result)
         {
-            var eventType = eventTypes.FirstOrDefault(_ => _.Id == (EventTypeId)item["_id"].AsGuid);
+            var eventType = eventTypes.FirstOrDefault(_ => _.Id == (EventTypeId)item["_id"].AsString);
             if (eventType != null)
             {
                 resultAsDictionary[eventType] = new EventSequenceNumber((ulong)item["items"][0].AsInt64);

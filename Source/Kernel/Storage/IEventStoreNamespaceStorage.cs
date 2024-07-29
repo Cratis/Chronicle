@@ -4,10 +4,12 @@
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Recommendations;
+using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Storage;
 
@@ -20,6 +22,11 @@ public interface IEventStoreNamespaceStorage
     /// Gets the <see cref="IEventSequenceStorage"/> for the event store namespace.
     /// </summary>
     IChangesetStorage Changesets { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IIdentityStorage"/> for the event store.
+    /// </summary>
+    IIdentityStorage Identities { get; }
 
     /// <summary>
     /// Gets the <see cref="IJobStorage"/> for the event store namespace.
@@ -50,6 +57,11 @@ public interface IEventStoreNamespaceStorage
     /// Gets the <see cref="IObserverKeyIndexes"/>  for the event store namespace.
     /// </summary>
     IObserverKeyIndexes ObserverKeyIndexes { get; }
+
+    /// <summary>
+    /// Gets the <see cref="ISinks"/> for the event store namespace.
+    /// </summary>
+    ISinks Sinks { get; }
 
     /// <summary>
     /// Get the <see cref="IEventSequenceStorage"/> for a specific <see cref="EventSequenceId"/>.

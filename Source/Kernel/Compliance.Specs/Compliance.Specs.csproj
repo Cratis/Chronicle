@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Compliance.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Compliance</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Compliance/Compliance.csproj"/>
+        <ProjectReference Include="../Shared/Shared.csproj"/>
+    </ItemGroup>
+
+</Project>

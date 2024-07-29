@@ -9,3 +9,4 @@ global using Cratis.Execution;
 
 using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Cratis.Chronicle.Specs")]
+[assembly: InternalsVisibleTo("Cratis.Chronicle.Orleans")]

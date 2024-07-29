@@ -23,14 +23,14 @@ public static class EventMetadataConverters
     }
 
     /// <summary>
-    /// Convert to kernel version of <see cref="EventMetadata"/>.
+    /// Convert to Chronicle version of <see cref="EventMetadata"/>.
     /// </summary>
     /// <param name="metadata"><see cref="Contracts.Events.EventMetadata"/> to convert.</param>
     /// <returns>Converted <see cref="EventMetadata"/>.</returns>
-    public static EventMetadata ToKernel(this Contracts.Events.EventMetadata metadata)
+    public static EventMetadata ToChronicle(this Contracts.Events.EventMetadata metadata)
     {
         return new(
             metadata.SequenceNumber,
-            metadata.Type.ToKernel());
+            metadata.Type.ToChronicle());
     }
 }

@@ -6,10 +6,4 @@ namespace Cratis.Chronicle.Rules;
 /// <summary>
 /// Defines the minimum of a business rule.
 /// </summary>
-public interface IRule
-{
-    /// <summary>
-    /// Gets the unique identifier of the rule.
-    /// </summary>
-    RuleId Identifier { get; }
-}
+public interface IRule;

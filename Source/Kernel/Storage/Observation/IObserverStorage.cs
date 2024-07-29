@@ -22,20 +22,20 @@ public interface IObserverStorage
     /// </summary>
     /// <param name="observerId">The <see cref="ObserverId"/> to get for.</param>
     /// <returns><see cref="ObserverInformation"/>.</returns>
-    Task<ObserverInformation> GetObserver(ObserverId observerId);
+    Task<ObserverInformation> Get(ObserverId observerId);
 
     /// <summary>
     /// Get all observers for specific event types.
     /// </summary>
     /// <param name="eventTypes">Collection of <see cref="EventType"/> to get for.</param>
     /// <returns>Collection of <see cref="ObserverInformation"/> holding all information about the observers.</returns>
-    Task<IEnumerable<ObserverInformation>> GetObserversForEventTypes(IEnumerable<EventType> eventTypes);
+    Task<IEnumerable<ObserverInformation>> GetForEventTypes(IEnumerable<EventType> eventTypes);
 
     /// <summary>
     /// Get all observers.
     /// </summary>
     /// <returns>Collection of <see cref="ObserverInformation"/> holding all information about the observers.</returns>
-    Task<IEnumerable<ObserverInformation>> GetAllObservers();
+    Task<IEnumerable<ObserverInformation>> GetAll();
 
     /// <summary>
     /// Get the state of an observer.

@@ -12,7 +12,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.Providers;
-using Orleans.Runtime;
 using Orleans.Utilities;
 
 namespace Cratis.Chronicle.Grains.Jobs;
@@ -429,7 +428,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
     Task SubscribeJobEventsForAllJobSteps()
     {
-        _subscriptionTimer = RegisterTimer(
+        _subscriptionTimer = this.RegisterGrainTimer(
             async (_) =>
             {
                 foreach (var jobStep in _jobStepGrains.Values)
@@ -437,9 +436,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                     await ThisJob.Subscribe(jobStep.Grain.AsReference<IJobObserver>());
                 }
             },
-            null!,
-            TimeSpan.FromSeconds(1),
-            TimeSpan.FromSeconds(10));
+            new() { DueTime = TimeSpan.FromSeconds(1), Period = TimeSpan.FromSeconds(10) });
 
         return Task.CompletedTask;
     }

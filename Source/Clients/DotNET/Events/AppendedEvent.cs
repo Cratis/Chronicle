@@ -30,6 +30,13 @@ public record AppendedEvent(EventMetadata Metadata, EventContext Context, Expand
     /// <summary>
     /// Represents an empty <see cref="AppendedEvent"/> with a specific event type.
     /// </summary>
+    /// <param name="content">The content for the event.</param>
+    /// <returns>An empty <see cref="AppendedEvent"/> with a specific event type.</returns>
+    public static AppendedEvent EmptyWithContent(ExpandoObject content) => new(new EventMetadata(EventSequenceNumber.First, new EventType(string.Empty, 0)), EventContext.Empty, content);
+
+    /// <summary>
+    /// Represents an empty <see cref="AppendedEvent"/> with a specific event type.
+    /// </summary>
     /// <param name="eventType">Type of event it should be.</param>
     /// <param name="eventSequenceNumber">Event sequence number it should hold.</param>///
     /// <returns>An empty <see cref="AppendedEvent"/> with a specific event type.</returns>

@@ -10,8 +10,8 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Integration;
 using Cratis.Chronicle.Net;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
@@ -60,12 +60,6 @@ public class ClientBuilder : IClientBuilder
         _metadata["machineName"] = Environment.MachineName;
         _metadata["process"] = Environment.ProcessPath ?? string.Empty;
         _identityProviderType = typeof(BaseIdentityProvider);
-
-        // _optionsBuilder = services.AddOptions<ClientOptions>();
-        // SetDefaultOptions();
-        // _optionsBuilder.BindConfiguration("cratis")
-        //     .ValidateDataAnnotations()
-        //     .ValidateOnStart();
         Services = services;
         _logger = logger;
     }
@@ -122,7 +116,6 @@ public class ClientBuilder : IClientBuilder
     {
         _logger.Configuring();
 
-        // var options = Services.BuildServiceProvider().GetRequiredService<IOptions<ClientOptions>>();
         var clientArtifacts = _clientArtifactsProvider ?? new DefaultClientArtifactsProvider(
              new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
@@ -133,13 +126,12 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton(clientArtifacts)
             .AddSingleton(_modelNameConvention ?? new DefaultModelNameConvention())
             .AddSingleton<IModelNameResolver, ModelNameResolver>()
-            .AddObservers(clientArtifacts)
+            .AddReactions(clientArtifacts)
             .AddSingleton(Globals.JsonSerializerOptions)
             .AddSingleton<IConnectionLifecycle, ConnectionLifecycle>()
-            .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
-            .AddSingleton<IReducersRegistrar, ReducersRegistrar>()
+            .AddSingleton<IReactionMiddlewares, ReactionMiddlewares>()
+            .AddSingleton<IReducers, Reducers.Reducers>()
             .AddSingleton<IReducerValidator, ReducerValidator>()
-            .AddTransient<IClientReducers, ClientReducers>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
             .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
             .AddSingleton<IEventTypes, Events.EventTypes>()
@@ -151,11 +143,9 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IAdapterProjectionFactory, AdapterProjectionFactory>()
             .AddSingleton<IAdapterMapperFactory, AdapterMapperFactory>()
             .AddSingleton<IProjections, Projections.Projections>()
-            .AddSingleton<IImmediateProjections, ImmediateProjections>()
             .AddSingleton<ILoadBalancerStrategy, RoundRobinLoadBalancerStrategy>()
             .AddSingleton<ILoadBalancedHttpClientFactory, LoadBalancedHttpClientFactory>()
             .AddSingleton<IProjections, Projections.Projections>()
-            .AddSingleton<IClientProjections, ClientProjections>()
             .AddSingleton<IRulesProjections, RulesProjections>()
             .AddSingleton<ICausationManager, CausationManager>()
             .AddSingleton<PIIMetadataProvider>()
@@ -171,12 +161,4 @@ public class ClientBuilder : IClientBuilder
         clientArtifacts.ComplianceForTypesProviders.ForEach(_ => Services.AddTransient(_));
         clientArtifacts.ComplianceForPropertiesProviders.ForEach(_ => Services.AddTransient(_));
     }
-
-    // void SetDefaultOptions()
-    // {
-    //     _optionsBuilder
-    //         .Configure(options =>
-    //         {
-    //         });
-    // }
 }

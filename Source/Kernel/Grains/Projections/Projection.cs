@@ -1,14 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Grains.Recommendations;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Replaying;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Definitions;
 using Microsoft.Extensions.Logging;
-using Orleans.Runtime;
+using Orleans.Providers;
 using Orleans.Utilities;
-using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Grains.Projections;
 
@@ -18,39 +21,55 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Projection"/> class.
 /// </remarks>
-/// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
+/// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
+/// <param name="projectionDefinitionComparer"><see cref="IProjectionDefinitionComparer"/> for comparing projection definitions.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
 /// <param name="logger">Logger for logging.</param>
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class Projection(
-    IKernel kernel,
+    IProjectionFactory projectionFactory,
+    IProjectionDefinitionComparer projectionDefinitionComparer,
     ILocalSiloDetails localSiloDetails,
-    ILogger<Projection> logger) : Grain, IProjection
+    ILogger<Projection> logger) : Grain<ProjectionDefinition>, IProjection
 {
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromMinutes(1), logger);
-    EngineProjection? _projection;
     IObserver? _observer;
-    ProjectionId _projectionId = ProjectionId.NotSet;
-    ProjectionDefinition? _definition;
-    EventStoreName? _eventStore;
-    EventStoreNamespaceName? _namespace;
+    bool _subscribed;
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    public async Task SetDefinitionAndSubscribe(ProjectionDefinition definition)
     {
-        _projectionId = this.GetPrimaryKey(out var keyAsString);
-        var key = ProjectionKey.Parse(keyAsString);
-        _eventStore = key.EventStore;
-        _namespace = key.Namespace;
+        var compareResult = projectionDefinitionComparer.Compare(State, definition);
 
-        await RefreshDefinition();
+        State = definition;
+        await WriteStateAsync();
 
-        _observer = GrainFactory.GetGrain<IObserver>(_projectionId, new ObserverKey(key.EventStore, key.Namespace, key.EventSequenceId));
+        var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
 
-        await _observer.Subscribe<IProjectionObserverSubscriber>(
-            _definition!.Name.Value,
-            ObserverType.Projection,
-            _projection!.EventTypes,
-            localSiloDetails.SiloAddress);
+        if (compareResult == ProjectionDefinitionCompareResult.Different)
+        {
+            if (_subscribed)
+            {
+                await _observer!.Unsubscribe();
+                _subscribed = false;
+            }
+            _definitionObservers.Notify(_ => _.OnProjectionDefinitionsChanged());
+            var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
+            await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+        }
+
+        if (!_subscribed && definition.IsActive)
+        {
+            _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, key.Namespace, key.EventSequenceId));
+            var projection = await projectionFactory.Create(key.EventStore, key.Namespace, definition);
+
+            await _observer.Subscribe<IProjectionObserverSubscriber>(
+                ObserverType.Projection,
+                projection.EventTypes,
+                localSiloDetails.SiloAddress);
+
+            _subscribed = true;
+        }
     }
 
     /// <inheritdoc/>
@@ -60,18 +79,19 @@ public class Projection(
         return Task.CompletedTask;
     }
 
-    /// <inheritdoc/>
-    public async Task RefreshDefinition()
+    async Task AddReplayRecommendationForAllNamespaces(ProjectionKey key, IEnumerable<EventStoreNamespaceName> namespaces)
     {
-        var eventStore = kernel.GetEventStore(_eventStore!);
-        var eventStoreNamespace = eventStore.GetNamespace(_namespace!);
-
-        var (_, projectionDefinition) = await eventStore.ProjectionDefinitions.TryGetFor(_projectionId);
-        _definition = projectionDefinition;
-        _projection = eventStoreNamespace.ProjectionManager.Get(_definition!.Identifier);
-        _definitionObservers.Notify(_ => _.OnProjectionDefinitionsChanged());
+        foreach (var @namespace in namespaces)
+        {
+            var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
+            await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
+                "Projection definition has changed.",
+                new ReplayCandidateRequest
+                {
+                    ObserverId = key.ProjectionId,
+                    ObserverKey = new ObserverKey(key.ProjectionId, key.EventStore, @namespace, key.EventSequenceId),
+                    Reasons = [new ProjectionDefinitionChangedReplayCandidateReason()]
+                });
+        }
     }
-
-    /// <inheritdoc/>
-    public Task Ensure() => Task.CompletedTask;
 }

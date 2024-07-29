@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -30,7 +30,8 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         IMongoDBClientManager clientManager,
         Configuration.Storage configuration)
     {
-        var databaseName = $"{eventStore}-{@namespace}";
+        // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
+        var databaseName = $"{eventStore}+es+{@namespace}";
 
         var urlBuilder = new MongoUrlBuilder(configuration.ConnectionDetails.ToString())
         {
@@ -115,7 +116,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     string GetCollectionNameFor(EventSequenceId eventSequenceId)
     {
         var collectionName = WellKnownCollectionNames.EventLog;
-        if (!eventSequenceId.IsEventLog && eventSequenceId == EventSequenceId.SystemId)
+        if (!eventSequenceId.IsEventLog && eventSequenceId == EventSequenceId.System)
         {
             collectionName = WellKnownCollectionNames.System;
         }

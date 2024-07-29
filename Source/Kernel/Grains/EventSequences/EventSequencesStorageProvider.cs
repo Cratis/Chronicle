@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
-using Orleans.Runtime;
 using Orleans.Storage;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
@@ -26,11 +26,10 @@ public class EventSequencesStorageProvider(IStorage storage) : IGrainStorage
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var actualGrainState = (grainState as IGrainState<EventSequenceState>)!;
-        var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
-        var key = EventSequenceKey.Parse(keyAsString!);
+        var key = EventSequenceKey.Parse(grainId.Key.ToString()!);
 
         var eventTypesStorage = storage.GetEventStore(key.EventStore).EventTypes;
-        var eventSequenceStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).GetEventSequence(eventSequenceId);
+        var eventSequenceStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).GetEventSequence(key.EventSequenceId);
         actualGrainState.State = await eventSequenceStorage.GetState();
         await HandleTailSequenceNumbersForEventTypes(eventTypesStorage, eventSequenceStorage, actualGrainState);
     }
@@ -38,10 +37,9 @@ public class EventSequencesStorageProvider(IStorage storage) : IGrainStorage
     /// <inheritdoc/>
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
-        var key = EventSequenceKey.Parse(keyAsString!);
+        var key = EventSequenceKey.Parse(grainId.Key.ToString()!);
         var eventSequenceState = (grainState.State as EventSequenceState)!;
-        var eventSequenceStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).GetEventSequence(eventSequenceId);
+        var eventSequenceStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).GetEventSequence(key.EventSequenceId);
         await eventSequenceStorage.SaveState(eventSequenceState);
     }
 

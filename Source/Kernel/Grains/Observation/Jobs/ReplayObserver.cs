@@ -63,7 +63,6 @@ public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, Repla
         {
             steps.Add(CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
-                    request.ObserverId,
                     request.ObserverKey,
                     request.ObserverSubscription,
                     key,

@@ -3,7 +3,9 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Sinks;
 
 namespace Cratis.Chronicle.Projections.Definitions;
 
@@ -30,8 +32,8 @@ public record ChildrenDefinition(
     FromEventPropertyDefinition? FromEventProperty = default,
     RemovedWithDefinition? RemovedWith = default) :
     ProjectionDefinition(
-        Guid.Empty,
-        string.Empty,
+        EventSequences.EventSequenceId.Unspecified,
+        ProjectionId.Unspecified,
         Model,
         true,
         false,
@@ -41,5 +43,6 @@ public record ChildrenDefinition(
         Children,
         [],
         All,
+        SinkDefinition.None,
         FromEventProperty,
         RemovedWith);

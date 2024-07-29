@@ -6,42 +6,46 @@ using Cratis.Chronicle.Projections;
 namespace Cratis.Chronicle.Aggregates;
 
 /// <summary>
-/// Represents an implementation of <see cref="IAggregateRootStateProvider"/> using a projection.
+/// Represents an implementation of <see cref="IAggregateRootStateProvider{TState}"/> using a projection.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ProjectionAggregateRootStateProvider"/> class.
+/// Initializes a new instance of the <see cref="ProjectionAggregateRootStateProvider{TState}"/> class.
 /// </remarks>
-/// <param name="aggregateRoot">The <see cref="AggregateRoot"/> the state is for.</param>
-/// <param name="immediateProjections"><see cref="IImmediateProjections"/> to use for getting state.</param>
-public class ProjectionAggregateRootStateProvider(
-    AggregateRoot aggregateRoot,
-    IImmediateProjections immediateProjections) : IAggregateRootStateProvider
+/// <typeparam name="TState">Type of state for the aggregate root.</typeparam>
+/// <param name="aggregateRootContext">The <see cref="AggregateRoot"/> the state is for.</param>
+/// <param name="projections"><see cref="IProjections"/> to use for getting state.</param>
+public class ProjectionAggregateRootStateProvider<TState>(
+    IAggregateRootContext aggregateRootContext,
+    IProjections projections) : IAggregateRootStateProvider<TState>
 {
     /// <inheritdoc/>
-    public async Task<object?> Provide()
+    public async Task<TState?> Provide()
     {
-        var result = await immediateProjections.GetInstanceByIdForSession(
-            aggregateRoot.CorrelationId,
-            aggregateRoot.StateType,
-            aggregateRoot._eventSourceId);
-        return result.Model;
+        var result = await projections.GetInstanceByIdForSession(
+            aggregateRootContext.CorrelationId,
+            typeof(TState),
+            aggregateRootContext.EventSourceId);
+
+        return (TState?)result.Model;
     }
 
     /// <inheritdoc/>
-    public async Task<object?> Update(object? initialState, IEnumerable<object> events)
+    public async Task<TState?> Update(TState? initialState, IEnumerable<object> events)
     {
-        var result = await immediateProjections.GetInstanceByIdForSessionWithEventsApplied(
-            aggregateRoot.CorrelationId,
-            aggregateRoot.StateType,
-            aggregateRoot._eventSourceId,
+        var result = await projections.GetInstanceByIdForSessionWithEventsApplied(
+            aggregateRootContext.CorrelationId,
+            typeof(TState),
+            aggregateRootContext.EventSourceId,
             events);
-        return result.Model;
+        return (TState?)result.Model;
     }
 
     /// <inheritdoc/>
-    public Task Dehydrate() =>
-        immediateProjections.DehydrateSession(
-            aggregateRoot.CorrelationId,
-            aggregateRoot.StateType,
-            aggregateRoot._eventSourceId);
+    public async Task Dehydrate()
+    {
+        await projections.DehydrateSession(
+            aggregateRootContext.CorrelationId,
+            typeof(TState),
+            aggregateRootContext.EventSourceId);
+    }
 }

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Storage.MongoDB.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Storage.MongoDB</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj"/>
+        <ProjectReference Include="../Shared/Shared.csproj"/>
+    </ItemGroup>
+</Project>

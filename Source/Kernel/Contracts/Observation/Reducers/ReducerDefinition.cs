@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Models;
-
+using Cratis.Chronicle.Contracts.Sinks;
 using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Observation.Reducers;
 
 /// <summary>
-/// Represents the definition of a reducer.
+/// Represents the payload for the definition of a reducer.
 /// </summary>
 [ProtoContract]
 public class ReducerDefinition
@@ -17,35 +17,29 @@ public class ReducerDefinition
     /// Gets or sets the <see cref="ReducerId"/>.
     /// </summary>
     [ProtoMember(1)]
-    public Guid ReducerId { get; set; }
+    public string ReducerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the observer.
+    /// Gets or sets the event sequence identifier.
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the event sequence the reducer is for.
-    /// </summary>
-    [ProtoMember(3)]
-    public Guid EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; }
 
     /// <summary>
     /// Gets or sets the event types the reducer is interested in.
     /// </summary>
-    [ProtoMember(4, IsRequired = true)]
-    public IEnumerable<EventTypeWithKeyExpression> EventTypes { get; set; } = [];
+    [ProtoMember(3, IsRequired = true)]
+    public IList<EventTypeWithKeyExpression> EventTypes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the <see cref="ModelDefinition"/> of the read model.
     /// </summary>
-    [ProtoMember(5)]
-    public ModelDefinition ReadModel { get; set; }
+    [ProtoMember(4)]
+    public ModelDefinition Model { get; set; }
 
     /// <summary>
-    /// Gets or sets the <see cref="SinkTypeId"/> of the target sink.
+    /// Gets or sets the projection sink definition.
     /// </summary>
-    [ProtoMember(6)]
-    public Guid SinkTypeId { get; set; }
+    [ProtoMember(5)]
+    public SinkDefinition Sink { get; set; }
 }

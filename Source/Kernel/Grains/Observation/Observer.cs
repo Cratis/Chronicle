@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
@@ -11,13 +12,10 @@ using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
-using Orleans.Runtime;
-using Orleans.Streams;
 
 namespace Cratis.Chronicle.Grains.Observation;
 
@@ -41,13 +39,13 @@ public class Observer(
     IMeter<Observer> meter,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
 {
-    IStreamProvider _streamProvider = null!;
-    ObserverId _observerId = Guid.Empty;
+    ObserverId _observerId = ObserverId.Unspecified;
     ObserverKey _observerKey = ObserverKey.NotSet;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
     IEventSequence _eventSequence = null!;
+    IAppendedEventsQueues _appendedEventsQueues = null!;
     IMeterScope<Observer>? _metrics;
 
     /// <inheritdoc/>
@@ -61,18 +59,18 @@ public class Observer(
         // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
         DelayDeactivation(TimeSpan.MaxValue);
 
-        _observerId = this.GetPrimaryKey(out var keyAsString);
-        _observerKey = ObserverKey.Parse(keyAsString);
+        _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
+        _observerId = _observerKey.ObserverId;
 
-        _streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_observerKey.EventStore, _observerKey.Namespace));
 
         await failures.ReadStateAsync();
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
-            _observerKey.EventSequenceId,
-            new EventSequenceKey(_observerKey.EventStore, _observerKey.Namespace));
+            new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace));
 
+        var eventSequenceKey = new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace);
+        _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(eventSequenceKey);
         _metrics = meter.BeginObserverScope(_observerId, _observerKey);
     }
 
@@ -114,7 +112,6 @@ public class Observer(
 
     /// <inheritdoc/>
     public async Task Subscribe<TObserverSubscriber>(
-        ObserverName name,
         ObserverType type,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
@@ -125,7 +122,7 @@ public class Observer(
 
         logger.Subscribing();
 
-        State = State with { Name = name, Type = type };
+        State = State with { Type = type };
 
         _subscription = new ObserverSubscription(
             _observerId,
@@ -175,7 +172,7 @@ public class Observer(
         new Indexing(),
 
         new Observing(
-            _streamProvider,
+            _appendedEventsQueues,
             _observerKey.EventStore,
             _observerKey.Namespace,
             _observerKey.EventSequenceId,
@@ -336,6 +333,7 @@ public class Observer(
                 try
                 {
                     var key = new ObserverSubscriberKey(
+                        _observerKey.ObserverId,
                         _observerKey.EventStore,
                         _observerKey.Namespace,
                         _observerKey.EventSequenceId,
@@ -345,7 +343,7 @@ public class Observer(
                     var firstEvent = events.First();
                     var lastEvent = events.Last();
 
-                    var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, _observerId, key) as IObserverSubscriber)!;
+                    var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                     tailEventSequenceNumber = firstEvent.Metadata.SequenceNumber;
                     var result = await subscriber.OnNext(events, new(_subscription.Arguments));
                     if (result.LastSuccessfulObservation != EventSequenceNumber.Unavailable)

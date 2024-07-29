@@ -12,28 +12,28 @@ namespace Cratis.Chronicle.Grains.Jobs;
 
 internal static partial class JobLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Starting job")]
+    [LoggerMessage(LogLevel.Information, "Starting job")]
     internal static partial void Starting(this ILogger<IJob> logger);
 
-    [LoggerMessage(1, LogLevel.Information, "Resuming job")]
+    [LoggerMessage(LogLevel.Information, "Resuming job")]
     internal static partial void Resuming(this ILogger<IJob> logger);
 
-    [LoggerMessage(2, LogLevel.Information, "Pausing job")]
+    [LoggerMessage(LogLevel.Information, "Pausing job")]
     internal static partial void Pausing(this ILogger<IJob> logger);
 
-    [LoggerMessage(3, LogLevel.Information, "Stopping job")]
+    [LoggerMessage(LogLevel.Information, "Stopping job")]
     internal static partial void Stopping(this ILogger<IJob> logger);
 
-    [LoggerMessage(4, LogLevel.Trace, "Step {JobStepId} successfully completed")]
+    [LoggerMessage(LogLevel.Trace, "Step {JobStepId} successfully completed")]
     internal static partial void StepSuccessfullyCompleted(this ILogger<IJob> logger, JobStepId jobStepId);
 
-    [LoggerMessage(5, LogLevel.Trace, "Step {JobStepId} failed")]
+    [LoggerMessage(LogLevel.Trace, "Step {JobStepId} failed")]
     internal static partial void StepFailed(this ILogger<IJob> logger, JobStepId jobStepId);
 
-    [LoggerMessage(6, LogLevel.Trace, "Preparing job steps for running")]
+    [LoggerMessage(LogLevel.Trace, "Preparing job steps for running")]
     internal static partial void PrepareJobStepsForRunning(this ILogger<IJob> logger);
 
-    [LoggerMessage(7, LogLevel.Error, "Job failed")]
+    [LoggerMessage(LogLevel.Error, "Job failed")]
     internal static partial void Failed(this ILogger<IJob> logger, Exception exception);
 }
 

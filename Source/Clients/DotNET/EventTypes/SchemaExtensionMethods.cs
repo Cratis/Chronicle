@@ -44,7 +44,7 @@ public static class SchemaExtensionMethods
         if (schema.HasEventType())
         {
             var elements = schema.ExtensionData![EventTypeExtension]!.ToString()!.Split('+');
-            return new(Guid.Parse(elements[0]), uint.Parse(elements[1]));
+            return new(elements[0], uint.Parse(elements[1]));
         }
 
         return new(EventTypeId.Unknown, EventGeneration.First);

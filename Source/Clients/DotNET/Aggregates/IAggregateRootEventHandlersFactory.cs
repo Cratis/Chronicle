@@ -13,5 +13,5 @@ public interface IAggregateRootEventHandlersFactory
     /// </summary>
     /// <param name="aggregateRoot">The <see cref="IAggregateRoot"/> to create for.</param>
     /// <returns>A new <see cref="IAggregateRootEventHandlers"/> instance.</returns>
-    IAggregateRootEventHandlers CreateFor(IAggregateRoot aggregateRoot);
+    IAggregateRootEventHandlers GetFor(IAggregateRoot aggregateRoot);
 }

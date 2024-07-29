@@ -25,7 +25,7 @@ public class ChildrenDefinition
     [ProtoMember(2)]
     public ModelDefinition Model { get; set; }
 
-     /// <summary>
+    /// <summary>
     /// Gets or sets the initial state to use for new instances of the model.
     /// </summary>
     [ProtoMember(3)]
@@ -34,20 +34,20 @@ public class ChildrenDefinition
     /// <summary>
     /// Gets or sets all the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.
     /// </summary>
-    [ProtoMember(4)]
-    public IDictionary<EventType, FromDefinition> From { get; set; }
+    [ProtoMember(4, IsRequired = true)]
+    public IDictionary<EventType, FromDefinition> From { get; set; } = new Dictionary<EventType, FromDefinition>();
 
     /// <summary>
     /// Gets or sets all the <see cref="JoinDefinition"/> for <see cref="EventType">event types</see>.
     /// </summary>
-    [ProtoMember(5)]
-    public IDictionary<EventType, JoinDefinition> Join { get; set; }
+    [ProtoMember(5, IsRequired = true)]
+    public IDictionary<EventType, JoinDefinition> Join { get; set; } = new Dictionary<EventType, JoinDefinition>();
 
     /// <summary>
     /// Gets or sets all the <see cref="ChildrenDefinition"/> for properties on model.
     /// </summary>
-    [ProtoMember(6)]
-    public IDictionary<string, ChildrenDefinition> Children { get; set; }
+    [ProtoMember(6, IsRequired = true)]
+    public IDictionary<string, ChildrenDefinition> Children { get; set; } = new Dictionary<string, ChildrenDefinition>();
 
     /// <summary>
     /// Gets or sets the full <see cref="AllDefinition"/>.
@@ -56,8 +56,14 @@ public class ChildrenDefinition
     public AllDefinition All { get; set; }
 
     /// <summary>
-    /// Gets or sets the definition of what removes a child, if any.
+    /// Gets or sets the optional <see cref="FromEventPropertyDefinition"/> definition.
     /// </summary>
     [ProtoMember(8)]
+    public FromEventPropertyDefinition? FromEventProperty { get; set; }
+
+    /// <summary>
+    /// Gets or sets the definition of what removes a child, if any.
+    /// </summary>
+    [ProtoMember(9)]
     public RemovedWithDefinition? RemovedWith { get; set; }
 }

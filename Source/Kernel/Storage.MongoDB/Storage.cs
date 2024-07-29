@@ -1,9 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Observation.Reducers.Json;
 using Cratis.Chronicle.Projections.Json;
+using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
@@ -15,22 +19,24 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// Initializes a new instance of the <see cref="Storage"/> class.
 /// </remarks>
 /// <param name="database">The MongoDB <see cref="IDatabase"/>.</param>
-/// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for handling serialization of projection definitions.</param>
-/// <param name="projectionPipelineSerializer"><see cref="IJsonProjectionPipelineSerializer"/> for handling serialization of projection pipeline definitions.</param>
+/// <param name="projectionSerializer"><see cref="IJsonProjectionDefinitionSerializer"/> for handling serialization of projection definitions.</param>
+/// <param name="reducerSerializer"><see cref="IJsonReducerDefinitionSerializer"/> for handling serialization of reducer definitions.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
-/// <param name="expandoObjectConverter"><see cref="Json.ExpandoObjectConverter"/> for conversions.</param>
+/// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
+/// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class Storage(
     IDatabase database,
-    IJsonProjectionSerializer projectionSerializer,
-    IJsonProjectionPipelineSerializer projectionPipelineSerializer,
+    IJsonProjectionDefinitionSerializer projectionSerializer,
+    IJsonReducerDefinitionSerializer reducerSerializer,
     IJsonComplianceManager complianceManager,
-    Json.ExpandoObjectConverter expandoObjectConverter,
+    Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
+    IInstancesOf<ISinkFactory> sinkFactories,
     ILoggerFactory loggerFactory) : IStorage
 {
-    readonly Dictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
+    readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
 
     /// <inheritdoc/>
     public IEventStoreStorage GetEventStore(EventStoreName eventStore)
@@ -42,13 +48,13 @@ public class Storage(
 
         return _eventStores[eventStore] = new EventStoreStorage(
             eventStore,
-            database,
             database.GetEventStoreDatabase(eventStore),
             projectionSerializer,
-            projectionPipelineSerializer,
+            reducerSerializer,
             complianceManager,
             expandoObjectConverter,
             jsonSerializerOptions,
+            sinkFactories,
             loggerFactory);
     }
 }

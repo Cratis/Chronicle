@@ -9,7 +9,6 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Jobs;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
@@ -36,7 +35,7 @@ public class HandleEventsForPartition(
     public override Task Prepare(HandleEventsForPartitionArguments request)
     {
         var eventSourceId = (EventSourceId)(request.Partition.Value.ToString() ?? string.Empty);
-        _observer = GrainFactory.GetGrain<IObserver>(request.ObserverId, request.ObserverKey);
+        _observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
 
         State.NextEventSequenceNumber = request.StartEventSequenceNumber;
 
@@ -46,13 +45,14 @@ public class HandleEventsForPartition(
         }
 
         var key = new ObserverSubscriberKey(
+            request.ObserverKey.ObserverId,
             request.ObserverKey.EventStore,
             request.ObserverKey.Namespace,
             request.ObserverKey.EventSequenceId,
             eventSourceId,
             request.ObserverSubscription.SiloAddress.ToParsableString());
 
-        _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, request.ObserverSubscription.ObserverId, key) as IObserverSubscriber)!;
+        _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, key) as IObserverSubscriber)!;
 
         return Task.CompletedTask;
     }

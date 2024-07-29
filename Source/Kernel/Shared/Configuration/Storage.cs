@@ -16,5 +16,5 @@ public class Storage
     /// <summary>
     /// Gets the provider type specific connection details.
     /// </summary>
-    public object ConnectionDetails { get; init; } = "mongodb://localhost:27017/cratis";
+    public object ConnectionDetails { get; init; } = "mongodb://localhost:27017/chronicle";
 }

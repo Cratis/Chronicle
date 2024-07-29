@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Observation;
-using Orleans.Runtime;
 using Orleans.Storage;
 
 namespace Cratis.Chronicle.Storage.Observation;
@@ -23,26 +22,24 @@ public class FailedPartitionGrainStorageProvider(IStorage storage) : IGrainStora
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var actualGrainState = (grainState as IGrainState<FailedPartitions>)!;
-        var observerId = grainId.GetGuidKey(out var observerKeyAsString);
-        var observerKey = ObserverKey.Parse(observerKeyAsString!);
+        var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
         var failedPartitions = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).FailedPartitions;
-        actualGrainState.State = await failedPartitions.GetFor(observerId);
+        actualGrainState.State = await failedPartitions.GetFor(observerKey.ObserverId);
     }
 
     /// <inheritdoc/>
     public virtual async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var actualGrainState = (grainState as IGrainState<FailedPartitions>)!;
-        var observerId = grainId.GetGuidKey(out var observerKeyAsString);
-        var observerKey = ObserverKey.Parse(observerKeyAsString!);
+        var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
         var failedPartitions = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).FailedPartitions;
         foreach (var failedPartition in actualGrainState.State.Partitions)
         {
-            failedPartition.ObserverId = observerId;
+            failedPartition.ObserverId = observerKey.ObserverId;
         }
 
-        await failedPartitions.Save(observerId, actualGrainState.State);
+        await failedPartitions.Save(observerKey.ObserverId, actualGrainState.State);
     }
 }

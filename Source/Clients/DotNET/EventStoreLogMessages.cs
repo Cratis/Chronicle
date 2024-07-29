@@ -7,9 +7,9 @@ namespace Cratis.Chronicle;
 
 internal static partial class EventStoreLogMessages
 {
-    [LoggerMessage(0, LogLevel.Trace, "Discover all artifacts")]
+    [LoggerMessage(LogLevel.Trace, "Discover all artifacts")]
     internal static partial void DiscoverAllArtifacts(this ILogger logger);
 
-    [LoggerMessage(1, LogLevel.Trace, "Register all artifacts")]
+    [LoggerMessage(LogLevel.Trace, "Register all artifacts")]
     internal static partial void RegisterAllArtifacts(this ILogger logger);
 }

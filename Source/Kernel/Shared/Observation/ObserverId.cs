@@ -7,22 +7,16 @@ namespace Cratis.Chronicle.Observation;
 /// Concept that represents the unique identifier of an observer.
 /// </summary>
 /// <param name="Value">Actual value.</param>
-public record ObserverId(Guid Value) : ConceptAs<Guid>(Value)
+public record ObserverId(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
     /// Gets the representation of an unspecified <see cref="ObserverId"/>.
     /// </summary>
-    public static readonly ObserverId Unspecified = new(Guid.Empty);
+    public static readonly ObserverId Unspecified = new("[unspecified]");
 
     /// <summary>
-    /// Implicitly convert from a string representation of a <see cref="Guid"/> to <see cref="ObserverId"/>.
+    /// Implicitly convert from a string to <see cref="ObserverId"/>.
     /// </summary>
-    /// <param name="id">String representation of a <see cref="Guid"/> to convert from.</param>
-    public static implicit operator ObserverId(string id) => new(Guid.Parse(id));
-
-    /// <summary>
-    /// Implicitly convert from <see cref="Guid"/> to <see cref="ObserverId"/>.
-    /// </summary>
-    /// <param name="id"><see cref="Guid"/> to convert from.</param>
-    public static implicit operator ObserverId(Guid id) => new(id);
+    /// <param name="id">String to convert from.</param>
+    public static implicit operator ObserverId(string id) => new(id);
 }

@@ -8,9 +8,9 @@ import { useLayoutContext } from "../context/LayoutContext";
 import { CurrentNamespace } from "./CurrentNamespace";
 import { InputText } from 'primereact/inputtext';
 import { ItemsList } from 'Components/ItemsList/ItemsList';
-import { Namespace } from 'API/Namespaces';
+import { Namespace } from 'Api/Namespaces';
 import { INamespaceSelectorProps, NamespaceSelectorViewModel } from './NamespaceSelectorViewModel';
-import { withViewModel } from 'Infrastructure/MVVM';
+import { withViewModel } from '@cratis/applications.react.mvvm';
 import css from './NamespaceSelector.module.css';
 
 export const NamespaceSelector = withViewModel<NamespaceSelectorViewModel, INamespaceSelectorProps>(NamespaceSelectorViewModel, ({ viewModel, props }) => {

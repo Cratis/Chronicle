@@ -20,7 +20,7 @@ public class ReplayCandidateRecommendation : Recommendation<ReplayCandidateReque
         var key = (RecommendationKey)keyAsString;
         var jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(key.EventStore, key.Namespace));
 
-        var observer = GrainFactory.GetGrain<IObserver>(request.ObserverId, keyExtension: request.ObserverKey);
+        var observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
         var subscription = await observer.GetSubscription();
         var eventTypes = await observer.GetEventTypes();
 

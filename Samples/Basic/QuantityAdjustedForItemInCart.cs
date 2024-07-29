@@ -5,5 +5,5 @@ using Cratis.Chronicle.Events;
 
 namespace Basic;
 
-[EventType("f3927a33-7028-4242-bc06-a06f8ad62b68")]
+[EventType]
 public record QuantityAdjustedForItemInCart(PersonId PersonId, MaterialId MaterialId, int Quantity);

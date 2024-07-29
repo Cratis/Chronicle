@@ -8,14 +8,19 @@ namespace Cratis.Chronicle;
 /// </summary>
 /// <remarks>
 /// <![CDATA[
-/// cratis://<host>[:<port>]/?<options>
-/// cratis://username:password@<host>[:<port>]/?<options>
-/// cratis+srv://<host>[:<port>]/?<options>
-/// cratis://<host>[:<port>],<host>[:<port>],<host>[:<port>]/?<options>
+/// chronicle://<host>[:<port>]/?<options>
+/// chronicle://username:password@<host>[:<port>]/?<options>
+/// chronicle+srv://<host>[:<port>]/?<options>
+/// chronicle://<host>[:<port>],<host>[:<port>],<host>[:<port>]/?<options>
 /// ]]>
 /// </remarks>
 public class ChronicleUrl
 {
+    /// <summary>
+    /// The default <see cref="ChronicleUrl"/> pointing to localhost.
+    /// </summary>
+    public static readonly ChronicleUrl Default = new("chronicle://localhost:35000");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleUrl"/> class.
     /// </summary>

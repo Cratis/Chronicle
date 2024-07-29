@@ -2,10 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.Definitions;
 using Cratis.Chronicle.Projections.Pipelines;
+using Orleans.Providers;
 
 namespace Cratis.Chronicle.Grains.Projections;
 
@@ -15,31 +18,30 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
 /// </remarks>
-/// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
-public class ProjectionObserverSubscriber(IKernel kernel) : Grain, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
+/// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
+/// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> for creating projection pipelines.</param>
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
+public class ProjectionObserverSubscriber(
+    IProjectionFactory projectionFactory,
+    IProjectionPipelineFactory projectionPipelineFactory) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
-    ProjectionId _projectionId = ProjectionId.NotSet;
+    ObserverSubscriberKey _key = new(ObserverId.Unspecified, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Unspecified, EventSourceId.Unspecified, string.Empty);
     IProjectionPipeline? _pipeline;
-    EventStoreName _eventStore = EventStoreName.NotSet;
-    EventStoreNamespaceName _namespace = EventStoreNamespaceName.NotSet;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _projectionId = this.GetPrimaryKey(out var keyAsString);
-        var key = ObserverSubscriberKey.Parse(keyAsString);
-        _eventStore = key.EventStore;
-        _namespace = key.Namespace;
-        var projection = GrainFactory.GetGrain<IProjection>(_projectionId, new ProjectionKey(key.EventStore, key.Namespace, key.EventSequenceId));
+        _key = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
+        var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
         await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
-
-        HandleDefinitionsAndInstances();
+        await HandlePipeline();
     }
 
     /// <inheritdoc/>
     public void OnProjectionDefinitionsChanged()
     {
-        HandleDefinitionsAndInstances();
+        ReadStateAsync().Wait();
+        HandlePipeline().Wait();
     }
 
     /// <inheritdoc/>
@@ -71,9 +73,9 @@ public class ProjectionObserverSubscriber(IKernel kernel) : Grain, IProjectionOb
         }
     }
 
-    void HandleDefinitionsAndInstances()
+    async Task HandlePipeline()
     {
-        var projectionManager = kernel.GetEventStore(_eventStore).GetNamespace(_namespace).ProjectionManager;
-        _pipeline = projectionManager.GetPipeline(_projectionId);
+        var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State);
+        _pipeline = projectionPipelineFactory.Create(_key.EventStore, _key.Namespace, projection, State);
     }
 }

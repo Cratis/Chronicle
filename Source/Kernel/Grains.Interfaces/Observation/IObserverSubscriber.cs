@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// <summary>
 /// Defines the base interface for observer subscribers.
 /// </summary>
-public interface IObserverSubscriber : IGrainWithGuidCompoundKey
+public interface IObserverSubscriber : IGrainWithStringKey
 {
     /// <summary>
     /// Called whenever an event is ready to be observed.

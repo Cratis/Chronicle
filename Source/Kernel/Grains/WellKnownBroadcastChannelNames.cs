@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Grains;
 public static class WellKnownBroadcastChannelNames
 {
     /// <summary>
-    /// The name of the channel for when a projection changes definition.
+    /// The name of the channel for when a namespace is added.
     /// </summary>
-    public const string ProjectionChanged = "projection-changed";
+    public const string NamespaceAdded = "namespace-added";
 }

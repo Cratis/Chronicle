@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Grains.Workers;
 using Cratis.Chronicle.Jobs;
 using Orleans.Concurrency;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Jobs;
 

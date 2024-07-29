@@ -14,10 +14,10 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 
 internal static partial class ObservingLogMessages
 {
-    [LoggerMessage(0, LogLevel.Trace, "Entering observing state")]
+    [LoggerMessage(LogLevel.Trace, "Entering observing state")]
     internal static partial void Entering(this ILogger<Observing> logger);
 
-    [LoggerMessage(1, LogLevel.Trace, "Subscribing to stream from event sequence number {EventSequenceNumber}")]
+    [LoggerMessage(LogLevel.Trace, "Subscribing to stream from event sequence number {EventSequenceNumber}")]
     internal static partial void SubscribingToStream(this ILogger<Observing> logger, EventSequenceNumber eventSequenceNumber);
 }
 

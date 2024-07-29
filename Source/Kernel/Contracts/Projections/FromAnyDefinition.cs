@@ -16,7 +16,7 @@ public class FromAnyDefinition
     /// Gets or sets the event types.
     /// </summary>
     [ProtoMember(1)]
-    public IEnumerable<EventType> EventTypes { get; set; }
+    public IList<EventType> EventTypes { get; set; }
 
     /// <summary>
     /// Gets or sets the from definition.

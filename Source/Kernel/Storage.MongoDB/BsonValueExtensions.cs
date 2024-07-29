@@ -3,7 +3,7 @@
 
 using System.Collections;
 using System.Globalization;
-using Cratis.MongoDB;
+using Cratis.Applications.MongoDB;
 using Cratis.Reflection;
 using Cratis.Strings;
 using Cratis.Types;

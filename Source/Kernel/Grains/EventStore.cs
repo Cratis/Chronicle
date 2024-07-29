@@ -3,65 +3,39 @@
 
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using Cratis.Chronicle.Grains.Observation.Reducers;
-using Cratis.Chronicle.Grains.Projections.Definitions;
-using Cratis.Chronicle.Projections.Json;
+using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Storage;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Types;
 
 namespace Cratis.Chronicle.Grains;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStore"/>.
 /// </summary>
-public class EventStore : IEventStore
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventStore"/> class.
+/// </remarks>
+/// <param name="storage">The <see cref="IStorage"/>.</param>
+/// <param name="name">Name of the event store.</param>
+/// <param name="objectComparer">The <see cref="IObjectComparer"/>.</param>
+/// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> of <see cref="ISinkFactory"/>.</param>
+public class EventStore(
+    IStorage storage,
+    EventStoreName name,
+    IObjectComparer objectComparer,
+    IInstancesOf<ISinkFactory> sinkFactories) : IEventStore
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespace> _namespaces = new();
-    readonly IServiceProvider _serviceProvider;
-    readonly ILoggerFactory _loggerFactory;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventStore"/> class.
-    /// </summary>
-    /// <param name="name">Name of the event store.</param>
-    /// <param name="storage"><see cref="IEventStoreStorage"/> for accessing underlying storage for the specific event store.</param>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
-    /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-    public EventStore(
-        EventStoreName name,
-        IEventStoreStorage storage,
-        IServiceProvider serviceProvider,
-        ILoggerFactory loggerFactory)
-    {
-        Name = name;
-        Storage = storage;
-        _serviceProvider = serviceProvider;
-        _loggerFactory = loggerFactory;
-        var projectionSerializer = serviceProvider.GetRequiredService<IJsonProjectionSerializer>();
-        ProjectionDefinitions = new ProjectionDefinitions(storage.Projections, projectionSerializer);
-        ProjectionPipelineDefinitions = new ProjectionPipelineDefinitions(storage.ProjectionPipelines);
-        ReducerPipelineDefinitions = new ReducerPipelineDefinitions();
-        Namespaces = ImmutableList<IEventStoreNamespace>.Empty;
-    }
 
     /// <inheritdoc/>
-    public EventStoreName Name { get; }
+    public EventStoreName Name { get; } = name;
 
     /// <inheritdoc/>
-    public IEventStoreStorage Storage { get; }
+    public IEventStoreStorage Storage { get; } = storage.GetEventStore(name);
 
     /// <inheritdoc/>
-    public IProjectionDefinitions ProjectionDefinitions { get; }
-
-    /// <inheritdoc/>
-    public IProjectionPipelineDefinitions ProjectionPipelineDefinitions { get; }
-
-    /// <inheritdoc/>
-    public IReducerPipelineDefinitions ReducerPipelineDefinitions { get; }
-
-    /// <inheritdoc/>
-    public IImmutableList<IEventStoreNamespace> Namespaces { get; private set; }
+    public IImmutableList<IEventStoreNamespace> Namespaces { get; private set; } = ImmutableList<IEventStoreNamespace>.Empty;
 
     /// <inheritdoc/>
     public IEventStoreNamespace GetNamespace(EventStoreNamespaceName @namespace)
@@ -69,11 +43,11 @@ public class EventStore : IEventStore
         if (!_namespaces.TryGetValue(@namespace, out var namespaceInstance))
         {
             namespaceInstance = new EventStoreNamespace(
+                storage,
                 Name,
                 @namespace,
-                Storage.GetNamespace(@namespace),
-                _serviceProvider,
-                _loggerFactory);
+                objectComparer,
+                sinkFactories);
             _namespaces[@namespace] = namespaceInstance;
             Namespaces = Namespaces.Add(namespaceInstance);
         }

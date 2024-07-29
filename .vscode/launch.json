@@ -45,6 +45,30 @@
             "sourceFileMap": {}
         },
         {
+            "name": ".NET Core Launch (Server)",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net8.0/Cratis.Chronicle.Server.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Source/Kernel/Server",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": ".NET Core Launch (Basic sample)",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Samples/Basic",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach"
@@ -65,5 +89,13 @@
             "command": "dotnet-build-commands.getTarget"
         }
     ],
-    "compounds": []
+    "compounds": [
+        {
+            "name": "Server and Basic",
+            "configurations": [
+                ".NET Core Launch (Server)",
+                ".NET Core Launch (Basic sample)"
+            ]
+        }
+    ]
 }

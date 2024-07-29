@@ -4,8 +4,10 @@
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Sinks;
 using Cratis.Models;
 
 namespace Cratis.Chronicle.Projections;
@@ -19,9 +21,9 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
     readonly ProjectionId _identifier;
     readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _schemaGenerator;
+    EventSequenceId _eventSequenceId = EventSequenceId.Log;
     bool _isRewindable = true;
-
-    string? _name;
+    bool _isActive = true;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
@@ -46,9 +48,9 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> WithName(string name)
+    public IProjectionBuilderFor<TModel> FromEventSequence(EventSequenceId eventSequenceId)
     {
-        _name = name;
+        _eventSequenceId = eventSequenceId;
         return this;
     }
 
@@ -67,6 +69,13 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
     }
 
     /// <inheritdoc/>
+    public IProjectionBuilderFor<TModel> Passive()
+    {
+        _isActive = false;
+        return this;
+    }
+
+    /// <inheritdoc/>
     public ProjectionDefinition Build()
     {
         var modelType = typeof(TModel);
@@ -78,21 +87,26 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
 
         return new()
         {
+            EventSequenceId = _eventSequenceId,
             Identifier = _identifier,
-            Name = _name ?? modelType.FullName ?? "[N/A]",
             Model = new()
             {
                 Name = _modelName,
                 Schema = modelSchema.ToJson()
             },
-            IsActive = true,
+            IsActive = _isActive,
             IsRewindable = _isRewindable,
             InitialModelState = _initialValues.ToJsonString(),
             From = _fromDefinitions,
             Join = _joinDefinitions,
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
             All = _allDefinition,
-            RemovedWith = _removedWithEvent == default ? default : new() { Event = _removedWithEvent }
+            RemovedWith = _removedWithEvent == default ? default : new() { Event = _removedWithEvent },
+            Sink = new()
+            {
+                ConfigurationId = Guid.Empty,
+                TypeId = WellKnownSinkTypes.MongoDB
+            }
         };
     }
 }

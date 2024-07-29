@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Storage.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Storage</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Storage/Storage.csproj"/>
+        <ProjectReference Include="../Shared/Shared.csproj"/>
+    </ItemGroup>
+
+</Project>

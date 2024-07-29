@@ -2,13 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
 using Cratis.Models;
 using Microsoft.Extensions.Logging;
@@ -57,7 +59,7 @@ public class EventStore : IEventStore
         _eventStoreName = eventStoreName;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
-        EventStoreName = eventStoreName;
+        Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
         EventTypes = new Events.EventTypes(this, schemaGenerator, clientArtifactsProvider);
@@ -77,29 +79,61 @@ public class EventStore : IEventStore
             causationManager,
             identityProvider);
 
-        Observers = new Observers(
+        Reactions = new Reactions.Reactions(
             this,
             EventTypes,
             clientArtifactsProvider,
             serviceProvider,
-            new ObserverMiddlewares(clientArtifactsProvider, serviceProvider),
+            new ReactionMiddlewares(clientArtifactsProvider, serviceProvider),
             _eventSerializer,
             causationManager,
-            loggerFactory.CreateLogger<Observers>(),
+            loggerFactory.CreateLogger<Reactions.Reactions>(),
             loggerFactory);
 
-        Reducers = new Reducers.Reducers(this, clientArtifactsProvider);
-        Projections = new Projections.Projections(
+        var modelNameResolver = new ModelNameResolver(modelNameConvention);
+
+        Reducers = new Reducers.Reducers(
             this,
             clientArtifactsProvider,
+            serviceProvider,
+            new ReducerValidator(),
+            EventTypes,
+            _eventSerializer,
+            modelNameResolver,
             schemaGenerator,
-            new ModelNameResolver(modelNameConvention),
+            jsonSerializerOptions,
+            loggerFactory.CreateLogger<Reducers.Reducers>());
+
+        Projections = new Projections.Projections(
+            this,
+            EventTypes,
+            clientArtifactsProvider,
+            new RulesProjections(
+                serviceProvider,
+                clientArtifactsProvider,
+                EventTypes,
+                modelNameResolver,
+                schemaGenerator,
+                jsonSerializerOptions),
+            schemaGenerator,
+            modelNameResolver,
+            _eventSerializer,
             serviceProvider,
             jsonSerializerOptions);
+
+        AggregateRootFactory = new AggregateRootFactory(
+            this,
+            new AggregateRootMutatorFactory(
+                this,
+                new AggregateRootStateProviders(Reducers, Projections),
+                new AggregateRootEventHandlersFactory(EventTypes),
+                _eventSerializer),
+            causationManager,
+            serviceProvider);
     }
 
     /// <inheritdoc/>
-    public EventStoreName EventStoreName { get; }
+    public EventStoreName Name { get; }
 
     /// <inheritdoc/>
     public EventStoreNamespaceName Namespace { get; }
@@ -108,13 +142,16 @@ public class EventStore : IEventStore
     public IChronicleConnection Connection { get; }
 
     /// <inheritdoc/>
+    public IAggregateRootFactory AggregateRootFactory { get; }
+
+    /// <inheritdoc/>
     public IEventTypes EventTypes { get; }
 
     /// <inheritdoc/>
     public IEventLog EventLog { get; }
 
     /// <inheritdoc/>
-    public IObservers Observers { get; }
+    public IReactions Reactions { get; }
 
     /// <inheritdoc/>
     public IReducers Reducers { get; }
@@ -123,23 +160,31 @@ public class EventStore : IEventStore
     public IProjections Projections { get; }
 
     /// <inheritdoc/>
-    public Task DiscoverAll()
+    public async Task DiscoverAll()
     {
         _logger.DiscoverAllArtifacts();
-        return Task.WhenAll(
-            EventTypes.Discover(),
-            Observers.Discover(),
+
+        // We need to discover all event types first, as they are used by the other artifacts
+        await EventTypes.Discover();
+
+        await Task.WhenAll(
+            Reactions.Discover(),
             Reducers.Discover(),
             Projections.Discover());
     }
 
     /// <inheritdoc/>
-    public Task RegisterAll()
+    public async Task RegisterAll()
     {
         _logger.RegisterAllArtifacts();
-        return Task.WhenAll(
-            EventTypes.Register(),
-            Observers.Register());
+
+        // We need to register event types first, as they are used by the other artifacts
+        await EventTypes.Register();
+
+        await Task.WhenAll(
+            Reactions.Register(),
+            Reducers.Register(),
+            Projections.Register());
     }
 
     /// <inheritdoc/>

@@ -8,7 +8,6 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Jobs;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 

@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Grains;
 public static class WellKnownGrainStorageProviders
 {
     /// <summary>
+    /// The name of the storage provider used for namespaces.
+    /// </summary>
+    public const string Namespaces = "namespaces";
+
+    /// <summary>
     /// The name of the storage provider used for event sequences.
     /// </summary>
     public const string EventSequences = "event-sequences";
@@ -37,4 +42,24 @@ public static class WellKnownGrainStorageProviders
     /// The name of the storage provider used for recommendations.
     /// </summary>
     public const string Recommendations = "recommendations";
+
+    /// <summary>
+    /// The name of the storage provider used for projections.
+    /// </summary>
+    public const string Projections = "projections";
+
+    /// <summary>
+    /// The name of the storage provider used for projections manager.
+    /// </summary>
+    public const string ProjectionsManager = "projections-manager";
+
+    /// <summary>
+    /// The name of the storage provider used for reducers.
+    /// </summary>
+    public const string Reducers = "reducers";
+
+    /// <summary>
+    /// The name of the storage provider used for reducers manager.
+    /// </summary>
+    public const string ReducersManager = "reducers-manager";
 }

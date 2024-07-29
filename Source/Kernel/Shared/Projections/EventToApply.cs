@@ -7,7 +7,7 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents the payload for an event when used in applying to an immediate projection.
+/// Represents the payload for an event when used in applying to an projection.
 /// </summary>
 /// <param name="EventType">The <see cref="EventType">type of event</see> to append.</param>
 /// <param name="Content">The JSON payload of the event.</param>

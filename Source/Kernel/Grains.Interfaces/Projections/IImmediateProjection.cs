@@ -6,30 +6,30 @@ using Cratis.Chronicle.Projections;
 namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
-/// Defines an immediate projection.
+/// Defines an projection.
 /// </summary>
 /// <remarks>
 /// The compound identity is based on the actual event source id.
 /// This ensures that we can run multiple of these in a cluster for a specific type without
 /// having to wait for turn if its not the same identifier.
 /// </remarks>
-public interface IImmediateProjection : IGrainWithGuidCompoundKey
+public interface IImmediateProjection : IGrainWithStringKey
 {
     /// <summary>
     /// Get the model instance.
     /// </summary>
-    /// <returns>The <see cref="ImmediateProjectionResult"/>.</returns>
-    Task<ImmediateProjectionResult> GetModelInstance();
+    /// <returns>The <see cref="ProjectionResult"/>.</returns>
+    Task<ProjectionResult> GetModelInstance();
 
     /// <summary>
     /// Get the current model instance with additional events applied. Ignoring any new events from the event store.
     /// </summary>
     /// <param name="events">Collection of events to apply.</param>
-    /// <returns>The <see cref="ImmediateProjectionResult"/>.</returns>
-    Task<ImmediateProjectionResult> GetCurrentModelInstanceWithAdditionalEventsApplied(IEnumerable<EventToApply> events);
+    /// <returns>The <see cref="ProjectionResult"/>.</returns>
+    Task<ProjectionResult> GetCurrentModelInstanceWithAdditionalEventsApplied(IEnumerable<EventToApply> events);
 
     /// <summary>
-    /// Dehydrate the immediate projection instance.
+    /// Dehydrate the projection instance.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Dehydrate();

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Observation;
-using Orleans.Runtime;
 using Orleans.Runtime.Placement;
 
 namespace Cratis.Chronicle.Grains.Observation.Placement;
@@ -15,8 +14,7 @@ public class ConnectedObserverPlacementDirector : IPlacementDirector
     /// <inheritdoc/>
     public Task<SiloAddress> OnAddActivation(PlacementStrategy strategy, PlacementTarget target, IPlacementContext context)
     {
-        target.GrainIdentity.GetGuidKey(out var key);
-        var connectedObserverKey = ObserverSubscriberKey.Parse(key!);
+        var connectedObserverKey = ObserverSubscriberKey.Parse(target.GrainIdentity.Key.ToString()!);
         var targetSiloAddress = SiloAddress.FromParsableString(connectedObserverKey.SiloAddress);
         return Task.FromResult(targetSiloAddress);
     }

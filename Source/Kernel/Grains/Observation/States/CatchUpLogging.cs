@@ -13,16 +13,16 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 
 internal static partial class CatchUpLogMessages
 {
-    [LoggerMessage(0, LogLevel.Trace, "Entering catchup state")]
+    [LoggerMessage(LogLevel.Trace, "Entering catchup state")]
     internal static partial void Entering(this ILogger<CatchUp> logger);
 
-    [LoggerMessage(1, LogLevel.Trace, "Existing catch up job running, will let it finish")]
+    [LoggerMessage(LogLevel.Trace, "Existing catch up job running, will let it finish")]
     internal static partial void FinishingExistingCatchUpJob(this ILogger<CatchUp> logger);
 
-    [LoggerMessage(2, LogLevel.Trace, "Existing catch up job found - resuming")]
+    [LoggerMessage(LogLevel.Trace, "Existing catch up job found - resuming")]
     internal static partial void ResumingCatchUpJob(this ILogger<CatchUp> logger);
 
-    [LoggerMessage(3, LogLevel.Trace, "Start new catch up job from event sequence number {EventSequenceNumber}")]
+    [LoggerMessage(LogLevel.Trace, "Start new catch up job from event sequence number {EventSequenceNumber}")]
     internal static partial void StartCatchUpJob(this ILogger<CatchUp> logger, EventSequenceNumber eventSequenceNumber);
 }
 

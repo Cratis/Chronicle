@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
 
 ####################################
-# Cratis Server
+# Cratis Chronicle Server
 # Build runtime image.
 ####################################
-FROM cratis/cratis-base
+FROM cratis/base
 ARG VERSION
 ARG ENTRYPOINT=entrypoint.sh
 

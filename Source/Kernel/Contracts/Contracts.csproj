@@ -4,7 +4,7 @@
         <TargetFramework>net6.0</TargetFramework>
         <AssemblyName>Cratis.Chronicle.Contracts</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Contracts</RootNamespace>
-        <NoWarn>$(NoWarn);CS8618</NoWarn>
+        <NoWarn>$(NoWarn);CS8618;PBN2008</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.MongoDB;
 using MongoDB.Driver;
 using StorageConfiguration = Cratis.Chronicle.Configuration.Storage;
 
@@ -22,7 +21,7 @@ public class Database : IDatabase
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
     /// </summary>
-    /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
+    /// <param name="clientManager"><see cref="IMongoDBClientManager"/> for working with MongoDB.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public Database(
         IMongoDBClientManager clientManager,
@@ -67,8 +66,8 @@ public class Database : IDatabase
             return database;
         }
 
-        // TODO: This should be a configurable convention.
-        var databaseName = $"{eventStore}-{@namespace}-rm";
+        // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
+        var databaseName = (@namespace == EventStoreNamespaceName.Default) ? $"{eventStore}" : $"{eventStore}+{@namespace}";
         var urlBuilder = new MongoUrlBuilder(_configuration.ConnectionDetails.ToString())
         {
             DatabaseName = databaseName

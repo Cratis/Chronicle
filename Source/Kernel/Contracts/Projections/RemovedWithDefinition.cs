@@ -16,5 +16,5 @@ public class RemovedWithDefinition
     /// Gets or sets the event that is causing the removal.
     /// </summary>
     [ProtoMember(1)]
-    public EventType Event { get; set; }
+    public EventType Event { get; set; }
 }

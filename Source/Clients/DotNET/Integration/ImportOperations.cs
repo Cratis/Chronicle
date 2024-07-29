@@ -107,10 +107,9 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
 
         if (!context.Events.Any()) return;
 
-        var eventsToAppend = context.Events.Select(_ => new EventAndValidFrom(_.Event, _.ValidFrom)).ToArray();
-        await _eventLog.AppendMany(eventSourceId!, eventsToAppend);
+        await _eventLog.AppendMany(eventSourceId!, context.Events);
 
-        var publicEventsToAppend = eventsToAppend.Where(_ => _.Event.GetType().GetCustomAttribute<EventTypeAttribute>()?.IsPublic ?? false).ToArray();
+        var publicEventsToAppend = context.Events.Where(_ => _.GetType().GetCustomAttribute<EventTypeAttribute>()?.IsPublic ?? false).ToArray();
 
         if (publicEventsToAppend.Length == 0) return;
     }

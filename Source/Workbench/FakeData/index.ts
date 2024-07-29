@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Constructor } from 'Infrastructure';
+import { Constructor } from '@cratis/fundamentals';
 import { NullObservableQueryConnection } from './NullObservableQueryConnection';
-import { ObservableQuerySubscription, OnNextResult, QueryResult } from 'Infrastructure/queries';
+import { ObservableQuerySubscription, OnNextResult, QueryResult } from '@cratis/applications/queries';
 import { container } from 'tsyringe';
-import { AllObservers } from 'API/Observation/AllObservers';
-import { ObserverInformation } from 'API/Cratis/Kernel/Contracts/Observation/ObserverInformation';
-import { AllNamespaces, Namespace } from 'API/Namespaces';
+import { AllObservers } from 'Api/Observation/AllObservers';
+import { ObserverInformation } from 'Api/Contracts/Observation/ObserverInformation';
+import { AllNamespaces, Namespace } from 'Api/Namespaces';
 import observers from './Observers.json';
 import namespaces from './Namespaces.json';
 
@@ -25,7 +25,7 @@ function registerFakeQuery<TDataType>(queryType: Constructor, itemConstructor: C
         "exceptionStackTrace": ""
     };
 
-    query.subscribe = (callback: OnNextResult<QueryResult<TDataType>>, args?: any | undefined) => {
+    query.subscribe = (callback: OnNextResult<QueryResult<TDataType>>, _: any | undefined) => {
         const result = new QueryResult<TDataType>(response, itemConstructor, true);
         callback(result);
         return new ObservableQuerySubscription(new NullObservableQueryConnection());

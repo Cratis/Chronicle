@@ -2,7 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.EventTypes;
-using Cratis.Chronicle.Storage.Identities;
+using Cratis.Chronicle.Storage.Namespaces;
+using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
 
 namespace Cratis.Chronicle.Storage;
@@ -18,9 +19,9 @@ public interface IEventStoreStorage
     EventStoreName EventStore { get; }
 
     /// <summary>
-    /// Gets the <see cref="IIdentityStorage"/> for the event store.
+    /// Gets the <see cref="INamespaceStorage"/> for the event store.
     /// </summary>
-    IIdentityStorage Identities { get; }
+    INamespaceStorage Namespaces { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventTypesStorage"/> for the event store.
@@ -28,14 +29,14 @@ public interface IEventStoreStorage
     IEventTypesStorage EventTypes { get; }
 
     /// <summary>
+    /// Gets the <see cref="IReducerDefinitionsStorage"/> for the event store.
+    /// </summary>
+    IReducerDefinitionsStorage Reducers { get; }
+
+    /// <summary>
     /// Gets the <see cref="IProjectionDefinitionsStorage"/> for the event store.
     /// </summary>
     IProjectionDefinitionsStorage Projections { get; }
-
-    /// <summary>
-    /// Gets the <see cref="IProjectionPipelineDefinitionsStorage"/> for the event store.
-    /// </summary>
-    IProjectionPipelineDefinitionsStorage ProjectionPipelines { get; }
 
     /// <summary>
     /// Get a specific <see cref="IEventStoreNamespaceStorage"/> for a <see cref="EventStoreNamespaceName"/>.

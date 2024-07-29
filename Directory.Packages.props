@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>12.1.2</ApplicationModel>
+    <ApplicationModel>12.1.5</ApplicationModel>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
@@ -12,12 +12,14 @@
     <PackageVersion Include="Cratis.Applications.Orleans" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Serilog" Version="$(ApplicationModel)" />
+    <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="$(ApplicationModel)" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageVersion Include="castle.core" Version="5.1.1" />
     <PackageVersion Include="docfx.console" Version="2.59.3" />
     <PackageVersion Include="humanizer" Version="2.14.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
@@ -88,6 +90,7 @@
     <PackageVersion Include="xunit" Version="2.9.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="moq" Version="4.20.70" />
+    <PackageVersion Include="NSubstitute" Version="5.1.0" />
     <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.10.0" />
   </ItemGroup>
 </Project>

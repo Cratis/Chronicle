@@ -7,29 +7,32 @@ using Cratis.Chronicle.Reducers;
 namespace Cratis.Chronicle.Aggregates;
 
 /// <summary>
-/// Represents an implementation of <see cref="IAggregateRootStateProvider"/> using a reducer.
+/// Represents an implementation of <see cref="IAggregateRootStateProvider{TState}"/> using a reducer.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ReducerAggregateRootStateProvider"/> class.
+/// Initializes a new instance of the <see cref="ReducerAggregateRootStateProvider{TState}"/> class.
 /// </remarks>
-/// <param name="aggregateRoot">The <see cref="AggregateRoot"/> the state is for.</param>
+/// <typeparam name="TState">Type of state for the aggregate root.</typeparam>
+/// <param name="aggregateRootContext">The <see cref="IAggregateRootContext"/> the state is for.</param>
 /// <param name="reducer"><see cref="IReducerHandler"/> to use for creating the state.</param>
-public class ReducerAggregateRootStateProvider(AggregateRoot aggregateRoot, IReducerHandler reducer) : IAggregateRootStateProvider
+public class ReducerAggregateRootStateProvider<TState>(
+    IAggregateRootContext aggregateRootContext,
+    IReducerHandler reducer) : IAggregateRootStateProvider<TState>
 {
     /// <inheritdoc/>
-    public async Task<object?> Provide()
+    public async Task<TState?> Provide()
     {
-        var events = await aggregateRoot.EventSequence.GetForEventSourceIdAndEventTypes(aggregateRoot._eventSourceId, aggregateRoot.EventHandlers.EventTypes);
+        var events = await aggregateRootContext.EventSequence.GetForEventSourceIdAndEventTypes(aggregateRootContext.EventSourceId, reducer.EventTypes);
         var result = await reducer.OnNext(events, null);
-        return result.State;
+        return (TState?)result.ModelState;
     }
 
     /// <inheritdoc/>
-    public async Task<object?> Update(object? initialState, IEnumerable<object> events)
+    public async Task<TState?> Update(TState? initialState, IEnumerable<object> events)
     {
-        var eventsWithContext = events.Select(_ => new EventAndContext(_, EventContext.EmptyWithEventSourceId(aggregateRoot._eventSourceId)));
+        var eventsWithContext = events.Select(_ => new EventAndContext(_, EventContext.EmptyWithEventSourceId(aggregateRootContext.EventSourceId)));
         var result = await reducer.Invoker.Invoke(eventsWithContext, initialState);
-        return result.State;
+        return (TState?)result.ModelState;
     }
 
     /// <inheritdoc/>

@@ -1,10 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Reducers;
 
 namespace Cratis.Chronicle;
@@ -15,9 +16,9 @@ namespace Cratis.Chronicle;
 public interface IEventStore
 {
     /// <summary>
-    /// Gets the <see cref="EventStoreName"/> for the event store.
+    /// Gets the <see cref="Name"/> for the event store.
     /// </summary>
-    EventStoreName EventStoreName { get; }
+    EventStoreName Name { get; }
 
     /// <summary>
     /// Gets the namespace for the event store.
@@ -30,6 +31,11 @@ public interface IEventStore
     IChronicleConnection Connection { get; }
 
     /// <summary>
+    /// Gets the <see cref="IAggregateRootFactory"/>.
+    /// </summary>
+    IAggregateRootFactory AggregateRootFactory { get; }
+
+    /// <summary>
     /// Gets the <see cref="IEventTypes"/> for the event store.
     /// </summary>
     IEventTypes EventTypes { get; }
@@ -40,9 +46,9 @@ public interface IEventStore
     IEventLog EventLog { get; }
 
     /// <summary>
-    /// Gets the <see cref="IObservers"/> for the event store.
+    /// Gets the <see cref="IReactions"/> for the event store.
     /// </summary>
-    IObservers Observers { get; }
+    IReactions Reactions { get; }
 
     /// <summary>
     /// Gets the <see cref="IReducers"/> for the event store.

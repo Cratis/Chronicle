@@ -12,8 +12,8 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryType>git</RepositoryType>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
-        <RepositoryUrl>https://github.com/Cratis/Cratis</RepositoryUrl>
-        <PackageProjectUrl>https://github.com/Cratis/Cratis</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/Cratis/Chronicle</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/Cratis/Chronicle</PackageProjectUrl>
 
         <GenerateAssemblyTitleAttribute>true</GenerateAssemblyTitleAttribute>
         <GenerateAssemblyDescriptionAttribute>true</GenerateAssemblyDescriptionAttribute>
@@ -56,4 +56,15 @@
         <None Include="$(MSBuildThisFileDirectory)/../logo.png" Pack="true" PackagePath="/"/>
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalAssemblyInfo.cs"/>
     </ItemGroup>
+
+    <ItemGroup Condition="'$(IsTestProject)'=='true'">
+        <PackageReference Include="Cratis.Specifications.XUnit" />
+        <PackageReference Include="moq" />
+        <PackageReference Include="NSubstitute" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.Specs.cs"/>
+    </ItemGroup>
+
 </Project>

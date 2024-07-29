@@ -22,11 +22,11 @@ public static class EventObservationStateConverters
     };
 
     /// <summary>
-    /// Convert to kernel version of <see cref="EventObservationState"/>.
+    /// Convert to Chronicle version of <see cref="EventObservationState"/>.
     /// </summary>
     /// <param name="state"><see cref="Contracts.Events.EventObservationState"/> to convert.</param>
     /// <returns>Converted <see cref="EventObservationState"/>.</returns>
-    public static EventObservationState ToKernel(this Contracts.Events.EventObservationState state) => state switch
+    public static EventObservationState ToChronicle(this Contracts.Events.EventObservationState state) => state switch
     {
         Contracts.Events.EventObservationState.None => EventObservationState.None,
         Contracts.Events.EventObservationState.Initial => EventObservationState.Initial,
