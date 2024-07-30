@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.XUnit.Auditing;
 /// <summary>
 /// Represents a null implementation of <see cref="ICausationManager"/>.
 /// </summary>
-public class NullCausationManager : ICausationManager
+public class CausationManagerForTesting : ICausationManager
 {
     static readonly Causation _root = new(DateTimeOffset.UtcNow, CausationType.Unknown, ImmutableDictionary<string, string>.Empty);
 

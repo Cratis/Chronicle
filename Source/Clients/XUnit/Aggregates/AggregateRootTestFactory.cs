@@ -24,7 +24,7 @@ public static class AggregateRootTestFactory
         where TAggregateRoot : AggregateRoot
     {
         var aggregateRoot = (Activator.CreateInstance(typeof(TAggregateRoot), dependencies) as TAggregateRoot)!;
-        var eventSequence = new NullEventSequence();
+        var eventSequence = new EventSequenceForTesting();
 
         var aggregateRootContext = new AggregateRootContext(
             CorrelationId.New(),
@@ -35,7 +35,7 @@ public static class AggregateRootTestFactory
             false);
 
         var mutator = new AggregateRootMutatorForTesting();
-        var mutation = new AggregateRootMutation(aggregateRootContext, mutator, eventSequence, new NullCausationManager());
+        var mutation = new AggregateRootMutation(aggregateRootContext, mutator, eventSequence, new CausationManagerForTesting());
         aggregateRoot._context = aggregateRootContext;
         aggregateRoot._mutation = mutation;
         return aggregateRoot;
@@ -53,7 +53,7 @@ public static class AggregateRootTestFactory
         where TAggregateRoot : AggregateRoot<TState>
     {
         var aggregateRoot = (Activator.CreateInstance(typeof(TAggregateRoot), dependencies) as AggregateRoot<TState>)!;
-        var eventSequence = new NullEventSequence();
+        var eventSequence = new EventSequenceForTesting();
 
         var aggregateRootContext = new AggregateRootContext(
             CorrelationId.New(),
@@ -64,11 +64,10 @@ public static class AggregateRootTestFactory
             false);
 
         var mutator = new AggregateRootMutatorForTesting();
-        var mutation = new AggregateRootMutation(aggregateRootContext, mutator, eventSequence, new NullCausationManager());
+        var mutation = new AggregateRootMutation(aggregateRootContext, mutator, eventSequence, new CausationManagerForTesting());
         aggregateRoot._context = aggregateRootContext;
         aggregateRoot._mutation = mutation;
         aggregateRoot._state = new AggregateRootState<TState>();
         return aggregateRoot;
     }
-
 }

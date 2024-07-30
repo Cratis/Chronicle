@@ -41,6 +41,10 @@
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
 
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
         <ProjectReference Include="../../Kernel/Shared/Shared.csproj">
             <Aliases>Server</Aliases>
             <PrivateAssets>all</PrivateAssets>

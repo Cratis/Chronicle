@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.XUnit.Events;
 /// <summary>
 /// Represents a null implementation of <see cref="IEventSequence"/> that does nothing.
 /// </summary>
-public class NullEventSequence : IEventSequence
+public class EventSequenceForTesting : IEventSequence
 {
     /// <inheritdoc/>
     public EventSequenceId Id => EventSequenceId.Log;
