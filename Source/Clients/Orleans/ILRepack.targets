@@ -3,6 +3,7 @@
     <Import Project="$(MSBuildThisFileDirectory)../ILRepack.targets" />
 
     <ItemGroup>
-        <AssembliesToExclude Include="$(OutputPath)/Cratis.Chronicle.Setup.dll"/>
+        <DoNotInternalizeAssemblies Include="$(OutputPath)/Cratis.Chronicle.Setup.dll"/>
+        <DoNotInternalizeAssemblies Include="$(OutputPath)/Cratis.Chronicle.Storage.MongoDB.dll"/>
     </ItemGroup>
 </Project>
