@@ -37,7 +37,7 @@
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.1.1" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.65.0" />
     <PackageVersion Include="mongodb.driver" Version="2.28.0" />
-    <PackageVersion Include="OrleansTestKit" Version="8.2.0" />
+
     <PackageVersion Include="serilog" Version="4.0.1" />
     <PackageVersion Include="Serilog.AspNetCore" Version="8.0.1" />
     <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
@@ -55,6 +55,9 @@
     <PackageVersion Include="automapper" Version="13.0.1" />
     <PackageVersion Include="Azure.Data.Tables" Version="12.9.0" />
     <PackageVersion Include="FluentValidation" Version="11.9.2" />
+    <PackageVersion Include="handlebars.net" Version="2.1.6" />
+
+    <!-- Orleans -->
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
@@ -70,7 +73,10 @@
     <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
+    <PackageVersion Include="OrleansTestKit" Version="8.2.0" />
     <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
+
+    <!-- Open Telemetry -->
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.9.0" />
@@ -78,17 +84,19 @@
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.9.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.3.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.9.0" />
-    <PackageVersion Include="handlebars.net" Version="2.1.6" />
+
     <!-- Roslyn-->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.10.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.9.2" />
+
     <!-- Analysis -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" Version="4.10.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.12.4" />
     <PackageVersion Include="Meziantou.Analyzer" Version="2.0.162" />
-    <!-- Specifications -->
+
+    <!-- Testing & Specifications -->
     <PackageVersion Include="Cratis.Specifications" Version="3.0.3" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.3" />
     <PackageVersion Include="Testcontainers" Version="3.9.0" />
