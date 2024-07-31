@@ -8,7 +8,7 @@ namespace Orleans;
 public class Testing
 {
     [Fact]
-    public async Task ShouldDoStuff()
+    public async Task TestStatelessAggregate()
     {
         var silo = new TestKitSilo();
         var order = await silo.CreateAggregateRoot<StatelessOrder>(
@@ -21,6 +21,20 @@ public class Testing
                 null));
         await order.DoStuff();
         var result = await order.Commit();
+        result.ShouldBeSuccessful();
+        result.ShouldContainEvent<ItemAddedToCart>();
+    }
+
+    [Fact]
+    public async Task TestStatefulAggregate()
+    {
+        var silo = new TestKitSilo();
+        var statefulOrder = await silo.CreateAggregateRoot<Order, OrderState>(
+            "123123",
+            new OrderState(15, []));
+
+        await statefulOrder.DoStuff();
+        var result = await statefulOrder.Commit();
         result.ShouldBeSuccessful();
         result.ShouldContainEvent<ItemAddedToCart>();
     }
