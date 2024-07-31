@@ -16,13 +16,8 @@ namespace Cratis.Chronicle.Orleans.Aggregates;
 /// <summary>
 /// Represents an implementation of <see cref="IAggregateRoot"/> for Orleans.
 /// </summary>
-public class AggregateRoot : Grain, IAggregateRoot
+public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
 {
-    /// <summary>
-    /// Context of the aggregate root - accessible only to Chronicle Internally.
-    /// </summary>
-    internal IAggregateRootContext? _context;
-
     /// <summary>
     /// Mutation of the aggregate root - accessible only to Chronicle Internally.
     /// </summary>
@@ -30,10 +25,13 @@ public class AggregateRoot : Grain, IAggregateRoot
 
     StatelessAggregateRootMutator? _mutator;
 
+    /// <inheritdoc/>
+    public IAggregateRootContext? Context { get; set; }
+
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => _context?.HasEvents ?? true;
+    protected bool IsNew => Context?.HasEvents ?? true;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -43,7 +41,7 @@ public class AggregateRoot : Grain, IAggregateRoot
         var eventSerializer = ServiceProvider.GetRequiredService<IEventSerializer>();
 
         // TODO: Fix CorrelationId to be a real value from the current context
-        _context = new AggregateRootContext(
+        Context = new AggregateRootContext(
             CorrelationId.New(),
             this.GetPrimaryKeyString(),
             eventLog,
@@ -54,11 +52,11 @@ public class AggregateRoot : Grain, IAggregateRoot
         var eventHandlers = eventHandlersFactory.GetFor(this);
 
         _mutator = new StatelessAggregateRootMutator(
-            _context,
+            Context,
             eventStore,
             eventSerializer,
             eventHandlers);
-        _mutation = new AggregateRootMutation(_context, _mutator, eventLog, ServiceProvider.GetRequiredService<ICausationManager>());
+        _mutation = new AggregateRootMutation(Context, _mutator, eventLog, ServiceProvider.GetRequiredService<ICausationManager>());
 
         await _mutator.Rehydrate();
 
@@ -89,13 +87,8 @@ public class AggregateRoot : Grain, IAggregateRoot
 /// Represents an implementation of <see cref="IAggregateRoot"/> for stateful Orleans based Grains.
 /// </summary>
 /// <typeparam name="TState">Type of state for the grain.</typeparam>
-public class AggregateRoot<TState> : Grain, IAggregateRoot
+public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContextHolder
 {
-    /// <summary>
-    /// Context of the aggregate root - accessible only to Chronicle Internally.
-    /// </summary>
-    internal IAggregateRootContext? _context;
-
     /// <summary>
     /// Mutation of the aggregate root - accessible only to Chronicle Internally.
     /// </summary>
@@ -108,6 +101,9 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot
 
     StatefulAggregateRootMutator<TState>? _mutator;
 
+    /// <inheritdoc/>
+    public IAggregateRootContext? Context { get; set; }
+
     /// <summary>
     /// Gets the current state of the aggregate root.
     /// </summary>
@@ -116,7 +112,7 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => _context?.HasEvents ?? true;
+    protected bool IsNew => Context?.HasEvents ?? true;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -124,7 +120,7 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot
         var eventLog = ServiceProvider.GetRequiredService<IEventLog>();
 
         // TODO: Fix CorrelationId to be a real value from the current context
-        _context = new AggregateRootContext(
+        Context = new AggregateRootContext(
             CorrelationId.New(),
             this.GetPrimaryKeyString(),
             eventLog,
@@ -132,10 +128,10 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot
             true);
 
         var stateProviders = ServiceProvider.GetRequiredService<IAggregateRootStateProviders>();
-        var stateProvider = await stateProviders.CreateFor<TState>(_context);
+        var stateProvider = await stateProviders.CreateFor<TState>(Context);
         _state = new AggregateRootState<TState>();
         _mutator = new StatefulAggregateRootMutator<TState>(_state, stateProvider);
-        _mutation = new AggregateRootMutation(_context, _mutator, eventLog, ServiceProvider.GetRequiredService<ICausationManager>());
+        _mutation = new AggregateRootMutation(Context, _mutator, eventLog, ServiceProvider.GetRequiredService<ICausationManager>());
 
         await _mutator.Rehydrate();
 

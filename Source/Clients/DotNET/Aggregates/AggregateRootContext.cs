@@ -36,7 +36,7 @@ public class AggregateRootContext(
     public IAggregateRoot AggregateRoot { get; } = aggregateRoot;
 
     /// <inheritdoc/>
-    public bool AutoCommit { get; } = autoCommit;
+    public bool AutoCommit { get; internal set; } = autoCommit;
 
     /// <inheritdoc/>
     public bool HasEvents { get; internal set; } = hasEvents;

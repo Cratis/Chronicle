@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -22,18 +23,28 @@ public static class AggregateRootTestSiloExtensions
     /// <param name="silo"><see cref="TestKitSilo"/> to create the <see cref="AggregateRoot"/> in.</param>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to create the <see cref="AggregateRoot"/> with.</param>
     /// <returns>An instance of the <see cref="AggregateRoot"/> created.</returns>
-    public static async Task<TAggregateRoot> Create<TAggregateRoot>(this TestKitSilo silo, EventSourceId eventSourceId)
+    public static async Task<TAggregateRoot> CreateAggregateRoot<TAggregateRoot>(this TestKitSilo silo, EventSourceId eventSourceId)
         where TAggregateRoot : IAggregateRoot, IGrainBase, IGrainWithStringKey
     {
         var eventSerializer = new NullEventSerializerForTesting();
         var eventStore = new EventStoreForTesting();
         var eventLog = new EventLogForTesting();
         var causationManager = new CausationManagerForTesting();
+        var aggregateRootStateProviders = new AggregateRootStateProvidersForTesting();
         silo.AddService<IEventSerializer>(eventSerializer);
         silo.AddService<IEventStore>(eventStore);
         silo.AddService<IEventLog>(eventLog);
+        silo.AddService<IAggregateRootStateProviders>(aggregateRootStateProviders);
         silo.AddService<ICausationManager>(causationManager);
 
-        return await silo.CreateGrainAsync<TAggregateRoot>(eventSourceId);
+        var aggregateRoot = await silo.CreateGrainAsync<TAggregateRoot>(eventSourceId);
+
+        if (aggregateRoot is IAggregateRootContextHolder contextHolder &&
+            contextHolder.Context is AggregateRootContext context)
+        {
+            context.AutoCommit = false;
+        }
+
+        return aggregateRoot;
     }
 }
