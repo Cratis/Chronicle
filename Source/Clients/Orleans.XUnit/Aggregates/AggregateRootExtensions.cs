@@ -18,7 +18,6 @@ public static class AggregateRootExtensions
     /// <typeparam name="TState">Type of state to set.</typeparam>
     /// <returns>The aggregate root for continuation.</returns>
     public static AggregateRoot<TState> SetState<TState>(this AggregateRoot<TState> aggregateRoot, TState state)
-        where TState : class
     {
         aggregateRoot._state?.SetState(state);
         return aggregateRoot;
@@ -41,7 +40,6 @@ public static class AggregateRootExtensions
     /// <typeparam name="TState">Type of state to set.</typeparam>
     /// <returns>A collection of the actual events applied.</returns>
     public static IImmutableList<object> GetUncommittedEvents<TState>(this AggregateRoot<TState> aggregateRoot)
-        where TState : class
     {
         return aggregateRoot._mutation?.UncommittedEvents.ToImmutableList() ?? [];
     }

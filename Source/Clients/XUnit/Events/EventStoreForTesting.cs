@@ -14,7 +14,15 @@ namespace Cratis.Chronicle.XUnit.Events;
 /// </summary>
 public class EventStoreForTesting : IEventStore
 {
-    readonly EventSequenceForTesting _nullEventSequence = new();
+    readonly EventSequenceForTesting _defaultEventSequence = new(Defaults.EventTypes);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventStoreForTesting"/> class.
+    /// </summary>
+    public EventStoreForTesting()
+    {
+        Connection = new ChronicleConnectionForTesting();
+    }
 
     /// <inheritdoc/>
     public EventStoreName Name => nameof(EventStoreForTesting);
@@ -23,10 +31,10 @@ public class EventStoreForTesting : IEventStore
     public EventStoreNamespaceName Namespace => "Default";
 
     /// <inheritdoc/>
-    public IChronicleConnection Connection => throw new NotImplementedException();
+    public IChronicleConnection Connection { get; }
 
     /// <inheritdoc/>
-    public Chronicle.Aggregates.IAggregateRootFactory AggregateRootFactory => throw new NotImplementedException();
+    public Aggregates.IAggregateRootFactory AggregateRootFactory => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public IEventTypes EventTypes => throw new NotImplementedException();
@@ -47,7 +55,7 @@ public class EventStoreForTesting : IEventStore
     public Task DiscoverAll() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public IEventSequence GetEventSequence(EventSequenceId id) => _nullEventSequence;
+    public IEventSequence GetEventSequence(EventSequenceId id) => _defaultEventSequence;
 
     /// <inheritdoc/>
     public Task RegisterAll() => Task.CompletedTask;

@@ -11,7 +11,14 @@ public class Testing
     public async Task ShouldDoStuff()
     {
         var silo = new TestKitSilo();
-        var order = await silo.CreateAggregateRoot<Order>("123123");
+        var order = await silo.CreateAggregateRoot<StatelessOrder>(
+            "123123",
+            new ItemAddedToCart(
+                new(Guid.NewGuid()),
+                new(Guid.NewGuid()),
+                1,
+                null,
+                null));
         await order.DoStuff();
         var result = await order.Commit();
         result.ShouldBeSuccessful();
