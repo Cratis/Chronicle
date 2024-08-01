@@ -61,5 +61,6 @@
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Cratis.Applications.Orleans" />
+        <PackageReference Include="NJsonSchema" />
     </ItemGroup>
 </Project>
