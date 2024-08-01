@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Compliance.GDPR;
 
-namespace Cratis.Chronicle.PersonalInformation;
+namespace Cratis.Chronicle.Concepts.PersonalInformation;
 
 /// <summary>
 /// Represents the concept of an first name of a person.

@@ -8,7 +8,7 @@
 
     <ItemGroup>
         <InputAssemblies Include="$(TargetPath)"/>
-        <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle.*.dll" Exclude="@(AssembliesToExclude)"/>
+        <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle*.dll" Exclude="@(AssembliesToExclude)"/>
         <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
     </ItemGroup>
 
@@ -21,6 +21,6 @@
         OutputFile="$(TargetPath)"
         Parallel="false"
         LibraryPath="@(LibraryPath)"
-        TargetKind="SameAsPrimaryAssembly" />
+        TargetKind="SameAsPrimaryAssembly"/>
   </Target>
 </Project>

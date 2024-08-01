@@ -4,10 +4,8 @@
 
 // eslint-disable-next-line header/header
 export * from './ReplayPartition';
-export * from './FailedPartition';
 export * from './GetObservers';
 export * from './Replay';
 export * from './AllObservers';
-export * from './FailedPartitionAttempt';
 export * from './RetryPartition';
 export * from './AllFailedPartitions';

@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Projections.Definitions;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;

@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Chronicle.Models;
-using Cratis.Chronicle.Sinks;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Types;
 
 namespace Cratis.Chronicle.Storage.Sinks;

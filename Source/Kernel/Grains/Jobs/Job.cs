@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
-using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Reflection;

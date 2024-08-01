@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Concepts.Events;
 
-namespace Cratis.Chronicle.Observation.Replaying;
+namespace Cratis.Chronicle.Concepts.Observation.Replaying;
 
 /// <summary>
 /// Represents a reason for a replay candidate when event types have changed.

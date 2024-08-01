@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Models;
-using Cratis.Chronicle.Projections.Definitions;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Projections.Expressions.Keys;

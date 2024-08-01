@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Concepts.EventSequences;
 
-namespace Cratis.Chronicle.Events.EventSequences;
+namespace Cratis.Chronicle.Concepts.Events.EventSequences;
 
 /// <summary>
 /// The event that occurs when a collection of events are redacted based on their <see cref="EventSourceId"/>.

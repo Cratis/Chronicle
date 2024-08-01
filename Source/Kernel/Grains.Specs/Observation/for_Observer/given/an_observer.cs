@@ -3,10 +3,11 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Json;

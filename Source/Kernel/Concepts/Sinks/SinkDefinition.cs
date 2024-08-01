@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Sinks;
+namespace Cratis.Chronicle.Concepts.Sinks;
 
 /// <summary>
 /// Represents the definition of where to store results from a projection.

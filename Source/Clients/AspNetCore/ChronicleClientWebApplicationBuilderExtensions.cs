@@ -11,7 +11,7 @@ namespace Microsoft.AspNetCore.Builder;
 /// <summary>
 /// Extensions for using Cratis.Chronicle with a <see cref="WebApplicationBuilder"/>.
 /// </summary>
-public static class WebApplicationBuilderExtensions
+public static class ChronicleClientWebApplicationBuilderExtensions
 {
     /// <summary>
     /// Configures the usage of Cratis for the app.

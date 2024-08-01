@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.Definitions;
+namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 
 /// <summary>
 /// Converter methods for <see cref="JoinDefinition"/>.

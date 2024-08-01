@@ -28,7 +28,7 @@ namespace Orleans.Hosting;
 /// <summary>
 /// Extensions for <see cref="ISiloBuilder"/> to use with current silo.
 /// </summary>
-public static class SiloBuilderExtensions
+public static class ChronicleClientSiloBuilderExtensions
 {
     /// <summary>
     /// Gets the default section path for the Chronicle configuration.

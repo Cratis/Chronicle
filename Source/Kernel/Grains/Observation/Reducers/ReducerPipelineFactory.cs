@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Models;
-using Cratis.Chronicle.Observation.Reducers;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Storage;
 using NJsonSchema;
 

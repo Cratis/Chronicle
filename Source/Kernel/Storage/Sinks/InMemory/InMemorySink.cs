@@ -4,13 +4,13 @@
 using System.Dynamic;
 using System.Text;
 using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Dynamic;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Sinks;
 using Cratis.Json;
 using Cratis.Reflection;
 using Cratis.Types;

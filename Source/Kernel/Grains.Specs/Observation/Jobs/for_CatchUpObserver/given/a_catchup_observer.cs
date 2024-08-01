@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Keys;
 using Orleans.Core;

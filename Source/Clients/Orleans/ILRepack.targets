@@ -3,7 +3,10 @@
     <Import Project="$(MSBuildThisFileDirectory)../ILRepack.targets" />
 
     <ItemGroup>
-        <DoNotInternalizeAssemblies Include="$(OutputPath)/Cratis.Chronicle.Setup.dll"/>
-        <DoNotInternalizeAssemblies Include="$(OutputPath)/Cratis.Chronicle.Storage.MongoDB.dll"/>
+        <DoNotInternalizeAssemblies Include="Cratis.Chronicle"/>
+        <DoNotInternalizeAssemblies Include="Cratis.Chronicle.AspNetCore"/>
+        <DoNotInternalizeAssemblies Include="Cratis.Chronicle.Grains"/>
+        <DoNotInternalizeAssemblies Include="Cratis.Chronicle.Setup"/>
+        <DoNotInternalizeAssemblies Include="Cratis.Chronicle.Storage.MongoDB"/>
     </ItemGroup>
 </Project>

@@ -3,14 +3,15 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Dynamic;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;

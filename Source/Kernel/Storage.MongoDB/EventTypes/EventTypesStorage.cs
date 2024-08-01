@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Chronicle;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.MongoDB;

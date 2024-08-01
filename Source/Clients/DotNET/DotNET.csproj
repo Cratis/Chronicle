@@ -14,13 +14,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+        <!-- <PackageReference Include="ILRepack.Lib.MSBuild.Task">
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
           <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
+        </PackageReference> -->
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="automapper" />
-        <PackageReference Include="Azure.Data.Tables" />
         <PackageReference Include="FluentValidation" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />

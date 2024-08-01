@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Recommendations;
-using Cratis.Chronicle.Jobs;
 
 namespace Cratis.Chronicle.Grains.Observation.States;
 

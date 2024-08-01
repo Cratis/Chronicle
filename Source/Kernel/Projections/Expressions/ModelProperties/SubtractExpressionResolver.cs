@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using System.Text.RegularExpressions;
-using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
 using NJsonSchema;

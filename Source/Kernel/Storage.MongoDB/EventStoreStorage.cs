@@ -4,8 +4,9 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
-using Cratis.Chronicle.Observation.Reducers.Json;
-using Cratis.Chronicle.Projections.Json;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
+using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.MongoDB.Namespaces;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;

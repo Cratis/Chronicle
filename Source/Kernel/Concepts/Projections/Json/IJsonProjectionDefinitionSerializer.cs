@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Projections.Definitions;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 
-namespace Cratis.Chronicle.Projections.Json;
+namespace Cratis.Chronicle.Concepts.Projections.Json;
 
 /// <summary>
 /// Defines a parser for JSON definition of a projection.

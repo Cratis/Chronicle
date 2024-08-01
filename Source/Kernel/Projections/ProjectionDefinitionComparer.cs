@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Projections.Definitions;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Projections;

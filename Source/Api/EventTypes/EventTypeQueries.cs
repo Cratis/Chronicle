@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Chronicle;
+using Cratis.Chronicle.Concepts;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Api.EventTypes;

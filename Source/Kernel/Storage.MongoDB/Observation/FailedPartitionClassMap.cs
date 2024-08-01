@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Applications.MongoDB;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Concepts.Observation;
 using MongoDB.Bson.Serialization;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation;

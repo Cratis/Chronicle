@@ -3,7 +3,7 @@
 
 using System.Text.Json.Nodes;
 
-namespace Cratis.Chronicle.Observation.Reducers.Json;
+namespace Cratis.Chronicle.Concepts.Observation.Reducers.Json;
 
 /// <summary>
 /// Defines a parser for JSON definition of a projection.

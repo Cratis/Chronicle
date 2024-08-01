@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Concepts.EventSequences;
 
-namespace Cratis.Chronicle.Observation;
+namespace Cratis.Chronicle.Concepts.Observation;
 
 /// <summary>
 /// Represents a key for an observer.

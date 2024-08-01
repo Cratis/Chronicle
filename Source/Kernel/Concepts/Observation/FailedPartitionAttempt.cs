@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Concepts.Events;
 
-namespace Cratis.Chronicle.Observation;
+namespace Cratis.Chronicle.Concepts.Observation;
 
 /// <summary>
 /// Represents the state of an attempt of a failed partition. This includes representing the initial attempt that caused it.

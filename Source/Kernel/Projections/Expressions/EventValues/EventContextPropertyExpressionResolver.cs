@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.RegularExpressions;
-using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.Expressions.EventValues;

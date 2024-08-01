@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
-using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactions;
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reactions.Clients;
-using Cratis.Chronicle.Observation;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Observation.Reactions;

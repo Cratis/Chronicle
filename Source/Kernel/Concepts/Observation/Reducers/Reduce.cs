@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Concepts.Events;
 
-namespace Cratis.Chronicle.Observation.Reducers;
+namespace Cratis.Chronicle.Concepts.Observation.Reducers;
 
 /// <summary>
 /// Represents the payload for a reduce operation.

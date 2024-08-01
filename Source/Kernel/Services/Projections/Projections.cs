@@ -1,9 +1,9 @@
 ﻿// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Projections.Definitions;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Projections;

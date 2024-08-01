@@ -3,11 +3,11 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Concepts.Auditing;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Contracts.EventSequences;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using ProtoBuf.Grpc;

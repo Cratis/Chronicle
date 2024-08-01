@@ -3,8 +3,8 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Projections;
 

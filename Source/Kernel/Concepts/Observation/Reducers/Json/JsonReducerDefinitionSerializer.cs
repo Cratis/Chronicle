@@ -6,7 +6,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Properties;
 using Cratis.Json;
 
-namespace Cratis.Chronicle.Observation.Reducers.Json;
+namespace Cratis.Chronicle.Concepts.Observation.Reducers.Json;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJsonReducerDefinitionSerializer"/>.

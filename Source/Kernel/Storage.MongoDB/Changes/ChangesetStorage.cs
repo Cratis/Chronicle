@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Changes;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections;

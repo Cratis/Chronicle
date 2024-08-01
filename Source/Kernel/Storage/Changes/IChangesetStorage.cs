@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Storage.Changes;
 

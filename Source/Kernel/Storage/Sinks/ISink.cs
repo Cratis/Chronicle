@@ -3,9 +3,9 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Sinks;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sinks;
 

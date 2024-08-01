@@ -3,8 +3,8 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Applications.MongoDB;
-using Cratis.Chronicle.Observation.Reducers;
-using Cratis.Chronicle.Observation.Reducers.Json;
+using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using MongoDB.Bson;
 using MongoDB.Driver;

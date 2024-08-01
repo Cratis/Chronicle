@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Sinks;
 
-namespace Cratis.Chronicle.Projections.Definitions;
+namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 
 /// <summary>
 /// Represents the definition of a projection.

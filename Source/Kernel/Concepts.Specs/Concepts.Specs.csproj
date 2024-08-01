@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Shared.Specs</AssemblyName>
-        <RootNamespace>Cratis</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Concepts.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Concepts</RootNamespace>
         <IsTestProject>true</IsTestProject>
     </PropertyGroup>
 

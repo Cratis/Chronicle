@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Concepts.Jobs;
 
 namespace Cratis.Chronicle.Storage.Jobs;
 

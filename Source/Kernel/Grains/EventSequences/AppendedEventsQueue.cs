@@ -3,9 +3,9 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
 

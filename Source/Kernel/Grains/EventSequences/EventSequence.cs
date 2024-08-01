@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Concepts.Auditing;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Namespaces;
-using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;

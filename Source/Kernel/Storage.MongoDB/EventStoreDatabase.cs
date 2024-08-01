@@ -3,8 +3,9 @@
 
 using System.Collections.Concurrent;
 using Cratis.Applications.MongoDB;
+using Cratis.Chronicle.Concepts;
 using MongoDB.Driver;
-using StorageConfiguration = Cratis.Chronicle.Configuration.Storage;
+using StorageConfiguration = Cratis.Chronicle.Concepts.Configuration.Storage;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 

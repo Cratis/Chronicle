@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.Chronicle.Concepts;
 using MongoDB.Driver;
-using StorageConfiguration = Cratis.Chronicle.Configuration.Storage;
+using StorageConfiguration = Cratis.Chronicle.Concepts.Configuration.Storage;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 

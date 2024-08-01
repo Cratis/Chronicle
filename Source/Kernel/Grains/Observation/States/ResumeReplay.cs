@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
-using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 

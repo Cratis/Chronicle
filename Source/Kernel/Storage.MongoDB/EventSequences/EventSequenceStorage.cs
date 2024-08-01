@@ -4,10 +4,11 @@
 using System.Collections.Immutable;
 using System.Dynamic;
 using System.Text.Json;
-using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Auditing;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;

@@ -3,7 +3,7 @@
 
 using System.Collections;
 using System.Dynamic;
-using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;

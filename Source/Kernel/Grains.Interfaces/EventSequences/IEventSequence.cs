@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Concepts.Auditing;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Identities;
 using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Grains.EventSequences;

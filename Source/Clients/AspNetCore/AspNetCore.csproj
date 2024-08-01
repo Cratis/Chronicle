@@ -9,6 +9,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj" />
+        <ProjectReference Include="../DotNET/DotNET.csproj"/>
     </ItemGroup>
 </Project>

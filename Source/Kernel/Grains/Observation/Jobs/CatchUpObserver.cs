@@ -2,9 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
@@ -68,7 +69,7 @@ public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, Cat
                     request.ObserverSubscription,
                     key,
                     request.FromEventSequenceNumber,
-                    Events.EventObservationState.None,
+                    EventObservationState.None,
                     request.EventTypes)));
         }
 

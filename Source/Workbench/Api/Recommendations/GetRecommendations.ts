@@ -5,7 +5,7 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import { RecommendationInformation } from './RecommendationInformation';
+import { RecommendationInformation } from '../Concepts/Recommendations/RecommendationInformation';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/recommendations');

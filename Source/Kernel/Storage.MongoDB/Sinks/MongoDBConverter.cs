@@ -4,8 +4,8 @@
 using System.Collections;
 using System.Dynamic;
 using System.Text;
-using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Strings;

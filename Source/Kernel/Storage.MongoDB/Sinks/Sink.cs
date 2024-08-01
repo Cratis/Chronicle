@@ -3,10 +3,10 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Models;
-using Cratis.Chronicle.Sinks;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Storage.Sinks;
 using MongoDB.Bson;
 using MongoDB.Driver;

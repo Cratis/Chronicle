@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Concepts;
 using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Storage.Compliance;

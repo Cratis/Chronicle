@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.DependencyInjection;

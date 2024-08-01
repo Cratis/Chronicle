@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Connections;
+namespace Cratis.Chronicle.Concepts.Clients;
 
 /// <summary>
 /// Represents the information related to a connected client.

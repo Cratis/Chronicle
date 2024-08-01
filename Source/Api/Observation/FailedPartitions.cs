@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Chronicle;
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Api.Observation;

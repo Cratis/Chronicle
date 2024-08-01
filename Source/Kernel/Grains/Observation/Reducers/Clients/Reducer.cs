@@ -1,14 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Concepts.Observation.Replaying;
 using Cratis.Chronicle.Grains.Clients;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Grains.Recommendations;
-using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Observation.Reducers;
-using Cratis.Chronicle.Observation.Replaying;
 using Microsoft.Extensions.Logging;
 using Orleans.Placement;
 using Orleans.Providers;

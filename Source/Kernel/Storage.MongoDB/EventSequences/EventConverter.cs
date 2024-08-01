@@ -3,7 +3,8 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
-using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 

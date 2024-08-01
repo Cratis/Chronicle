@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.Definitions;
+namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 
 /// <summary>
 /// Represents the definition for a collection of property actions to perform for all events in the projection.

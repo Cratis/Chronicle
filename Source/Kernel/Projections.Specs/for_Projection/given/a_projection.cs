@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Concepts.Models;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.for_Projection.given;

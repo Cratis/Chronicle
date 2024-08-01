@@ -4,15 +4,15 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Models;
-using Cratis.Chronicle.Observation;
 using NJsonSchema;
 using ProtoBuf.Grpc;
 

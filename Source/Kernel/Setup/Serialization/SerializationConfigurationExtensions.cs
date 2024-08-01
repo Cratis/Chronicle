@@ -3,9 +3,9 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Projections.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Json;

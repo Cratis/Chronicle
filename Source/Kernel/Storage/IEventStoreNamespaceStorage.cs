@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Identities;

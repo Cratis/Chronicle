@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 
@@ -33,7 +34,7 @@ public class ReplayObserverPartition : Job<ReplayObserverPartitionRequest, JobSt
                     request.ObserverSubscription,
                     request.Key,
                     request.FromSequenceNumber,
-                    Events.EventObservationState.Replay,
+                    EventObservationState.Replay,
                     request.EventTypes))
         }.ToImmutableList();
 

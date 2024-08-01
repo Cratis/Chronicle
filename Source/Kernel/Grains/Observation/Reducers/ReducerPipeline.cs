@@ -3,8 +3,8 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers;

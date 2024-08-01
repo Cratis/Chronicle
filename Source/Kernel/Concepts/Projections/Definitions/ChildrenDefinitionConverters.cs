@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.Definitions;
+namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 
 /// <summary>
 /// Converter methods for <see cref="ChildrenDefinition"/>.

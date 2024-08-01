@@ -27,5 +27,10 @@
     {
         "name": "DotNET Client",
         "path": "${workspaceFolder}/Source/Clients/DotNET"
+    },
+    {
+        "name": "AssemblyFixer",
+        "path": "${workspaceFolder}/Source/Clients/AssemblyFixer",
+        "outputPath": "${workspaceFolder}/Source/Clients/AssemblyFixer/bin/Debug/net8.0/AssemblyFixer.dll"
     }
 ]

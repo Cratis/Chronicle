@@ -3,12 +3,12 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Applications.MongoDB;
-using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Projections.Json;
+using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Storage.Projections;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using ProjectionDefinition = Cratis.Chronicle.Projections.Definitions.ProjectionDefinition;
+using ProjectionDefinition = Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 

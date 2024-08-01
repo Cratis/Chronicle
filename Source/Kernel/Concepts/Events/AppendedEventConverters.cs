@@ -5,7 +5,7 @@ using System.Dynamic;
 using System.Text.Json;
 using Cratis.Json;
 
-namespace Cratis.Chronicle.Events;
+namespace Cratis.Chronicle.Concepts.Events;
 
 /// <summary>
 /// Converter methods for <see cref="AppendedEvent"/>.

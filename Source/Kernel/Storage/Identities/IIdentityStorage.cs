@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Concepts.Identities;
 
 namespace Cratis.Chronicle.Storage.Identities;
 

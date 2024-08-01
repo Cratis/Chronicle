@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Projections;
 
 namespace Cratis.Chronicle.Services.Projections;
 

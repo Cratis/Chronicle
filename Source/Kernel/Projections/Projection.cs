@@ -4,8 +4,9 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections;

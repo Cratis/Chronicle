@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Concepts.Auditing;
+using Cratis.Chronicle.Concepts.Identities;
 
-namespace Cratis.Chronicle.Events.for_EventContext;
+namespace Cratis.Chronicle.Concepts.Events.for_EventContext;
 
 public class when_creating_copy_with_new_desired_state : Specification
 {

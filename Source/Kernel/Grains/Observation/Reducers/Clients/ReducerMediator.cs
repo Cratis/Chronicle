@@ -3,9 +3,9 @@
 
 using System.Collections.Concurrent;
 using System.Dynamic;
-using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Observation.Reducers;
+using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
