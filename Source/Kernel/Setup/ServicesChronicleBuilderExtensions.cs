@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Setup;
 /// <summary>
 /// Extension methods for <see cref="IChronicleBuilder"/>.
 /// </summary>
-public static class ChronicleBuilderExtensions
+public static class ServicesChronicleBuilderExtensions
 {
     /// <summary>
     /// Configure services for the builder.

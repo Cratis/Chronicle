@@ -11,7 +11,7 @@ namespace Orleans.Hosting;
 /// <summary>
 /// Defines extensions for <see cref="ISiloBuilder"/> for configuring Chronicle in the current silo.
 /// </summary>
-public static class SiloBuilderExtensions
+public static class ChronicleServerSiloBuilderExtensions
 {
     /// <summary>
     /// Add Chronicle to the silo. This enables running Chronicle in process in the same process as the silo.

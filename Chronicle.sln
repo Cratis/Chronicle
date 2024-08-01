@@ -51,9 +51,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Services", "Source\Kernel\S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Setup", "Source\Kernel\Setup\Setup.csproj", "{1F17DD1A-35D8-449D-ABCE-D52B62A5202A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared.Specs", "Source\Kernel\Shared.Specs\Shared.Specs.csproj", "{911A605F-202E-497F-80BF-70272B2BD1A4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Concepts.Specs", "Source\Kernel\Concepts.Specs\Concepts.Specs.csproj", "{911A605F-202E-497F-80BF-70272B2BD1A4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Source\Kernel\Shared\Shared.csproj", "{33BB32BC-6531-4B64-BC95-84470E90A387}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Concepts", "Source\Kernel\Concepts\Concepts.csproj", "{33BB32BC-6531-4B64-BC95-84470E90A387}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Storage.MongoDB.Specs", "Source\Kernel\Storage.MongoDB.Specs\Storage.MongoDB.Specs.csproj", "{C07D2EE1-EBF9-4ACA-BCDD-99262E6B8A2B}"
 EndProject
@@ -74,6 +74,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.XUnit", "Source\Clients\Orleans.XUnit\Orleans.XUnit.csproj", "{D129D9D3-E521-4186-8AE0-DA8434DC9CF0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.Specs", "Samples\Orleans.Specs\Orleans.Specs.csproj", "{12C69A74-DA38-4533-BBE7-3B87F08714FA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssemblyFixer", "Source\Clients\AssemblyFixer\AssemblyFixer.csproj", "{B2700EC7-859E-41B4-9F6F-DB5ED7ADD060}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -212,6 +214,10 @@ Global
 		{12C69A74-DA38-4533-BBE7-3B87F08714FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{12C69A74-DA38-4533-BBE7-3B87F08714FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{12C69A74-DA38-4533-BBE7-3B87F08714FA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2700EC7-859E-41B4-9F6F-DB5ED7ADD060}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2700EC7-859E-41B4-9F6F-DB5ED7ADD060}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2700EC7-859E-41B4-9F6F-DB5ED7ADD060}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2700EC7-859E-41B4-9F6F-DB5ED7ADD060}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{3AFFF171-7A38-4D6B-8C30-27C0FBEAF88B} = {518F772A-4A10-4D31-91D0-32C20380BBB0}
@@ -248,5 +254,6 @@ Global
 		{5C88060A-AC72-475B-8ED7-E7C4D434B407} = {F758BEB2-9DED-4784-81A2-BD1C5435E8A6}
 		{D129D9D3-E521-4186-8AE0-DA8434DC9CF0} = {F758BEB2-9DED-4784-81A2-BD1C5435E8A6}
 		{12C69A74-DA38-4533-BBE7-3B87F08714FA} = {1FE2B7D6-57AA-48A1-9ED0-CED9715723DA}
+		{B2700EC7-859E-41B4-9F6F-DB5ED7ADD060} = {F758BEB2-9DED-4784-81A2-BD1C5435E8A6}
 	EndGlobalSection
 EndGlobal

@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Setup;
 /// <summary>
 /// Extension methods for <see cref="IChronicleBuilder"/> for configuring Chronicle to use MongoDB.
 /// </summary>
-public static class ChronicleBuilderExtensions
+public static class MongoDBChronicleBuilderExtensions
 {
     /// <summary>
     /// Configure Chronicle to use MongoDB.

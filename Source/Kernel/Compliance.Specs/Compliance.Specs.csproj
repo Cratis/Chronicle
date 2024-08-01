@@ -7,7 +7,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Compliance/Compliance.csproj"/>
-        <ProjectReference Include="../Shared/Shared.csproj"/>
+        <ProjectReference Include="../Concepts/Concepts.csproj"/>
     </ItemGroup>
 
 </Project>

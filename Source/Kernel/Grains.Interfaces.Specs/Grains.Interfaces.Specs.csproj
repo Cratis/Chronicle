@@ -7,7 +7,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
-        <ProjectReference Include="../Shared/Shared.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>
 
 </Project>

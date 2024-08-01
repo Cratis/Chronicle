@@ -10,7 +10,7 @@
         <ProjectReference Include="../XUnit/XUnit.csproj"/>
         <ProjectReference Include="../Orleans/Orleans.csproj"/>
 
-        <ProjectReference Include="../../Kernel/Shared/Shared.csproj">
+        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
             <Aliases>Server</Aliases>
         </ProjectReference>

@@ -21,7 +21,7 @@
         <ProjectReference Include="../Storage/Storage.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
-        <ProjectReference Include="../Shared/Shared.csproj">
+        <ProjectReference Include="../Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
     </ItemGroup>
