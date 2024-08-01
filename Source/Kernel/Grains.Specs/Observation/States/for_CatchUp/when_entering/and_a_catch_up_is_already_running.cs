@@ -21,7 +21,6 @@ public class and_a_catch_up_is_already_running : given.a_catch_up_state
                     {
                         Id = JobId.New(),
                         Request = new CatchUpObserverRequest(
-                            stored_state.ObserverId,
                             observer_key,
                             subscription,
                             42,

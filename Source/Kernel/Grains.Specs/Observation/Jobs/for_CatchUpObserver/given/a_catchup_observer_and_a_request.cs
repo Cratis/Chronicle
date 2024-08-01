@@ -11,7 +11,6 @@ public class a_catchup_observer_and_a_request : a_catchup_observer
     void Establish()
     {
         state_storage.State.Request = new CatchUpObserverRequest(
-            Guid.NewGuid().ToString(),
             new ObserverKey(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString()),
             ObserverSubscription.Unsubscribed,
             42UL,

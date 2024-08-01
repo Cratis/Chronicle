@@ -48,7 +48,7 @@ public class and_no_jobs_are_running : given.a_replay_state
 
     [Fact] void should_reset_handled_count() => resulting_stored_state.ShouldEqual(stored_state with { Handled = EventCount.Zero });
     [Fact] void should_start_catch_up_job() => jobs_manager.Verify(_ => _.Start<IReplayObserver, ReplayObserverRequest>(IsAny<JobId>(), IsAny<ReplayObserverRequest>()), Once);
-    [Fact] void should_start_catch_up_job_with_correct_observer_id() => request.ObserverId.ShouldEqual(stored_state.ObserverId);
+    [Fact] void should_start_catch_up_job_with_correct_observer_id() => request.ObserverKey.ObserverId.ShouldEqual(stored_state.ObserverId);
     [Fact] void should_start_catch_up_job_with_correct_observer_key() => request.ObserverKey.ShouldEqual(observer_key);
     [Fact] void should_start_catch_up_job_with_correct_subscription() => request.ObserverSubscription.ShouldEqual(subscription);
     [Fact] void should_start_catch_up_job_with_correct_event_types() => request.EventTypes.ShouldEqual(stored_state.EventTypes);

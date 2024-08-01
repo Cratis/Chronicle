@@ -30,11 +30,10 @@ public class a_replay_state : Specification
     {
         observer = new();
         observer_id = Guid.NewGuid().ToString();
-        observer_key = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+        observer_key = new(observer_id, Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
         observer_service_client = new();
         jobs_manager = new();
         state = new Replay(
-            observer_id,
             observer_key,
             observer_service_client.Object,
             jobs_manager.Object,

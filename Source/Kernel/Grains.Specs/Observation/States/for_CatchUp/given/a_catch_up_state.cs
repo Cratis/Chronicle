@@ -26,14 +26,14 @@ public class a_catch_up_state : Specification
     {
         observer = new();
         observer_id = Guid.NewGuid().ToString();
-        observer_key = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+        observer_key = new(observer_id, Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
         jobs_manager = new();
-        state = new CatchUp(observer_id, observer_key, jobs_manager.Object, Mock.Of<ILogger<CatchUp>>());
+        state = new CatchUp(observer_key, jobs_manager.Object, Mock.Of<ILogger<CatchUp>>());
         state.SetStateMachine(observer.Object);
 
         stored_state = new ObserverState
         {
-            ObserverId = Guid.NewGuid().ToString(),
+            ObserverId = observer_id,
             RunningState = ObserverRunningState.CatchingUp,
         };
 
