@@ -29,11 +29,11 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)'==''">
-        <Configuration>debug</Configuration>
+        <Configuration>Debug</Configuration>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration).ToLower()'=='debug'">
-        <Configuration>debug</Configuration>
+        <Configuration>Debug</Configuration>
         <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
         <MSBuildTreatWarningsAsErrors>False</MSBuildTreatWarningsAsErrors>
         <CodeAnalysisTreatWarningsAsErrors>False</CodeAnalysisTreatWarningsAsErrors>
@@ -41,7 +41,7 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration).ToLower()'=='release'">
-        <Configuration>release</Configuration>
+        <Configuration>Delease</Configuration>
         <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
         <MSBuildTreatWarningsAsErrors>True</MSBuildTreatWarningsAsErrors>
         <CodeAnalysisTreatWarningsAsErrors>True</CodeAnalysisTreatWarningsAsErrors>
