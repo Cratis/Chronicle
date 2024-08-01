@@ -24,7 +24,7 @@ public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, Cat
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         await observer.ReportHandledEvents(State.HandledCount);
         await observer.TransitionTo<Routing>();
     }
@@ -41,12 +41,12 @@ public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, Cat
     }
 
     /// <inheritdoc/>
-    protected override JobDetails GetJobDetails() => $"{Request.ObserverId}";
+    protected override JobDetails GetJobDetails() => $"{Request.ObserverKey.ObserverId}";
 
     /// <inheritdoc/>
     protected override Task<bool> CanResume()
     {
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey.ObserverId, Request.ObserverKey);
         return observer.IsSubscribed();
     }
 
@@ -54,9 +54,7 @@ public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, Cat
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
         var observerKeyIndexes = storage.GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
-        var index = await observerKeyIndexes.GetFor(
-            request.ObserverId,
-            request.ObserverKey);
+        var index = await observerKeyIndexes.GetFor(request.ObserverKey);
 
         var keys = index.GetKeys(request.FromEventSequenceNumber);
 

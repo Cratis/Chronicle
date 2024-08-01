@@ -20,11 +20,9 @@ public class ObserverKeyIndexes(
     IObserverStorage observerStorage) : IObserverKeyIndexes
 {
     /// <inheritdoc/>
-    public async Task<IObserverKeyIndex> GetFor(
-        ObserverId observerId,
-        ObserverKey observerKey)
+    public async Task<IObserverKeyIndex> GetFor(ObserverKey observerKey)
     {
-        var observer = await observerStorage.Get(observerId);
+        var observer = await observerStorage.Get(observerKey.ObserverId);
         var database = eventStoreDatabase;
         var collection = database.GetEventSequenceCollectionFor(observerKey.EventSequenceId);
         return new EventSourceKeyIndex(collection, observer.EventTypes);

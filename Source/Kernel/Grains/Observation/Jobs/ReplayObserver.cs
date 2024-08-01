@@ -22,7 +22,7 @@ public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, Repla
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         await observer.ReportHandledEvents(State.HandledCount);
         await observer.TransitionTo<Routing>();
     }
@@ -39,12 +39,12 @@ public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, Repla
     }
 
     /// <inheritdoc/>
-    protected override JobDetails GetJobDetails() => $"{Request.ObserverId}";
+    protected override JobDetails GetJobDetails() => $"{Request.ObserverKey.ObserverId}";
 
     /// <inheritdoc/>
     protected override Task<bool> CanResume()
     {
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         return observer.IsSubscribed();
     }
 
@@ -52,9 +52,7 @@ public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, Repla
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverRequest request)
     {
         var observerKeyIndexes = storage.GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
-        var index = await observerKeyIndexes.GetFor(
-            request.ObserverId,
-            request.ObserverKey);
+        var index = await observerKeyIndexes.GetFor(request.ObserverKey);
 
         var keys = index.GetKeys(EventSequenceNumber.First);
         var steps = new List<JobStepDetails>();

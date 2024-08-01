@@ -27,7 +27,6 @@ public class ReplayCandidateRecommendation : Recommendation<ReplayCandidateReque
         await jobsManager.Start<IReplayObserver, ReplayObserverRequest>(
             JobId.New(),
             new ReplayObserverRequest(
-                request.ObserverId,
                 request.ObserverKey,
                 subscription,
                 eventTypes));

@@ -26,7 +26,7 @@ public class AddItemToOrderRules : RulesFor<AddItemToOrderRules, AddItemToOrder>
 {
     public int Count { get; set; }
 
-    public AddItemToOrderRules()
+    public AddItemToOrderRules(IServiceProvider serviceProvider)
     {
         RuleForState(_ => _.Count)
             .LessThan(5)

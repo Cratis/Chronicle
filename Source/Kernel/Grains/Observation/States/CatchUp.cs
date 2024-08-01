@@ -18,12 +18,10 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// <remarks>
 /// Initializes a new instance of the <see cref="CatchUp"/> class.
 /// </remarks>
-/// <param name="observerId">The <see cref="ObserverId"/> for the observer.</param>
 /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
 /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
 /// <param name="logger">Logger for logging.</param>
 public class CatchUp(
-    ObserverId observerId,
     ObserverKey observerKey,
     IJobsManager jobsManager,
     ILogger<CatchUp> logger) : BaseObserverState
@@ -68,7 +66,6 @@ public class CatchUp(
             await jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(
                 JobId.New(),
                 new CatchUpObserverRequest(
-                    state.ObserverId,
                     observerKey,
                     subscription,
                     state.NextEventSequenceNumber,
@@ -85,6 +82,5 @@ public class CatchUp(
     }
 
     bool IsJobForThisObserver(JobState jobState) =>
-        ((ReplayObserverRequest)jobState.Request).ObserverId == observerId &&
         ((ReplayObserverRequest)jobState.Request).ObserverKey == observerKey;
 }

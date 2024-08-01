@@ -13,8 +13,7 @@ public interface IObserverKeyIndexes
     /// <summary>
     /// Get the key index for a specific observer, event sequence, event store and namespace.
     /// </summary>
-    /// <param name="observerId"><see cref="ObserverId"/> the index is for.</param>
     /// <param name="observerKey"><see cref="ObserverKey"/> for the observer.</param>
     /// <returns><see cref="IObserverKeyIndex"/> to work with.</returns>
-    Task<IObserverKeyIndex> GetFor(ObserverId observerId, ObserverKey observerKey);
+    Task<IObserverKeyIndex> GetFor(ObserverKey observerKey);
 }

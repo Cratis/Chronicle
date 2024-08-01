@@ -9,4 +9,4 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// Represents the request for a <see cref="IReplayObserver"/>.
 /// </summary>
 /// <param name="Observers">The observers to consolidate state for.</param>
-public record ConsolidateStateForObserveRequest(IEnumerable<ObserverIdAndKey> Observers);
+public record ConsolidateStateForObserveRequest(IEnumerable<ObserverKey> Observers);

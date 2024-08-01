@@ -32,7 +32,7 @@ public class Observers(
         var observerStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Observers;
         var observers = await observerStorage.GetAll();
 
-        var observersForConsolidation = new List<ObserverIdAndKey>();
+        var observersForConsolidation = new List<ObserverKey>();
 
         foreach (var observerInfo in observers)
         {
@@ -44,7 +44,7 @@ public class Observers(
                 observerInfo.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable) &&
                 observerInfo.EventTypes.Any())
             {
-                observersForConsolidation.Add(new ObserverIdAndKey(observerInfo.ObserverId, observerKey));
+                observersForConsolidation.Add(observerKey);
             }
         }
 

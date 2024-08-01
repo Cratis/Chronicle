@@ -151,19 +151,16 @@ public class Observer(
             loggerFactory.CreateLogger<Routing>()),
 
         new CatchUp(
-            _observerId,
             _observerKey,
             _jobsManager,
             loggerFactory.CreateLogger<CatchUp>()),
 
         new ResumeReplay(
-            _observerId,
             _observerKey,
             replayStateServiceClient,
             _jobsManager),
 
         new Replay(
-            _observerId,
             _observerKey,
             replayStateServiceClient,
             _jobsManager,
@@ -286,7 +283,6 @@ public class Observer(
         await _jobsManager.Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(
             JobId.New(),
             new(
-                _observerId,
                 _observerKey,
                 _subscription,
                 partition,

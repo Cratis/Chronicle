@@ -59,8 +59,7 @@ public interface IChangeset<TSource, TTarget>
     /// <param name="onProperty">The property defining the property it was joined on.</param>
     /// <param name="key">Key representing the join.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
-    /// <returns>A changeset that is scoped for the join.</returns>
-    IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers);
+    void Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers);
 
     /// <summary>
     /// Apply a join resolution change to the <see cref="Changeset{TSource, TTarget}"/>.
@@ -69,8 +68,7 @@ public interface IChangeset<TSource, TTarget>
     /// <param name="key">Key representing the join.</param>
     /// <param name="incoming">The incoming change that resolved the join.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
-    /// <returns>A changeset that is scoped for the join.</returns>
-    IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers);
+    void ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers);
 
     /// <summary>
     /// Adds a child as is to a given children property.

@@ -68,6 +68,7 @@ public static class KeyResolvers
         return async (IEventSequenceStorage eventSequenceStorage, AppendedEvent @event) =>
         {
             var arrayIndexers = new List<ArrayIndexer>();
+
             var parentKey = await parentKeyResolver(eventSequenceStorage, @event);
             if (projection.HasParent)
             {

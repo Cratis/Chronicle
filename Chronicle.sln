@@ -73,7 +73,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XUnit", "Source\Clients\XUn
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.XUnit", "Source\Clients\Orleans.XUnit\Orleans.XUnit.csproj", "{D129D9D3-E521-4186-8AE0-DA8434DC9CF0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.Specs", "Samples\Orleans.Spesc\Orleans.Specs.csproj", "{12C69A74-DA38-4533-BBE7-3B87F08714FA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.Specs", "Samples\Orleans.Specs\Orleans.Specs.csproj", "{12C69A74-DA38-4533-BBE7-3B87F08714FA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

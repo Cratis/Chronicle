@@ -17,12 +17,10 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// <remarks>
 /// Initializes a new instance of the <see cref="CatchUp"/> class.
 /// </remarks>
-/// <param name="observerId">The <see cref="ObserverId"/> for the observer.</param>
 /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
 /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
 /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
 public class ResumeReplay(
-    ObserverId observerId,
     ObserverKey observerKey,
     IObserverServiceClient replayStateServiceClient,
     IJobsManager jobsManager) : BaseObserverState
@@ -77,6 +75,5 @@ public class ResumeReplay(
     }
 
     bool IsJobForThisObserver(JobState jobState) =>
-        ((ReplayObserverRequest)jobState.Request).ObserverId == observerId &&
         ((ReplayObserverRequest)jobState.Request).ObserverKey == observerKey;
 }

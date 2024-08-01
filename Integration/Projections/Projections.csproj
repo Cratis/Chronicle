@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Integration.Projections</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Projections</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
+      <ProjectReference Include="../../Source/Kernel/Projections/Projections.csproj" />
+    </ItemGroup>
+</Project>

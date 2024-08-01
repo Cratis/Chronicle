@@ -21,13 +21,13 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
     {
         if (State.Progress.SuccessfulSteps == 1)
         {
-            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
+            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
             await observer.FailedPartitionRecovered(Request.Key);
         }
     }
 
     /// <inheritdoc/>
-    protected override JobDetails GetJobDetails() => $"{Request.ObserverId}-{Request.Key}";
+    protected override JobDetails GetJobDetails() => $"{Request.ObserverKey.ObserverId}-{Request.Key}";
 
     /// <inheritdoc/>
     protected override Task<bool> CanResume()
@@ -37,7 +37,7 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
             return Task.FromResult(false);
         }
 
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         return observer.IsSubscribed();
     }
 

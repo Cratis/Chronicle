@@ -22,20 +22,20 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 public class ConsolidateStateForObserver(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<JobStepState> jobStepState,
-    IStorage storage) : JobStep<ObserverIdAndKey, object, JobStepState>(jobStepState), IConsolidateStateForObserver
+    IStorage storage) : JobStep<ObserverKey, object, JobStepState>(jobStepState), IConsolidateStateForObserver
 {
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver? _observer;
 
     /// <inheritdoc/>
-    public override Task Prepare(ObserverIdAndKey request)
+    public override Task Prepare(ObserverKey request)
     {
-        _observer = GrainFactory.GetGrain<IObserver>(request.ObserverId, request.ObserverKey);
+        _observer = GrainFactory.GetGrain<IObserver>(request);
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    protected override async Task<JobStepResult> PerformStep(ObserverIdAndKey request, CancellationToken cancellationToken)
+    protected override async Task<JobStepResult> PerformStep(ObserverKey request, CancellationToken cancellationToken)
     {
         var state = await _observer!.GetState();
         var lastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber;
@@ -43,7 +43,7 @@ public class ConsolidateStateForObserver(
 
         var modified = false;
 
-        var eventSequenceStorage = GetEventSequenceStorage(request.ObserverKey.EventStore, request.ObserverKey.Namespace, request.ObserverKey.EventSequenceId);
+        var eventSequenceStorage = GetEventSequenceStorage(request.EventStore, request.Namespace, request.EventSequenceId);
 
         if (state.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable &&
             state.Handled == EventCount.NotSet)
