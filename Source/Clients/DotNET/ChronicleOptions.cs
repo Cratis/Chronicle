@@ -74,7 +74,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="IServiceProvider"/> to use.
     /// </summary>
-    public IServiceProvider ServiceProvider { get; init; } = serviceProvider ?? new DefaultServiceProvider();
+    public IServiceProvider ServiceProvider { get; set; } = serviceProvider ?? new DefaultServiceProvider();
 
     /// <summary>
     /// Gets the <see cref="IClientArtifactsProvider"/> to use.

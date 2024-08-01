@@ -111,6 +111,7 @@ public static class SiloBuilderExtensions
             {
                 var grainFactory = sp.GetRequiredService<IGrainFactory>();
                 var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
+                options.ServiceProvider = sp;
                 var storage = sp.GetRequiredService<IStorage>();
                 var services = new Cratis.Chronicle.Services(
                     new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
