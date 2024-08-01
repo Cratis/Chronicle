@@ -4,6 +4,7 @@
         <OutputType>Exe</OutputType>
         <AssemblyName>AssemblyFixer</AssemblyName>
         <RootNamespace>AssemblyFixer</RootNamespace>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
     <ItemGroup>
       <PackageReference Include="Mono.Cecil" />

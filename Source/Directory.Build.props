@@ -59,6 +59,10 @@
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalAssemblyInfo.cs"/>
     </ItemGroup>
 
+    <PropertyGroup Condition="'$(IsTestProject)'=='true'">
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
     <ItemGroup Condition="'$(IsTestProject)'=='true'">
         <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="moq" />
@@ -68,5 +72,4 @@
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.Specs.cs"/>
     </ItemGroup>
-
 </Project>
