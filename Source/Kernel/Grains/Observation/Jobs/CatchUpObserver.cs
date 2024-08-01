@@ -46,7 +46,7 @@ public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, Cat
     /// <inheritdoc/>
     protected override Task<bool> CanResume()
     {
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey.ObserverId, Request.ObserverKey);
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         return observer.IsSubscribed();
     }
 
