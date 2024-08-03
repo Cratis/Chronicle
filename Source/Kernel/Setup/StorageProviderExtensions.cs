@@ -32,6 +32,7 @@ public static class StorageProviderExtensions
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.ProjectionsManager, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Projections.ProjectionsManagerStorageProvider>());
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Reducers, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Observation.Reducers.Clients.ReducerDefinitionStorageProvider>());
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.ReducersManager, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Observation.Reducers.Clients.ReducersManagerStorageProvider>());
+            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Constraints, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Events.Constraints.ConstraintsStorageProvider>());
         });
 
         return builder;

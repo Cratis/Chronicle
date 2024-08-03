@@ -5,10 +5,12 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Grains.Events.Constraints;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage;
@@ -50,6 +52,7 @@ public class EventSequence(
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
     IMeterScope<EventSequence>? _metrics;
     IAppendedEventsQueues? _appendedEventsQueues;
+    IConstraints? _constraints;
 
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
@@ -67,6 +70,9 @@ public class EventSequence(
         await @namespaces.Ensure(_eventSequenceKey.Namespace);
 
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);
+
+        var constraintsKey = new ConstraintsKey(_eventSequenceKey.EventStore);
+        _constraints = GrainFactory.GetGrain<IConstraints>(constraintsKey);
 
         await base.OnActivateAsync(cancellationToken);
     }
@@ -138,6 +144,8 @@ public class EventSequence(
         var eventName = "[N/A]";
         try
         {
+            _constraints?.Check(eventSourceId, eventType, content);
+
             var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
             eventName = eventSchema.Schema.GetDisplayName();
             logger.Appending(

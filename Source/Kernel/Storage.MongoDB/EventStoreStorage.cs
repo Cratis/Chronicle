@@ -7,7 +7,9 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
 using Cratis.Chronicle.Concepts.Projections.Json;
+using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.Namespaces;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;
 using Cratis.Chronicle.Storage.MongoDB.Projections;
@@ -63,6 +65,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IProjectionDefinitionsStorage Projections { get; } = new ProjectionDefinitionsStorage(eventStoreDatabase, projectionSerializer);
+
+    /// <inheritdoc/>
+    public IConstraintsStorage Constraints { get; } = new ConstraintsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)

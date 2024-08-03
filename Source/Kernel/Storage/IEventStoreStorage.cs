@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation.Reducers;
@@ -28,6 +29,11 @@ public interface IEventStoreStorage
     /// Gets the <see cref="IEventTypesStorage"/> for the event store.
     /// </summary>
     IEventTypesStorage EventTypes { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IUniqueConstraintsStorage"/> for the event store.
+    /// </summary>
+    IConstraintsStorage Constraints { get; }
 
     /// <summary>
     /// Gets the <see cref="IReducerDefinitionsStorage"/> for the event store.

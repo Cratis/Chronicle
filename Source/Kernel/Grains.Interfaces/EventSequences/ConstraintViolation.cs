@@ -12,5 +12,5 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// <param name="SequenceNumber">The <see cref="EventSequenceNumber"/> where the violation occurred.</param>
 /// <param name="ConstraintType"><see cref="ConstraintType"/> that was violated.</param>
 /// <param name="ConstraintName"><see cref="ConstraintName"/> that was violated.</param>
-/// <param name="Message"><see cref="ViolationMessage"/> with more details.</param>
-public record ConstraintViolation(EventSequenceNumber SequenceNumber, ConstraintType ConstraintType, ConstraintName ConstraintName, ViolationMessage Message);
+/// <param name="Message"><see cref="ConstraintViolationMessage"/> with more details.</param>
+public record ConstraintViolation(EventSequenceNumber SequenceNumber, ConstraintType ConstraintType, ConstraintName ConstraintName, ConstraintViolationMessage Message);

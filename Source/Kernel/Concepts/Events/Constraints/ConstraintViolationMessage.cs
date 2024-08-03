@@ -7,11 +7,11 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// Represents the message from a violation of a constraint.
 /// </summary>
 /// <param name="Name">The inner value.</param>
-public record ViolationMessage(string Name) : ConceptAs<string>(Name)
+public record ConstraintViolationMessage(string Name) : ConceptAs<string>(Name)
 {
     /// <summary>
-    /// Implicitly convert from a <see cref="string"/> to a <see cref="ViolationMessage"/>.
+    /// Implicitly convert from a <see cref="string"/> to a <see cref="ConstraintViolationMessage"/>.
     /// </summary>
     /// <param name="name">Name to convert.</param>
-    public static implicit operator ViolationMessage(string name) => new(name);
+    public static implicit operator ConstraintViolationMessage(string name) => new(name);
 }

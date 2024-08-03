@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Server::Cratis.Chronicle.Services.Events;
+using Server::Cratis.Chronicle.Services.Events.Constraints;
 using Server::Cratis.Chronicle.Services.EventSequences;
 using Server::Cratis.Chronicle.Services.Observation;
 
@@ -116,6 +117,7 @@ public static class ChronicleClientSiloBuilderExtensions
                 var services = new Cratis.Chronicle.Services(
                     new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
                     new EventTypes(storage),
+                    new Constraints(grainFactory),
                     new Observers(),
                     new Server::Cratis.Chronicle.Services.Observation.Reactions.Reactions(grainFactory, sp.GetRequiredService<IReactionMediator>()),
                     new Server::Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IExpandoObjectConverter>()),

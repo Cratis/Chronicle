@@ -9,7 +9,17 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 public enum ConstraintType
 {
     /// <summary>
+    /// Represents no constraint.
+    /// </summary>
+    None = 0,
+
+    /// <summary>
     /// Represents a unique constraint.
     /// </summary>
-    Unique = 1
+    Unique = 1,
+
+    /// <summary>
+    /// Represents a unique event type constraint.
+    /// </summary>
+    UniqueEventType = 2
 }

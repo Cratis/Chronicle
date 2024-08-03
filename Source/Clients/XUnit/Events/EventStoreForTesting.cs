@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactions;
@@ -50,6 +51,9 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public IProjections Projections => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public IConstraints Constraints => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task DiscoverAll() => Task.CompletedTask;
