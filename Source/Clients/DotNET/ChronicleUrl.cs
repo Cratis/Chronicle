@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle;
 
 /// <summary>
-/// Represents a URL for connecting to the Cratis Kernel.
+/// Represents a URL for connecting to the Chronicle.
 /// </summary>
 /// <remarks>
 /// <![CDATA[

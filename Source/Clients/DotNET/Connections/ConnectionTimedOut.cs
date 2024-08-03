@@ -11,7 +11,7 @@ public class ConnectionTimedOut : Exception
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionTimedOut"/> class.
     /// </summary>
-    public ConnectionTimedOut() : base("Connection timed out when trying to connect to the Cratis Kernel")
+    public ConnectionTimedOut() : base("Connection timed out when trying to connect to the Chronicle")
     {
     }
 }
