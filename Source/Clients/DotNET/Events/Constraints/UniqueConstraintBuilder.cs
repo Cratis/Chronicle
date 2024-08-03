@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Cratis.Chronicle.Schemas;
+using Cratis.Reflection;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -12,24 +14,90 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="owner">Optional owner of the constraint.</param>
 public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = default) : IUniqueConstraintBuilder
 {
-    /// <inheritdoc/>
-    public IUniqueConstraintBuilder On<TEventType>(Expression<Func<TEventType, object>> property) => throw new NotImplementedException();
+    readonly List<EventTypeAndProperty> _eventTypesAndProperties = [];
+    ConstraintName? _name;
+    Func<object, ConstraintViolationMessage>? _messageProvider;
 
     /// <inheritdoc/>
-    public IUniqueConstraintBuilder On(EventType eventType, string property) => throw new NotImplementedException();
+    public IUniqueConstraintBuilder On<TEventType>(Expression<Func<TEventType, object>> property)
+    {
+        var eventType = eventTypes.GetEventTypeFor(typeof(TEventType));
+        return On(eventType, property.GetPropertyInfo().Name);
+    }
 
     /// <inheritdoc/>
-    public IUniqueConstraintBuilder WithMessage(string message) => throw new NotImplementedException();
+    public IUniqueConstraintBuilder On(EventType eventType, string property)
+    {
+        ThrowIfEventTypeAlreadyAdded(eventType, property);
+        ThrowIfPropertyIsMissing(eventType, property);
+        ThrowIfPropertyTypeMismatch(eventType, property);
+
+        _eventTypesAndProperties.Add(new EventTypeAndProperty(eventType, eventTypes.GetSchemaFor(eventType.Id), property));
+        return this;
+    }
 
     /// <inheritdoc/>
-    public IUniqueConstraintBuilder WithMessage(Func<object, ConstraintViolationMessage> messageProvider) => throw new NotImplementedException();
+    public IUniqueConstraintBuilder WithMessage(string message) => WithMessage(_ => message);
 
     /// <inheritdoc/>
-    public IUniqueConstraintBuilder WithName(ConstraintName name) => throw new NotImplementedException();
+    public IUniqueConstraintBuilder WithMessage(Func<object, ConstraintViolationMessage> messageProvider)
+    {
+        _messageProvider = messageProvider;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IUniqueConstraintBuilder WithName(ConstraintName name)
+    {
+        _name = name;
+        return this;
+    }
 
     /// <inheritdoc/>
     public IConstraintDefinition Build()
     {
-        return new UniqueConstraintDefinition(string.Empty, (et) => string.Empty, []);
+        ThrowIfNoEventTypesAdded();
+
+        var name = _name ?? owner?.Name ?? throw new MissingNameForUniqueConstraint();
+
+        Func<object, ConstraintViolationMessage> defaultMessageProvider = _ => $"Violation of unique constraint '{name}'";
+        var messageProvider = _messageProvider ?? defaultMessageProvider;
+
+        return new UniqueConstraintDefinition(name, messageProvider, [.. _eventTypesAndProperties]);
+    }
+
+    void ThrowIfNoEventTypesAdded()
+    {
+        if (_eventTypesAndProperties.Count == 0)
+        {
+            throw new NoEventTypesAddedToUniqueConstraint();
+        }
+    }
+
+    void ThrowIfPropertyIsMissing(EventType eventType, string property)
+    {
+        var schema = eventTypes.GetSchemaFor(eventType.Id);
+        if (!schema.GetFlattenedProperties().Any(_ => _.Name == property))
+        {
+            throw new PropertyDoesNotExistOnEventType(eventType, property);
+        }
+    }
+
+    void ThrowIfEventTypeAlreadyAdded(EventType eventType, string property)
+    {
+        if (_eventTypesAndProperties.Exists(_ => _.EventType == eventType))
+        {
+            throw new EventTypeAlreadyAddedToUniqueConstraint(string.Empty, eventType, property);
+        }
+    }
+
+    void ThrowIfPropertyTypeMismatch(EventType eventType, string property)
+    {
+        var schema = eventTypes.GetSchemaFor(eventType.Id);
+        var propertySchema = schema.GetFlattenedProperties().First(p => p.Name == property);
+        if (_eventTypesAndProperties.Exists(_ => _.Schema.GetFlattenedProperties().First(p => p.Name == _.Property).Type != propertySchema.Type))
+        {
+            throw new PropertyTypeMismatchInUniqueConstraint(eventType, property);
+        }
     }
 }

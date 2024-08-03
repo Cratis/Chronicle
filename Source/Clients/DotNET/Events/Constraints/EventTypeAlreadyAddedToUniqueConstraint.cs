@@ -15,4 +15,13 @@ namespace Cratis.Chronicle.Events.Constraints;
 public class EventTypeAlreadyAddedToUniqueConstraint(ConstraintName constraintName, EventType eventType, string property)
     : Exception($"The event type '{eventType}' with property '{property}' has already been added to the unique constraint with name '{constraintName}'")
 {
+    /// <summary>
+    /// Gets the event type.
+    /// </summary>
+    public EventType EventType { get; } = eventType;
+
+    /// <summary>
+    /// Gets the property.
+    /// </summary>
+    public string Property { get; } = property;
 }
