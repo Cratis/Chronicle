@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Events.Constraints;
+using UniqueEventTypeConstraintDefinitionContract = Cratis.Chronicle.Contracts.Events.Constraints.UniqueEventTypeConstraintDefinition;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -17,6 +18,10 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, Func<Even
     public Constraint ToContract() => new()
     {
         Name = Name,
-        Type = ConstraintType.UniqueEventType
+        Type = ConstraintType.UniqueEventType,
+        Definition = new(new UniqueEventTypeConstraintDefinitionContract
+        {
+            EventType = EventType.ToContract()
+        })
     };
 }
