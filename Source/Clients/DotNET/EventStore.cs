@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Projections;
@@ -13,6 +14,8 @@ using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
 using Cratis.Models;
+using Cratis.Types;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle;
@@ -78,6 +81,10 @@ public class EventStore : IEventStore
             _eventSerializer,
             causationManager,
             identityProvider);
+
+        Constraints = new Constraints(
+            this,
+            serviceProvider.GetRequiredService<IInstancesOf<ICanProvideConstraints>>());
 
         Reactions = new Reactions.Reactions(
             this,
@@ -146,6 +153,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IEventTypes EventTypes { get; }
+
+    /// <inheritdoc/>
+    public IConstraints Constraints { get; }
 
     /// <inheritdoc/>
     public IEventLog EventLog { get; }

@@ -9,6 +9,21 @@ namespace Cratis.Chronicle.Events.Constraints;
 public interface IConstraints
 {
     /// <summary>
+    /// Check if a constraint exists for a specific <see cref="ConstraintName"/>.
+    /// </summary>
+    /// <param name="constraintName"><see cref="ConstraintName"/> to check for.</param>
+    /// <returns>True if it exists, false if not.</returns>
+    bool HasFor(ConstraintName constraintName);
+
+    /// <summary>
+    /// Get a specific constraint by its <see cref="ConstraintName"/>.
+    /// </summary>
+    /// <param name="constraintName"><see cref="ConstraintName"/>.</param>
+    /// <returns><see cref="IConstraintDefinition"/>.</returns>
+    /// <exception cref="UnknownConstraint">Thrown if the constraint is unknown.</exception>
+    IConstraintDefinition GetFor(ConstraintName constraintName);
+
+    /// <summary>
     /// Discover all constraints in the system.
     /// </summary>
     /// <returns>Awaitable task.</returns>
