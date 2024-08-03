@@ -33,7 +33,7 @@ public class EventStore : IEventStore
     /// </summary>
     /// <param name="eventStoreName">Name of the event store.</param>
     /// <param name="namespace">Namespace for the event store.</param>
-    /// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Cratis Kernel.</param>
+    /// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Chronicle.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>

@@ -23,7 +23,7 @@ public interface IEventTypes
     Task Discover();
 
     /// <summary>
-    /// Register all event types with the Cratis Kernel.
+    /// Register all event types with the Chronicle.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Register();
