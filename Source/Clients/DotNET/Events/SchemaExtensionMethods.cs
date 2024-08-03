@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.EventTypes;
+namespace Cratis.Chronicle.Events;
 
 /// <summary>
 /// Extension methods for working with <see cref="JsonSchema"/> and specific metadata.
