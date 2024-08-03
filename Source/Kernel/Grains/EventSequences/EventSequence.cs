@@ -142,9 +142,18 @@ public class EventSequence(
     {
         bool updateSequenceNumber;
         var eventName = "[N/A]";
+
+        // TODO: Get correct correlation id
+        var correlationId = CorrelationId.New();
+
         try
         {
-            _constraints?.Check(eventSourceId, eventType, content);
+            var constraintCheck = await (_constraints?.Check(eventSourceId, eventType, content) ?? Task.FromResult(ConstraintCheckResult.Success));
+            if (!constraintCheck.IsSuccess)
+            {
+                _metrics?.ConstraintViolation(eventSourceId, eventName);
+                return AppendResult.Failed(correlationId, constraintCheck.Violations);
+            }
 
             var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
             eventName = eventSchema.Schema.GetDisplayName();
@@ -205,7 +214,7 @@ public class EventSequence(
                 ex.SequenceNumber,
                 ex);
 
-            throw;
+            return AppendResult.Failed(correlationId, [ex.Message]);
         }
         catch (Exception ex)
         {
@@ -217,7 +226,7 @@ public class EventSequence(
                 State.SequenceNumber,
                 ex);
 
-            throw;
+            return AppendResult.Failed(correlationId, [ex.Message]);
         }
 
         if (updateSequenceNumber)
@@ -225,10 +234,10 @@ public class EventSequence(
             var appendedSequenceNumber = State.SequenceNumber;
             State.SequenceNumber++;
             await WriteStateAsync();
-            return AppendResult.Success(appendedSequenceNumber);
+            return AppendResult.Success(correlationId, appendedSequenceNumber);
         }
 
-        return AppendResult.Success(State.SequenceNumber);
+        return AppendResult.Failed(correlationId, ["Unable to append event for unknown reason"]);
     }
 
     /// <inheritdoc/>
@@ -238,6 +247,9 @@ public class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
+        // TODO: Get correct correlation id
+        var correlationId = CorrelationId.New();
+
         foreach (var @event in events)
         {
             await Append(
@@ -248,7 +260,7 @@ public class EventSequence(
                 causedBy);
         }
 
-        return AppendManyResult.Success([]);
+        return AppendManyResult.Success(correlationId, []);
     }
 
     /// <inheritdoc/>

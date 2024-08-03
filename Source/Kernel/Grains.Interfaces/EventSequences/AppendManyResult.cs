@@ -49,7 +49,12 @@ public class AppendManyResult
     /// <summary>
     /// Create a successful result.
     /// </summary>
+    /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>
     /// <param name="sequenceNumbers">Collection of <see cref="EventSequenceNumber"/> to report.</param>
     /// <returns>A new <see cref="AppendResult"/> instance.</returns>
-    public static AppendManyResult Success(IEnumerable<EventSequenceNumber> sequenceNumbers) => new() { SequenceNumbers = sequenceNumbers.ToImmutableList() };
+    public static AppendManyResult Success(CorrelationId correlationId, IEnumerable<EventSequenceNumber> sequenceNumbers) => new()
+    {
+        CorrelationId = correlationId,
+        SequenceNumbers = sequenceNumbers.ToImmutableList()
+    };
 }

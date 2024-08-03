@@ -49,7 +49,36 @@ public class AppendResult
     /// <summary>
     /// Create a successful result.
     /// </summary>
+    /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to report.</param>
-    /// <returns>A new <see cref="AppendResult"/> instance.</returns>
-    public static AppendResult Success(EventSequenceNumber sequenceNumber) => new() { SequenceNumber = sequenceNumber };
+    /// <returns>A new successful <see cref="AppendResult"/> instance.</returns>
+    public static AppendResult Success(CorrelationId correlationId, EventSequenceNumber sequenceNumber) => new()
+    {
+        CorrelationId = correlationId,
+        SequenceNumber = sequenceNumber
+    };
+
+    /// <summary>
+    /// Create a failed result with constraint violations.
+    /// </summary>
+    /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>
+    /// <param name="violations">The violations.</param>
+    /// <returns>A new failed <see cref="AppendResult"/> instance.</returns>
+    public static AppendResult Failed(CorrelationId correlationId, IEnumerable<ConstraintViolation> violations) => new()
+    {
+        CorrelationId = correlationId,
+        ConstraintViolations = violations.ToImmutableList()
+    };
+
+    /// <summary>
+    /// Create a failed result with errors.
+    /// </summary>
+    /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>
+    /// <param name="errors">The errors.</param>
+    /// <returns>A new failed <see cref="AppendResult"/> instance.</returns>
+    public static AppendResult Failed(CorrelationId correlationId, IEnumerable<AppendError> errors) => new()
+    {
+        CorrelationId = correlationId,
+        Errors = errors.ToImmutableList()
+    };
 }
