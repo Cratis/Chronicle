@@ -18,8 +18,7 @@ public static class EventTypeConverters
         return new()
         {
             Id = type.Id.Value,
-            Generation = type.Generation.Value,
-            IsPublic = type.IsPublic
+            Generation = type.Generation.Value
         };
     }
 
@@ -37,7 +36,7 @@ public static class EventTypeConverters
     /// <param name="eventType"><see cref="Contracts.Events.EventType"/> to convert from.</param>
     /// <returns>Converted <see cref="EventType"/>.</returns>
     public static EventType ToChronicle(this Contracts.Events.EventType eventType) =>
-        new(eventType.Id, eventType.Generation, eventType.IsPublic);
+        new(eventType.Id, eventType.Generation);
 
     /// <summary>
     /// Convert to a collection of kernel version of <see cref="Contracts.Events.EventType"/>.

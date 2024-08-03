@@ -76,6 +76,6 @@ public static class EventTypeExtensions
             "" => type.Name,
             _ => attribute.Id.Value
         };
-        return new EventType(new EventTypeId(id), attribute.Generation, attribute.IsPublic);
+        return new EventType(new EventTypeId(id), attribute.Generation);
     }
 }

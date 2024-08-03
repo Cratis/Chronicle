@@ -8,5 +8,4 @@ namespace Cratis.Api.EventTypes;
 /// </summary>
 /// <param name="Id">The unique identifier of the event.</param>
 /// <param name="Generation">The generation of the event.</param>
-/// <param name="IsPublic">Whether or not the event type is considered a public event.</param>
-public record EventType(string Id, uint Generation, bool IsPublic = false);
+public record EventType(string Id, uint Generation);

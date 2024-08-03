@@ -12,7 +12,6 @@ namespace Cratis.Chronicle.Concepts.EventTypes;
 public static class SchemaExtensionMethods
 {
     const string EventTypeExtension = "eventType";
-    const string IsPublicExtension = "isPublic";
     const string DisplayNameExtension = "displayName";
     const string GenerationExtension = "generation";
 
@@ -48,17 +47,6 @@ public static class SchemaExtensionMethods
         }
 
         return new(EventTypeId.Unknown, EventGeneration.First);
-    }
-
-    /// <summary>
-    /// Set the isPublic extension in the schema.
-    /// </summary>
-    /// <param name="schema"><see cref="JsonSchema"/> to use.</param>
-    /// <param name="isPublic">State to set.</param>
-    public static void SetIsPublic(this JsonSchema schema, bool isPublic)
-    {
-        schema.EnsureExtensionData();
-        schema.ExtensionData[IsPublicExtension] = isPublic;
     }
 
     /// <summary>

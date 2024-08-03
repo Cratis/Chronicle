@@ -8,8 +8,7 @@ namespace Cratis.Chronicle.Concepts.Events;
 /// </summary>
 /// <param name="Id"><see cref="EventTypeId">Unique identifier</see>.</param>
 /// <param name="Generation"><see cref="EventGeneration">Generation</see> of the event.</param>
-/// <param name="IsPublic">Whether or not the event type is considered a public event.</param>
-public record EventType(EventTypeId Id, EventGeneration Generation, bool IsPublic = false)
+public record EventType(EventTypeId Id, EventGeneration Generation)
 {
     /// <summary>
     /// Represents an unknown event type.

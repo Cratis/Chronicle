@@ -13,12 +13,10 @@ const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/types')
 class AllEventTypesSortBy {
     private _id: SortingActionsForQuery<EventType[]>;
     private _generation: SortingActionsForQuery<EventType[]>;
-    private _isPublic: SortingActionsForQuery<EventType[]>;
 
     constructor(readonly query: AllEventTypes) {
         this._id = new SortingActionsForQuery<EventType[]>('id', query);
         this._generation = new SortingActionsForQuery<EventType[]>('generation', query);
-        this._isPublic = new SortingActionsForQuery<EventType[]>('isPublic', query);
     }
 
     get id(): SortingActionsForQuery<EventType[]> {
@@ -27,24 +25,17 @@ class AllEventTypesSortBy {
     get generation(): SortingActionsForQuery<EventType[]> {
         return this._generation;
     }
-    get isPublic(): SortingActionsForQuery<EventType[]> {
-        return this._isPublic;
-    }
 }
 
 class AllEventTypesSortByWithoutQuery {
     private _id: SortingActions  = new SortingActions('id');
     private _generation: SortingActions  = new SortingActions('generation');
-    private _isPublic: SortingActions  = new SortingActions('isPublic');
 
     get id(): SortingActions {
         return this._id;
     }
     get generation(): SortingActions {
         return this._generation;
-    }
-    get isPublic(): SortingActions {
-        return this._isPublic;
     }
 }
 
