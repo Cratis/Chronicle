@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events.Constraints;
+
 namespace Cratis.Chronicle;
 
 /// <summary>
@@ -67,4 +69,24 @@ public interface IClientArtifactsProvider
     /// Gets all the available aggregate root state types.
     /// </summary>
     IEnumerable<Type> AggregateRootStateTypes { get; }
+
+    /// <summary>
+    /// Gets all the available constraint types represented by <see cref="IConstraint"/> .
+    /// </summary>
+    IEnumerable<Type> ConstraintTypes { get; }
+
+    /// <summary>
+    /// Gets all the available unique constraints represented by event types having properties with <see cref="UniqueAttribute"/>.
+    /// </summary>
+    IEnumerable<Type> UniqueConstraints { get; }
+
+    /// <summary>
+    /// Gets all the available unique event type constraints represented by event types having <see cref="UniqueAttribute"/>.
+    /// </summary>
+    IEnumerable<Type> UniqueEventTypeConstraints { get; }
+
+    /// <summary>
+    /// Initializes the provider.
+    /// </summary>
+    void Initialize();
 }

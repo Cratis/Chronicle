@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Integration;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactions;
@@ -20,13 +21,59 @@ namespace Cratis.Chronicle;
 /// <remarks>
 /// This will use type discovery through the provided <see cref="ICanProvideAssembliesForDiscovery"/>.
 /// </remarks>
-public class DefaultClientArtifactsProvider : IClientArtifactsProvider
+/// <remarks>
+/// Initializes a new instance of the <see cref="DefaultClientArtifactsProvider"/> class.
+/// </remarks>
+/// <param name="assembliesProvider"><see cref="ICanProvideAssembliesForDiscovery"/> for discovering types.</param>
+public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery assembliesProvider) : IClientArtifactsProvider
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultClientArtifactsProvider"/> class.
-    /// </summary>
-    /// <param name="assembliesProvider"><see cref="ICanProvideAssembliesForDiscovery"/> for discovering types.</param>
-    public DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery assembliesProvider)
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> EventTypes { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> Projections { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> Adapters { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> Reactions { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> Reducers { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> ReactionMiddlewares { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> ComplianceForTypesProviders { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> ComplianceForPropertiesProviders { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> Rules { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> AdditionalEventInformationProviders { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> AggregateRoots { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> AggregateRootStateTypes { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> ConstraintTypes { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> UniqueConstraints { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> UniqueEventTypeConstraints { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public void Initialize()
     {
         assembliesProvider.Initialize();
         EventTypes = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<EventTypeAttribute>()).ToArray();
@@ -45,41 +92,9 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
                                             .Where(_ => _.IsDerivedFromOpenGeneric(typeof(AggregateRoot<>)))
                                             .Select(_ => _.GetGenericArguments()[0])
                                             .ToArray();
+
+        ConstraintTypes = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IConstraint) && _.IsAssignableTo(typeof(IConstraint))).ToArray();
+        UniqueConstraints = EventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();
+        UniqueEventTypeConstraints = EventTypes.Where(_ => !_.HasAttribute<UniqueAttribute>()).ToArray();
     }
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> EventTypes { get; }
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> Projections { get; }
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> Adapters { get; }
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> Reactions { get; }
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> Reducers { get; }
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> ReactionMiddlewares { get; }
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> ComplianceForTypesProviders { get; }
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> ComplianceForPropertiesProviders { get; }
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> Rules { get; }
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> AdditionalEventInformationProviders { get; }
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> AggregateRoots { get; }
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> AggregateRootStateTypes { get; }
 }

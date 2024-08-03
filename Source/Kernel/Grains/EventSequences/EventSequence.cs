@@ -127,7 +127,7 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public async Task Append(
+    public async Task<AppendResult> Append(
         EventSourceId eventSourceId,
         EventType eventType,
         JsonObject content,
@@ -214,13 +214,17 @@ public class EventSequence(
 
         if (updateSequenceNumber)
         {
+            var appendedSequenceNumber = State.SequenceNumber;
             State.SequenceNumber++;
             await WriteStateAsync();
+            return AppendResult.Success(appendedSequenceNumber);
         }
+
+        return AppendResult.Success(State.SequenceNumber);
     }
 
     /// <inheritdoc/>
-    public async Task AppendMany(
+    public async Task<AppendManyResult> AppendMany(
         EventSourceId eventSourceId,
         IEnumerable<EventToAppend> events,
         IEnumerable<Causation> causation,
@@ -235,6 +239,8 @@ public class EventSequence(
                 causation,
                 causedBy);
         }
+
+        return AppendManyResult.Success([]);
     }
 
     /// <inheritdoc/>

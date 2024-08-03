@@ -66,7 +66,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the event, defined by <see cref="Identity"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, IEnumerable<Causation> causation, Identity causedBy);
+    Task<AppendResult> Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Append a single event to the event store.
@@ -76,7 +76,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the events, defined by <see cref="Identity"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventToAppend> events, IEnumerable<Causation> causation, Identity causedBy);
+    Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<EventToAppend> events, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Compensate a specific event in the event store.
