@@ -20,12 +20,12 @@ public class UniqueConstraintValidator(
 
     /// <inheritdoc/>
     public bool CanValidate(ConstraintValidationContext context) =>
-        definition.EventsWithProperties.Any(_ => _.EventType == context.EventType);
+        definition.EventDefinitions.Any(_ => _.EventType == context.EventType);
 
     /// <inheritdoc/>
     public async Task<ConstraintValidationResult> Validate(ConstraintValidationContext context)
     {
-        var property = definition.EventsWithProperties.Single(_ => _.EventType == context.EventType).Property;
+        var property = definition.EventDefinitions.Single(_ => _.EventType == context.EventType).Property;
         var contentAsDictionary = (context.Content as IDictionary<string, object>)!;
         var value = contentAsDictionary[property]?.ToString();
         if (value is null)

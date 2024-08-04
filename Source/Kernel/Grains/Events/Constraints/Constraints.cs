@@ -21,7 +21,7 @@ public class Constraints(IClusterClient clusterClient) : Grain<ConstraintsState>
     public async Task Register(IEnumerable<IConstraintDefinition> definitions)
     {
         // TODO: Check for change; any new or replaced definitions should be re-initialized (Job)
-        var existing = State.Constraints.Where(existing => definitions.Any(d => d.Name == existing.Name));
+        var existing = State.Constraints.Where(existing => definitions.Any(d => d.Name == existing.Name)).ToArray();
         existing.ForEach(c => State.Constraints.Remove(c));
         definitions.ForEach(State.Constraints.Add);
         await WriteStateAsync();

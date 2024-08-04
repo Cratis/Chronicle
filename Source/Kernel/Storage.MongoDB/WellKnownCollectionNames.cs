@@ -87,4 +87,9 @@ public static class WellKnownCollectionNames
     /// The collection that holds reducer definitions.
     /// </summary>
     public const string ReducerDefinitions = "reducer-definitions";
+
+    /// <summary>
+    /// The collection that holds the definitions of constraints.
+    /// </summary>
+    public const string Constraints = "constraints";
 }

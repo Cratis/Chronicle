@@ -11,4 +11,4 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="EventType">The <see cref="EventType"/>.</param>
 /// <param name="Schema">The <see cref="JsonSchema"/> for the event type.</param>
 /// <param name="Property">The property on the event type.</param>
-public record EventTypeAndProperty(EventType EventType, JsonSchema Schema, string Property);
+public record UniqueConstraintEventDefinition(EventType EventType, JsonSchema Schema, string Property);

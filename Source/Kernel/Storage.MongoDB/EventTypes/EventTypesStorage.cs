@@ -28,7 +28,7 @@ public class EventTypesStorage(
     IEventStoreDatabase sharedDatabase,
     ILogger<EventTypesStorage> logger) : IEventTypesStorage
 {
-    ConcurrentDictionary<EventTypeId, Dictionary<EventGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = [];
+    ConcurrentDictionary<EventTypeId, ConcurrentDictionary<EventGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = [];
 
     /// <inheritdoc/>
     public async Task Populate()
@@ -42,7 +42,7 @@ public class EventTypesStorage(
             allSchemas!.GroupBy(_ => _.EventType)
             .ToDictionary(
                 _ => (EventTypeId)_.Key,
-                _ => _.ToDictionary(es => (EventGeneration)es.Generation, es => es.ToEventSchema())));
+                _ => new ConcurrentDictionary<EventGeneration, EventTypeSchema>(_.ToDictionary(es => (EventGeneration)es.Generation, es => es.ToEventSchema()))));
     }
 
     /// <inheritdoc/>
@@ -119,7 +119,7 @@ public class EventTypesStorage(
         var filter = GetFilterForSpecificSchema(type, generation);
         var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
-        _schemasByTypeAndGeneration[type] = schemas.ToDictionary(_ => (EventGeneration)_.Generation, _ => _.ToEventSchema());
+        _schemasByTypeAndGeneration[type] = new ConcurrentDictionary<EventGeneration, EventTypeSchema>(schemas.ToDictionary(_ => (EventGeneration)_.Generation, _ => _.ToEventSchema()));
 
         if (schemas.Count == 0)
         {

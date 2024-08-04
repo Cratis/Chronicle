@@ -24,6 +24,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.NamespaceAdded, _ => _.FireAndForgetDelivery = true)
+            .AddBroadcastChannel(WellKnownBroadcastChannelNames.ConstraintsChanged, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()
             .AddReminders()
             .AddTelemetry()

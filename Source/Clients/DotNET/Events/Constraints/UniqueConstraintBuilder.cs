@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="owner">Optional owner of the constraint.</param>
 public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = default) : IUniqueConstraintBuilder
 {
-    readonly List<EventTypeAndProperty> _eventTypesAndProperties = [];
+    readonly List<UniqueConstraintEventDefinition> _eventTypesAndProperties = [];
     ConstraintName? _name;
     ConstraintViolationMessageProvider? _messageProvider;
 
@@ -32,7 +32,7 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
         ThrowIfPropertyIsMissing(eventType, property);
         ThrowIfPropertyTypeMismatch(eventType, property);
 
-        _eventTypesAndProperties.Add(new EventTypeAndProperty(eventType, eventTypes.GetSchemaFor(eventType.Id), property));
+        _eventTypesAndProperties.Add(new UniqueConstraintEventDefinition(eventType, eventTypes.GetSchemaFor(eventType.Id), property));
         return this;
     }
 

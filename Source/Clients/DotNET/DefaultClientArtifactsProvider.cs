@@ -27,6 +27,8 @@ namespace Cratis.Chronicle;
 /// <param name="assembliesProvider"><see cref="ICanProvideAssembliesForDiscovery"/> for discovering types.</param>
 public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery assembliesProvider) : IClientArtifactsProvider
 {
+    bool _initialized;
+
     /// <inheritdoc/>
     public virtual IEnumerable<Type> EventTypes { get; private set; } = [];
 
@@ -75,6 +77,8 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     /// <inheritdoc/>
     public void Initialize()
     {
+        if (_initialized) return;
+
         assembliesProvider.Initialize();
         EventTypes = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<EventTypeAttribute>()).ToArray();
         ComplianceForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForType) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ToArray();
@@ -95,6 +99,8 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
 
         ConstraintTypes = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IConstraint) && _.IsAssignableTo(typeof(IConstraint))).ToArray();
         UniqueConstraints = EventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();
-        UniqueEventTypeConstraints = EventTypes.Where(_ => !_.HasAttribute<UniqueAttribute>()).ToArray();
+        UniqueEventTypeConstraints = EventTypes.Where(_ => _.HasAttribute<UniqueAttribute>()).ToArray();
+
+        _initialized = true;
     }
 }

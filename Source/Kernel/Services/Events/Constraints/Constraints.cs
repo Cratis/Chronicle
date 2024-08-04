@@ -13,13 +13,12 @@ namespace Cratis.Chronicle.Services.Events.Constraints;
 public class Constraints(IGrainFactory grainFactory) : IConstraints
 {
     /// <inheritdoc/>
-    public Task Register(RegisterConstraintsRequest request)
+    public async Task Register(RegisterConstraintsRequest request)
     {
         var key = new ConstraintsKey(request.EventStoreName);
         var grain = grainFactory.GetGrain<Grains.Events.Constraints.IConstraints>(key);
 
-        // var constraints = request.Constraints.Select(_ => _.ToChronicle());
-        // await grain.Register(constraints);
-        throw new NotImplementedException();
+        var constraints = request.Constraints.Select(_ => _.ToChronicle()).ToArray();
+        await grain.Register(constraints);
     }
 }

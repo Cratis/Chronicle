@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 
@@ -12,9 +13,19 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 /// <param name="eventStoreDatabase">The <see cref="IEventStoreDatabase"/> to use.</param>
 public class ConstraintsStorage(IEventStoreDatabase eventStoreDatabase) : IConstraintsStorage
 {
-    /// <inheritdoc/>
-    public Task<IEnumerable<IConstraintDefinition>> GetDefinitions() => throw new NotImplementedException();
+    readonly IMongoCollection<IConstraintDefinition> _collection = eventStoreDatabase.GetCollection<IConstraintDefinition>(WellKnownCollectionNames.Constraints);
 
     /// <inheritdoc/>
-    public Task SaveDefinition(IConstraintDefinition definition) => throw new NotImplementedException();
+    public async Task<IEnumerable<IConstraintDefinition>> GetDefinitions()
+    {
+        var result = await _collection.FindAsync(_ => true);
+        return result.ToList();
+    }
+
+    /// <inheritdoc/>
+    public async Task SaveDefinition(IConstraintDefinition definition)
+    {
+        var filter = Builders<IConstraintDefinition>.Filter.Eq(new StringFieldDefinition<IConstraintDefinition, string>("name"), definition.Name.Value);
+        await _collection.ReplaceOneAsync(filter, definition, new ReplaceOptions { IsUpsert = true });
+    }
 }

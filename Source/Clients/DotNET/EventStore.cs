@@ -177,6 +177,7 @@ public class EventStore : IEventStore
 
         // We need to discover all event types first, as they are used by the other artifacts
         await EventTypes.Discover();
+        await Constraints.Discover();
 
         await Task.WhenAll(
             Reactions.Discover(),
@@ -191,6 +192,7 @@ public class EventStore : IEventStore
 
         // We need to register event types first, as they are used by the other artifacts
         await EventTypes.Register();
+        await Constraints.Register();
 
         await Task.WhenAll(
             Reactions.Register(),

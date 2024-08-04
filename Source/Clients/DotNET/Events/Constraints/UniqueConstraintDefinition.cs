@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="Name">Name of the constraint.</param>
 /// <param name="MessageCallback">the callback that provides the <see cref="ConstraintViolationMessage"/> of the constraint.</param>
 /// <param name="EventsWithProperties">The <see cref="EventType"/> and properties the constraint is for.</param>
-public record UniqueConstraintDefinition(ConstraintName Name, ConstraintViolationMessageProvider MessageCallback, IEnumerable<EventTypeAndProperty> EventsWithProperties) : IConstraintDefinition
+public record UniqueConstraintDefinition(ConstraintName Name, ConstraintViolationMessageProvider MessageCallback, IEnumerable<UniqueConstraintEventDefinition> EventsWithProperties) : IConstraintDefinition
 {
     /// <inheritdoc/>
     public Constraint ToContract() => new()
@@ -21,7 +21,7 @@ public record UniqueConstraintDefinition(ConstraintName Name, ConstraintViolatio
         Type = ConstraintType.Unique,
         Definition = new(new UniqueConstraintDefinitionContract
         {
-            EventDefinitions = EventsWithProperties.Select(_ => new UniqueConstraintEventDefinition
+            EventDefinitions = EventsWithProperties.Select(_ => new Contracts.Events.Constraints.UniqueConstraintEventDefinition
             {
                 EventType = _.EventType.ToContract(),
                 Property = _.Property
