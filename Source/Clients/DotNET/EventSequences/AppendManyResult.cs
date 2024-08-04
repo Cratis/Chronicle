@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Grains.Events.Constraints;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 
-namespace Cratis.Chronicle.Grains.EventSequences;
+namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
 /// Represents the result of an append many operation.
 /// </summary>
-public class AppendManyResult
+public record AppendManyResult
 {
     /// <summary>
     /// Gets the <see cref="CorrelationId"/> for the operation.
@@ -20,7 +20,7 @@ public class AppendManyResult
     /// <summary>
     /// Gets the sequence numbers of the events that were appended, if successful. In the same sequence as the events were provided.
     /// </summary>
-    public IImmutableList<EventSequenceNumber> SequenceNumbers { get; init; } = [];
+    public IImmutableList<EventSequenceNumber> SequenceNumbers { get; init; } = ImmutableList<EventSequenceNumber>.Empty;
 
     /// <summary>
     /// Gets a value indicating whether the operation was successful.
@@ -40,12 +40,12 @@ public class AppendManyResult
     /// <summary>
     /// Gets any violations that occurred during the operation.
     /// </summary>
-    public IImmutableList<ConstraintViolation> ConstraintViolations { get; init; } = [];
+    public IImmutableList<ConstraintViolation> ConstraintViolations { get; init; } = ImmutableList<ConstraintViolation>.Empty;
 
     /// <summary>
     /// Gets any exception messages that might have occurred.
     /// </summary>
-    public IImmutableList<AppendError> Errors { get; init; } = [];
+    public IImmutableList<AppendError> Errors { get; init; } = ImmutableList<AppendError>.Empty;
 
     /// <summary>
     /// Create a successful result.
@@ -57,17 +57,5 @@ public class AppendManyResult
     {
         CorrelationId = correlationId,
         SequenceNumbers = sequenceNumbers.ToImmutableList()
-    };
-
-    /// <summary>
-    /// Create a failed result with constraint violations.
-    /// </summary>
-    /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>
-    /// <param name="violations">The violations.</param>
-    /// <returns>A new failed <see cref="AppendResult"/> instance.</returns>
-    public static AppendManyResult Failed(CorrelationId correlationId, IEnumerable<ConstraintViolation> violations) => new()
-    {
-        CorrelationId = correlationId,
-        ConstraintViolations = violations.ToImmutableList()
     };
 }

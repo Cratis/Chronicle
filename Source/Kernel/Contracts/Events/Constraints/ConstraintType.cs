@@ -9,9 +9,9 @@ namespace Cratis.Chronicle.Contracts.Events.Constraints;
 public enum ConstraintType
 {
     /// <summary>
-    /// Represents no constraint.
+    /// Represents unknown constraint.
     /// </summary>
-    None = 0,
+    Unknown = 0,
 
     /// <summary>
     /// Represents a unique constraint.

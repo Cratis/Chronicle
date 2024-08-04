@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Changes;
+using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;
@@ -69,4 +70,18 @@ public interface IEventStoreNamespaceStorage
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>
     /// <returns>The <see cref="IEventStoreNamespaceStorage"/> instance.</returns>
     IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId);
+
+    /// <summary>
+    /// Gets the storage for unique constraints.
+    /// </summary>
+    /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>
+    /// <returns>The <see cref="IUniqueConstraintsStorage"/> instance.</returns>
+    IUniqueConstraintsStorage GetUniqueConstraintsStorage(EventSequenceId eventSequenceId);
+
+    /// <summary>
+    /// Gets the storage for unique event type constraints.
+    /// </summary>
+    /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>
+    /// /// <returns>The <see cref="IUniqueEventTypesConstraintsStorage"/> instance.</returns>
+    IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(EventSequenceId eventSequenceId);
 }

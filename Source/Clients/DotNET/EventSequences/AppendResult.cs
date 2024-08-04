@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Grains.Events.Constraints;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 
-namespace Cratis.Chronicle.Grains.EventSequences;
+namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
 /// Represents the result of an append operation.
 /// </summary>
-public class AppendResult
+public record AppendResult
 {
     /// <summary>
     /// Gets the <see cref="CorrelationId"/> for the operation.
@@ -40,12 +40,12 @@ public class AppendResult
     /// <summary>
     /// Gets any violations that occurred during the operation.
     /// </summary>
-    public IImmutableList<ConstraintViolation> ConstraintViolations { get; init; } = [];
+    public IImmutableList<ConstraintViolation> ConstraintViolations { get; init; } = ImmutableList<ConstraintViolation>.Empty;
 
     /// <summary>
     /// Gets any exception messages that might have occurred.
     /// </summary>
-    public IImmutableList<AppendError> Errors { get; init; } = [];
+    public IImmutableList<AppendError> Errors { get; init; } = ImmutableList<AppendError>.Empty;
 
     /// <summary>
     /// Create a successful result.

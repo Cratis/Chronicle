@@ -20,6 +20,12 @@ public record ConstraintsKey(EventStoreName EventStore)
     /// <param name="key"><see cref="ConstraintsKey"/> to convert from.</param>
     public static implicit operator string(ConstraintsKey key) => key.ToString();
 
+    /// <summary>
+    /// Implicitly convert from string to <see cref="ConstraintsKey"/>.
+    /// </summary>
+    /// <param name="key">String representation to convert from.</param>
+    public static implicit operator ConstraintsKey(string key) => Parse(key);
+
     /// <inheritdoc/>
     public override string ToString()
     {
@@ -35,7 +41,6 @@ public record ConstraintsKey(EventStoreName EventStore)
     {
         var elements = key.Split('+');
         var eventStore = (EventStoreName)elements[0];
-
         return new(eventStore);
     }
 }

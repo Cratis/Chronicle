@@ -48,7 +48,7 @@ public interface IUniqueConstraintBuilder
     /// </summary>
     /// <param name="messageProvider">Callback that provides the message.</param>
     /// <returns>Builder for continuation.</returns>
-    IUniqueConstraintBuilder WithMessage(Func<object, ConstraintViolationMessage> messageProvider);
+    IUniqueConstraintBuilder WithMessage(ConstraintViolationMessageProvider messageProvider);
 
     /// <summary>
     /// Builds the unique constraint.

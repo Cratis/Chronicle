@@ -59,7 +59,7 @@ public interface IEventSequence
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="event">The event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Append(EventSourceId eventSourceId, object @event);
+    Task<AppendResult> Append(EventSourceId eventSourceId, object @event);
 
     /// <summary>
     /// Append a collection of events to the event store.
@@ -67,7 +67,7 @@ public interface IEventSequence
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="events">Collection of events to append.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events);
+    Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<object> events);
 
     /// <summary>
     /// Redact an event at a specific sequence number.

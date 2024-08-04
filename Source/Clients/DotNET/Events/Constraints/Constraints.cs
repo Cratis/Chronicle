@@ -47,6 +47,19 @@ public class Constraints(
         return eventStore.Connection.Services.Constraints.Register(request);
     }
 
+    /// <inheritdoc/>
+    public ConstraintViolation ResolveMessageFor(ConstraintViolation violation)
+    {
+        var constraint = GetFor(violation.ConstraintName);
+        var message = constraint.MessageCallback(violation);
+        if (string.IsNullOrEmpty(message.Value))
+        {
+            return violation;
+        }
+
+        return violation with { Message = message };
+    }
+
     void ThrowIfUnknownConstraint(ConstraintName constraintName)
     {
         if (!HasFor(constraintName)) throw new UnknownConstraint(constraintName);

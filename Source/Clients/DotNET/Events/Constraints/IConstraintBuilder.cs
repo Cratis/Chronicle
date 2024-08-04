@@ -34,7 +34,7 @@ public interface IConstraintBuilder
     /// <param name="messageCallback">Callback for providing message for the constraint.</param>
     /// <param name="name">Optional name for the constraint.</param>
     /// <returns>Builder for continuation.</returns>
-    IConstraintBuilder Unique<TEventType>(Func<EventType, ConstraintViolationMessage> messageCallback, ConstraintName? name = default);
+    IConstraintBuilder Unique<TEventType>(ConstraintViolationMessageProvider messageCallback, ConstraintName? name = default);
 
     /// <summary>
     /// Add a constraint to the builder.

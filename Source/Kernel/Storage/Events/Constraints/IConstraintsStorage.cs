@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events.Constraints;
+
 namespace Cratis.Chronicle.Storage.Events.Constraints;
 
 /// <summary>
@@ -9,12 +11,15 @@ namespace Cratis.Chronicle.Storage.Events.Constraints;
 public interface IConstraintsStorage
 {
     /// <summary>
-    /// Gets the storage for unique constraints.
+    /// Get all definitions.
     /// </summary>
-    IUniqueConstraintsStorage Unique { get; }
+    /// <returns>Collection of <see cref="IConstraintDefinition"/>.</returns>
+    Task<IEnumerable<IConstraintDefinition>> GetDefinitions();
 
     /// <summary>
-    /// Gets the storage for unique event type constraints.
+    /// Save a definition.
     /// </summary>
-    IUniqueEventTypesConstraintsStorage UniqueEventTypes { get; }
+    /// <param name="definition"><see cref="IConstraintDefinition"/> to save.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SaveDefinition(IConstraintDefinition definition);
 }

@@ -65,7 +65,7 @@ public class EventStore : IEventStore
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
-        EventTypes = new Events.EventTypes(this, schemaGenerator, clientArtifactsProvider);
+        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
 
         _eventSerializer = new EventSerializer(
             clientArtifactsProvider,
@@ -73,18 +73,19 @@ public class EventStore : IEventStore
             EventTypes,
             jsonSerializerOptions);
 
+        Constraints = new Constraints(
+            this,
+            serviceProvider.GetRequiredService<IInstancesOf<ICanProvideConstraints>>());
+
         EventLog = new EventLog(
             eventStoreName,
             @namespace,
             connection,
             EventTypes,
+            Constraints,
             _eventSerializer,
             causationManager,
             identityProvider);
-
-        Constraints = new Constraints(
-            this,
-            serviceProvider.GetRequiredService<IInstancesOf<ICanProvideConstraints>>());
 
         Reactions = new Reactions.Reactions(
             this,
@@ -205,6 +206,7 @@ public class EventStore : IEventStore
             id,
             Connection,
             EventTypes,
+            Constraints,
             _eventSerializer,
             _causationManager,
             _identityProvider);

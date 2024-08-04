@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
@@ -20,6 +20,7 @@ using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
+using Orleans.BroadcastChannel;
 using Orleans.Providers;
 using IObserver = Cratis.Chronicle.Grains.Observation.IObserver;
 
@@ -32,6 +33,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// Initializes a new instance of <see cref="EventSequence"/>.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
+/// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidatorSetFactory"/> for creating a set of constraint validators.</param>
 /// <param name="meter">The meter to use for metrics.</param>
 /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
@@ -39,10 +41,11 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 public class EventSequence(
     IStorage storage,
+    IConstraintValidatorSetFactory constraintValidatorSetFactory,
     IMeter<EventSequence> meter,
     IJsonComplianceManager jsonComplianceManagerProvider,
     IExpandoObjectConverter expandoObjectConverter,
-    ILogger<EventSequence> logger) : Grain<EventSequenceState>, IEventSequence
+    ILogger<EventSequence> logger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
     IEventSequenceStorage? _eventSequenceStorage;
     IEventTypesStorage? _eventTypesStorage;
@@ -52,8 +55,7 @@ public class EventSequence(
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
     IMeterScope<EventSequence>? _metrics;
     IAppendedEventsQueues? _appendedEventsQueues;
-    IConstraints? _constraints;
-
+    IConstraintValidatorSet? _constraints;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
@@ -71,10 +73,16 @@ public class EventSequence(
 
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);
 
-        var constraintsKey = new ConstraintsKey(_eventSequenceKey.EventStore);
-        _constraints = GrainFactory.GetGrain<IConstraints>(constraintsKey);
+        _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
 
         await base.OnActivateAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
+    {
+        streamSubscription.Attach<ConstraintsChanged>(OnConstraintsChanged, OnConstraintsChangedError);
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -148,13 +156,6 @@ public class EventSequence(
 
         try
         {
-            var constraintCheck = await (_constraints?.Check(eventSourceId, eventType, content) ?? Task.FromResult(ConstraintCheckResult.Success));
-            if (!constraintCheck.IsSuccess)
-            {
-                _metrics?.ConstraintViolation(eventSourceId, eventName);
-                return AppendResult.Failed(correlationId, constraintCheck.Violations);
-            }
-
             var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
             eventName = eventSchema.Schema.GetDisplayName();
             logger.Appending(
@@ -168,6 +169,16 @@ public class EventSequence(
 
             var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
             var compliantEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
+
+            var constraintValidationResult =
+                await (_constraints?.Validate(new EventToValidateForConstraints(eventSourceId, eventType, compliantEventAsExpandoObject)) ??
+                Task.FromResult(ConstraintValidationResult.Success));
+
+            if (!constraintValidationResult.IsValid)
+            {
+                _metrics?.ConstraintViolation(eventSourceId, eventName);
+                return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
+            }
 
             var appending = true;
             while (appending)
@@ -250,17 +261,29 @@ public class EventSequence(
         // TODO: Get correct correlation id
         var correlationId = CorrelationId.New();
 
+        var results = new List<AppendResult>();
+
         foreach (var @event in events)
         {
-            await Append(
+            results.Add(await Append(
                 eventSourceId,
                 @event.EventType,
                 @event.Content,
                 causation,
-                causedBy);
+                causedBy));
         }
 
-        return AppendManyResult.Success(correlationId, []);
+        if (results.TrueForAll(_ => _.IsSuccess))
+        {
+            return AppendManyResult.Success(correlationId, []);
+        }
+
+        return new AppendManyResult
+        {
+            CorrelationId = correlationId,
+            ConstraintViolations = results.SelectMany(r => r.ConstraintViolations).ToImmutableList(),
+            Errors = results.SelectMany(r => r.Errors).ToImmutableList()
+        };
     }
 
     /// <inheritdoc/>
@@ -326,6 +349,16 @@ public class EventSequence(
             await IdentityStorage.GetFor(causedBy),
             DateTimeOffset.UtcNow);
         await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
+    }
+
+    async Task OnConstraintsChanged(ConstraintsChanged payload)
+    {
+        _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+    }
+
+    Task OnConstraintsChangedError(Exception exception)
+    {
+        return Task.CompletedTask;
     }
 
     async Task RewindPartitionForAffectedObservers(

@@ -32,27 +32,27 @@ public class EventSequences(
     public async Task<AppendResponse> Append(AppendRequest request, CallContext context = default)
     {
         var eventSequence = GetEventSequenceGrain(request);
-        await eventSequence.Append(
+        var result = await eventSequence.Append(
             request.EventSourceId,
             request.EventType.ToChronicle(),
             JsonSerializer.Deserialize<JsonNode>(request.Content, jsonSerializerOptions)!.AsObject(),
             request.Causation.ToChronicle(),
             request.CausedBy.ToChronicle());
 
-        return new AppendResponse();
+        return result.ToContract();
     }
 
     /// <inheritdoc/>
     public async Task<AppendManyResponse> AppendMany(AppendManyRequest request, CallContext context = default)
     {
         var eventSequence = GetEventSequenceGrain(request);
-        await eventSequence.AppendMany(
+        var result = await eventSequence.AppendMany(
             request.EventSourceId,
             request.Events.ToChronicle(),
             request.Causation.ToChronicle(),
             request.CausedBy.ToChronicle());
 
-        return new AppendManyResponse();
+        return result.ToContract();
     }
 
     /// <inheritdoc/>

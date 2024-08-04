@@ -27,12 +27,12 @@ public class ConstraintBuilder(IEventTypes eventTypes, Type? owner = default) : 
     public IConstraintBuilder Unique<TEventType>(ConstraintViolationMessage? message = default, ConstraintName? name = default)
     {
         return Unique<TEventType>(
-            eventType => message ?? $"An instance of event type {eventType.Id} already exists",
+            eventType => message ?? string.Empty,
             name);
     }
 
     /// <inheritdoc/>
-    public IConstraintBuilder Unique<TEventType>(Func<EventType, ConstraintViolationMessage> messageCallback, ConstraintName? name = default)
+    public IConstraintBuilder Unique<TEventType>(ConstraintViolationMessageProvider messageCallback, ConstraintName? name = default)
     {
         var eventType = eventTypes.GetEventTypeFor(typeof(TEventType));
         AddConstraint(new UniqueEventTypeConstraintDefinition(

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 
 namespace Cratis.Chronicle.Services.Events.Constraints;
@@ -12,5 +13,13 @@ namespace Cratis.Chronicle.Services.Events.Constraints;
 public class Constraints(IGrainFactory grainFactory) : IConstraints
 {
     /// <inheritdoc/>
-    public Task Register(RegisterConstraintsRequest request) => throw new NotImplementedException();
+    public Task Register(RegisterConstraintsRequest request)
+    {
+        var key = new ConstraintsKey(request.EventStoreName);
+        var grain = grainFactory.GetGrain<Grains.Events.Constraints.IConstraints>(key);
+
+        // var constraints = request.Constraints.Select(_ => _.ToChronicle());
+        // await grain.Register(constraints);
+        throw new NotImplementedException();
+    }
 }

@@ -19,7 +19,7 @@ public interface IConstraintDefinition
     /// <summary>
     /// Gets the callback that provides the <see cref="ConstraintViolationMessage"/> of the constraint.
     /// </summary>
-    Func<EventType, ConstraintViolationMessage> MessageCallback { get; }
+    ConstraintViolationMessageProvider MessageCallback { get; }
 
     /// <summary>
     /// Converts the definition to a <see cref="Contract"/> representation.

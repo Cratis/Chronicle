@@ -16,7 +16,7 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
 {
     readonly List<EventTypeAndProperty> _eventTypesAndProperties = [];
     ConstraintName? _name;
-    Func<object, ConstraintViolationMessage>? _messageProvider;
+    ConstraintViolationMessageProvider? _messageProvider;
 
     /// <inheritdoc/>
     public IUniqueConstraintBuilder On<TEventType>(Expression<Func<TEventType, object>> property)
@@ -40,7 +40,7 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
     public IUniqueConstraintBuilder WithMessage(string message) => WithMessage(_ => message);
 
     /// <inheritdoc/>
-    public IUniqueConstraintBuilder WithMessage(Func<object, ConstraintViolationMessage> messageProvider)
+    public IUniqueConstraintBuilder WithMessage(ConstraintViolationMessageProvider messageProvider)
     {
         _messageProvider = messageProvider;
         return this;
@@ -60,7 +60,7 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
 
         var name = _name ?? owner?.Name ?? throw new MissingNameForUniqueConstraint();
 
-        Func<object, ConstraintViolationMessage> defaultMessageProvider = _ => $"Violation of unique constraint '{name}'";
+        ConstraintViolationMessageProvider defaultMessageProvider = _ => string.Empty;
         var messageProvider = _messageProvider ?? defaultMessageProvider;
 
         return new UniqueConstraintDefinition(name, messageProvider, [.. _eventTypesAndProperties]);

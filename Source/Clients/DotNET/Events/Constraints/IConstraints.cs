@@ -24,6 +24,13 @@ public interface IConstraints
     IConstraintDefinition GetFor(ConstraintName constraintName);
 
     /// <summary>
+    /// Resolve the concrete actual message for a <see cref="ConstraintViolation"/>.
+    /// </summary>
+    /// <param name="violation"><see cref="ConstraintViolation"/> to resolve for.</param>
+    /// <returns>An instance of <see cref="ConstraintViolation"/> with the resolved message.</returns>
+    ConstraintViolation ResolveMessageFor(ConstraintViolation violation);
+
+    /// <summary>
     /// Discover all constraints in the system.
     /// </summary>
     /// <returns>Awaitable task.</returns>

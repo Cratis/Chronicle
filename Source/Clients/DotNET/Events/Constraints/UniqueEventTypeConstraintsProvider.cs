@@ -17,6 +17,6 @@ public class UniqueEventTypeConstraintsProvider(IClientArtifactsProvider clientA
         clientArtifactsProvider.UniqueEventTypeConstraints
             .Select(eventType => new UniqueEventTypeConstraintDefinition(
                 eventType.GetConstraintName(),
-                et => eventType.GetConstraintMessage() ?? $"An instance of event type {et.Id} already exists",
+                et => eventType.GetConstraintMessage() ?? string.Empty,
                 eventTypes.GetEventTypeFor(eventType)) as IConstraintDefinition).ToImmutableList();
 }
