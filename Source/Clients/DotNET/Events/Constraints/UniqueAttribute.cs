@@ -9,15 +9,15 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="name">Optional name of the constraint to use.</param>
 /// <param name="message">Optional message to use when the unique constraint is violated.</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = false)]
-public sealed class UniqueAttribute(string name = "", string message = "") : Attribute
+public sealed class UniqueAttribute(string? name = default, string? message = default) : Attribute
 {
     /// <summary>
     /// Gets the name of the constraint.
     /// </summary>
-    public string Name { get; } = name;
+    public string? Name { get; } = name;
 
     /// <summary>
     /// Gets the message to use when the unique constraint is violated.
     /// </summary>
-    public string Message { get; } = message;
+    public string? Message { get; } = message;
 }
