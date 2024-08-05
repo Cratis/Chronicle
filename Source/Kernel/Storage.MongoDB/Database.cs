@@ -3,6 +3,9 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using StorageConfiguration = Cratis.Chronicle.Concepts.Configuration.Storage;
 
@@ -28,6 +31,8 @@ public class Database : IDatabase
         IMongoDBClientManager clientManager,
         StorageConfiguration configuration)
     {
+        BsonSerializer.RegisterDiscriminatorConvention(typeof(IConstraintDefinition), new ConstraintTypeDiscriminatorConvention());
+
         var url = new MongoUrl(configuration.ConnectionDetails.ToString());
         var settings = MongoClientSettings.FromUrl(url);
         var client = clientManager.GetClientFor(settings);

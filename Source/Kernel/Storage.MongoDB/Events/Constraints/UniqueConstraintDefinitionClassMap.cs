@@ -18,6 +18,5 @@ public class UniqueConstraintDefinitionClassMap : IBsonClassMapFor<UniqueConstra
         classMap.AutoMap();
         classMap.SetIsRootClass(true);
         classMap.MapIdProperty(_ => _.Name);
-        classMap.SetDiscriminator(nameof(ConstraintType.Unique));
     }
 }
