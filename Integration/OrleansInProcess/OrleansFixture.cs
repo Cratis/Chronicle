@@ -26,7 +26,7 @@ public class OrleansFixture : WebApplicationFactory<Startup>
             mongo =>
             {
                 mongo.Server = "mongodb://localhost:27018";
-                mongo.Database = "orleans";
+                mongo.Database = "testing";
             });
 
         builder.Host.UseDefaultServiceProvider(_ => _.ValidateOnBuild = false);
@@ -38,7 +38,7 @@ public class OrleansFixture : WebApplicationFactory<Startup>
                 silo
                     .UseLocalhostClustering()
                     .AddCratisChronicle(
-                        options => options.EventStoreName = "sample",
+                        options => options.EventStoreName = "testing",
                         _ => _.WithMongoDB());
             });
 
