@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Integration.Base</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Integration.Base</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="mongodb.driver" />
+      <PackageReference Include="Testcontainers" />
+    </ItemGroup>
+</Project>

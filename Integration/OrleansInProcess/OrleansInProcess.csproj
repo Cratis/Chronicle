@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Integration.OrleansInProcess</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Integration.OrleansInProcess</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Base\Base.csproj" />
+      <ProjectReference Include="..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
+      <ProjectReference Include="..\..\Source\Clients\Orleans\Orleans.csproj" />
+      <ProjectReference Include="..\..\Source\Kernel\Storage.MongoDB\Storage.MongoDB.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+      <PackageReference Include="Cratis.Applications.MongoDB" />
+    </ItemGroup>
+
+</Project>
