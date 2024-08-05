@@ -16,7 +16,7 @@ public class UniqueEventTypeConstraintDefinitionClassMap : IBsonClassMapFor<Uniq
     public void Configure(BsonClassMap<UniqueEventTypeConstraintDefinition> classMap)
     {
         classMap.AutoMap();
-        classMap.SetIsRootClass(true);
         classMap.MapIdProperty(_ => _.Name);
+        classMap.SetIsRootClass(true);
     }
 }

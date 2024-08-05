@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
+using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.Reminders;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,6 +34,7 @@ public static class MongoDBChronicleBuilderExtensions
 
         BsonSerializer.RegisterSerializer(new JsonElementSerializer());
         BsonSerializer.RegisterSerializer(new UriSerializer());
+        BsonSerializer.RegisterSerializer(new ConstraintDefinitionSerializer());
         builder.ConfigureServices(services => services.AddSingleton<IReminderTable, ReminderTable>());
         return builder;
     }
