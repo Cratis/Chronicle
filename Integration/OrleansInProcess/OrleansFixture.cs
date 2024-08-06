@@ -6,6 +6,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Json;
 using DotNet.Testcontainers.Networks;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 
 namespace Cratis.Chronicle.Integration.OrleansInProcess;
 
@@ -20,7 +21,7 @@ public class OrleansFixture : WebApplicationFactory<Startup>
 
     protected override IHostBuilder CreateHostBuilder()
     {
-        var builder = base.CreateHostBuilder();
+        var builder = Host.CreateDefaultBuilder();
         builder.UseCratisMongoDB(
             mongo =>
             {
@@ -48,6 +49,11 @@ public class OrleansFixture : WebApplicationFactory<Startup>
             .UseConsoleLifetime();
 
         return builder;
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseSolutionRelativeContentRoot("Integration/OrleansInProcess");
     }
 
     public INetwork Network => GlobalFixture.Network;
