@@ -32,7 +32,7 @@ public class Database : IDatabase
         var url = new MongoUrl(mongoDBOptions.Value.Server);
         var settings = MongoClientSettings.FromUrl(url);
         var client = clientManager.GetClientFor(settings);
-        _database = client.GetDatabase(url.DatabaseName);
+        _database = client.GetDatabase("chronicle+main");
         _clientManager = clientManager;
         _mongoDBOptions = mongoDBOptions;
     }
