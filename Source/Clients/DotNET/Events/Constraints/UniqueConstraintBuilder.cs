@@ -4,6 +4,7 @@
 using System.Linq.Expressions;
 using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
+using Cratis.Strings;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -28,6 +29,7 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
     /// <inheritdoc/>
     public IUniqueConstraintBuilder On(EventType eventType, string property)
     {
+        property = property.ToCamelCase();
         ThrowIfEventTypeAlreadyAdded(eventType, property);
         ThrowIfPropertyIsMissing(eventType, property);
         ThrowIfPropertyTypeMismatch(eventType, property);
@@ -77,7 +79,8 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
     void ThrowIfPropertyIsMissing(EventType eventType, string property)
     {
         var schema = eventTypes.GetSchemaFor(eventType.Id);
-        if (!schema.GetFlattenedProperties().Any(_ => _.Name == property))
+        var properties = schema.GetFlattenedProperties();
+        if (!properties.Any(_ => _.Name == property))
         {
             throw new PropertyDoesNotExistOnEventType(eventType, property);
         }

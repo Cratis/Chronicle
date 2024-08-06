@@ -13,6 +13,7 @@ using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
+using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Jobs;
@@ -150,7 +151,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             return uniqueConstraintsStorage;
         }
 
-        return _uniqueConstraints[eventSequenceId] = new UniqueConstraintsStorage();
+        return _uniqueConstraints[eventSequenceId] = new UniqueConstraintsStorage(_eventStoreNamespaceDatabase, eventSequenceId);
     }
 
     /// <inheritdoc/>

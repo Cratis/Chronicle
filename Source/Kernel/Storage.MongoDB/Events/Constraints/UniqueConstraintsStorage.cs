@@ -1,46 +1,47 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Events.Constraints;
-using MongoDB.Bson.Serialization;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 
 /// <summary>
 /// Represents an implementation of <see cref="IUniqueConstraintsStorage"/>.
 /// </summary>
-public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNamespaceDatabase) : IUniqueConstraintsStorage
+/// <param name="eventStoreNamespaceDatabase"><see cref="IEventStoreNamespaceDatabase"/> for the storage.</param>
+/// <param name="eventSequenceId"><see cref="EventSequenceId"/> for the storage.</param>
+public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNamespaceDatabase, EventSequenceId eventSequenceId) : IUniqueConstraintsStorage
 {
     /// <inheritdoc/>
-    public Task<(bool Exists, EventSequenceNumber SequenceNumber)> Exists(ConstraintName name, UniqueConstraintValue value) => throw new NotImplementedException();
+    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, ConstraintName name, UniqueConstraintValue value)
+    {
+        var collection = GetCollectionFor(name);
+        var result = await collection.FindAsync(_ => _.Value == value);
+        var existing = result.FirstOrDefault();
+        if (existing is not null)
+        {
+            if (existing.EventSourceId == eventSourceId) return (true, existing.SequenceNumber);
+
+            return (false, existing.SequenceNumber);
+        }
+
+        return (true, EventSequenceNumber.Unavailable);
+    }
 
     /// <inheritdoc/>
-    public Task Save(ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value)
+    public async Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value)
     {
-        eventStoreNamespaceDatabase.GetCollection
+        var collection = GetCollectionFor(name);
+        await collection.ReplaceOneAsync(
+            u => u.EventSourceId == eventSourceId,
+            new UniqueConstraintIndex(eventSourceId, value, sequenceNumber),
+            new ReplaceOptions { IsUpsert = true });
     }
-}
 
-
-/// <summary>
-/// Represents
-/// </summary>
-/// <param name="Value"></param>
-/// <param name="SequenceNumber"></param>
-/// <returns></returns>
-public record UniqueConstraintValueObject(UniqueConstraintValue Value, EventSequenceNumber SequenceNumber);
-
-/// <summary>
-/// Represents the mapping for <see cref="UniqueConstraintValueObject"/>.
-/// </summary>
-public class UniqueConstraintValueObjectClassMap : IBsonClassMapFor<UniqueConstraintValueObject>
-{
-    public void Define(BsonClassMap<UniqueConstraintValueObject> classMap)
-    {
-        classMap.AutoMap();
-        classMap.MapIdProperty(_ => _.Value);
-    }
+    IMongoCollection<UniqueConstraintIndex> GetCollectionFor(ConstraintName constraintName) =>
+        eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>($"{eventSequenceId}+{constraintName}+constraint");
 }

@@ -55,12 +55,35 @@ app.MapGet(
     "/users",
     async (IEventLog eventLog) =>
     {
+        var userId = Guid.Parse("3444635c-8174-47b3-99dd-a27cd3ea80e4");
+        var groupId = Guid.NewGuid();
+
+        var result = await eventLog.Append(userId, new Events.Users.OnboardingStarted("My User", "asdasd", "asdasdasd"));
+        result = await eventLog.Append(userId, new Events.Users.PasswordChanged("awesome"));
+        result = await eventLog.Append(groupId, new Events.Groups.GroupAdded("My Group"));
+        result = await eventLog.Append(groupId, new Events.Groups.UserAddedToGroup(userId));
+        result = await eventLog.Append(userId, new Events.Users.OnboardingCompleted());
+    });
+
+app.MapGet(
+    "/users/rename",
+    async (IEventLog eventLog) =>
+    {
+        var userId = Guid.Parse("3444635c-8174-47b3-99dd-a27cd3ea80e4");
+        var groupId = Guid.NewGuid();
+
+        var result = await eventLog.Append(userId, new Events.Users.UserNameChanged("My User"));
+    });
+
+app.MapGet(
+    "/users/new",
+    async (IEventLog eventLog) =>
+    {
         var userId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
-        await eventLog.Append(userId, new Events.Users.OnboardingStarted("My User", "asdasd", "asdasdasd"));
-        await eventLog.Append(userId, new Events.Users.PasswordChanged("awesome"));
-        await eventLog.Append(groupId, new Events.Groups.GroupAdded("My Group"));
-        await eventLog.Append(groupId, new Events.Groups.UserAddedToGroup(userId));
+
+        var result = await eventLog.Append(userId, new Events.Users.UserNameChanged("My User"));
     });
+
 
 await app.RunAsync();

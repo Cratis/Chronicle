@@ -14,20 +14,22 @@ public interface IUniqueConstraintsStorage
     /// <summary>
     /// Check if a constraint value exists.
     /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to check for.</param>
     /// <param name="name"><see cref="ConstraintName"/> to check for.</param>
     /// <param name="value"><see cref="UniqueConstraintValue"/>to check.</param>
     /// <returns>
-    /// Tuple containing a boolean saying whether or not it exists and the <see cref="EventSequenceNumber"/> where it already exists.
+    /// Tuple containing a boolean saying whether or not its allowed to perform and the <see cref="EventSequenceNumber"/> for the item it violates.
     /// Returns <see cref="EventSequenceNumber.Unavailable"/> if it doesn't exist.
     /// </returns>
-    Task<(bool Exists, EventSequenceNumber SequenceNumber)> Exists(ConstraintName name, UniqueConstraintValue value);
+    Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, ConstraintName name, UniqueConstraintValue value);
 
     /// <summary>
     /// Save a constraint value.
     /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to save for.</param>
     /// <param name="name"><see cref="ConstraintName"/> to save for.</param>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> the value exists at.</param>
     /// <param name="value"><see cref="UniqueConstraintValue"/>to save.</param>
     /// <returns>True if it exists, false if not.</returns>
-    Task Save(ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value);
+    Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value);
 }

@@ -32,10 +32,10 @@ public class UniqueConstraintValidator(
             return ConstraintValidationResult.Success;
         }
 
-        var (exists, sequenceNumber) = await storage.Exists(definition.Name, value);
-        return exists ?
-            new() { Violations = [this.CreateViolation(context, sequenceNumber, $"Event '{context.EventType}' with value '{value}' on property '{property}' violated a unique constraint on sequence number {sequenceNumber}")] } :
-            ConstraintValidationResult.Success;
+        var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventSourceId, definition.Name, value);
+        return isAllowed ?
+            ConstraintValidationResult.Success :
+            new() { Violations = [this.CreateViolation(context, sequenceNumber, $"Event '{context.EventType}' with value '{value}' on property '{property}' violated a unique constraint on sequence number {sequenceNumber}")] };
     }
 
     /// <inheritdoc/>
@@ -44,7 +44,7 @@ public class UniqueConstraintValidator(
         var (_, value) = GetPropertyAndValue(definition, context);
         if (value is not null)
         {
-            await storage.Save(definition.Name, eventSequenceNumber, value);
+            await storage.Save(context.EventSourceId, definition.Name, eventSequenceNumber, value);
         }
     }
 

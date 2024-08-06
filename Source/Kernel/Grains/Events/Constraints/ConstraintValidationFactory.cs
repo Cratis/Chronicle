@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Grains.Events.Constraints;
 /// </summary>
 /// <param name="storage">The <see cref="IStorage"/> to use.</param>
 [Singleton]
-public class ConstraintValidatorSetFactory(IStorage storage) : IConstraintValidationFactory
+public class ConstraintValidationFactory(IStorage storage) : IConstraintValidationFactory
 {
     /// <inheritdoc/>
     public async Task<IConstraintValidation> Create(EventSequenceKey eventSequenceKey)

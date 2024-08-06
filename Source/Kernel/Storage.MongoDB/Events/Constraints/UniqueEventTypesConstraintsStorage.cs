@@ -18,7 +18,7 @@ public class UniqueEventTypesConstraintsStorage(IEventStoreNamespaceDatabase dat
     readonly IMongoCollection<Event> _collection = database.GetEventSequenceCollectionFor(eventSequenceId);
 
     /// <inheritdoc/>
-    public async Task<(bool Exists, EventSequenceNumber SequenceNumber)> Exists(EventType eventType, EventSourceId eventSourceId)
+    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventType eventType, EventSourceId eventSourceId)
     {
         var filter = Builders<Event>.Filter.Eq(_ => _.Type, eventType.Id);
         filter &= Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId);
@@ -27,9 +27,9 @@ public class UniqueEventTypesConstraintsStorage(IEventStoreNamespaceDatabase dat
         var existing = result.FirstOrDefault();
         if (existing is not null)
         {
-            return (true, existing.SequenceNumber);
+            return (false, existing.SequenceNumber);
         }
 
-        return (false, EventSequenceNumber.Unavailable);
+        return (true, EventSequenceNumber.Unavailable);
     }
 }

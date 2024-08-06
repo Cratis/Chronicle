@@ -25,10 +25,10 @@ public class UniqueEventTypeConstraintValidator(
     /// <inheritdoc/>
     public async Task<ConstraintValidationResult> Validate(ConstraintValidationContext context)
     {
-        var (exists, sequenceNumber) = await storage.Exists(context.EventType, context.EventSourceId);
-        return exists ?
-            new() { Violations = [this.CreateViolation(context, sequenceNumber, $"Event '{context.EventType}' with event source id '{context.EventSourceId}' violated a unique event type constraint on sequence number {sequenceNumber}")] } :
-            ConstraintValidationResult.Success;
+        var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventType, context.EventSourceId);
+        return isAllowed ?
+            ConstraintValidationResult.Success :
+            new() { Violations = [this.CreateViolation(context, sequenceNumber, $"Event '{context.EventType}' with event source id '{context.EventSourceId}' violated a unique event type constraint on sequence number {sequenceNumber}")] };
     }
 
     /// <inheritdoc/>
