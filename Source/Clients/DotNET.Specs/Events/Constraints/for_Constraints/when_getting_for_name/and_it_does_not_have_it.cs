@@ -7,11 +7,6 @@ public class and_it_does_not_have_it : given.no_constraints
 {
     UnknownConstraint _result;
 
-    async Task Establish()
-    {
-        await _constraints.Discover();
-    }
-
     void Because() => _result = Catch.Exception<UnknownConstraint>(() => _constraints.GetFor("SomeConstraint"));
 
     [Fact] void should_throw_unknown_constraint() => _result.ShouldBeOfExactType<UnknownConstraint>();

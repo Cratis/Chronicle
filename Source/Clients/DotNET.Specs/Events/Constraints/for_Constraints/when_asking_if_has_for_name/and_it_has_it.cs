@@ -7,11 +7,6 @@ public class and_it_has_it : given.two_constraints
 {
     bool _result;
 
-    async Task Establish()
-    {
-        await _constraints.Discover();
-    }
-
     void Because() => _result = _constraints.HasFor(_secondConstraintName);
 
     [Fact] void should_have_the_constraint() => _result.ShouldBeTrue();
