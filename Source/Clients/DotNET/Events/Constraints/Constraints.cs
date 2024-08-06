@@ -53,7 +53,10 @@ public class Constraints(
         var constraint = GetFor(violation.ConstraintName);
         var message = constraint.MessageCallback(violation);
 
-
+        foreach (var (detailKey, detailValue) in violation.Details)
+        {
+            message = message.Value.Replace($"{{{detailKey}}}", detailValue);
+        }
 
         if (string.IsNullOrEmpty(message.Value))
         {
