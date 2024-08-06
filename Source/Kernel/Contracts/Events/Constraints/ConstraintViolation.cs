@@ -40,4 +40,10 @@ public class ConstraintViolation
     /// </summary>
     [ProtoMember(5)]
     public string Message { get; set; }
+
+    /// <summary>
+    /// Gets or sets the details with more details.
+    /// </summary>
+    [ProtoMember(6, IsRequired = true)]
+    public IDictionary<string, string> Details { get; set; } = new Dictionary<string, string>();
 }

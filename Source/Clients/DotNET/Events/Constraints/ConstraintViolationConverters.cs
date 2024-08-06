@@ -18,5 +18,6 @@ public static class ConstraintViolationConverters
             violation.EventType.ToClient(),
             violation.SequenceNumber,
             violation.ConstraintName,
-            violation.Message);
+            violation.Message,
+            new(violation.Details));
 }

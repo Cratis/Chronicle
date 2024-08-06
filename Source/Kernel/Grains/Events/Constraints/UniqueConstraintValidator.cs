@@ -35,7 +35,17 @@ public class UniqueConstraintValidator(
         var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventSourceId, definition.Name, value);
         return isAllowed ?
             ConstraintValidationResult.Success :
-            new() { Violations = [this.CreateViolation(context, sequenceNumber, $"Event '{context.EventType}' with value '{value}' on property '{property}' violated a unique constraint on sequence number {sequenceNumber}")] };
+            new()
+            {
+                Violations =
+                [
+                    this.CreateViolation(
+                        context,
+                        sequenceNumber,
+                        $"Event '{context.EventType}' with value '{value}' on property '{property}' violated a unique constraint on sequence number {sequenceNumber}",
+                        new() { { "property", property }, { "value", value } })
+                ]
+            };
     }
 
     /// <inheritdoc/>

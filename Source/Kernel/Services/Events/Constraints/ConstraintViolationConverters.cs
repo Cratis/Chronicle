@@ -23,6 +23,7 @@ public static class ConstraintViolationConverters
             SequenceNumber = violation.SequenceNumber,
             ConstraintType = (Contracts.Events.Constraints.ConstraintType)violation.ConstraintType,
             ConstraintName = violation.ConstraintName,
-            Message = violation.Message
+            Message = violation.Message,
+            Details = violation.Details
         };
 }

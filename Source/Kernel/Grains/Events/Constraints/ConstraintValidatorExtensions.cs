@@ -18,13 +18,18 @@ public static class ConstraintValidatorExtensions
     /// <param name="context"><see cref="ConstraintValidationContext"/> to create the violation from.</param>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> of the existing event.</param>
     /// <param name="message"><see cref="ConstraintViolationMessage"/> to use.</param>
+    /// <param name="details"><see cref="ConstraintViolationDetails"/> associated with the violation.</param>
     /// <returns>The created <see cref="ConstraintViolation"/>.</returns>
     public static ConstraintViolation CreateViolation(
         this IConstraintValidator validator,
         ConstraintValidationContext context,
         EventSequenceNumber sequenceNumber,
-        ConstraintViolationMessage message) =>
-        new(context.EventType, sequenceNumber, validator.ToConstraintType(), validator.Definition.Name, message);
+        ConstraintViolationMessage message,
+        ConstraintViolationDetails? details = default)
+    {
+        details ??= [];
+        return new(context.EventType, sequenceNumber, validator.ToConstraintType(), validator.Definition.Name, message, details);
+    }
 
     static ConstraintType ToConstraintType(this IConstraintValidator validator) =>
         validator switch
