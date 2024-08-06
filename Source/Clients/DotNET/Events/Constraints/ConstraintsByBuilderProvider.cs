@@ -18,13 +18,17 @@ public class ConstraintsByBuilderProvider(
     IServiceProvider serviceProvider) : ICanProvideConstraints
 {
     /// <inheritdoc/>
-    public IImmutableList<IConstraintDefinition> Provide() =>
-        clientArtifactsProvider.ConstraintTypes
-            .Select(type => (serviceProvider.GetRequiredService(type) as IConstraint)!)
+    public IImmutableList<IConstraintDefinition> Provide()
+    {
+        var constraints = clientArtifactsProvider.ConstraintTypes
+            .Select(type => (serviceProvider.GetRequiredService(type) as IConstraint)!);
+
+        return constraints
             .SelectMany(constraint =>
             {
                 var builder = new ConstraintBuilder(eventTypes, constraint.GetType());
                 constraint.Define(builder);
                 return builder.Build();
             }).ToImmutableList();
+    }
 }
