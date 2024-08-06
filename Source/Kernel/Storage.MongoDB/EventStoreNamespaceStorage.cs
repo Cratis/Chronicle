@@ -161,6 +161,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             return uniqueEventTypesConstraintsStorage;
         }
 
-        return _uniqueEventTypesConstraints[eventSequenceId] = new UniqueEventTypesConstraintsStorage();
+        return _uniqueEventTypesConstraints[eventSequenceId] = new UniqueEventTypesConstraintsStorage(_eventStoreNamespaceDatabase, eventSequenceId);
     }
 }

@@ -9,14 +9,14 @@ using Cratis.DependencyInjection;
 namespace Cratis.Chronicle.Grains.Events.Constraints;
 
 /// <summary>
-/// Represents an implementation of <see cref="IConstraintValidatorSetFactory"/>.
+/// Represents an implementation of <see cref="IConstraintValidationFactory"/>.
 /// </summary>
 /// <param name="storage">The <see cref="IStorage"/> to use.</param>
 [Singleton]
-public class ConstraintValidatorSetFactory(IStorage storage) : IConstraintValidatorSetFactory
+public class ConstraintValidatorSetFactory(IStorage storage) : IConstraintValidationFactory
 {
     /// <inheritdoc/>
-    public async Task<IConstraintValidatorSet> Create(EventSequenceKey eventSequenceKey)
+    public async Task<IConstraintValidation> Create(EventSequenceKey eventSequenceKey)
     {
         var eventStore = storage.GetEventStore(eventSequenceKey.EventStore);
         var namespaceStorage = eventStore.GetNamespace(eventSequenceKey.Namespace);
@@ -30,6 +30,6 @@ public class ConstraintValidatorSetFactory(IStorage storage) : IConstraintValida
             _ => throw new UnknownConstraintType(_.GetType())
         }).ToArray();
 
-        return new ConstraintValidatorSet(validators);
+        return new ConstraintValidation(validators);
     }
 }

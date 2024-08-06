@@ -6,14 +6,14 @@ using Cratis.Chronicle.Concepts.EventSequences;
 namespace Cratis.Chronicle.Grains.Events.Constraints;
 
 /// <summary>
-/// Defines a system that can create instances of <see cref="IConstraintValidatorSet"/>.
+/// Defines a system that can create instances of <see cref="IConstraintValidation"/>.
 /// </summary>
-public interface IConstraintValidatorSetFactory
+public interface IConstraintValidationFactory
 {
     /// <summary>
-    /// Create a new <see cref="IConstraintValidatorSet"/>.
+    /// Create a new <see cref="IConstraintValidation"/>.
     /// </summary>
     /// <param name="eventSequenceKey">The <see cref="EventSequenceKey"/> to create the collection for.</param>
-    /// <returns>A new instance of <see cref="IConstraintValidatorSet"/>.</returns>
-    Task<IConstraintValidatorSet> Create(EventSequenceKey eventSequenceKey);
+    /// <returns>A new instance of <see cref="IConstraintValidation"/>.</returns>
+    Task<IConstraintValidation> Create(EventSequenceKey eventSequenceKey);
 }

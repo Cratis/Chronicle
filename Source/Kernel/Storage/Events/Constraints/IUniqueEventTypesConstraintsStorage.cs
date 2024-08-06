@@ -15,7 +15,9 @@ public interface IUniqueEventTypesConstraintsStorage
     /// </summary>
     /// <param name="eventType"><see cref="EventType"/> to check.</param>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to check.</param>
-    /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the existing event, if any.</param>
-    /// <returns>True if it exists, false if not.</returns>
-    Task<bool> Exists(EventType eventType, EventSourceId eventSourceId, out EventSequenceNumber sequenceNumber);
+    /// <returns>
+    /// Tuple containing a boolean saying whether or not it exists and the <see cref="EventSequenceNumber"/> where it already exists.
+    /// Returns <see cref="EventSequenceNumber.Unavailable"/> if it doesn't exist.
+    /// </returns>
+    Task<(bool Exists, EventSequenceNumber SequenceNumber)> Exists(EventType eventType, EventSourceId eventSourceId);
 }

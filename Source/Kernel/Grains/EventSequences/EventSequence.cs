@@ -33,7 +33,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// Initializes a new instance of <see cref="EventSequence"/>.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
-/// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidatorSetFactory"/> for creating a set of constraint validators.</param>
+/// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
 /// <param name="meter">The meter to use for metrics.</param>
 /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
@@ -41,7 +41,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 public class EventSequence(
     IStorage storage,
-    IConstraintValidatorSetFactory constraintValidatorSetFactory,
+    IConstraintValidationFactory constraintValidatorSetFactory,
     IMeter<EventSequence> meter,
     IJsonComplianceManager jsonComplianceManagerProvider,
     IExpandoObjectConverter expandoObjectConverter,
@@ -55,7 +55,7 @@ public class EventSequence(
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
     IMeterScope<EventSequence>? _metrics;
     IAppendedEventsQueues? _appendedEventsQueues;
-    IConstraintValidatorSet? _constraints;
+    IConstraintValidation? _constraints;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
@@ -170,10 +170,8 @@ public class EventSequence(
             var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
             var compliantEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
 
-            var constraintValidationResult =
-                await (_constraints?.Validate(new EventToValidateForConstraints(eventSourceId, eventType, compliantEventAsExpandoObject)) ??
-                Task.FromResult(ConstraintValidationResult.Success));
-
+            var constraintContext = _constraints!.Establish(eventSourceId, eventType, compliantEventAsExpandoObject);
+            var constraintValidationResult = await constraintContext.Validate();
             if (!constraintValidationResult.IsValid)
             {
                 _metrics?.ConstraintViolation(eventSourceId, eventName);
@@ -211,6 +209,8 @@ public class EventSequence(
                     await WriteStateAsync();
                 }
             }
+
+            await constraintContext.Update(State.SequenceNumber);
             updateSequenceNumber = true;
         }
         catch (UnableToAppendToEventSequence ex)

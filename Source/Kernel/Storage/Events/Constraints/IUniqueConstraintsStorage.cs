@@ -16,15 +16,18 @@ public interface IUniqueConstraintsStorage
     /// </summary>
     /// <param name="name"><see cref="ConstraintName"/> to check for.</param>
     /// <param name="value"><see cref="UniqueConstraintValue"/>to check.</param>
-    /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the existing event, if any.</param>
-    /// <returns>True if it exists, false if not.</returns>
-    Task<bool> Exists(ConstraintName name, UniqueConstraintValue value, out EventSequenceNumber sequenceNumber);
+    /// <returns>
+    /// Tuple containing a boolean saying whether or not it exists and the <see cref="EventSequenceNumber"/> where it already exists.
+    /// Returns <see cref="EventSequenceNumber.Unavailable"/> if it doesn't exist.
+    /// </returns>
+    Task<(bool Exists, EventSequenceNumber SequenceNumber)> Exists(ConstraintName name, UniqueConstraintValue value);
 
     /// <summary>
     /// Save a constraint value.
     /// </summary>
     /// <param name="name"><see cref="ConstraintName"/> to save for.</param>
+    /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> the value exists at.</param>
     /// <param name="value"><see cref="UniqueConstraintValue"/>to save.</param>
     /// <returns>True if it exists, false if not.</returns>
-    Task Save(ConstraintName name, UniqueConstraintValue value);
+    Task Save(ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value);
 }

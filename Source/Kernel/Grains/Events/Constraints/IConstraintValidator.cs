@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Grains.Events.Constraints;
@@ -28,4 +29,12 @@ public interface IConstraintValidator
     /// <param name="context"><see cref="ConstraintValidationContext"/> to validate.</param>
     /// <returns>The <see cref="ConstraintValidationResult"/> of the validation.</returns>
     Task<ConstraintValidationResult> Validate(ConstraintValidationContext context);
+
+    /// <summary>
+    /// Update any affected constraints with information from the <see cref="EventToValidateForConstraints"/> and <see cref="EventSequenceNumber"/>.
+    /// </summary>
+    /// <param name="context">The <see cref="ConstraintValidationContext"/> to update.</param>
+    /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> of the event.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Update(ConstraintValidationContext context, EventSequenceNumber eventSequenceNumber);
 }

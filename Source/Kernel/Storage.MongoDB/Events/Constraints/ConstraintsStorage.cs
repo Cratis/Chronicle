@@ -25,7 +25,7 @@ public class ConstraintsStorage(IEventStoreDatabase eventStoreDatabase) : IConst
     /// <inheritdoc/>
     public async Task SaveDefinition(IConstraintDefinition definition)
     {
-        var filter = Builders<IConstraintDefinition>.Filter.Eq(new StringFieldDefinition<IConstraintDefinition, string>("name"), definition.Name.Value);
+        var filter = Builders<IConstraintDefinition>.Filter.Eq(new StringFieldDefinition<IConstraintDefinition, string>("_id"), definition.Name.Value);
         await _collection.ReplaceOneAsync(filter, definition, new ReplaceOptions { IsUpsert = true });
     }
 }
