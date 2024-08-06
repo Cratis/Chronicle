@@ -5,6 +5,7 @@ using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -24,17 +25,17 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <param name="eventStore"><see cref="EventStoreName"/> the database is for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the database is for.</param>
     /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
-    /// <param name="configuration"><see cref="Concepts.Configuration.Storage"/> configuration.</param>
+    /// <param name="mongoDBOptions"><see cref="Concepts.Configuration.Storage"/> configuration.</param>
     public EventStoreNamespaceDatabase(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         IMongoDBClientManager clientManager,
-        Concepts.Configuration.Storage configuration)
+        IOptions<MongoDBOptions> mongoDBOptions)
     {
         // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
         var databaseName = $"{eventStore}+es+{@namespace}";
 
-        var urlBuilder = new MongoUrlBuilder(configuration.ConnectionDetails.ToString())
+        var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server)
         {
             DatabaseName = databaseName
         };
