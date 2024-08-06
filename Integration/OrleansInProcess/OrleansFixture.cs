@@ -24,7 +24,7 @@ public class OrleansFixture : WebApplicationFactory<Startup>
         builder.UseCratisMongoDB(
             mongo =>
             {
-                mongo.Server = "mongodb://localhost:27017";
+                mongo.Server = "mongodb://localhost:27018";
                 mongo.Database = "orleans";
             });
 
