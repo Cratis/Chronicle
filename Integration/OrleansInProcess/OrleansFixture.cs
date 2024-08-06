@@ -48,6 +48,9 @@ public class OrleansFixture : WebApplicationFactory<Startup>
             })
             .UseConsoleLifetime();
 
+        // For some weird reason we need this https://stackoverflow.com/questions/69974249/no-app-configured-error-while-using-webapplicationfactory-for-running-integrat
+        builder.ConfigureWebHostDefaults(b => b.Configure(app => { }));
+
         return builder;
     }
 
