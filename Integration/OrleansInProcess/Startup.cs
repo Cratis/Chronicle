@@ -5,10 +5,6 @@ namespace Cratis.Chronicle.Integration.OrleansInProcess;
 
 public class Startup
 {
-    public void ConfigureServices(IServiceCollection services)
-    {
-    }
-
     public void Configure(IApplicationBuilder app)
     {
         app.UseCratisChronicle();

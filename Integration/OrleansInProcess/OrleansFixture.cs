@@ -18,19 +18,23 @@ public class OrleansFixture : WebApplicationFactory<Startup>
         GlobalFixture = globalFixture;
     }
 
-    protected override IWebHostBuilder CreateWebHostBuilder()
+    protected override IHostBuilder CreateHostBuilder()
     {
-        var builder = WebApplication.CreateBuilder();
-
+        var builder = base.CreateHostBuilder();
         builder.UseCratisMongoDB(
             mongo =>
             {
-                mongo.Server = "mongodb://localhost:27018";
-                mongo.Database = "testing";
+                mongo.Server = "mongodb://localhost:27017";
+                mongo.Database = "orleans";
             });
 
-        builder.Host.UseDefaultServiceProvider(_ => _.ValidateOnBuild = false);
-        builder.Services.AddSingleton(Globals.JsonSerializerOptions);
+        builder.UseDefaultServiceProvider(_ => _.ValidateOnBuild = false);
+
+        builder.ConfigureServices(services =>
+        {
+            services.AddSingleton(Globals.JsonSerializerOptions);
+            services.AddControllers();
+        });
         builder.UseCratisChronicle();
 
         builder.UseOrleans(silo =>
@@ -38,11 +42,12 @@ public class OrleansFixture : WebApplicationFactory<Startup>
                 silo
                     .UseLocalhostClustering()
                     .AddCratisChronicle(
-                        options => options.EventStoreName = "testing",
+                        options => options.EventStoreName = "sample",
                         _ => _.WithMongoDB());
-            });
+            })
+            .UseConsoleLifetime();
 
-        return builder.WebHost;
+        return builder;
     }
 
     public INetwork Network => GlobalFixture.Network;
