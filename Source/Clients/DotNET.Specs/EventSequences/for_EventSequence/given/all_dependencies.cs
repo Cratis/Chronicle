@@ -4,31 +4,34 @@
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 
 public class all_dependencies : Specification
 {
-    protected Mock<IEventTypes> event_types;
-    protected Mock<IEventSerializer> event_serializer;
-    protected Mock<ICausationManager> causation_manager;
-    protected Mock<IIdentityProvider> identity_provider;
-    protected Mock<IChronicleConnection> connection;
-    protected Mock<IEventSequences> event_sequences;
-    protected Mock<IServices> services;
+    protected IEventTypes _eventTypes;
+    protected IEventSerializer _eventSerializer;
+    protected IConstraints _constraints;
+    protected ICausationManager _causationManager;
+    protected IIdentityProvider _identityProvider;
+    protected IChronicleConnection _connection;
+    protected IEventSequences _eventSequences;
+    protected IServices services;
 
 
     void Establish()
     {
-        event_types = new();
-        event_serializer = new();
-        causation_manager = new();
-        identity_provider = new();
-        connection = new();
-        event_sequences = new();
-        services = new();
-        connection.SetupGet(_ => _.Services).Returns(services.Object);
-        services.SetupGet(_ => _.EventSequences).Returns(event_sequences.Object);
+        _eventTypes = Substitute.For<IEventTypes>();
+        _constraints = Substitute.For<IConstraints>();
+        _eventSerializer = Substitute.For<IEventSerializer>();
+        _causationManager = Substitute.For<ICausationManager>();
+        _identityProvider = Substitute.For<IIdentityProvider>();
+        _connection = Substitute.For<IChronicleConnection>();
+        _eventSequences = Substitute.For<IEventSequences>();
+        services = Substitute.For<IServices>();
+        _connection.Services.Returns(services);
+        services.EventSequences.Returns(_eventSequences);
     }
 }

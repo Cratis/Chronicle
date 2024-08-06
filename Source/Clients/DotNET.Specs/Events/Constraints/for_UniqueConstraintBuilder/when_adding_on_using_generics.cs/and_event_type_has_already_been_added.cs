@@ -6,15 +6,12 @@ using Microsoft.VisualBasic;
 
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_adding_on_using_generics;
 
-public class and_event_type_has_already_been_added : given.a_unique_constraint_builder_with_owner
+public class and_event_type_has_already_been_added : given.a_unique_constraint_builder_with_owner_and_an_event_type
 {
-    EventType _eventType;
-
     EventTypeAlreadyAddedToUniqueConstraint _result;
 
     void Establish()
     {
-        _eventType = new EventType(nameof(EventWithStringProperty), EventGeneration.First);
         _eventTypes.GetEventTypeFor(typeof(EventWithStringProperty)).Returns(_eventType);
         _constraintBuilder.On<EventWithStringProperty>(e => e.SomeProperty);
     }

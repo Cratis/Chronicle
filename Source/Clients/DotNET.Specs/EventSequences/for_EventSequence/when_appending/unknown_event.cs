@@ -8,7 +8,7 @@ public class unknown_event : given.an_event_sequence
 {
     Exception result;
 
-    void Establish() => event_types.Setup(_ => _.HasFor(typeof(object))).Returns(false);
+    void Establish() => _eventTypes.HasFor(typeof(object)).Returns(false);
 
     async Task Because() => result = await Catch.Exception(async () => await event_sequence.Append(Guid.NewGuid().ToString(), new object()));
 

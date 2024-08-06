@@ -5,14 +5,13 @@ using Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_addin
 
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_building;
 
-public class without_explicit_name_and_owner_specified : given.a_unique_constraint_builder_without_owner
+public class without_explicit_name_and_owner_specified : given.a_unique_constraint_builder_without_owner_with_an_event_type
 {
     Exception _result;
 
     void Establish()
     {
-        var eventType = new EventType(nameof(EventWithStringProperty), EventGeneration.First);
-        _constraintBuilder.On(eventType, nameof(EventWithStringProperty.SomeProperty));
+        _constraintBuilder.On(_eventType, nameof(EventWithStringProperty.SomeProperty));
     }
 
     void Because() => _result = Catch.Exception(() => _constraintBuilder.Build());

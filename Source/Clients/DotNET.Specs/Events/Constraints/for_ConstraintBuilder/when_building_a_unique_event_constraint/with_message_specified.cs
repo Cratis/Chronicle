@@ -12,9 +12,11 @@ public class with_message_specified : given.a_constraint_builder_with_owner
     const string _message = "Some message";
     IImmutableList<IConstraintDefinition> _result;
     EventType _eventType;
+    ConstraintViolation _violation;
 
     void Establish()
     {
+        _violation = new ConstraintViolation(_eventType, EventSequenceNumber.First, "Some Constraint", "Error", []);
         _eventType = new EventType(nameof(SomeEvent), EventGeneration.First);
         _eventTypes.GetEventTypeFor(typeof(SomeEvent)).Returns(_eventType);
     }
@@ -28,7 +30,7 @@ public class with_message_specified : given.a_constraint_builder_with_owner
     [Fact] void should_have_the_correct_number_of_constraints() => _result.Count.ShouldEqual(1);
     [Fact] void should_have_the_correct_constraint() => _result[0].ShouldBeOfExactType<UniqueEventTypeConstraintDefinition>();
     [Fact] void should_have_the_correct_name() => _result[0].Name.Value.ShouldEqual(_eventType.Id.Value);
-    [Fact] void should_have_the_correct_message() => _result[0].MessageCallback(_eventType).Value.ShouldEqual(_message);
+    [Fact] void should_have_the_correct_message() => _result[0].MessageCallback(_violation).Value.ShouldEqual(_message);
 
     record SomeEvent();
 }

@@ -6,14 +6,13 @@ using Microsoft.VisualBasic;
 
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_building;
 
-public class without_explicit_name_but_owner_is_specified : given.a_unique_constraint_builder_with_owner
+public class without_explicit_name_but_owner_is_specified : given.a_unique_constraint_builder_with_owner_and_an_event_type
 {
     IConstraintDefinition _result;
 
     void Establish()
     {
-        var eventType = new EventType(nameof(EventWithStringProperty), EventGeneration.First);
-        _constraintBuilder.On(eventType, nameof(EventWithStringProperty.SomeProperty));
+        _constraintBuilder.On(_eventType, nameof(EventWithStringProperty.SomeProperty));
     }
 
     void Because() => _result = _constraintBuilder.Build();

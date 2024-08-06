@@ -5,16 +5,14 @@ using Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_addin
 
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_building;
 
-public class with_no_message_set : given.a_unique_constraint_builder_with_owner
+public class with_no_message_set : given.a_unique_constraint_builder_with_owner_and_an_event_type
 {
     const string _message = "Some message";
 
     IConstraintDefinition _result;
-    EventType _eventType;
 
     void Establish()
     {
-        _eventType = new EventType(nameof(EventWithStringProperty), EventGeneration.First);
         _constraintBuilder.On(_eventType, nameof(EventWithStringProperty.SomeProperty));
         _constraintBuilder.WithMessage(_ => _message);
     }
