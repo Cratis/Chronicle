@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Transactions;
 
 #pragma warning disable SA1402 // File may only contain a single type
 
@@ -34,9 +35,9 @@ public interface IAggregateRootContext
     IAggregateRoot AggregateRoot { get; }
 
     /// <summary>
-    /// Gets a value indicating whether or not to automatically commit changes on every apply.
+    /// Gets the <see cref="IUnitOfWork"/> for the context.
     /// </summary>
-    bool AutoCommit { get; }
+    IUnitOfWork UnitOfWOrk { get; }
 
     /// <summary>
     /// Gets a value indicating whether or not the context has events.

@@ -76,24 +76,30 @@ public class EventSequence(
             var eventType = eventTypes.GetEventTypeFor(@event.GetType());
             return new Contracts.Events.EventToAppend
             {
+                EventSourceId = eventSourceId,
                 EventType = eventType.ToContract(),
                 Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString()
             };
         }).ToList();
-        var causationChain = causationManager.GetCurrentChain().ToContract();
-        var identity = identityProvider.GetCurrent();
-        var response = await connection.Services.EventSequences.AppendMany(new()
-        {
-            EventStoreName = eventStoreName,
-            Namespace = @namespace,
-            EventSequenceId = eventSequenceId,
-            EventSourceId = eventSourceId,
-            Events = eventsToAppend,
-            Causation = causationChain,
-            CausedBy = identity.ToContract()
-        });
 
-        return ResolveViolationMessages(response.ToClient());
+        return await AppendManyImplementation(eventsToAppend);
+    }
+
+    /// <inheritdoc/>
+    public async Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events)
+    {
+        var eventsToAppend = events.Select(@event =>
+        {
+            var eventType = eventTypes.GetEventTypeFor(@event.GetType());
+            return new Contracts.Events.EventToAppend
+            {
+                EventSourceId = @event.EventSourceId,
+                EventType = eventType.ToContract(),
+                Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString()
+            };
+        }).ToList();
+
+        return await AppendManyImplementation(eventsToAppend);
     }
 
     /// <inheritdoc/>
@@ -148,8 +154,26 @@ public class EventSequence(
         }
     }
 
+    async Task<AppendManyResult> AppendManyImplementation(IList<Contracts.Events.EventToAppend> eventsToAppend)
+    {
+        var causationChain = causationManager.GetCurrentChain().ToContract();
+        var identity = identityProvider.GetCurrent();
+        var response = await connection.Services.EventSequences.AppendMany(new()
+        {
+            EventStoreName = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            Events = eventsToAppend,
+            Causation = causationChain,
+            CausedBy = identity.ToContract()
+        });
+
+        return ResolveViolationMessages(response.ToClient());
+    }
+
     AppendResult ResolveViolationMessages(AppendResult result) => result with { ConstraintViolations = ResolveViolationMessages(result.ConstraintViolations) };
     AppendManyResult ResolveViolationMessages(AppendManyResult result) => result with { ConstraintViolations = ResolveViolationMessages(result.ConstraintViolations) };
     IImmutableList<ConstraintViolation> ResolveViolationMessages(IEnumerable<ConstraintViolation> violations) =>
         violations.Select(constraints.ResolveMessageFor).ToImmutableList();
+
 }

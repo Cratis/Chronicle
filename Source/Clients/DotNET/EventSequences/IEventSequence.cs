@@ -54,7 +54,7 @@ public interface IEventSequence
     Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type);
 
     /// <summary>
-    /// Append a single event to the event store.
+    /// Append a single event to the event store as a transaction.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="event">The event.</param>
@@ -67,7 +67,20 @@ public interface IEventSequence
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="events">Collection of events to append.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
+    /// <remarks>
+    /// All events will be committed as one operation for the underlying data store.
+    /// </remarks>
     Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<object> events);
+
+    /// <summary>
+    /// Append a collection of events to the event store as a transaction.
+    /// </summary>
+    /// <param name="events">Collection of <see cref="EventForEventSourceId"/> to append.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    /// <remarks>
+    /// All events will be committed as one operation for the underlying data store.
+    /// </remarks>
+    Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events);
 
     /// <summary>
     /// Redact an event at a specific sequence number.

@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
@@ -73,7 +74,7 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     /// <inheritdoc/>
     public Task<AggregateRootCommitResult> Commit()
     {
-        return _mutation?.Commit() ?? Task.FromResult(AggregateRootCommitResult.Failed(ImmutableList<object>.Empty));
+        return _mutation?.Commit() ?? Task.FromResult(AggregateRootCommitResult.Failed(ImmutableList<object>.Empty, ImmutableList<ConstraintViolation>.Empty));
     }
 
     /// <summary>

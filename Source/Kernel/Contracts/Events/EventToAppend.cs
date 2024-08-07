@@ -12,14 +12,20 @@ namespace Cratis.Chronicle.Contracts.Events;
 public class EventToAppend
 {
     /// <summary>
-    /// Gets or sets the event type.
+    /// Gets or sets the event source id.
     /// </summary>
     [ProtoMember(1)]
+    public string EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event type.
+    /// </summary>
+    [ProtoMember(2)]
     public EventType EventType { get; set; }
 
     /// <summary>
     /// Gets or sets the content of the event - in the form of a JSON payload.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(3)]
     public string Content { get; set; }
 }

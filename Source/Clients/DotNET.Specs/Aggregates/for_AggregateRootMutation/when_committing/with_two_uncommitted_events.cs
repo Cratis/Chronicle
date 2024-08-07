@@ -33,7 +33,7 @@ public class with_two_uncommitted_events : given.an_aggregate_mutation
 
     async Task Because() => _result = await _mutation.Commit();
 
-    [Fact] void should_return_a_successful_commit_result() => _result.Success.ShouldBeTrue();
+    [Fact] void should_return_a_successful_commit_result() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_return_the_correct_events_in_the_commit_result() => _result.Events.ShouldContainOnly(_events);
     [Fact] void should_append_the_correct_events_to_the_event_sequence() => _eventSequence.Received(1).AppendMany(_eventSourceId, Arg.Is<IEnumerable<object>>(_ => _.ToList().SequenceEqual(_events)));
     [Fact] void should_add_causation_information_for_aggregate_root_type_to_the_causation_manager() => _causations.ShouldContain(kvp => kvp.Key == AggregateRootMutation.CausationAggregateRootTypeProperty && kvp.Value == _aggregateRoot.GetType().AssemblyQualifiedName);

@@ -23,6 +23,7 @@ public static class EventToAppendConverters
     /// <returns>A converted <see cref="EventToAppend"/>.</returns>
     public static EventToAppend ToChronicle(this Contracts.Events.EventToAppend eventToAppend) =>
         new(
+            eventToAppend.EventSourceId,
             eventToAppend.EventType.ToChronicle(),
             JsonSerializer.Deserialize<JsonNode>(eventToAppend.Content, Globals.JsonSerializerOptions)!.AsObject());
 
