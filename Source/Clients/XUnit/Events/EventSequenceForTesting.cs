@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Execution;
 
 namespace Cratis.Chronicle.XUnit.Events;
 
@@ -27,10 +28,10 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params object[] eve
     public EventSequenceId Id => EventSequenceId.Log;
 
     /// <inheritdoc/>
-    public Task Append(EventSourceId eventSourceId, object @event) => Task.CompletedTask;
+    public Task<AppendResult> Append(EventSourceId eventSourceId, object @event) => Task.FromResult(AppendResult.Success(CorrelationId.New(), EventSequenceNumber.Unavailable));
 
     /// <inheritdoc/>
-    public Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events) => Task.CompletedTask;
+    public Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<object> events) => Task.FromResult(AppendManyResult.Success(CorrelationId.New(), []));
 
     /// <inheritdoc/>
     public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes) => Task.FromResult<IImmutableList<AppendedEvent>>(_events.ToImmutableList());
