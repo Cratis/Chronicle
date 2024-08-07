@@ -29,7 +29,7 @@ public class EventTypesForSpecifications : IEventTypes
         _eventTypes = types.ToDictionary(_ => _, _ => _.GetEventType());
         _clrTypesByEventType = _eventTypes.ToDictionary(_ => _.Value.Id, _ => _.Key);
 
-        var generator = new JsonSchemaGenerator(new JsonSchemaGeneratorSettings());
+        var generator = new JsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings());
         _jsonSchemasByEventType = _eventTypes.ToDictionary(_ => _.Value.Id, _ => generator.Generate(_.Key));
 
         AllClrTypes = _clrTypesByEventType.Values.ToImmutableList();

@@ -25,7 +25,7 @@ public static class AggregateRootTestFactory
         where TAggregateRoot : AggregateRoot
     {
         var aggregateRoot = (Activator.CreateInstance(typeof(TAggregateRoot), dependencies) as TAggregateRoot)!;
-        var eventSequence = new EventSequenceForTesting(Defaults.EventTypes);
+        var eventSequence = new EventSequenceForTesting(Defaults.Instance.EventTypes);
 
         var aggregateRootContext = new AggregateRootContext(
             CorrelationId.New(),
@@ -54,7 +54,7 @@ public static class AggregateRootTestFactory
         where TAggregateRoot : AggregateRoot<TState>
     {
         var aggregateRoot = (Activator.CreateInstance(typeof(TAggregateRoot), dependencies) as AggregateRoot<TState>)!;
-        var eventSequence = new EventSequenceForTesting(Defaults.EventTypes);
+        var eventSequence = new EventSequenceForTesting(Defaults.Instance.EventTypes);
 
         var aggregateRootContext = new AggregateRootContext(
             CorrelationId.New(),

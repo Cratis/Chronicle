@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.XUnit.Events;
 /// </summary>
 public class EventStoreForTesting : IEventStore
 {
-    readonly EventSequenceForTesting _defaultEventSequence = new(Defaults.EventTypes);
+    EventSequenceForTesting? _defaultEventSequence;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreForTesting"/> class.
@@ -59,7 +59,8 @@ public class EventStoreForTesting : IEventStore
     public Task DiscoverAll() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public IEventSequence GetEventSequence(EventSequenceId id) => _defaultEventSequence;
+    public IEventSequence GetEventSequence(EventSequenceId id) =>
+        _defaultEventSequence ??= new(Defaults.Instance.EventTypes);
 
     /// <inheritdoc/>
     public Task RegisterAll() => Task.CompletedTask;

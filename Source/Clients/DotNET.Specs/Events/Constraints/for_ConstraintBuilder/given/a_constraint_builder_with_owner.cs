@@ -17,12 +17,12 @@ public class a_constraint_builder_with_owner : Specification
 
     void Establish()
     {
-        _generator = new NJsonSchemaGenerator(new JsonSchemaGeneratorSettings
+        _generator = new NJsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings
         {
             SerializerOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            },
+            }
         });
 
         _owner = typeof(Owner);

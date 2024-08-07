@@ -60,7 +60,7 @@ public class EventValueProviderExpressionResolvers(ITypeFormats typeFormats) : I
         {
             var expandoObject = (input as IDictionary<string, object>)!;
             var properties = schemaProperty.IsArray ?
-                schemaProperty.Item.GetFlattenedProperties() :
+                schemaProperty.Item!.GetFlattenedProperties() :
                 schemaProperty.GetFlattenedProperties();
 
             foreach (var property in properties)

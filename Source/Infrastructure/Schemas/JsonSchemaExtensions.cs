@@ -101,7 +101,7 @@ public static class JsonSchemaExtensions
                 var properties = new List<JsonSchemaProperty>();
                 CollectPropertiesFrom(schema, properties);
 
-                schema.ExtensionData ??= new Dictionary<string, object>();
+                schema.ExtensionData ??= new Dictionary<string, object?>();
                 schema.ExtensionData[FlattenedProperties] = properties.DistinctBy(_ => _.Name).ToArray().AsEnumerable();
             }
         }
@@ -113,7 +113,7 @@ public static class JsonSchemaExtensions
     /// <param name="schema"><see cref="JsonSchema"/> to reset for.</param>
     public static void ResetFlattenedProperties(this JsonSchema schema)
     {
-        schema.ExtensionData.Remove(FlattenedProperties);
+        schema.ExtensionData!.Remove(FlattenedProperties);
     }
 
     /// <summary>
@@ -126,7 +126,7 @@ public static class JsonSchemaExtensions
         lock (schema)
         {
             EnsureFlattenedProperties(schema);
-            return (schema.ExtensionData[FlattenedProperties] as IEnumerable<JsonSchemaProperty>)!;
+            return (schema.ExtensionData![FlattenedProperties] as IEnumerable<JsonSchemaProperty>)!;
         }
     }
 
@@ -140,13 +140,13 @@ public static class JsonSchemaExtensions
     {
         foreach (var segment in propertyPath.Segments)
         {
-            var properties = schema.GetFlattenedProperties();
+            var properties = schema!.GetFlattenedProperties();
             var schemaProperty = properties.SingleOrDefault(_ => _.Name == segment.Value);
             if (schemaProperty is not null)
             {
                 if (schemaProperty.IsArray)
                 {
-                    schema = schemaProperty.Item.Reference;
+                    schema = schemaProperty.Item!.Reference!;
                 }
                 else
                 {
@@ -169,7 +169,7 @@ public static class JsonSchemaExtensions
         var segments = propertyPath.Segments.ToArray();
         for (var segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
         {
-            var properties = schema.GetFlattenedProperties();
+            var properties = schema!.GetFlattenedProperties();
             var segment = segments[segmentIndex];
 
             var schemaProperty = properties.SingleOrDefault(_ => _.Name == segment.Value);
@@ -182,7 +182,7 @@ public static class JsonSchemaExtensions
 
                 if (schemaProperty.IsArray)
                 {
-                    schema = schemaProperty.Item.Reference;
+                    schema = schemaProperty.Item!.Reference!;
                 }
                 else
                 {
@@ -220,15 +220,15 @@ public static class JsonSchemaExtensions
     /// <returns>The actual type or null if its not a known property path within the schema.</returns>
     public static Type? GetTargetTypeForJsonSchemaProperty(this JsonSchemaProperty schemaProperty, ITypeFormats typeFormats)
     {
-        if (typeFormats.IsKnown(schemaProperty.Format))
+        if (typeFormats.IsKnown(schemaProperty.Format!))
         {
-            return typeFormats.GetTypeForFormat(schemaProperty.Format);
+            return typeFormats.GetTypeForFormat(schemaProperty.Format!);
         }
 
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
                     schemaProperty.Reference?.Type ??
                         (schemaProperty.HasOneOfSchemaReference ?
-                            schemaProperty.OneOf.First().Reference.Type :
+                            schemaProperty.OneOf.First().Reference!.Type :
                             JsonObjectType.None) :
                     schemaProperty.Type;
 

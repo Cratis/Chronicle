@@ -18,14 +18,13 @@ public class a_mongodb_converter : Specification
 
     void Establish()
     {
-        var generator = new NJsonSchemaGenerator(new JsonSchemaGeneratorSettings
+        var generator = new NJsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings
         {
             AllowReferencesWithProperties = true,
             SerializerOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            },
-            ReflectionService = new ReflectionService()
+            }
         });
 
         expando_object_converter = new();

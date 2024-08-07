@@ -14,7 +14,7 @@ public class all_dependencies : Specification
 
     void Establish()
     {
-        _generator = new NJsonSchemaGenerator(new JsonSchemaGeneratorSettings
+        _generator = new NJsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings
         {
             SerializerOptions = new JsonSerializerOptions
             {

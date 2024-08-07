@@ -146,9 +146,9 @@ public class MongoDBConverter(
     {
         if (input is null) return BsonNull.Value;
 
-        if (typeFormats.IsKnown(schemaProperty.Format))
+        if (typeFormats.IsKnown(schemaProperty.Format!))
         {
-            var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format);
+            var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format!);
             return input.ToBsonValue(targetType);
         }
 
@@ -170,7 +170,7 @@ public class MongoDBConverter(
             {
                 if (item is ExpandoObject itemAsExpandoObject)
                 {
-                    items.Add(expandoObjectConverter.ToBsonDocument(itemAsExpandoObject, schemaProperty.Item));
+                    items.Add(expandoObjectConverter.ToBsonDocument(itemAsExpandoObject, schemaProperty.Item!));
                 }
                 else
                 {

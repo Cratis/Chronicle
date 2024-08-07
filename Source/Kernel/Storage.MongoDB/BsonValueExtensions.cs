@@ -246,7 +246,7 @@ public static class BsonValueExtensions
         }
 
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
-                    schemaProperty.Reference.Type :
+                    schemaProperty.Reference!.Type :
                     schemaProperty.Type;
 
         if (type.HasFlag(JsonObjectType.Array) && value is IEnumerable enumerable)
@@ -254,7 +254,7 @@ public static class BsonValueExtensions
             var convertedArray = new BsonArray();
             foreach (var item in enumerable)
             {
-                convertedArray.Add(item.ToBsonValueBasedOnSchemaPropertyType(schemaProperty.Item));
+                convertedArray.Add(item.ToBsonValueBasedOnSchemaPropertyType(schemaProperty.Item!));
             }
             return convertedArray;
         }

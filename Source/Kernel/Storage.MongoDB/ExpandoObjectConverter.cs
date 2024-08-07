@@ -88,7 +88,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         {
             return ToBsonDocument(
                 expando,
-                schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
+                schemaProperty.IsArray ? schemaProperty.Item!.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
 
         if (schemaProperty.Type.HasFlag(JsonObjectType.Array) && value is IEnumerable enumerable)
@@ -96,12 +96,12 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             var items = new List<BsonValue>();
             foreach (var item in enumerable)
             {
-                items.Add(ConvertToBsonValue(item, schemaProperty.Item.Reference ?? schemaProperty.Item));
+                items.Add(ConvertToBsonValue(item, schemaProperty.Item!.Reference ?? schemaProperty.Item));
             }
             return new BsonArray(items);
         }
 
-        if (typeFormats.IsKnown(schemaProperty.Format))
+        if (typeFormats.IsKnown(schemaProperty.Format!))
         {
             return ConvertToBsonValueBasedOnSchemaType(value, schemaProperty);
         }
@@ -111,7 +111,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
     object? ConvertFromBsonValue(BsonValue bsonValue, JsonSchema schemaProperty)
     {
-        schemaProperty = schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema;
+        schemaProperty = schemaProperty.IsArray ? schemaProperty.Item!.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema;
 
         if (bsonValue is BsonDocument childDocument)
         {
@@ -130,9 +130,9 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             return array.Select(_ => ConvertFromBsonValue(_, schemaProperty)).ToArray();
         }
 
-        if (typeFormats.IsKnown(schemaProperty.Format))
+        if (typeFormats.IsKnown(schemaProperty.Format!))
         {
-            return bsonValue.ToTargetType(typeFormats.GetTypeForFormat(schemaProperty.Format));
+            return bsonValue.ToTargetType(typeFormats.GetTypeForFormat(schemaProperty.Format!));
         }
         return ConvertBsonValueFromUnknownFormat(bsonValue, schemaProperty);
     }
@@ -236,7 +236,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     object? ConvertBsonValueFromUnknownFormat(BsonValue value, JsonSchema schemaProperty)
     {
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
-                schemaProperty.Reference.Type :
+                schemaProperty.Reference!.Type :
                 schemaProperty.Type;
 
         if (type.HasFlag(JsonObjectType.Null))
@@ -266,7 +266,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
     BsonValue ConvertToBsonValueBasedOnSchemaType(object? input, JsonSchema schemaProperty)
     {
-        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format);
+        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format!);
         return input.ToBsonValue(targetType);
     }
 
