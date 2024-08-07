@@ -175,5 +175,4 @@ public class EventSequence(
     AppendManyResult ResolveViolationMessages(AppendManyResult result) => result with { ConstraintViolations = ResolveViolationMessages(result.ConstraintViolations) };
     IImmutableList<ConstraintViolation> ResolveViolationMessages(IEnumerable<ConstraintViolation> violations) =>
         violations.Select(constraints.ResolveMessageFor).ToImmutableList();
-
 }

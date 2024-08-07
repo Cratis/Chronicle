@@ -62,7 +62,6 @@ public class AggregateRootMutation(
     public async Task<AggregateRootCommitResult> Commit()
     {
         await aggregateRootContext.UnitOfWOrk.Commit();
-        var result = AggregateRootCommitResult.CreateFrom(aggregateRootContext.UnitOfWOrk);;
-        return result;
+        return AggregateRootCommitResult.CreateFrom(aggregateRootContext.UnitOfWOrk);
     }
 }

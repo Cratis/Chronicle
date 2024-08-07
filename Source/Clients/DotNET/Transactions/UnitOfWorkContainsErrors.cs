@@ -6,4 +6,5 @@ namespace Cratis.Chronicle.Transactions;
 /// <summary>
 /// Exception that gets thrown when a unit of work contains errors and cannot be committed.
 /// </summary>
+/// <param name="correlationId">Correlation identifier for the unit of work.</param>
 public class UnitOfWorkContainsErrors(CorrelationId correlationId) : Exception($"Unit of work with correlation identifier '{correlationId}' contains errors and cannot be committed");

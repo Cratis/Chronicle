@@ -137,6 +137,7 @@ public static class ChronicleClientSiloBuilderExtensions
             });
 
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Connection);
+            services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().UnitOfWorkManager);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().AggregateRootFactory);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().EventTypes);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().EventLog);

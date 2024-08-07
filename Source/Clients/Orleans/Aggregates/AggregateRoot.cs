@@ -1,12 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Cratis.Chronicle.Aggregates;
-using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -40,14 +38,14 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
         var eventStore = ServiceProvider.GetRequiredService<IEventStore>();
         var eventLog = ServiceProvider.GetRequiredService<IEventLog>();
         var eventSerializer = ServiceProvider.GetRequiredService<IEventSerializer>();
+        var unitOfWorkManager = ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
+        var unitOfWork = unitOfWorkManager.Begin(CorrelationId.New());
 
-        // TODO: Fix CorrelationId to be a real value from the current context
         Context = new AggregateRootContext(
-            CorrelationId.New(),
             this.GetPrimaryKeyString(),
             eventLog,
             this,
-            true);
+            unitOfWork);
 
         var eventHandlersFactory = ServiceProvider.GetRequiredService<IAggregateRootEventHandlersFactory>();
         var eventHandlers = eventHandlersFactory.GetFor(this);
@@ -57,7 +55,7 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
             eventStore,
             eventSerializer,
             eventHandlers);
-        _mutation = new AggregateRootMutation(Context, _mutator, eventLog, ServiceProvider.GetRequiredService<ICausationManager>());
+        _mutation = new AggregateRootMutation(Context, _mutator, eventLog);
 
         await _mutator.Rehydrate();
 
@@ -72,10 +70,7 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     }
 
     /// <inheritdoc/>
-    public Task<AggregateRootCommitResult> Commit()
-    {
-        return _mutation?.Commit() ?? Task.FromResult(AggregateRootCommitResult.Failed(ImmutableList<object>.Empty, ImmutableList<ConstraintViolation>.Empty));
-    }
+    public Task<AggregateRootCommitResult> Commit() => _mutation!.Commit();
 
     /// <summary>
     /// Called when the aggregate root is ready to be activated.
@@ -119,20 +114,21 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var eventLog = ServiceProvider.GetRequiredService<IEventLog>();
+        var unitOfWorkManager = ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
+        var unitOfWork = unitOfWorkManager.Begin(CorrelationId.New());
 
         // TODO: Fix CorrelationId to be a real value from the current context
         Context = new AggregateRootContext(
-            CorrelationId.New(),
             this.GetPrimaryKeyString(),
             eventLog,
             this,
-            true);
+            unitOfWork);
 
         var stateProviders = ServiceProvider.GetRequiredService<IAggregateRootStateProviders>();
         var stateProvider = await stateProviders.CreateFor<TState>(Context);
         _state = new AggregateRootState<TState>();
         _mutator = new StatefulAggregateRootMutator<TState>(_state, stateProvider);
-        _mutation = new AggregateRootMutation(Context, _mutator, eventLog, ServiceProvider.GetRequiredService<ICausationManager>());
+        _mutation = new AggregateRootMutation(Context, _mutator, eventLog);
 
         await _mutator.Rehydrate();
 
@@ -147,10 +143,7 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     }
 
     /// <inheritdoc/>
-    public Task<AggregateRootCommitResult> Commit()
-    {
-        return _mutation?.Commit() ?? Task.FromResult(AggregateRootCommitResult.Failed(ImmutableList<object>.Empty));
-    }
+    public Task<AggregateRootCommitResult> Commit() => _mutation!.Commit();
 
     /// <summary>
     /// Called when the aggregate root is ready to be activated.

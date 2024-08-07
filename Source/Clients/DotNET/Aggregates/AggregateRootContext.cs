@@ -10,23 +10,18 @@ namespace Cratis.Chronicle.Aggregates;
 /// <summary>
 /// Represents an implementation of <see cref="IAggregateRootContext"/>.
 /// </summary>
-/// <param name="correlationId">The <see cref="CorrelationId"/> for the context.</param>
 /// <param name="eventSourceId">The <see cref="EventSourceId"/> for the context.</param>
 /// <param name="eventSequence">The <see cref="IEventSequence"/> for the context.</param>
 /// <param name="aggregateRoot">The <see cref="IAggregateRoot"/> for the context.</param>
 /// <param name="unitOfWork">The <see cref="IUnitOfWork"/> for the context.</param>
 /// <param name="hasEvents">A value indicating whether or not the context has events.</param>
 public class AggregateRootContext(
-    CorrelationId correlationId,
     EventSourceId eventSourceId,
     IEventSequence eventSequence,
     IAggregateRoot aggregateRoot,
     IUnitOfWork unitOfWork,
     bool hasEvents = false) : IAggregateRootContext
 {
-    /// <inheritdoc/>
-    public CorrelationId CorrelationId { get; } = correlationId;
-
     /// <inheritdoc/>
     public EventSourceId EventSourceId { get; } = eventSourceId;
 
