@@ -3,7 +3,7 @@
 
 extern alias Server;
 
-namespace Cratis.Chronicle.Orleans;
+namespace Cratis.Chronicle.Orleans.InProcess;
 
 /// <summary>
 /// Represents a startup task for Chronicle.

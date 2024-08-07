@@ -8,7 +8,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Clients;
 using Server::Cratis.Chronicle.Services.Clients;
 
-namespace Cratis.Chronicle.Orleans;
+namespace Cratis.Chronicle.Orleans.InProcess;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/> for Orleans in-process.

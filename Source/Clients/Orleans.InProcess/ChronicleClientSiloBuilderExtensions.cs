@@ -8,7 +8,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Orleans;
+using Cratis.Chronicle.Orleans.InProcess;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
@@ -124,7 +124,7 @@ public static class ChronicleClientSiloBuilderExtensions
                     new Server::Cratis.Chronicle.Services.Projections.Projections(grainFactory));
 
                 var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
-                var connection = new Cratis.Chronicle.Orleans.ChronicleConnection(connectionLifecycle, services, grainFactory);
+                var connection = new Cratis.Chronicle.Orleans.InProcess.ChronicleConnection(connectionLifecycle, services, grainFactory);
                 options.ArtifactsProvider = new DefaultOrleansClientArtifactsProvider(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
                 return new ChronicleClient(connection, options);
             });

@@ -3,12 +3,11 @@
 
 extern alias Server;
 
-using Cratis.Chronicle;
 using Cratis.Chronicle.Orleans.Aggregates;
 using Cratis.Reflection;
 using Cratis.Types;
 
-namespace Orleans.Hosting;
+namespace Cratis.Chronicle.Orleans.InProcess;
 
 /// <summary>
 /// Represents a default implementation of <see cref="IClientArtifactsProvider"/> for Orleans.
