@@ -2,11 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using System.Reflection;
 using AutoMapper;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Integration;

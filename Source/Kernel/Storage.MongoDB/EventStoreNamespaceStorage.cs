@@ -7,11 +7,13 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Changes;
+using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
+using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Jobs;
@@ -41,6 +43,8 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILoggerFactory _loggerFactory;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequenceStorage> _eventSequences = new();
+    readonly ConcurrentDictionary<EventSequenceId, IUniqueConstraintsStorage> _uniqueConstraints = new();
+    readonly ConcurrentDictionary<EventSequenceId, IUniqueEventTypesConstraintsStorage> _uniqueEventTypesConstraints = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreNamespaceStorage"/> class.
@@ -126,7 +130,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             return eventSequenceStorage;
         }
 
-        eventSequenceStorage = new EventSequenceStorage(
+        return _eventSequences[eventSequenceId] = new EventSequenceStorage(
             _eventStore,
             _namespace,
             eventSequenceId,
@@ -137,8 +141,27 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             _expandoObjectConverter,
             _jsonSerializerOptions,
             _loggerFactory.CreateLogger<EventSequenceStorage>());
-        _eventSequences[eventSequenceId] = eventSequenceStorage;
+    }
 
-        return eventSequenceStorage;
+    /// <inheritdoc/>
+    public IUniqueConstraintsStorage GetUniqueConstraintsStorage(EventSequenceId eventSequenceId)
+    {
+        if (_uniqueConstraints.TryGetValue(eventSequenceId, out var uniqueConstraintsStorage))
+        {
+            return uniqueConstraintsStorage;
+        }
+
+        return _uniqueConstraints[eventSequenceId] = new UniqueConstraintsStorage(_eventStoreNamespaceDatabase, eventSequenceId);
+    }
+
+    /// <inheritdoc/>
+    public IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(EventSequenceId eventSequenceId)
+    {
+        if (_uniqueEventTypesConstraints.TryGetValue(eventSequenceId, out var uniqueEventTypesConstraintsStorage))
+        {
+            return uniqueEventTypesConstraintsStorage;
+        }
+
+        return _uniqueEventTypesConstraints[eventSequenceId] = new UniqueEventTypesConstraintsStorage(_eventStoreNamespaceDatabase, eventSequenceId);
     }
 }

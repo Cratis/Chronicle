@@ -5,6 +5,7 @@ using System.Diagnostics;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactions;
@@ -112,6 +113,7 @@ public class ChronicleConnection : IChronicleConnection
             _services = new Services(
                 _channel.CreateGrpcService<IEventSequences>(),
                 _channel.CreateGrpcService<IEventTypes>(),
+                _channel.CreateGrpcService<IConstraints>(),
                 _channel.CreateGrpcService<IObservers>(),
                 _channel.CreateGrpcService<IReactions>(),
                 _channel.CreateGrpcService<IReducers>(),

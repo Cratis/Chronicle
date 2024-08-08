@@ -30,14 +30,13 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata.</param>
     public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver)
     {
-        var settings = new JsonSchemaGeneratorSettings
+        var settings = new SystemTextJsonSchemaGeneratorSettings()
         {
             AllowReferencesWithProperties = true,
             SerializerOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            },
-            ReflectionService = new ReflectionService(),
+            }
         };
         settings.SchemaProcessors.Add(new ComplianceMetadataSchemaProcessor(metadataResolver));
         settings.SchemaProcessors.Add(new TypeFormatSchemaProcessor(new TypeFormats()));
@@ -71,7 +70,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 
         if (schema.HasReference)
         {
-            ForceSchemaToBeCamelCase(schema.Reference);
+            ForceSchemaToBeCamelCase(schema.Reference!);
         }
     }
 }

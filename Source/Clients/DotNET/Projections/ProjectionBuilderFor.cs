@@ -5,7 +5,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
 using Cratis.Models;

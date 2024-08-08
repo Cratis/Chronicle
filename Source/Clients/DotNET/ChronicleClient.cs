@@ -97,6 +97,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
             return eventStore;
         }
 
+        _options.ArtifactsProvider.Initialize();
+
         eventStore = new EventStore(
             name,
             @namespace,

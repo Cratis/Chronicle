@@ -28,11 +28,11 @@ public static class AggregateRootTestSiloExtensions
     public static async Task<TAggregateRoot> CreateAggregateRoot<TAggregateRoot>(this TestKitSilo silo, EventSourceId eventSourceId, params object[] events)
         where TAggregateRoot : AggregateRoot, IGrainWithStringKey
     {
-        var eventLog = new EventLogForTesting(Defaults.EventTypes, events);
+        var eventLog = new EventLogForTesting(Defaults.Instance.EventTypes, events);
         var causationManager = new CausationManagerForTesting();
-        var aggregateRootEventHandlersFactory = new AggregateRootEventHandlersFactory(Defaults.EventTypes);
-        silo.AddService(Defaults.EventSerializer);
-        silo.AddService(Defaults.EventStore);
+        var aggregateRootEventHandlersFactory = new AggregateRootEventHandlersFactory(Defaults.Instance.EventTypes);
+        silo.AddService(Defaults.Instance.EventSerializer);
+        silo.AddService(Defaults.Instance.EventStore);
         silo.AddService<IEventLog>(eventLog);
         silo.AddService<ICausationManager>(causationManager);
         silo.AddService<IAggregateRootEventHandlersFactory>(aggregateRootEventHandlersFactory);
@@ -59,7 +59,7 @@ public static class AggregateRootTestSiloExtensions
     public static async Task<TAggregateRoot> CreateAggregateRoot<TAggregateRoot, TState>(this TestKitSilo silo, EventSourceId eventSourceId, TState? initialState = default)
         where TAggregateRoot : AggregateRoot<TState>, IGrainWithStringKey
     {
-        var eventLog = new EventLogForTesting(Defaults.EventTypes);
+        var eventLog = new EventLogForTesting(Defaults.Instance.EventTypes);
         var causationManager = new CausationManagerForTesting();
         var aggregateRootStateProviders = new AggregateRootStateProvidersForTesting();
         silo.AddService<IEventLog>(eventLog);

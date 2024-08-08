@@ -16,13 +16,12 @@ public class an_expando_object_converter : Specification
 
     void Establish()
     {
-        var settings = new JsonSchemaGeneratorSettings
+        var settings = new SystemTextJsonSchemaGeneratorSettings
         {
             SerializerOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            },
-            ReflectionService = new ReflectionService(),
+            }
         };
         var typeFormats = new TypeFormats();
         settings.SchemaProcessors.Add(new TypeFormatSchemaProcessor(typeFormats));

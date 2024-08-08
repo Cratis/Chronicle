@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Projections;
@@ -13,6 +14,8 @@ using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
 using Cratis.Models;
+using Cratis.Types;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle;
@@ -62,7 +65,7 @@ public class EventStore : IEventStore
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
-        EventTypes = new Events.EventTypes(this, schemaGenerator, clientArtifactsProvider);
+        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
 
         _eventSerializer = new EventSerializer(
             clientArtifactsProvider,
@@ -70,11 +73,16 @@ public class EventStore : IEventStore
             EventTypes,
             jsonSerializerOptions);
 
+        Constraints = new Constraints(
+            this,
+            serviceProvider.GetRequiredService<IInstancesOf<ICanProvideConstraints>>());
+
         EventLog = new EventLog(
             eventStoreName,
             @namespace,
             connection,
             EventTypes,
+            Constraints,
             _eventSerializer,
             causationManager,
             identityProvider);
@@ -148,6 +156,9 @@ public class EventStore : IEventStore
     public IEventTypes EventTypes { get; }
 
     /// <inheritdoc/>
+    public IConstraints Constraints { get; }
+
+    /// <inheritdoc/>
     public IEventLog EventLog { get; }
 
     /// <inheritdoc/>
@@ -166,6 +177,7 @@ public class EventStore : IEventStore
 
         // We need to discover all event types first, as they are used by the other artifacts
         await EventTypes.Discover();
+        await Constraints.Discover();
 
         await Task.WhenAll(
             Reactions.Discover(),
@@ -180,6 +192,7 @@ public class EventStore : IEventStore
 
         // We need to register event types first, as they are used by the other artifacts
         await EventTypes.Register();
+        await Constraints.Register();
 
         await Task.WhenAll(
             Reactions.Register(),
@@ -195,6 +208,7 @@ public class EventStore : IEventStore
             id,
             Connection,
             EventTypes,
+            Constraints,
             _eventSerializer,
             _causationManager,
             _identityProvider);

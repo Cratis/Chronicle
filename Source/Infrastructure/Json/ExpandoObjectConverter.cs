@@ -106,7 +106,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         {
             return ToJsonObject(
                 expando,
-                schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
+                schemaProperty.IsArray ? schemaProperty.Item!.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
 
         if (schemaProperty.Type.HasFlag(JsonObjectType.Array) && value is IEnumerable enumerable)
@@ -114,12 +114,12 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             var items = new List<JsonNode?>();
             foreach (var item in enumerable)
             {
-                items.Add(ConvertToJsonNode(item, schemaProperty.Item.Reference ?? schemaProperty.Item));
+                items.Add(ConvertToJsonNode(item, schemaProperty.Item!.Reference ?? schemaProperty.Item));
             }
             return new JsonArray([.. items]);
         }
 
-        if (typeFormats.IsKnown(schemaProperty.Format))
+        if (typeFormats.IsKnown(schemaProperty.Format!))
         {
             return ConvertToJsonValueBasedOnSchemaType(value, schemaProperty);
         }
@@ -138,15 +138,15 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
             return ToExpandoObject(
                 childObject,
-                schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
+                schemaProperty.IsArray ? schemaProperty.Item!.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
 
         if (jsonNode is JsonArray array)
         {
-            return array.Select(_ => ConvertFromJsonNode(_!, schemaProperty.Item)).ToArray();
+            return array.Select(_ => ConvertFromJsonNode(_!, schemaProperty.Item!)).ToArray();
         }
 
-        if (typeFormats.IsKnown(schemaProperty.Format))
+        if (typeFormats.IsKnown(schemaProperty.Format!))
         {
             return ConvertJsonValueToSchemaType(jsonNode, schemaProperty);
         }
@@ -184,7 +184,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             }
         }
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
-                schemaProperty.Reference.Type :
+                schemaProperty.Reference!.Type :
                 schemaProperty.Type;
 
         if (type.HasFlag(JsonObjectType.Null))
@@ -211,7 +211,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                     schemaProperty.Reference?.IsEnumeration == true)
                 {
                     var index = schemaProperty.Reference.EnumerationNames.IndexOf(value.GetValue<string>());
-                    return TypeConversion.Convert(typeof(int), schemaProperty.Reference.Enumeration.ToArray()[index]);
+                    return TypeConversion.Convert(typeof(int), schemaProperty.Reference.Enumeration.ToArray()[index]!);
                 }
                 return value.GetValue<int>();
 
@@ -313,7 +313,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
     object? ConvertJsonValueToSchemaType(JsonNode jsonNode, JsonSchema schemaProperty)
     {
-        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format);
+        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format!);
         return jsonNode.AsValue().ToTargetTypeValue(targetType);
     }
 
@@ -324,7 +324,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             return null;
         }
 
-        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format);
+        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format!);
         input = TypeConversion.Convert(targetType, input);
         return input.ToJsonValue();
     }
@@ -347,7 +347,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             }
         }
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
-                schemaProperty.Reference.Type :
+                schemaProperty.Reference!.Type :
                 schemaProperty.Type;
 
         if (type.HasFlag(JsonObjectType.Null))

@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Schemas;
+using NJsonSchema;
 
 namespace Cratis.Chronicle.Events;
 
@@ -13,6 +14,7 @@ namespace Cratis.Chronicle.Events;
 public class EventTypes : IEventTypes
 {
     readonly IDictionary<EventType, Type> _typesByEventType = new Dictionary<EventType, Type>();
+    readonly IDictionary<EventType, JsonSchema> _schemasByEventType = new Dictionary<EventType, JsonSchema>();
     readonly IEventStore _eventStore;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly IClientArtifactsProvider _clientArtifacts;
@@ -56,6 +58,7 @@ public class EventTypes : IEventTypes
         foreach (var eventType in eventTypes)
         {
             _typesByEventType[eventType.EventType] = eventType.ClrType;
+            _schemasByEventType[eventType.EventType] = _jsonSchemaGenerator.Generate(eventType.ClrType);
         }
 
         return Task.CompletedTask;
@@ -68,7 +71,7 @@ public class EventTypes : IEventTypes
         {
             Type = _.Key.ToContract(),
             FriendlyName = _.Value.Name,
-            Schema = _jsonSchemaGenerator.Generate(_.Value).ToJson()
+            Schema = _schemasByEventType[_.Key].ToJson()
         }).ToList();
 
         await _eventStore.Connection.Services.EventTypes.Register(new()
@@ -83,6 +86,9 @@ public class EventTypes : IEventTypes
 
     /// <inheritdoc/>
     public EventType GetEventTypeFor(Type clrType) => _typesByEventType.Single(_ => _.Value == clrType).Key;
+
+    /// <inheritdoc/>
+    public JsonSchema GetSchemaFor(EventTypeId eventTypeId) => _schemasByEventType.Single(_ => _.Key.Id == eventTypeId).Value;
 
     /// <inheritdoc/>
     public bool HasFor(Type clrType) => _typesByEventType.Any(_ => _.Value == clrType);

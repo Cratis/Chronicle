@@ -13,10 +13,11 @@ public class an_event_sequence : all_dependencies
             Guid.NewGuid().ToString(),
             Guid.NewGuid().ToString(),
             Guid.NewGuid().ToString(),
-            connection.Object,
-            event_types.Object,
-            event_serializer.Object,
-            causation_manager.Object,
-            identity_provider.Object);
+            _connection,
+            _eventTypes,
+            _constraints,
+            _eventSerializer,
+            _causationManager,
+            _identityProvider);
     }
 }

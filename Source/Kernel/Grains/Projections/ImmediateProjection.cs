@@ -27,7 +27,6 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ImmediateProjection"/> class.
 /// </remarks>
-/// <param name="kernel"><see cref="IKernel"/> for accessing global artifacts.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
@@ -35,7 +34,6 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <param name="logger">Logger for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class ImmediateProjection(
-    IKernel kernel,
     IStorage storage,
     IProjectionFactory projectionFactory,
     IObjectComparer objectComparer,
@@ -69,9 +67,6 @@ public class ImmediateProjection(
 
         try
         {
-            var eventStore = kernel.GetEventStore(_projectionKey!.EventStore);
-            var @namespace = eventStore.GetNamespace(_projectionKey!.Namespace);
-
             var projectionChanged = false;
 
             var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
@@ -130,8 +125,6 @@ public class ImmediateProjection(
     /// <inheritdoc/>
     public async Task<ProjectionResult> GetCurrentModelInstanceWithAdditionalEventsApplied(IEnumerable<EventToApply> events)
     {
-        var @namespace = kernel.GetEventStore(_projectionKey!.EventStore).GetNamespace(_projectionKey!.Namespace);
-
         var affectedProperties = new HashSet<PropertyPath>();
 
         var eventTypesStorage = storage.GetEventStore(_projectionKey!.EventStore).EventTypes;

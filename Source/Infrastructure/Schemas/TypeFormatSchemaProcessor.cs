@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Namotion.Reflection;
 using NJsonSchema.Generation;
 
 namespace Cratis.Chronicle.Schemas;
@@ -21,7 +22,7 @@ public class TypeFormatSchemaProcessor(ITypeFormats typeFormats) : ISchemaProces
 
         context.Schema.Format = typeFormats.GetFormatForType(context.ContextualType.Type);
 
-        if (context.ContextualType.Attributes.OfType<NullableAttribute>().Any() ||
+        if (context.ContextualType.IsAttributeDefined<NullableAttribute>(false) ||
             (context.ContextualType.Parent is not null &&
             context.ContextualType.Type == context.ContextualType.Parent.Type &&
             context.ContextualType.Parent.IsNullableType))

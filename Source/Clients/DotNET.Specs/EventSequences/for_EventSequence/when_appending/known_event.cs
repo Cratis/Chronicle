@@ -14,46 +14,56 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending;
 
 public class known_event : given.an_event_sequence
 {
-    EventSourceId event_source_id;
-    string @event;
-    EventType event_type;
-    AppendRequest command;
-    JsonObject event_content;
-    IEnumerable<Causation> causation;
-    Identity caused_by;
-
+    EventSourceId _eventSourceId;
+    string _event;
+    EventType _eventType;
+    AppendRequest _command;
+    JsonObject _eventContext;
+    IEnumerable<Causation> _causation;
+    Identity _causedBy;
+    AppendResponse _response;
 
     void Establish()
     {
-        event_source_id = Guid.NewGuid();
-        @event = "Actual event";
-        event_type = new(Guid.NewGuid().ToString(), EventGeneration.First);
+        _eventSourceId = Guid.NewGuid();
+        _event = "Actual event";
+        _eventType = new(Guid.NewGuid().ToString(), EventGeneration.First);
 
-        event_content = [];
-        event_serializer.Setup(_ => _.Serialize(@event)).ReturnsAsync(event_content);
+        _eventContext = [];
+        _eventSerializer.Serialize(_event).Returns(_eventContext);
 
-        causation =
+        _causation =
         [
             new Causation(DateTimeOffset.UtcNow, Guid.NewGuid().ToString(), new Dictionary<string, string> { { "key", "42" } })
         ];
 
-        caused_by = new("Subject", "Name", "UserName", new("BehalfOf_Subject", "BehalfOf_Name", "BehalfOf_UserName"));
+        _causedBy = new("Subject", "Name", "UserName", new("BehalfOf_Subject", "BehalfOf_Name", "BehalfOf_UserName"));
 
-        event_types.Setup(_ => _.HasFor(typeof(string))).Returns(true);
-        event_types.Setup(_ => _.GetEventTypeFor(typeof(string))).Returns(event_type);
-        event_sequences
-            .Setup(_ => _.Append(IsAny<AppendRequest>(), CallContext.Default))
-            .Callback((AppendRequest _, CallContext __) => command = _);
-        causation_manager.Setup(_ => _.GetCurrentChain()).Returns(causation.ToImmutableList());
-        identity_provider.Setup(_ => _.GetCurrent()).Returns(caused_by);
+        _eventTypes.HasFor(typeof(string)).Returns(true);
+        _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
+        _eventSequences
+            .When(_ => _.Append(Arg.Any<AppendRequest>(), CallContext.Default))
+            .Do((CallInfo callInfo) => _command = callInfo.Arg<AppendRequest>());
+        _causationManager.GetCurrentChain().Returns(_causation.ToImmutableList());
+        _identityProvider.GetCurrent().Returns(_causedBy);
+
+        _response = new()
+        {
+            CorrelationId = Guid.NewGuid().ToString(),
+            SequenceNumber = 42,
+            ConstraintViolations = [],
+            Errors = []
+        };
+
+        _connection.Services.EventSequences.Append(Arg.Any<AppendRequest>(), CallContext.Default).Returns(_response);
     }
 
-    async Task Because() => await event_sequence.Append(event_source_id, @event);
+    async Task Because() => await event_sequence.Append(_eventSourceId, _event);
 
-    [Fact] void should_append_event() => command.ShouldNotBeNull();
-    [Fact] void should_append_event_with_correct_event_source_id() => command.EventSourceId.ShouldEqual(event_source_id.Value);
-    [Fact] void should_append_event_with_correct_event_type() => command.EventType.ToClient().ShouldEqual(event_type);
-    [Fact] void should_append_event_with_correct_event() => command.Content.ShouldEqual(event_content.ToString());
-    [Fact] void should_append_event_with_correct_causations() => command.Causation.ToClient().ShouldEqual(causation);
-    [Fact] void should_append_event_with_correct_caused_by() => command.CausedBy.ToClient().ShouldEqual(caused_by);
+    [Fact] void should_append_event() => _command.ShouldNotBeNull();
+    [Fact] void should_append_event_with_correct_event_source_id() => _command.EventSourceId.ShouldEqual(_eventSourceId.Value);
+    [Fact] void should_append_event_with_correct_event_type() => _command.EventType.ToClient().ShouldEqual(_eventType);
+    [Fact] void should_append_event_with_correct_event() => _command.Content.ShouldEqual(_eventContext.ToString());
+    [Fact] void should_append_event_with_correct_causations() => _command.Causation.ToClient().ShouldEqual(_causation);
+    [Fact] void should_append_event_with_correct_caused_by() => _command.CausedBy.ToClient().ShouldEqual(_causedBy);
 }

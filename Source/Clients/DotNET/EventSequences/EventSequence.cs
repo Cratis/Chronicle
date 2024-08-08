@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -17,8 +18,9 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="eventStoreName">Name of the event store.</param>
 /// <param name="namespace">Namespace for the event store.</param>
 /// <param name="eventSequenceId">The identifier of the event sequence.</param>
-/// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Cratis Kernel.</param>
+/// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Chronicle.</param>
 /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
+/// <param name="constraints">Known <see cref="IConstraints"/>.</param>
 /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
 /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
@@ -28,6 +30,7 @@ public class EventSequence(
     EventSequenceId eventSequenceId,
     IChronicleConnection connection,
     IEventTypes eventTypes,
+    IConstraints constraints,
     IEventSerializer eventSerializer,
     ICausationManager causationManager,
     IIdentityProvider identityProvider) : IEventSequence
@@ -36,7 +39,7 @@ public class EventSequence(
     public EventSequenceId Id => eventSequenceId;
 
     /// <inheritdoc/>
-    public async Task Append(EventSourceId eventSourceId, object @event)
+    public async Task<AppendResult> Append(EventSourceId eventSourceId, object @event)
     {
         var eventClrType = @event.GetType();
 
@@ -46,7 +49,7 @@ public class EventSequence(
         var content = await eventSerializer.Serialize(@event);
         var causationChain = causationManager.GetCurrentChain().ToContract();
         var identity = identityProvider.GetCurrent();
-        await connection.Services.EventSequences.Append(new()
+        var response = await connection.Services.EventSequences.Append(new()
         {
             EventStoreName = eventStoreName,
             Namespace = @namespace,
@@ -61,6 +64,36 @@ public class EventSequence(
             Causation = causationChain,
             CausedBy = identity.ToContract()
         });
+
+        return ResolveViolationMessages(response.ToClient());
+    }
+
+    /// <inheritdoc/>
+    public async Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<object> events)
+    {
+        var eventsToAppend = events.Select(@event =>
+        {
+            var eventType = eventTypes.GetEventTypeFor(@event.GetType());
+            return new Contracts.Events.EventToAppend
+            {
+                EventType = eventType.ToContract(),
+                Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString()
+            };
+        }).ToList();
+        var causationChain = causationManager.GetCurrentChain().ToContract();
+        var identity = identityProvider.GetCurrent();
+        var response = await connection.Services.EventSequences.AppendMany(new()
+        {
+            EventStoreName = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = eventSourceId,
+            Events = eventsToAppend,
+            Causation = causationChain,
+            CausedBy = identity.ToContract()
+        });
+
+        return ResolveViolationMessages(response.ToClient());
     }
 
     /// <inheritdoc/>
@@ -75,32 +108,6 @@ public class EventSequence(
         });
 
         return result.HasEvents;
-    }
-
-    /// <inheritdoc/>
-    public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events)
-    {
-        var eventsToAppend = events.Select(@event =>
-        {
-            var eventType = eventTypes.GetEventTypeFor(@event.GetType());
-            return new Contracts.Events.EventToAppend
-            {
-                EventType = eventType.ToContract(),
-                Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString()
-            };
-        }).ToList();
-        var causationChain = causationManager.GetCurrentChain().ToContract();
-        var identity = identityProvider.GetCurrent();
-        await connection.Services.EventSequences.AppendMany(new()
-        {
-            EventStoreName = eventStoreName,
-            Namespace = @namespace,
-            EventSequenceId = eventSequenceId,
-            EventSourceId = eventSourceId,
-            Events = eventsToAppend,
-            Causation = causationChain,
-            CausedBy = identity.ToContract()
-        });
     }
 
     /// <inheritdoc/>
@@ -140,4 +147,9 @@ public class EventSequence(
             throw new UnknownEventType(eventClrType);
         }
     }
+
+    AppendResult ResolveViolationMessages(AppendResult result) => result with { ConstraintViolations = ResolveViolationMessages(result.ConstraintViolations) };
+    AppendManyResult ResolveViolationMessages(AppendManyResult result) => result with { ConstraintViolations = ResolveViolationMessages(result.ConstraintViolations) };
+    IImmutableList<ConstraintViolation> ResolveViolationMessages(IEnumerable<ConstraintViolation> violations) =>
+        violations.Select(constraints.ResolveMessageFor).ToImmutableList();
 }

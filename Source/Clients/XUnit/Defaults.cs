@@ -13,34 +13,17 @@ namespace Cratis.Chronicle.XUnit;
 /// <summary>
 /// Represents default implementations for Chronicle services.
 /// </summary>
-public static class Defaults
+public class Defaults
 {
     /// <summary>
-    /// Gets the default <see cref="IEventStore"/>.
+    /// Get the singleton instance.
     /// </summary>
-    public static readonly IEventStore EventStore;
+    public static readonly Defaults Instance = new();
 
     /// <summary>
-    /// Gets the default <see cref="IEventTypes"/>.
+    /// Initializes a new instance of the <see cref="Defaults"/> class.
     /// </summary>
-    public static readonly IEventTypes EventTypes;
-
-    /// <summary>
-    /// Gets the default <see cref="IJsonSchemaGenerator"/>.
-    /// </summary>
-    public static readonly IJsonSchemaGenerator JsonSchemaGenerator;
-
-    /// <summary>
-    /// Gets the default <see cref="IClientArtifactsProvider"/>.
-    /// </summary>
-    public static readonly IClientArtifactsProvider ClientArtifactsProvider;
-
-    /// <summary>
-    /// Gets the default <see cref="IEventSerializer"/>.
-    /// </summary>
-    public static readonly IEventSerializer EventSerializer;
-
-    static Defaults()
+    public Defaults()
     {
         EventStore = new EventStoreForTesting();
         JsonSchemaGenerator = new JsonSchemaGenerator(
@@ -48,10 +31,11 @@ public static class Defaults
                 new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
                 new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()));
 
-        ClientArtifactsProvider = new DefaultClientArtifactsProvider(
-            new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
+        var assembliesProvider = new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance);
+        ClientArtifactsProvider = new DefaultClientArtifactsProvider(assembliesProvider);
+        ClientArtifactsProvider.Initialize();
 
-        EventTypes = new Chronicle.Events.EventTypes(
+        EventTypes = new EventTypes(
             EventStore,
             JsonSchemaGenerator,
             ClientArtifactsProvider);
@@ -64,4 +48,29 @@ public static class Defaults
             EventTypes,
             Globals.JsonSerializerOptions);
     }
+
+    /// <summary>
+    /// Gets the default <see cref="IEventStore"/>.
+    /// </summary>
+    public IEventStore EventStore { get; }
+
+    /// <summary>
+    /// Gets the default <see cref="IEventTypes"/>.
+    /// </summary>
+    public IEventTypes EventTypes { get; }
+
+    /// <summary>
+    /// Gets the default <see cref="IJsonSchemaGenerator"/>.
+    /// </summary>
+    public IJsonSchemaGenerator JsonSchemaGenerator { get; }
+
+    /// <summary>
+    /// Gets the default <see cref="IClientArtifactsProvider"/>.
+    /// </summary>
+    public IClientArtifactsProvider ClientArtifactsProvider { get; }
+
+    /// <summary>
+    /// Gets the default <see cref="IEventSerializer"/>.
+    /// </summary>
+    public IEventSerializer EventSerializer { get; }
 }

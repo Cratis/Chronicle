@@ -18,7 +18,7 @@ public class a_type_with_one_property : Specification
     void Establish()
     {
         var instance = new TypeHoldingValue(value_in_type);
-        var settings = new JsonSchemaGeneratorSettings();
+        var settings = new SystemTextJsonSchemaGeneratorSettings();
         var generator = new JsonSchemaGenerator(settings);
         schema = generator.Generate(instance.GetType());
         input = new JsonObject

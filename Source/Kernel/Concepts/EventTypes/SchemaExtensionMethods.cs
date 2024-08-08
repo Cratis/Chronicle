@@ -23,7 +23,7 @@ public static class SchemaExtensionMethods
     public static void SetEventType(this JsonSchema schema, EventType eventType)
     {
         schema.EnsureExtensionData();
-        schema.ExtensionData[EventTypeExtension] = $"{eventType.Id}+{eventType.Generation}";
+        schema.ExtensionData![EventTypeExtension] = $"{eventType.Id}+{eventType.Generation}";
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ public static class SchemaExtensionMethods
     {
         schema.EnsureExtensionData();
 
-        schema.ExtensionData[DisplayNameExtension] = name;
+        schema.ExtensionData![DisplayNameExtension] = name;
     }
 
     /// <summary>
@@ -70,7 +70,7 @@ public static class SchemaExtensionMethods
     {
         schema.EnsureExtensionData();
 
-        schema.ExtensionData[GenerationExtension] = generation;
+        schema.ExtensionData![GenerationExtension] = generation;
     }
 
     /// <summary>
@@ -95,6 +95,6 @@ public static class SchemaExtensionMethods
 
     static void EnsureExtensionData(this JsonSchema schema)
     {
-        schema.ExtensionData ??= new Dictionary<string, object>();
+        schema.ExtensionData ??= new Dictionary<string, object?>();
     }
 }

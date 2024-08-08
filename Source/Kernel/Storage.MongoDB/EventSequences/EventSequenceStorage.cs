@@ -49,6 +49,8 @@ public class EventSequenceStorage(
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
 {
+    readonly IMongoCollection<Event> _collection = database.GetEventSequenceCollectionFor(eventSequenceId);
+
     /// <inheritdoc/>
     public async Task<Chronicle.Storage.EventSequences.EventSequenceState> GetState()
     {
@@ -88,7 +90,7 @@ public class EventSequenceStorage(
         }
 
         var filter = Builders<Event>.Filter.And([.. filters]);
-        var collection = GetCollection();
+        var collection = _collection;
         return await collection.CountDocumentsAsync(filter).ConfigureAwait(false);
     }
 
@@ -126,7 +128,7 @@ public class EventSequenceStorage(
                     { eventType.Generation.ToString(), document }
                 },
                 []);
-            var collection = GetCollection();
+            var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
             return new AppendedEvent(
@@ -182,7 +184,7 @@ public class EventSequenceStorage(
         DateTimeOffset occurred)
     {
         logger.Redacting(eventSequenceId, sequenceNumber);
-        var collection = GetCollection();
+        var collection = _collection;
 
         var @event = await GetEventAt(sequenceNumber);
         if (@event.Metadata.Type == GlobalEventTypes.Redaction)
@@ -207,7 +209,7 @@ public class EventSequenceStorage(
         DateTimeOffset occurred)
     {
         logger.RedactingMultiple(eventSequenceId, eventSourceId, eventTypes ?? []);
-        var collection = GetCollection();
+        var collection = _collection;
         var updates = new List<UpdateOneModel<Event>>();
         var affectedEventTypes = new HashSet<EventType>();
 
@@ -239,7 +241,7 @@ public class EventSequenceStorage(
     {
         logger.GettingHeadSequenceNumber(eventSequenceId);
 
-        var collection = GetCollection();
+        var collection = _collection;
         var filters = new List<FilterDefinition<Event>>();
         if (eventTypes?.Any() ?? false)
         {
@@ -268,7 +270,7 @@ public class EventSequenceStorage(
     {
         logger.GettingTailSequenceNumber(eventSequenceId);
 
-        var collection = GetCollection();
+        var collection = _collection;
         var filters = new List<FilterDefinition<Event>>();
         if (eventTypes?.Any() ?? false)
         {
@@ -408,7 +410,7 @@ public class EventSequenceStorage(
     public async Task<bool> HasEventsFor(EventSourceId eventSourceId)
     {
         var filter = Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId);
-        var collection = GetCollection();
+        var collection = _collection;
         var count = await collection.Find(filter)
                                     .CountDocumentsAsync()
                                     .ConfigureAwait(false);
@@ -422,7 +424,7 @@ public class EventSequenceStorage(
             Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
-        var collection = GetCollection();
+        var collection = _collection;
         var count = await collection.Find(filter)
                                     .CountDocumentsAsync()
                                     .ConfigureAwait(false);
@@ -436,7 +438,7 @@ public class EventSequenceStorage(
 
         var filter = Builders<Event>.Filter.And(Builders<Event>.Filter.Eq(_ => _.SequenceNumber, sequenceNumber));
 
-        var collection = GetCollection();
+        var collection = _collection;
         var @event = await collection.Find(filter)
                                      .SortByDescendingSequenceNumber()
                                      .Limit(1)
@@ -456,7 +458,7 @@ public class EventSequenceStorage(
             Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
-        var collection = GetCollection();
+        var collection = _collection;
         var @event = await collection.Find(filter)
                                      .SortByDescendingSequenceNumber()
                                      .Limit(1)
@@ -478,7 +480,7 @@ public class EventSequenceStorage(
             anyEventTypes,
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
-        var collection = GetCollection();
+        var collection = _collection;
         var @event = await collection.Find(filter)
                                      .SortByDescendingSequenceNumber()
                                      .Limit(1)
@@ -496,7 +498,7 @@ public class EventSequenceStorage(
     {
         logger.GettingFromSequenceNumber(eventSequenceId, sequenceNumber);
 
-        var collection = GetCollection();
+        var collection = _collection;
         var filters = new List<FilterDefinition<Event>>
             {
                 Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber)
@@ -529,7 +531,7 @@ public class EventSequenceStorage(
         CancellationToken cancellationToken = default)
     {
         logger.GettingRange(eventSequenceId, start, end);
-        var collection = GetCollection();
+        var collection = _collection;
         var filters = new List<FilterDefinition<Event>>
             {
                 Builders<Event>.Filter.Gte(_ => _.SequenceNumber, start),
@@ -554,8 +556,6 @@ public class EventSequenceStorage(
                                      .ConfigureAwait(false);
         return new EventCursor(converter, cursor);
     }
-
-    IMongoCollection<Event> GetCollection() => database.GetEventSequenceCollectionFor(eventSequenceId);
 
     UpdateOneModel<Event> CreateRedactionUpdateModelFor(
         AppendedEvent @event,

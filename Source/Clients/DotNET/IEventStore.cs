@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactions;
@@ -39,6 +40,11 @@ public interface IEventStore
     /// Gets the <see cref="IEventTypes"/> for the event store.
     /// </summary>
     IEventTypes EventTypes { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IConstraints"/> for the event store.
+    /// </summary>
+    IConstraints Constraints { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventLog"/> event sequence.

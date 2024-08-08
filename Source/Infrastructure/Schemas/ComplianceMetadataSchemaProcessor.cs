@@ -44,7 +44,7 @@ public class ComplianceMetadataSchemaProcessor(IComplianceMetadataResolver metad
     {
         EnsureExtensionData(schema);
 
-        if (!schema.ExtensionData.ContainsKey(JsonSchemaGenerator.ComplianceKey))
+        if (!schema.ExtensionData!.ContainsKey(JsonSchemaGenerator.ComplianceKey))
         {
             schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] = new List<ComplianceSchemaMetadata>();
         }
@@ -54,6 +54,6 @@ public class ComplianceMetadataSchemaProcessor(IComplianceMetadataResolver metad
 
     void EnsureExtensionData(JsonSchema schema)
     {
-        schema.ExtensionData ??= new Dictionary<string, object>();
+        schema.ExtensionData ??= new Dictionary<string, object?>();
     }
 }

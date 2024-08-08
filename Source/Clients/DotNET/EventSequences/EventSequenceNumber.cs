@@ -10,34 +10,29 @@ namespace Cratis.Chronicle.Events;
 public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
 {
     /// <summary>
-    /// Gets the sequence number representing the warm up event.
-    /// </summary>
-    public static readonly EventSequenceNumber WarmUp = ulong.MaxValue;
-
-    /// <summary>
     /// Gets the first sequence number.
     /// </summary>
     public static readonly EventSequenceNumber First = 0u;
 
     /// <summary>
-    /// Gets the max sequence number.
-    /// </summary>
-    public static readonly EventSequenceNumber Max = ulong.MaxValue - 1;
-
-    /// <summary>
     /// Gets the value when the sequence number is unavailable.
     /// </summary>
-    public static readonly EventSequenceNumber Unavailable = ulong.MaxValue - 2;
+    public static readonly EventSequenceNumber Unavailable = ulong.MaxValue;
+
+    /// <summary>
+    /// Gets the max sequence number.
+    /// </summary>
+    public static readonly EventSequenceNumber Max = ulong.MaxValue - 2;
 
     /// <summary>
     /// Check if the <see cref="EventSequenceNumber"/> is an actual value representing a sequence number.
     /// </summary>
     /// <returns>True if it can, false if not.</returns>
     /// <remarks>
-    /// Values such as <see cref="Unavailable"/>, <see cref="Max"/> and <see cref="WarmUp"/> are not actual values.
+    /// Values such as <see cref="Unavailable"/>, <see cref="Max"/> are not actual values.
     /// They are system values used for special purposes.
     /// </remarks>
-    public bool IsActualValue => this != Unavailable && this != Max && this != WarmUp;
+    public bool IsActualValue => this != Unavailable && this != Max;
 
     /// <summary>
     /// Check if the <see cref="EventSequenceNumber"/> is unavailable.

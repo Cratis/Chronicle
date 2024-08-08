@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactions;
@@ -14,7 +15,7 @@ namespace Cratis.Chronicle.XUnit.Events;
 /// </summary>
 public class EventStoreForTesting : IEventStore
 {
-    readonly EventSequenceForTesting _defaultEventSequence = new(Defaults.EventTypes);
+    EventSequenceForTesting? _defaultEventSequence;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreForTesting"/> class.
@@ -52,10 +53,14 @@ public class EventStoreForTesting : IEventStore
     public IProjections Projections => throw new NotImplementedException();
 
     /// <inheritdoc/>
+    public IConstraints Constraints => throw new NotImplementedException();
+
+    /// <inheritdoc/>
     public Task DiscoverAll() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public IEventSequence GetEventSequence(EventSequenceId id) => _defaultEventSequence;
+    public IEventSequence GetEventSequence(EventSequenceId id) =>
+        _defaultEventSequence ??= new(Defaults.Instance.EventTypes);
 
     /// <inheritdoc/>
     public Task RegisterAll() => Task.CompletedTask;
