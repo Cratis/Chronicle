@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Json;
 using DotNet.Testcontainers.Networks;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -10,14 +12,9 @@ using Microsoft.AspNetCore.TestHost;
 
 namespace Cratis.Chronicle.Integration.OrleansInProcess;
 
-public class OrleansFixture : WebApplicationFactory<Startup>
+public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory<Startup>
 {
     string _name = string.Empty;
-
-    public OrleansFixture(GlobalFixture globalFixture)
-    {
-        GlobalFixture = globalFixture;
-    }
 
     protected override IHostBuilder CreateHostBuilder()
     {
@@ -60,10 +57,17 @@ public class OrleansFixture : WebApplicationFactory<Startup>
     }
 
     public INetwork Network => GlobalFixture.Network;
-    public MongoDBDatabase EventStore => GlobalFixture.EventStore;
-    public MongoDBDatabase EventStoreForNamespace => GlobalFixture.EventStore;
-    public MongoDBDatabase ReadModels => GlobalFixture.ReadModels;
-    public GlobalFixture GlobalFixture { get; }
+    public MongoDBDatabase EventStoreDatabase => GlobalFixture.EventStore;
+    public MongoDBDatabase EventStoreForNamespaceDatabase => GlobalFixture.EventStoreForNamespace;
+    public MongoDBDatabase ReadModelsDatbase => GlobalFixture.ReadModels;
+
+    public IEventStore EventStore => Services.GetRequiredService<IEventStore>();
+    public IChronicleClient ChronicleClient => Services.GetRequiredService<IChronicleClient>();
+    public IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore("sample");
+    public IEventStoreNamespaceStorage GetEventStoreNamespaceStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => EventStoreStorage.GetNamespace(namespaceName ?? Concepts.EventStoreNamespaceName.Default);
+    public IEventSequenceStorage GetEventLogStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => GetEventStoreNamespaceStorage(namespaceName).GetEventSequence(Concepts.EventSequences.EventSequenceId.Log);
+
+    public GlobalFixture GlobalFixture { get; } = globalFixture;
 
     public void SetName(string name) => _name = name;
 

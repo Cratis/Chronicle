@@ -3,13 +3,15 @@
 
 namespace Cratis.Chronicle.Integration.OrleansInProcess;
 
-public class OrleansTest : IClassFixture<OrleansFixture>
+public class OrleansTest<TSetup> : IClassFixture<TSetup>
+    where TSetup : IntegrationTestSetup
 {
-    public OrleansTest(OrleansFixture fixture)
+    public OrleansTest(TSetup fixture)
     {
         Fixture = fixture;
         fixture.SetName(GetType().Name);
     }
 
-    protected OrleansFixture Fixture { get; }
+    protected TSetup Fixture { get; }
+
 }
