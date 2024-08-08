@@ -12,6 +12,5 @@ public class OrleansTest<TSetup> : IClassFixture<TSetup>
         fixture.SetName(GetType().Name);
     }
 
-    protected TSetup Fixture { get; }
-
+    public TSetup Fixture { get; }
 }

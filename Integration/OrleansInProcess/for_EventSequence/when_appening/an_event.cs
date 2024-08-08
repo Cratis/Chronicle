@@ -15,7 +15,7 @@ public class an_event(an_event.context fixture) : OrleansTest<an_event.context>(
 
         public override Task Establish()
         {
-            Event = new SomeEvent();
+            Event = new SomeEvent("some content");
             return Task.CompletedTask;
         }
         public override async Task Because()
@@ -25,29 +25,11 @@ public class an_event(an_event.context fixture) : OrleansTest<an_event.context>(
     }
 
     [Fact]
-    async Task should_have_correct_tail_sequence_number_stored()
-    {
-        var eventLog = Fixture.GetEventLogStorage();
-        var number = await eventLog.GetTailSequenceNumber();
-        number.ShouldEqual(Concepts.Events.EventSequenceNumber.First);
-    }
+    Task should_have_correct_next_sequence_number() => Fixture.ShouldHaveCorrectNextSequenceNumber(1);
 
     [Fact]
-    async Task should_have_events_for_the_event_source_stored()
-    {
-        var eventLog = Fixture.GetEventLogStorage();
-        var hasEvents = await eventLog.HasEventsFor(new Concepts.Events.EventSourceId(Fixture.EventSourceId.Value));
-        hasEvents.ShouldEqual(true);
-    }
+    Task should_have_correct_tail_sequence_number() => Fixture.ShouldHaveCorrectTailSequenceNumber(Concepts.Events.EventSequenceNumber.First);
 
     [Fact]
-    async Task should_have_the_event_stored()
-    {
-        var eventLog = Fixture.GetEventLogStorage();
-        var evt = await eventLog.GetEventAt(0);
-        var eventType = Fixture.EventStore.EventTypes.GetEventTypeFor(Fixture.Event.GetType());
-        evt.Context.EventSourceId.Value.ShouldEqual(Fixture.EventSourceId.Value);
-        evt.Metadata.SequenceNumber.ShouldEqual(Concepts.Events.EventSequenceNumber.First);
-        evt.Metadata.Type.Id.Value.ShouldEqual(eventType.Id.Value);
-    }
+    Task should_have_the_event_stored() => Fixture.ShouldHaveStoredCorrectEvent<SomeEvent>(0, Fixture.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Fixture.Event.Content));
 }

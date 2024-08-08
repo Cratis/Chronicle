@@ -6,4 +6,4 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Integration.OrleansInProcess.for_EventSequence.when_appending;
 
 [EventType]
-public class SomeEvent;
+public record SomeEvent(string Content);

@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Grains;
+using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
@@ -9,6 +12,7 @@ using Cratis.Json;
 using DotNet.Testcontainers.Networks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Orleans.Storage;
 
 namespace Cratis.Chronicle.Integration.OrleansInProcess;
 
@@ -65,7 +69,14 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public IChronicleClient ChronicleClient => Services.GetRequiredService<IChronicleClient>();
     public IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore("sample");
     public IEventStoreNamespaceStorage GetEventStoreNamespaceStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => EventStoreStorage.GetNamespace(namespaceName ?? Concepts.EventStoreNamespaceName.Default);
-    public IEventSequenceStorage GetEventLogStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => GetEventStoreNamespaceStorage(namespaceName).GetEventSequence(Concepts.EventSequences.EventSequenceId.Log);
+    public IEventSequenceStorage GetEventLogStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => GetEventStoreNamespaceStorage(namespaceName).GetEventSequence(EventSequenceId.Log);
+
+    public TStorage GetGrainStorage<TStorage>(string key)
+        where TStorage : IGrainStorage => (TStorage)Services.GetRequiredKeyedService<IGrainStorage>(key);
+    public EventSequencesStorageProvider GetEventSequenceStatesStorage() => GetGrainStorage<EventSequencesStorageProvider>(WellKnownGrainStorageProviders.EventSequences);
+    public IEventSequence EventLogSequenceGrain => GetEventSequenceGrain(EventSequenceId.Log);
+    public IEventSequence GetEventSequenceGrain(EventSequenceId id) => Services.GetRequiredService<IGrainFactory>().GetGrain<IEventSequence>(CreateEventSequenceKey(id));
+    public EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, "sample", Concepts.EventStoreNamespaceName.Default);
 
     public GlobalFixture GlobalFixture { get; } = globalFixture;
 
