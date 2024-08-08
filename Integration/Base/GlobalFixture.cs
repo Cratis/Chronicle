@@ -57,14 +57,7 @@ public class GlobalFixture : IDisposable
 
     public void Dispose()
     {
-        MongoDBContainer.StopAsync().GetAwaiter().GetResult();
-#pragma warning disable CA2012 // Use ValueTasks correctly
-        var disposeTask = MongoDBContainer.DisposeAsync();
-        if (!disposeTask.IsCompleted)
-        {
-            disposeTask.GetAwaiter().GetResult();
-        }
-#pragma warning restore CA2012 // Use ValueTasks correctly
+        MongoDBContainer.DisposeAsync();
     }
 
     public void PerformBackup(string? prefix = null)
