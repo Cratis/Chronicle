@@ -8,7 +8,7 @@ namespace Orleans;
 
 public class StatelessOrder : AggregateRoot, IOrder
 {
-    public async Task DoStuff()
+    public async Task<string> DoStuff()
     {
         await Apply(new ItemAddedToCart(
             new(Guid.NewGuid()),
@@ -16,6 +16,8 @@ public class StatelessOrder : AggregateRoot, IOrder
             1,
             null,
             null));
+
+        return "Hello there";
     }
 
     public async Task DoOtherStuff()

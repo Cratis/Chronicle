@@ -15,8 +15,12 @@ namespace Cratis.Chronicle.Transactions;
 /// Represents an implementation of <see cref="IUnitOfWork"/>.
 /// </summary>
 /// <param name="correlationId">The <see cref="CorrelationId"/> for the <see cref="IUnitOfWork"/>.</param>
+/// <param name="onCompleted">The action to call when the <see cref="IUnitOfWork"/> is completed.</param>
 /// <param name="eventStore">The <see cref="IEventStore"/> to use for the <see cref="IUnitOfWork"/>.</param>
-public class UnitOfWork(CorrelationId correlationId, IEventStore eventStore) : IUnitOfWork
+public class UnitOfWork(
+    CorrelationId correlationId,
+    Action onCompleted,
+    IEventStore eventStore) : IUnitOfWork
 {
     readonly ConcurrentDictionary<EventSequenceId, ConcurrentBag<EventForEventSourceId>> _events = [];
     readonly ConcurrentBag<ConstraintViolation> _constraintViolations = [];
@@ -66,6 +70,8 @@ public class UnitOfWork(CorrelationId correlationId, IEventStore eventStore) : I
             result.ConstraintViolations.ForEach(_constraintViolations.Add);
             result.Errors.ForEach(_appendErrors.Add);
         }
+
+        onCompleted();
     }
 
     /// <inheritdoc/>
@@ -75,6 +81,8 @@ public class UnitOfWork(CorrelationId correlationId, IEventStore eventStore) : I
         _isRolledBack = true;
         _events.Clear();
         _constraintViolations.Clear();
+
+        onCompleted();
         return Task.CompletedTask;
     }
 
@@ -85,6 +93,8 @@ public class UnitOfWork(CorrelationId correlationId, IEventStore eventStore) : I
         {
             Rollback().Wait();
         }
+
+        onCompleted();
     }
 
     void ThrowIfUnitOfWorkIsCompleted()

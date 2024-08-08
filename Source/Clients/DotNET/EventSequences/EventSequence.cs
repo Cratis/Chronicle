@@ -90,12 +90,12 @@ public class EventSequence(
     {
         var eventsToAppend = events.Select(@event =>
         {
-            var eventType = eventTypes.GetEventTypeFor(@event.GetType());
+            var eventType = eventTypes.GetEventTypeFor(@event.Event.GetType());
             return new Contracts.Events.EventToAppend
             {
                 EventSourceId = @event.EventSourceId,
                 EventType = eventType.ToContract(),
-                Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString()
+                Content = eventSerializer.Serialize(@event.Event).GetAwaiter().GetResult().ToString()
             };
         }).ToList();
 

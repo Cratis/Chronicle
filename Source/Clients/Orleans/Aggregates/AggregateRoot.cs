@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Orleans.Transactions;
 using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
@@ -113,11 +114,16 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        var correlationId = RequestContext.Get(Constants.CorrelationIdKey) as CorrelationId;
+        correlationId ??= CorrelationId.New();
         var eventLog = ServiceProvider.GetRequiredService<IEventLog>();
         var unitOfWorkManager = ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
-        var unitOfWork = unitOfWorkManager.Begin(CorrelationId.New());
 
-        // TODO: Fix CorrelationId to be a real value from the current context
+        if (!unitOfWorkManager.TryGetFor(correlationId, out var unitOfWork))
+        {
+            unitOfWork = unitOfWorkManager.Begin(CorrelationId.New());
+        }
+
         Context = new AggregateRootContext(
             this.GetPrimaryKeyString(),
             eventLog,

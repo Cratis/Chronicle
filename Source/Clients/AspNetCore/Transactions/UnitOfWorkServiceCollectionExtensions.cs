@@ -1,24 +1,26 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.AspNetCore.Rules;
+using Cratis.Chronicle.AspNetCore.Transactions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Extension methods for working adding rules to <see cref="IServiceCollection"/> .
+/// Extension methods for working adding unit of work to <see cref="IServiceCollection"/> .
 /// </summary>
-public static class RulesServiceCollectionExtensions
+public static class UnitOfWorkServiceCollectionExtensions
 {
     /// <summary>
     /// Add CQRS setup.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <returns><see cref="MvcOptions"/> for building continuation.</returns>
-    public static IServiceCollection AddRules(this IServiceCollection services)
+    public static IServiceCollection AddUnitOfWork(this IServiceCollection services)
     {
-        services.Configure<MvcOptions>(options => options.ModelValidatorProviders.Insert(0, new RulesModelValidatorProvider()));
+        services.Configure<MvcOptions>(options => options.ModelValidatorProviders.Insert(0, new UnitOfWorkValidatorProvider()));
+        services.AddTransient<IStartupFilter, UnitOfWorkStartupFilter>();
 
         return services;
     }
