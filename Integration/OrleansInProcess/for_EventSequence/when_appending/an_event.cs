@@ -13,6 +13,8 @@ public class an_event(an_event.context fixture) : OrleansTest<an_event.context>(
         public Events.EventSourceId EventSourceId { get; } = "source";
         public SomeEvent Event { get; private set; }
 
+        public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
+
         public override Task Establish()
         {
             Event = new SomeEvent("some content");

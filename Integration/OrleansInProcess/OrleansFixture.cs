@@ -2,9 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
+using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -16,7 +19,7 @@ using Orleans.Storage;
 
 namespace Cratis.Chronicle.Integration.OrleansInProcess;
 
-public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory<Startup>
+public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory<Startup>, IClientArtifactsProvider
 {
     string _name = string.Empty;
 
@@ -36,7 +39,10 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
         {
             services.AddSingleton(Globals.JsonSerializerOptions);
             services.AddControllers();
+            services.Configure<ChronicleOptions>(opts => opts.ArtifactsProvider = this);
+            ConfigureServices(services);
         });
+
         builder.UseCratisChronicle();
 
         builder.UseOrleans(silo =>
@@ -78,6 +84,9 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public IEventSequence GetEventSequenceGrain(EventSequenceId id) => Services.GetRequiredService<IGrainFactory>().GetGrain<IEventSequence>(CreateEventSequenceKey(id));
     public EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, "sample", Concepts.EventStoreNamespaceName.Default);
 
+    public IObserver GetObserverFor<T>() => Services.GetRequiredService<IGrainFactory>()
+        .GetGrain<IObserver>(new ObserverKey(typeof(T).GetReactionId().Value, "sample",
+            Concepts.EventStoreNamespaceName.Default, EventSequenceId.Log));
     public GlobalFixture GlobalFixture { get; } = globalFixture;
 
     public void SetName(string name) => _name = name;
@@ -88,4 +97,20 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
         GlobalFixture.RemoveAllDatabases().GetAwaiter().GetResult();
         base.Dispose(disposing);
     }
+
+    protected virtual void ConfigureServices(IServiceCollection services)
+    {
+    }
+    public virtual IEnumerable<Type> EventTypes { get; } = [];
+    public virtual IEnumerable<Type> Projections { get; } = [];
+    public virtual IEnumerable<Type> Adapters { get; } = [];
+    public virtual IEnumerable<Type> Reactions { get; } = [];
+    public virtual IEnumerable<Type> Reducers { get; } = [];
+    public virtual IEnumerable<Type> ReactionMiddlewares { get; } = [];
+    public virtual IEnumerable<Type> ComplianceForTypesProviders { get; } = [];
+    public virtual IEnumerable<Type> ComplianceForPropertiesProviders { get; } = [];
+    public virtual IEnumerable<Type> Rules { get; } = [];
+    public virtual IEnumerable<Type> AdditionalEventInformationProviders { get; } = [];
+    public virtual IEnumerable<Type> AggregateRoots { get; } = [];
+    public virtual IEnumerable<Type> AggregateRootStateTypes { get; } = [];
 }

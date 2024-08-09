@@ -39,5 +39,4 @@ public static class TestHelpers
         var storedNumber = await storedEventLog.GetTailSequenceNumber();
         storedNumber.ShouldEqual(sequenceNumber);
     }
-
 }

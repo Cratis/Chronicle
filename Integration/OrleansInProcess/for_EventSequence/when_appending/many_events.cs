@@ -15,6 +15,8 @@ public class many_events(many_events.context fixture, ITestOutputHelper testLogg
         public Events.EventSourceId EventSourceId { get; } = "source";
         public IList<SomeEvent> Events { get; private set; }
 
+        public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
+
         public override Task Establish()
         {
             Events = [new SomeEvent("some value"), new SomeEvent("some other value"), new SomeEvent("some third value")];

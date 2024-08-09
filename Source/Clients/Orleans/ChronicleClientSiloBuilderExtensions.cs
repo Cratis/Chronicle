@@ -102,7 +102,7 @@ public static class ChronicleClientSiloBuilderExtensions
             services.AddSingleton<IReducerMediator, ReducerMediator>();
             services.AddSingleton<IRules, Rules>();
 
-            services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ArtifactsProvider);
+            services.AddSingleton<IClientArtifactsProvider>(sp => new DefaultOrleansClientArtifactsProvider(sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ArtifactsProvider));
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ModelNameConvention);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.IdentityProvider);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.JsonSerializerOptions);
@@ -112,6 +112,7 @@ public static class ChronicleClientSiloBuilderExtensions
                 var grainFactory = sp.GetRequiredService<IGrainFactory>();
                 var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
                 options.ServiceProvider = sp;
+                options.ArtifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
                 var storage = sp.GetRequiredService<IStorage>();
                 var services = new Cratis.Chronicle.Services(
                     new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
@@ -123,7 +124,6 @@ public static class ChronicleClientSiloBuilderExtensions
 
                 var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
                 var connection = new Cratis.Chronicle.Orleans.ChronicleConnection(connectionLifecycle, services, grainFactory);
-                options.ArtifactsProvider = new DefaultOrleansClientArtifactsProvider(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
                 return new ChronicleClient(connection, options);
             });
 
