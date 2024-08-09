@@ -62,4 +62,10 @@ public interface IUnitOfWork : IDisposable
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Rollback();
+
+    /// <summary>
+    /// Set callback to be called when completed.
+    /// </summary>
+    /// <param name="callback">The callback to call.</param>
+    void OnCompleted(Action<IUnitOfWork> callback);
 }

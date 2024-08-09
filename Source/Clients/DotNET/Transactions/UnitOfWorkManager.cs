@@ -19,7 +19,7 @@ public class UnitOfWorkManager(IEventStore eventStore) : IUnitOfWorkManager
     public IUnitOfWork Current => _current.Value ?? throw new NoUnitOfWorkHasBeenStarted();
 
     /// <inheritdoc/>
-    public bool HasCurrent => _current.Value != null;
+    public bool HasCurrent => _current.Value is not null;
 
     /// <inheritdoc/>
     public bool TryGetFor(CorrelationId correlationId, [MaybeNullWhen(false)] out IUnitOfWork unitOfWork) =>
@@ -30,7 +30,7 @@ public class UnitOfWorkManager(IEventStore eventStore) : IUnitOfWorkManager
     {
         var unitOfWork = new UnitOfWork(
             correlationId,
-            () => _unitsOfWork.TryRemove(correlationId, out _),
+            UnitOfWorkCompleted,
             eventStore);
         _current.Value = unitOfWork;
         _unitsOfWork[correlationId] = unitOfWork;
@@ -38,5 +38,16 @@ public class UnitOfWorkManager(IEventStore eventStore) : IUnitOfWorkManager
     }
 
     /// <inheritdoc/>
-    public void SetCurrent(IUnitOfWork unitOfWork) => _current.Value = unitOfWork;
+    public void SetCurrent(IUnitOfWork unitOfWork)
+    {
+        _current.Value = unitOfWork;
+        _unitsOfWork[unitOfWork.CorrelationId] = unitOfWork;
+        unitOfWork.OnCompleted(UnitOfWorkCompleted);
+    }
+
+    void UnitOfWorkCompleted(IUnitOfWork unitOfWork)
+    {
+        _unitsOfWork.TryRemove(unitOfWork.CorrelationId, out _);
+        _current.Value = null!;
+    }
 }
