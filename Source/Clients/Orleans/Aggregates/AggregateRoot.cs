@@ -31,7 +31,7 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => Context?.HasEvents ?? true;
+    protected bool IsNew => Context?.HasEventsForRehydration ?? true;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -109,7 +109,7 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => Context?.HasEvents ?? true;
+    protected bool IsNew => Context?.HasEventsForRehydration ?? true;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)

@@ -1,14 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Orleans.Aggregates;
 
 namespace Orleans;
 
 public class StatelessOrder : AggregateRoot, IOrder
 {
-    public async Task<string> DoStuff()
+    public async Task DoStuff()
     {
         await Apply(new ItemAddedToCart(
             new(Guid.NewGuid()),
@@ -16,8 +15,6 @@ public class StatelessOrder : AggregateRoot, IOrder
             1,
             null,
             null));
-
-        return "Hello there";
     }
 
     public async Task DoOtherStuff()

@@ -37,14 +37,7 @@ public static class AggregateRootTestSiloExtensions
         silo.AddService<ICausationManager>(causationManager);
         silo.AddService<IAggregateRootEventHandlersFactory>(aggregateRootEventHandlersFactory);
 
-        var aggregateRoot = await silo.CreateGrainAsync<TAggregateRoot>(eventSourceId);
-
-        if (aggregateRoot.Context is AggregateRootContext context)
-        {
-            context.AutoCommit = false;
-        }
-
-        return aggregateRoot;
+        return await silo.CreateGrainAsync<TAggregateRoot>(eventSourceId);
     }
 
     /// <summary>
@@ -71,11 +64,6 @@ public static class AggregateRootTestSiloExtensions
         if (initialState is not null)
         {
             aggregateRoot.SetState(initialState);
-        }
-
-        if (aggregateRoot.Context is AggregateRootContext context)
-        {
-            context.AutoCommit = false;
         }
 
         return aggregateRoot;
