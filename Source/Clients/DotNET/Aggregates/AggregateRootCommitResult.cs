@@ -44,7 +44,7 @@ public class AggregateRootCommitResult
     /// </summary>
     /// <param name="events">Collection of events.</param>
     /// <returns><see cref="AggregateRootCommitResult"/>.</returns>
-    public static AggregateRootCommitResult Successful(IImmutableList<object> events) => new() { Events = events };
+    public static AggregateRootCommitResult Successful(IImmutableList<object>? events = default) => new() { Events = events ?? ImmutableList<object>.Empty };
 
     /// <summary>
     /// Create an <see cref="AggregateRootCommitResult"/> from <see cref="IUnitOfWork"/>.

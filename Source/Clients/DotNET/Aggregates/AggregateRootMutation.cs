@@ -38,7 +38,10 @@ public class AggregateRootMutation(
     public EventSourceId EventSourceId => aggregateRootContext.EventSourceId;
 
     /// <inheritdoc/>
-    public IImmutableList<object> UncommittedEvents => aggregateRootContext.UnitOfWOrk.GetEvents();
+    public IImmutableList<object> UncommittedEvents { get; private set; } = ImmutableList<object>.Empty;
+
+    /// <inheritdoc/>
+    public bool HasEvents => UncommittedEvents.Count > 0;
 
     /// <inheritdoc/>
     public IAggregateRootMutator Mutator => mutator;
@@ -54,6 +57,7 @@ public class AggregateRootMutation(
             { CausationEventSequenceIdProperty, eventSequence.Id }
         });
         aggregateRootContext.UnitOfWOrk.AddEvent(eventSequence.Id, EventSourceId, @event, causation);
+        UncommittedEvents = UncommittedEvents.Add(@event);
 
         await mutator.Mutate(@event);
     }
@@ -62,6 +66,7 @@ public class AggregateRootMutation(
     public async Task<AggregateRootCommitResult> Commit()
     {
         await aggregateRootContext.UnitOfWOrk.Commit();
+        UncommittedEvents = ImmutableList<object>.Empty;
         return AggregateRootCommitResult.CreateFrom(aggregateRootContext.UnitOfWOrk);
     }
 }

@@ -28,7 +28,7 @@ public class ProjectionAggregateRootStateProvider<TState>(
 
         if (result.ProjectedEventsCount > 0 && aggregateRootContext is AggregateRootContext actualContext)
         {
-            actualContext.HasEvents = true;
+            actualContext.HasEventsForRehydration = true;
         }
 
         return (TState?)result.Model;

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.Aggregates.for_AggregateRootMutatorFactory;
 
@@ -12,11 +13,10 @@ public class when_creating_for_stateful_aggregate_root : given.an_aggregate_root
     IAggregateRootMutator _result;
 
     void Establish() => _context = new AggregateRootContext(
-        CorrelationId.New(),
         EventSourceId.New(),
         Substitute.For<IEventSequence>(),
         new StatefulAggregateRoot(),
-        true);
+        Substitute.For<IUnitOfWork>());
 
     async Task Because() => _result = await _factory.Create<StatefulAggregateRoot>(_context);
 

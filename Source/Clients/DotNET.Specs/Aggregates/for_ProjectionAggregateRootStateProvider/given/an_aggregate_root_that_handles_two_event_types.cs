@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.Aggregates.for_ProjectionAggregateRootStateProvider.given;
 
@@ -12,20 +13,22 @@ public class an_aggregate_root_that_handles_two_event_types : a_projection_aggre
     protected EventSourceId _eventSourceId;
     protected IImmutableList<EventType> _eventTypes;
     protected AggregateRootContext _aggregateRootContext;
+    protected IUnitOfWork _unitOfWork;
     protected CorrelationId _correlationId;
 
     void Establish()
     {
         _aggregateRoot = new StatefulAggregateRoot();
         _eventSourceId = EventSourceId.New();
+
         _correlationId = CorrelationId.New();
+        _unitOfWork = Substitute.For<IUnitOfWork>();
+        _unitOfWork.CorrelationId.Returns(_correlationId);
         _aggregateRootContext = new AggregateRootContext(
-            _correlationId,
             _eventSourceId,
             _eventSequence,
             _aggregateRoot,
-            true,
-            false);
+            _unitOfWork);
 
         _eventTypes = new EventType[]
         {

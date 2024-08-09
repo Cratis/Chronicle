@@ -23,7 +23,7 @@ public class AggregateRoot : IAggregateRoot
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => _context.HasEvents;
+    protected bool IsNew => !_mutation.HasEvents;
 
     /// <inheritdoc/>
     public async Task Apply<T>(T @event)

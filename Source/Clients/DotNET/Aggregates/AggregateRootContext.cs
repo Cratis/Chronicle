@@ -14,13 +14,11 @@ namespace Cratis.Chronicle.Aggregates;
 /// <param name="eventSequence">The <see cref="IEventSequence"/> for the context.</param>
 /// <param name="aggregateRoot">The <see cref="IAggregateRoot"/> for the context.</param>
 /// <param name="unitOfWork">The <see cref="IUnitOfWork"/> for the context.</param>
-/// <param name="hasEvents">A value indicating whether or not the context has events.</param>
 public class AggregateRootContext(
     EventSourceId eventSourceId,
     IEventSequence eventSequence,
     IAggregateRoot aggregateRoot,
-    IUnitOfWork unitOfWork,
-    bool hasEvents = false) : IAggregateRootContext
+    IUnitOfWork unitOfWork) : IAggregateRootContext
 {
     /// <inheritdoc/>
     public EventSourceId EventSourceId { get; } = eventSourceId;
@@ -35,5 +33,5 @@ public class AggregateRootContext(
     public IUnitOfWork UnitOfWOrk { get; } = unitOfWork;
 
     /// <inheritdoc/>
-    public bool HasEvents { get; internal set; } = hasEvents;
+    public bool HasEventsForRehydration { get; set; }
 }

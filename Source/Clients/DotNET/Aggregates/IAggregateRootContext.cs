@@ -35,7 +35,7 @@ public interface IAggregateRootContext
     IUnitOfWork UnitOfWOrk { get; }
 
     /// <summary>
-    /// Gets a value indicating whether or not the context has events.
+    /// Gets or sets a value indicating whether there are events available for rehydration.
     /// </summary>
-    bool HasEvents { get; }
+    bool HasEventsForRehydration { get; set; }
 }
