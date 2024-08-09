@@ -90,6 +90,7 @@ public static class ChronicleClientSiloBuilderExtensions
 
     static void ConfigureChronicle(this ISiloBuilder builder, Action<IChronicleBuilder>? configureChronicle = default)
     {
+        builder.AddTelemetry();
         builder.AddChronicleToSilo(configureChronicle);
         builder.AddStartupTask<ChronicleStartupTask>();
         builder.ConfigureServices(services =>
