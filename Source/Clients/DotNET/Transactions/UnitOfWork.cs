@@ -69,7 +69,10 @@ public class UnitOfWork(
 
         foreach (var (eventSequenceId, events) in _events)
         {
-            var sorted = events.OrderBy(_ => _.SequenceNumber).ToArray();
+            var sorted = events
+                            .OrderBy(_ => _.SequenceNumber)
+                            .Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, e.Causation))
+                            .ToArray();
             var eventSequence = eventStore.GetEventSequence(eventSequenceId);
             var result = await eventSequence.AppendMany(sorted);
             result.ConstraintViolations.ForEach(_constraintViolations.Add);

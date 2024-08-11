@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Transactions;
 
@@ -17,4 +16,8 @@ namespace Cratis.Chronicle.Transactions;
 /// <remarks>
 /// This is typically used internally by <see cref="UnitOfWork"/> to keep track of events that are part of the same sequence to guarantee the order of events.
 /// </remarks>
-public record EventForEventSourceIdWithSequenceNumber(EventSequenceNumber SequenceNumber, EventSourceId EventSourceId, object Event, Causation Causation) : EventForEventSourceId(EventSourceId, Event, Causation);
+public record EventForEventSourceIdWithSequenceNumber(
+    EventSequenceNumber SequenceNumber,
+    EventSourceId EventSourceId,
+    object Event,
+    Causation Causation);
