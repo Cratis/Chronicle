@@ -33,7 +33,7 @@ public class UnitOfWork(
     public CorrelationId CorrelationId => correlationId;
 
     /// <inheritdoc/>
-    public bool IsSuccess => _constraintViolations.IsEmpty;
+    public bool IsSuccess => _constraintViolations.IsEmpty && _appendErrors.IsEmpty;
 
     /// <inheritdoc/>
     public void AddEvent(EventSequenceId eventSequenceId, EventSourceId eventSourceId, object @event, Causation causation)
@@ -55,14 +55,14 @@ public class UnitOfWork(
         _events.Values.SelectMany(_ => _).Select(_ => _.Event).ToImmutableList();
 
     /// <inheritdoc/>
-    public IImmutableList<AppendError> GetAppendErrors() => throw new NotImplementedException();
+    public IImmutableList<AppendError> GetAppendErrors() =>
+        _appendErrors.ToImmutableList();
 
     /// <inheritdoc/>
     public async Task Commit()
     {
         ThrowIfUnitOfWorkIsCompleted();
         _isCommitted = true;
-        ThrowIfUnitOfWorkContainsErrors();
 
         foreach (var (eventSequenceId, events) in _events)
         {
@@ -105,13 +105,5 @@ public class UnitOfWork(
     {
         if (_isCommitted) throw new UnitOfWorkIsAlreadyCommitted(CorrelationId);
         if (_isRolledBack) throw new UnitOfWorkIsAlreadyRolledBack(CorrelationId);
-    }
-
-    void ThrowIfUnitOfWorkContainsErrors()
-    {
-        if (!IsSuccess)
-        {
-            throw new UnitOfWorkContainsErrors(CorrelationId);
-        }
     }
 }

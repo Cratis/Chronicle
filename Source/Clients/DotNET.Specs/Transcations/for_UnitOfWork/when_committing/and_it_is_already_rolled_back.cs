@@ -3,13 +3,13 @@
 
 namespace Cratis.Chronicle.Transactions.for_UnitOfWork.when_committing;
 
-public class and_it_is_already_disposed : given.a_unit_of_work
+public class and_it_is_already_rolled_back : given.a_unit_of_work
 {
     Exception _exception;
 
-    void Establish()
+    async Task Establish()
     {
-        _unitOfWork.Dispose();
+        await _unitOfWork.Rollback();
     }
 
     async Task Because() => _exception = await Catch.Exception(_unitOfWork.Commit);
