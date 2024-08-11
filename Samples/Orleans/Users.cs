@@ -10,18 +10,20 @@ namespace Orleans;
 [Route("/api/users")]
 public class Users(IAggregateRootFactory aggregateRootFactory, IEventLog eventLog) : ControllerBase
 {
+    [HttpGet("onboard")]
     public async Task FullOnboarding()
     {
-        var userId = Guid.Parse("3444635c-8174-47b3-99dd-a27cd3ea80e4");
+        var userId = Guid.NewGuid();
+        // Guid.Parse("3444635c-8174-47b3-99dd-a27cd3ea80e4");
 
-        // var user = await aggregateRootFactory.Get<IUser>(userId);
-        // await user.Onboard("My User", "asdasd");
-        // await user.ChangePassword("awesome");
+        var user = await aggregateRootFactory.Get<IUser>(userId);
+        await user.Onboard("My User", "asdasd");
+        await user.ChangePassword("awesome");
 
         await Task.CompletedTask;
     }
 
-    [HttpGet("events")]
+    [HttpGet("onboard-events")]
     public async Task FullOnboardingEvents()
     {
         var userId = Guid.Parse("3444635c-8174-47b3-99dd-a27cd3ea80e4");

@@ -19,7 +19,7 @@ public static class UnitOfWorkServiceCollectionExtensions
     /// <returns><see cref="MvcOptions"/> for building continuation.</returns>
     public static IServiceCollection AddUnitOfWork(this IServiceCollection services)
     {
-        services.Configure<MvcOptions>(options => options.ModelValidatorProviders.Insert(0, new UnitOfWorkValidatorProvider()));
+        services.Configure<MvcOptions>(options => options.Filters.Add<UnitOfWorkActionFilter>(0));
         services.AddTransient<IStartupFilter, UnitOfWorkStartupFilter>();
 
         return services;

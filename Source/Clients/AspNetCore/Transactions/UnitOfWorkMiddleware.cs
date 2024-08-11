@@ -21,16 +21,7 @@ public class UnitOfWorkMiddleware(IUnitOfWorkManager unitOfWorkManager, RequestD
     /// <returns>Awaitable task.</returns>
     public async Task InvokeAsync(HttpContext context)
     {
-        var unitOfWork = unitOfWorkManager.Begin(CorrelationId.New());
+        unitOfWorkManager.Begin(CorrelationId.New());
         await next(context);
-
-        if (unitOfWork.IsSuccess)
-        {
-            await unitOfWork.Commit();
-        }
-        else
-        {
-            await unitOfWork.Rollback();
-        }
     }
 }
