@@ -114,10 +114,11 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     /// <inheritdoc/>
     public async Task SetContext(IAggregateRootContext context)
     {
-        var stateProvider = await _stateProviders!.CreateFor<TState>(Context!);
+        Context = context;
+        var stateProvider = await _stateProviders!.CreateFor<TState>(context!);
         _state = new AggregateRootState<TState>();
         _mutator = new StatefulAggregateRootMutator<TState>(_state, stateProvider);
-        _mutation = new AggregateRootMutation(Context!, _mutator, _eventLog!);
+        _mutation = new AggregateRootMutation(context, _mutator, _eventLog!);
 
         await _mutator.Rehydrate();
     }

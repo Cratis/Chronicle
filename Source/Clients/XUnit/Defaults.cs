@@ -50,8 +50,9 @@ public static class Defaults
 
         ClientArtifactsProvider = new DefaultClientArtifactsProvider(
             new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
+        ClientArtifactsProvider.Initialize();
 
-        EventTypes = new Chronicle.Events.EventTypes(
+        EventTypes = new EventTypes(
             EventStore,
             JsonSchemaGenerator,
             ClientArtifactsProvider);

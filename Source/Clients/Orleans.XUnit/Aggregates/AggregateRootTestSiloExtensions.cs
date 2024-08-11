@@ -5,12 +5,16 @@ using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.XUnit;
 using Cratis.Chronicle.XUnit.Auditing;
 using Cratis.Chronicle.XUnit.Events;
+using Cratis.Execution;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Orleans.Aggregates;
+
+#pragma warning disable CA2000 // Dispose objects before losing scope
 
 /// <summary>
 /// Represents extension methods for working with testing with <see cref="AggregateRoot"/>.
@@ -37,7 +41,11 @@ public static class AggregateRootTestSiloExtensions
         silo.AddService<ICausationManager>(causationManager);
         silo.AddService<IAggregateRootEventHandlersFactory>(aggregateRootEventHandlersFactory);
 
-        return await silo.CreateGrainAsync<TAggregateRoot>(eventSourceId);
+        var aggregateRoot = await silo.CreateGrainAsync<TAggregateRoot>(eventSourceId);
+        var unitOfWork = new UnitOfWork(CorrelationId.New(), _ => { }, Defaults.EventStore);
+        await aggregateRoot.SetContext(new AggregateRootContext(eventSourceId, eventLog, aggregateRoot, unitOfWork));
+
+        return aggregateRoot;
     }
 
     /// <summary>
@@ -65,6 +73,8 @@ public static class AggregateRootTestSiloExtensions
         {
             aggregateRoot.SetState(initialState);
         }
+        var unitOfWork = new UnitOfWork(CorrelationId.New(), _ => { }, Defaults.EventStore);
+        await aggregateRoot.SetContext(new AggregateRootContext(eventSourceId, eventLog, aggregateRoot, unitOfWork));
 
         return aggregateRoot;
     }
