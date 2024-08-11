@@ -13,7 +13,7 @@ public class when_committing : given.a_stateless_aggregate_root
 
     void Establish()
     {
-        expected_result = new AggregateRootCommitResult(true, ImmutableList<object>.Empty);
+        expected_result = AggregateRootCommitResult.Successful();
         _mutation.Commit().Returns(Task.FromResult(expected_result));
     }
 

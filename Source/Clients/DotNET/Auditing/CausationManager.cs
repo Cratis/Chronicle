@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Auditing;
 /// </summary>
 public class CausationManager : ICausationManager
 {
-    readonly AsyncLocal<List<Causation>> _current = new();
+    static readonly AsyncLocal<List<Causation>> _current = new();
 
     /// <inheritdoc/>
     public Causation Root { get; private set; } = new(DateTimeOffset.UtcNow, CausationType.Unknown, ImmutableDictionary<string, string>.Empty);

@@ -1,12 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Cratis.Chronicle.Aggregates;
-using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
 
 #pragma warning disable SA1402
@@ -24,6 +21,10 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     internal AggregateRootMutation? _mutation;
 
     StatelessAggregateRootMutator? _mutator;
+    IAggregateRootEventHandlers? _eventHandlers;
+    IEventStore? _eventStore;
+    IEventLog? _eventLog;
+    IEventSerializer? _eventSerializer;
 
     /// <inheritdoc/>
     public IAggregateRootContext? Context { get; set; }
@@ -31,36 +32,33 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => Context?.HasEvents ?? true;
+    protected bool IsNew => Context?.HasEventsForRehydration ?? true;
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    public async Task SetContext(IAggregateRootContext context)
     {
-        var eventStore = ServiceProvider.GetRequiredService<IEventStore>();
-        var eventLog = ServiceProvider.GetRequiredService<IEventLog>();
-        var eventSerializer = ServiceProvider.GetRequiredService<IEventSerializer>();
-
-        // TODO: Fix CorrelationId to be a real value from the current context
-        Context = new AggregateRootContext(
-            CorrelationId.New(),
-            this.GetPrimaryKeyString(),
-            eventLog,
-            this,
-            true);
-
-        var eventHandlersFactory = ServiceProvider.GetRequiredService<IAggregateRootEventHandlersFactory>();
-        var eventHandlers = eventHandlersFactory.GetFor(this);
-
+        Context = context;
         _mutator = new StatelessAggregateRootMutator(
-            Context,
-            eventStore,
-            eventSerializer,
-            eventHandlers);
-        _mutation = new AggregateRootMutation(Context, _mutator, eventLog, ServiceProvider.GetRequiredService<ICausationManager>());
+            context,
+            _eventStore!,
+            _eventSerializer!,
+            _eventHandlers!);
+        _mutation = new AggregateRootMutation(context, _mutator, _eventLog!);
 
         await _mutator.Rehydrate();
+    }
 
-        await OnActivate();
+    /// <inheritdoc/>
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        _eventStore = ServiceProvider.GetRequiredService<IEventStore>();
+        _eventLog = ServiceProvider.GetRequiredService<IEventLog>();
+        _eventSerializer = ServiceProvider.GetRequiredService<IEventSerializer>();
+
+        var eventHandlersFactory = ServiceProvider.GetRequiredService<IAggregateRootEventHandlersFactory>();
+        _eventHandlers = eventHandlersFactory.GetFor(this);
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -71,10 +69,7 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     }
 
     /// <inheritdoc/>
-    public Task<AggregateRootCommitResult> Commit()
-    {
-        return _mutation?.Commit() ?? Task.FromResult(AggregateRootCommitResult.Failed(ImmutableList<object>.Empty));
-    }
+    public Task<AggregateRootCommitResult> Commit() => _mutation!.Commit();
 
     /// <summary>
     /// Called when the aggregate root is ready to be activated.
@@ -100,6 +95,8 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     internal AggregateRootState<TState>? _state;
 
     StatefulAggregateRootMutator<TState>? _mutator;
+    IEventLog? _eventLog;
+    IAggregateRootStateProviders? _stateProviders;
 
     /// <inheritdoc/>
     public IAggregateRootContext? Context { get; set; }
@@ -112,28 +109,25 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => Context?.HasEvents ?? true;
+    protected bool IsNew => Context?.HasEventsForRehydration ?? true;
+
+    /// <inheritdoc/>
+    public async Task SetContext(IAggregateRootContext context)
+    {
+        Context = context;
+        var stateProvider = await _stateProviders!.CreateFor<TState>(context!);
+        _state = new AggregateRootState<TState>();
+        _mutator = new StatefulAggregateRootMutator<TState>(_state, stateProvider);
+        _mutation = new AggregateRootMutation(context, _mutator, _eventLog!);
+
+        await _mutator.Rehydrate();
+    }
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        var eventLog = ServiceProvider.GetRequiredService<IEventLog>();
-
-        // TODO: Fix CorrelationId to be a real value from the current context
-        Context = new AggregateRootContext(
-            CorrelationId.New(),
-            this.GetPrimaryKeyString(),
-            eventLog,
-            this,
-            true);
-
-        var stateProviders = ServiceProvider.GetRequiredService<IAggregateRootStateProviders>();
-        var stateProvider = await stateProviders.CreateFor<TState>(Context);
-        _state = new AggregateRootState<TState>();
-        _mutator = new StatefulAggregateRootMutator<TState>(_state, stateProvider);
-        _mutation = new AggregateRootMutation(Context, _mutator, eventLog, ServiceProvider.GetRequiredService<ICausationManager>());
-
-        await _mutator.Rehydrate();
+        _eventLog = ServiceProvider.GetRequiredService<IEventLog>();
+        _stateProviders = ServiceProvider.GetRequiredService<IAggregateRootStateProviders>();
 
         await OnActivate();
     }
@@ -146,10 +140,7 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     }
 
     /// <inheritdoc/>
-    public Task<AggregateRootCommitResult> Commit()
-    {
-        return _mutation?.Commit() ?? Task.FromResult(AggregateRootCommitResult.Failed(ImmutableList<object>.Empty));
-    }
+    public Task<AggregateRootCommitResult> Commit() => _mutation!.Commit();
 
     /// <summary>
     /// Called when the aggregate root is ready to be activated.

@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Aggregates;
@@ -16,30 +16,31 @@ namespace Cratis.Chronicle.Aggregates;
 /// </remarks>
 /// <param name="eventStore"><see cref="IEventStore"/> to get event sequence to work with.</param>
 /// <param name="mutatorFactory"><see cref="IAggregateRootMutatorFactory"/> for creating mutators.</param>
-/// <param name="causationManager">The <see cref="ICausationManager"/> for handling causation.</param>
+/// <param name="unitOfWorkManager"><see cref="IUnitOfWorkManager"/> for managing units of work.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances.</param>
 public class AggregateRootFactory(
     IEventStore eventStore,
     IAggregateRootMutatorFactory mutatorFactory,
-    ICausationManager causationManager,
+    IUnitOfWorkManager unitOfWorkManager,
     IServiceProvider serviceProvider) : IAggregateRootFactory
 {
     /// <inheritdoc/>
-    public async Task<TAggregateRoot> Get<TAggregateRoot>(EventSourceId id, bool autoCommit = true)
+    public async Task<TAggregateRoot> Get<TAggregateRoot>(EventSourceId id)
         where TAggregateRoot : IAggregateRoot
     {
+        var unitOfWork = unitOfWorkManager.HasCurrent ? unitOfWorkManager.Current : unitOfWorkManager.Begin(CorrelationId.New());
+
         var aggregateRoot = ActivatorUtilities.CreateInstance<TAggregateRoot>(serviceProvider);
         var eventSequence = eventStore.GetEventSequence(EventSequenceId.Log);
 
-        // TODO: Fix CorrelationId to be a real value from the current context
-        var context = new AggregateRootContext(CorrelationId.New(), id, eventSequence, aggregateRoot, autoCommit);
+        var context = new AggregateRootContext(id, eventSequence, aggregateRoot, unitOfWork);
         var mutator = await mutatorFactory.Create<TAggregateRoot>(context);
 
         await mutator.Rehydrate();
 
         if (aggregateRoot is AggregateRoot knownAggregateRoot)
         {
-            knownAggregateRoot._mutation = new AggregateRootMutation(context, mutator, eventSequence, causationManager);
+            knownAggregateRoot._mutation = new AggregateRootMutation(context, mutator, eventSequence);
             knownAggregateRoot._context = context;
             await knownAggregateRoot.InternalOnActivate();
         }

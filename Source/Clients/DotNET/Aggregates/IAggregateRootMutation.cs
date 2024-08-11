@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Aggregates;
-#pragma warning disable SA1402 // File may only contain a single type
 
 /// <summary>
 /// Defines the mutation related to an aggregate root.
@@ -21,6 +20,11 @@ public interface IAggregateRootMutation
     /// Gets the uncommitted events for the aggregate root.
     /// </summary>
     IImmutableList<object> UncommittedEvents { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the mutation has events. This is an indication of whether or not the aggregate root has been mutated.
+    /// </summary>
+    bool HasEvents { get; }
 
     /// <summary>
     /// Gets the mutator for the aggregate root.

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Extension methods for working with <see cref="MvcOptions"/>.
+/// Extension methods for working adding rules to <see cref="IServiceCollection"/> .
 /// </summary>
 public static class RulesServiceCollectionExtensions
 {

@@ -27,32 +27,20 @@ public class AppendManyRequest : IEventSequenceRequest
     public string EventSequenceId { get; set; }
 
     /// <summary>
-    /// Gets or sets the event source identifier.
-    /// </summary>
-    [ProtoMember(4)]
-    public string EventSourceId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the event type.
-    /// </summary>
-    [ProtoMember(5)]
-    public EventType EventType { get; set; }
-
-    /// <summary>
     /// Gets or sets the events to append.
     /// </summary>
-    [ProtoMember(6)]
+    [ProtoMember(4)]
     public IList<EventToAppend> Events { get; set; }
 
     /// <summary>
     /// Gets or sets the causation.
     /// </summary>
-    [ProtoMember(7)]
+    [ProtoMember(5)]
     public IList<Causation> Causation { get; set; }
 
     /// <summary>
     /// Gets or sets the caused by.
     /// </summary>
-    [ProtoMember(8)]
+    [ProtoMember(6)]
     public Identity CausedBy { get; set; }
 }

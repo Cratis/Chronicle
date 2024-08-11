@@ -7,6 +7,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.XUnit.Events;
 
@@ -54,6 +55,9 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public IConstraints Constraints => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public IUnitOfWorkManager UnitOfWorkManager => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task DiscoverAll() => Task.CompletedTask;

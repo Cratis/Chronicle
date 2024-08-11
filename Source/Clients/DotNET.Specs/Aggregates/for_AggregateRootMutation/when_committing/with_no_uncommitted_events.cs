@@ -9,6 +9,6 @@ public class with_no_uncommitted_events : given.an_aggregate_mutation
 
     async Task Because() => _result = await _mutation.Commit();
 
-    [Fact] void should_return_a_successful_commit_result() => _result.Success.ShouldBeTrue();
+    [Fact] void should_return_a_successful_commit_result() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_not_append_any_events_to_the_event_sequence() => _eventSequence.DidNotReceive().AppendMany(_eventSourceId, Arg.Any<IEnumerable<object>>());
 }

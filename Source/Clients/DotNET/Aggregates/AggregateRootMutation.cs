@@ -14,12 +14,10 @@ namespace Cratis.Chronicle.Aggregates;
 /// <param name="aggregateRootContext">The <see cref="IAggregateRootContext"/> for the aggregate root.</param>
 /// <param name="mutator">The <see cref="IAggregateRootMutator"/> for the aggregate root.</param>
 /// <param name="eventSequence">The <see cref="IEventSequence"/> for the aggregate root.</param>
-/// <param name="causationManager">The <see cref="ICausationManager"/> for the aggregate root.</param>
 public class AggregateRootMutation(
     IAggregateRootContext aggregateRootContext,
     IAggregateRootMutator mutator,
-    IEventSequence eventSequence,
-    ICausationManager causationManager) : IAggregateRootMutation
+    IEventSequence eventSequence) : IAggregateRootMutation
 {
     /// <summary>
     /// The causation aggregate root type property.
@@ -36,13 +34,14 @@ public class AggregateRootMutation(
     /// </summary>
     public static readonly CausationType CausationType = "AggregateRoot";
 
-    readonly IList<object> _uncommittedEvents = [];
-
     /// <inheritdoc/>
     public EventSourceId EventSourceId => aggregateRootContext.EventSourceId;
 
     /// <inheritdoc/>
-    public IImmutableList<object> UncommittedEvents => _uncommittedEvents.ToImmutableList();
+    public IImmutableList<object> UncommittedEvents { get; private set; } = ImmutableList<object>.Empty;
+
+    /// <inheritdoc/>
+    public bool HasEvents => UncommittedEvents.Count > 0;
 
     /// <inheritdoc/>
     public IAggregateRootMutator Mutator => mutator;
@@ -52,34 +51,22 @@ public class AggregateRootMutation(
         where TEvent : class
     {
         typeof(TEvent).ValidateEventType();
-        _uncommittedEvents.Add(@event);
+        var causation = new Causation(DateTimeOffset.Now, CausationType, new Dictionary<string, string>
+        {
+            { CausationAggregateRootTypeProperty, aggregateRootContext.AggregateRoot.GetType().AssemblyQualifiedName! },
+            { CausationEventSequenceIdProperty, eventSequence.Id }
+        });
+        aggregateRootContext.UnitOfWOrk.AddEvent(eventSequence.Id, EventSourceId, @event, causation);
+        UncommittedEvents = UncommittedEvents.Add(@event);
 
         await mutator.Mutate(@event);
-
-        if (aggregateRootContext.AutoCommit)
-        {
-            await Commit();
-        }
     }
 
     /// <inheritdoc/>
     public async Task<AggregateRootCommitResult> Commit()
     {
-        causationManager.Add(CausationType, new Dictionary<string, string>
-        {
-            { CausationAggregateRootTypeProperty, aggregateRootContext.AggregateRoot.GetType().AssemblyQualifiedName! },
-            { CausationEventSequenceIdProperty, eventSequence.Id }
-        });
-
-        if (_uncommittedEvents.Count == 0)
-        {
-            return AggregateRootCommitResult.Successful(ImmutableList<object>.Empty);
-        }
-
-        await eventSequence.AppendMany(aggregateRootContext.EventSourceId, new List<object>(_uncommittedEvents));
-
-        var result = AggregateRootCommitResult.Successful(_uncommittedEvents.ToImmutableList());
-        _uncommittedEvents.Clear();
-        return result;
+        await aggregateRootContext.UnitOfWOrk.Commit();
+        UncommittedEvents = ImmutableList<object>.Empty;
+        return AggregateRootCommitResult.CreateFrom(aggregateRootContext.UnitOfWOrk);
     }
 }

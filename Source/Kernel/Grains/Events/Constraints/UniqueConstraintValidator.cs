@@ -42,8 +42,8 @@ public class UniqueConstraintValidator(
                     this.CreateViolation(
                         context,
                         sequenceNumber,
-                        $"Event '{context.EventType}' with value '{value}' on property '{property}' violated a unique constraint on sequence number {sequenceNumber}",
-                        new() { { "property", property }, { "value", value } })
+                        $"Event '{context.EventType}' with value '{value}' on member '{property}' violated a unique constraint on sequence number {sequenceNumber}",
+                        new() { { WellKnownConstraintDetailKeys.PropertyName, property }, { WellKnownConstraintDetailKeys.PropertyValue, value } })
                 ]
             };
     }

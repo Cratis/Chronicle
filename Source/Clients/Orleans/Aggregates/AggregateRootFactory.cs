@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Orleans.Aggregates;
 public class AggregateRootFactory(IGrainFactory grainFactory) : IAggregateRootFactory
 {
     /// <inheritdoc/>
-    public Task<TAggregateRoot> Get<TAggregateRoot>(EventSourceId id, bool autoCommit = true)
+    public Task<TAggregateRoot> Get<TAggregateRoot>(EventSourceId id)
         where TAggregateRoot : IAggregateRoot
     {
         return Task.FromResult(grainFactory.GetGrain<TAggregateRoot>(id.Value));

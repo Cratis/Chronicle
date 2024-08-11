@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.XUnit;
-using Cratis.Chronicle.XUnit.Auditing;
 using Cratis.Chronicle.XUnit.Events;
 using Cratis.Execution;
 
@@ -26,17 +26,18 @@ public static class AggregateRootTestFactory
     {
         var aggregateRoot = (Activator.CreateInstance(typeof(TAggregateRoot), dependencies) as TAggregateRoot)!;
         var eventSequence = new EventSequenceForTesting(Defaults.Instance.EventTypes);
+#pragma warning disable CA2000 // Call dispose
+        var unitOfWork = new UnitOfWork(CorrelationId.New(), _ => { }, Defaults.Instance.EventStore);
+#pragma warning restore CA2000 // Call dispose
 
         var aggregateRootContext = new AggregateRootContext(
-            CorrelationId.New(),
             eventSourceId,
             eventSequence,
             aggregateRoot,
-            true,
-            false);
+            unitOfWork);
 
         var mutator = new AggregateRootMutatorForTesting();
-        var mutation = new AggregateRootMutation(aggregateRootContext, mutator, eventSequence, new CausationManagerForTesting());
+        var mutation = new AggregateRootMutation(aggregateRootContext, mutator, eventSequence);
         aggregateRoot._context = aggregateRootContext;
         aggregateRoot._mutation = mutation;
         return aggregateRoot;
@@ -55,17 +56,18 @@ public static class AggregateRootTestFactory
     {
         var aggregateRoot = (Activator.CreateInstance(typeof(TAggregateRoot), dependencies) as AggregateRoot<TState>)!;
         var eventSequence = new EventSequenceForTesting(Defaults.Instance.EventTypes);
+#pragma warning disable CA2000 // Call dispose
+        var unitOfWork = new UnitOfWork(CorrelationId.New(), _ => { }, Defaults.Instance.EventStore);
+#pragma warning restore CA2000 // Call dispose
 
         var aggregateRootContext = new AggregateRootContext(
-            CorrelationId.New(),
             eventSourceId,
             eventSequence,
             aggregateRoot,
-            true,
-            false);
+            unitOfWork);
 
         var mutator = new AggregateRootMutatorForTesting();
-        var mutation = new AggregateRootMutation(aggregateRootContext, mutator, eventSequence, new CausationManagerForTesting());
+        var mutation = new AggregateRootMutation(aggregateRootContext, mutator, eventSequence);
         aggregateRoot._context = aggregateRootContext;
         aggregateRoot._mutation = mutation;
         aggregateRoot._state = new AggregateRootState<TState>();

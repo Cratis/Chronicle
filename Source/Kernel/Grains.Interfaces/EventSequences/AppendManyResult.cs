@@ -20,7 +20,7 @@ public class AppendManyResult
     /// <summary>
     /// Gets the sequence numbers of the events that were appended, if successful. In the same sequence as the events were provided.
     /// </summary>
-    public IImmutableList<EventSequenceNumber> SequenceNumbers { get; init; } = [];
+    public IEnumerable<EventSequenceNumber> SequenceNumbers { get; init; } = [];
 
     /// <summary>
     /// Gets a value indicating whether the operation was successful.
@@ -40,12 +40,12 @@ public class AppendManyResult
     /// <summary>
     /// Gets any violations that occurred during the operation.
     /// </summary>
-    public IImmutableList<ConstraintViolation> ConstraintViolations { get; init; } = [];
+    public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
 
     /// <summary>
     /// Gets any exception messages that might have occurred.
     /// </summary>
-    public IImmutableList<AppendError> Errors { get; init; } = [];
+    public IEnumerable<AppendError> Errors { get; init; } = [];
 
     /// <summary>
     /// Create a successful result.

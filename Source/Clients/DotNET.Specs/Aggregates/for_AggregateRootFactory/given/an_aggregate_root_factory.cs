@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.Aggregates.for_AggregateRootFactory.given;
 
@@ -12,7 +13,7 @@ public class an_aggregate_root_factory : Specification
     protected AggregateRootFactory _factory;
     protected IEventStore _eventStore;
     protected IAggregateRootMutatorFactory _mutatorFactory;
-    protected ICausationManager _causationManager;
+    protected IUnitOfWorkManager _unitOfWorkManager;
     protected IServiceProvider _serviceProvider;
     protected IAggregateRootMutator _mutator;
     protected IEventSequence _eventSequence;
@@ -24,7 +25,7 @@ public class an_aggregate_root_factory : Specification
         _eventStore.GetEventSequence(Arg.Any<EventSequenceId>()).Returns(_eventSequence);
 
         _mutatorFactory = Substitute.For<IAggregateRootMutatorFactory>();
-        _causationManager = Substitute.For<ICausationManager>();
+        _unitOfWorkManager = Substitute.For<IUnitOfWorkManager>();
         _serviceProvider = Substitute.For<IServiceProvider>();
         _mutator = Substitute.For<IAggregateRootMutator>();
         _mutatorFactory.Create<StatelessAggregateRoot>(Arg.Any<AggregateRootContext>()).Returns(_mutator);
@@ -32,7 +33,7 @@ public class an_aggregate_root_factory : Specification
         _factory = new AggregateRootFactory(
             _eventStore,
             _mutatorFactory,
-            _causationManager,
+            _unitOfWorkManager,
             _serviceProvider);
     }
 }

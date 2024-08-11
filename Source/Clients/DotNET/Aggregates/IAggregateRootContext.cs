@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Transactions;
 
 #pragma warning disable SA1402 // File may only contain a single type
 
@@ -13,11 +14,6 @@ namespace Cratis.Chronicle.Aggregates;
 /// </summary>
 public interface IAggregateRootContext
 {
-    /// <summary>
-    /// Gets the <see cref="CorrelationId"/> for the context.
-    /// </summary>
-    CorrelationId CorrelationId { get; }
-
     /// <summary>
     /// Gets the <see cref="EventSourceId"/> for the context.
     /// </summary>
@@ -34,12 +30,12 @@ public interface IAggregateRootContext
     IAggregateRoot AggregateRoot { get; }
 
     /// <summary>
-    /// Gets a value indicating whether or not to automatically commit changes on every apply.
+    /// Gets the <see cref="IUnitOfWork"/> for the context.
     /// </summary>
-    bool AutoCommit { get; }
+    IUnitOfWork UnitOfWOrk { get; }
 
     /// <summary>
-    /// Gets a value indicating whether or not the context has events.
+    /// Gets or sets a value indicating whether there are events available for rehydration.
     /// </summary>
-    bool HasEvents { get; }
+    bool HasEventsForRehydration { get; set; }
 }

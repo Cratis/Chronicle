@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.Aggregates.for_AggregateRootMutation.given;
 
@@ -17,6 +18,7 @@ public class an_aggregate_mutation : Specification
     protected EventSequenceId _eventSequenceId;
     protected IAggregateRootContext _aggregateRootContext;
     protected IAggregateRoot _aggregateRoot;
+    protected IUnitOfWork _unitOfWork;
 
     void Establish()
     {
@@ -27,15 +29,17 @@ public class an_aggregate_mutation : Specification
         _causationManager = Substitute.For<ICausationManager>();
         _eventSourceId = EventSourceId.New();
 
+        _unitOfWork = Substitute.For<IUnitOfWork>();
+
         _aggregateRoot = new StatefulAggregateRoot();
         _aggregateRootContext = Substitute.For<IAggregateRootContext>();
         _aggregateRootContext.EventSourceId.Returns(_eventSourceId);
         _aggregateRootContext.AggregateRoot.Returns(_aggregateRoot);
+        _aggregateRootContext.UnitOfWOrk.Returns(_unitOfWork);
 
         _mutation = new AggregateRootMutation(
             _aggregateRootContext,
             _mutator,
-            _eventSequence,
-            _causationManager);
+            _eventSequence);
     }
 }
