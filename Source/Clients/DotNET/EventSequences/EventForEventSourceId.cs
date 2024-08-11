@@ -11,5 +11,5 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 /// <param name="EventSourceId"><see cref="EventSourceId"/> the event is for.</param>
 /// <param name="Event">The actual event.</param>
-/// <param name="causation">The causation for the event.</param>
-public record EventForEventSourceId(EventSourceId EventSourceId, object Event, Causation causation);
+/// <param name="Causation">The causation for the event.</param>
+public record EventForEventSourceId(EventSourceId EventSourceId, object Event, Causation Causation);
