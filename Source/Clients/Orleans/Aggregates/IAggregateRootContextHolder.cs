@@ -16,4 +16,11 @@ internal interface IAggregateRootContextHolder
     /// Gets the context of the aggregate root.
     /// </summary>
     IAggregateRootContext? Context { get; set; }
+
+    /// <summary>
+    /// Set the context of the aggregate root.
+    /// </summary>
+    /// <param name="context"><see cref="IAggregateRootContext"/> to set.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SetContext(IAggregateRootContext context);
 }

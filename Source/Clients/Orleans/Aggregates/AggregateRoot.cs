@@ -4,9 +4,6 @@
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Orleans.Transactions;
-using Cratis.Chronicle.Transactions;
-using Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
 
 #pragma warning disable SA1402
@@ -24,6 +21,10 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     internal AggregateRootMutation? _mutation;
 
     StatelessAggregateRootMutator? _mutator;
+    IAggregateRootEventHandlers? _eventHandlers;
+    IEventStore? _eventStore;
+    IEventLog? _eventLog;
+    IEventSerializer? _eventSerializer;
 
     /// <inheritdoc/>
     public IAggregateRootContext? Context { get; set; }
@@ -34,33 +35,30 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     protected bool IsNew => Context?.HasEventsForRehydration ?? true;
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    public async Task SetContext(IAggregateRootContext context)
     {
-        var eventStore = ServiceProvider.GetRequiredService<IEventStore>();
-        var eventLog = ServiceProvider.GetRequiredService<IEventLog>();
-        var eventSerializer = ServiceProvider.GetRequiredService<IEventSerializer>();
-        var unitOfWorkManager = ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
-        var unitOfWork = unitOfWorkManager.Begin(CorrelationId.New());
-
-        Context = new AggregateRootContext(
-            this.GetPrimaryKeyString(),
-            eventLog,
-            this,
-            unitOfWork);
-
-        var eventHandlersFactory = ServiceProvider.GetRequiredService<IAggregateRootEventHandlersFactory>();
-        var eventHandlers = eventHandlersFactory.GetFor(this);
-
+        Context = context;
         _mutator = new StatelessAggregateRootMutator(
-            Context,
-            eventStore,
-            eventSerializer,
-            eventHandlers);
-        _mutation = new AggregateRootMutation(Context, _mutator, eventLog);
+            context,
+            _eventStore!,
+            _eventSerializer!,
+            _eventHandlers!);
+        _mutation = new AggregateRootMutation(context, _mutator, _eventLog!);
 
         await _mutator.Rehydrate();
+    }
 
-        await OnActivate();
+    /// <inheritdoc/>
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        _eventStore = ServiceProvider.GetRequiredService<IEventStore>();
+        _eventLog = ServiceProvider.GetRequiredService<IEventLog>();
+        _eventSerializer = ServiceProvider.GetRequiredService<IEventSerializer>();
+
+        var eventHandlersFactory = ServiceProvider.GetRequiredService<IAggregateRootEventHandlersFactory>();
+        _eventHandlers = eventHandlersFactory.GetFor(this);
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -97,6 +95,8 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     internal AggregateRootState<TState>? _state;
 
     StatefulAggregateRootMutator<TState>? _mutator;
+    IEventLog? _eventLog;
+    IAggregateRootStateProviders? _stateProviders;
 
     /// <inheritdoc/>
     public IAggregateRootContext? Context { get; set; }
@@ -112,31 +112,21 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     protected bool IsNew => Context?.HasEventsForRehydration ?? true;
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    public async Task SetContext(IAggregateRootContext context)
     {
-        var correlationId = RequestContext.Get(Constants.CorrelationIdKey) as CorrelationId;
-        correlationId ??= CorrelationId.New();
-        var eventLog = ServiceProvider.GetRequiredService<IEventLog>();
-        var unitOfWorkManager = ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
-
-        if (!unitOfWorkManager.TryGetFor(correlationId, out var unitOfWork))
-        {
-            unitOfWork = unitOfWorkManager.Begin(CorrelationId.New());
-        }
-
-        Context = new AggregateRootContext(
-            this.GetPrimaryKeyString(),
-            eventLog,
-            this,
-            unitOfWork);
-
-        var stateProviders = ServiceProvider.GetRequiredService<IAggregateRootStateProviders>();
-        var stateProvider = await stateProviders.CreateFor<TState>(Context);
+        var stateProvider = await _stateProviders!.CreateFor<TState>(Context!);
         _state = new AggregateRootState<TState>();
         _mutator = new StatefulAggregateRootMutator<TState>(_state, stateProvider);
-        _mutation = new AggregateRootMutation(Context, _mutator, eventLog);
+        _mutation = new AggregateRootMutation(Context!, _mutator, _eventLog!);
 
         await _mutator.Rehydrate();
+    }
+
+    /// <inheritdoc/>
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        _eventLog = ServiceProvider.GetRequiredService<IEventLog>();
+        _stateProviders = ServiceProvider.GetRequiredService<IAggregateRootStateProviders>();
 
         await OnActivate();
     }
