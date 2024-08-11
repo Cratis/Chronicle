@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.XUnit;
-using Cratis.Chronicle.XUnit.Auditing;
 using Cratis.Chronicle.XUnit.Events;
 using Cratis.Execution;
 
@@ -28,7 +27,7 @@ public static class AggregateRootTestFactory
         var aggregateRoot = (Activator.CreateInstance(typeof(TAggregateRoot), dependencies) as TAggregateRoot)!;
         var eventSequence = new EventSequenceForTesting(Defaults.EventTypes);
 #pragma warning disable CA2000 // Call dispose
-        var unitOfWork = new UnitOfWork(CorrelationId.New(), () => { }, Defaults.EventStore);
+        var unitOfWork = new UnitOfWork(CorrelationId.New(), _ => { }, Defaults.EventStore);
 #pragma warning restore CA2000 // Call dispose
 
         var aggregateRootContext = new AggregateRootContext(
@@ -58,7 +57,7 @@ public static class AggregateRootTestFactory
         var aggregateRoot = (Activator.CreateInstance(typeof(TAggregateRoot), dependencies) as AggregateRoot<TState>)!;
         var eventSequence = new EventSequenceForTesting(Defaults.EventTypes);
 #pragma warning disable CA2000 // Call dispose
-        var unitOfWork = new UnitOfWork(CorrelationId.New(), () => { }, Defaults.EventStore);
+        var unitOfWork = new UnitOfWork(CorrelationId.New(), _ => { }, Defaults.EventStore);
 #pragma warning restore CA2000 // Call dispose
 
         var aggregateRootContext = new AggregateRootContext(
