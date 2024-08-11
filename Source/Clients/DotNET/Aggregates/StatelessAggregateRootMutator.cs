@@ -21,12 +21,11 @@ public class StatelessAggregateRootMutator(
     /// <inheritdoc/>
     public async Task Rehydrate()
     {
-        var hasEventsForRehydration = false;
+        var hasEventsForRehydration = await aggregateRootContext.EventSequence.HasEventsFor(aggregateRootContext.EventSourceId);
 
         if (eventHandlers.HasHandleMethods)
         {
             var events = await aggregateRootContext.EventSequence.GetForEventSourceIdAndEventTypes(aggregateRootContext.EventSourceId, eventHandlers.EventTypes);
-            hasEventsForRehydration = events.Any();
             var deserializedEventsTasks = events.Select(async _ =>
             {
                 var @event = await eventSerializer.Deserialize(_);
@@ -35,10 +34,6 @@ public class StatelessAggregateRootMutator(
 
             var deserializedEvents = await Task.WhenAll(deserializedEventsTasks);
             await eventHandlers.Handle(aggregateRootContext.AggregateRoot, deserializedEvents);
-        }
-        else
-        {
-            hasEventsForRehydration = await aggregateRootContext.EventSequence.HasEventsFor(aggregateRootContext.EventSourceId);
         }
 
         if (aggregateRootContext is AggregateRootContext actualContext)
