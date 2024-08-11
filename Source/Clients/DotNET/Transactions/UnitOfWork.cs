@@ -22,12 +22,13 @@ public class UnitOfWork(
     Action<IUnitOfWork> onCompleted,
     IEventStore eventStore) : IUnitOfWork
 {
-    readonly ConcurrentDictionary<EventSequenceId, ConcurrentBag<EventForEventSourceId>> _events = [];
+    readonly ConcurrentDictionary<EventSequenceId, ConcurrentBag<EventForEventSourceIdWithSequenceNumber>> _events = [];
     readonly ConcurrentBag<ConstraintViolation> _constraintViolations = [];
     readonly ConcurrentBag<AppendError> _appendErrors = [];
     Action<IUnitOfWork> _onCompleted = onCompleted;
     bool _isCommitted;
     bool _isRolledBack;
+    EventSequenceNumber _currentSequenceNumber = EventSequenceNumber.First;
 
     /// <inheritdoc/>
     public CorrelationId CorrelationId => correlationId;
@@ -43,7 +44,9 @@ public class UnitOfWork(
             _events[eventSequenceId] = events = [];
         }
 
-        events.Add(new(eventSourceId, @event, causation));
+        events.Add(new(_currentSequenceNumber, eventSourceId, @event, causation));
+
+        _currentSequenceNumber++;
     }
 
     /// <inheritdoc/>
@@ -66,8 +69,9 @@ public class UnitOfWork(
 
         foreach (var (eventSequenceId, events) in _events)
         {
+            var sorted = events.OrderBy(_ => _.SequenceNumber).ToArray();
             var eventSequence = eventStore.GetEventSequence(eventSequenceId);
-            var result = await eventSequence.AppendMany(events);
+            var result = await eventSequence.AppendMany(sorted);
             result.ConstraintViolations.ForEach(_constraintViolations.Add);
             result.Errors.ForEach(_appendErrors.Add);
         }
