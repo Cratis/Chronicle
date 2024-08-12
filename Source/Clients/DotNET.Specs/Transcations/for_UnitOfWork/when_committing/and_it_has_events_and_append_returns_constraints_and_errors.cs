@@ -24,16 +24,16 @@ public class and_it_has_events_and_append_returns_constraints_and_errors : given
         _result = new AppendManyResult
         {
             CorrelationId = _correlationId,
-            ConstraintViolations = new[]
-            {
+            ConstraintViolations =
+            [
                 new ConstraintViolation(EventType.Unknown, EventSequenceNumber.First, "some constraint", "some message", []),
                 new ConstraintViolation(EventType.Unknown, 42UL, "some other constraint", "some message", [])
-            }.ToImmutableList(),
-            Errors = new[]
-            {
+            ],
+            Errors =
+            [
                 new AppendError("some error"),
                 new AppendError("some other error")
-            }.ToImmutableList()
+            ]
         };
 
         _eventSequence

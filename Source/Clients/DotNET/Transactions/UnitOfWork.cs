@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using System.Collections.Immutable;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
@@ -50,16 +49,14 @@ public class UnitOfWork(
     }
 
     /// <inheritdoc/>
-    public IImmutableList<ConstraintViolation> GetConstraintViolations() =>
-        _constraintViolations.ToImmutableList();
+    public IEnumerable<ConstraintViolation> GetConstraintViolations() => [.. _constraintViolations];
 
     /// <inheritdoc/>
-    public IImmutableList<object> GetEvents() =>
-        _events.Values.SelectMany(_ => _).Select(_ => _.Event).ToImmutableList();
+    public IEnumerable<object> GetEvents() =>
+        _events.Values.SelectMany(_ => _).Select(_ => _.Event).ToArray();
 
     /// <inheritdoc/>
-    public IImmutableList<AppendError> GetAppendErrors() =>
-        _appendErrors.ToImmutableList();
+    public IEnumerable<AppendError> GetAppendErrors() => [.. _appendErrors];
 
     /// <inheritdoc/>
     public async Task Commit()

@@ -28,7 +28,7 @@ public static class AggregateRootCommitResultShouldExtensions
     /// <param name="result"><see cref="AggregateRootCommitResult"/> to assert.</param>
     public static void ShouldNotContainAnyEvents(this AggregateRootCommitResult result)
     {
-        var count = result.Events.Count;
+        var count = result.Events.Count();
         Assert.True(count == 0, $"Expected no events, but found {count}");
     }
 

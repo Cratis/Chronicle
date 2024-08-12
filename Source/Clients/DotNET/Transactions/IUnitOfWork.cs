@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
@@ -37,19 +36,19 @@ public interface IUnitOfWork : IDisposable
     /// Get the events that have occurred in the <see cref="IUnitOfWork"/>.
     /// </summary>
     /// <returns>A collection of events.</returns>
-    IImmutableList<object> GetEvents();
+    IEnumerable<object> GetEvents();
 
     /// <summary>
     /// Gets the constraint violations that have occurred in the <see cref="IUnitOfWork"/>.
     /// </summary>
     /// <returns>A collection of <see cref="ConstraintViolation"/>.</returns>
-    IImmutableList<ConstraintViolation> GetConstraintViolations();
+    IEnumerable<ConstraintViolation> GetConstraintViolations();
 
     /// <summary>
     /// Get any errors that have occurred while attempting to commit in the <see cref="IUnitOfWork"/>.
     /// </summary>
     /// <returns>A collection of <see cref="AppendError"/>.</returns>
-    IImmutableList<AppendError> GetAppendErrors();
+    IEnumerable<AppendError> GetAppendErrors();
 
     /// <summary>
     /// Commit the <see cref="IUnitOfWork"/>.

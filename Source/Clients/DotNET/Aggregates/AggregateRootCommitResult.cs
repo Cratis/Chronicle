@@ -16,22 +16,22 @@ public class AggregateRootCommitResult
     /// <summary>
     /// Gets a value indicating whether or not the commit was successful.
     /// </summary>
-    public IImmutableList<object> Events { get; init; } = ImmutableList<object>.Empty;
+    public IEnumerable<object> Events { get; init; } = [];
 
     /// <summary>
     /// Gets the constraint violations that occurred during the commit.
     /// </summary>
-    public IImmutableList<ConstraintViolation> ConstraintViolations { get; init; } = ImmutableList<ConstraintViolation>.Empty;
+    public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
 
     /// <summary>
     /// Gets a value indicating whether or not the commit was successful.
     /// </summary>
-    public bool IsSuccess => ConstraintViolations.Count == 0;
+    public bool IsSuccess => !ConstraintViolations.Any();
 
     /// <summary>
     /// Gets any exception messages that might have occurred.
     /// </summary>
-    public IImmutableList<AppendError> Errors { get; init; } = ImmutableList<AppendError>.Empty;
+    public IEnumerable<AppendError> Errors { get; init; } = [];
 
     /// <summary>
     /// Implicitly convert from <see cref="AggregateRootCommitResult"/> to <see cref="bool"/>.
