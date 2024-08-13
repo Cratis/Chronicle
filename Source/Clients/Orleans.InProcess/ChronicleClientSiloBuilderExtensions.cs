@@ -5,6 +5,7 @@ extern alias Server;
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
@@ -15,7 +16,6 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Cratis.Json;
-using Cratis.Types;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -98,6 +98,7 @@ public static class ChronicleClientSiloBuilderExtensions
         builder.AddStartupTask<ChronicleStartupTask>();
         builder.ConfigureServices(services =>
         {
+            services.AddCratisTelemetry(builder.Configuration);
             services.AddTypeDiscovery();
             services.AddBindingsByConvention();
             services.AddSelfBindings();
