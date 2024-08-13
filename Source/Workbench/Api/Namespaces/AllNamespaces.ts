@@ -8,7 +8,7 @@ import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, 
 import { Namespace } from './Namespace';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/namespaces');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/namespaces');
 
 class AllNamespacesSortBy {
     private _name: SortingActionsForObservableQuery<Namespace[]>;

@@ -7,7 +7,7 @@ import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActions
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/types/schemas/{eventTypeId}');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/types/schemas/{{eventTypeId}}');
 
 class GenerationSchemasForTypeSortBy {
 

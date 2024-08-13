@@ -11,7 +11,7 @@ import { Causation } from '../Auditing/Causation';
 import { Identity } from '../Identities/Identity';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}/append-many');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/append-many');
 
 export interface IAppendMany {
     eventStore?: string;

@@ -8,7 +8,7 @@ import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applic
 import { Validator } from '@cratis/applications/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/compliance/gdpr/pii/delete/{person}');
+const routeTemplate = Handlebars.compile('/api/compliance/gdpr/pii/delete/{{person}}');
 
 export interface IDeletePIIForPerson {
     person?: string;
