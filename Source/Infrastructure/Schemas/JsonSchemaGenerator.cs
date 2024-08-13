@@ -38,6 +38,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             }
         };
+        settings.ReflectionService = new ReflectionService(settings.ReflectionService);
         settings.SchemaProcessors.Add(new ComplianceMetadataSchemaProcessor(metadataResolver));
         settings.SchemaProcessors.Add(new TypeFormatSchemaProcessor(new TypeFormats()));
         _generator = new NJsonSchemaGenerator(settings);

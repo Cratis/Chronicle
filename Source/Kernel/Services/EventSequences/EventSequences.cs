@@ -47,7 +47,6 @@ public class EventSequences(
     {
         var eventSequence = GetEventSequenceGrain(request);
         var result = await eventSequence.AppendMany(
-            request.EventSourceId,
             request.Events.ToChronicle(),
             request.Causation.ToChronicle(),
             request.CausedBy.ToChronicle());

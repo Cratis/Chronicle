@@ -34,6 +34,9 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params object[] eve
     public Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<object> events) => Task.FromResult(AppendManyResult.Success(CorrelationId.New(), []));
 
     /// <inheritdoc/>
+    public Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events) => Task.FromResult(AppendManyResult.Success(CorrelationId.New(), []));
+
+    /// <inheritdoc/>
     public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes) => Task.FromResult<IImmutableList<AppendedEvent>>(_events.ToImmutableList());
 
     /// <inheritdoc/>

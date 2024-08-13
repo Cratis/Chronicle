@@ -14,13 +14,13 @@ public static class AggregateRootCommitResultShouldExtensions
     /// Asserts that the <see cref="AggregateRootCommitResult"/> is successful.
     /// </summary>
     /// <param name="result"><see cref="AggregateRootCommitResult"/> to assert.</param>
-    public static void ShouldBeSuccessful(this AggregateRootCommitResult result) => Assert.True(result.Success);
+    public static void ShouldBeSuccessful(this AggregateRootCommitResult result) => Assert.True(result.IsSuccess);
 
     /// <summary>
     /// Asserts that the <see cref="AggregateRootCommitResult"/> is successful.
     /// </summary>
     /// <param name="result"><see cref="AggregateRootCommitResult"/> to assert.</param>
-    public static void ShouldBeFailed(this AggregateRootCommitResult result) => Assert.False(result.Success);
+    public static void ShouldBeFailed(this AggregateRootCommitResult result) => Assert.False(result.IsSuccess);
 
     /// <summary>
     /// Asserts that the <see cref="AggregateRootCommitResult"/> contains no events.
@@ -28,7 +28,7 @@ public static class AggregateRootCommitResultShouldExtensions
     /// <param name="result"><see cref="AggregateRootCommitResult"/> to assert.</param>
     public static void ShouldNotContainAnyEvents(this AggregateRootCommitResult result)
     {
-        var count = result.Events.Count;
+        var count = result.Events.Count();
         Assert.True(count == 0, $"Expected no events, but found {count}");
     }
 

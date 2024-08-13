@@ -9,6 +9,7 @@ using Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Orleans.InProcess;
+using Cratis.Chronicle.Orleans.Transactions;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
@@ -92,6 +93,8 @@ public static class ChronicleClientSiloBuilderExtensions
     static void ConfigureChronicle(this ISiloBuilder builder, Action<IChronicleBuilder>? configureChronicle = default)
     {
         builder.AddTelemetry();
+        builder.AddIncomingGrainCallFilter<UnitOfWorkIncomingCallFilter>();
+        builder.AddOutgoingGrainCallFilter<UnitOfWorkOutgoingCallFilter>();
         builder.AddChronicleToSilo(configureChronicle);
         builder.AddStartupTask<ChronicleStartupTask>();
         builder.ConfigureServices(services =>
@@ -138,6 +141,7 @@ public static class ChronicleClientSiloBuilderExtensions
             });
 
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Connection);
+            services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().UnitOfWorkManager);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().AggregateRootFactory);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().EventTypes);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().EventLog);

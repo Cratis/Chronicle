@@ -27,7 +27,7 @@ public class ReducerAggregateRootStateProvider<TState>(
 
         if (result.LastSuccessfullyObservedEvent.IsActualValue && aggregateRootContext is AggregateRootContext actualContext)
         {
-            actualContext.HasEvents = true;
+            actualContext.HasEventsForRehydration = true;
         }
 
         return (TState?)result.ModelState;

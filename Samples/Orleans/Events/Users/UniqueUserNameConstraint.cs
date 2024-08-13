@@ -8,5 +8,5 @@ public class UniqueUserNameConstraint : IConstraint
         .Unique(_ => _
             .On<OnboardingStarted>(_ => _.UserName)
             .On<UserNameChanged>(_ => _.UserName)
-            .WithMessage("User name '{value}' is already in use"));
+            .WithMessage("User name '{PropertyValue}' is already in use"));
 }

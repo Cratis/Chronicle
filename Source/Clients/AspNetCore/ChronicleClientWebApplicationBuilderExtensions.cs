@@ -24,6 +24,8 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         ILoggerFactory? loggerFactory = default)
     {
         webApplicationBuilder.Services.AddRules();
+        webApplicationBuilder.Services.AddUnitOfWork();
+        webApplicationBuilder.Services.AddCausation();
         webApplicationBuilder.Services.AddHttpContextAccessor();
         webApplicationBuilder.Host.UseCratisChronicle(loggerFactory);
         return webApplicationBuilder;
@@ -36,8 +38,6 @@ public static class ChronicleClientWebApplicationBuilderExtensions
     /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
     public static IApplicationBuilder UseCratisChronicle(this IApplicationBuilder app)
     {
-        app.UseCausation();
-
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
         appLifetime.ApplicationStarted.Register(() => GlobalInstances.ServiceProvider = app.ApplicationServices);
 

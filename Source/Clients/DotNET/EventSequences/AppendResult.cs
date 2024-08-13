@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 
@@ -40,12 +39,12 @@ public record AppendResult
     /// <summary>
     /// Gets any violations that occurred during the operation.
     /// </summary>
-    public IImmutableList<ConstraintViolation> ConstraintViolations { get; init; } = ImmutableList<ConstraintViolation>.Empty;
+    public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
 
     /// <summary>
     /// Gets any exception messages that might have occurred.
     /// </summary>
-    public IImmutableList<AppendError> Errors { get; init; } = ImmutableList<AppendError>.Empty;
+    public IEnumerable<AppendError> Errors { get; init; } = [];
 
     /// <summary>
     /// Create a successful result.
@@ -68,7 +67,7 @@ public record AppendResult
     public static AppendResult Failed(CorrelationId correlationId, IEnumerable<ConstraintViolation> violations) => new()
     {
         CorrelationId = correlationId,
-        ConstraintViolations = violations.ToImmutableList()
+        ConstraintViolations = violations.ToArray()
     };
 
     /// <summary>
@@ -80,6 +79,6 @@ public record AppendResult
     public static AppendResult Failed(CorrelationId correlationId, IEnumerable<AppendError> errors) => new()
     {
         CorrelationId = correlationId,
-        Errors = errors.ToImmutableList()
+        Errors = errors.ToArray()
     };
 }

@@ -3,29 +3,23 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.Aggregates;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAggregateRootContext"/>.
 /// </summary>
-/// <param name="correlationId">The <see cref="CorrelationId"/> for the context.</param>
 /// <param name="eventSourceId">The <see cref="EventSourceId"/> for the context.</param>
 /// <param name="eventSequence">The <see cref="IEventSequence"/> for the context.</param>
 /// <param name="aggregateRoot">The <see cref="IAggregateRoot"/> for the context.</param>
-/// <param name="autoCommit">A value indicating whether or not to automatically commit changes on every apply.</param>
-/// <param name="hasEvents">A value indicating whether or not the context has events.</param>
+/// <param name="unitOfWork">The <see cref="IUnitOfWork"/> for the context.</param>
 public class AggregateRootContext(
-    CorrelationId correlationId,
     EventSourceId eventSourceId,
     IEventSequence eventSequence,
     IAggregateRoot aggregateRoot,
-    bool autoCommit,
-    bool hasEvents = false) : IAggregateRootContext
+    IUnitOfWork unitOfWork) : IAggregateRootContext
 {
-    /// <inheritdoc/>
-    public CorrelationId CorrelationId { get; } = correlationId;
-
     /// <inheritdoc/>
     public EventSourceId EventSourceId { get; } = eventSourceId;
 
@@ -36,8 +30,8 @@ public class AggregateRootContext(
     public IAggregateRoot AggregateRoot { get; } = aggregateRoot;
 
     /// <inheritdoc/>
-    public bool AutoCommit { get; internal set; } = autoCommit;
+    public IUnitOfWork UnitOfWOrk { get; } = unitOfWork;
 
     /// <inheritdoc/>
-    public bool HasEvents { get; internal set; } = hasEvents;
+    public bool HasEventsForRehydration { get; set; }
 }

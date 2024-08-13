@@ -13,6 +13,7 @@ using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Transactions;
 using Cratis.Models;
 using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,6 +67,7 @@ public class EventStore : IEventStore
         Namespace = @namespace;
         Connection = connection;
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
+        UnitOfWorkManager = new UnitOfWorkManager(this);
 
         _eventSerializer = new EventSerializer(
             clientArtifactsProvider,
@@ -136,7 +138,7 @@ public class EventStore : IEventStore
                 new AggregateRootStateProviders(Reducers, Projections),
                 new AggregateRootEventHandlersFactory(EventTypes),
                 _eventSerializer),
-            causationManager,
+            UnitOfWorkManager,
             serviceProvider);
     }
 
@@ -148,6 +150,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IChronicleConnection Connection { get; }
+
+    /// <inheritdoc/>
+    public IUnitOfWorkManager UnitOfWorkManager { get; }
 
     /// <inheritdoc/>
     public IAggregateRootFactory AggregateRootFactory { get; }

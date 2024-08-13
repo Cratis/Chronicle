@@ -8,6 +8,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactions;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle;
 
@@ -30,6 +31,11 @@ public interface IEventStore
     /// Gets the <see cref="IChronicleConnection"/> used for the <see cref="IEventStore"/>.
     /// </summary>
     IChronicleConnection Connection { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IClientArtifactsProvider"/> for the event store.
+    /// </summary>
+    IUnitOfWorkManager UnitOfWorkManager { get; }
 
     /// <summary>
     /// Gets the <see cref="IAggregateRootFactory"/>.

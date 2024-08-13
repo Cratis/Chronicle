@@ -4,13 +4,14 @@
 using Cratis.Chronicle.Orleans.Aggregates;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Rules;
+using Cratis.Chronicle.Transactions;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Orleans;
 
 [Route("/api/orders")]
-public class Orders(IAggregateRootFactory aggregateRootFactory) : ControllerBase
+public class Orders(IAggregateRootFactory aggregateRootFactory, IUnitOfWorkManager unitOfWorkManager) : ControllerBase
 {
     [HttpPost("items")]
     public async Task AddItem([FromBody] AddItemToOrder command)

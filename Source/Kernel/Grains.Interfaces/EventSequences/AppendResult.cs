@@ -39,12 +39,12 @@ public class AppendResult
     /// <summary>
     /// Gets any violations that occurred during the operation.
     /// </summary>
-    public IList<ConstraintViolation> ConstraintViolations { get; init; } = [];
+    public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
 
     /// <summary>
     /// Gets any exception messages that might have occurred.
     /// </summary>
-    public IList<AppendError> Errors { get; init; } = [];
+    public IEnumerable<AppendError> Errors { get; init; } = [];
 
     /// <summary>
     /// Create a successful result.

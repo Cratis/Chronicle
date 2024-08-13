@@ -22,7 +22,7 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     /// <summary>
     /// Gets the max sequence number.
     /// </summary>
-    public static readonly EventSequenceNumber Max = ulong.MaxValue - 2;
+    public static readonly EventSequenceNumber Max = ulong.MaxValue - 1;
 
     /// <summary>
     /// Check if the <see cref="EventSequenceNumber"/> is an actual value representing a sequence number.

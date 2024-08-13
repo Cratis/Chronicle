@@ -23,11 +23,11 @@ public class AggregateRoot : IAggregateRoot
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => _context.HasEvents;
+    protected bool IsNew => !_context.HasEventsForRehydration;
 
     /// <inheritdoc/>
-    public Task Apply<T>(T @event)
-        where T : class => _mutation.Apply(@event);
+    public async Task Apply<T>(T @event)
+        where T : class => await _mutation.Apply(@event);
 
     /// <inheritdoc/>
     public async Task<AggregateRootCommitResult> Commit()
