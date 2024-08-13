@@ -11,9 +11,9 @@ namespace Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 
 internal static partial class ReactionLogMessages
 {
-    [LoggerMessage(LogLevel.Debug, "Starting client reaction {reactionId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace}")]
+    [LoggerMessage(LogLevel.Debug, "Starting client reaction {reactionId} for event store {EventStore} on sequence {EventSequenceId} for namespace {@namespace}")]
     internal static partial void Starting(this ILogger<Reaction> logger, EventStoreName eventStore, ReactionId reactionId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 
-    [LoggerMessage(LogLevel.Debug, "Client with connection id {connectionId} has disconnected - unsubscribing observer {reactionId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace}")]
+    [LoggerMessage(LogLevel.Debug, "Client with connection id {connectionId} has disconnected - unsubscribing observer {reactionId} for event store {EventStore} on sequence {EventSequenceId} for namespace {@namespace}")]
     internal static partial void ClientDisconnected(this ILogger<Reaction> logger, ConnectionId connectionId, EventStoreName eventStore, ReactionId reactionId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 }
