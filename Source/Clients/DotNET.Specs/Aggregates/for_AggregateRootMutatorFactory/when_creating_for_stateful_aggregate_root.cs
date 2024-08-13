@@ -11,14 +11,20 @@ public class when_creating_for_stateful_aggregate_root : given.an_aggregate_root
 {
     AggregateRootContext _context;
     IAggregateRootMutator _result;
+    StatefulAggregateRoot _aggregateRoot;
 
-    void Establish() => _context = new AggregateRootContext(
+    void Establish()
+    {
+        _aggregateRoot = new StatefulAggregateRoot();
+        _context = new AggregateRootContext(
         EventSourceId.New(),
         Substitute.For<IEventSequence>(),
-        new StatefulAggregateRoot(),
+        _aggregateRoot,
         Substitute.For<IUnitOfWork>());
+    }
 
     async Task Because() => _result = await _factory.Create<StatefulAggregateRoot>(_context);
 
     [Fact] void should_return_a_stateful_mutator() => _result.ShouldBeOfExactType<StatefulAggregateRootMutator<StateForAggregateRoot>>();
+    [Fact] void should_set_state_provider_on_mutator() => _aggregateRoot._state.ShouldNotBeNull();
 }

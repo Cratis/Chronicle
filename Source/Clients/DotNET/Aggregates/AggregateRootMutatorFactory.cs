@@ -57,6 +57,8 @@ public class AggregateRootMutatorFactory(
         {
             var stateProvider = await stateProviders.CreateFor<TState>(context);
             var aggregateRootState = new AggregateRootState<TState>();
+            var aggregateRoot = (context.AggregateRoot as AggregateRoot<TState>)!;
+            aggregateRoot._state = aggregateRootState;
             return new StatefulAggregateRootMutator<TState>(aggregateRootState, stateProvider);
         }
     }
