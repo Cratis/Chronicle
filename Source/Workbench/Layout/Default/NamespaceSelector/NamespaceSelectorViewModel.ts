@@ -35,6 +35,8 @@ export class NamespaceSelectorViewModel {
             } else {
                 this.currentNamespace = this.namespaces[0];
             }
+        }, {
+            eventStore: _params.eventStoreId
         });
     }
 

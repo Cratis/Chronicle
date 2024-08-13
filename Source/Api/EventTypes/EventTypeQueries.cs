@@ -13,7 +13,7 @@ namespace Cratis.Api.EventTypes;
 /// <remarks>
 /// Initializes a new instance of the <see cref="EventTypeQueries"/> class.
 /// </remarks>
-[Route("/api/events/store/{eventStore}/types")]
+[Route("/api/event-store/{eventStore}/types")]
 public class EventTypeQueries() : ControllerBase
 {
     /// <summary>

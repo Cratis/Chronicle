@@ -8,7 +8,7 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { RecommendationInformation } from '../Concepts/Recommendations/RecommendationInformation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/recommendations');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/{namespace}/recommendations');
 
 class GetRecommendationsSortBy {
     private _id: SortingActionsForQuery<RecommendationInformation[]>;
@@ -72,7 +72,7 @@ export interface GetRecommendationsArguments {
 }
 
 export class GetRecommendations extends QueryFor<RecommendationInformation[], GetRecommendationsArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/recommendations';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/recommendations';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: RecommendationInformation[] = [];
     private readonly _sortBy: GetRecommendationsSortBy;

@@ -11,7 +11,7 @@ import { Causation } from '../Auditing/Causation';
 import { Identity } from '../Identities/Identity';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}/append-many');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}/append-many');
 
 export interface IAppendMany {
     eventStore?: string;
@@ -36,7 +36,7 @@ export class AppendManyValidator extends CommandValidator {
 }
 
 export class AppendMany extends Command<IAppendMany> implements IAppendMany {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}/append-many';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}/append-many';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new AppendManyValidator();
 

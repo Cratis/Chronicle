@@ -14,7 +14,7 @@ import { Bindings } from '@cratis/applications.react.mvvm';
 import { FakeData } from './FakeData';
 
 Bindings.initialize();
-FakeData.initialize();
+// FakeData.initialize();
 
 configureMobx({
     enforceActions: 'never'

@@ -15,7 +15,7 @@ namespace Cratis.Api.Recommendations;
 /// Initializes a new instance of the <see cref="RecommendationCommands"/> class.
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-[Route("/api/events/store/{eventStore}/{namespace}/recommendations")]
+[Route("/api/event-store/{eventStore}/{namespace}/recommendations")]
 public class RecommendationCommands(IGrainFactory grainFactory) : ControllerBase
 {
     /// <summary>

@@ -14,7 +14,7 @@ namespace Cratis.Api.Jobs;
 /// Initializes a new instance of the <see cref="Jobs"/> class.
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to work with grains.</param>
-[Route("/api/events/store/{eventStore}/{namespace}/jobs")]
+[Route("/api/event-store/{eventStore}/{namespace}/jobs")]
 public class JobCommands(IGrainFactory grainFactory) : ControllerBase
 {
     /// <summary>

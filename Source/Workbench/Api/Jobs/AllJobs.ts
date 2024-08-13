@@ -8,7 +8,7 @@ import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, 
 import { JobState } from './JobState';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/jobs');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/{namespace}/jobs');
 
 class AllJobsSortBy {
     private _id: SortingActionsForObservableQuery<JobState[]>;
@@ -89,7 +89,7 @@ export interface AllJobsArguments {
     namespace: string;
 }
 export class AllJobs extends ObservableQueryFor<JobState[], AllJobsArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/jobs';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/jobs';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: JobState[] = [];
     private readonly _sortBy: AllJobsSortBy;

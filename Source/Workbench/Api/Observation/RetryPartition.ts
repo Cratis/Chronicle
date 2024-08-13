@@ -8,7 +8,7 @@ import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applic
 import { Validator } from '@cratis/applications/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/observers/{namespace}/failed-partitions/{observerId}/retry/{partition}');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/observers/{namespace}/failed-partitions/{observerId}/retry/{partition}');
 
 export interface IRetryPartition {
     eventStore?: string;
@@ -27,7 +27,7 @@ export class RetryPartitionValidator extends CommandValidator {
 }
 
 export class RetryPartition extends Command<IRetryPartition> implements IRetryPartition {
-    readonly route: string = '/api/events/store/{eventStore}/observers/{namespace}/failed-partitions/{observerId}/retry/{partition}';
+    readonly route: string = '/api/event-store/{eventStore}/observers/{namespace}/failed-partitions/{observerId}/retry/{partition}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RetryPartitionValidator();
 

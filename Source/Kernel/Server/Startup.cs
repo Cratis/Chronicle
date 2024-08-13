@@ -3,6 +3,7 @@
 
 #pragma warning disable SA1600
 
+using Cratis.Api.Server;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
@@ -13,6 +14,7 @@ public class Startup
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddCodeFirstGrpc();
+        services.AddCratisChronicleApi();
         services.AddGrpcServices();
         services.AddSingleton(BinderConfiguration.Default);
     }
@@ -20,7 +22,7 @@ public class Startup
     public void Configure(IApplicationBuilder app)
     {
         app.UseRouting();
+        app.UseCratisChronicleApi();
         app.MapGrpcServices();
-        app.UseCratisApplicationModel();
     }
 }

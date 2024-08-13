@@ -13,7 +13,7 @@ namespace Cratis.Api.Events;
 /// Initializes a new instance of the <see cref="EventTypes"/> class.
 /// </remarks>
 /// <param name="eventTypes"><see cref="IEventTypes"/> service for actual registration.</param>
-[Route("/api/events/store/{eventStoreName}/types")]
+[Route("/api/event-store/{eventStoreName}/types")]
 public class EventTypes(IEventTypes eventTypes) : Controller
 {
     /// <summary>

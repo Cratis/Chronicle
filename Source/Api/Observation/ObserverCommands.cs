@@ -11,7 +11,7 @@ namespace Cratis.Api.Observation;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ObserverCommands"/> class.
 /// </remarks>
-[Route("/api/events/store/{eventStore}/observers")]
+[Route("/api/event-store/{eventStore}/observers")]
 public class ObserverCommands : ControllerBase
 {
     /// <summary>

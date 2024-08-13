@@ -8,7 +8,7 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { EventTypeWithSchemas } from './EventTypeWithSchemas';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/types/schemas');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/types/schemas');
 
 class AllEventTypesWithSchemasSortBy {
     private _type: SortingActionsForQuery<EventTypeWithSchemas[]>;
@@ -44,7 +44,7 @@ export interface AllEventTypesWithSchemasArguments {
 }
 
 export class AllEventTypesWithSchemas extends QueryFor<EventTypeWithSchemas[], AllEventTypesWithSchemasArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/types/schemas';
+    readonly route: string = '/api/event-store/{eventStore}/types/schemas';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventTypeWithSchemas[] = [];
     private readonly _sortBy: AllEventTypesWithSchemasSortBy;

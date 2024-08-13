@@ -8,7 +8,7 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { Projection } from './Projection';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/projections');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/projections');
 
 class AllProjectionsSortBy {
     private _id: SortingActionsForQuery<Projection[]>;
@@ -53,7 +53,7 @@ export interface AllProjectionsArguments {
 }
 
 export class AllProjections extends QueryFor<Projection[], AllProjectionsArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/projections';
+    readonly route: string = '/api/event-store/{eventStore}/projections';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Projection[] = [];
     private readonly _sortBy: AllProjectionsSortBy;

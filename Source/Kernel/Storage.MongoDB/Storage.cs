@@ -2,14 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
 using Cratis.Chronicle.Concepts.Projections.Json;
+using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -40,12 +43,32 @@ public class Storage(
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<EventStoreName>> GetEventStores()
+    {
+        var collection = GetCollection();
+        var result = await collection.FindAsync(_ => true);
+        return result.ToList().Select(_ => _.Name);
+    }
+
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<EventStoreName>> ObserveEventStores()
+    {
+        var collection = GetCollection();
+        return new TransformingSubject<IEnumerable<EventStore>, IEnumerable<EventStoreName>>(
+            collection.Observe(),
+            _ => _.Select(_ => _.Name));
+    }
+
+    /// <inheritdoc/>
     public IEventStoreStorage GetEventStore(EventStoreName eventStore)
     {
         if (_eventStores.TryGetValue(eventStore, out var storage))
         {
             return storage;
         }
+
+        var collection = GetCollection();
+        collection.ReplaceOne(_ => _.Name == eventStore, new EventStore(eventStore), new ReplaceOptions { IsUpsert = true });
 
         return _eventStores[eventStore] = new EventStoreStorage(
             eventStore,
@@ -58,4 +81,6 @@ public class Storage(
             sinkFactories,
             loggerFactory);
     }
+
+    IMongoCollection<EventStore> GetCollection() => database.GetCollection<EventStore>(WellKnownCollectionNames.EventStores);
 }

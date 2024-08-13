@@ -12,7 +12,7 @@ namespace Cratis.Api.EventSequences;
 /// <remarks>
 /// Initializes a new instance of the <see cref="EventSequenceQueries"/> class.
 /// </remarks>
-[Route("/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
+[Route("/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
 public class EventSequenceQueries : ControllerBase
 {
     /// <summary>

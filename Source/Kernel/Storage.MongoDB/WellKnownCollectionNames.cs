@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public static class WellKnownCollectionNames
 {
     /// <summary>
+    /// The collection that holds <see cref="EventStore"/>.
+    /// </summary>
+    public const string EventStores = "event-stores";
+
+    /// <summary>
     /// The collection that holds <see cref="Event"/>.
     /// </summary>
     public const string EventLog = "event-log";

@@ -7,7 +7,7 @@ import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActions
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/types/schemas/{eventTypeId}');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/types/schemas/{eventTypeId}');
 
 class GenerationSchemasForTypeSortBy {
 
@@ -26,7 +26,7 @@ export interface GenerationSchemasForTypeArguments {
 }
 
 export class GenerationSchemasForType extends QueryFor<any[], GenerationSchemasForTypeArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/types/schemas/{eventTypeId}';
+    readonly route: string = '/api/event-store/{eventStore}/types/schemas/{eventTypeId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: any[] = [];
     private readonly _sortBy: GenerationSchemasForTypeSortBy;

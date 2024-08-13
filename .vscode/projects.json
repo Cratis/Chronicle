@@ -6,8 +6,8 @@
     },
     {
         "name": "API",
-        "path": "${workspaceFolder}/Source/API",
-        "outputPath": "${workspaceFolder}/Source/API/bin/Debug/net8.0/Cratis.API.dll"
+        "path": "${workspaceFolder}/Source/Api",
+        "outputPath": "${workspaceFolder}/Source/Api/bin/Debug/net8.0/Cratis.Chronicle.Api.dll"
     },
     {
         "name": "ProxyGenerator",

@@ -12,7 +12,7 @@ namespace Cratis.Api.Jobs;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Jobs"/> class.
 /// </remarks>
-[Route("/api/events/store/{eventStore}/{namespace}/jobs")]
+[Route("/api/event-store/{eventStore}/{namespace}/jobs")]
 public class JobQueries() : ControllerBase
 {
     /// <summary>

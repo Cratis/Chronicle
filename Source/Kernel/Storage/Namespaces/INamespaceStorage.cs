@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 
 namespace Cratis.Chronicle.Storage.Namespaces;
@@ -30,4 +31,10 @@ public interface INamespaceStorage
     /// <param name="name">The name of the namespace to delete.</param>
     /// <returns>An asynchronous operation.</returns>
     Task Delete(EventStoreNamespaceName name);
+
+    /// <summary>
+    /// Observes all namespaces.
+    /// </summary>
+    /// <returns>Subject with all namespaces.</returns>
+    ISubject<IEnumerable<NamespaceState>> ObserveNamespaces();
 }

@@ -14,7 +14,7 @@ namespace Cratis.Api.Recommendations;
 /// <remarks>
 /// Initializes a new instance of the <see cref="RecommendationQueries"/> class.
 /// </remarks>
-[Route("/api/events/store/{eventStore}/{namespace}/recommendations")]
+[Route("/api/event-store/{eventStore}/{namespace}/recommendations")]
 public class RecommendationQueries() : ControllerBase
 {
     /// <summary>

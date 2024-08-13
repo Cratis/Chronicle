@@ -58,6 +58,7 @@ public static class Program
             .ConfigureWebHostDefaults(_ => _
                 .ConfigureKestrel(options =>
                 {
+                    options.ListenAnyIP(8080, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
                     options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
                     options.Limits.Http2.MaxStreamsPerConnection = 100;
                 })

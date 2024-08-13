@@ -9,7 +9,7 @@ namespace Cratis.Api.EventSequences;
 /// <summary>
 /// Represents the API for working with event logs.
 /// </summary>
-[Route("/api/events/store/sequences")]
+[Route("/api/event-store/sequences")]
 public class EventSequences : ControllerBase
 {
     /// <summary>

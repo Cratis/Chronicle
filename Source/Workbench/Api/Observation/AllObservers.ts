@@ -8,7 +8,7 @@ import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, 
 import { ObserverInformation } from '../Contracts/Observation/ObserverInformation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/observers/observe');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/{namespace}/observers/observe');
 
 class AllObserversSortBy {
     private _observerId: SortingActionsForObservableQuery<ObserverInformation[]>;
@@ -80,7 +80,7 @@ export interface AllObserversArguments {
     namespace: string;
 }
 export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllObserversArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/observers/observe';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/observers/observe';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverInformation[] = [];
     private readonly _sortBy: AllObserversSortBy;

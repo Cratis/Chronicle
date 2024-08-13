@@ -11,7 +11,7 @@ import { Causation } from '../Auditing/Causation';
 import { Identity } from '../Identities/Identity';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}');
 
 export interface IAppend {
     eventStore?: string;
@@ -38,7 +38,7 @@ export class AppendValidator extends CommandValidator {
 }
 
 export class Append extends Command<IAppend> implements IAppend {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new AppendValidator();
 

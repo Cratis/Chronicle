@@ -12,7 +12,7 @@ namespace Cratis.Api.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionQueries"/> class.
 /// </remarks>
-[Route("/api/events/store/{eventStore}/projections")]
+[Route("/api/event-store/{eventStore}/projections")]
 public class ProjectionQueries() : ControllerBase
 {
     /// <summary>

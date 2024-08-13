@@ -8,7 +8,7 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { AppendedEventWithJsonAsContent } from './AppendedEventWithJsonAsContent';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}');
 
 class GetAppendedEventsSortBy {
     private _metadata: SortingActionsForQuery<AppendedEventWithJsonAsContent[]>;
@@ -58,7 +58,7 @@ export interface GetAppendedEventsArguments {
 }
 
 export class GetAppendedEvents extends QueryFor<AppendedEventWithJsonAsContent[], GetAppendedEventsArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AppendedEventWithJsonAsContent[] = [];
     private readonly _sortBy: GetAppendedEventsSortBy;

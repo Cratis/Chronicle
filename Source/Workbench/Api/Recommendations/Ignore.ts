@@ -9,7 +9,7 @@ import { Validator } from '@cratis/applications/validation';
 import { Guid } from '@cratis/fundamentals';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/recommendations/{recommendationId}/ignore');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/{namespace}/recommendations/{recommendationId}/ignore');
 
 export interface IIgnore {
     eventStore?: string;
@@ -26,7 +26,7 @@ export class IgnoreValidator extends CommandValidator {
 }
 
 export class Ignore extends Command<IIgnore> implements IIgnore {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/recommendations/{recommendationId}/ignore';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/recommendations/{recommendationId}/ignore';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new IgnoreValidator();
 

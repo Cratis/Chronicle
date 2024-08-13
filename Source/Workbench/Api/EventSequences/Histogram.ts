@@ -8,7 +8,7 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { EventHistogramEntry } from './EventHistogramEntry';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}/histogram');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}/histogram');
 
 class HistogramSortBy {
     private _date: SortingActionsForQuery<EventHistogramEntry[]>;
@@ -40,7 +40,7 @@ class HistogramSortByWithoutQuery {
 }
 
 export class Histogram extends QueryFor<EventHistogramEntry[]> {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}/histogram';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}/histogram';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventHistogramEntry[] = [];
     private readonly _sortBy: HistogramSortBy;

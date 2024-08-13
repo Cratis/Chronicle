@@ -8,7 +8,7 @@ import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, 
 import { Namespace } from './Namespace';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/namespaces');
+const routeTemplate = Handlebars.compile('/api/event-store/{eventStore}/namespaces');
 
 class AllNamespacesSortBy {
     private _name: SortingActionsForObservableQuery<Namespace[]>;
@@ -39,8 +39,11 @@ class AllNamespacesSortByWithoutQuery {
     }
 }
 
-export class AllNamespaces extends ObservableQueryFor<Namespace[]> {
-    readonly route: string = '/api/namespaces';
+export interface AllNamespacesArguments {
+    eventStore: string;
+}
+export class AllNamespaces extends ObservableQueryFor<Namespace[], AllNamespacesArguments> {
+    readonly route: string = '/api/event-store/{eventStore}/namespaces';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Namespace[] = [];
     private readonly _sortBy: AllNamespacesSortBy;
@@ -53,6 +56,7 @@ export class AllNamespaces extends ObservableQueryFor<Namespace[]> {
 
     get requestArguments(): string[] {
         return [
+            'eventStore',
         ];
     }
 
@@ -64,11 +68,11 @@ export class AllNamespaces extends ObservableQueryFor<Namespace[]> {
         return this._sortBy;
     }
 
-    static use(sorting?: Sorting): [QueryResultWithState<Namespace[]>, SetSorting] {
-        return useObservableQuery<Namespace[], AllNamespaces>(AllNamespaces, undefined, sorting);
+    static use(args?: AllNamespacesArguments, sorting?: Sorting): [QueryResultWithState<Namespace[]>, SetSorting] {
+        return useObservableQuery<Namespace[], AllNamespaces, AllNamespacesArguments>(AllNamespaces, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, sorting?: Sorting): [QueryResultWithState<Namespace[]>, SetSorting, SetPage, SetPageSize] {
-        return useObservableQueryWithPaging<Namespace[], AllNamespaces>(AllNamespaces, new Paging(0, pageSize), undefined, sorting);
+    static useWithPaging(pageSize: number, args?: AllNamespacesArguments, sorting?: Sorting): [QueryResultWithState<Namespace[]>, SetSorting, SetPage, SetPageSize] {
+        return useObservableQueryWithPaging<Namespace[], AllNamespaces>(AllNamespaces, new Paging(0, pageSize), args, sorting);
     }
 }

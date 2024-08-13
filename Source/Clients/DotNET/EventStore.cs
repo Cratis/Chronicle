@@ -15,8 +15,6 @@ using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Transactions;
 using Cratis.Models;
-using Cratis.Types;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle;
@@ -77,7 +75,10 @@ public class EventStore : IEventStore
 
         Constraints = new Constraints(
             this,
-            serviceProvider.GetRequiredService<IInstancesOf<ICanProvideConstraints>>());
+            [
+                new UniqueConstraintProvider(clientArtifactsProvider, EventTypes),
+                new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes)
+            ]);
 
         EventLog = new EventLog(
             eventStoreName,

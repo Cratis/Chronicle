@@ -8,7 +8,7 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { EventSequenceInformation } from './EventSequenceInformation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/sequences');
+const routeTemplate = Handlebars.compile('/api/event-store/sequences');
 
 class AllEventSequencesSortBy {
     private _id: SortingActionsForQuery<EventSequenceInformation[]>;
@@ -40,7 +40,7 @@ class AllEventSequencesSortByWithoutQuery {
 }
 
 export class AllEventSequences extends QueryFor<EventSequenceInformation[]> {
-    readonly route: string = '/api/events/store/sequences';
+    readonly route: string = '/api/event-store/sequences';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventSequenceInformation[] = [];
     private readonly _sortBy: AllEventSequencesSortBy;
