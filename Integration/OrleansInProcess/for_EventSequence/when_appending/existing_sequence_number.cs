@@ -14,8 +14,10 @@ public class existing_sequence_number(existing_sequence_number.context fixture) 
     public class context(GlobalFixture globalFixture) : IntegrationTestSetup(globalFixture)
     {
         public Events.EventSourceId EventSourceId { get; } = "source";
-        public SomeEvent FirstEvent { get; private set; }
-        public SomeEvent SecondEvent { get; private set; }
+        public SomeEvent FirstEvent { get; private set; }
+        public SomeEvent SecondEvent { get; private set; }
+
+        public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
 
         public override async Task Establish()
         {
