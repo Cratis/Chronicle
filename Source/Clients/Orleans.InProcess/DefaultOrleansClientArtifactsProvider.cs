@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle;
 using Cratis.Chronicle.Orleans.Aggregates;
 using Cratis.Reflection;
 
@@ -46,6 +45,7 @@ public class DefaultOrleansClientArtifactsProvider(IClientArtifactsProvider prov
 
     /// <inheritdoc/>
     public IEnumerable<Type> ComplianceForPropertiesProviders => provider.ComplianceForPropertiesProviders;
+
     /// <inheritdoc/>
     public IEnumerable<Type> Rules => provider.Rules;
 
@@ -54,4 +54,16 @@ public class DefaultOrleansClientArtifactsProvider(IClientArtifactsProvider prov
 
     /// <inheritdoc/>
     public IEnumerable<Type> AggregateRoots => provider.AggregateRoots;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> ConstraintTypes => provider.ConstraintTypes;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> UniqueConstraints => provider.UniqueConstraints;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> UniqueEventTypeConstraints => provider.UniqueEventTypeConstraints;
+
+    /// <inheritdoc/>
+    public void Initialize() => provider.Initialize();
 }
