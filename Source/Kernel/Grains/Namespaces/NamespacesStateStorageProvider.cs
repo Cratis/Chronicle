@@ -27,8 +27,9 @@ public class NamespacesStateStorageProvider(IStorage storage) : IGrainStorage
         var namespaces = (await eventStore.Namespaces.GetAll()).Select(_ => new NamespaceState(_.Name, _.Created)).ToList();
         if (namespaces.Find(_ => _.Name == EventStoreNamespaceName.Default) == default)
         {
-            namespaces.Add(new NamespaceState(EventStoreNamespaceName.Default, DateTimeOffset.UtcNow));
-            await WriteStateAsync(stateName, grainId, grainState);
+            var @namespace = new NamespaceState(EventStoreNamespaceName.Default, DateTimeOffset.UtcNow);
+            namespaces.Add(@namespace);
+            await eventStore.Namespaces.Create(@namespace.Name, @namespace.Created);
         }
 
         actualGrainState.State = new NamespacesState
