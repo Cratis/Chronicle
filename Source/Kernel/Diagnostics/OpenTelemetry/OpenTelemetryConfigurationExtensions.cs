@@ -31,7 +31,7 @@ public static class OpenTelemetryConfigurationExtensions
     /// <param name="builder">The <see cref="IHostBuilder"/>.</param>
     /// <param name="configureTelemetry">The optional callback for configuring <see cref="OpenTelemetryOptions"/>.</param>
     /// <returns>The builder for continuation.</returns>
-    public static IHostBuilder AddCratisTelemetry(this IHostBuilder builder, Action<OpenTelemetryOptions>? configureTelemetry = default)
+    public static IHostBuilder ConfigureCratisTelemetry(this IHostBuilder builder, Action<OpenTelemetryOptions>? configureTelemetry = default)
     {
         builder.ConfigureServices((ctx, services) =>
             services.AddCratisTelemetry(ctx.Configuration, configureTelemetry));
