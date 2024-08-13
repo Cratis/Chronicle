@@ -17,12 +17,12 @@ namespace Cratis.Chronicle.XUnit.Events;
 /// </remarks>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
 /// <param name="events">Optional events to populate the event log with.</param>
-public class EventSequenceForTesting(IEventTypes eventTypes, params object[] events) : IEventSequence
+public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEventSourceId[] events) : IEventSequence
 {
     readonly AppendedEvent[] _events = events.Select((@event, index) => new AppendedEvent(
-            new((ulong)index, eventTypes.GetEventTypeFor(@event.GetType())),
-            EventContext.Empty,
-            @event.AsExpandoObject())).ToArray();
+            new((ulong)index, eventTypes.GetEventTypeFor(@event.Event.GetType())),
+            EventContext.Empty with { EventSourceId = @event.EventSourceId },
+            @event.Event.AsExpandoObject())).ToArray();
 
     /// <inheritdoc/>
     public EventSequenceId Id => EventSequenceId.Log;
@@ -49,7 +49,7 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params object[] eve
     public Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type) => Task.FromResult(EventSequenceNumber.First);
 
     /// <inheritdoc/>
-    public Task<bool> HasEventsFor(EventSourceId eventSourceId) => Task.FromResult(false);
+    public Task<bool> HasEventsFor(EventSourceId eventSourceId) => Task.FromResult(_events.Any(_ => _.Context.EventSourceId == eventSourceId));
 
     /// <inheritdoc/>
     public Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = null) => Task.CompletedTask;

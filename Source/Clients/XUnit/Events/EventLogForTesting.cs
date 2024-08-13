@@ -11,4 +11,4 @@ namespace Cratis.Chronicle.XUnit.Events;
 /// </summary>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>///
 /// <param name="events">Optional events to populate the event log with.</param>
-public class EventLogForTesting(IEventTypes eventTypes, params object[] events) : EventSequenceForTesting(eventTypes, events), IEventLog;
+public class EventLogForTesting(IEventTypes eventTypes, params EventForEventSourceId[] events) : EventSequenceForTesting(eventTypes, events), IEventLog;

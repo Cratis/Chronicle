@@ -32,7 +32,8 @@ public static class AggregateRootTestSiloExtensions
     public static async Task<TAggregateRoot> CreateAggregateRoot<TAggregateRoot>(this TestKitSilo silo, EventSourceId eventSourceId, params object[] events)
         where TAggregateRoot : AggregateRoot, IGrainWithStringKey
     {
-        var eventLog = new EventLogForTesting(Defaults.Instance.EventTypes, events);
+        var actualEvents = events.Select(_ => new EventForEventSourceId(eventSourceId, _, new Causation(DateTimeOffset.UtcNow, "Test", new Dictionary<string, string>()))).ToArray();
+        var eventLog = new EventLogForTesting(Defaults.Instance.EventTypes, actualEvents);
         var causationManager = new CausationManagerForTesting();
         var aggregateRootEventHandlersFactory = new AggregateRootEventHandlersFactory(Defaults.Instance.EventTypes);
         silo.AddService(Defaults.Instance.EventSerializer);
