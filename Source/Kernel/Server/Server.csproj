@@ -46,6 +46,7 @@
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <ProjectReference Include="../Setup/Setup.csproj" />
+        <ProjectReference Include="../Diagnostics/Diagnostics.csproj" />
     </ItemGroup>
 
     <!-- General -->

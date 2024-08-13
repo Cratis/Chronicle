@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using Cratis.Json;
@@ -34,6 +35,7 @@ public static class Program
                 _.ValidateScopes = false;
                 _.ValidateOnBuild = false;
             })
+            .ConfigureCratisTelemetry()
             .UseCratisApplicationModel()
             .UseLogging()
             .UseCratisMongoDB(mongo =>
