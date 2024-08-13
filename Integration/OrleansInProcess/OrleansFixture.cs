@@ -91,6 +91,11 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
 
     public void SetName(string name) => _name = name;
 
+    protected void EnsureBuilt()
+    {
+        Services.GetRequiredService<IEventStore>();
+    }
+
     protected override void Dispose(bool disposing)
     {
         GlobalFixture.PerformBackup(_name);

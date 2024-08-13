@@ -23,6 +23,7 @@ public abstract class IntegrationTestSetup(GlobalFixture globalFixture) : Orlean
 
     public async Task InitializeAsync()
     {
+        EnsureBuilt();
         await Establish();
         await Because();
     }
