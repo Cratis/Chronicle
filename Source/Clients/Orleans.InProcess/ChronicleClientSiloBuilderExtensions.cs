@@ -92,7 +92,6 @@ public static class ChronicleClientSiloBuilderExtensions
 
     static void ConfigureChronicle(this ISiloBuilder builder, Action<IChronicleBuilder>? configureChronicle = default)
     {
-        builder.AddTelemetry();
         builder.AddIncomingGrainCallFilter<UnitOfWorkIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UnitOfWorkOutgoingCallFilter>();
         builder.AddChronicleToSilo(configureChronicle);

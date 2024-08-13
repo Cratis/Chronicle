@@ -101,6 +101,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     protected virtual void ConfigureServices(IServiceCollection services)
     {
     }
+
     public virtual IEnumerable<Type> EventTypes { get; } = [];
     public virtual IEnumerable<Type> Projections { get; } = [];
     public virtual IEnumerable<Type> Adapters { get; } = [];
@@ -113,4 +114,10 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public virtual IEnumerable<Type> AdditionalEventInformationProviders { get; } = [];
     public virtual IEnumerable<Type> AggregateRoots { get; } = [];
     public virtual IEnumerable<Type> AggregateRootStateTypes { get; } = [];
+    public virtual IEnumerable<Type> ConstraintTypes { get; } = [];
+    public virtual IEnumerable<Type> UniqueConstraints { get; } = [];
+    public virtual IEnumerable<Type> UniqueEventTypeConstraints { get; } = [];
+    public void Initialize()
+    {
+    }
 }

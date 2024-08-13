@@ -4,8 +4,7 @@
 using System.Diagnostics.Metrics;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -29,8 +28,8 @@ public static class TelemetryConfigurationExtensions
 
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
-            services
-                .AddOpenTelemetry()
+            services.AddOpenTelemetry()
+                .ConfigureResource(resource => resource.AddService(serviceName: "Test"))
                 .WithTracing(tracing =>
                 {
                     tracing
