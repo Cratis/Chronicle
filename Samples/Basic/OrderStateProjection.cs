@@ -5,16 +5,16 @@ using Cratis.Chronicle.Projections;
 
 namespace Basic;
 
-// public class OrderStateProjection : IProjectionFor<OrderState>
-// {
-//     public void Define(IProjectionBuilderFor<OrderState> builder) => builder
-//         .Children(_ => _.CartItems, cb => cb
-//             .IdentifiedBy(m => m.MaterialId)
-//             .From<ItemAddedToCart>(_ => _
-//                 .UsingKey(e => e.MaterialId)
-//                 .Set(m => m.Quantity).To(e => e.Quantity))
-//             .RemovedWith<ItemRemovedFromCart>()
-//             .From<QuantityAdjustedForItemInCart>(_ => _
-//                 .UsingKey(e => e.MaterialId)
-//                 .Set(m => m.Quantity).To(e => e.Quantity)));
-// }
+public class OrderStateProjection : IProjectionFor<OrderState>
+{
+    public void Define(IProjectionBuilderFor<OrderState> builder) => builder
+        .Children(_ => _.CartItems, cb => cb
+            .IdentifiedBy(m => m.MaterialId)
+            .From<ItemAddedToCart>(_ => _
+                .UsingKey(e => e.MaterialId)
+                .Set(m => m.Quantity).To(e => e.Quantity))
+            .RemovedWith<ItemRemovedFromCart>()
+            .From<QuantityAdjustedForItemInCart>(_ => _
+                .UsingKey(e => e.MaterialId)
+                .Set(m => m.Quantity).To(e => e.Quantity)));
+}

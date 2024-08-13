@@ -6,8 +6,7 @@ using Cratis.Chronicle.Reducers;
 
 namespace Basic;
 
-public class OrderStateReducer
-// : IReducerFor<OrderState>
+public class OrderStateReduce // : IReducerFor<OrderState>
 {
     public Task<OrderState> ItemAdded(ItemAddedToCart @event, OrderState? initial, EventContext context)
     {

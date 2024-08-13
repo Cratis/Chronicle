@@ -36,7 +36,7 @@ async Task AddItemToCart()
 
 async Task AddBulkOfItemsToCart()
 {
-    var events = Enumerable.Range(1, 1000).Select(_ => new ItemAddedToCart(
+    var events = Enumerable.Range(1, 10).Select(_ => new ItemAddedToCart(
         PersonId: new(Guid.NewGuid()),
         MaterialId: new(Guid.NewGuid()),
         Quantity: 1,
@@ -53,7 +53,7 @@ async Task AddBulkOfItemsToCart()
 
 async Task AddManyItemsToCart()
 {
-    var events = Enumerable.Range(1, 1000).Select(_ => new ItemAddedToCart(
+    var events = Enumerable.Range(1, 10).Select(_ => new ItemAddedToCart(
         PersonId: new(Guid.NewGuid()),
         MaterialId: new(Guid.NewGuid()),
         Quantity: 1,
