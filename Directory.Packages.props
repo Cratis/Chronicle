@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>12.1.7</ApplicationModel>
+    <ApplicationModel>12.1.10</ApplicationModel>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
@@ -38,7 +38,7 @@
     <PackageVersion Include="protobuf-net.Grpc" Version="1.1.1" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.1.1" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.65.0" />
-    <PackageVersion Include="mongodb.driver" Version="2.28.0" />
+    <PackageVersion Include="mongodb.driver" Version="2.25.0" />
     <PackageVersion Include="serilog" Version="4.0.1" />
     <PackageVersion Include="Serilog.AspNetCore" Version="8.0.2" />
     <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
