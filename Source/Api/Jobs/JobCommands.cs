@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Api.Jobs;
 

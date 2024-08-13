@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Api.EventTypes;
 

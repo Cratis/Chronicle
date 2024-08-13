@@ -61,7 +61,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                     value={viewModel.observers}
                     rows={100}
                     paginator
-                    // alwaysShowPaginator={false}
+                    alwaysShowPaginator={false}
                     scrollable
                     scrollHeight={'flex'}
                     selectionMode='single'

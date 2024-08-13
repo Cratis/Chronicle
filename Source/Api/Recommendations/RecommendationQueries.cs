@@ -4,7 +4,6 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Recommendations;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Api.Recommendations;
 

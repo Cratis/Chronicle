@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Recommendations;
 using Cratis.Chronicle.Grains.Recommendations;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Api.Recommendations;
 

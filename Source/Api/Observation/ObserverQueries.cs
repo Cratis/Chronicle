@@ -3,7 +3,6 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Observation;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Api.Observation;
 
