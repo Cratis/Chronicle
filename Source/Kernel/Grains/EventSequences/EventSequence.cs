@@ -272,14 +272,10 @@ public class EventSequence(
                 causedBy));
         }
 
-        if (results.TrueForAll(_ => _.IsSuccess))
-        {
-            return AppendManyResult.Success(correlationId, []);
-        }
-
         return new AppendManyResult
         {
             CorrelationId = correlationId,
+            SequenceNumbers = results.Select(r => r.SequenceNumber).ToImmutableList(),
             ConstraintViolations = results.SelectMany(r => r.ConstraintViolations).ToImmutableList(),
             Errors = results.SelectMany(r => r.Errors).ToImmutableList()
         };
