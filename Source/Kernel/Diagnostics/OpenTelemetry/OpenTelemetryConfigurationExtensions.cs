@@ -6,7 +6,6 @@ using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Metrics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -34,7 +33,9 @@ public static class OpenTelemetryConfigurationExtensions
     /// <returns>The builder for continuation.</returns>
     public static IServiceCollection AddChronicleTelemetry(this IServiceCollection services, IConfiguration configuration, Action<OpenTelemetryOptions>? configureTelemetry = default)
     {
+#pragma warning disable CA2000 // Dispose objects before losing scope
         var meter = new Meter("Cratis.Chronicle");
+#pragma warning restore CA2000 // Dispose objects before losing scope
         services.AddSingleton(meter);
         services.AddSingleton(typeof(Meter<>));
         var options = configuration.GetSection(ConfigSection).Get<OpenTelemetryOptions>() ?? new OpenTelemetryOptions();

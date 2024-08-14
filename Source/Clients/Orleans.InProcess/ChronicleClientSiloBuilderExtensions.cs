@@ -5,7 +5,6 @@ extern alias Server;
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;

@@ -6,7 +6,7 @@ using System.Diagnostics;
 namespace Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 
 /// <summary>
-/// Holds information about the cratis <see cref="ActivitySource"/>.
+/// Holds information about the Chronicle <see cref="ActivitySource"/>.
 /// </summary>
 public static class ChronicleActivity
 {
@@ -14,17 +14,9 @@ public static class ChronicleActivity
     /// The <see cref="ActivitySource"/> name.
     /// </summary>
     public const string SourceName = "Cratis.Chronicle";
+
+    /// <summary>
+    /// Gets the <see cref="ActivitySource"/> for Chronicle.
+    /// </summary>
     public static readonly ActivitySource Source = new(SourceName);
-
-    public static bool TryToActivityTraceId(this CorrelationId correlationId, out ActivityTraceId? traceId)
-    {
-        traceId = null;
-        if (Guid.TryParse(correlationId.Value, out var guid))
-        {
-            traceId = ActivityTraceId.CreateFromBytes(guid.ToByteArray());
-        }
-
-        return traceId.HasValue;
-    }
 }
-
