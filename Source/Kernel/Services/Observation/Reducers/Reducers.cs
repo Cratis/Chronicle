@@ -15,6 +15,7 @@ using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
 using NJsonSchema;
 using ProtoBuf.Grpc;
+using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
 
 namespace Cratis.Chronicle.Services.Observation.Reducers;
 
@@ -54,12 +55,15 @@ public class Reducers(
                         register.Namespace,
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
-                    clientObserver = grainFactory.GetGrain<IReducer>(key);
-                    var reducerDefinition = register.Reducer.ToChronicle();
-                    clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+                    using (Tracing.RegisterObserver(key, ObserverType.Reducer))
+                    {
+                        clientObserver = grainFactory.GetGrain<IReducer>(key);
+                        var reducerDefinition = register.Reducer.ToChronicle();
+                        clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
 
-                    var modelSchema = JsonSchema.FromJsonAsync(reducerDefinition.Model.Schema).GetAwaiter().GetResult();
-                    model = new Model(reducerDefinition.Model.Name, modelSchema);
+                        var modelSchema = JsonSchema.FromJsonAsync(reducerDefinition.Model.Schema).GetAwaiter().GetResult();
+                        model = new Model(reducerDefinition.Model.Name, modelSchema);
+                    }
 
                     registrationTcs.SetResult(register);
                     break;
