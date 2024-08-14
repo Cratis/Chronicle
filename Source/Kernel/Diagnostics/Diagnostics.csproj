@@ -10,5 +10,9 @@
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
         <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>
 </Project>

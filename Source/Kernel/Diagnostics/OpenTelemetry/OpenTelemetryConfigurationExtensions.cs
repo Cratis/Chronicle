@@ -28,24 +28,11 @@ public static class OpenTelemetryConfigurationExtensions
     /// <summary>
     /// Sets up open telemetry for Cratis.
     /// </summary>
-    /// <param name="builder">The <see cref="IHostBuilder"/>.</param>
-    /// <param name="configureTelemetry">The optional callback for configuring <see cref="OpenTelemetryOptions"/>.</param>
-    /// <returns>The builder for continuation.</returns>
-    public static IHostBuilder ConfigureCratisTelemetry(this IHostBuilder builder, Action<OpenTelemetryOptions>? configureTelemetry = default)
-    {
-        builder.ConfigureServices((ctx, services) =>
-            services.AddCratisTelemetry(ctx.Configuration, configureTelemetry));
-        return builder;
-    }
-
-    /// <summary>
-    /// Sets up open telemetry for Cratis.
-    /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/>.</param>
     /// <param name="configuration">The <see cref="IConfiguration"/>.</param>
     /// <param name="configureTelemetry">The optional callback for configuring <see cref="OpenTelemetryOptions"/>.</param>
     /// <returns>The builder for continuation.</returns>
-    public static IServiceCollection AddCratisTelemetry(this IServiceCollection services, IConfiguration configuration, Action<OpenTelemetryOptions>? configureTelemetry = default)
+    public static IServiceCollection AddChronicleTelemetry(this IServiceCollection services, IConfiguration configuration, Action<OpenTelemetryOptions>? configureTelemetry = default)
     {
         var meter = new Meter("Cratis.Chronicle");
         services.AddSingleton(meter);
@@ -71,6 +58,7 @@ public static class OpenTelemetryConfigurationExtensions
                     .AddSource(CratisActivity.SourceName)
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation()
+                    .AddGrpcClientInstrumentation()
                     .AddOtlpExporter(_ => ConfigureExporter(_, options));
             });
         }
@@ -81,6 +69,7 @@ public static class OpenTelemetryConfigurationExtensions
                 metrics
                     .AddMeter(meter.Name)
                     .AddMeter("Microsoft.Orleans")
+                    .AddMeter("Grpc.AspNetCore.Server")
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation()
                     .AddOtlpExporter(_ => ConfigureExporter(_, options));
