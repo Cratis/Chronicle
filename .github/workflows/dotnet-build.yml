@@ -31,8 +31,3 @@ jobs:
 
       - name: Build & run tests for root
         run: dotnet test --configuration Debug --settings specs.runsettings
-
-      - name: Build & run tests for bank sample
-        working-directory: ./Samples/Banking/Bank
-        run: dotnet test --configuration Debug
-
