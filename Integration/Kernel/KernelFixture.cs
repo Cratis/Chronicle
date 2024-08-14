@@ -9,7 +9,7 @@ namespace Cratis.Chronicle;
 
 public class KernelFixture : IDisposable
 {
-    public const string HostName = "cratis";
+    public const string HostName = "chronicle";
 
     string _name = string.Empty;
 
@@ -17,7 +17,7 @@ public class KernelFixture : IDisposable
     {
         var dockerBuildContextPath = DirectoryHelper.GetDirectoryThatHasSubDirectory(".git");
 
-        const string imageName = "cratis";
+        const string imageName = "chronicle";
 
         var image = new ImageFromDockerfileBuilder()
             .WithName(imageName)

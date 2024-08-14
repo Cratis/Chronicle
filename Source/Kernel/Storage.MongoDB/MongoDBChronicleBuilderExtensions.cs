@@ -32,9 +32,9 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<IStorage, Storage.MongoDB.Storage>();
         });
 
-        BsonSerializer.RegisterSerializer(new JsonElementSerializer());
-        BsonSerializer.RegisterSerializer(new UriSerializer());
-        BsonSerializer.RegisterSerializer(new ConstraintDefinitionSerializer());
+        BsonSerializer.TryRegisterSerializer(new JsonElementSerializer());
+        BsonSerializer.TryRegisterSerializer(new UriSerializer());
+        BsonSerializer.TryRegisterSerializer(new ConstraintDefinitionSerializer());
         builder.ConfigureServices(services => services.AddSingleton<IReminderTable, ReminderTable>());
         return builder;
     }

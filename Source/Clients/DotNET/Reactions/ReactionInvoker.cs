@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Conventions;
 using Cratis.Chronicle.Events;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactions;
@@ -55,13 +56,12 @@ public class ReactionInvoker : IReactionInvoker
     {
         try
         {
-            var actualReaction = _serviceProvider.GetService(_targetType);
+            var actualReaction = _serviceProvider.GetRequiredService(_targetType);
             var eventType = content.GetType();
 
-            if (_methodsByEventType.ContainsKey(eventType))
+            if (_methodsByEventType.TryGetValue(eventType, out var method))
             {
                 Task returnValue;
-                var method = _methodsByEventType[eventType];
                 var parameters = method.GetParameters();
 
                 await _middlewares.BeforeInvoke(eventContext, content);

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Integration.Orleans.InProcess</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Integration.Orleans.InProcess</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Base\Base.csproj" />
+      <ProjectReference Include="..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
+      <ProjectReference Include="..\..\Source\Clients\Orleans.InProcess\Orleans.InProcess.csproj" />
+      <ProjectReference Include="..\..\Source\Kernel\Storage.MongoDB\Storage.MongoDB.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+      <PackageReference Include="Cratis.Applications.MongoDB" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="for_Observers\when_appending_event\" />
+    </ItemGroup>
+
+</Project>

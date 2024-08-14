@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Observation.Reactions;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reactions.Clients;
 using ProtoBuf.Grpc;
+using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
 
 namespace Cratis.Chronicle.Services.Observation.Reactions;
 
@@ -31,7 +32,6 @@ public class Reactions(
         var registrationTcs = new TaskCompletionSource<RegisterReaction>();
         TaskCompletionSource<ObserverSubscriberResult>? observationResultTcs = null;
         TaskCompletionSource<IEnumerable<AppendedEvent>>? eventsTcs;
-
         IReaction clientObserver = null!;
 
         messages.Subscribe(message =>
@@ -45,9 +45,11 @@ public class Reactions(
                         register.Namespace,
                         register.EventSequenceId,
                         register.ConnectionId);
-                    clientObserver = grainFactory.GetGrain<IReaction>(key);
-                    clientObserver.Start(register.EventTypes.Select(_ => _.ToChronicle()).ToArray());
-
+                    using (Tracing.RegisterObserver(key, ObserverType.Client))
+                    {
+                        clientObserver = grainFactory.GetGrain<IReaction>(key);
+                        clientObserver.Start(register.EventTypes.Select(_ => _.ToChronicle()).ToArray());
+                    }
                     registrationTcs.SetResult(register);
                     break;
 

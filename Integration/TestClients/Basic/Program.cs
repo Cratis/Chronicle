@@ -12,12 +12,11 @@ CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication
                 .CreateBuilder(args)
-                .UseCratis();
+                .UseCratisChronicle();
 
-builder.Host.UseMongoDB();
 
 var app = builder.Build();
 app.UseRouting();
-app.UseCratis();
+app.UseCratisChronicle();
 
 app.Run();
