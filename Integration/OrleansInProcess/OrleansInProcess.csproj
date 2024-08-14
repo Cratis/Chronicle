@@ -18,7 +18,6 @@
 
     <ItemGroup>
       <Folder Include="for_Observers\when_appending_event\" />
-      <Folder Include="for_Observers\when_subscribing\" />
     </ItemGroup>
 
 </Project>
