@@ -85,8 +85,11 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, "sample", Concepts.EventStoreNamespaceName.Default);
 
     public IObserver GetObserverFor<T>() => Services.GetRequiredService<IGrainFactory>()
-        .GetGrain<IObserver>(new ObserverKey(typeof(T).GetReactionId().Value, "sample",
-            Concepts.EventStoreNamespaceName.Default, EventSequenceId.Log));
+        .GetGrain<IObserver>(
+            new ObserverKey(typeof(T).GetReactionId().Value,
+            "sample",
+            Concepts.EventStoreNamespaceName.Default,
+            EventSequenceId.Log));
     public GlobalFixture GlobalFixture { get; } = globalFixture;
 
     public void SetName(string name) => _name = name;

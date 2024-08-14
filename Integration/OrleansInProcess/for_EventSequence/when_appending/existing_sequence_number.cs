@@ -34,15 +34,11 @@ public class existing_sequence_number(existing_sequence_number.context fixture) 
         }
     }
 
-    [Fact]
-    Task should_have_correct_next_sequence_number() => Fixture.ShouldHaveCorrectNextSequenceNumber(2);
+    [Fact] Task should_have_correct_next_sequence_number() => Fixture.ShouldHaveCorrectNextSequenceNumber(2);
 
-    [Fact]
-    Task should_have_correct_tail_sequence_number() => Fixture.ShouldHaveCorrectTailSequenceNumber(1);
+    [Fact] Task should_have_correct_tail_sequence_number() => Fixture.ShouldHaveCorrectTailSequenceNumber(1);
 
-    [Fact]
-    Task should_have_the_first_event_stored() => Fixture.ShouldHaveStoredCorrectEvent<SomeEvent>(0, Fixture.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Fixture.FirstEvent.Content));
+    [Fact] Task should_have_the_first_event_stored() => Fixture.ShouldHaveStoredCorrectEvent<SomeEvent>(0, Fixture.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Fixture.FirstEvent.Content));
 
-    [Fact]
-    Task should_have_the_second_event_stored() => Fixture.ShouldHaveStoredCorrectEvent<SomeEvent>(1, Fixture.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Fixture.SecondEvent.Content));
+    [Fact] Task should_have_the_second_event_stored() => Fixture.ShouldHaveStoredCorrectEvent<SomeEvent>(1, Fixture.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Fixture.SecondEvent.Content));
 }

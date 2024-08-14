@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Base;
 /// <summary>
 /// Represents a global fixture for the test run.
 /// </summary>
-public class GlobalFixture : IDisposable
+public class GlobalFixture : IAsyncDisposable
 {
     public const string HostName = "mongo";
 
@@ -55,9 +55,9 @@ public class GlobalFixture : IDisposable
     public MongoDBDatabase EventStoreForNamespace { get; }
     public MongoDBDatabase ReadModels { get; }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        MongoDBContainer.DisposeAsync();
+        await MongoDBContainer.DisposeAsync();
     }
 
     public void PerformBackup(string? prefix = null)

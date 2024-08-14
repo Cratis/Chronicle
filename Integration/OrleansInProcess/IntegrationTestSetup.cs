@@ -28,5 +28,5 @@ public abstract class IntegrationTestSetup(GlobalFixture globalFixture) : Orlean
         await Because();
     }
 
-    public Task DisposeAsync() => Destroy();
+    public new Task DisposeAsync() => Destroy();
 }
