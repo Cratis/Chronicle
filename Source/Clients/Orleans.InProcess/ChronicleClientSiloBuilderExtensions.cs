@@ -98,7 +98,6 @@ public static class ChronicleClientSiloBuilderExtensions
         builder.AddStartupTask<ChronicleStartupTask>();
         builder.ConfigureServices(services =>
         {
-            services.AddCratisTelemetry(builder.Configuration);
             services.AddTypeDiscovery();
             services.AddBindingsByConvention();
             services.AddSelfBindings();

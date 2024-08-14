@@ -35,7 +35,6 @@ public static class Program
                 _.ValidateScopes = false;
                 _.ValidateOnBuild = false;
             })
-            .ConfigureCratisTelemetry()
             .UseCratisApplicationModel()
             .UseLogging()
             .UseCratisMongoDB(mongo =>
