@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 
@@ -15,7 +16,7 @@ public interface IObserverStorage
     /// Gets an <see cref="IObservable{T}"/> for all instances of <see cref="ObserverInformation"/>.
     /// </summary>
     /// <returns>An observable of collection of <see cref="ObserverInformation"/>.</returns>
-    IObservable<IEnumerable<ObserverInformation>> ObserveAll();
+    ISubject<IEnumerable<ObserverInformation>> ObserveAll();
 
     /// <summary>
     /// Get the information for a specific observer.

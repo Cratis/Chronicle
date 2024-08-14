@@ -5,9 +5,9 @@ import { withViewModel } from '@cratis/applications.react.mvvm';
 import { ObserversViewModel } from './ObserversViewModel';
 import { DataTable, DataTableFilterMeta } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { ObserverType } from 'Api/Contracts/Observation/ObserverType';
+import { ObserverType } from 'Api/Concepts/Observation/ObserverType';
 import { Page } from 'Components/Common/Page';
-import { ObserverInformation } from 'Api/Contracts/Observation/ObserverInformation';
+import { ObserverInformation } from 'Api/Concepts/Observation/ObserverInformation';
 import { FilterMatchMode } from 'primereact/api';
 import { useState } from 'react';
 import { ColumnFilterProps } from 'Components/ColumnFilter/ColumnFilter';
@@ -74,14 +74,19 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                     globalFilterFields={['name', 'type', 'runningState']}
                     emptyMessage='No observers found'
                 >
-                    <Column field='name' header={strings.eventStore.namespaces.observers.columns.name} sortable />
-                    <Column field='type' header={strings.eventStore.namespaces.observers.columns.observerType} sortable body={observerType} />
+                    <Column field='observerId' header={strings.eventStore.namespaces.observers.columns.id} sortable />
+                    <Column
+                        field='type'
+                        header={strings.eventStore.namespaces.observers.columns.observerType}
+                        sortable
+                        body={observerType} />
+
                     <Column
                         field='nextEventSequenceNumber'
                         dataType='numeric'
                         header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
-                        sortable
-                    />
+                        sortable />
+
                     <Column
                         {...ColumnFilterProps}
                         field='runningState'
@@ -89,8 +94,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                         sortable
                         body={(data: ObserverInformation) => getObserverRunningStateAsText(data.runningState)}
                         filterElement={ObserverRunningStateFilterTemplate}
-                        showFilterMatchModes={false}
-                    />
+                        showFilterMatchModes={false} />
                 </DataTable>
             </div>
         </Page>

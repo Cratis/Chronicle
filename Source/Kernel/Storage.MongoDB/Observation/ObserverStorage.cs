@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage.Observation;
 using MongoDB.Driver;
 
@@ -22,10 +24,12 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
     IMongoCollection<ObserverState> Collection => database.GetObserverStateCollection();
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ObserverInformation>> ObserveAll()
+    public ISubject<IEnumerable<ObserverInformation>> ObserveAll()
     {
         var observerInformation = GetAll().GetAwaiter().GetResult();
-        return Collection.Observe(observerInformation, HandleChangesForObservers);
+        return new TransformingSubject<IEnumerable<ObserverState>, IEnumerable<ObserverInformation>>(
+            Collection.Observe(),
+            observers => observers.Select(_ => ToObserverInformation(_)).ToArray());
     }
 
     /// <inheritdoc/>
@@ -80,25 +84,6 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
             state!,
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
-
-    void HandleChangesForObservers(IChangeStreamCursor<ChangeStreamDocument<ObserverState>> cursor, List<ObserverInformation> observers)
-    {
-        foreach (var changedObserver in cursor.Current.Select(_ => _.FullDocument))
-        {
-            var observerInformation = ToObserverInformation(changedObserver);
-            var observer = observers.Find(_ => _.ObserverId == changedObserver.ObserverId);
-            if (observer is not null)
-            {
-                var index = observers.IndexOf(observer);
-                observers[index] = observerInformation;
-            }
-            else
-            {
-                observers.Add(observerInformation);
-            }
-        }
-    }
-
     ObserverInformation ToObserverInformation(ObserverState state) => new(
         state.ObserverId,
         state.EventSequenceId,

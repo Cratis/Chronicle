@@ -21,16 +21,7 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     /// <inheritdoc/>
     public IObservable<IEnumerable<FailedPartition>> ObserveAllFor(ObserverId? observerId = default)
     {
-        var filter = observerId == default || observerId == ObserverId.Unspecified ?
-            Builders<FailedPartition>.Filter.Empty :
-            Builders<FailedPartition>.Filter.Eq(_ => _.ObserverId, observerId);
-
-        var observers = Collection.Find(filter).ToList();
-        return Collection.Observe(observers, (cursor, items) =>
-        {
-            items.Clear();
-            items.AddRange(Collection.Find(filter).ToList());
-        });
+        throw new NotImplementedException();
     }
 
     /// <inheritdoc/>

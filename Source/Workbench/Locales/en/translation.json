@@ -40,7 +40,7 @@
             "observers": {
                 "title": "Observers",
                 "columns": {
-                    "name": "Name",
+                    "id": "Identifier",
                     "observerType": "Observer type",
                     "state": "State",
                     "nextEventSequenceNumber": "Next event sequence number"
