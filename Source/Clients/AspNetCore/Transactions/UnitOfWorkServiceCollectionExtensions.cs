@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.AspNetCore.Transactions;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
