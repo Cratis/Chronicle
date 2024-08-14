@@ -20,7 +20,7 @@ public static class Tracing
     /// <returns>The started <see cref="Activity"/>.</returns>
     public static Activity? RegisterObserver(ConnectedObserverKey key, ObserverType observerType)
     {
-        var activity = CratisActivity.Source.StartActivity(nameof(RegisterObserver), ActivityKind.Server);
+        var activity = ChronicleActivity.Source.StartActivity(nameof(RegisterObserver), ActivityKind.Server);
         activity?.Tag(key, observerType);
         return activity;
     }

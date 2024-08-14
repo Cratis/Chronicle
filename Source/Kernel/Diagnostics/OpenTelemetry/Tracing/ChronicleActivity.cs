@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 /// <summary>
 /// Holds information about the cratis <see cref="ActivitySource"/>.
 /// </summary>
-public static class CratisActivity
+public static class ChronicleActivity
 {
     /// <summary>
     /// The <see cref="ActivitySource"/> name.

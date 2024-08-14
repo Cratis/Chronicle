@@ -55,7 +55,7 @@ public static class OpenTelemetryConfigurationExtensions
                 tracing
                     .AddSource("Microsoft.Orleans.Runtime")
                     .AddSource("Microsoft.Orleans.Application")
-                    .AddSource(CratisActivity.SourceName)
+                    .AddSource(ChronicleActivity.SourceName)
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation()
                     .AddGrpcClientInstrumentation()
