@@ -2,18 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Api.Observation;
 
 /// <summary>
 /// Represents the API for working with observers.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ObserverQueries"/> class.
-/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/observers")]
-public class ObserverQueries() : ControllerBase
+public class ObserverQueries(IStorage storage) : ControllerBase
 {
     /// <summary>
     /// Get all observers for an event store and namespace.
@@ -38,6 +37,7 @@ public class ObserverQueries() : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace)
     {
-        throw new NotImplementedException();
+        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
+        return namespaceStorage.Observers.ObserveAll();
     }
 }
