@@ -26,14 +26,15 @@ public class Users(IAggregateRootFactory aggregateRootFactory, IEventLog eventLo
     [HttpGet("onboard-events")]
     public async Task FullOnboardingEvents()
     {
-        var userId = Guid.Parse("3444635c-8174-47b3-99dd-a27cd3ea80e4");
+        var userId = Guid.NewGuid();
+        //Guid.Parse("3444635c-8174-47b3-99dd-a27cd3ea80e4");
         var groupId = Guid.NewGuid();
 
         var result = await eventLog.Append(userId, new Events.Users.OnboardingStarted("My User", "asdasd", "asdasdasd"));
-        result = await eventLog.Append(userId, new Events.Users.PasswordChanged("awesome"));
-        result = await eventLog.Append(groupId, new Events.Groups.GroupAdded("My Group"));
-        result = await eventLog.Append(groupId, new Events.Groups.UserAddedToGroup(userId));
-        result = await eventLog.Append(userId, new Events.Users.OnboardingCompleted());
+        // result = await eventLog.Append(userId, new Events.Users.PasswordChanged("awesome"));
+        // result = await eventLog.Append(groupId, new Events.Groups.GroupAdded("My Group"));
+        // result = await eventLog.Append(groupId, new Events.Groups.UserAddedToGroup(userId));
+        // result = await eventLog.Append(userId, new Events.Users.OnboardingCompleted());
     }
 
     [HttpGet("rename")]
