@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Base;
 
-namespace Cratis.Chronicle.Integration.OrleansInProcess.for_Observers.when_appending_event;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Observers.when_appending_event;
 
 [Collection(GlobalCollection.Name)]
 public class and_waiting_for_observer_to_be_active(and_waiting_for_observer_to_be_active.context fixture) : OrleansTest<and_waiting_for_observer_to_be_active.context>(fixture)

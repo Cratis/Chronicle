@@ -81,7 +81,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Integration", "Integration"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Base", "Integration\Base\Base.csproj", "{9805E0B8-7D8B-45D3-9E54-1EF6A1CBDF16}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrleansInProcess", "Integration\OrleansInProcess\OrleansInProcess.csproj", "{0220580C-C69C-4803-8C51-B2A0E3A6AFC1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.InProcess", "Integration\Orleans.InProcess\Orleans.InProcess.csproj", "{0220580C-C69C-4803-8C51-B2A0E3A6AFC1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Diagnostics", "Source\Kernel\Diagnostics\Diagnostics.csproj", "{ED780880-A1E0-4692-86E4-42086D2C194F}"
 EndProject

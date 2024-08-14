@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Integration.Base;
 
-namespace Cratis.Chronicle.Integration.OrleansInProcess.for_EventSequence.when_appending;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
 
 [Collection(GlobalCollection.Name)]
 public class an_event(an_event.context fixture) : OrleansTest<an_event.context>(fixture)

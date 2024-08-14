@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Integration.OrleansInProcess;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
 public static class TestHelpers
 {

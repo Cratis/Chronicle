@@ -6,7 +6,7 @@ using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Storage.MongoDB;
 using MongoDB.Driver;
 
-namespace Cratis.Chronicle.Integration.OrleansInProcess.for_EventSequence.when_appending;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
 
 [Collection(GlobalCollection.Name)]
 public class existing_sequence_number(existing_sequence_number.context fixture) : OrleansTest<existing_sequence_number.context>(fixture)

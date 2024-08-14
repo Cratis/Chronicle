@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Integration.Base;
 
-namespace Cratis.Chronicle.Integration.OrleansInProcess;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
 public abstract class IntegrationTestSetup(GlobalFixture globalFixture) : OrleansFixture(globalFixture), IAsyncLifetime
 {

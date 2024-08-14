@@ -17,7 +17,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Orleans.Storage;
 
-namespace Cratis.Chronicle.Integration.OrleansInProcess;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
 public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory<Startup>, IClientArtifactsProvider
 {
@@ -63,7 +63,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseSolutionRelativeContentRoot("Integration/OrleansInProcess");
+        builder.UseSolutionRelativeContentRoot("Integration/Orleans.InProcess");
     }
 
     public INetwork Network => GlobalFixture.Network;

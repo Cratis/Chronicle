@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation;
 
-namespace Cratis.Chronicle.Integration.OrleansInProcess;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
 public static class ObserverHelpers
 {

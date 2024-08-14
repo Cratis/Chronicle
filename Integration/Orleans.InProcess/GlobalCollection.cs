@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Integration.Base;
 
-namespace Cratis.Chronicle.Integration.OrleansInProcess;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
 [CollectionDefinition(Name)]
 public class GlobalCollection : ICollectionFixture<GlobalFixture>
