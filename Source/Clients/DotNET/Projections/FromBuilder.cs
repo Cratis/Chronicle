@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Strings;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -19,6 +20,20 @@ public class FromBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TMod
     : ModelPropertiesBuilder<TModel, TEvent, IFromBuilder<TModel, TEvent>, TParentBuilder>(projectionBuilder), IFromBuilder<TModel, TEvent>
         where TParentBuilder : class
 {
+    /// <inheritdoc/>
+    public IFromBuilder<TModel, TEvent> AutoMap()
+    {
+        var eventProperties = typeof(TEvent).GetProperties().Select(_ => _.Name.ToCamelCase());
+        var modelProperties = typeof(TModel).GetProperties().Select(_ => _.Name.ToCamelCase());
+
+        foreach (var property in eventProperties.Intersect(modelProperties))
+        {
+            Set(property).To(property);
+        }
+
+        return this;
+    }
+
     /// <inheritdoc/>
     public FromDefinition Build() => new()
     {

@@ -14,6 +14,12 @@ public interface IProjectionBuilder<TModel, TBuilder>
     where TBuilder : class
 {
     /// <summary>
+    /// Automatically map event properties to model properties on the events added.
+    /// </summary>
+    /// <returns>Builder continuation.</returns>
+    AutoMapProjectionBuilder<TModel> AutoMap();
+
+    /// <summary>
     /// Sets the initial values to use for a new model instance.
     /// </summary>
     /// <param name="initialValueProviderCallback">Callback for building.</param>
@@ -31,7 +37,7 @@ public interface IProjectionBuilder<TModel, TBuilder>
     /// <param name="builderCallback">Callback for building.</param>
     /// <typeparam name="TEvent">Type of event.</typeparam>
     /// <returns>Builder continuation.</returns>
-    TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>> builderCallback);
+    TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>>? builderCallback = default);
 
     /// <summary>
     /// Start building a join expressions for a specific event type.

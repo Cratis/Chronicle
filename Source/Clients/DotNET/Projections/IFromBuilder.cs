@@ -13,6 +13,12 @@ namespace Cratis.Chronicle.Projections;
 public interface IFromBuilder<TModel, TEvent> : IModelPropertiesBuilder<TModel, TEvent, IFromBuilder<TModel, TEvent>>
 {
     /// <summary>
+    /// Automatically map event properties to model properties on the events added.
+    /// </summary>
+    /// <returns>Builder continuation.</returns>
+    IFromBuilder<TModel, TEvent> AutoMap();
+
+    /// <summary>
     /// Build <see cref="FromDefinition"/> from the builder.
     /// </summary>
     /// <returns>A new instance of <see cref="FromDefinition"/>.</returns>

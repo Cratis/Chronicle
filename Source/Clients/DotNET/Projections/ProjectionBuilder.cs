@@ -55,7 +55,21 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>> builderCallback)
+    public AutoMapProjectionBuilder<TModel> AutoMap() =>
+        new(
+            definitions =>
+            {
+                foreach (var (eventType, fromDefinition) in definitions)
+                {
+                    _fromDefinitions[eventType] = fromDefinition;
+                }
+            },
+            eventTypes,
+            schemaGenerator,
+            jsonSerializerOptions);
+
+    /// <inheritdoc/>
+    public virtual TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>>? builderCallback = default)
     {
         var type = typeof(TEvent);
 
@@ -67,7 +81,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
         var eventTypesInProjection = type.GetEventTypes(eventTypes.AllClrTypes).Select(eventTypes.GetEventTypeFor).ToArray();
 
         var builder = new FromBuilder<TModel, TEvent, TBuilder>(this);
-        builderCallback(builder);
+        builderCallback?.Invoke(builder);
         var fromDefinition = builder.Build();
 
         if (eventTypesInProjection.Length > 1)

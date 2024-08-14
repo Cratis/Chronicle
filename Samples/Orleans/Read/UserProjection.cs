@@ -7,23 +7,15 @@ namespace Read.Users;
 public class UserProjection : IProjectionFor<User>
 {
     public void Define(IProjectionBuilderFor<User> builder) => builder
-        .From<OnboardingStarted>(b => b
-            .Set(m => m.Name).To(e => e.Name)
-            .Set(m => m.UserName).To(e => e.UserName)
-            .Set(m => m.Password).To(e => e.Password))
+        .AutoMap()
+        .From<OnboardingStarted>()
         .From<SystemUserAdded>(b => b
-            .Set(m => m.Name).To(e => e.Name)
-            .Set(m => m.UserName).To(e => e.UserName)
-            .Set(m => m.Password).To(e => e.Password)
             .Set(m => m.System).ToValue(true))
         .From<OnboardingCompleted>(b => b
             .Set(m => m.Onboarded).ToValue(true))
-        .From<UserNameChanged>(b => b
-            .Set(m => m.UserName).To(e => e.UserName))
-        .From<ProfileNameChanged>(b => b
-            .Set(m => m.Name).To(e => e.Name))
-        .From<PasswordChanged>(b => b
-            .Set(m => m.Password).To(e => e.Password))
+        .From<UserNameChanged>()
+        .From<ProfileNameChanged>()
+        .From<PasswordChanged>()
         .RemovedWith<UserRemoved>()
         .Children(c => c.Groups, b => b
             .IdentifiedBy(e => e.GroupId)
