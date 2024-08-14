@@ -32,7 +32,7 @@
         <Configuration>Debug</Configuration>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration).ToLower()'=='debug'">
+    <PropertyGroup Condition="'$(Configuration)'=='Debug'">
         <Configuration>Debug</Configuration>
         <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
         <MSBuildTreatWarningsAsErrors>False</MSBuildTreatWarningsAsErrors>
@@ -40,8 +40,8 @@
         <StyleCopTreatErrorsAsWarnings>True</StyleCopTreatErrorsAsWarnings>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration).ToLower()'=='release'">
-        <Configuration>Delease</Configuration>
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+        <Configuration>Release</Configuration>
         <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
         <MSBuildTreatWarningsAsErrors>True</MSBuildTreatWarningsAsErrors>
         <CodeAnalysisTreatWarningsAsErrors>True</CodeAnalysisTreatWarningsAsErrors>
