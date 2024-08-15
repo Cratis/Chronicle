@@ -49,7 +49,7 @@ public class AddChildBuilder<TParentModel, TChildModel, TEvent>(IChildrenBuilder
     }
 
     /// <inheritdoc/>
-    public IAddChildBuilder<TChildModel, TEvent> UsingParentKeyFromContext<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
+    public IAddChildBuilder<TChildModel, TEvent> UsingParentKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor)
     {
         fromBuilder!.UsingParentKeyFromContext(keyAccessor);
         return this;

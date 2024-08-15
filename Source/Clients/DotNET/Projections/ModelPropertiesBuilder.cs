@@ -64,7 +64,7 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
     }
 
     /// <inheritdoc/>
-    public TBuilder UsingParentKeyFromContext<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
+    public TBuilder UsingParentKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor)
     {
         _parentKey = new KeyBuilder(new EventContextPropertyExpression(keyAccessor.GetPropertyPath()));
         return (this as TBuilder)!;
