@@ -9,7 +9,7 @@ import { Validator } from '@cratis/applications/validation';
 import { Guid } from '@cratis/fundamentals';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/jobs/{jobId}/stop');
+const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/jobs/{{jobId}}/stop');
 
 export interface IStopJob {
     eventStore?: string;

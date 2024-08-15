@@ -8,7 +8,7 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { Projection } from './Projection';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/projections');
+const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/projections');
 
 class AllProjectionsSortBy {
     private _id: SortingActionsForQuery<Projection[]>;

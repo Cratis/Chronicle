@@ -10,7 +10,7 @@ import { Causation } from '../Auditing/Causation';
 import { Identity } from '../Identities/Identity';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}/redact-events');
+const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/redact-events');
 
 export interface IRedactMany {
     eventStore?: string;

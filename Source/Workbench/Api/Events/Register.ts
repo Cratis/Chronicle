@@ -9,7 +9,7 @@ import { Validator } from '@cratis/applications/validation';
 import { EventTypeRegistration } from '../Contracts/Events/EventTypeRegistration';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{eventStoreName}/types');
+const routeTemplate = Handlebars.compile('/api/events/store/{{eventStoreName}}/types');
 
 export interface IRegister {
     eventStoreName?: string;
