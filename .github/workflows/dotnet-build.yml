@@ -30,5 +30,8 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - name: Build & run tests for root
-        run: dotnet test --configuration Release --settings specs.runsettings
+      - name: Run tests
+        run: dotnet build --configuration Release
+
+      - name: Run tests
+        run: dotnet test --no-build --configuration Release --settings specs.runsettings
