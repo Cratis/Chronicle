@@ -19,81 +19,84 @@ namespace Cratis.Chronicle.Diagnostics.OpenTelemetry;
 /// </summary>
 public static class OpenTelemetryConfigurationExtensions
 {
+    const string MeterName = "Cratis.Chronicle";
+
     /// <summary>
-    /// The <see cref="OpenTelemetryOptions"/> config section path.
+    /// Add Chronicle instrumentation to the <see cref="MeterProviderBuilder"/>.
     /// </summary>
-    public static readonly string ConfigSection = ConfigurationPath.Combine("Cratis", "Chronicle", "OpenTelemetry");
+    /// <param name="builder">The <see cref="MeterProviderBuilder"/> to add to.</param>
+    /// <returns>The <see cref="MeterProviderBuilder"/> for continuation.</returns>
+    public static MeterProviderBuilder AddChronicleInstrumentation(this MeterProviderBuilder builder)
+    {
+        builder
+            .ConfigureServices(services => services
+                .AddSingleton(() => new Meter(MeterName))
+                .AddSingleton(typeof(Meter<>)))
+            .AddMeter(MeterName)
+            .AddMeter("Microsoft.Orleans")
+            .AddMeter("Grpc.AspNetCore.Server");
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Add Chronicle instrumentation to the <see cref="TracerProviderBuilder"/>.
+    /// </summary>
+    /// <param name="builder">The <see cref="TracerProviderBuilder"/> to add to.</param>
+    /// <returns>The <see cref="TracerProviderBuilder"/> for continuation.</returns>
+    public static TracerProviderBuilder AddChronicleInstrumentation(this TracerProviderBuilder builder)
+    {
+        builder
+            .AddSource("Microsoft.Orleans.Runtime")
+            .AddSource("Microsoft.Orleans.Application")
+            .AddSource(ChronicleActivity.SourceName);
+
+        return builder;
+    }
 
     /// <summary>
     /// Sets up open telemetry for Cratis.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/>.</param>
-    /// <param name="configuration">The <see cref="IConfiguration"/>.</param>
-    /// <param name="configureTelemetry">The optional callback for configuring <see cref="OpenTelemetryOptions"/>.</param>
+    /// <param name="configuration">The <see cref="IConfiguration"/> to use.</param>
+    /// <param name="serviceName">The name of the service exposed on Open Telemetry.</param>
     /// <returns>The builder for continuation.</returns>
-    public static IServiceCollection AddChronicleTelemetry(this IServiceCollection services, IConfiguration configuration, Action<OpenTelemetryOptions>? configureTelemetry = default)
+    public static IServiceCollection AddChronicleTelemetry(this IServiceCollection services, IConfiguration configuration, string serviceName = "Chronicle")
     {
-#pragma warning disable CA2000 // Dispose objects before losing scope
-        var meter = new Meter("Cratis.Chronicle");
-#pragma warning restore CA2000 // Dispose objects before losing scope
-        services.AddSingleton(meter);
-        services.AddSingleton(typeof(Meter<>));
-        var options = configuration.GetSection(ConfigSection).Get<OpenTelemetryOptions>() ?? new OpenTelemetryOptions();
-        configureTelemetry?.Invoke(options);
+        var otlpOptions = configuration.GetSection("OTEL_EXPORTER_OTLP").Get<OtlpExporterOptions>();
+        MaybeSetHttp2Unencrypted(otlpOptions);
 
-        MaybeSetHttp2Unencrypted(options);
         var otelBuilder = services.AddOpenTelemetry();
 
-        otelBuilder.ConfigureResource(resources => resources.AddService(serviceName: options.ServiceName));
-        if (options.Logging)
-        {
-            otelBuilder.WithLogging(logger => logger.AddOtlpExporter(_ => ConfigureExporter(_, options)));
-        }
-        if (options.Tracing)
-        {
-            otelBuilder.WithTracing(tracing =>
+        otelBuilder.ConfigureResource(resources => resources.AddService(serviceName))
+            .WithLogging(logger => logger.AddOtlpExporter())
+            .WithTracing(tracing =>
             {
                 tracing
-                    .AddSource("Microsoft.Orleans.Runtime")
-                    .AddSource("Microsoft.Orleans.Application")
-                    .AddSource(ChronicleActivity.SourceName)
+                    .AddChronicleInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation()
                     .AddGrpcClientInstrumentation()
-                    .AddOtlpExporter(_ => ConfigureExporter(_, options));
-            });
-        }
-        if (options.Metrics)
-        {
-            otelBuilder.WithMetrics(metrics =>
+                    .AddOtlpExporter();
+            })
+                .WithMetrics(metrics =>
             {
                 metrics
-                    .AddMeter(meter.Name)
-                    .AddMeter("Microsoft.Orleans")
-                    .AddMeter("Grpc.AspNetCore.Server")
+                    .AddChronicleInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation()
-                    .AddOtlpExporter(_ => ConfigureExporter(_, options));
+                    .AddOtlpExporter();
             });
-        }
         return services;
     }
 
-    static void MaybeSetHttp2Unencrypted(OpenTelemetryOptions options)
+    static void MaybeSetHttp2Unencrypted(OtlpExporterOptions? options)
     {
-        if (string.IsNullOrWhiteSpace(options.Endpoint) ||
-            (Uri.TryCreate(options.Endpoint, UriKind.RelativeOrAbsolute, out var otlpEndpoint) && otlpEndpoint.Scheme.Equals("http")))
+        var endpoint = options?.Endpoint.ToString() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(endpoint) ||
+            (Uri.TryCreate(endpoint, UriKind.RelativeOrAbsolute, out var otlpEndpoint) && otlpEndpoint.Scheme.Equals("http")))
         {
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
         }
-    }
-
-    static void ConfigureExporter(OtlpExporterOptions exporterOptions, OpenTelemetryOptions config)
-    {
-        if (string.IsNullOrWhiteSpace(config.Endpoint))
-        {
-            return;
-        }
-        exporterOptions.Endpoint = new Uri(config.Endpoint);
     }
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using Cratis.Json;
@@ -27,41 +28,42 @@ public static class Program
     }
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
-         Host.CreateDefaultBuilder(args)
-            .UseConfiguration()
-            .UseDefaultServiceProvider(_ =>
-            {
-                _.ValidateScopes = false;
-                _.ValidateOnBuild = false;
-            })
-            .UseCratisApplicationModel()
-            .UseLogging()
-            .UseCratisMongoDB(mongo =>
-            {
-                mongo.Server = "mongodb://localhost:27017";
-                mongo.Database = "chronicle";
-            })
-            .ConfigureServices(services => services
-                .AddSingleton(Globals.JsonSerializerOptions)
-                .AddBindingsByConvention()
-                .AddSelfBindings())
-            .UseOrleans(_ => _
-                .UseLocalhostClustering() // TODO: Implement MongoDB clustering
-                .AddChronicleToSilo(_ => _
-                    .WithMongoDB())
-                .UseDashboard(options =>
-                {
-                    options.Host = "*";
-                    options.Port = 8081;
-                    options.HostSelf = true;
-                }))
-            .ConfigureWebHostDefaults(_ => _
-                .ConfigureKestrel(options =>
-                {
-                    options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
-                    options.Limits.Http2.MaxStreamsPerConnection = 100;
-                })
-                .UseStartup<Startup>());
+        Host.CreateDefaultBuilder(args)
+           .UseConfiguration()
+           .UseDefaultServiceProvider(_ =>
+           {
+               _.ValidateScopes = false;
+               _.ValidateOnBuild = false;
+           })
+           .UseCratisApplicationModel()
+           .UseLogging()
+           .UseCratisMongoDB(mongo =>
+           {
+               mongo.Server = "mongodb://localhost:27017";
+               mongo.Database = "chronicle";
+           })
+           .ConfigureServices((context, services) => services
+               .AddSingleton(Globals.JsonSerializerOptions)
+               .AddBindingsByConvention()
+               .AddChronicleTelemetry(context.Configuration)
+               .AddSelfBindings())
+           .UseOrleans(_ => _
+               .UseLocalhostClustering() // TODO: Implement MongoDB clustering
+               .AddChronicleToSilo(_ => _
+                   .WithMongoDB())
+               .UseDashboard(options =>
+               {
+                   options.Host = "*";
+                   options.Port = 8081;
+                   options.HostSelf = true;
+               }))
+           .ConfigureWebHostDefaults(_ => _
+               .ConfigureKestrel(options =>
+               {
+                   options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+                   options.Limits.Http2.MaxStreamsPerConnection = 100;
+               })
+               .UseStartup<Startup>());
 
     static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
     {
