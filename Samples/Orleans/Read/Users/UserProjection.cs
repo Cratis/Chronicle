@@ -7,6 +7,7 @@ namespace Read.Users;
 public class UserProjection : IProjectionFor<User>
 {
     public void Define(IProjectionBuilderFor<User> builder) => builder
+        .WithInitialValues(() => new User())
         .AutoMap()
         .From<OnboardingStarted>()
         .From<SystemUserAdded>(b => b
@@ -21,8 +22,8 @@ public class UserProjection : IProjectionFor<User>
             .IdentifiedBy(e => e.GroupId)
             .From<UserAddedToGroup>(b => b
                 .UsingParentKey(e => e.UserId)
-                .Set(m => m.GroupId).ToEventSourceId())
-            .Join<GroupAdded>(b => b
-                .On(m => m.GroupId)
-                .Set(m => m.Name).To(e => e.Name)));
+                .Set(m => m.GroupId).ToEventSourceId()));
+            // .Join<GroupAdded>(b => b
+            //     .On(m => m.GroupId)
+            //     .Set(m => m.Name).To(e => e.Name)));
 }
