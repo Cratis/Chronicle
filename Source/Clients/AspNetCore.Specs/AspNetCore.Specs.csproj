@@ -3,6 +3,7 @@
         <AssemblyName>Cratis.AspNetCore.Specs</AssemblyName>
         <RootNamespace>Cratis.AspNetCore</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>

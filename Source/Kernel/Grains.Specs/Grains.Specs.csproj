@@ -3,6 +3,7 @@
         <AssemblyName>Cratis.Chronicle.Grains.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Grains</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
