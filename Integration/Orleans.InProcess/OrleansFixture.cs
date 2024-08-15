@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Observation;
@@ -33,16 +34,16 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
                 mongo.Database = "orleans";
             });
 
-        builder.UseDefaultServiceProvider(_ => _.ValidateOnBuild = false);
-
-        builder.ConfigureServices(services =>
-        {
-            services.AddSingleton(Globals.JsonSerializerOptions);
-            services.AddControllers();
-            services.Configure<ChronicleOptions>(opts => opts.ArtifactsProvider = this);
-            ConfigureServices(services);
-        });
-
+        builder
+            .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
+            .ConfigureServices((ctx, services) =>
+            {
+                services.AddChronicleTelemetry(ctx.Configuration);
+                services.AddSingleton(Globals.JsonSerializerOptions);
+                services.AddControllers();
+                services.Configure<ChronicleOptions>(opts => opts.ArtifactsProvider = this);
+                ConfigureServices(services);
+            });
         builder.UseCratisChronicle();
 
         builder.UseOrleans(silo =>
