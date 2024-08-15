@@ -29,15 +29,23 @@ public static class OpenTelemetryConfigurationExtensions
     public static MeterProviderBuilder AddChronicleInstrumentation(this MeterProviderBuilder builder)
     {
         builder
-            .ConfigureServices(services => services
-                .AddSingleton(() => new Meter(MeterName))
-                .AddSingleton(typeof(Meter<>)))
             .AddMeter(MeterName)
             .AddMeter("Microsoft.Orleans")
             .AddMeter("Grpc.AspNetCore.Server");
 
         return builder;
     }
+
+    /// <summary>
+    /// Adds the Chronicle <see cref="Meter{T}"/> and System Diagnostics <see cref="Meter"/>.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/>.</param>
+    /// <returns>The <see cref="IServiceCollection"/> for continuation.</returns>
+    public static IServiceCollection AddChronicleMeter(this IServiceCollection services) =>
+#pragma warning disable CA2000
+        services.AddSingleton(new Meter(MeterName))
+#pragma warning restore CA2000
+            .AddSingleton(typeof(Meter<>));
 
     /// <summary>
     /// Add Chronicle instrumentation to the <see cref="TracerProviderBuilder"/>.
