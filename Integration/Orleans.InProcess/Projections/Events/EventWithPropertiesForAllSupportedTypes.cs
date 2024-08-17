@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Concepts;
+using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_properties;
 using Cratis.Chronicle.Projections;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
@@ -56,10 +58,10 @@ public record EventWithPropertiesForAllSupportedTypes(
         random.NextDouble(),
         (EnumWithValues)random.Next((int)EnumWithValues.ThirdValue),
         Guid.NewGuid(),
-        DateTime.UtcNow.AddDays(random.Next(60)),
+        DateTime.UtcNow.AddDays(random.Next(60)).RoundDownTicks(),
         DateOnly.FromDateTime(DateTime.UtcNow.AddDays(random.Next(60))),
-        TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(random.Next(48))),
-        DateTimeOffset.UtcNow.AddDays(random.Next(60)),
+        TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(random.Next(48))).RoundDownTicks(),
+        DateTimeOffset.UtcNow.AddDays(random.Next(60)).RoundDownTicks(),
         random.NextDouble().ToString(),
         (random.Next() % 1) == 0,
         random.Next(5000),
