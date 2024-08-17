@@ -51,7 +51,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
                 silo
                     .UseLocalhostClustering()
                     .AddCratisChronicle(
-                        options => options.EventStoreName = "testing",
+                        options => options.EventStoreName = Constants.EventStore,
                         _ => _.WithMongoDB());
             })
             .UseConsoleLifetime();
@@ -70,11 +70,11 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public INetwork Network => GlobalFixture.Network;
     public MongoDBDatabase EventStoreDatabase => GlobalFixture.EventStore;
     public MongoDBDatabase EventStoreForNamespaceDatabase => GlobalFixture.EventStoreForNamespace;
-    public MongoDBDatabase ReadModelsDatbase => GlobalFixture.ReadModels;
+    public MongoDBDatabase ReadModelsDatabase => GlobalFixture.ReadModels;
 
     public IEventStore EventStore => Services.GetRequiredService<IEventStore>();
     public IChronicleClient ChronicleClient => Services.GetRequiredService<IChronicleClient>();
-    public IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore("sample");
+    public IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore(Constants.EventStore);
     public IEventStoreNamespaceStorage GetEventStoreNamespaceStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => EventStoreStorage.GetNamespace(namespaceName ?? Concepts.EventStoreNamespaceName.Default);
     public IEventSequenceStorage GetEventLogStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => GetEventStoreNamespaceStorage(namespaceName).GetEventSequence(EventSequenceId.Log);
 
@@ -83,14 +83,23 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public EventSequencesStorageProvider GetEventSequenceStatesStorage() => GetGrainStorage<EventSequencesStorageProvider>(WellKnownGrainStorageProviders.EventSequences);
     public IEventSequence EventLogSequenceGrain => GetEventSequenceGrain(EventSequenceId.Log);
     public IEventSequence GetEventSequenceGrain(EventSequenceId id) => Services.GetRequiredService<IGrainFactory>().GetGrain<IEventSequence>(CreateEventSequenceKey(id));
-    public EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, "sample", Concepts.EventStoreNamespaceName.Default);
+    public EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, Constants.EventStore, Concepts.EventStoreNamespaceName.Default);
 
     public IObserver GetObserverFor<T>() => Services.GetRequiredService<IGrainFactory>()
         .GetGrain<IObserver>(
-            new ObserverKey(typeof(T).GetReactionId().Value,
-            "sample",
-            Concepts.EventStoreNamespaceName.Default,
-            EventSequenceId.Log));
+            new ObserverKey(
+                typeof(T).GetReactionId().Value,
+                Constants.EventStore,
+                Concepts.EventStoreNamespaceName.Default,
+                EventSequenceId.Log));
+
+    public IObserver GetObserverForProjection<TProjection>() => Services.GetRequiredService<IGrainFactory>()
+        .GetGrain<IObserver>(
+            new ObserverKey(typeof(TProjection).GetProjectionId().Value,
+                Constants.EventStore,
+                Concepts.EventStoreNamespaceName.Default,
+                EventSequenceId.Log));
+
     public GlobalFixture GlobalFixture { get; } = globalFixture;
 
     public void SetName(string name) => _name = name;

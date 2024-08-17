@@ -36,9 +36,9 @@ public class GlobalFixture : IAsyncDisposable
 
         MongoDBContainer.StartAsync().GetAwaiter().GetResult();
 
-        EventStore = new MongoDBDatabase(MongoDBContainer, "testing+es");
-        EventStoreForNamespace = new MongoDBDatabase(MongoDBContainer, "testing+es+Default");
-        ReadModels = new MongoDBDatabase(MongoDBContainer, "testing");
+        EventStore = new MongoDBDatabase(MongoDBContainer, Constants.EventStoreDatabaseName);
+        EventStoreForNamespace = new MongoDBDatabase(MongoDBContainer, Constants.EventStoreNamespaceDatabaseName);
+        ReadModels = new MongoDBDatabase(MongoDBContainer, Constants.ReadModelsDatabaseName);
     }
 
     /// <summary>

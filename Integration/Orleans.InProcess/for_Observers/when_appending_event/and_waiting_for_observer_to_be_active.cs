@@ -34,7 +34,7 @@ public class and_waiting_for_observer_to_be_active(and_waiting_for_observer_to_b
         }
         public override async Task Because()
         {
-            await GetObserverFor<SomeReaction>().WaitForState(ObserverRunningState.Active);
+            await GetObserverFor<SomeReaction>().WaitTillActive();
             await EventStore.EventLog.Append(EventSourceId, Event);
             await Tsc.Task.WaitAsync(TimeSpan.FromSeconds(10));
         }
