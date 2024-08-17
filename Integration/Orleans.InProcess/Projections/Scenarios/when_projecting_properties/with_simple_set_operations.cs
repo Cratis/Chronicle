@@ -41,14 +41,12 @@ public class with_simple_set_operations(with_simple_set_operations.context fixtu
         {
             var observer = GetObserverForProjection<SetPropertiesProjection>();
             await observer.WaitTillActive();
-            var state = await observer.GetState();
             var appendResult = await EventStore.EventLog.Append(EventSourceId, EventAppended);
             await observer.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
             var filter = Builders<Model>.Filter.Eq(new StringFieldDefinition<Model, string>("_id"), EventSourceId.Value);
-            var result = await globalFixture.ReadModels.Database.GetCollection<Model>().FindAsync(_ => true);
-            var all = result.ToList();
-            Result = all.FirstOrDefault();
+            var result = await globalFixture.ReadModels.Database.GetCollection<Model>().FindAsync(filter);
+            Result = result.FirstOrDefault();
         }
     }
 
