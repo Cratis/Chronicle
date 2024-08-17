@@ -12,7 +12,7 @@ using MongoDB.Driver;
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_properties;
 
 [Collection(GlobalCollection.Name)]
-public class with_simple_set_operations(with_simple_set_operations.context fixture) : OrleansTest<with_simple_set_operations.context>(fixture)
+public class with_simple_set_operations(with_simple_set_operations.context context) : OrleansTest<with_simple_set_operations.context>(context)
 {
     public class context(GlobalFixture globalFixture) : IntegrationTestSetup(globalFixture)
     {
@@ -50,21 +50,21 @@ public class with_simple_set_operations(with_simple_set_operations.context fixtu
         }
     }
 
-    [Fact] void should_set_the_string_value() => Fixture.Result.StringValue.ShouldEqual(Fixture.EventAppended.StringValue);
-    [Fact] void should_set_the_bool_value() => Fixture.Result.BoolValue.ShouldEqual(Fixture.EventAppended.BoolValue);
-    [Fact] void should_set_the_int_value() => Fixture.Result.IntValue.ShouldEqual(Fixture.EventAppended.IntValue);
-    [Fact] void should_set_the_float_value() => Fixture.Result.FloatValue.ShouldEqual(Fixture.EventAppended.FloatValue);
-    [Fact] void should_set_the_double_value() => Fixture.Result.DoubleValue.ShouldEqual(Fixture.EventAppended.DoubleValue);
-    [Fact] void should_set_the_enum_value() => Fixture.Result.EnumValue.ShouldEqual(Fixture.EventAppended.EnumValue);
-    [Fact] void should_set_the_guid_value() => Fixture.Result.GuidValue.ShouldEqual(Fixture.EventAppended.GuidValue);
-    [Fact] void should_set_the_date_time_value() => Fixture.Result.DateTimeValue.ShouldEqual(Fixture.EventAppended.DateTimeValue);
-    [Fact] void should_set_the_date_only_value() => Fixture.Result.DateOnlyValue.ShouldEqual(Fixture.EventAppended.DateOnlyValue);
-    [Fact] void should_set_the_time_only_value() => Fixture.Result.TimeOnlyValue.ShouldEqual(Fixture.EventAppended.TimeOnlyValue);
-    [Fact] void should_set_the_date_time_offset_value() => Fixture.Result.DateTimeOffsetValue.ShouldEqual(Fixture.EventAppended.DateTimeOffsetValue);
-    [Fact] void should_set_the_string_concept_value() => Fixture.Result.StringConceptValue.ShouldEqual(Fixture.EventAppended.StringConceptValue);
-    [Fact] void should_set_the_bool_concept_value() => Fixture.Result.BoolConceptValue.ShouldEqual(Fixture.EventAppended.BoolConceptValue);
-    [Fact] void should_set_the_int_concept_value() => Fixture.Result.IntConceptValue.ShouldEqual(Fixture.EventAppended.IntConceptValue);
-    [Fact] void should_set_the_float_concept_value() => Fixture.Result.FloatConceptValue.ShouldEqual(Fixture.EventAppended.FloatConceptValue);
-    [Fact] void should_set_the_double_concept_value() => Fixture.Result.DoubleConceptValue.ShouldEqual(Fixture.EventAppended.DoubleConceptValue);
-    [Fact] void should_set_the_guid_concept_value() => Fixture.Result.GuidConceptValue.ShouldEqual(Fixture.EventAppended.GuidConceptValue);
+    [Fact] void should_set_the_string_value() => Context.Result.StringValue.ShouldEqual(Context.EventAppended.StringValue);
+    [Fact] void should_set_the_bool_value() => Context.Result.BoolValue.ShouldEqual(Context.EventAppended.BoolValue);
+    [Fact] void should_set_the_int_value() => Context.Result.IntValue.ShouldEqual(Context.EventAppended.IntValue);
+    [Fact] void should_set_the_float_value() => Context.Result.FloatValue.ShouldEqual(Context.EventAppended.FloatValue);
+    [Fact] void should_set_the_double_value() => Context.Result.DoubleValue.ShouldEqual(Context.EventAppended.DoubleValue);
+    [Fact] void should_set_the_enum_value() => Context.Result.EnumValue.ShouldEqual(Context.EventAppended.EnumValue);
+    [Fact] void should_set_the_guid_value() => Context.Result.GuidValue.ShouldEqual(Context.EventAppended.GuidValue);
+    [Fact] void should_set_the_date_time_value() => Context.Result.DateTimeValue.ShouldEqual(Context.EventAppended.DateTimeValue);
+    [Fact] void should_set_the_date_only_value() => Context.Result.DateOnlyValue.ShouldEqual(Context.EventAppended.DateOnlyValue);
+    [Fact] void should_set_the_time_only_value() => Context.Result.TimeOnlyValue.ShouldEqual(Context.EventAppended.TimeOnlyValue);
+    [Fact] void should_set_the_date_time_offset_value() => Context.Result.DateTimeOffsetValue.ShouldEqual(Context.EventAppended.DateTimeOffsetValue);
+    [Fact] void should_set_the_string_concept_value() => Context.Result.StringConceptValue.ShouldEqual(Context.EventAppended.StringConceptValue);
+    [Fact] void should_set_the_bool_concept_value() => Context.Result.BoolConceptValue.ShouldEqual(Context.EventAppended.BoolConceptValue);
+    [Fact] void should_set_the_int_concept_value() => Context.Result.IntConceptValue.ShouldEqual(Context.EventAppended.IntConceptValue);
+    [Fact] void should_set_the_float_concept_value() => Context.Result.FloatConceptValue.ShouldEqual(Context.EventAppended.FloatConceptValue);
+    [Fact] void should_set_the_double_concept_value() => Context.Result.DoubleConceptValue.ShouldEqual(Context.EventAppended.DoubleConceptValue);
+    [Fact] void should_set_the_guid_concept_value() => Context.Result.GuidConceptValue.ShouldEqual(Context.EventAppended.GuidConceptValue);
 }

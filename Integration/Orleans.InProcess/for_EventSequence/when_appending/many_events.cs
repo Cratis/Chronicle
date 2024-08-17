@@ -8,7 +8,7 @@ using Xunit.Abstractions;
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
 
 [Collection(GlobalCollection.Name)]
-public class many_events(many_events.context fixture, ITestOutputHelper testLogger) : OrleansTest<many_events.context>(fixture)
+public class many_events(many_events.context context, ITestOutputHelper testLogger) : OrleansTest<many_events.context>(context)
 {
     public class context(GlobalFixture globalFixture) : IntegrationTestSetup(globalFixture)
     {
@@ -29,18 +29,18 @@ public class many_events(many_events.context fixture, ITestOutputHelper testLogg
     }
 
     [Fact]
-    Task should_have_correct_next_sequence_number() => Fixture.ShouldHaveCorrectNextSequenceNumber((ulong)Fixture.Events.Count);
+    Task should_have_correct_next_sequence_number() => Context.ShouldHaveCorrectNextSequenceNumber((ulong)Context.Events.Count);
 
     [Fact]
-    Task should_have_correct_tail_sequence_number() => Fixture.ShouldHaveCorrectTailSequenceNumber((ulong)Fixture.Events.Count - 1);
+    Task should_have_correct_tail_sequence_number() => Context.ShouldHaveCorrectTailSequenceNumber((ulong)Context.Events.Count - 1);
 
     [Fact]
     async Task should_have_stored_all_the_events_in_correct_order()
     {
-        foreach (var (e, i) in Fixture.Events.Select((item, index) => (item, index)))
+        foreach (var (e, i) in Context.Events.Select((item, index) => (item, index)))
         {
             testLogger.WriteLine($"Checking stored event {i + 1}");
-            await Fixture.ShouldHaveStoredCorrectEvent<SomeEvent>((ulong)i, Fixture.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Fixture.Events[i].Content));
+            await Context.ShouldHaveStoredCorrectEvent<SomeEvent>((ulong)i, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.Events[i].Content));
         }
     }
 }

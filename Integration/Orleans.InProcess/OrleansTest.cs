@@ -6,11 +6,11 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 public class OrleansTest<TSetup> : IClassFixture<TSetup>
     where TSetup : IntegrationTestSetup
 {
-    public OrleansTest(TSetup fixture)
+    public OrleansTest(TSetup context)
     {
-        Fixture = fixture;
-        fixture.SetName(GetType().Name);
+        Context = context;
+        context.SetName(GetType().Name);
     }
 
-    public TSetup Fixture { get; }
+    public TSetup Context { get; }
 }

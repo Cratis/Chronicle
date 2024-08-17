@@ -8,7 +8,7 @@ using Cratis.Chronicle.Integration.Base;
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Observers.when_appending_event;
 
 [Collection(GlobalCollection.Name)]
-public class and_waiting_for_observer_to_be_active(and_waiting_for_observer_to_be_active.context fixture) : OrleansTest<and_waiting_for_observer_to_be_active.context>(fixture)
+public class and_waiting_for_observer_to_be_active(and_waiting_for_observer_to_be_active.context context) : OrleansTest<and_waiting_for_observer_to_be_active.context>(context)
 {
     public class context(GlobalFixture globalFixture) : IntegrationTestSetup(globalFixture)
     {
@@ -40,12 +40,9 @@ public class and_waiting_for_observer_to_be_active(and_waiting_for_observer_to_b
         }
     }
 
-    [Fact]
-    Task should_have_correct_next_sequence_number() => Fixture.ShouldHaveCorrectNextSequenceNumber(1);
+    [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveCorrectNextSequenceNumber(1);
 
-    [Fact]
-    Task should_have_correct_tail_sequence_number() => Fixture.ShouldHaveCorrectTailSequenceNumber(Concepts.Events.EventSequenceNumber.First);
+    [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveCorrectTailSequenceNumber(Concepts.Events.EventSequenceNumber.First);
 
-    [Fact]
-    void should_have_handled_the_event() => Fixture.Reaction.HandledEvents.ShouldEqual(1);
+    [Fact] void should_have_handled_the_event() => Context.Reaction.HandledEvents.ShouldEqual(1);
 }

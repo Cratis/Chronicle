@@ -9,7 +9,7 @@ using MongoDB.Driver;
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
 
 [Collection(GlobalCollection.Name)]
-public class existing_sequence_number(existing_sequence_number.context fixture) : OrleansTest<existing_sequence_number.context>(fixture)
+public class existing_sequence_number(existing_sequence_number.context context) : OrleansTest<existing_sequence_number.context>(context)
 {
     public class context(GlobalFixture globalFixture) : IntegrationTestSetup(globalFixture)
     {
@@ -34,11 +34,11 @@ public class existing_sequence_number(existing_sequence_number.context fixture) 
         }
     }
 
-    [Fact] Task should_have_correct_next_sequence_number() => Fixture.ShouldHaveCorrectNextSequenceNumber(2);
+    [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveCorrectNextSequenceNumber(2);
 
-    [Fact] Task should_have_correct_tail_sequence_number() => Fixture.ShouldHaveCorrectTailSequenceNumber(1);
+    [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveCorrectTailSequenceNumber(1);
 
-    [Fact] Task should_have_the_first_event_stored() => Fixture.ShouldHaveStoredCorrectEvent<SomeEvent>(0, Fixture.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Fixture.FirstEvent.Content));
+    [Fact] Task should_have_the_first_event_stored() => Context.ShouldHaveStoredCorrectEvent<SomeEvent>(0, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.FirstEvent.Content));
 
-    [Fact] Task should_have_the_second_event_stored() => Fixture.ShouldHaveStoredCorrectEvent<SomeEvent>(1, Fixture.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Fixture.SecondEvent.Content));
+    [Fact] Task should_have_the_second_event_stored() => Context.ShouldHaveStoredCorrectEvent<SomeEvent>(1, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.SecondEvent.Content));
 }
