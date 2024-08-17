@@ -19,13 +19,14 @@ public class existing_sequence_number(existing_sequence_number.context context) 
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
 
-        public override async Task Establish()
+        async Task Establish()
         {
             FirstEvent = new SomeEvent("some value");
             SecondEvent = new SomeEvent("some other value");
             await EventStore.EventLog.Append(EventSourceId, FirstEvent);
         }
-        public override async Task Because()
+
+        async Task Because()
         {
             var database = EventStoreForNamespaceDatabase.Database;
             var updateDef = Builders<Event>.Update.Set(_ => _.SequenceNumber, new EventSequenceNumber(1));

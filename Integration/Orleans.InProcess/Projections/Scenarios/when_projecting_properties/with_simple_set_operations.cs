@@ -1,52 +1,27 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.ProjectionTypes;
 using Cratis.Chronicle.Projections;
 using HandlebarsDotNet;
-using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_properties;
 
 [Collection(GlobalCollection.Name)]
 public class with_simple_set_operations(with_simple_set_operations.context context) : OrleansTest<with_simple_set_operations.context>(context)
 {
-    public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
+    public class context(GlobalFixture globalFixture) : given.a_projection_and_events_appended_to_it<SetPropertiesProjection, Model>(globalFixture)
     {
-        public EventSourceId EventSourceId;
         public EventWithPropertiesForAllSupportedTypes EventAppended;
-        public Model Result;
 
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
 
-        public override IEnumerable<Type> Projections => [typeof(SetPropertiesProjection)];
-
-        protected override void ConfigureServices(IServiceCollection services)
+        void Establish()
         {
-            services.AddSingleton<IProjectionFor<Model>>(new SetPropertiesProjection());
-        }
-
-        public override Task Establish()
-        {
-            EventSourceId = Guid.NewGuid().ToString();
             EventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
-
-            return Task.CompletedTask;
-        }
-
-        public override async Task Because()
-        {
-            var observer = GetObserverForProjection<SetPropertiesProjection>();
-            await observer.WaitTillActive();
-            var appendResult = await EventStore.EventLog.Append(EventSourceId, EventAppended);
-            await observer.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
-
-            var filter = Builders<Model>.Filter.Eq(new StringFieldDefinition<Model, string>("_id"), EventSourceId.Value);
-            var result = await globalFixture.ReadModels.Database.GetCollection<Model>().FindAsync(filter);
-            Result = result.FirstOrDefault();
+            EventsToAppend.Add(EventAppended);
         }
     }
 

@@ -12,43 +12,20 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.w
 [Collection(GlobalCollection.Name)]
 public class adding_from_properties(adding_from_properties.context context) : OrleansTest<adding_from_properties.context>(context)
 {
-    public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
+    public class context(GlobalFixture globalFixture) : given.a_projection_and_events_appended_to_it<AddingFromPropertiesProjection, Model>(globalFixture)
     {
-        public EventSourceId EventSourceId;
-        public Model Result;
         public EventWithPropertiesForAllSupportedTypes FirstEventAppended;
         public EventWithPropertiesForAllSupportedTypes SecondEventAppended;
 
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
 
-        public override IEnumerable<Type> Projections => [typeof(AddingFromPropertiesProjection)];
 
-
-        protected override void ConfigureServices(IServiceCollection services)
+        void Establish()
         {
-            services.AddSingleton<IProjectionFor<Model>>(new AddingFromPropertiesProjection());
-        }
-
-        public override Task Establish()
-        {
-            EventSourceId = Guid.NewGuid().ToString();
             FirstEventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
+            EventsToAppend.Add(FirstEventAppended);
             SecondEventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
-
-            return Task.CompletedTask;
-        }
-
-        public override async Task Because()
-        {
-            var observer = GetObserverForProjection<AddingFromPropertiesProjection>();
-            await observer.WaitTillActive();
-            await EventStore.EventLog.Append(EventSourceId, FirstEventAppended);
-            var appendResult = await EventStore.EventLog.Append(EventSourceId, SecondEventAppended);
-            await observer.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
-
-            var filter = Builders<Model>.Filter.Eq(new StringFieldDefinition<Model, string>("_id"), EventSourceId.Value);
-            var result = await globalFixture.ReadModels.Database.GetCollection<Model>().FindAsync(filter);
-            Result = result.FirstOrDefault();
+            EventsToAppend.Add(SecondEventAppended);
         }
     }
 

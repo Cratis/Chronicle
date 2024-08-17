@@ -15,12 +15,12 @@ public class an_event(an_event.context context) : OrleansTest<an_event.context>(
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
 
-        public override Task Establish()
+        void Establish()
         {
             Event = new SomeEvent("some content");
-            return Task.CompletedTask;
         }
-        public override async Task Because()
+
+        async Task Because()
         {
             await EventStore.EventLog.Append(EventSourceId, Event);
         }

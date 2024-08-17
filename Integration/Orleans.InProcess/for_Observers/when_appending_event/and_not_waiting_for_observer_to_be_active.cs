@@ -18,20 +18,20 @@ public class and_not_waiting_for_observer_to_be_active(and_not_waiting_for_obser
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
         public override IEnumerable<Type> Reactions => [typeof(SomeReaction)];
+
         protected override void ConfigureServices(IServiceCollection services)
         {
             Reaction = new SomeReaction(Tsc);
             services.AddSingleton(Reaction);
         }
 
-        public override Task Establish()
+        void Establish()
         {
             EventSourceId = "some source";
             Event = new SomeEvent(42);
-
-            return Task.CompletedTask;
         }
-        public override async Task Because()
+
+        async Task Because()
         {
             await EventStore.EventLog.Append(EventSourceId, Event);
             await Tsc.Task.WaitAsync(TimeSpan.FromSeconds(10));

@@ -26,13 +26,13 @@ public class and_waiting_for_observer_to_be_active(and_waiting_for_observer_to_b
             services.AddSingleton(Reaction);
         }
 
-        public override Task Establish()
+        void Establish()
         {
             EventSourceId = "some source";
             Event = new SomeEvent(42);
-            return Task.CompletedTask;
         }
-        public override async Task Because()
+
+        async Task Because()
         {
             await GetObserverFor<SomeReaction>().WaitTillActive();
             await EventStore.EventLog.Append(EventSourceId, Event);

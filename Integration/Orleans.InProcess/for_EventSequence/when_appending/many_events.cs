@@ -17,12 +17,12 @@ public class many_events(many_events.context context, ITestOutputHelper testLogg
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
 
-        public override Task Establish()
+        void Establish()
         {
             Events = [new SomeEvent("some value"), new SomeEvent("some other value"), new SomeEvent("some third value")];
-            return Task.CompletedTask;
         }
-        public override async Task Because()
+
+        async Task Because()
         {
             await EventStore.EventLog.AppendMany(EventSourceId, Events);
         }
