@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -17,7 +18,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 {
     readonly IMongoDatabase _database;
-    readonly HashSet<EventSequenceId> _indexedEventSequences = [];
+    readonly ConcurrentDictionary<EventSequenceId, bool> _indexedEventSequences = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreNamespaceDatabase"/> class.
@@ -71,7 +72,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 
     void CreateIndexesForEventSequenceIfNotCreated(IMongoCollection<Event> collection, EventSequenceId eventSequenceId)
     {
-        if (!_indexedEventSequences.Contains(eventSequenceId))
+        if (!_indexedEventSequences.ContainsKey(eventSequenceId))
         {
             collection.Indexes.CreateOne(
                 new CreateIndexModel<Event>(
@@ -111,7 +112,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
                         Background = true
                     }));
 
-            _indexedEventSequences.Add(eventSequenceId);
+            _indexedEventSequences.TryAdd(eventSequenceId, true);
         }
     }
 
