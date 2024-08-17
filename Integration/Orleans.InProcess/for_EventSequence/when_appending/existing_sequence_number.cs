@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_
 [Collection(GlobalCollection.Name)]
 public class existing_sequence_number(existing_sequence_number.context context) : OrleansTest<existing_sequence_number.context>(context)
 {
-    public class context(GlobalFixture globalFixture) : IntegrationTestSetup(globalFixture)
+    public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     {
         public Events.EventSourceId EventSourceId { get; } = "source";
         public SomeEvent FirstEvent { get; private set; }

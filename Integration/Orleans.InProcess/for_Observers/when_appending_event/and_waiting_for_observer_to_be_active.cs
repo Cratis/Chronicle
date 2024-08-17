@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Observers.when_appe
 [Collection(GlobalCollection.Name)]
 public class and_waiting_for_observer_to_be_active(and_waiting_for_observer_to_be_active.context context) : OrleansTest<and_waiting_for_observer_to_be_active.context>(context)
 {
-    public class context(GlobalFixture globalFixture) : IntegrationTestSetup(globalFixture)
+    public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     {
         public static TaskCompletionSource Tsc = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public EventSourceId EventSourceId;

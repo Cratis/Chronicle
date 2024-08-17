@@ -5,7 +5,7 @@ using Cratis.Chronicle.Integration.Base;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
-public abstract class IntegrationTestSetup(GlobalFixture globalFixture) : OrleansFixture(globalFixture), IAsyncLifetime
+public abstract class IntegrationSpecificationContext(GlobalFixture globalFixture) : OrleansFixture(globalFixture), IAsyncLifetime
 {
     public virtual Task Establish()
     {

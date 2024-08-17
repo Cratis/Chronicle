@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.w
 [Collection(GlobalCollection.Name)]
 public class with_simple_set_operations(with_simple_set_operations.context context) : OrleansTest<with_simple_set_operations.context>(context)
 {
-    public class context(GlobalFixture globalFixture) : IntegrationTestSetup(globalFixture)
+    public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     {
         public EventSourceId EventSourceId;
         public EventWithPropertiesForAllSupportedTypes EventAppended;

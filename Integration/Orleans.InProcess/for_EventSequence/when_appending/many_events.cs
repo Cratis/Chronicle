@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_
 [Collection(GlobalCollection.Name)]
 public class many_events(many_events.context context, ITestOutputHelper testLogger) : OrleansTest<many_events.context>(context)
 {
-    public class context(GlobalFixture globalFixture) : IntegrationTestSetup(globalFixture)
+    public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     {
         public Events.EventSourceId EventSourceId { get; } = "source";
         public IList<SomeEvent> Events { get; private set; }

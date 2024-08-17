@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
 public static class TestHelpers
 {
-    public static async Task ShouldHaveStoredCorrectEvent<TEvent>(this IntegrationTestSetup fixture, Concepts.Events.EventSequenceNumber sequenceNumber, Concepts.Events.EventSourceId eventSourceId, Action<TEvent> isCorrectEvent)
+    public static async Task ShouldHaveStoredCorrectEvent<TEvent>(this IntegrationSpecificationContext fixture, Concepts.Events.EventSequenceNumber sequenceNumber, Concepts.Events.EventSourceId eventSourceId, Action<TEvent> isCorrectEvent)
     {
         var eventLog = fixture.GetEventLogStorage();
         var evt = await eventLog.GetEventAt(sequenceNumber);
@@ -22,14 +22,14 @@ public static class TestHelpers
         isCorrectEvent(theEvent);
     }
 
-    public static async Task ShouldHaveCorrectNextSequenceNumber(this IntegrationTestSetup fixture, Concepts.Events.EventSequenceNumber sequenceNumber)
+    public static async Task ShouldHaveCorrectNextSequenceNumber(this IntegrationSpecificationContext fixture, Concepts.Events.EventSequenceNumber sequenceNumber)
     {
         var eventLog = fixture.EventLogSequenceGrain;
         var number = await eventLog.GetNextSequenceNumber();
         number.ShouldEqual(sequenceNumber);
     }
 
-    public static async Task ShouldHaveCorrectTailSequenceNumber(this IntegrationTestSetup fixture, Concepts.Events.EventSequenceNumber sequenceNumber)
+    public static async Task ShouldHaveCorrectTailSequenceNumber(this IntegrationSpecificationContext fixture, Concepts.Events.EventSequenceNumber sequenceNumber)
     {
         var eventLog = fixture.EventLogSequenceGrain;
         var number = await eventLog.GetTailSequenceNumber();

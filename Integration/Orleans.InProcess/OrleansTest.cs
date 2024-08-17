@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
 public class OrleansTest<TSetup> : IClassFixture<TSetup>
-    where TSetup : IntegrationTestSetup
+    where TSetup : IntegrationSpecificationContext
 {
     public OrleansTest(TSetup context)
     {

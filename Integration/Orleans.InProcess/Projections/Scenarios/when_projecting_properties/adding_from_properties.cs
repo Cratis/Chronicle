@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.w
 [Collection(GlobalCollection.Name)]
 public class adding_from_properties(adding_from_properties.context context) : OrleansTest<adding_from_properties.context>(context)
 {
-    public class context(GlobalFixture globalFixture) : IntegrationTestSetup(globalFixture)
+    public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     {
         public EventSourceId EventSourceId;
         public Model Result;
