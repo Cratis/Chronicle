@@ -26,12 +26,9 @@ public class an_event(an_event.context context) : OrleansTest<an_event.context>(
         }
     }
 
-    [Fact]
-    Task should_have_correct_next_sequence_number() => Context.ShouldHaveCorrectNextSequenceNumber(1);
+    [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveCorrectNextSequenceNumber(1);
 
-    [Fact]
-    Task should_have_correct_tail_sequence_number() => Context.ShouldHaveCorrectTailSequenceNumber(Concepts.Events.EventSequenceNumber.First);
+    [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveCorrectTailSequenceNumber(Concepts.Events.EventSequenceNumber.First);
 
-    [Fact]
-    Task should_have_the_event_stored() => Context.ShouldHaveStoredCorrectEvent<SomeEvent>(0, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.Event.Content));
+    [Fact] Task should_have_the_event_stored() => Context.ShouldHaveStoredCorrectEvent<SomeEvent>(0, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.Event.Content));
 }

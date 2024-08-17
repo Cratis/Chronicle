@@ -28,11 +28,9 @@ public class many_events(many_events.context context, ITestOutputHelper testLogg
         }
     }
 
-    [Fact]
-    Task should_have_correct_next_sequence_number() => Context.ShouldHaveCorrectNextSequenceNumber((ulong)Context.Events.Count);
+    [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveCorrectNextSequenceNumber((ulong)Context.Events.Count);
 
-    [Fact]
-    Task should_have_correct_tail_sequence_number() => Context.ShouldHaveCorrectTailSequenceNumber((ulong)Context.Events.Count - 1);
+    [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveCorrectTailSequenceNumber((ulong)Context.Events.Count - 1);
 
     [Fact]
     async Task should_have_stored_all_the_events_in_correct_order()
