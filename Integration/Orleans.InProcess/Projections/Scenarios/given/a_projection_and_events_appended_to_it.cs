@@ -36,7 +36,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
 
     async Task Because()
     {
-        var observer = GetObserverForProjection<SetPropertiesProjection>();
+        var observer = GetObserverForProjection<TProjection>();
         await observer.WaitTillActive();
 
         AppendResult appendResult = null;
