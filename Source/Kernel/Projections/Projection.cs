@@ -14,10 +14,10 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Represents the implementation of <see cref="IProjection"/>.
 /// </summary>
-public class Projection : IProjection
+public class Projection : IProjection, IDisposable
 {
-    readonly ISubject<ProjectionEventContext> _subject = new Subject<ProjectionEventContext>();
-    IDictionary<EventType, KeyResolver> _eventTypesToKeyResolver = new Dictionary<EventType, KeyResolver>();
+    readonly Subject<ProjectionEventContext> _subject = new();
+    Dictionary<EventType, KeyResolver> _eventTypesToKeyResolver = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projection"/> class.
@@ -129,6 +129,12 @@ public class Projection : IProjection
 
     /// <inheritdoc/>
     public void SetParent(IProjection projection) => Parent = projection;
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _subject.Dispose();
+    }
 
     void ThrowIfMissingKeyResolverForEventType(EventType eventType)
     {
