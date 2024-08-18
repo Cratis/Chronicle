@@ -14,7 +14,8 @@ namespace Cratis.Chronicle.Changes;
 /// <param name="propertyPath">Raw difference.</param>
 /// <param name="original">Original value.</param>
 /// <param name="changed">Changed value.</param>
-public class PropertyDifference(PropertyPath propertyPath, object? original, object? changed)
+/// <param name="arrayIndexers">Array indexers.</param>
+public class PropertyDifference(PropertyPath propertyPath, object? original, object? changed, ArrayIndexers? arrayIndexers = default)
 {
     /// <summary>
     /// Gets the full member path to the property that has changed.
@@ -30,4 +31,9 @@ public class PropertyDifference(PropertyPath propertyPath, object? original, obj
     /// Gets the changed value - possibly default.
     /// </summary>
     public object? Changed { get; } = changed;
+
+    /// <summary>
+    /// Gets the array indexers for the property.
+    /// </summary>
+    public ArrayIndexers ArrayIndexers { get; set; } = arrayIndexers ?? ArrayIndexers.NoIndexers;
 }

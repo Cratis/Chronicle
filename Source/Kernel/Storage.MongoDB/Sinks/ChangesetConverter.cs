@@ -92,7 +92,7 @@ public class ChangesetConverter(
 
         foreach (var propertyDifference in propertiesChanged.Differences.Where(_ => !_.PropertyPath.IsMongoDBKey()).ToArray())
         {
-            var (property, arrayFilters) = converter.ToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
+            var (property, arrayFilters) = converter.ToMongoDBProperty(propertyDifference.PropertyPath, propertyDifference.ArrayIndexers);
             allArrayFilters.AddRange(arrayFilters);
 
             var value = converter.ToBsonValue(propertyDifference.Changed, propertyDifference.PropertyPath);

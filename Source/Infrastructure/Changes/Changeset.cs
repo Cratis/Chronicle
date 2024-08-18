@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Properties;
+using Cratis.Collections;
 
 namespace Cratis.Chronicle.Changes;
 
@@ -50,6 +51,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
 
         if (!comparer.Equals(CurrentState, workingState, out var differences))
         {
+            differences.ForEach(_ => _.ArrayIndexers = arrayIndexers);
             Add(new PropertiesChanged<TTarget>(workingState, differences));
         }
 

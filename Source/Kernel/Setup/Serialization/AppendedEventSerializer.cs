@@ -65,5 +65,5 @@ public class AppendedEventSerializer(
         StringCodec.WriteField(ref writer, fieldIdDelta, json);
     }
 
-    record AppendedEventWithSchema(AppendedEvent AppendedEvent, string Schema);
+    sealed record AppendedEventWithSchema(AppendedEvent AppendedEvent, string Schema);
 }
