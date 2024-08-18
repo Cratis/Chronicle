@@ -212,7 +212,7 @@ public class ProjectionFactory(
         return propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty!, expression);
     }
 
-    void ResolveEventsForProjection(IProjection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
+    void ResolveEventsForProjection(Projection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
     {
         // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
         var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
