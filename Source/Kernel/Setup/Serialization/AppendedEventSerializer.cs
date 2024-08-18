@@ -6,8 +6,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Objects;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Strings;
 using NJsonSchema;
