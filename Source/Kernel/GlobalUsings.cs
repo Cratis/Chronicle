@@ -5,3 +5,4 @@
 
 global using Cratis.Concepts;
 global using Cratis.Execution;
+global using CorrelationId = Cratis.Execution.CorrelationId;
