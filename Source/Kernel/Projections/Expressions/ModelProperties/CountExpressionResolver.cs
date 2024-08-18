@@ -17,9 +17,9 @@ namespace Cratis.Chronicle.Projections.Expressions.ModelProperties;
 /// Initializes a new instance of the <see cref="CountExpressionResolver"/> class.
 /// </remarks>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
-public class CountExpressionResolver(ITypeFormats typeFormats) : IModelPropertyExpressionResolver
+public partial class CountExpressionResolver(ITypeFormats typeFormats) : IModelPropertyExpressionResolver
 {
-    static readonly Regex _regularExpression = new("\\$count\\(\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+    static readonly Regex _regularExpression = CountRegEx();
     readonly ITypeFormats _typeFormats = typeFormats;
 
     /// <inheritdoc/>
@@ -27,4 +27,7 @@ public class CountExpressionResolver(ITypeFormats typeFormats) : IModelPropertyE
 
     /// <inheritdoc/>
     public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression) => PropertyMappers.Count(_typeFormats, targetProperty, targetPropertySchema);
+
+    [GeneratedRegex("\\$count\\(\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex CountRegEx();
 }

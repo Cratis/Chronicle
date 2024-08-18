@@ -17,9 +17,9 @@ namespace Cratis.Chronicle.Projections.Expressions.ModelProperties;
 /// Initializes a new instance of the <see cref="AddExpressionResolver"/> class.
 /// </remarks>
 /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving.</param>
-public class AddExpressionResolver(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers) : IModelPropertyExpressionResolver
+public partial class AddExpressionResolver(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers) : IModelPropertyExpressionResolver
 {
-    static readonly Regex _regularExpression = new($"\\$add\\((?<expression>{EventValueProviderRegularExpressions.Expression}*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+    static readonly Regex _regularExpression = AddRegEx();
 
     /// <inheritdoc/>
     public bool CanResolve(PropertyPath targetProperty, string expression) => _regularExpression.Match(expression).Success;
@@ -30,4 +30,7 @@ public class AddExpressionResolver(IEventValueProviderExpressionResolvers eventV
         var match = _regularExpression.Match(expression);
         return PropertyMappers.AddWithEventValueProvider(targetProperty, eventValueProviderExpressionResolvers.Resolve(targetPropertySchema, match.Groups["expression"].Value));
     }
+
+    [GeneratedRegex($"\\$add\\((?<expression>{EventValueProviderRegularExpressions.Expression}*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex AddRegEx();
 }

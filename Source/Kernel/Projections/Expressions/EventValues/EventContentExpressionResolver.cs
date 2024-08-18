@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 public class EventContentExpressionResolver : IEventValueProviderExpressionResolver
 {
     /// <inheritdoc/>
-    public bool CanResolve(string expression) => !expression.StartsWith("$", StringComparison.InvariantCultureIgnoreCase);
+    public bool CanResolve(string expression) => !expression.StartsWith('$');
 
     /// <inheritdoc/>
     public ValueProvider<AppendedEvent> Resolve(string expression) => EventValueProviders.EventContent(expression);

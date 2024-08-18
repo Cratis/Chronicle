@@ -10,9 +10,9 @@ namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 /// <summary>
 /// Represents a <see cref="IModelPropertyExpressionResolver"/> for resolving value to a constant.
 /// </summary>
-public class ValueExpressionResolver : IEventValueProviderExpressionResolver
+public partial class ValueExpressionResolver : IEventValueProviderExpressionResolver
 {
-    static readonly Regex _regularExpression = new("\\$value\\((?<value>[\\w ._/:\\*\\+\\-]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+    static readonly Regex _regularExpression = ValueRegEx();
 
     /// <inheritdoc/>
     public bool CanResolve(string expression) => _regularExpression.Match(expression).Success;
@@ -23,4 +23,7 @@ public class ValueExpressionResolver : IEventValueProviderExpressionResolver
         var match = _regularExpression.Match(expression);
         return EventValueProviders.Value(match.Groups["value"].Value);
     }
+
+    [GeneratedRegex("\\$value\\((?<value>[\\w ._/:\\*\\+\\-]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex ValueRegEx();
 }
