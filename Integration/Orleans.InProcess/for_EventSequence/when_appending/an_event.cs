@@ -2,11 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Integration.Base;
+using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending.an_event.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
 
 [Collection(GlobalCollection.Name)]
-public class an_event(an_event.context context) : OrleansTest<an_event.context>(context)
+public class an_event(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     {

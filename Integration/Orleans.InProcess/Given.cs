@@ -3,10 +3,10 @@
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
-public class OrleansTest<TSetup> : IClassFixture<TSetup>
+public class Given<TSetup> : IClassFixture<TSetup>
     where TSetup : IntegrationSpecificationContext
 {
-    public OrleansTest(TSetup context)
+    public Given(TSetup context)
     {
         Context = context;
         context.SetName(GetType().Name);

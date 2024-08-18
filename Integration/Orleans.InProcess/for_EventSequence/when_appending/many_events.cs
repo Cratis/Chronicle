@@ -4,11 +4,12 @@
 using Cratis.Chronicle.Integration.Base;
 using MongoDB.Driver;
 using Xunit.Abstractions;
+using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending.many_events.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
 
 [Collection(GlobalCollection.Name)]
-public class many_events(many_events.context context, ITestOutputHelper testLogger) : OrleansTest<many_events.context>(context)
+public class many_events(context context, ITestOutputHelper testLogger) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     {

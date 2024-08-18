@@ -4,11 +4,12 @@
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Base;
+using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Observers.when_appending_event.and_waiting_for_observer_to_be_active.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Observers.when_appending_event;
 
 [Collection(GlobalCollection.Name)]
-public class and_waiting_for_observer_to_be_active(and_waiting_for_observer_to_be_active.context context) : OrleansTest<and_waiting_for_observer_to_be_active.context>(context)
+public class and_waiting_for_observer_to_be_active(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     {

@@ -7,11 +7,12 @@ using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Storage.MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending.existing_sequence_number.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
 
 [Collection(GlobalCollection.Name)]
-public class existing_sequence_number(existing_sequence_number.context context) : OrleansTest<existing_sequence_number.context>(context)
+public class existing_sequence_number(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     {

@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Concepts;
 
-namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Models;
 
 public record Model(
     string StringValue,
