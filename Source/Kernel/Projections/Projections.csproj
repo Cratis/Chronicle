@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
         <AssemblyName>Cratis.Chronicle.Projections</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Projections</RootNamespace>
     </PropertyGroup>
