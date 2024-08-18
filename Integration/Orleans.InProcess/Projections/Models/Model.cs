@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Concepts;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Models;
@@ -55,15 +56,15 @@ public record Model(
         random.NextDouble(),
         (EnumWithValues)random.Next((int)EnumWithValues.ThirdValue),
         Guid.NewGuid(),
-        DateTime.UtcNow.AddDays(random.Next(60)),
+        DateTime.UtcNow.AddDays(random.Next(60)).RoundDownTicks(),
         DateOnly.FromDateTime(DateTime.UtcNow.AddDays(random.Next(60))),
-        TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(random.Next(48))),
-        DateTimeOffset.UtcNow.AddDays(random.Next(60)),
+        TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(random.Next(48))).RoundDownTicks(),
+        DateTimeOffset.UtcNow.AddDays(random.Next(60)).RoundDownTicks(),
         random.NextDouble().ToString(),
         (random.Next() % 1) == 0,
         random.Next(5000),
         random.NextSingle(),
         random.NextDouble(),
         Guid.NewGuid(),
-        DateTimeOffset.UtcNow.AddDays(random.Next(60)));
+        DateTimeOffset.UtcNow.AddDays(random.Next(60)).RoundDownTicks());
 }
