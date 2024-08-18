@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Applications.Orleans.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Grains.Observation;
@@ -11,6 +12,8 @@ using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
+using Orleans.Serialization.Cloning;
+using Orleans.Serialization.Serializers;
 
 namespace Cratis.Chronicle.Setup.Serialization;
 
@@ -45,8 +48,23 @@ public static class SerializationConfigurationExtensions
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<JobStateJsonConverter, JobState>());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<JobStepStateJsonConverter, JobStepState>());
 
-        services.AddSerializer(serializerBuilder => serializerBuilder.AddJsonSerializer(
+        services.AddConceptSerializer();
+        services.AddAppendedEventSerializer();
+        services.AddSerializer(
+            serializerBuilder => serializerBuilder.AddJsonSerializer(
             _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Cratis") ?? false),
             options));
+    }
+
+    static IServiceCollection AddAppendedEventSerializer(this IServiceCollection services)
+    {
+        services.AddSerializer(builder =>
+        {
+            builder.Services.AddSingleton<AppendedEventSerializer>();
+            builder.Services.AddSingleton<IGeneralizedCodec, AppendedEventSerializer>();
+            builder.Services.AddSingleton<IGeneralizedCopier, AppendedEventSerializer>();
+            builder.Services.AddSingleton<ITypeFilter, AppendedEventSerializer>();
+        });
+        return services;
     }
 }
