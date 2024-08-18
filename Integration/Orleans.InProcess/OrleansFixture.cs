@@ -22,6 +22,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
 public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory<Startup>, IClientArtifactsProvider
 {
+    bool _backupPerformed;
     string _name = string.Empty;
 
     protected override IHostBuilder CreateHostBuilder()
@@ -111,7 +112,11 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
 
     protected override void Dispose(bool disposing)
     {
-        GlobalFixture.PerformBackup(_name);
+        if (!_backupPerformed)
+        {
+            GlobalFixture.PerformBackup(_name);
+            _backupPerformed = true;
+        }
         GlobalFixture.RemoveAllDatabases().GetAwaiter().GetResult();
         base.Dispose(disposing);
     }
