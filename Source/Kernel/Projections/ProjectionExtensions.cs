@@ -42,8 +42,11 @@ public static class ProjectionExtensions
         var joinSubject = new Subject<ProjectionEventContext>();
         observable.Subscribe(_ =>
         {
-            _.Changeset.Join(onModelProperty, _.Key.Value, _.Key.ArrayIndexers);
-            joinSubject.OnNext(_);
+            var changeset = _.Changeset.Join(onModelProperty, _.Key.Value, _.Key.ArrayIndexers);
+            joinSubject.OnNext(_ with
+            {
+                Changeset = changeset
+            });
         });
         return joinSubject;
     }
@@ -69,18 +72,15 @@ public static class ProjectionExtensions
 
             if (onValue is not null)
             {
-                var checkTask = eventSequenceStorage.HasInstanceFor(joinEventType.Id, onValue.ToString()!);
-                checkTask.Wait();
-                if (checkTask.Result)
+                var hasInstance = eventSequenceStorage.HasInstanceFor(joinEventType.Id, onValue.ToString()!).GetAwaiter().GetResult();
+                if (hasInstance)
                 {
-                    var lastEventInstanceTask = eventSequenceStorage.GetLastInstanceFor(joinEventType.Id, onValue.ToString()!);
-                    lastEventInstanceTask.Wait();
-                    var lastEventInstance = lastEventInstanceTask.Result;
-
-                    _.Changeset.ResolvedJoin(onModelProperty, _.Key.Value, lastEventInstance, _.Key.ArrayIndexers);
+                    var lastEventInstance = eventSequenceStorage.GetLastInstanceFor(joinEventType.Id, onValue.ToString()!).GetAwaiter().GetResult();
+                    var changeset = _.Changeset.ResolvedJoin(onModelProperty, _.Key.Value, lastEventInstance, _.Key.ArrayIndexers);
                     joinSubject.OnNext(_ with
                     {
-                        Event = lastEventInstance
+                        Event = lastEventInstance,
+                        Changeset = changeset
                     });
                 }
             }

@@ -59,19 +59,23 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     }
 
     /// <inheritdoc/>
-    public void Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers)
+    public IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers)
     {
         var workingState = InitialState.Clone()!;
-        Add(new Joined(workingState, key, onProperty, arrayIndexers, Changes));
+        var changeset = new Changeset<TSource, TTarget>(comparer, Incoming, workingState);
+        Add(new Joined(workingState, key, onProperty, arrayIndexers, changeset.Changes));
         CurrentState = workingState;
+        return changeset;
     }
 
     /// <inheritdoc/>
-    public void ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers)
+    public IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers)
     {
         var workingState = CurrentState.Clone()!;
-        Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, Changes));
+        var changeset = new Changeset<TSource, TTarget>(comparer, incoming, workingState);
+        Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, changeset.Changes));
         CurrentState = workingState;
+        return changeset;
     }
 
     /// <inheritdoc/>

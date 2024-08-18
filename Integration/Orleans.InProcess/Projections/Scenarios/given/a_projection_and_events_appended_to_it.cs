@@ -23,6 +23,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
     public AppendedEvent[] AppendedEvents;
     public override IEnumerable<Type> Projections => [typeof(TProjection)];
     protected List<object> EventsToAppend = [];
+    protected List<EventAndEventSourceId> EventsWithEventSourceIdToAppend = [];
 
     protected override void ConfigureServices(IServiceCollection services)
     {
@@ -44,6 +45,11 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
         foreach (var @event in EventsToAppend)
         {
             appendResult = await EventStore.EventLog.Append(EventSourceId, @event);
+        }
+
+        foreach (var @event in EventsWithEventSourceIdToAppend)
+        {
+            appendResult = await EventStore.EventLog.Append(@event.EventSourceId, @event.Event);
         }
 
         var appendedEvents = await EventStore.EventLog.GetForEventSourceIdAndEventTypes(EventSourceId, EventTypes.Select(_ => _.GetEventType()));

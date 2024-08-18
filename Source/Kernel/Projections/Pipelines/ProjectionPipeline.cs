@@ -53,6 +53,11 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task Handle(AppendedEvent @event)
     {
+        if (@event.Metadata.Type.Id == "UserAddedToGroup")
+        {
+            Console.WriteLine("UserAddedToGroup");
+        }
+
         logger.HandlingEvent(@event.Metadata.SequenceNumber);
         var correlationId = CorrelationId.New(); // TODO: Fix this when we have a proper correlation id
         var keyResolver = Projection.GetKeyResolverFor(@event.Metadata.Type);
