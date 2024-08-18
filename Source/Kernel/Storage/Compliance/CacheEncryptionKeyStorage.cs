@@ -51,5 +51,5 @@ public class CacheEncryptionKeyStorage(IEncryptionKeyStorage actualKeyStore) : I
         await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key);
     }
 
-    record Key(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier);
+    sealed record Key(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier);
 }
