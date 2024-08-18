@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Concepts;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections;
@@ -14,10 +15,10 @@ public static class KnownValues
     public static double DoubleValue = 42.42;
     public static EnumWithValues EnumValue = EnumWithValues.SecondValue;
     public static Guid GuidValue = Guid.NewGuid();
-    public static DateTime DateTimeValue = DateTime.UtcNow;
+    public static DateTime DateTimeValue = DateTime.UtcNow.RoundDownTicks();
     public static DateOnly DateOnlyValue = DateOnly.FromDateTime(DateTime.UtcNow);
-    public static TimeOnly TimeOnlyValue = TimeOnly.FromDateTime(DateTime.UtcNow);
-    public static DateTimeOffset DateTimeOffsetValue = DateTimeOffset.UtcNow;
+    public static TimeOnly TimeOnlyValue = TimeOnly.FromDateTime(DateTime.UtcNow).RoundDownTicks();
+    public static DateTimeOffset DateTimeOffsetValue = DateTimeOffset.UtcNow.RoundDownTicks();
     public static StringConcept StringConceptValue = "Forty three";
     public static BoolConcept BoolConceptValue = true;
     public static IntConcept IntConceptValue = 43;

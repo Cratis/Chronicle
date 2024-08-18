@@ -16,21 +16,21 @@ public class using_composite_key_from_property_and_context_property(context cont
     public class context(GlobalFixture globalFixture) : given.a_projection_and_events_appended_to_it<CompositeKeyFromPropertyAndContextPropertyProjection, ModelWithCompositeKey>(globalFixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
-        public CompositeKey ModelId;
+        public CompositeKey CompositeId;
         public ModelWithCompositeKey Model;
 
         void Establish()
         {
-            ModelId = new(Guid.NewGuid().ToString(), 0);
+            CompositeId = new(Guid.NewGuid().ToString(), 0);
             EventsToAppend.Add(EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues() with
             {
-                StringValue = ModelId.First
+                StringValue = CompositeId.First
             });
         }
 
         async Task Because()
         {
-            var result = await GlobalFixture.ReadModels.Database.GetCollection<ModelWithCompositeKey>().FindAsync(_ => _.Id == ModelId);
+            var result = await GlobalFixture.ReadModels.Database.GetCollection<ModelWithCompositeKey>().FindAsync(_ => _.Id == CompositeId);
             Model = await result.FirstOrDefaultAsync();
         }
     }

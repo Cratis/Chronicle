@@ -17,6 +17,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
     public EventSourceId EventSourceId;
+    public string ModelId;
 
     public TModel Result;
     public AppendedEvent[] AppendedEvents;
@@ -31,6 +32,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
     void Establish()
     {
         EventSourceId = Guid.NewGuid().ToString();
+        ModelId = EventSourceId;
     }
 
     async Task Because()
@@ -50,7 +52,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
         if (appendResult is not null)
         {
             await observer.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
-            var filter = Builders<TModel>.Filter.Eq(new StringFieldDefinition<TModel, string>("_id"), EventSourceId.Value);
+            var filter = Builders<TModel>.Filter.Eq(new StringFieldDefinition<TModel, string>("_id"), ModelId);
             var result = await _globalFixture.ReadModels.Database.GetCollection<TModel>().FindAsync(filter);
             Result = result.FirstOrDefault();
         }
