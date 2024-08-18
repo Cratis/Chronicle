@@ -1,11 +1,11 @@
 # Running with Docker Compose
 
-Using the development image of Cratis is very convenient for getting started quickly.
+Using the development image of Chronicle is very convenient for getting started quickly.
 Sometimes you want more control over the running environment and have MongoDB as its own
 thing and possible other services, for collecting logging and other telemetry
-both from Cratis and your own app running on top.
+both from Chronicle and your own app running on top.
 
-The following configures a `docker-compose-yml` with Cratis, a version of [MongoDB](https://mongodb.com),
+The following configures a `docker-compose-yml` with Chronicle, a version of [MongoDB](https://mongodb.com),
 [ZipKin](http://zipkin.io), [Seq](https://datalust.co/seq) and [Prometheus](https://prometheus.io) to
 be working together.
 
@@ -24,7 +24,7 @@ services:
     ports:
       - 27017:27017
 
-  cratis:
+  chronicle:
     image: cratis/chronicle:latest
     ports:
       - 27017:27017
@@ -64,51 +64,5 @@ services:
       - zipkin-all-in-one
 ```
 
-The Cratis service is configured with a specific `appsettings.json` file.
-Add a file called `appsettings.json` next to your `docker-compose.yml` and
-add the following:
-
-```json
-{
-    "Serilog": {
-        "Using": [
-            "Serilog.Sinks.Console"
-        ],
-        "MinimumLevel": {
-            "Default": "Verbose",
-            "Override": {
-                "Cratis": "Information",
-                "Microsoft": "Warning",
-                "Microsoft.AspNetCore.HttpLogging": "Warning",
-                "Microsoft.Hosting.Lifetime": "Information",
-                "System": "Warning",
-                "Orleans": "Information"
-            }
-        },
-        "Enrich": [
-            "FromLogContext",
-            "WithMachineName",
-            "WithThreadId"
-        ],
-        "WriteTo": [
-            {
-                "Name": "Console",
-                "Args": {
-                    "theme": "Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme::Code, Serilog.Sinks.Console",
-                    "outputTemplate": "[{Timestamp:HH:mm:ss} {Level}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}{NewLine}"
-                }
-            },
-            {
-                "Name": "Seq",
-                "Args": {
-                    "serverUrl": "http://localhost:5341"
-                }
-            }
-        ]
-    },
-    "AllowedHosts": "*"
-}
-```
-
-You will now have a full stack that will give you all the logging from Cratis inside `Seq`
+You will now have a full stack that will give you all the logging from Chronicle inside `Seq`
 and the individual services separated out.

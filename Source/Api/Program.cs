@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Serilog;
 
 #pragma warning disable SA1600
 namespace Cratis.Api.Server;
@@ -38,8 +37,6 @@ public static class Program
     {
         if (args.ExceptionObject is Exception exception)
         {
-            Log.Logger?.Error(exception, "Unhandled exception");
-            Log.CloseAndFlush();
             Console.WriteLine("************ BEGIN UNHANDLED EXCEPTION ************");
             PrintExceptionInfo(exception);
 
