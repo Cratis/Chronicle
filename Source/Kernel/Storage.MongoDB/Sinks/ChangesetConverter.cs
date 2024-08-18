@@ -61,7 +61,7 @@ public class ChangesetConverter(
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    hasChanges = BuildPropertiesChanged(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, propertiesChanged);
+                    hasChanges |= BuildPropertiesChanged(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, propertiesChanged);
                     break;
 
                 case ChildAdded childAdded:
