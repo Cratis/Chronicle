@@ -44,11 +44,12 @@ public static class PropertyMappers
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            if (!actualTarget!.ContainsKey(lastSegment.Value))
+            if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
-                actualTarget[lastSegment.Value] = 0D;
+                valueAsObject = 0D;
+                actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double));
+            var value = (double)Convert.ChangeType(valueAsObject, typeof(double));
             value += (double)Convert.ChangeType(eventValueProvider(@event), typeof(double));
             actualTarget[lastSegment.Value] = value;
         };
@@ -66,11 +67,12 @@ public static class PropertyMappers
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            if (!actualTarget!.ContainsKey(lastSegment.Value))
+            if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
-                actualTarget[lastSegment.Value] = 0D;
+                valueAsObject = 0D;
+                actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double));
+            var value = (double)Convert.ChangeType(valueAsObject, typeof(double));
             value -= (double)Convert.ChangeType(eventValueProvider(@event), typeof(double));
             actualTarget[lastSegment.Value] = value;
         };
@@ -91,11 +93,12 @@ public static class PropertyMappers
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            if (!actualTarget!.ContainsKey(lastSegment.Value))
+            if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
-                actualTarget[lastSegment.Value] = 0;
+                valueAsObject = 0;
+                actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var value = (int)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(int));
+            var value = (int)Convert.ChangeType(valueAsObject, typeof(int));
             value++;
             if (targetType?.Equals(typeof(int)) == false)
             {
