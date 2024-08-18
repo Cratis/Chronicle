@@ -113,6 +113,7 @@ public static class ChronicleClientSiloBuilderExtensions
             services.AddSingleton<IChronicleClient>(sp =>
             {
                 var grainFactory = sp.GetRequiredService<IGrainFactory>();
+                var clusterClient = sp.GetRequiredService<IClusterClient>();
                 var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
                 options.ServiceProvider = sp;
                 options.ArtifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
@@ -124,7 +125,8 @@ public static class ChronicleClientSiloBuilderExtensions
                     new Observers(),
                     new Server::Cratis.Chronicle.Services.Observation.Reactions.Reactions(grainFactory, sp.GetRequiredService<IReactionMediator>()),
                     new Server::Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IExpandoObjectConverter>()),
-                    new Server::Cratis.Chronicle.Services.Projections.Projections(grainFactory));
+                    new Server::Cratis.Chronicle.Services.Projections.Projections(grainFactory),
+                    new Server::Cratis.Chronicle.Services.Host.Server(clusterClient));
 
                 var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
                 var connection = new Cratis.Chronicle.Orleans.InProcess.ChronicleConnection(connectionLifecycle, services, grainFactory);

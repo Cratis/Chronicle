@@ -26,6 +26,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.NamespaceAdded, _ => _.FireAndForgetDelivery = true)
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ConstraintsChanged, _ => _.FireAndForgetDelivery = true)
+            .AddBroadcastChannel(WellKnownBroadcastChannelNames.ReloadState, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()
             .AddReminders()
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
