@@ -14,20 +14,12 @@ public class counting_events(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : given.a_projection_and_events_appended_to_it<CountingEventsProjection, Model>(globalFixture)
     {
-        string event_source_id;
-        EventWithPropertiesForAllSupportedTypes first_event_appended;
-        EventWithPropertiesForAllSupportedTypes second_event_appended;
-
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
 
         void Establish()
         {
-            event_source_id = Guid.NewGuid().ToString();
-
-            first_event_appended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
-            EventsToAppend.Add(first_event_appended);
-            second_event_appended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
-            EventsToAppend.Add(second_event_appended);
+            EventsToAppend.Add(EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues());
+            EventsToAppend.Add(EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues());
         }
     }
 
