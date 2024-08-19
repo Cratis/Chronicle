@@ -74,16 +74,7 @@ public class ProjectionFactory(
                 true));
 
         var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
-
-        ExpandoObject initialState;
-        if (projectionDefinition.InitialModelState is not null)
-        {
-            initialState = expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
-        }
-        else
-        {
-            initialState = new ExpandoObject();
-        }
+        var initialState = GetInitialState(expandoObjectConverter, projectionDefinition, modelSchema, model);
 
         var projection = new Projection(
             projectionDefinition.Identifier,
@@ -160,6 +151,25 @@ public class ProjectionFactory(
         }
 
         return projection;
+    }
+
+    ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema modelSchema, Model model) =>
+        projectionDefinition.InitialModelState.Count == 0 ?
+            CreateInitialState(model) :
+            expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
+
+    ExpandoObject CreateInitialState(Model model)
+    {
+        // If there is no initial state, we create one with empty collections for all arrays.
+        // This is to ensure that we can add to them without having to check for null.
+        // And that any sinks don't fail when trying to access them.
+        var initialState = new ExpandoObject();
+        foreach (var collection in model.Schema.GetFlattenedProperties().Where(_ => _.IsArray))
+        {
+            ((IDictionary<string, object?>)initialState)[collection.Name] = new List<object>();
+        }
+
+        return initialState;
     }
 
     void SetupFromSubscription(
