@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -34,7 +35,7 @@ public static class ProjectionExtensions
     /// </summary>
     /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
     /// <param name="onModelProperty">The property on the model to join on.</param>
-    /// <returns>An observable for continuation.</returns>
+    /// <returns>A new observable for the Join operation.</returns>
     public static IObservable<ProjectionEventContext> Join(
         this IObservable<ProjectionEventContext> observable,
         PropertyPath onModelProperty)
@@ -58,7 +59,7 @@ public static class ProjectionExtensions
     /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for getting the event in the past.</param>
     /// <param name="joinEventType">Type of event to be joined.</param>
     /// <param name="onModelProperty">The property on the model to join on.</param>
-    /// <returns>The observable for continuation.</returns>
+    /// <returns>A new observable for the ResolveJoin operation.</returns>
     public static IObservable<ProjectionEventContext> ResolveJoin(
         this IObservable<ProjectionEventContext> observable,
         IEventSequenceStorage eventSequenceStorage,
@@ -68,8 +69,7 @@ public static class ProjectionExtensions
         var joinSubject = new Subject<ProjectionEventContext>();
         observable.Subscribe(_ =>
         {
-            var onValue = onModelProperty.GetValue(_.Changeset.CurrentState, ArrayIndexers.NoIndexers);
-
+            var onValue = onModelProperty.GetValue(_.Changeset.CurrentState, _.Key.ArrayIndexers);
             if (onValue is not null)
             {
                 var hasInstance = eventSequenceStorage.HasInstanceFor(joinEventType.Id, onValue.ToString()!).GetAwaiter().GetResult();
@@ -86,6 +86,17 @@ public static class ProjectionExtensions
             }
         });
         return joinSubject;
+    }
+
+    /// <summary>
+    /// Optimize the changeset.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> Optimize(this IObservable<ProjectionEventContext> observable)
+    {
+        observable.Subscribe(_ => _.Changeset.Optimize());
+        return observable;
     }
 
     /// <summary>

@@ -188,11 +188,12 @@ public class ProjectionFactory(
             {
                 var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
                 projected = projected
-                    .ResolveJoin(eventSequenceStorage, joinEventType, joinDefinition.On)
+                    .ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On)
                     .Project(
                         childrenAccessorProperty,
                         actualIdentifiedByProperty,
-                        joinPropertyMappers);
+                        joinPropertyMappers)
+                    .Optimize();
             }
         }
     }
