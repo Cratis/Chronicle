@@ -9,7 +9,7 @@ public class Given<TSetup> : IClassFixture<TSetup>
     public Given(TSetup context)
     {
         Context = context;
-        context.SetName(GetType().Name);
+        context.SetName(GetType().FullName);
     }
 
     public TSetup Context { get; }
