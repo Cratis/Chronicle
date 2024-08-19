@@ -72,7 +72,7 @@ public class ProjectionPipeline(
         var context = new ProjectionEventContext(key, @event, changeset);
         await HandleEventFor(Projection, context);
 
-        if (needsInitialState)
+        if (needsInitialState && !changeset.HasJoined())
         {
             changeset.AddPropertiesFrom(Projection.InitialModelState);
         }

@@ -39,4 +39,12 @@ public static class ChangesetExtensions
         var propertiesChanged = new PropertiesChanged<ExpandoObject>(changeset.CurrentState, newProperties);
         changeset.Add(propertiesChanged);
     }
+
+    /// <summary>
+    /// Checks if the changeset has a <see cref="Joined"/> change.
+    /// </summary>
+    /// <param name="changeset">Changeset to check.</param>
+    /// <returns>True if it has, false if not.</returns>
+    public static bool HasJoined(this IChangeset<AppendedEvent, ExpandoObject> changeset) =>
+        changeset.Changes.OfType<Joined>().Any();
 }
