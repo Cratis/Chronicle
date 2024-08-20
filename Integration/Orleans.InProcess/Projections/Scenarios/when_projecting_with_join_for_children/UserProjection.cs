@@ -15,6 +15,5 @@ public class UserProjection : IProjectionFor<User>
             .From<UserAddedToGroup>(b => b
                 .UsingParentKey(e => e.UserId))
             .Join<GroupCreated>(j => j
-                .On(g => g.GroupId)
                 .Set(m => m.GroupName).To(e => e.Name)));
 }

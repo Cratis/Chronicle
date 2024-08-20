@@ -37,7 +37,14 @@ public class ChildrenBuilder<TParentModel, TChildModel>(
     // TODO: This is not used, but it should be - figure out what the purpose was. The FromEventProperty method is called from ModelPropertiesBuilder
     EventType? _fromEventPropertyEventType;
     IEventValueExpression? _fromEventPropertyExpression;
+
 #pragma warning restore IDE0052 // Remove unread private members
+
+    /// <inheritdoc/>
+    public bool HasIdentifiedBy => _identifiedBy.IsSet;
+
+    /// <inheritdoc/>
+    public PropertyPath GetIdentifiedBy() => _identifiedBy;
 
     /// <inheritdoc/>
     public IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy(PropertyPath propertyPath)
