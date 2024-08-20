@@ -6,15 +6,14 @@ using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_with_join_for_children;
 
-public class ProjectionWithJoinOnChildren : IProjectionFor<User>
+public class UserProjection : IProjectionFor<User>
 {
     public void Define(IProjectionBuilderFor<User> builder) => builder
         .From<UserCreated>(b => b.Set(m => m.Name).To(e => e.Name))
         .Children(_ => _.Groups, _ => _
             .IdentifiedBy(e => e.GroupId)
             .From<UserAddedToGroup>(b => b
-                .UsingParentKey(e => e.UserId)
-                .Set(m => m.GroupId).ToEventSourceId())
+                .UsingParentKey(e => e.UserId))
             .Join<GroupCreated>(j => j
                 .On(g => g.GroupId)
                 .Set(m => m.GroupName).To(e => e.Name)));

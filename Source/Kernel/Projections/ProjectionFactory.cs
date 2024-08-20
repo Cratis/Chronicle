@@ -126,7 +126,7 @@ public class ProjectionFactory(
             propertyMappers.AddRange(propertyMappersForAllEventTypes);
             projection.Event
                 .WhereEventTypeEquals(eventType)
-                .Join(joinDefinition.On)
+                .Join(childrenAccessorProperty + joinDefinition.On)
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,
@@ -182,7 +182,7 @@ public class ProjectionFactory(
         EventType eventType,
         FromDefinition fromDefinition)
     {
-        var joinExpressions = projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key));
+        var joinExpressions = projectionDefinition.Join.Where(join => fromDefinition.Key == join.Value.On);
         var propertyMappers = fromDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
         propertyMappers.AddRange(propertyMappersForAllEventTypes);
         var projected = projection.Event
