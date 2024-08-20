@@ -21,6 +21,7 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="automapper" />
         <PackageReference Include="FluentValidation" />
+        <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />

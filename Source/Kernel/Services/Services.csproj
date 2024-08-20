@@ -17,6 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
     </ItemGroup>

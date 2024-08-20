@@ -7,12 +7,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj"/>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Cratis.Applications" />
+        <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
     </ItemGroup>
 </Project>

@@ -6,6 +6,7 @@
 
     <ItemGroup>
       <PackageReference Include="mongodb.driver" />
+      <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
       <PackageReference Include="Testcontainers" />
     </ItemGroup>
 </Project>

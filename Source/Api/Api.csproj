@@ -21,6 +21,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
       <PackageReference Include="Swashbuckle.AspNetCore" />
       <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
       <PackageReference Include="Cratis.Applications" />

@@ -16,5 +16,6 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
     </ItemGroup>
 </Project>

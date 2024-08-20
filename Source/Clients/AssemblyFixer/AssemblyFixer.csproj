@@ -8,5 +8,6 @@
     </PropertyGroup>
     <ItemGroup>
       <PackageReference Include="Mono.Cecil" />
+      <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
     </ItemGroup>
 </Project>

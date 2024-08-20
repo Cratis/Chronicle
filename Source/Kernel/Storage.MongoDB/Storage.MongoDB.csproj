@@ -8,6 +8,7 @@
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Serialization" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
+        <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="MongoDB.Driver" />
         <PackageReference Include="Cratis.Applications.MongoDB" />

@@ -9,6 +9,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
     </ItemGroup>
 </Project>

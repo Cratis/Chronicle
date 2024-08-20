@@ -20,6 +20,7 @@
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
+        <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
         <PackageReference Include="OrleansDashboard" />
     </ItemGroup>
 </Project>
