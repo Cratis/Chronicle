@@ -8,5 +8,6 @@
     </PropertyGroup>
     <ItemGroup>
       <PackageReference Include="Mono.Cecil" />
+      <PackageReference Include="System.Reactive" />
     </ItemGroup>
 </Project>

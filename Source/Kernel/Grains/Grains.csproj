@@ -23,5 +23,6 @@
       <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
       <PackageReference Include="Microsoft.Orleans.Sdk" />
       <PackageReference Include="Microsoft.Orleans.Reminders" />
+      <PackageReference Include="System.Reactive" />
     </ItemGroup>
 </Project>

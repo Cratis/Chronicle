@@ -16,5 +16,6 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="System.Reactive" />
     </ItemGroup>
 </Project>

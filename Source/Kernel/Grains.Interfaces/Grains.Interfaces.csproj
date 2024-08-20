@@ -19,5 +19,6 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="Cratis.Applications.Orleans" />
+        <PackageReference Include="System.Reactive" />
     </ItemGroup>
 </Project>

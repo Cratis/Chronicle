@@ -6,6 +6,7 @@
 
     <ItemGroup>
       <PackageReference Include="mongodb.driver" />
+      <PackageReference Include="System.Reactive" />
       <PackageReference Include="Testcontainers" />
     </ItemGroup>
 </Project>

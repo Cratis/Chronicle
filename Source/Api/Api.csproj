@@ -26,5 +26,6 @@
       <PackageReference Include="Cratis.Applications" />
       <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
       <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
+      <PackageReference Include="System.Reactive" />
     </ItemGroup>
 </Project>
