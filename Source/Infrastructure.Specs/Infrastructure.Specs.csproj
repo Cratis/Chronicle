@@ -7,10 +7,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Infrastructure/Infrastructure.csproj"/>
+        <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Cratis.Applications"/>
+        <PackageReference Include="Cratis.Applications" />
+        <PackageReference Include="FluentValidation" />
     </ItemGroup>
 </Project>
