@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="From">All the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="Join">All the <see cref="JoinDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
-/// <param name="FromAny">All the <see cref="FromAnyDefinition"/> for <see cref="EventType">event types</see>.</param>
+/// <param name="FromEvery">All the <see cref="FromEveryDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="All">The full <see cref="AllDefinition"/>.</param>
 /// <param name="Sink">The <see cref="SinkDefinition"/>.</param>
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
@@ -38,7 +38,7 @@ public record ProjectionDefinition(
     IDictionary<EventType, FromDefinition> From,
     IDictionary<EventType, JoinDefinition> Join,
     IDictionary<PropertyPath, ChildrenDefinition> Children,
-    IEnumerable<FromAnyDefinition> FromAny,
+    IEnumerable<FromEveryDefinition> FromEvery,
     AllDefinition All,
     SinkDefinition Sink,
     FromEventPropertyDefinition? FromEventProperty = default,

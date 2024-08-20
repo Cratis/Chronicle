@@ -109,13 +109,13 @@ public class ProjectionFactory(
             SetupFromSubscription(eventSequenceStorage, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromDefinition);
         }
 
-        if (projectionDefinition.FromAny is not null)
+        if (projectionDefinition.FromEvery is not null)
         {
-            foreach (var fromAnyDefinition in projectionDefinition.FromAny)
+            foreach (var fromEveryDefinition in projectionDefinition.FromEvery)
             {
-                foreach (var eventType in fromAnyDefinition.EventTypes)
+                foreach (var eventType in fromEveryDefinition.EventTypes)
                 {
-                    SetupFromSubscription(eventSequenceStorage, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromAnyDefinition.From);
+                    SetupFromSubscription(eventSequenceStorage, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromEveryDefinition.From);
                 }
             }
         }
@@ -229,11 +229,11 @@ public class ProjectionFactory(
         var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
         eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
 
-        if (projectionDefinition.FromAny is not null)
+        if (projectionDefinition.FromEvery is not null)
         {
-            foreach (var fromAnyDefinition in projectionDefinition.FromAny)
+            foreach (var fromEveryDefinition in projectionDefinition.FromEvery)
             {
-                eventsForProjection.AddRange(fromAnyDefinition.EventTypes.Select(eventType => GetEventTypeWithKeyResolverFor(projection, eventType, fromAnyDefinition.From.Key, actualIdentifiedByProperty, hasParent, fromAnyDefinition.From.ParentKey)));
+                eventsForProjection.AddRange(fromEveryDefinition.EventTypes.Select(eventType => GetEventTypeWithKeyResolverFor(projection, eventType, fromEveryDefinition.From.Key, actualIdentifiedByProperty, hasParent, fromEveryDefinition.From.ParentKey)));
             }
         }
 

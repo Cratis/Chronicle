@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Contracts.Projections;
 /// Represents the from any definition of a projection.
 /// </summary>
 [ProtoContract]
-public class FromAnyDefinition
+public class FromEveryDefinition
 {
     /// <summary>
     /// Gets or sets the event types.

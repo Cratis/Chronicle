@@ -13,4 +13,4 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <remarks>
 /// This is typically representing event types that are deriving from a common base type.
 /// </remarks>
-public record FromAnyDefinition(IEnumerable<EventType> EventTypes, FromDefinition From);
+public record FromEveryDefinition(IEnumerable<EventType> EventTypes, FromDefinition From);

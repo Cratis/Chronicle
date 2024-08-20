@@ -40,7 +40,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     protected readonly Dictionary<EventType, FromDefinition> _fromDefinitions = [];
     protected readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = [];
     protected readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = [];
-    protected readonly List<FromAnyDefinition> _fromAnyDefinitions = [];
+    protected readonly List<FromEveryDefinition> _fromEveryDefinitions = [];
     protected AllDefinition _allDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected EventType? _removedWithEvent;
@@ -86,7 +86,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
 
         if (eventTypesInProjection.Length > 1)
         {
-            _fromAnyDefinitions.Add(new FromAnyDefinition
+            _fromEveryDefinitions.Add(new FromEveryDefinition
             {
                 EventTypes = eventTypesInProjection.ToContract(),
                 From = fromDefinition
