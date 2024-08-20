@@ -197,7 +197,7 @@ public class ProjectionFactory(
             foreach (var (joinEventType, joinDefinition) in joinExpressions)
             {
                 var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
-                projected = projected
+                projected
                     .ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On)
                     .Project(
                         childrenAccessorProperty,
