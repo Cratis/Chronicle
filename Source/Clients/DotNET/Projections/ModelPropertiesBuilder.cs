@@ -6,6 +6,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Properties;
 using Cratis.Reflection;
+using Cratis.Strings;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -38,6 +39,20 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
     protected ModelPropertiesBuilder(IProjectionBuilder<TModel, TParentBuilder> projectionBuilder)
     {
         _projectionBuilder = projectionBuilder;
+    }
+
+    /// <inheritdoc/>
+    public TBuilder AutoMap()
+    {
+        var eventProperties = typeof(TEvent).GetProperties().Select(_ => _.Name.ToCamelCase());
+        var modelProperties = typeof(TModel).GetProperties().Select(_ => _.Name.ToCamelCase());
+
+        foreach (var property in eventProperties.Intersect(modelProperties))
+        {
+            Set(property).To(property);
+        }
+
+        return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>

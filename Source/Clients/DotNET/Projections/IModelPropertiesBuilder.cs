@@ -17,6 +17,12 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     where TBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
 {
     /// <summary>
+    /// Automatically map event properties to model properties on the events added.
+    /// </summary>
+    /// <returns>Builder continuation.</returns>
+    TBuilder AutoMap();
+
+    /// <summary>
     /// Define what key to use. This is optional, if not set - it will default to using the event source identifier on the event.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>

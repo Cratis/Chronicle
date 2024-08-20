@@ -102,7 +102,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>> builderCallback)
+    public TBuilder Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>>? builderCallback)
     {
         if (!typeof(TEvent).IsEventType(eventTypes.AllClrTypes))
         {
@@ -110,7 +110,13 @@ public class ProjectionBuilder<TModel, TBuilder>(
         }
 
         var builder = new JoinBuilder<TModel, TEvent, TBuilder>(this);
-        builderCallback(builder);
+
+        if (_autoMap)
+        {
+            builder.AutoMap();
+        }
+
+        builderCallback?.Invoke(builder);
         var eventType = eventTypes.GetEventTypeFor(typeof(TEvent));
         _joinDefinitions[eventType.ToContract()] = builder.Build();
         return (this as TBuilder)!;
