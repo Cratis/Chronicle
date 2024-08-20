@@ -43,7 +43,7 @@ public class JoinBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TMod
         return new()
         {
             On = _on!,
-            Properties = _propertyExpressions.ToDictionary(_ => (string)_.TargetProperty, _ => _.Build()),
+            Properties = _propertyExpressions.DistinctBy(_ => _.TargetProperty).ToDictionary(_ => (string)_.TargetProperty, _ => _.Build()),
             Key = _key.Build()
         };
     }
