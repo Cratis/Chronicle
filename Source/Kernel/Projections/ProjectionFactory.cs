@@ -106,7 +106,16 @@ public class ProjectionFactory(
         var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
-            SetupFromSubscription(eventSequenceStorage, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromDefinition);
+            SetupJoinsForFromDefinition(
+                eventSequenceStorage,
+                projectionDefinition,
+                childrenAccessorProperty,
+                actualIdentifiedByProperty,
+                projection,
+                propertyMappersForAllEventTypes,
+                eventType,
+                fromDefinition,
+                hasParent);
         }
 
         if (projectionDefinition.FromEvery is not null)
@@ -115,7 +124,16 @@ public class ProjectionFactory(
             {
                 foreach (var eventType in fromEveryDefinition.EventTypes)
                 {
-                    SetupFromSubscription(eventSequenceStorage, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromEveryDefinition.From);
+                    SetupJoinsForFromDefinition(
+                        eventSequenceStorage,
+                        projectionDefinition,
+                        childrenAccessorProperty,
+                        actualIdentifiedByProperty,
+                        projection,
+                        propertyMappersForAllEventTypes,
+                        eventType,
+                        fromEveryDefinition.From,
+                        hasParent);
                 }
             }
         }
@@ -172,7 +190,7 @@ public class ProjectionFactory(
         return initialState;
     }
 
-    void SetupFromSubscription(
+    void SetupJoinsForFromDefinition(
         IEventSequenceStorage eventSequenceStorage,
         ProjectionDefinition projectionDefinition,
         PropertyPath childrenAccessorProperty,
@@ -180,9 +198,12 @@ public class ProjectionFactory(
         Projection projection,
         IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappersForAllEventTypes,
         EventType eventType,
-        FromDefinition fromDefinition)
+        FromDefinition fromDefinition,
+        bool hasParent)
     {
-        var joinExpressions = projectionDefinition.Join.Where(join => join.Value.On == actualIdentifiedByProperty);
+        // Notes: The purpose of this method is to hook up on every From definition that matches the eventType of the Join definition
+        // and the join definition matching the property its joining on to then add actions for resolving a join post a projection of
+        // the from.
         var propertyMappers = fromDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
         propertyMappers.AddRange(propertyMappersForAllEventTypes);
         var projected = projection.Event
@@ -191,6 +212,16 @@ public class ProjectionFactory(
                 childrenAccessorProperty,
                 actualIdentifiedByProperty,
                 propertyMappers);
+
+        IEnumerable<KeyValuePair<EventType, JoinDefinition>> joinExpressions;
+        if (hasParent)
+        {
+            joinExpressions = projectionDefinition.Join.Where(join => join.Value.On == actualIdentifiedByProperty);
+        }
+        else
+        {
+            joinExpressions = projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key));
+        }
 
         if (joinExpressions.Any())
         {
