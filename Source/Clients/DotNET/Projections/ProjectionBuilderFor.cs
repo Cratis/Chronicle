@@ -99,7 +99,7 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
             From = _fromDefinitions,
             Join = _joinDefinitions,
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
-            All = _allDefinition,
+            All = _fromEveryDefinition,
             RemovedWith = _removedWithEvent == default ? default : new() { Event = _removedWithEvent },
             Sink = new()
             {

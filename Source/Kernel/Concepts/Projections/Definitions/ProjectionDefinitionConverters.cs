@@ -32,9 +32,9 @@ public static class ProjectionDefinitionConverters
             From = definition.From.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
             Join = definition.Join.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
             Children = definition.Children.ToDictionary(_ => (string)_.Key, _ => _.Value.ToContract()),
-            FromEvery = definition.FromEvery.Select(_ => _.ToContract()).ToList(),
+            FromEvery = definition.FromDerivatives.Select(_ => _.ToContract()).ToList(),
             Sink = definition.Sink.ToContract(),
-            All = definition.All.ToContract(),
+            All = definition.FromEvery.ToContract(),
             FromEventProperty = definition.FromEventProperty?.ToContract() ?? null!,
             RemovedWith = definition.RemovedWith?.ToContract() ?? null!,
             LastUpdated = definition.LastUpdated ?? null!

@@ -1,16 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 
 /// <summary>
-/// Represents the definition from for a set of events.
+/// Represents the definition for a collection of property actions to perform for all events in the projection.
 /// </summary>
-/// <param name="EventTypes">Collection of <see cref="EventType"/> for the definition.</param>
-/// <param name="From">The from definition associated.</param>
-/// <remarks>
-/// This is typically representing event types that are deriving from a common base type.
-/// </remarks>
-public record FromEveryDefinition(IEnumerable<EventType> EventTypes, FromDefinition From);
+/// <param name="Properties">Properties and expressions for each property.</param>
+/// <param name="IncludeChildren">Include event types from child projections.</param>
+public record FromEveryDefinition(IDictionary<PropertyPath, string> Properties, bool IncludeChildren);

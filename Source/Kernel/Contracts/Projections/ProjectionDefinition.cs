@@ -69,16 +69,16 @@ public class ProjectionDefinition
     public IDictionary<string, ChildrenDefinition> Children { get; set; } = new Dictionary<string, ChildrenDefinition>();
 
     /// <summary>
-    /// Gets or sets all the <see cref="FromEveryDefinition"/> for <see cref="EventType">event types</see>.
+    /// Gets or sets all the <see cref="FromDerivativesDefinition"/> for <see cref="EventType">event types</see>.
     /// </summary>
     [ProtoMember(9, IsRequired = true)]
-    public IList<FromEveryDefinition> FromEvery { get; set; } = [];
+    public IList<FromDerivativesDefinition> FromEvery { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the full <see cref="AllDefinition"/>.
+    /// Gets or sets the full <see cref="FromEveryDefinition"/>.
     /// </summary>
     [ProtoMember(10)]
-    public AllDefinition All { get; set; }
+    public FromEveryDefinition All { get; set; }
 
     /// <summary>
     /// Gets or sets the optional <see cref="FromEventPropertyDefinition"/> definition.

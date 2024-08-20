@@ -103,7 +103,7 @@ public class ProjectionFactory(
                 .AddChildFromEventProperty(childrenAccessorProperty, valueProvider);
         }
 
-        var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
+        var propertyMappersForAllEventTypes = projectionDefinition.FromEvery.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
             var fromObservable = SetupFromDefinition(
@@ -125,19 +125,29 @@ public class ProjectionFactory(
                 hasParent);
         }
 
-        if (projectionDefinition.FromEvery is not null)
+        if (projectionDefinition.FromDerivatives is not null)
         {
-            foreach (var fromEveryDefinition in projectionDefinition.FromEvery)
+            foreach (var fromDerivativesDefinition in projectionDefinition.FromDerivatives)
             {
-                foreach (var eventType in fromEveryDefinition.EventTypes)
+                foreach (var eventType in fromDerivativesDefinition.EventTypes)
                 {
-                    SetupFromDefinition(
+                    var fromObservable = SetupFromDefinition(
                         projection,
-                        fromEveryDefinition.From,
+                        fromDerivativesDefinition.From,
                         eventType,
                         childrenAccessorProperty,
                         actualIdentifiedByProperty,
                         propertyMappersForAllEventTypes);
+
+                    SetupJoinsForFromDefinition(
+                        fromObservable,
+                        eventSequenceStorage,
+                        projectionDefinition,
+                        childrenAccessorProperty,
+                        actualIdentifiedByProperty,
+                        projection,
+                        fromDerivativesDefinition.From,
+                        hasParent);
                 }
             }
         }
@@ -155,7 +165,7 @@ public class ProjectionFactory(
                     propertyMappers);
         }
 
-        if (projectionDefinition.All.IncludeChildren)
+        if (projectionDefinition.FromEvery.IncludeChildren)
         {
             var childEventTypes = projection
                 .EventTypes
@@ -272,11 +282,11 @@ public class ProjectionFactory(
         var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
         eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
 
-        if (projectionDefinition.FromEvery is not null)
+        if (projectionDefinition.FromDerivatives is not null)
         {
-            foreach (var fromEveryDefinition in projectionDefinition.FromEvery)
+            foreach (var fromDerivativeDefinition in projectionDefinition.FromDerivatives)
             {
-                eventsForProjection.AddRange(fromEveryDefinition.EventTypes.Select(eventType => GetEventTypeWithKeyResolverFor(projection, eventType, fromEveryDefinition.From.Key, actualIdentifiedByProperty, hasParent, fromEveryDefinition.From.ParentKey)));
+                eventsForProjection.AddRange(fromDerivativeDefinition.EventTypes.Select(eventType => GetEventTypeWithKeyResolverFor(projection, eventType, fromDerivativeDefinition.From.Key, actualIdentifiedByProperty, hasParent, fromDerivativeDefinition.From.ParentKey)));
             }
         }
 

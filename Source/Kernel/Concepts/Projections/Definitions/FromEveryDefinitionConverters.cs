@@ -1,8 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 
@@ -12,29 +11,29 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 public static class FromEveryDefinitionConverters
 {
     /// <summary>
-    /// Converts a <see cref="FromEveryDefinition"/> to its corresponding contract representation.
+    /// Convert to contract version of <see cref="FromEveryDefinition"/>.
     /// </summary>
-    /// <param name="fromEvery">The <see cref="FromEveryDefinition"/> to convert.</param>
-    /// <returns>The converted <see cref="Contracts.Projections.FromEveryDefinition"/>.</returns>
-    public static Contracts.Projections.FromEveryDefinition ToContract(this FromEveryDefinition fromEvery)
+    /// <param name="definition"><see cref="FromEveryDefinition"/> to convert.</param>
+    /// <returns>Converted contract version.</returns>
+    public static Contracts.Projections.FromEveryDefinition ToContract(this FromEveryDefinition definition)
     {
         return new()
         {
-            EventTypes = fromEvery.EventTypes.Select(_ => _.ToContract()).ToList(),
-            From = fromEvery.From.ToContract()
+            Properties = definition.Properties.ToDictionary(_ => (string)_.Key, _ => _.Value),
+            IncludeChildren = definition.IncludeChildren
         };
     }
 
     /// <summary>
-    /// Converts a contract representation of <see cref="FromEveryDefinition"/> to its corresponding Chronicle representation.
+    /// Convert to Chronicle version of <see cref="FromEveryDefinition"/>.
     /// </summary>
-    /// <param name="fromAny">The contract representation of <see cref="FromEveryDefinition"/> to convert.</param>
-    /// <returns>The converted <see cref="FromEveryDefinition"/>.</returns>
-    public static FromEveryDefinition ToChronicle(this Contracts.Projections.FromEveryDefinition fromAny)
+    /// <param name="contract"><see cref="Contracts.Projections.FromEveryDefinition"/> to convert.</param>
+    /// <returns>Converted Chronicle version.</returns>
+    public static FromEveryDefinition ToChronicle(this Contracts.Projections.FromEveryDefinition contract)
     {
         return new(
-            fromAny.EventTypes.Select(_ => _.ToChronicle()),
-            fromAny.From.ToChronicle()
+            contract.Properties.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value),
+            contract.IncludeChildren
         );
     }
 }

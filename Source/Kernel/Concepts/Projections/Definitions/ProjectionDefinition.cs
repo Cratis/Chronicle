@@ -22,8 +22,8 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="From">All the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="Join">All the <see cref="JoinDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
-/// <param name="FromEvery">All the <see cref="FromEveryDefinition"/> for <see cref="EventType">event types</see>.</param>
-/// <param name="All">The full <see cref="AllDefinition"/>.</param>
+/// <param name="FromDerivatives">All the <see cref="Definitions.FromDerivatives"/> for an event type used as a base type in a From statement.</param>
+/// <param name="FromEvery">The full <see cref="FromEveryDefinition"/>.</param>
 /// <param name="Sink">The <see cref="SinkDefinition"/>.</param>
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
 /// <param name="RemovedWith">The definition of what removes a child, if any.</param>
@@ -38,8 +38,8 @@ public record ProjectionDefinition(
     IDictionary<EventType, FromDefinition> From,
     IDictionary<EventType, JoinDefinition> Join,
     IDictionary<PropertyPath, ChildrenDefinition> Children,
-    IEnumerable<FromEveryDefinition> FromEvery,
-    AllDefinition All,
+    IEnumerable<FromDerivatives> FromDerivatives,
+    FromEveryDefinition FromEvery,
     SinkDefinition Sink,
     FromEventPropertyDefinition? FromEventProperty = default,
     RemovedWithDefinition? RemovedWith = default,

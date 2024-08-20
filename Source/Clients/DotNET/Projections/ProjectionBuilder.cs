@@ -42,8 +42,8 @@ public class ProjectionBuilder<TModel, TBuilder>(
     protected readonly Dictionary<EventType, FromDefinition> _fromDefinitions = [];
     protected readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = [];
     protected readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = [];
-    protected readonly List<FromEveryDefinition> _fromEveryDefinitions = [];
-    protected AllDefinition _allDefinition = new();
+    protected readonly List<FromDerivativesDefinition> _fromDerivativesDefinitions = [];
+    protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected EventType? _removedWithEvent;
     protected bool _autoMap = autoMap;
@@ -88,7 +88,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
 
         if (eventTypesInProjection.Length > 1)
         {
-            _fromEveryDefinitions.Add(new FromEveryDefinition
+            _fromDerivativesDefinitions.Add(new FromDerivativesDefinition
             {
                 EventTypes = eventTypesInProjection.ToContract(),
                 From = fromDefinition
@@ -121,11 +121,11 @@ public class ProjectionBuilder<TModel, TBuilder>(
     {
         var builder = new FromEveryBuilder<TModel>();
         builderCallback(builder);
-        var allDefinition = builder.Build();
-        _allDefinition = new AllDefinition
+        var fromEveryDefinition = builder.Build();
+        _fromEveryDefinition = new FromEveryDefinition
         {
-            Properties = new Dictionary<string, string>(_allDefinition.Properties.Concat(allDefinition.Properties)),
-            IncludeChildren = allDefinition.IncludeChildren
+            Properties = new Dictionary<string, string>(_fromEveryDefinition.Properties.Concat(fromEveryDefinition.Properties)),
+            IncludeChildren = fromEveryDefinition.IncludeChildren
         };
         return (this as TBuilder)!;
     }

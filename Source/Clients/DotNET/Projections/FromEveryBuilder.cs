@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Projections;
 public class FromEveryBuilder<TModel> : IFromEveryBuilder<TModel>
 {
     readonly List<IPropertyExpressionBuilder> _propertyExpressions = [];
-    bool _includeChildren;
+    bool _includeChildren = true;
 
     /// <inheritdoc/>
     public IAllSetBuilder<TModel, IFromEveryBuilder<TModel>> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
@@ -25,15 +25,15 @@ public class FromEveryBuilder<TModel> : IFromEveryBuilder<TModel>
     }
 
     /// <inheritdoc/>
-    public IFromEveryBuilder<TModel> IncludeChildProjections()
+    public IFromEveryBuilder<TModel> ExcludeChildProjections()
     {
-        _includeChildren = true;
+        _includeChildren = false;
         return this;
     }
 
     /// <summary>
-    /// Builds a <see cref="AllDefinition"/> from expressions.
+    /// Builds a <see cref="FromEveryDefinition"/> from expressions.
     /// </summary>
-    /// <returns>A new <see cref="AllDefinition"/> instance.</returns>
-    public AllDefinition Build() => new() { Properties = _propertyExpressions.ToDictionary(_ => (string)_.TargetProperty, _ => _.Build()), IncludeChildren = _includeChildren };
+    /// <returns>A new <see cref="FromEveryDefinition"/> instance.</returns>
+    public FromEveryDefinition Build() => new() { Properties = _propertyExpressions.ToDictionary(_ => (string)_.TargetProperty, _ => _.Build()), IncludeChildren = _includeChildren };
 }
