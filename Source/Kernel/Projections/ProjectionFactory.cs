@@ -103,7 +103,7 @@ public class ProjectionFactory(
                 .AddChildFromEventProperty(childrenAccessorProperty, valueProvider);
         }
 
-        var propertyMappersForAllEventTypes = projectionDefinition.FromEvery.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
+        var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
             var fromObservable = SetupFromDefinition(
@@ -112,7 +112,7 @@ public class ProjectionFactory(
                 eventType,
                 childrenAccessorProperty,
                 actualIdentifiedByProperty,
-                propertyMappersForAllEventTypes);
+                propertyMappersForEveryEventType);
 
             SetupJoinsForFromDefinition(
                 fromObservable,
@@ -137,7 +137,7 @@ public class ProjectionFactory(
                         eventType,
                         childrenAccessorProperty,
                         actualIdentifiedByProperty,
-                        propertyMappersForAllEventTypes);
+                        propertyMappersForEveryEventType);
 
                     SetupJoinsForFromDefinition(
                         fromObservable,
@@ -155,30 +155,21 @@ public class ProjectionFactory(
         foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
         {
             var propertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
-            propertyMappers.AddRange(propertyMappersForAllEventTypes);
-            projection.Event
+            propertyMappers.AddRange(propertyMappersForEveryEventType);
+            var joinObservable = projection.Event
                 .WhereEventTypeEquals(eventType)
                 .Join(childrenAccessorProperty + joinDefinition.On)
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,
                     propertyMappers);
-        }
 
-        if (projectionDefinition.FromEvery.IncludeChildren)
-        {
-            var childEventTypes = projection
-                .EventTypes
-                .Where(_ => !projectionDefinition.From.Any(kvp => kvp.Key == _) && !projectionDefinition.Join.Any(kvp => kvp.Key == _));
-
-            foreach (var eventType in childEventTypes)
+            if (projectionDefinition.FromEvery.IncludeChildren)
             {
-                projection.Event
-                    .WhereEventTypeEquals(eventType)
-                    .Project(
-                        childrenAccessorProperty,
-                        actualIdentifiedByProperty,
-                        propertyMappersForAllEventTypes);
+                joinObservable.Project(
+                    childrenAccessorProperty,
+                    actualIdentifiedByProperty,
+                    propertyMappersForEveryEventType);
             }
         }
 
