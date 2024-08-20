@@ -28,10 +28,12 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
 /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
+/// <param name="autoMap">Whether to automatically map properties.</param>
 public class ProjectionBuilder<TModel, TBuilder>(
     IEventTypes eventTypes,
     IJsonSchemaGenerator schemaGenerator,
-    JsonSerializerOptions jsonSerializerOptions) : IProjectionBuilder<TModel, TBuilder>
+    JsonSerializerOptions jsonSerializerOptions,
+    bool autoMap) : IProjectionBuilder<TModel, TBuilder>
     where TBuilder : class
 {
 #pragma warning disable CA1051 // Visible instance fields
@@ -44,6 +46,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     protected AllDefinition _allDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected EventType? _removedWithEvent;
+    protected bool _autoMap = autoMap;
     protected string _modelName = typeof(TModel).HasAttribute<ModelNameAttribute>() ? typeof(TModel).GetCustomAttribute<ModelNameAttribute>()!.Name : typeof(TModel).Name.Pluralize().ToCamelCase();
 
     /// <inheritdoc/>
@@ -55,21 +58,14 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public AutoMapProjectionBuilder<TModel> AutoMap() =>
-        new(
-            definitions =>
-            {
-                foreach (var (eventType, fromDefinition) in definitions)
-                {
-                    _fromDefinitions[eventType] = fromDefinition;
-                }
-            },
-            eventTypes,
-            schemaGenerator,
-            jsonSerializerOptions);
+    public IProjectionBuilder<TModel, TBuilder> AutoMap()
+    {
+        _autoMap = true;
+        return this;
+    }
 
     /// <inheritdoc/>
-    public virtual TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>>? builderCallback = default)
+    public TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>>? builderCallback = default)
     {
         var type = typeof(TEvent);
 
@@ -81,6 +77,12 @@ public class ProjectionBuilder<TModel, TBuilder>(
         var eventTypesInProjection = type.GetEventTypes(eventTypes.AllClrTypes).Select(eventTypes.GetEventTypeFor).ToArray();
 
         var builder = new FromBuilder<TModel, TEvent, TBuilder>(this);
+
+        if (_autoMap)
+        {
+            builder.AutoMap();
+        }
+
         builderCallback?.Invoke(builder);
         var fromDefinition = builder.Build();
 
@@ -143,7 +145,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     /// <inheritdoc/>
     public TBuilder Children<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TModel, TChildModel>> builderCallback)
     {
-        var builder = new ChildrenBuilder<TModel, TChildModel>(eventTypes, schemaGenerator, jsonSerializerOptions);
+        var builder = new ChildrenBuilder<TModel, TChildModel>(eventTypes, schemaGenerator, jsonSerializerOptions, _autoMap);
         builderCallback(builder);
         _childrenDefinitions[targetProperty.GetPropertyPath()] = builder.Build();
         return (this as TBuilder)!;

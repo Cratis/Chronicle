@@ -38,7 +38,7 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions)
-        : base(eventTypes, schemaGenerator, jsonSerializerOptions)
+        : base(eventTypes, schemaGenerator, jsonSerializerOptions, false)
     {
         _identifier = identifier;
         _eventTypes = eventTypes;

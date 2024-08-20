@@ -17,7 +17,7 @@ public interface IProjectionBuilder<TModel, TBuilder>
     /// Automatically map event properties to model properties on the events added.
     /// </summary>
     /// <returns>Builder continuation.</returns>
-    AutoMapProjectionBuilder<TModel> AutoMap();
+    IProjectionBuilder<TModel, TBuilder> AutoMap();
 
     /// <summary>
     /// Sets the initial values to use for a new model instance.
