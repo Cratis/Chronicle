@@ -106,14 +106,21 @@ public class ProjectionFactory(
         var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
+            var fromObservable = SetupFromDefinition(
+                projection,
+                fromDefinition,
+                eventType,
+                childrenAccessorProperty,
+                actualIdentifiedByProperty,
+                propertyMappersForAllEventTypes);
+
             SetupJoinsForFromDefinition(
+                fromObservable,
                 eventSequenceStorage,
                 projectionDefinition,
                 childrenAccessorProperty,
                 actualIdentifiedByProperty,
                 projection,
-                propertyMappersForAllEventTypes,
-                eventType,
                 fromDefinition,
                 hasParent);
         }
@@ -124,16 +131,13 @@ public class ProjectionFactory(
             {
                 foreach (var eventType in fromEveryDefinition.EventTypes)
                 {
-                    SetupJoinsForFromDefinition(
-                        eventSequenceStorage,
-                        projectionDefinition,
+                    SetupFromDefinition(
+                        projection,
+                        fromEveryDefinition.From,
+                        eventType,
                         childrenAccessorProperty,
                         actualIdentifiedByProperty,
-                        projection,
-                        propertyMappersForAllEventTypes,
-                        eventType,
-                        fromEveryDefinition.From,
-                        hasParent);
+                        propertyMappersForAllEventTypes);
                 }
             }
         }
@@ -190,29 +194,37 @@ public class ProjectionFactory(
         return initialState;
     }
 
+    IObservable<ProjectionEventContext> SetupFromDefinition(
+        Projection projection,
+        FromDefinition fromDefinition,
+        EventType eventType,
+        PropertyPath childrenAccessorProperty,
+        PropertyPath actualIdentifiedByProperty,
+        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappersForAllEventTypes)
+    {
+        var propertyMappers = fromDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
+        propertyMappers.AddRange(propertyMappersForAllEventTypes);
+        return projection.Event
+            .WhereEventTypeEquals(eventType)
+            .Project(
+                childrenAccessorProperty,
+                actualIdentifiedByProperty,
+                propertyMappers);
+    }
+
     void SetupJoinsForFromDefinition(
+        IObservable<ProjectionEventContext> fromObservable,
         IEventSequenceStorage eventSequenceStorage,
         ProjectionDefinition projectionDefinition,
         PropertyPath childrenAccessorProperty,
         PropertyPath actualIdentifiedByProperty,
         Projection projection,
-        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappersForAllEventTypes,
-        EventType eventType,
         FromDefinition fromDefinition,
         bool hasParent)
     {
         // Notes: The purpose of this method is to hook up on every From definition that matches the eventType of the Join definition
         // and the join definition matching the property its joining on to then add actions for resolving a join post a projection of
         // the from.
-        var propertyMappers = fromDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
-        propertyMappers.AddRange(propertyMappersForAllEventTypes);
-        var projected = projection.Event
-            .WhereEventTypeEquals(eventType)
-            .Project(
-                childrenAccessorProperty,
-                actualIdentifiedByProperty,
-                propertyMappers);
-
         IEnumerable<KeyValuePair<EventType, JoinDefinition>> joinExpressions;
         if (hasParent)
         {
@@ -228,7 +240,7 @@ public class ProjectionFactory(
             foreach (var (joinEventType, joinDefinition) in joinExpressions)
             {
                 var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
-                projected
+                fromObservable
                     .ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On)
                     .Project(
                         childrenAccessorProperty,
