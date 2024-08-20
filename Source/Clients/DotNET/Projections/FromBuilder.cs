@@ -22,7 +22,7 @@ public class FromBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TMod
     /// <inheritdoc/>
     public FromDefinition Build() => new()
     {
-        Properties = _propertyExpressions.DistinctBy(_ => _.TargetProperty).ToDictionary(_ => (string)_.TargetProperty, _ => _.Build()),
+        Properties = _propertyExpressions.ToDictionary(_ => (string)_.Key, _ => _.Value.Build()),
         Key = _key.Build(),
         ParentKey = _parentKey.Build()
     };

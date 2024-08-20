@@ -24,7 +24,7 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
 #pragma warning disable CA1051 // Visible instance fields
 #pragma warning disable SA1600 // Elements should be documented
 #pragma warning disable SA1629, CA1002, MA0016 // Return abstract
-    protected readonly List<IPropertyExpressionBuilder> _propertyExpressions = [];
+    protected readonly Dictionary<PropertyPath, IPropertyExpressionBuilder> _propertyExpressions = [];
     protected IKeyBuilder _parentKey = new KeyBuilder(new NoExpression());
     protected IKeyBuilder _key = new KeyBuilder(new EventSourceIdExpression());
 #pragma warning restore CA1629, CA1002, MA0016 // Return abstract
@@ -104,16 +104,18 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
     /// <inheritdoc/>
     public IAddBuilder<TModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
     {
-        var addBuilder = new AddBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, modelPropertyAccessor.GetPropertyPath());
-        _propertyExpressions.Add(addBuilder);
+        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        var addBuilder = new AddBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
+        _propertyExpressions[propertyPath] = addBuilder;
         return addBuilder;
     }
 
     /// <inheritdoc/>
     public ISubtractBuilder<TModel, TEvent, TProperty, TBuilder> Subtract<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
     {
-        var subtractBuilder = new SubtractBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, modelPropertyAccessor.GetPropertyPath());
-        _propertyExpressions.Add(subtractBuilder);
+        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        var subtractBuilder = new SubtractBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
+        _propertyExpressions[propertyPath] = subtractBuilder;
         return subtractBuilder;
     }
 
@@ -123,7 +125,7 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
         var propertyInfo = propertyPath.GetPropertyInfoFor<TModel>();
         var primitive = propertyInfo.PropertyType.IsAPrimitiveType() || propertyInfo.PropertyType.IsConcept();
         var setBuilder = new SetBuilder<TModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, !primitive);
-        _propertyExpressions.Add(setBuilder);
+        _propertyExpressions[propertyPath] = setBuilder;
 
         return setBuilder;
     }
@@ -134,8 +136,9 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 
-        var setBuilder = new SetBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, modelPropertyAccessor.GetPropertyPath(), !primitive);
-        _propertyExpressions.Add(setBuilder);
+        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        var setBuilder = new SetBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, !primitive);
+        _propertyExpressions[propertyPath] = setBuilder;
 
         return setBuilder;
     }
@@ -143,15 +146,17 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
     /// <inheritdoc/>
     public ISetBuilder<TModel, TEvent, TBuilder> SetThisValue()
     {
-        var setBuilder = new SetBuilder<TModel, TEvent, TBuilder>((this as TBuilder)!, new PropertyPath("$this"), false);
-        _propertyExpressions.Add(setBuilder);
+        var propertyPath = new PropertyPath("$this");
+        var setBuilder = new SetBuilder<TModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, false);
+        _propertyExpressions[propertyPath] = setBuilder;
         return setBuilder;
     }
 
     /// <inheritdoc/>
     public TBuilder Count<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
     {
-        _propertyExpressions.Add(new CountBuilder<TModel, TEvent, TProperty>(modelPropertyAccessor.GetPropertyPath()));
+        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        _propertyExpressions[propertyPath] = new CountBuilder<TModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
     }
 

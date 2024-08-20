@@ -102,7 +102,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>>? builderCallback)
+    public TBuilder Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>>? builderCallback = default)
     {
         if (!typeof(TEvent).IsEventType(eventTypes.AllClrTypes))
         {

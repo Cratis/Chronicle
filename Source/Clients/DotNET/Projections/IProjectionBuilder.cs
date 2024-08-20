@@ -34,18 +34,28 @@ public interface IProjectionBuilder<TModel, TBuilder>
     /// <summary>
     /// Start building the from expressions for a specific event type.
     /// </summary>
-    /// <param name="builderCallback">Callback for building.</param>
+    /// <param name="builderCallback">Optional callback for building.</param>
     /// <typeparam name="TEvent">Type of event.</typeparam>
     /// <returns>Builder continuation.</returns>
+    /// <remarks>
+    /// If using .AutoMap() the properties will be automatically mapped.
+    /// In many cases you then don't need to provide a builder callback.
+    /// You can override the mapping by providing a builder callback.
+    /// </remarks>
     TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>>? builderCallback = default);
 
     /// <summary>
     /// Start building a join expressions for a specific event type.
     /// </summary>
-    /// <param name="builderCallback">Callback for building.</param>
+    /// <param name="builderCallback">Optional callback for building.</param>
     /// <typeparam name="TEvent">Type of event.</typeparam>
     /// <returns>Builder continuation.</returns>
-    TBuilder Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>> builderCallback);
+    /// <remarks>
+    /// If using .AutoMap() the properties will be automatically mapped.
+    /// In many cases you then don't need to provide a builder callback.
+    /// You can override the mapping by providing a builder callback.
+    /// </remarks>
+    TBuilder Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>>? builderCallback = default);
 
     /// <summary>
     /// Start building property expressions that applies for every events being projected from.
