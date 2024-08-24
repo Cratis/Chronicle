@@ -20,7 +20,6 @@ public static class FromDerivativesConverters
     {
         return new()
         {
-            BaseType = fromEvery.BaseType.ToContract(),
             EventTypes = fromEvery.EventTypes.Select(_ => _.ToContract()).ToList(),
             From = fromEvery.From.ToContract()
         };
@@ -34,7 +33,6 @@ public static class FromDerivativesConverters
     public static FromDerivatives ToChronicle(this Contracts.Projections.FromDerivativesDefinition fromAny)
     {
         return new(
-            fromAny.BaseType.ToChronicle(),
             fromAny.EventTypes.Select(_ => _.ToChronicle()),
             fromAny.From.ToChronicle()
         );

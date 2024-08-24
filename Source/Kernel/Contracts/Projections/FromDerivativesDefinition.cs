@@ -15,18 +15,12 @@ public class FromDerivativesDefinition
     /// <summary>
     /// Gets or sets the event types.
     /// </summary>
-    [ProtoMember(1)]
-    public EventType BaseType { get; set; }
-
-    /// <summary>
-    /// Gets or sets the event types.
-    /// </summary>
-    [ProtoMember(2, IsRequired = true)]
+    [ProtoMember(1, IsRequired = true)]
     public IList<EventType> EventTypes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the from definition.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(2)]
     public FromDefinition From { get; set; }
 }
