@@ -147,7 +147,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
         }
 
         var removedWithEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
-        var removedWithBuilder = new RemovedWithBuilder<TModel, TEvent, TBuilder>(this);
+        var removedWithBuilder = new RemovedWithBuilder<TModel, TEvent, TBuilder>();
         builderCallback?.Invoke(removedWithBuilder);
         _removedWithDefinitions[removedWithEvent] = removedWithBuilder.Build();
 

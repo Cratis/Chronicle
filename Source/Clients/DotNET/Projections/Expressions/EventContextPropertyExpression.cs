@@ -6,7 +6,7 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections.Expressions;
 
 /// <summary>
-/// Represents a <see cref="IKeyBuilder"/> that builds an event context property accessor expression.
+/// Represents a <see cref="IEventValueExpression"/> that builds an event context property accessor expression.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="EventContextPropertyExpression"/> class.

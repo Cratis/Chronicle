@@ -44,7 +44,7 @@ public class JoinBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TMod
         {
             On = _on!,
             Properties = _propertyExpressions.ToDictionary(_ => (string)_.Key, _ => _.Value.Build()),
-            Key = _key.Build()
+            Key = _keyExpression
         };
     }
 

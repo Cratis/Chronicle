@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <typeparam name="TKeyType">Type of key to build.</typeparam>
 /// <typeparam name="TEvent">Event to build from.</typeparam>
-public interface ICompositeKeyBuilder<TKeyType, TEvent> : IKeyBuilder
+public interface ICompositeKeyBuilder<TKeyType, TEvent>
 {
     /// <summary>
     /// Start building the set operation to a target property on the model.
@@ -19,4 +19,10 @@ public interface ICompositeKeyBuilder<TKeyType, TEvent> : IKeyBuilder
     /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
     /// <returns>Builder continuation.</returns>
     ISetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>> Set<TProperty>(Expression<Func<TKeyType, TProperty>> modelPropertyAccessor);
+
+    /// <summary>
+    /// Builds the composite key expression.
+    /// </summary>
+    /// <returns><see cref="PropertyExpression"/> representing the composite key.</returns>
+    PropertyExpression Build();
 }

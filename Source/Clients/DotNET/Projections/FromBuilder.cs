@@ -20,7 +20,7 @@ public class FromBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TMod
     public FromDefinition Build() => new()
     {
         Properties = _propertyExpressions.ToDictionary(_ => (string)_.Key, _ => _.Value.Build()),
-        Key = _key.Build(),
-        ParentKey = _parentKey.Build()
+        Key = _keyExpression,
+        ParentKey = _parentKeyExpression
     };
 }
