@@ -125,6 +125,13 @@ public class ProjectionFactory(
                 hasParent);
         }
 
+        foreach (var (eventType, fromDefinition) in projectionDefinition.RemovedWith)
+        {
+            projection.Event
+                .WhereEventTypeEquals(eventType)
+                .Remove();
+        }
+
         if (projectionDefinition.FromDerivatives is not null)
         {
             foreach (var fromDerivativesDefinition in projectionDefinition.FromDerivatives)
@@ -272,6 +279,7 @@ public class ProjectionFactory(
         // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
         var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
         eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
+        eventsForProjection.AddRange(projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)));
 
         if (projectionDefinition.FromDerivatives is not null)
         {
@@ -286,11 +294,6 @@ public class ProjectionFactory(
             eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.FromEventProperty.Event, KeyResolvers.FromEventSourceId));
         }
 
-        if (projectionDefinition.RemovedWith is not null)
-        {
-            eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId));
-            projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);
-        }
         var distinctOwnEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).Select(_ => _.EventType).ToArray();
 
         foreach (var child in childProjections)

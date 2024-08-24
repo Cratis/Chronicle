@@ -167,11 +167,10 @@ public static class ProjectionExtensions
     /// Remove item based on event.
     /// </summary>
     /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
-    /// <param name="eventType"><see cref="EventType"/> causing the remove.</param>
     /// <returns>The observable for continuation.</returns>
-    public static IObservable<ProjectionEventContext> RemovedWith(this IObservable<ProjectionEventContext> observable, EventType eventType)
+    public static IObservable<ProjectionEventContext> Remove(this IObservable<ProjectionEventContext> observable)
     {
-        observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id).Subscribe(_ => _.Changeset.Remove());
+        observable.Subscribe(_ => _.Changeset.Remove());
         return observable;
     }
 }
