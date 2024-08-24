@@ -68,8 +68,9 @@ public interface IProjectionBuilder<TModel, TBuilder>
     /// Defines what event removes a child. This is optional, your system can chose to not support removal.
     /// </summary>
     /// <typeparam name="TEvent">Type of event.</typeparam>
+    /// <param name="builderCallback">Optional callback for building.</param>
     /// <returns>Builder continuation.</returns>
-    TBuilder RemovedWith<TEvent>();
+    TBuilder RemovedWith<TEvent>(Action<IRemovedWithBuilder<TModel, TEvent, TBuilder>>? builderCallback);
 
     /// <summary>
     /// Start building the children projection for a specific child model.

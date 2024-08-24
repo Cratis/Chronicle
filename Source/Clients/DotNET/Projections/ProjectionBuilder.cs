@@ -43,9 +43,9 @@ public class ProjectionBuilder<TModel, TBuilder>(
     protected readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = [];
     protected readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = [];
     protected readonly List<FromDerivativesDefinition> _fromDerivativesDefinitions = [];
+    protected readonly Dictionary<EventType, RemovedWithDefinition> _removedWithDefinitions = [];
     protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
-    protected EventType? _removedWithEvent;
     protected bool _autoMap = autoMap;
     protected string _modelName = typeof(TModel).HasAttribute<ModelNameAttribute>() ? typeof(TModel).GetCustomAttribute<ModelNameAttribute>()!.Name : typeof(TModel).Name.Pluralize().ToCamelCase();
 
@@ -137,14 +137,20 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder RemovedWith<TEvent>()
+    public TBuilder RemovedWith<TEvent>(Action<IRemovedWithBuilder<TModel, TEvent, TBuilder>>? builderCallback)
     {
-        if (_removedWithEvent != default)
+        var type = typeof(TEvent);
+
+        if (!type.IsEventType(eventTypes.AllClrTypes))
         {
-            throw new RemovalAlreadyDefined(GetType());
+            throw new TypeIsNotAnEventType(typeof(TEvent));
         }
 
-        _removedWithEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
+        var removedWithEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
+        var removedWithBuilder = new RemovedWithBuilder<TModel, TEvent, TBuilder>(this);
+        builderCallback?.Invoke(removedWithBuilder);
+        _removedWithDefinitions[removedWithEvent] = removedWithBuilder.Build();
+
         return (this as TBuilder)!;
     }
 

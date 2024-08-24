@@ -64,6 +64,6 @@ public class ChildrenDefinition
     /// <summary>
     /// Gets or sets the definition of what removes a child, if any.
     /// </summary>
-    [ProtoMember(9)]
-    public RemovedWithDefinition? RemovedWith { get; set; }
+    [ProtoMember(9, IsRequired = true)]
+    public IDictionary<EventType, RemovedWithDefinition> RemovedWith { get; set; } = new Dictionary<EventType, RemovedWithDefinition>();
 }

@@ -100,7 +100,7 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
             Join = _joinDefinitions,
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
             All = _fromEveryDefinition,
-            RemovedWith = _removedWithEvent == default ? default : new() { Event = _removedWithEvent },
+            RemovedWith = _removedWithDefinitions,
             Sink = new()
             {
                 ConfigurationId = Guid.Empty,

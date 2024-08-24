@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Events;
 using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Projections;
@@ -13,8 +12,14 @@ namespace Cratis.Chronicle.Contracts.Projections;
 public class RemovedWithDefinition
 {
     /// <summary>
-    /// Gets or sets the event that is causing the removal.
+    /// Gets or sets the key expression, represents the key to use for identifying the model instance.
     /// </summary>
     [ProtoMember(1)]
-    public EventType Event { get; set; }
+    public string Key { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional parent key expression, typically used in child relationships for identifying parent model.
+    /// </summary>
+    [ProtoMember(2)]
+    public string? ParentKey { get; set; }
 }

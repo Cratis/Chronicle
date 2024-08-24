@@ -89,8 +89,8 @@ public class ProjectionDefinition
     /// <summary>
     /// Gets or sets the definition of what removes a child, if any.
     /// </summary>
-    [ProtoMember(12)]
-    public RemovedWithDefinition? RemovedWith { get; set; }
+    [ProtoMember(12, IsRequired = true)]
+    public IDictionary<EventType, RemovedWithDefinition> RemovedWith { get; set; } = new Dictionary<EventType, RemovedWithDefinition>();
 
     /// <summary>
     /// Gets or sets the last time the projection definition was updated.

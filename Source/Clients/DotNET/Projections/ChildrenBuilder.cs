@@ -86,7 +86,7 @@ public class ChildrenBuilder<TParentModel, TChildModel>(
             Join = _joinDefinitions,
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
             All = _fromEveryDefinition,
-            RemovedWith = _removedWithEvent == default ? default : new() { Event = _removedWithEvent }
+            RemovedWith = _removedWithDefinitions
         };
     }
 }
