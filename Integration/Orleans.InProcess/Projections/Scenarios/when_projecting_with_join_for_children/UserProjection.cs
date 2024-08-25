@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
+using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.Models;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_with_join_for_children;
 

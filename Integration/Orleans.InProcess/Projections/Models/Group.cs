@@ -3,9 +3,9 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_with_join_for_children;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.Models;
 
-public record User(
+public record Group(
     EventSourceId Id,
     string Name,
-    IEnumerable<GroupOnUser> Groups);
+    IEnumerable<UserOnGroup> Users);
