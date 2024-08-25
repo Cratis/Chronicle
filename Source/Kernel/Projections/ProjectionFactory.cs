@@ -300,15 +300,20 @@ public class ProjectionFactory(
     void ResolveEventsForProjection(Projection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
     {
         // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
-        var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
-        eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
-        eventsForProjection.AddRange(projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)));
+        var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
+        eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
+        eventsForProjection.AddRange(projectionDefinition.RemovedWith.Select(kvp =>
+        {
+            // For RemovedWith that doesn't have a parent key reference, we ignore parent all together.
+            var includeParent = hasParent && kvp.Value.ParentKey?.IsSet() == true;
+            return GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, includeParent, kvp.Value.ParentKey);
+        }));
 
         if (projectionDefinition.FromDerivatives is not null)
         {
             foreach (var fromDerivativeDefinition in projectionDefinition.FromDerivatives)
             {
-                eventsForProjection.AddRange(fromDerivativeDefinition.EventTypes.Select(eventType => GetEventTypeWithKeyResolverFor(projection, eventType, fromDerivativeDefinition.From.Key, actualIdentifiedByProperty, hasParent, fromDerivativeDefinition.From.ParentKey)));
+                eventsForProjection.AddRange(fromDerivativeDefinition.EventTypes.Select(eventType => GetEventTypeWithKeyResolver(projection, eventType, fromDerivativeDefinition.From.Key, actualIdentifiedByProperty, hasParent, fromDerivativeDefinition.From.ParentKey)));
             }
         }
 
@@ -336,10 +341,10 @@ public class ProjectionFactory(
         }
     }
 
-    EventTypeWithKeyResolver GetEventTypeWithKeyResolverFor(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent = false, PropertyExpression? parentKey = null)
+    EventTypeWithKeyResolver GetEventTypeWithKeyResolver(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent = false, PropertyExpression? parentKey = null)
     {
         var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
-        if (hasParent && (parentKey?.IsSet() ?? false))
+        if (hasParent)
         {
             var parentKeyResolver = GetKeyResolverFor(projection, parentKey, actualIdentifiedByProperty);
             keyResolver = KeyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty);

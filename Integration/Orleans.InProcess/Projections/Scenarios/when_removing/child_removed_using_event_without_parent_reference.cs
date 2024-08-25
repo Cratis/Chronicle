@@ -36,8 +36,8 @@ public class child_removed_using_event_without_parent_reference(context context)
         }
     }
 
-    // [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
-    // [Fact] void should_only_have_one_child() => Context.Result.Groups.Count().ShouldEqual(1);
-    // [Fact] void should_have_the_correct_group_left() => Context.Result.Groups.First().GroupId.ShouldEqual(Context.SecondGroupId);
-    // [Fact] void should_not_have_the_removed_group() => Context.Result.Groups.Any(_ => _.GroupId == Context.FirstGroupId).ShouldBeFalse();
+    [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
+    [Fact] void should_only_have_one_child() => Context.Result.Groups.Count().ShouldEqual(1);
+    [Fact] void should_have_the_correct_group_left() => Context.Result.Groups.First().GroupId.ShouldEqual(Context.SecondGroupId);
+    [Fact] void should_not_have_the_removed_group() => Context.Result.Groups.Any(_ => _.GroupId == Context.FirstGroupId).ShouldBeFalse();
 }

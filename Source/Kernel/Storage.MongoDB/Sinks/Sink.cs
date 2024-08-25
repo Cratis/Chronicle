@@ -79,6 +79,12 @@ public class Sink(
                 IsUpsert = true,
                 ArrayFilters = converted.ArrayFilters
             });
+
+        // Run through and remove all children affected by ChildRemovedFromAll
+        foreach (var childRemoved in changeset.Changes.OfType<ChildRemovedFromAll>())
+        {
+            await RemoveChildFromAll(key, childRemoved);
+        }
     }
 
     /// <inheritdoc/>
@@ -96,5 +102,18 @@ public class Sink(
     {
         await collections.EndReplay();
         _isReplaying = true;
+    }
+
+    async Task RemoveChildFromAll(Key key, ChildRemovedFromAll childRemoved)
+    {
+        var childrenProperty = (string)childRemoved.ChildrenProperty.GetChildrenProperty();
+        var identifiedByProperty = (string)childRemoved.IdentifiedByProperty;
+
+        var fieldName = $"{childrenProperty}.{identifiedByProperty}";
+        var propertyValue = key.Value.ToBsonValue();
+
+        var filter = Builders<BsonDocument>.Filter.Eq(fieldName, propertyValue);
+        var update = Builders<BsonDocument>.Update.Pull(childrenProperty, new BsonDocument(identifiedByProperty, propertyValue));
+        await collections.GetCollection().UpdateManyAsync(filter, update);
     }
 }

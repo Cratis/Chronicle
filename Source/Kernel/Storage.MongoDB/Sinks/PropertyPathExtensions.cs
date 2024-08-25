@@ -16,4 +16,22 @@ public static class PropertyPathExtensions
     /// <param name="propertyPath"><see cref="PropertyPath"/> to check.</param>
     /// <returns>True if it is the key property, false if not.</returns>
     public static bool IsMongoDBKey(this PropertyPath propertyPath) => propertyPath == "_id" || propertyPath == "id";
+
+    /// <summary>
+    /// Get the children property of a property path.
+    /// </summary>
+    /// <param name="property"><see cref="PropertyPath"/> to get from.</param>
+    /// <returns>The new <see cref="PropertyPath"/>.</returns>
+    public static PropertyPath GetChildrenProperty(this PropertyPath property)
+    {
+        var segments = property.Segments.ToArray();
+        var childrenProperty = new PropertyPath(string.Empty);
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            childrenProperty += segments[i].ToString()!;
+        }
+
+        childrenProperty += segments[^1].Value;
+        return childrenProperty;
+    }
 }
