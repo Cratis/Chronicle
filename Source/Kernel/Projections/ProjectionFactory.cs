@@ -125,7 +125,7 @@ public class ProjectionFactory(
                 hasParent);
         }
 
-        foreach (var (eventType, fromDefinition) in projectionDefinition.RemovedWith)
+        foreach (var (eventType, removedWithDefinition) in projectionDefinition.RemovedWith)
         {
             projection.Event
                 .WhereEventTypeEquals(eventType)
