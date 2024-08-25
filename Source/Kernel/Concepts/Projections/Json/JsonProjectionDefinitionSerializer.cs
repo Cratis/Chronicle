@@ -31,6 +31,7 @@ public class JsonProjectionDefinitionSerializer : IJsonProjectionDefinitionSeria
                     new PropertyExpressionDictionaryConverter(),
                     new FromDefinitionsConverter(),
                     new JoinDefinitionsConverter(),
+                    new RemovedWithDefinitionsConverter(),
                     new ConceptAsJsonConverterFactory(),
                     new DateOnlyJsonConverter(),
                     new TimeOnlyJsonConverter()
