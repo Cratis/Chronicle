@@ -149,8 +149,23 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     }
 
     /// <inheritdoc/>
-    public void RemoveChild()
+    public void RemoveChild(
+        PropertyPath childrenProperty,
+        PropertyPath identifiedByProperty,
+        object key,
+        ArrayIndexers arrayIndexers)
     {
+        var workingState = CurrentState.Clone()!;
+        var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
+
+        var item = items.FindByKey(identifiedByProperty, key);
+        if (item is not null)
+        {
+            items.Remove(item);
+            Add(new ChildRemoved(item, childrenProperty, identifiedByProperty, key));
+        }
+
+        CurrentState = workingState;
     }
 
     /// <inheritdoc/>

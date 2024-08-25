@@ -69,6 +69,11 @@ public class ChangesetConverter(
                     hasChanges = true;
                     break;
 
+                case ChildRemoved childRemoved:
+                    BuildChildRemoved(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, childRemoved);
+                    hasChanges = true;
+                    break;
+
                 case Joined joined:
                     {
                         BuildJoined(key, updateDefinitionBuilder, isReplaying, joinTasks, joined);
@@ -144,6 +149,42 @@ public class ChangesetConverter(
         else
         {
             updateBuilder = updateDefinitionBuilder.Push(property, bsonValue);
+        }
+    }
+
+    void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, List<BsonDocumentArrayFilterDefinition<BsonDocument>> arrayFiltersForDocument, ChildRemoved childRemoved)
+    {
+        BsonValue bsonValue;
+
+        if (childRemoved.State.GetType().IsAPrimitiveType())
+        {
+            bsonValue = childRemoved.State.ToBsonValue();
+        }
+        else
+        {
+            var schema = model.Schema.GetSchemaForPropertyPath(childRemoved.ChildrenProperty);
+            bsonValue = expandoObjectConverter.ToBsonDocument((childRemoved.State as ExpandoObject)!, schema);
+        }
+
+        var segments = childRemoved.ChildrenProperty.Segments.ToArray();
+        var childrenProperty = new PropertyPath(string.Empty);
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            childrenProperty += segments[i].ToString()!;
+        }
+
+        childrenProperty += segments[^1].Value;
+        var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childRemoved.ChildrenProperty)));
+        var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
+        arrayFiltersForDocument.AddRange(arrayFilters);
+
+        if (updateBuilder is not null)
+        {
+            updateBuilder = updateBuilder.Pull(property, bsonValue);
+        }
+        else
+        {
+            updateBuilder = updateDefinitionBuilder.Pull(property, bsonValue);
         }
     }
 

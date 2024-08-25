@@ -170,9 +170,28 @@ public static class ProjectionExtensions
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> Remove(this IObservable<ProjectionEventContext> observable)
     {
+        observable.Subscribe(_ => _.Changeset.Remove());
+        return observable;
+    }
+
+    /// <summary>
+    /// Remove child based on event.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="childrenProperty">The property in which children are stored on the object.</param>
+    /// <param name="identifiedByProperty">The property that identifies a child.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> RemoveChild(this IObservable<ProjectionEventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty)
+    {
         observable.Subscribe(_ =>
         {
-            _.Changeset.Remove();
+            var items = _.Changeset.InitialState.EnsureCollection<object>(childrenProperty, _.Key.ArrayIndexers);
+            var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
+            if (identifiedByProperty.IsSet &&
+                items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
+            {
+                _.Changeset.RemoveChild(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, _.Key.ArrayIndexers);
+            }
         });
         return observable;
     }

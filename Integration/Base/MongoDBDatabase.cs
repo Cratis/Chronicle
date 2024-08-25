@@ -28,9 +28,11 @@ public class MongoDBDatabase : IDisposable
 
         _ = Task.Run(async () =>
         {
-            var filter = Builders<ChangeStreamDocument<BsonDocument>>.Filter.In(
-                new StringFieldDefinition<ChangeStreamDocument<BsonDocument>, string>("operationType"),
-                ["insert", "replace", "update", "delete"]);
+            var filter = Builders<ChangeStreamDocument<BsonDocument>>.Filter.Or(
+                Builders<ChangeStreamDocument<BsonDocument>>.Filter.In(
+                    new StringFieldDefinition<ChangeStreamDocument<BsonDocument>, string>("operationType"),
+                    ["insert", "replace", "update", "delete"]),
+                Builders<ChangeStreamDocument<BsonDocument>>.Filter.Eq("fullDocument", BsonNull.Value));
 
             var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<BsonDocument>>().Match(filter);
 

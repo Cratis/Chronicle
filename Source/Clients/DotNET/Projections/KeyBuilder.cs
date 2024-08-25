@@ -33,7 +33,7 @@ public class KeyBuilder<TEvent, TBuilder> : IKeyBuilder<TEvent, TBuilder>
     /// <inheritdoc/>
     public TBuilder UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        _keyExpression = new EventContentPropertyExpression(keyAccessor.GetPropertyPath()).Build();
+        _parentKeyExpression = new EventContentPropertyExpression(keyAccessor.GetPropertyPath()).Build();
         return (this as TBuilder)!;
     }
 

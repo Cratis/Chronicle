@@ -127,9 +127,20 @@ public class ProjectionFactory(
 
         foreach (var (eventType, removedWithDefinition) in projectionDefinition.RemovedWith)
         {
-            projection.Event
-                .WhereEventTypeEquals(eventType)
-                .Remove();
+            if (hasParent)
+            {
+                projection.Event
+                    .WhereEventTypeEquals(eventType)
+                    .RemoveChild(
+                        childrenAccessorProperty,
+                        actualIdentifiedByProperty);
+            }
+            else
+            {
+                projection.Event
+                    .WhereEventTypeEquals(eventType)
+                    .Remove();
+            }
         }
 
         if (projectionDefinition.FromDerivatives is not null)

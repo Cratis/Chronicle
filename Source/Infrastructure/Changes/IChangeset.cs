@@ -105,7 +105,11 @@ public interface IChangeset<TSource, TTarget>
     /// <summary>
     /// Apply a remove child change to the <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
-    void RemoveChild();
+    /// <param name="childrenProperty"><see cref="PropertyPath"/> for accessing the children collection.</param>
+    /// <param name="identifiedByProperty"><see cref="PropertyPath"/> that identifies the child.</param>
+    /// <param name="key">Key value.</param>
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+    void RemoveChild(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, ArrayIndexers arrayIndexers);
 
     /// <summary>
     /// Check if changeset contains a <see cref="ChildAdded"/> to a collection with a specific key.
