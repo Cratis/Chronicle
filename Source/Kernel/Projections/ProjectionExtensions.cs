@@ -170,7 +170,10 @@ public static class ProjectionExtensions
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> Remove(this IObservable<ProjectionEventContext> observable)
     {
-        observable.Subscribe(_ => _.Changeset.Remove());
+        observable.Subscribe(_ =>
+        {
+            _.Changeset.Remove();
+        });
         return observable;
     }
 }
