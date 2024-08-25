@@ -169,6 +169,16 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     }
 
     /// <inheritdoc/>
+    public void RemoveChildFromAll(
+        PropertyPath childrenProperty,
+        PropertyPath identifiedByProperty,
+        object key,
+        ArrayIndexers arrayIndexers)
+    {
+        Add(new ChildRemovedFromAll(childrenProperty, identifiedByProperty, key, arrayIndexers));
+    }
+
+    /// <inheritdoc/>
     public bool HasChildBeenAddedWithKey(PropertyPath childrenProperty, object key)
     {
         return Changes

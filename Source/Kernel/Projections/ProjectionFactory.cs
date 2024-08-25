@@ -180,15 +180,24 @@ public class ProjectionFactory(
 
     void SetupRemovedWith(ProjectionDefinition projectionDefinition, PropertyPath childrenAccessorProperty, bool hasParent, PropertyPath actualIdentifiedByProperty, Projection projection)
     {
-        foreach (var (eventType, _) in projectionDefinition.RemovedWith)
+        foreach (var (eventType, removedWithDefinition) in projectionDefinition.RemovedWith)
         {
             var observable = projection.Event
                     .WhereEventTypeEquals(eventType);
             if (hasParent)
             {
-                observable.RemoveChild(
+                if (removedWithDefinition.ParentKey?.IsSet() == false)
+                {
+                    observable.RemoveChildFromAll(
                         childrenAccessorProperty,
                         actualIdentifiedByProperty);
+                }
+                else
+                {
+                    observable.RemoveChild(
+                        childrenAccessorProperty,
+                        actualIdentifiedByProperty);
+                }
             }
             else
             {
@@ -330,7 +339,7 @@ public class ProjectionFactory(
     EventTypeWithKeyResolver GetEventTypeWithKeyResolverFor(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent = false, PropertyExpression? parentKey = null)
     {
         var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
-        if (hasParent)
+        if (hasParent && (parentKey?.IsSet() ?? false))
         {
             var parentKeyResolver = GetKeyResolverFor(projection, parentKey, actualIdentifiedByProperty);
             keyResolver = KeyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty);

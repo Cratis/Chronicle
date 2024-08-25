@@ -9,9 +9,11 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.w
 public class UserProjectionWithExternalRemovedWith : IProjectionFor<User>
 {
     public void Define(IProjectionBuilderFor<User> builder) => builder
+        .AutoMap()
         .From<UserCreated>()
         .Children(_ => _.Groups, _ => _
             .IdentifiedBy(e => e.GroupId)
-            .From<UserAddedToGroup>()
+            .From<UserAddedToGroup>(b => b
+                .UsingParentKey(e => e.UserId))
             .RemovedWith<GroupRemoved>());
 }

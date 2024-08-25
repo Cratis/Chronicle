@@ -195,4 +195,17 @@ public static class ProjectionExtensions
         });
         return observable;
     }
+
+    /// <summary>
+    /// Remove children from all projections that has a child that is identified by the event.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="childrenProperty">The property in which children are stored on the object.</param>
+    /// <param name="identifiedByProperty">The property that identifies a child.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> RemoveChildFromAll(this IObservable<ProjectionEventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty)
+    {
+        observable.Subscribe(_ => _.Changeset.RemoveChildFromAll(childrenProperty, identifiedByProperty, _.Key.Value, _.Key.ArrayIndexers));
+        return observable;
+    }
 }

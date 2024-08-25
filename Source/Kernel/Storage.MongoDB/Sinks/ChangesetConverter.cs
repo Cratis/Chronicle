@@ -74,6 +74,10 @@ public class ChangesetConverter(
                     hasChanges = true;
                     break;
 
+                case ChildRemovedFromAll childRemovedFromAll:
+                    RemoveChildFromAll(key, childRemovedFromAll);
+                    break;
+
                 case Joined joined:
                     {
                         BuildJoined(key, updateDefinitionBuilder, isReplaying, joinTasks, joined);
@@ -130,14 +134,7 @@ public class ChangesetConverter(
             bsonValue = expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
         }
 
-        var segments = childAdded.ChildrenProperty.Segments.ToArray();
-        var childrenProperty = new PropertyPath(string.Empty);
-        for (var i = 0; i < segments.Length - 1; i++)
-        {
-            childrenProperty += segments[i].ToString()!;
-        }
-
-        childrenProperty += segments[^1].Value;
+        var childrenProperty = GetChildrenProperty(childAdded.ChildrenProperty);
         var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
         var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
         arrayFiltersForDocument.AddRange(arrayFilters);
@@ -166,14 +163,7 @@ public class ChangesetConverter(
             bsonValue = expandoObjectConverter.ToBsonDocument((childRemoved.State as ExpandoObject)!, schema);
         }
 
-        var segments = childRemoved.ChildrenProperty.Segments.ToArray();
-        var childrenProperty = new PropertyPath(string.Empty);
-        for (var i = 0; i < segments.Length - 1; i++)
-        {
-            childrenProperty += segments[i].ToString()!;
-        }
-
-        childrenProperty += segments[^1].Value;
+        var childrenProperty = GetChildrenProperty(childRemoved.ChildrenProperty);
         var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childRemoved.ChildrenProperty)));
         var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
         arrayFiltersForDocument.AddRange(arrayFilters);
@@ -186,6 +176,32 @@ public class ChangesetConverter(
         {
             updateBuilder = updateDefinitionBuilder.Pull(property, bsonValue);
         }
+    }
+
+    PropertyPath GetChildrenProperty(PropertyPath property)
+    {
+        var segments = property.Segments.ToArray();
+        var childrenProperty = new PropertyPath(string.Empty);
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            childrenProperty += segments[i].ToString()!;
+        }
+
+        childrenProperty += segments[^1].Value;
+        return childrenProperty;
+    }
+
+    void RemoveChildFromAll(Key key, ChildRemovedFromAll childRemoved)
+    {
+        var childrenProperty = (string)GetChildrenProperty(childRemoved.ChildrenProperty);
+
+        var fieldName = $"{childrenProperty}.{childRemoved.IdentifiedByProperty}";
+        var propertyValue = key.Value.ToBsonValue();
+
+        var filter = Builders<BsonDocument>.Filter.Eq(fieldName, propertyValue);
+        var update = Builders<BsonDocument>.Update.Pull(fieldName, new BsonDocument(childRemoved.IdentifiedByProperty, propertyValue));
+        var result = collections.GetCollection().UpdateMany(filter, update);
+        Console.WriteLine("Hello");
     }
 
     void BuildJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, bool isReplaying, List<Task> joinTasks, Joined joined)

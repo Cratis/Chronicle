@@ -112,6 +112,15 @@ public interface IChangeset<TSource, TTarget>
     void RemoveChild(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, ArrayIndexers arrayIndexers);
 
     /// <summary>
+    /// Apply a remove child change that will remove a specific child from all models that matches the identity to the <see cref="IChangeset{TSource, TTarget}"/>.
+    /// </summary>
+    /// <param name="childrenProperty"><see cref="PropertyPath"/> for accessing the children collection.</param>
+    /// <param name="identifiedByProperty"><see cref="PropertyPath"/> that identifies the child.</param>
+    /// <param name="key">Key value.</param>
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+    void RemoveChildFromAll(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, ArrayIndexers arrayIndexers);
+
+    /// <summary>
     /// Check if changeset contains a <see cref="ChildAdded"/> to a collection with a specific key.
     /// </summary>
     /// <param name="childrenProperty">The <see cref="PropertyPath"/> representing the collection.</param>
