@@ -14,5 +14,5 @@ public class GroupProjectionWithAutoMapping : IProjectionFor<Group>
         .Children(_ => _.Users, _ => _
             .IdentifiedBy(e => e.UserId)
             .From<UserAddedToGroup>(b => b
-                .UsingParentKey(e => e.UserId)));
+                .UsingKey(e => e.UserId)));
 }
