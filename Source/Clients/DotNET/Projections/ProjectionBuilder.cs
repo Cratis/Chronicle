@@ -137,7 +137,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder RemovedWith<TEvent>(Action<IRemovedWithBuilder<TModel, TEvent, TBuilder>>? builderCallback)
+    public TBuilder RemovedWith<TEvent>(Action<IRemovedWithBuilder<TModel, TEvent, TBuilder>>? builderCallback = default)
     {
         var type = typeof(TEvent);
 
