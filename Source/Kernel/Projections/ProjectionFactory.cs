@@ -125,23 +125,7 @@ public class ProjectionFactory(
                 hasParent);
         }
 
-        foreach (var (eventType, removedWithDefinition) in projectionDefinition.RemovedWith)
-        {
-            if (hasParent)
-            {
-                projection.Event
-                    .WhereEventTypeEquals(eventType)
-                    .RemoveChild(
-                        childrenAccessorProperty,
-                        actualIdentifiedByProperty);
-            }
-            else
-            {
-                projection.Event
-                    .WhereEventTypeEquals(eventType)
-                    .Remove();
-            }
-        }
+        SetupRemovedWith(projectionDefinition, childrenAccessorProperty, hasParent, actualIdentifiedByProperty, projection);
 
         if (projectionDefinition.FromDerivatives is not null)
         {
@@ -192,6 +176,25 @@ public class ProjectionFactory(
         }
 
         return projection;
+    }
+
+    void SetupRemovedWith(ProjectionDefinition projectionDefinition, PropertyPath childrenAccessorProperty, bool hasParent, PropertyPath actualIdentifiedByProperty, Projection projection)
+    {
+        foreach (var (eventType, _) in projectionDefinition.RemovedWith)
+        {
+            var observable = projection.Event
+                    .WhereEventTypeEquals(eventType);
+            if (hasParent)
+            {
+                observable.RemoveChild(
+                        childrenAccessorProperty,
+                        actualIdentifiedByProperty);
+            }
+            else
+            {
+                observable.Remove();
+            }
+        }
     }
 
     ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema modelSchema, Model model) =>
