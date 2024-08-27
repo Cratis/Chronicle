@@ -70,7 +70,7 @@ public interface IProjectionBuilder<TModel, TBuilder>
     /// <typeparam name="TEvent">Type of event.</typeparam>
     /// <param name="builderCallback">Optional callback for building.</param>
     /// <returns>Builder continuation.</returns>
-    TBuilder RemovedWith<TEvent>(Action<IRemovedWithBuilder<TModel, TEvent, TBuilder>>? builderCallback = default);
+    TBuilder RemovedWith<TEvent>(Action<RemovedWithBuilder<TModel, TEvent>>? builderCallback = default);
 
     /// <summary>
     /// Start building the children projection for a specific child model.

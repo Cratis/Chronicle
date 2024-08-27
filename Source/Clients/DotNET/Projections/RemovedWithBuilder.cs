@@ -10,9 +10,7 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
-/// <typeparam name="TBuilder">Type of actual builder.</typeparam>
-public class RemovedWithBuilder<TModel, TEvent, TBuilder> : KeyBuilder<TEvent, TBuilder>, IRemovedWithBuilder<TModel, TEvent, TBuilder>
-    where TBuilder : class
+public class RemovedWithBuilder<TModel, TEvent> : KeyBuilder<TEvent, RemovedWithBuilder<TModel, TEvent>>, IRemovedWithBuilder<TModel, TEvent, RemovedWithBuilder<TModel, TEvent>>
 {
     /// <inheritdoc/>
     public RemovedWithDefinition Build() => new()
