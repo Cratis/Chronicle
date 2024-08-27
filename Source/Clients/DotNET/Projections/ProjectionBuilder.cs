@@ -137,7 +137,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder RemovedWith<TEvent>(Action<IRemovedWithBuilder<TModel, TEvent, TBuilder>>? builderCallback = default)
+    public TBuilder RemovedWith<TEvent>(Action<RemovedWithBuilder<TModel, TEvent>>? builderCallback = default)
     {
         var type = typeof(TEvent);
 
@@ -147,7 +147,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
         }
 
         var removedWithEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
-        var removedWithBuilder = new RemovedWithBuilder<TModel, TEvent, TBuilder>();
+        var removedWithBuilder = new RemovedWithBuilder<TModel, TEvent>();
         builderCallback?.Invoke(removedWithBuilder);
         _removedWithDefinitions[removedWithEvent] = removedWithBuilder.Build();
 
