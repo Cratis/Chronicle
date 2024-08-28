@@ -53,9 +53,6 @@ public class EventTypesStorage(
         // If this is a new generation, there must be an upcaster and downcaster associated with the schema
         // .. do not allow generational gaps
         // if (await HasFor(type.Id, type.Generation)) return;
-        schema.SetDisplayName(friendlyName);
-        schema.SetGeneration(type.Generation);
-
         var eventSchema = new EventTypeSchema(type, schema);
         if (!_schemasByTypeAndGeneration.TryGetValue(type.Id, out var value))
         {

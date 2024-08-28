@@ -8,12 +8,13 @@ namespace Cratis.Chronicle.Events;
 /// </summary>
 /// <param name="Id"><see cref="EventTypeId">Unique identifier</see>.</param>
 /// <param name="Generation"><see cref="EventGeneration">Generation</see> of the event.</param>
-public record EventType(EventTypeId Id, EventGeneration Generation)
+/// <param name="Tombstone">Whether or not the event is a tombstone event.</param>
+public record EventType(EventTypeId Id, EventGeneration Generation, bool Tombstone = false)
 {
     /// <summary>
     /// Represents an unknown event type.
     /// </summary>
-    public static readonly EventType Unknown = new(EventTypeId.Unknown, EventGeneration.First);
+    public static readonly EventType Unknown = new(EventTypeId.Unknown, EventGeneration.First, false);
 
     /// <summary>
     /// Implicitly convert from <see cref="EventType"/> to string.
@@ -47,8 +48,12 @@ public record EventType(EventTypeId Id, EventGeneration Generation)
         var segments = input.Split('+');
         if (segments.Length == 1)
         {
-            return new(segments[0], EventGeneration.First);
+            return new(segments[0], EventGeneration.First, false);
         }
-        return new(segments[0], uint.Parse(segments[1]));
+        if (segments.Length == 2)
+        {
+            return new(segments[0], uint.Parse(segments[1]), false);
+        }
+        return new(segments[0], uint.Parse(segments[1]), bool.Parse(segments[2]));
     }
 }

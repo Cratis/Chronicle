@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// </summary>
 internal static partial class EventSequenceLogMessages
 {
-    [LoggerMessage(LogLevel.Debug, "Appending '{EventName}-{EventType}' for EventSource {EventSource} with sequence number {SequenceNumber} to event sequence '{EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
-    internal static partial void Appending(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType, string eventName, EventSourceId eventSource, EventSequenceNumber sequenceNumber);
+    [LoggerMessage(LogLevel.Debug, "Appending '{EventType}' for EventSource {EventSource} with sequence number {SequenceNumber} to event sequence '{EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
+    internal static partial void Appending(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType, EventSourceId eventSource, EventSequenceNumber sequenceNumber);
 
     [LoggerMessage(LogLevel.Debug, "Compensating event @ {SequenceNumber} in event sequence {EventSequenceId} - event type '{EventType}' for event store '{EventStore}' on namespace {Namespace}")]
     internal static partial void Compensating(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventType eventType, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber);

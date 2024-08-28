@@ -7,7 +7,6 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Events.Constraints;
@@ -149,7 +148,6 @@ public class EventSequence(
         Identity causedBy)
     {
         bool updateSequenceNumber;
-        var eventName = "[N/A]";
 
         // TODO: Get correct correlation id
         var correlationId = CorrelationId.New();
@@ -157,13 +155,11 @@ public class EventSequence(
         try
         {
             var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-            eventName = eventSchema.Schema.GetDisplayName();
             logger.Appending(
                 _eventSequenceKey.EventStore,
                 _eventSequenceKey.Namespace,
                 _eventSequenceId,
                 eventType,
-                eventName,
                 eventSourceId,
                 State.SequenceNumber);
 
@@ -174,7 +170,7 @@ public class EventSequence(
             var constraintValidationResult = await constraintContext.Validate();
             if (!constraintValidationResult.IsValid)
             {
-                _metrics?.ConstraintViolation(eventSourceId, eventName);
+                _metrics?.ConstraintViolation(eventSourceId, eventType.Id);
                 return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
             }
 
@@ -185,7 +181,7 @@ public class EventSequence(
                 {
                     var occurred = DateTimeOffset.UtcNow;
 
-                    _metrics?.AppendedEvent(eventSourceId, eventName);
+                    _metrics?.AppendedEvent(eventSourceId, eventType.Id);
                     var appendedEvent = await EventSequenceStorage.Append(
                         State.SequenceNumber,
                         eventSourceId,
@@ -204,7 +200,7 @@ public class EventSequence(
                 }
                 catch (DuplicateEventSequenceNumber)
                 {
-                    _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
+                    _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventType.Id);
                     State.SequenceNumber++;
                     await WriteStateAsync();
                 }
@@ -215,7 +211,7 @@ public class EventSequence(
         }
         catch (UnableToAppendToEventSequence ex)
         {
-            _metrics?.FailedAppending(eventSourceId, eventName);
+            _metrics?.FailedAppending(eventSourceId, eventType.Id);
             logger.FailedAppending(
                 _eventSequenceKey.EventStore,
                 _eventSequenceKey.Namespace,

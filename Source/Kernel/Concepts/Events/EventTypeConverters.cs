@@ -18,7 +18,8 @@ public static class EventTypeConverters
         return new()
         {
             Id = type.Id.Value,
-            Generation = type.Generation.Value
+            Generation = type.Generation.Value,
+            Tombstone = type.Tombstone
         };
     }
 
@@ -36,7 +37,7 @@ public static class EventTypeConverters
     /// <param name="eventType"><see cref="Contracts.Events.EventType"/> to convert from.</param>
     /// <returns>Converted <see cref="EventType"/>.</returns>
     public static EventType ToChronicle(this Contracts.Events.EventType eventType) =>
-        new(eventType.Id, eventType.Generation);
+        new(eventType.Id, eventType.Generation, eventType.Tombstone);
 
     /// <summary>
     /// Convert to a collection of kernel version of <see cref="Contracts.Events.EventType"/>.

@@ -33,7 +33,7 @@ public class EventConverter(
     /// <inheritdoc/>
     public async Task<AppendedEvent> ToAppendedEvent(Event @event)
     {
-        var eventType = new EventType(@event.Type, EventGeneration.First);
+        var eventType = new EventType(@event.Type, EventGeneration.First, false);
         var content = (JsonNode.Parse(@event.Content[EventGeneration.First.ToString()].ToString()) as JsonObject)!;
         var eventSchema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var releasedContent = await jsonComplianceManager.Release(
