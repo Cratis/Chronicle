@@ -26,6 +26,7 @@
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
         <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
         <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
+        <PackageReference Include="Polly.Core" />
         <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
     </ItemGroup>
 
