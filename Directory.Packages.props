@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>13.1.1</ApplicationModel>
+    <ApplicationModel>13.2.0</ApplicationModel>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
