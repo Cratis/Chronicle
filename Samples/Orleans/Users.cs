@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Orleans.Aggregates;
+using Events.Groups;
+using Events.Users;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Orleans;
@@ -27,10 +29,13 @@ public class Users(IAggregateRootFactory aggregateRootFactory, IEventLog eventLo
     public async Task FullOnboardingEvents()
     {
         var userId = Guid.NewGuid();
-        //Guid.Parse("3444635c-8174-47b3-99dd-a27cd3ea80e4");
         var groupId = Guid.NewGuid();
 
-        var result = await eventLog.Append(userId, new Events.Users.OnboardingStarted("My User", "asdasd", "asdasdasd"));
+        await eventLog.Append(userId, new SystemUserAdded("System", "Blah", "password1"));
+        await eventLog.Append(groupId, new SystemGroupAdded("System"));
+        await eventLog.Append(groupId, new UserAddedToGroup(userId));
+
+        // var result = await eventLog.Append(userId, new Events.Users.OnboardingStarted("My User", "asdasd", "asdasdasd"));
         // result = await eventLog.Append(userId, new Events.Users.PasswordChanged("awesome"));
         // result = await eventLog.Append(groupId, new Events.Groups.GroupAdded("My Group"));
         // result = await eventLog.Append(groupId, new Events.Groups.UserAddedToGroup(userId));

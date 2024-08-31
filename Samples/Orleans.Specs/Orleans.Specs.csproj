@@ -8,9 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Orleans/Orleans.csproj"/>
-        <ProjectReference Include="../../Source/Clients/Orleans/Orleans.csproj"/>
-        <ProjectReference Include="../../Source/Clients/Orleans.XUnit/Orleans.XUnit.csproj"/>
+        <ProjectReference Include="../Orleans/Orleans.csproj" />
+        <ProjectReference Include="../../Source/Clients/Orleans/Orleans.csproj" />
+        <ProjectReference Include="../../Source/Clients/Orleans.XUnit/Orleans.XUnit.csproj" />
     </ItemGroup>
 
     <ItemGroup>

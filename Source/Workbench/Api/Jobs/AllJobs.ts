@@ -2,13 +2,14 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+/* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { JobState } from './JobState';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/jobs');
+const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/jobs');
 
 class AllJobsSortBy {
     private _id: SortingActionsForObservableQuery<JobState[]>;

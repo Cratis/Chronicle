@@ -17,6 +17,8 @@ namespace Cratis.Chronicle.Setup;
 /// </summary>
 public static class MongoDBChronicleBuilderExtensions
 {
+    static bool _mongoDBArtifactsInitializes;
+
     /// <summary>
     /// Configure Chronicle to use MongoDB.
     /// </summary>
@@ -32,9 +34,14 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<IStorage, Storage.MongoDB.Storage>();
         });
 
-        BsonSerializer.RegisterSerializer(new JsonElementSerializer());
-        BsonSerializer.RegisterSerializer(new UriSerializer());
-        BsonSerializer.RegisterSerializer(new ConstraintDefinitionSerializer());
+        if (!_mongoDBArtifactsInitializes)
+        {
+            BsonSerializer.TryRegisterSerializer(new JsonElementSerializer());
+            BsonSerializer.TryRegisterSerializer(new UriSerializer());
+            BsonSerializer.TryRegisterSerializer(new ConstraintDefinitionSerializer());
+            _mongoDBArtifactsInitializes = true;
+        }
+
         builder.ConfigureServices(services => services.AddSingleton<IReminderTable, ReminderTable>());
         return builder;
     }

@@ -23,5 +23,5 @@ public interface IFromEveryBuilder<TModel>
     /// Instruct the all definition to include all child projections.
     /// </summary>
     /// <returns>Builder continuation.</returns>
-    IFromEveryBuilder<TModel> IncludeChildProjections();
+    IFromEveryBuilder<TModel> ExcludeChildProjections();
 }

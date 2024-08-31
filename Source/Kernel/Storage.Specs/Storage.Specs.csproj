@@ -3,11 +3,11 @@
         <AssemblyName>Cratis.Chronicle.Storage.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Storage</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Storage/Storage.csproj"/>
-        <ProjectReference Include="../Concepts/Concepts.csproj"/>
+        <ProjectReference Include="../Storage/Storage.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>
-
 </Project>

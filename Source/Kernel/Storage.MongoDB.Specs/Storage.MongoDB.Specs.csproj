@@ -3,10 +3,11 @@
         <AssemblyName>Cratis.Chronicle.Storage.MongoDB.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Storage.MongoDB</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj"/>
-        <ProjectReference Include="../Concepts/Concepts.csproj"/>
+        <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>
 </Project>

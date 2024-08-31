@@ -14,4 +14,10 @@ public record PropertyExpression(string Expression) : ConceptAs<string>(Expressi
     /// </summary>
     /// <param name="expression">Expression string.</param>
     public static implicit operator PropertyExpression(string expression) => new(expression);
+
+    /// <summary>
+    /// Check if the <see cref="PropertyExpression"/> is set.
+    /// </summary>
+    /// <returns>True if it is set to a value, false if not.</returns>
+    public bool IsSet() => !string.IsNullOrWhiteSpace(Value);
 }

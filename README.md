@@ -13,7 +13,7 @@
 
 ## Statistics
 
-![Alt](https://repobeats.axiom.co/api/embed/552921f84632f2b5d78bfc34af351af69fdbc15b.svg "Repobeats analytics image")
+![Alt](https://repobeats.axiom.co/api/embed/5785d95f0b975264a07f625c7ddf5a4064ce4e66.svg "Repobeats analytics image")
 
 ## Introduction
 

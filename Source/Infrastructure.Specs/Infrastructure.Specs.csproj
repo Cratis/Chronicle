@@ -3,13 +3,14 @@
         <AssemblyName>Cratis.Infrastructure.Specs</AssemblyName>
         <RootNamespace>Cratis.Infrastructure</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Infrastructure/Infrastructure.csproj"/>
+        <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Cratis.Applications"/>
+        <PackageReference Include="Cratis.Applications" />
     </ItemGroup>
 </Project>

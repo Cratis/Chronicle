@@ -22,6 +22,7 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Observation.Reactions.IReactions, Services.Observation.Reactions.Reactions>();
         services.AddSingleton<Contracts.Observation.Reducers.IReducers, Services.Observation.Reducers.Reducers>();
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
+        services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();
     }
 
     /// <summary>
@@ -40,6 +41,7 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.Observation.Reactions.Reactions>();
             _.MapGrpcService<Services.Observation.Reducers.Reducers>();
             _.MapGrpcService<Services.Projections.Projections>();
+            _.MapGrpcService<Services.Host.Server>();
         });
     }
 }

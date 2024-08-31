@@ -28,10 +28,12 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
 /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
+/// <param name="autoMap">Whether to automatically map properties.</param>
 public class ProjectionBuilder<TModel, TBuilder>(
     IEventTypes eventTypes,
     IJsonSchemaGenerator schemaGenerator,
-    JsonSerializerOptions jsonSerializerOptions) : IProjectionBuilder<TModel, TBuilder>
+    JsonSerializerOptions jsonSerializerOptions,
+    bool autoMap) : IProjectionBuilder<TModel, TBuilder>
     where TBuilder : class
 {
 #pragma warning disable CA1051 // Visible instance fields
@@ -40,10 +42,11 @@ public class ProjectionBuilder<TModel, TBuilder>(
     protected readonly Dictionary<EventType, FromDefinition> _fromDefinitions = [];
     protected readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = [];
     protected readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = [];
-    protected readonly List<FromAnyDefinition> _fromAnyDefinitions = [];
-    protected AllDefinition _allDefinition = new();
+    protected readonly List<FromDerivativesDefinition> _fromDerivativesDefinitions = [];
+    protected readonly Dictionary<EventType, RemovedWithDefinition> _removedWithDefinitions = [];
+    protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
-    protected EventType? _removedWithEvent;
+    protected bool _autoMap = autoMap;
     protected string _modelName = typeof(TModel).HasAttribute<ModelNameAttribute>() ? typeof(TModel).GetCustomAttribute<ModelNameAttribute>()!.Name : typeof(TModel).Name.Pluralize().ToCamelCase();
 
     /// <inheritdoc/>
@@ -55,7 +58,14 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>> builderCallback)
+    public IProjectionBuilder<TModel, TBuilder> AutoMap()
+    {
+        _autoMap = true;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>>? builderCallback = default)
     {
         var type = typeof(TEvent);
 
@@ -67,12 +77,18 @@ public class ProjectionBuilder<TModel, TBuilder>(
         var eventTypesInProjection = type.GetEventTypes(eventTypes.AllClrTypes).Select(eventTypes.GetEventTypeFor).ToArray();
 
         var builder = new FromBuilder<TModel, TEvent, TBuilder>(this);
-        builderCallback(builder);
+
+        if (_autoMap)
+        {
+            builder.AutoMap();
+        }
+
+        builderCallback?.Invoke(builder);
         var fromDefinition = builder.Build();
 
         if (eventTypesInProjection.Length > 1)
         {
-            _fromAnyDefinitions.Add(new FromAnyDefinition
+            _fromDerivativesDefinitions.Add(new FromDerivativesDefinition
             {
                 EventTypes = eventTypesInProjection.ToContract(),
                 From = fromDefinition
@@ -86,7 +102,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>> builderCallback)
+    public TBuilder Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>>? builderCallback = default)
     {
         if (!typeof(TEvent).IsEventType(eventTypes.AllClrTypes))
         {
@@ -94,7 +110,13 @@ public class ProjectionBuilder<TModel, TBuilder>(
         }
 
         var builder = new JoinBuilder<TModel, TEvent, TBuilder>(this);
-        builderCallback(builder);
+
+        if (_autoMap)
+        {
+            builder.AutoMap();
+        }
+
+        builderCallback?.Invoke(builder);
         var eventType = eventTypes.GetEventTypeFor(typeof(TEvent));
         _joinDefinitions[eventType.ToContract()] = builder.Build();
         return (this as TBuilder)!;
@@ -105,31 +127,37 @@ public class ProjectionBuilder<TModel, TBuilder>(
     {
         var builder = new FromEveryBuilder<TModel>();
         builderCallback(builder);
-        var allDefinition = builder.Build();
-        _allDefinition = new AllDefinition
+        var fromEveryDefinition = builder.Build();
+        _fromEveryDefinition = new FromEveryDefinition
         {
-            Properties = new Dictionary<string, string>(_allDefinition.Properties.Concat(allDefinition.Properties)),
-            IncludeChildren = allDefinition.IncludeChildren
+            Properties = new Dictionary<string, string>(_fromEveryDefinition.Properties.Concat(fromEveryDefinition.Properties)),
+            IncludeChildren = fromEveryDefinition.IncludeChildren
         };
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
-    public TBuilder RemovedWith<TEvent>()
+    public TBuilder RemovedWith<TEvent>(Action<RemovedWithBuilder<TModel, TEvent>>? builderCallback = default)
     {
-        if (_removedWithEvent != default)
+        var type = typeof(TEvent);
+
+        if (!type.IsEventType(eventTypes.AllClrTypes))
         {
-            throw new RemovalAlreadyDefined(GetType());
+            throw new TypeIsNotAnEventType(typeof(TEvent));
         }
 
-        _removedWithEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
+        var removedWithEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
+        var removedWithBuilder = new RemovedWithBuilder<TModel, TEvent>();
+        builderCallback?.Invoke(removedWithBuilder);
+        _removedWithDefinitions[removedWithEvent] = removedWithBuilder.Build();
+
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public TBuilder Children<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TModel, TChildModel>> builderCallback)
     {
-        var builder = new ChildrenBuilder<TModel, TChildModel>(eventTypes, schemaGenerator, jsonSerializerOptions);
+        var builder = new ChildrenBuilder<TModel, TChildModel>(eventTypes, schemaGenerator, jsonSerializerOptions, _autoMap);
         builderCallback(builder);
         _childrenDefinitions[targetProperty.GetPropertyPath()] = builder.Build();
         return (this as TBuilder)!;

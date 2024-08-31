@@ -13,14 +13,12 @@ namespace Cratis.Chronicle.Projections;
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of parent builder.</typeparam>
-/// <remarks>
-/// Initializes a new instance of the <see cref="JoinBuilder{TModel, TEvent, TParentBuilder}"/>.
-/// </remarks>
 /// <param name="projectionBuilder">The parent <see cref="IProjectionBuilder{TModel, TParentBuilder}"/>.</param>
 public class JoinBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TModel, TParentBuilder> projectionBuilder)
     : ModelPropertiesBuilder<TModel, TEvent, IJoinBuilder<TModel, TEvent>, TParentBuilder>(projectionBuilder), IJoinBuilder<TModel, TEvent>
         where TParentBuilder : class
 {
+    readonly IProjectionBuilder<TModel, TParentBuilder> _projectionBuilder = projectionBuilder;
     PropertyPath? _on;
 
     /// <inheritdoc/>
@@ -33,21 +31,44 @@ public class JoinBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TMod
     /// <inheritdoc/>
     public JoinDefinition Build()
     {
-        ThrowIfMissingOn();
+        ThrowIfMissingOnForRootProjection();
+        ThrowIfOnSpecifiedForChildProjection();
+        ThrowIfMissingIdentifiedByForChildProjection();
+
+        if (_on is null && _projectionBuilder is IChildrenBuilder childrenBuilder)
+        {
+            _on = childrenBuilder.GetIdentifiedBy();
+        }
 
         return new()
         {
             On = _on!,
-            Properties = _propertyExpressions.ToDictionary(_ => (string)_.TargetProperty, _ => _.Build()),
-            Key = _key.Build()
+            Properties = _propertyExpressions.ToDictionary(_ => (string)_.Key, _ => _.Value.Build()),
+            Key = _keyExpression
         };
     }
 
-    void ThrowIfMissingOn()
+    void ThrowIfMissingOnForRootProjection()
     {
-        if (_on is null)
+        if (_on is null && _projectionBuilder is not IChildrenBuilder)
         {
             throw new MissingOnPropertyExpressionWhenJoiningWithEvent(typeof(TModel), typeof(TEvent));
+        }
+    }
+
+    void ThrowIfOnSpecifiedForChildProjection()
+    {
+        if (_on is not null && _projectionBuilder is IChildrenBuilder)
+        {
+            throw new OnPropertyShouldNotBeSpecifiedForChildJoin(typeof(TModel), typeof(TEvent));
+        }
+    }
+
+    void ThrowIfMissingIdentifiedByForChildProjection()
+    {
+        if (_on is null && _projectionBuilder is IChildrenBuilder childrenBuilder && !childrenBuilder.HasIdentifiedBy)
+        {
+            throw new MissingIdentifiedByPropertyExpressionWhenJoiningWithEvent(typeof(TModel), typeof(TEvent));
         }
     }
 }

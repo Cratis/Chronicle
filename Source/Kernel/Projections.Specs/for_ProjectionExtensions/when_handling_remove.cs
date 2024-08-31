@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.for_ProjectionExtensions.when_applying_fr
 
 public class when_handling_remove : given.an_observable_and_event_setup
 {
-    void Establish() => observable.RemovedWith(@event.Metadata.Type);
+    void Establish() => observable.Remove();
 
     void Because() => observable.OnNext(event_context);
 

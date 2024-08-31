@@ -2,13 +2,14 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+/* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { EventType } from './EventType';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/types');
+const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/types');
 
 class AllEventTypesSortBy {
     private _id: SortingActionsForQuery<EventType[]>;

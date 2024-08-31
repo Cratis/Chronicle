@@ -23,11 +23,13 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
 /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
+/// <param name="autoMap">Whether to automatically map properties.</param>
 public class ChildrenBuilder<TParentModel, TChildModel>(
     IEventTypes eventTypes,
     IJsonSchemaGenerator schemaGenerator,
-    JsonSerializerOptions jsonSerializerOptions) :
-    ProjectionBuilder<TChildModel, IChildrenBuilder<TParentModel, TChildModel>>(eventTypes, schemaGenerator, jsonSerializerOptions),
+    JsonSerializerOptions jsonSerializerOptions,
+    bool autoMap) :
+    ProjectionBuilder<TChildModel, IChildrenBuilder<TParentModel, TChildModel>>(eventTypes, schemaGenerator, jsonSerializerOptions, autoMap),
     IChildrenBuilder<TParentModel, TChildModel>
 {
     readonly IJsonSchemaGenerator _schemaGenerator = schemaGenerator;
@@ -37,7 +39,14 @@ public class ChildrenBuilder<TParentModel, TChildModel>(
     // TODO: This is not used, but it should be - figure out what the purpose was. The FromEventProperty method is called from ModelPropertiesBuilder
     EventType? _fromEventPropertyEventType;
     IEventValueExpression? _fromEventPropertyExpression;
+
 #pragma warning restore IDE0052 // Remove unread private members
+
+    /// <inheritdoc/>
+    public bool HasIdentifiedBy => _identifiedBy.IsSet;
+
+    /// <inheritdoc/>
+    public PropertyPath GetIdentifiedBy() => _identifiedBy;
 
     /// <inheritdoc/>
     public IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy(PropertyPath propertyPath)
@@ -76,8 +85,8 @@ public class ChildrenBuilder<TParentModel, TChildModel>(
             From = _fromDefinitions,
             Join = _joinDefinitions,
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
-            All = _allDefinition,
-            RemovedWith = _removedWithEvent == default ? default : new() { Event = _removedWithEvent }
+            All = _fromEveryDefinition,
+            RemovedWith = _removedWithDefinitions
         };
     }
 }

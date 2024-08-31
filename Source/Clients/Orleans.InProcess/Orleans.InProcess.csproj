@@ -39,6 +39,10 @@
             <!-- <PrivateAssets>all</PrivateAssets> -->
         </ProjectReference>
 
+        <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj">
+            <!-- <PrivateAssets>all</PrivateAssets> -->
+        </ProjectReference>
+
         <ProjectReference Include="../../Kernel/Services/Services.csproj">
             <!-- <PrivateAssets>all</PrivateAssets> -->
             <Aliases>Server</Aliases>

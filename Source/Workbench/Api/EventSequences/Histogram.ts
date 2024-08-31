@@ -2,13 +2,14 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+/* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { EventHistogramEntry } from './EventHistogramEntry';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/histogram');
+const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/histogram');
 
 class HistogramSortBy {
     private _date: SortingActionsForQuery<EventHistogramEntry[]>;

@@ -2,9 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using StorageConfiguration = Cratis.Chronicle.Concepts.Configuration.Storage;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -17,23 +18,23 @@ public class Database : IDatabase
     readonly ConcurrentDictionary<EventStoreName, IEventStoreDatabase> _eventStoreDatabases = new();
     readonly ConcurrentDictionary<(EventStoreName, EventStoreNamespaceName), IMongoDatabase> _readModelDatabases = new();
     readonly IMongoDBClientManager _clientManager;
-    readonly StorageConfiguration _configuration;
+    readonly IOptions<MongoDBOptions> _mongoDBOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
     /// </summary>
     /// <param name="clientManager"><see cref="IMongoDBClientManager"/> for working with MongoDB.</param>
-    /// <param name="configuration"><see cref="Storage"/> configuration.</param>
+    /// <param name="mongoDBOptions"><see cref="Storage"/> configuration.</param>
     public Database(
         IMongoDBClientManager clientManager,
-        StorageConfiguration configuration)
+        IOptions<MongoDBOptions> mongoDBOptions)
     {
-        var url = new MongoUrl(configuration.ConnectionDetails.ToString());
+        var url = new MongoUrl(mongoDBOptions.Value.Server);
         var settings = MongoClientSettings.FromUrl(url);
         var client = clientManager.GetClientFor(settings);
         _database = client.GetDatabase("chronicle+main");
         _clientManager = clientManager;
-        _configuration = configuration;
+        _mongoDBOptions = mongoDBOptions;
     }
 
     /// <inheritdoc/>
@@ -55,7 +56,7 @@ public class Database : IDatabase
             return database;
         }
 
-        return _eventStoreDatabases[eventStore] = new EventStoreDatabase(eventStore, _clientManager, _configuration);
+        return _eventStoreDatabases[eventStore] = new EventStoreDatabase(eventStore, _clientManager, _mongoDBOptions);
     }
 
     /// <inheritdoc/>
@@ -69,7 +70,7 @@ public class Database : IDatabase
 
         // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
         var databaseName = (@namespace == EventStoreNamespaceName.Default) ? $"{eventStore}" : $"{eventStore}+{@namespace}";
-        var urlBuilder = new MongoUrlBuilder(_configuration.ConnectionDetails.ToString())
+        var urlBuilder = new MongoUrlBuilder(_mongoDBOptions.Value.Server)
         {
             DatabaseName = databaseName
         };

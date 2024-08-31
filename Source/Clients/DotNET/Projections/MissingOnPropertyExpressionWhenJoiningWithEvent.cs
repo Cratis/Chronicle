@@ -6,9 +6,6 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Exception that gets thrown when missing the on property expression when joining with specific event type.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="MissingOnPropertyExpressionWhenJoiningWithEvent"/> class.
-/// </remarks>
 /// <param name="modelType">Type of model joining with event.</param>
 /// <param name="eventType">Type of event that is being joined.</param>
 public class MissingOnPropertyExpressionWhenJoiningWithEvent(Type modelType, Type eventType)

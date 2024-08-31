@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Models;
-
 namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 
 /// <summary>
@@ -20,7 +17,8 @@ public static class RemovedWithDefinitionConverters
     {
         return new()
         {
-            Event = definition.Event.ToContract(),
+            Key = definition.Key,
+            ParentKey = definition.ParentKey ?? null!
         };
     }
 
@@ -32,7 +30,8 @@ public static class RemovedWithDefinitionConverters
     public static RemovedWithDefinition ToChronicle(this Contracts.Projections.RemovedWithDefinition contract)
     {
         return new(
-            contract.Event.ToChronicle()
+            contract.Key,
+            contract.ParentKey ?? null!
         );
     }
 }

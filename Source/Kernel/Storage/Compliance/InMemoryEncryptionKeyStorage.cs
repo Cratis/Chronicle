@@ -37,5 +37,5 @@ public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
         return Task.CompletedTask;
     }
 
-    record Key(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier);
+    sealed record Key(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier);
 }

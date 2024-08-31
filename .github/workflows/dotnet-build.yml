@@ -1,6 +1,7 @@
 name: .NET Build
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "main"
@@ -27,12 +28,10 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "7.0.x"
+          dotnet-version: "8.0.x"
 
-      - name: Build & run tests for root
-        run: dotnet test --configuration Debug
+      - name: Build
+        run: dotnet build --configuration Release
 
-      - name: Build & run tests for bank sample
-        working-directory: ./Samples/Banking/Bank
-        run: dotnet test --configuration Debug
-
+      - name: Run tests
+        run: dotnet test --no-build --configuration Release --settings specs.runsettings

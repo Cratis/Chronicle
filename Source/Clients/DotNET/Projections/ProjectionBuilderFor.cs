@@ -38,7 +38,7 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions)
-        : base(eventTypes, schemaGenerator, jsonSerializerOptions)
+        : base(eventTypes, schemaGenerator, jsonSerializerOptions, false)
     {
         _identifier = identifier;
         _eventTypes = eventTypes;
@@ -99,8 +99,8 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
             From = _fromDefinitions,
             Join = _joinDefinitions,
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
-            All = _allDefinition,
-            RemovedWith = _removedWithEvent == default ? default : new() { Event = _removedWithEvent },
+            All = _fromEveryDefinition,
+            RemovedWith = _removedWithDefinitions,
             Sink = new()
             {
                 ConfigurationId = Guid.Empty,

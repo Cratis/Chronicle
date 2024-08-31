@@ -8,11 +8,28 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
+/// Defines the base interface for children builders.
+/// </summary>
+public interface IChildrenBuilder
+{
+    /// <summary>
+    /// Gets whether or not the builder has identified by.
+    /// </summary>
+    bool HasIdentifiedBy { get; }
+
+    /// <summary>
+    /// Gets the property path that identifies the child model in the collection within the parent.
+    /// </summary>
+    /// <returns><see cref="PropertyPath"/> for the identified by.</returns>
+    PropertyPath GetIdentifiedBy();
+}
+
+/// <summary>
 /// Defines the builder for building out a child relationship on a model.
 /// </summary>
 /// <typeparam name="TParentModel">Parent model type.</typeparam>
 /// <typeparam name="TChildModel">Child model type.</typeparam>
-public interface IChildrenBuilder<TParentModel, TChildModel> : IProjectionBuilder<TChildModel, IChildrenBuilder<TParentModel, TChildModel>>
+public interface IChildrenBuilder<TParentModel, TChildModel> : IProjectionBuilder<TChildModel, IChildrenBuilder<TParentModel, TChildModel>>, IChildrenBuilder
 {
     /// <summary>
     /// Sets the property that identifies the child model in the collection within the parent.

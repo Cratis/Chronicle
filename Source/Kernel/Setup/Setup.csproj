@@ -7,8 +7,6 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
-        <PackageReference Include="OpenTelemetry" />
-        <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     </ItemGroup>
 
     <ItemGroup>
@@ -22,6 +20,9 @@
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
         <ProjectReference Include="../Concepts/Concepts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../Diagnostics/Diagnostics.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
     </ItemGroup>

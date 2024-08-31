@@ -2,6 +2,8 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Grains.Interfaces</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Grains</RootNamespace>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\GeneratedFiles</CompilerGeneratedFilesOutputPath>
         <NoWarn>$(NoWarn);ORLEANS0010</NoWarn>
     </PropertyGroup>
 

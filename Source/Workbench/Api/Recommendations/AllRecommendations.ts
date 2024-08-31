@@ -2,13 +2,14 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+/* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { RecommendationInformation } from '../Concepts/Recommendations/RecommendationInformation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/recommendations/observe');
+const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/recommendations/observe');
 
 class AllRecommendationsSortBy {
     private _id: SortingActionsForObservableQuery<RecommendationInformation[]>;

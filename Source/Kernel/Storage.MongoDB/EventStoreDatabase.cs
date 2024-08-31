@@ -4,8 +4,8 @@
 using System.Collections.Concurrent;
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using StorageConfiguration = Cratis.Chronicle.Concepts.Configuration.Storage;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -18,20 +18,20 @@ public class EventStoreDatabase : IEventStoreDatabase
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceDatabase> _eventStoreNamespaceDatabases = new();
     readonly EventStoreName _eventStore;
     readonly IMongoDBClientManager _clientManager;
-    readonly StorageConfiguration _configuration;
+    readonly IOptions<MongoDBOptions> _mongoDBOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the database is for.</param>
     /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
-    /// <param name="configuration"><see cref="Storage"/> configuration.</param>
+    /// <param name="mongoDBOptions"><see cref="Storage"/> configuration.</param>
     public EventStoreDatabase(
         EventStoreName eventStore,
         IMongoDBClientManager clientManager,
-        StorageConfiguration configuration)
+        IOptions<MongoDBOptions> mongoDBOptions)
     {
-        var urlBuilder = new MongoUrlBuilder(configuration.ConnectionDetails.ToString())
+        var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server)
         {
             DatabaseName = eventStore.Value
         };
@@ -43,7 +43,7 @@ public class EventStoreDatabase : IEventStoreDatabase
         _database = client.GetDatabase($"{eventStore.Value}+es");
         _eventStore = eventStore;
         _clientManager = clientManager;
-        _configuration = configuration;
+        _mongoDBOptions = mongoDBOptions;
     }
 
     /// <inheritdoc/>
@@ -65,6 +65,6 @@ public class EventStoreDatabase : IEventStoreDatabase
             return database;
         }
 
-        return _eventStoreNamespaceDatabases[@namespace] = new EventStoreNamespaceDatabase(_eventStore, @namespace, _clientManager, _configuration);
+        return _eventStoreNamespaceDatabases[@namespace] = new EventStoreNamespaceDatabase(_eventStore, @namespace, _clientManager, _mongoDBOptions);
     }
 }

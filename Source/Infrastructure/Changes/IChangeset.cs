@@ -59,7 +59,8 @@ public interface IChangeset<TSource, TTarget>
     /// <param name="onProperty">The property defining the property it was joined on.</param>
     /// <param name="key">Key representing the join.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
-    void Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers);
+    /// <returns>A changeset that is scoped for the join.</returns>
+    IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers);
 
     /// <summary>
     /// Apply a join resolution change to the <see cref="Changeset{TSource, TTarget}"/>.
@@ -68,7 +69,13 @@ public interface IChangeset<TSource, TTarget>
     /// <param name="key">Key representing the join.</param>
     /// <param name="incoming">The incoming change that resolved the join.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
-    void ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers);
+    /// <returns>A changeset that is scoped for the join.</returns>
+    IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers);
+
+    /// <summary>
+    /// Optimize the changeset.
+    /// </summary>
+    void Optimize();
 
     /// <summary>
     /// Adds a child as is to a given children property.
@@ -98,7 +105,20 @@ public interface IChangeset<TSource, TTarget>
     /// <summary>
     /// Apply a remove child change to the <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
-    void RemoveChild();
+    /// <param name="childrenProperty"><see cref="PropertyPath"/> for accessing the children collection.</param>
+    /// <param name="identifiedByProperty"><see cref="PropertyPath"/> that identifies the child.</param>
+    /// <param name="key">Key value.</param>
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+    void RemoveChild(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, ArrayIndexers arrayIndexers);
+
+    /// <summary>
+    /// Apply a remove child change that will remove a specific child from all models that matches the identity to the <see cref="IChangeset{TSource, TTarget}"/>.
+    /// </summary>
+    /// <param name="childrenProperty"><see cref="PropertyPath"/> for accessing the children collection.</param>
+    /// <param name="identifiedByProperty"><see cref="PropertyPath"/> that identifies the child.</param>
+    /// <param name="key">Key value.</param>
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+    void RemoveChildFromAll(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, ArrayIndexers arrayIndexers);
 
     /// <summary>
     /// Check if changeset contains a <see cref="ChildAdded"/> to a collection with a specific key.

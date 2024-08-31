@@ -2,12 +2,13 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+/* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState } from '@cratis/applications/queries';
 import { useQuery, PerformQuery } from '@cratis/applications.react/queries';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/next-sequence-number');
+const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/next-sequence-number');
 
 
 export interface NextArguments {

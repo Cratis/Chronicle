@@ -3,10 +3,10 @@
         <AssemblyName>Cratis.Chronicle.Concepts.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Concepts</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Concepts/Concepts.csproj"/>
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>
-
 </Project>

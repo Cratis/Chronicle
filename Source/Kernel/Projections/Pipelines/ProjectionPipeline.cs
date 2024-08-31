@@ -60,10 +60,23 @@ public class ProjectionPipeline(
         key = EnsureCorrectTypeForArrayIndexersOnKey(key);
         logger.GettingInitialValues(@event.Metadata.SequenceNumber);
         var initialState = await Sink.FindOrDefault(key);
-        initialState ??= Projection.InitialModelState;
+
+        var needsInitialState = false;
+        if (initialState is null)
+        {
+            needsInitialState = true;
+            initialState = Projection.InitialModelState;
+        }
+
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, initialState);
         var context = new ProjectionEventContext(key, @event, changeset);
         await HandleEventFor(Projection, context);
+
+        if (needsInitialState && !changeset.HasJoined())
+        {
+            changeset.AddPropertiesFrom(Projection.InitialModelState);
+        }
+
         if (changeset.HasChanges)
         {
             await Sink.ApplyChanges(key, changeset);

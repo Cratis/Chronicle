@@ -20,7 +20,7 @@ public class AppendedEventsQueues : Grain, IAppendedEventsQueues
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
     public AppendedEventsQueues(IGrainFactory grainFactory)
     {
-        _queues = Enumerable.Range(0, 1).Select(_ => grainFactory.GetGrain<IAppendedEventsQueue>(_, this.GetPrimaryKeyString())).ToArray();
+        _queues = Enumerable.Range(0, 8).Select(_ => grainFactory.GetGrain<IAppendedEventsQueue>(_, this.GetPrimaryKeyString())).ToArray();
     }
 
     /// <inheritdoc/>

@@ -6,7 +6,6 @@ using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Serilog;
 
 #pragma warning disable SA1600
 namespace Cratis.Chronicle.Server;
@@ -35,7 +34,6 @@ public static class Program
                 _.ValidateOnBuild = false;
             })
             .UseCratisApplicationModel()
-            .UseLogging()
             .UseCratisMongoDB(mongo =>
             {
                 mongo.Server = "mongodb://localhost:27017";
@@ -68,8 +66,6 @@ public static class Program
     {
         if (args.ExceptionObject is Exception exception)
         {
-            Log.Logger?.Error(exception, "Unhandled exception");
-            Log.CloseAndFlush();
             Console.WriteLine("************ BEGIN UNHANDLED EXCEPTION ************");
             PrintExceptionInfo(exception);
 

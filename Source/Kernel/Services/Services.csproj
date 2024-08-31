@@ -9,6 +9,7 @@
     <ItemGroup>
         <ProjectReference Include="..\Contracts\Contracts.csproj" />
         <ProjectReference Include="..\Grains.Interfaces\Grains.Interfaces.csproj" />
+        <ProjectReference Include="..\Diagnostics\Diagnostics.csproj" />
 
         <ProjectReference Include="../Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
@@ -17,6 +18,7 @@
 
     <ItemGroup>
         <PackageReference Include="System.Reactive" />
+        <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
     </ItemGroup>
 
 </Project>

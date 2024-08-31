@@ -50,10 +50,10 @@ public class ChildrenDefinition
     public IDictionary<string, ChildrenDefinition> Children { get; set; } = new Dictionary<string, ChildrenDefinition>();
 
     /// <summary>
-    /// Gets or sets the full <see cref="AllDefinition"/>.
+    /// Gets or sets the full <see cref="FromEveryDefinition"/>.
     /// </summary>
     [ProtoMember(7)]
-    public AllDefinition All { get; set; }
+    public FromEveryDefinition All { get; set; }
 
     /// <summary>
     /// Gets or sets the optional <see cref="FromEventPropertyDefinition"/> definition.
@@ -64,6 +64,6 @@ public class ChildrenDefinition
     /// <summary>
     /// Gets or sets the definition of what removes a child, if any.
     /// </summary>
-    [ProtoMember(9)]
-    public RemovedWithDefinition? RemovedWith { get; set; }
+    [ProtoMember(9, IsRequired = true)]
+    public IDictionary<EventType, RemovedWithDefinition> RemovedWith { get; set; } = new Dictionary<EventType, RemovedWithDefinition>();
 }

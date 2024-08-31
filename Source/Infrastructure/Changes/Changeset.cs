@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Properties;
+using Cratis.Collections;
 
 namespace Cratis.Chronicle.Changes;
 
@@ -17,7 +18,8 @@ namespace Cratis.Chronicle.Changes;
 /// <param name="comparer"><see cref="IObjectComparer"/> to compare objects with.</param>
 /// <param name="incoming"><see cref="Incoming"/> that the <see cref="Changeset{TSource, TTarget}"/> is for.</param>
 /// <param name="initialState">The initial state before any changes are applied.</param>
-public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incoming, TTarget initialState) : IChangeset<TSource, TTarget>
+/// <param name="parent">Optional parent <see cref="IChangeset{TSource, TTarget}"/> if any.</param>
+public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incoming, TTarget initialState, Changeset<TSource, TTarget>? parent = null) : IChangeset<TSource, TTarget>
 {
     readonly List<Change> _changes = [];
 
@@ -50,6 +52,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
 
         if (!comparer.Equals(CurrentState, workingState, out var differences))
         {
+            differences.ForEach(_ => _.ArrayIndexers = arrayIndexers);
             Add(new PropertiesChanged<TTarget>(workingState, differences));
         }
 
@@ -57,19 +60,29 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     }
 
     /// <inheritdoc/>
-    public void Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers)
+    public IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers)
     {
         var workingState = InitialState.Clone()!;
-        Add(new Joined(workingState, key, onProperty, arrayIndexers, Changes));
+        var changeset = new Changeset<TSource, TTarget>(comparer, Incoming, workingState, this);
+        Add(new Joined(workingState, key, onProperty, arrayIndexers, changeset.Changes));
         CurrentState = workingState;
+        return changeset;
     }
 
     /// <inheritdoc/>
-    public void ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers)
+    public IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers)
     {
         var workingState = CurrentState.Clone()!;
-        Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, Changes));
+        var changeset = new Changeset<TSource, TTarget>(comparer, incoming, workingState, this);
+        Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, changeset.Changes));
         CurrentState = workingState;
+        return changeset;
+    }
+
+    /// <inheritdoc/>
+    public void Optimize()
+    {
+        OptimizeResolveJoinsAgainstChildrenAdded(parent);
     }
 
     /// <inheritdoc/>
@@ -136,8 +149,33 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     }
 
     /// <inheritdoc/>
-    public void RemoveChild()
+    public void RemoveChild(
+        PropertyPath childrenProperty,
+        PropertyPath identifiedByProperty,
+        object key,
+        ArrayIndexers arrayIndexers)
     {
+        var workingState = CurrentState.Clone()!;
+        var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
+
+        var item = items.FindByKey(identifiedByProperty, key);
+        if (item is not null)
+        {
+            items.Remove(item);
+            Add(new ChildRemoved(item, childrenProperty, identifiedByProperty, key));
+        }
+
+        CurrentState = workingState;
+    }
+
+    /// <inheritdoc/>
+    public void RemoveChildFromAll(
+        PropertyPath childrenProperty,
+        PropertyPath identifiedByProperty,
+        object key,
+        ArrayIndexers arrayIndexers)
+    {
+        Add(new ChildRemovedFromAll(childrenProperty, identifiedByProperty, key, arrayIndexers));
     }
 
     /// <inheritdoc/>
@@ -163,6 +201,43 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         }
 
         return default!;
+    }
+
+    void OptimizeResolveJoinsAgainstChildrenAdded(Changeset<TSource, TTarget>? parent)
+    {
+        if (parent is null)
+        {
+            return;
+        }
+
+        // Note: This merges any properties changed on any ResolvedJoin that matches a ChildAdded
+        // by its key, array property and identifier property. It takes the properties and resolves
+        // them onto the child added. This avoids anyone working with a changeset to have to perform an
+        // add and then perform an update on the child.
+        var changes = parent._changes;
+        var resolvesToRemove = new List<ResolvedJoin>();
+        foreach (var childAdded in changes.OfType<ChildAdded>())
+        {
+            var resolvedJoins = changes
+                .OfType<ResolvedJoin>().Where(_ =>
+                    _.ArrayIndexers.All.Any(a =>
+                        a.ArrayProperty == childAdded.ChildrenProperty &&
+                        a.IdentifierProperty == childAdded.IdentifiedByProperty &&
+                        a.Identifier == childAdded.Key));
+
+            resolvedJoins
+                .SelectMany(_ => _.Changes.OfType<PropertiesChanged<TTarget>>())
+                .SelectMany(_ => _.Differences)
+                .ForEach(difference =>
+                {
+                    var propertyPath = PropertyPath.CreateFrom([difference.PropertyPath.LastSegment]);
+                    propertyPath.SetValue(childAdded.Child, difference.Changed!, difference.ArrayIndexers);
+                });
+
+            resolvesToRemove.AddRange(resolvedJoins);
+        }
+
+        resolvesToRemove.ForEach(_ => changes.Remove(_));
     }
 
     void SetProperties(TTarget state, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)

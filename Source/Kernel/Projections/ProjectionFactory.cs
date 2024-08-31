@@ -74,16 +74,7 @@ public class ProjectionFactory(
                 true));
 
         var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
-
-        ExpandoObject initialState;
-        if (projectionDefinition.InitialModelState is not null)
-        {
-            initialState = expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
-        }
-        else
-        {
-            initialState = new ExpandoObject();
-        }
+        var initialState = GetInitialState(expandoObjectConverter, projectionDefinition, modelSchema, model);
 
         var projection = new Projection(
             projectionDefinition.Identifier,
@@ -112,19 +103,53 @@ public class ProjectionFactory(
                 .AddChildFromEventProperty(childrenAccessorProperty, valueProvider);
         }
 
-        var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
+        var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
-            SetupFromSubscription(eventSequenceStorage, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromDefinition);
+            var fromObservable = SetupFromDefinition(
+                projection,
+                fromDefinition,
+                eventType,
+                childrenAccessorProperty,
+                actualIdentifiedByProperty,
+                propertyMappersForEveryEventType);
+
+            SetupJoinsForFromDefinition(
+                fromObservable,
+                eventSequenceStorage,
+                projectionDefinition,
+                childrenAccessorProperty,
+                actualIdentifiedByProperty,
+                projection,
+                fromDefinition,
+                hasParent);
         }
 
-        if (projectionDefinition.FromAny is not null)
+        SetupRemovedWith(projectionDefinition, childrenAccessorProperty, hasParent, actualIdentifiedByProperty, projection);
+
+        if (projectionDefinition.FromDerivatives is not null)
         {
-            foreach (var fromAnyDefinition in projectionDefinition.FromAny)
+            foreach (var fromDerivativesDefinition in projectionDefinition.FromDerivatives)
             {
-                foreach (var eventType in fromAnyDefinition.EventTypes)
+                foreach (var eventType in fromDerivativesDefinition.EventTypes)
                 {
-                    SetupFromSubscription(eventSequenceStorage, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, projection, propertyMappersForAllEventTypes, eventType, fromAnyDefinition.From);
+                    var fromObservable = SetupFromDefinition(
+                        projection,
+                        fromDerivativesDefinition.From,
+                        eventType,
+                        childrenAccessorProperty,
+                        actualIdentifiedByProperty,
+                        propertyMappersForEveryEventType);
+
+                    SetupJoinsForFromDefinition(
+                        fromObservable,
+                        eventSequenceStorage,
+                        projectionDefinition,
+                        childrenAccessorProperty,
+                        actualIdentifiedByProperty,
+                        projection,
+                        fromDerivativesDefinition.From,
+                        hasParent);
                 }
             }
         }
@@ -132,67 +157,127 @@ public class ProjectionFactory(
         foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
         {
             var propertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
-            propertyMappers.AddRange(propertyMappersForAllEventTypes);
-            projection.Event
+            propertyMappers.AddRange(propertyMappersForEveryEventType);
+            var joinObservable = projection.Event
                 .WhereEventTypeEquals(eventType)
-                .Join(joinDefinition.On)
+                .Join(childrenAccessorProperty + joinDefinition.On)
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,
                     propertyMappers);
-        }
 
-        if (projectionDefinition.All.IncludeChildren)
-        {
-            var childEventTypes = projection
-                .EventTypes
-                .Where(_ => !projectionDefinition.From.Any(kvp => kvp.Key == _) && !projectionDefinition.Join.Any(kvp => kvp.Key == _));
-
-            foreach (var eventType in childEventTypes)
+            if (projectionDefinition.FromEvery.IncludeChildren)
             {
-                projection.Event
-                    .WhereEventTypeEquals(eventType)
-                    .Project(
-                        childrenAccessorProperty,
-                        actualIdentifiedByProperty,
-                        propertyMappersForAllEventTypes);
+                joinObservable.Project(
+                    childrenAccessorProperty,
+                    actualIdentifiedByProperty,
+                    propertyMappersForEveryEventType);
             }
         }
 
         return projection;
     }
 
-    void SetupFromSubscription(
-        IEventSequenceStorage eventSequenceStorage,
-        ProjectionDefinition projectionDefinition,
+    void SetupRemovedWith(ProjectionDefinition projectionDefinition, PropertyPath childrenAccessorProperty, bool hasParent, PropertyPath actualIdentifiedByProperty, Projection projection)
+    {
+        foreach (var (eventType, removedWithDefinition) in projectionDefinition.RemovedWith)
+        {
+            var observable = projection.Event
+                    .WhereEventTypeEquals(eventType);
+            if (hasParent)
+            {
+                if (removedWithDefinition.ParentKey?.IsSet() == false)
+                {
+                    observable.RemoveChildFromAll(
+                        childrenAccessorProperty,
+                        actualIdentifiedByProperty);
+                }
+                else
+                {
+                    observable.RemoveChild(
+                        childrenAccessorProperty,
+                        actualIdentifiedByProperty);
+                }
+            }
+            else
+            {
+                observable.Remove();
+            }
+        }
+    }
+
+    ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema modelSchema, Model model) =>
+        projectionDefinition.InitialModelState.Count == 0 ?
+            CreateInitialState(model) :
+            expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
+
+    ExpandoObject CreateInitialState(Model model)
+    {
+        // If there is no initial state, we create one with empty collections for all arrays.
+        // This is to ensure that we can add to them without having to check for null.
+        // And that any sinks don't fail when trying to access them.
+        var initialState = new ExpandoObject();
+        foreach (var collection in model.Schema.GetFlattenedProperties().Where(_ => _.IsArray))
+        {
+            ((IDictionary<string, object?>)initialState)[collection.Name] = new List<object>();
+        }
+
+        return initialState;
+    }
+
+    IObservable<ProjectionEventContext> SetupFromDefinition(
+        Projection projection,
+        FromDefinition fromDefinition,
+        EventType eventType,
         PropertyPath childrenAccessorProperty,
         PropertyPath actualIdentifiedByProperty,
-        Projection projection,
-        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappersForAllEventTypes,
-        EventType eventType,
-        FromDefinition fromDefinition)
+        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappersForAllEventTypes)
     {
-        var joinExpressions = projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key));
         var propertyMappers = fromDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
         propertyMappers.AddRange(propertyMappersForAllEventTypes);
-        var projected = projection.Event
+        return projection.Event
             .WhereEventTypeEquals(eventType)
             .Project(
                 childrenAccessorProperty,
                 actualIdentifiedByProperty,
                 propertyMappers);
+    }
+
+    void SetupJoinsForFromDefinition(
+        IObservable<ProjectionEventContext> fromObservable,
+        IEventSequenceStorage eventSequenceStorage,
+        ProjectionDefinition projectionDefinition,
+        PropertyPath childrenAccessorProperty,
+        PropertyPath actualIdentifiedByProperty,
+        Projection projection,
+        FromDefinition fromDefinition,
+        bool hasParent)
+    {
+        // Notes: The purpose of this method is to hook up on every From definition that matches the eventType of the Join definition
+        // and the join definition matching the property its joining on to then add actions for resolving a join post a projection of
+        // the from.
+        IEnumerable<KeyValuePair<EventType, JoinDefinition>> joinExpressions;
+        if (hasParent)
+        {
+            joinExpressions = projectionDefinition.Join.Where(join => join.Value.On == actualIdentifiedByProperty);
+        }
+        else
+        {
+            joinExpressions = projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key));
+        }
 
         if (joinExpressions.Any())
         {
             foreach (var (joinEventType, joinDefinition) in joinExpressions)
             {
                 var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
-                projected = projected
-                    .ResolveJoin(eventSequenceStorage, joinEventType, joinDefinition.On)
+                fromObservable
+                    .ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On)
                     .Project(
                         childrenAccessorProperty,
                         actualIdentifiedByProperty,
-                        joinPropertyMappers);
+                        joinPropertyMappers)
+                    .Optimize();
             }
         }
     }
@@ -212,17 +297,23 @@ public class ProjectionFactory(
         return propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty!, expression);
     }
 
-    void ResolveEventsForProjection(IProjection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
+    void ResolveEventsForProjection(Projection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
     {
         // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
-        var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
-        eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
-
-        if (projectionDefinition.FromAny is not null)
+        var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
+        eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
+        eventsForProjection.AddRange(projectionDefinition.RemovedWith.Select(kvp =>
         {
-            foreach (var fromAnyDefinition in projectionDefinition.FromAny)
+            // For RemovedWith that doesn't have a parent key reference, we ignore parent all together.
+            var includeParent = hasParent && kvp.Value.ParentKey?.IsSet() == true;
+            return GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, includeParent, kvp.Value.ParentKey);
+        }));
+
+        if (projectionDefinition.FromDerivatives is not null)
+        {
+            foreach (var fromDerivativeDefinition in projectionDefinition.FromDerivatives)
             {
-                eventsForProjection.AddRange(fromAnyDefinition.EventTypes.Select(eventType => GetEventTypeWithKeyResolverFor(projection, eventType, fromAnyDefinition.From.Key, actualIdentifiedByProperty, hasParent, fromAnyDefinition.From.ParentKey)));
+                eventsForProjection.AddRange(fromDerivativeDefinition.EventTypes.Select(eventType => GetEventTypeWithKeyResolver(projection, eventType, fromDerivativeDefinition.From.Key, actualIdentifiedByProperty, hasParent, fromDerivativeDefinition.From.ParentKey)));
             }
         }
 
@@ -231,11 +322,6 @@ public class ProjectionFactory(
             eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.FromEventProperty.Event, KeyResolvers.FromEventSourceId));
         }
 
-        if (projectionDefinition.RemovedWith is not null)
-        {
-            eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId));
-            projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);
-        }
         var distinctOwnEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).Select(_ => _.EventType).ToArray();
 
         foreach (var child in childProjections)
@@ -255,7 +341,7 @@ public class ProjectionFactory(
         }
     }
 
-    EventTypeWithKeyResolver GetEventTypeWithKeyResolverFor(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent = false, PropertyExpression? parentKey = null)
+    EventTypeWithKeyResolver GetEventTypeWithKeyResolver(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent = false, PropertyExpression? parentKey = null)
     {
         var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
         if (hasParent)

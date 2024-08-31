@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.Observation.Placement;
 using Cratis.Chronicle.Setup;
@@ -25,14 +26,15 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.NamespaceAdded, _ => _.FireAndForgetDelivery = true)
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ConstraintsChanged, _ => _.FireAndForgetDelivery = true)
+            .AddBroadcastChannel(WellKnownBroadcastChannelNames.ReloadState, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()
             .AddReminders()
-            .AddTelemetry()
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
             .AddStorageProviders()
             .ConfigureCpuBoundWorkers()
             .ConfigureSerialization();
 
+        builder.Services.AddChronicleMeter();
         var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration);
         configure?.Invoke(chronicleBuilder);
         return builder;

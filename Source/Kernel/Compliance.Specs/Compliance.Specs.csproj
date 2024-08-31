@@ -3,11 +3,11 @@
         <AssemblyName>Cratis.Chronicle.Compliance.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Compliance</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Compliance/Compliance.csproj"/>
-        <ProjectReference Include="../Concepts/Concepts.csproj"/>
+        <ProjectReference Include="../Compliance/Compliance.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>
-
 </Project>

@@ -2,103 +2,62 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Properties;
 using Cratis.Reflection;
+using Cratis.Strings;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IModelPropertiesBuilder{TModel, TEvent, TBuilder}"/>.
 /// </summary>
+/// <param name="projectionBuilder">The parent <see cref="IProjectionBuilderFor{TModel}"/>.</param>
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TBuilder">Type of actual builder.</typeparam>
 /// <typeparam name="TParentBuilder">The type of parent builder.</typeparam>
-public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : IModelPropertiesBuilder<TModel, TEvent, TBuilder>
-    where TBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
-    where TParentBuilder : class
+public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder>(IProjectionBuilder<TModel, TParentBuilder> projectionBuilder)
+    : KeyBuilder<TEvent, TBuilder>, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
+        where TBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
+        where TParentBuilder : class
 {
 #pragma warning disable CA1051 // Visible instance fields
 #pragma warning disable SA1600 // Elements should be documented
 #pragma warning disable SA1629, CA1002, MA0016 // Return abstract
-    protected readonly List<IPropertyExpressionBuilder> _propertyExpressions = [];
-    protected IKeyBuilder _parentKey = new KeyBuilder(new NoExpression());
-    protected IKeyBuilder _key = new KeyBuilder(new EventSourceIdExpression());
+    protected readonly Dictionary<PropertyPath, IPropertyExpressionBuilder> _propertyExpressions = [];
 #pragma warning restore CA1629, CA1002, MA0016 // Return abstract
 #pragma warning restore CA1600 // Elements should be documented
 #pragma warning restore CA1051 // Visible instance fields
-    readonly IProjectionBuilder<TModel, TParentBuilder> _projectionBuilder;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ModelPropertiesBuilder{TModel, TEvent, TBuilder, TParentBuilder}"/>.
-    /// </summary>
-    /// <param name="projectionBuilder">The parent <see cref="IProjectionBuilderFor{TModel}"/>.</param>
-    protected ModelPropertiesBuilder(IProjectionBuilder<TModel, TParentBuilder> projectionBuilder)
-    {
-        _projectionBuilder = projectionBuilder;
-    }
 
     /// <inheritdoc/>
-    public TBuilder UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
+    public TBuilder AutoMap()
     {
-        _key = new KeyBuilder(new EventContentPropertyExpression(keyAccessor.GetPropertyPath()));
-        return (this as TBuilder)!;
-    }
+        var eventProperties = typeof(TEvent).GetProperties().Select(_ => _.Name.ToCamelCase());
+        var modelProperties = typeof(TModel).GetProperties().Select(_ => _.Name.ToCamelCase());
 
-    /// <inheritdoc/>
-    public TBuilder UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
-    {
-        _parentKey = new KeyBuilder(new EventContentPropertyExpression(keyAccessor.GetPropertyPath()));
-        return (this as TBuilder)!;
-    }
+        foreach (var property in eventProperties.Intersect(modelProperties))
+        {
+            Set(property).To(property);
+        }
 
-    /// <inheritdoc/>
-    public TBuilder UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
-    {
-        var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>();
-        builderCallback(compositeKeyBuilder);
-        _parentKey = compositeKeyBuilder;
-        return (this as TBuilder)!;
-    }
-
-    /// <inheritdoc/>
-    public TBuilder UsingParentKeyFromContext<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
-    {
-        _parentKey = new KeyBuilder(new EventContextPropertyExpression(keyAccessor.GetPropertyPath()));
-        return (this as TBuilder)!;
-    }
-
-    /// <inheritdoc/>
-    public TBuilder UsingKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor)
-    {
-        _parentKey = new KeyBuilder(new EventContextPropertyExpression(keyAccessor.GetPropertyPath()));
-        return (this as TBuilder)!;
-    }
-
-    /// <inheritdoc/>
-    public TBuilder UsingCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
-    {
-        var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>();
-        builderCallback(compositeKeyBuilder);
-        _key = compositeKeyBuilder;
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public IAddBuilder<TModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
     {
-        var addBuilder = new AddBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, modelPropertyAccessor.GetPropertyPath());
-        _propertyExpressions.Add(addBuilder);
+        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        var addBuilder = new AddBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
+        _propertyExpressions[propertyPath] = addBuilder;
         return addBuilder;
     }
 
     /// <inheritdoc/>
     public ISubtractBuilder<TModel, TEvent, TProperty, TBuilder> Subtract<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
     {
-        var subtractBuilder = new SubtractBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, modelPropertyAccessor.GetPropertyPath());
-        _propertyExpressions.Add(subtractBuilder);
+        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        var subtractBuilder = new SubtractBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
+        _propertyExpressions[propertyPath] = subtractBuilder;
         return subtractBuilder;
     }
 
@@ -108,7 +67,7 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
         var propertyInfo = propertyPath.GetPropertyInfoFor<TModel>();
         var primitive = propertyInfo.PropertyType.IsAPrimitiveType() || propertyInfo.PropertyType.IsConcept();
         var setBuilder = new SetBuilder<TModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, !primitive);
-        _propertyExpressions.Add(setBuilder);
+        _propertyExpressions[propertyPath] = setBuilder;
 
         return setBuilder;
     }
@@ -119,8 +78,9 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 
-        var setBuilder = new SetBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, modelPropertyAccessor.GetPropertyPath(), !primitive);
-        _propertyExpressions.Add(setBuilder);
+        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        var setBuilder = new SetBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, !primitive);
+        _propertyExpressions[propertyPath] = setBuilder;
 
         return setBuilder;
     }
@@ -128,15 +88,17 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
     /// <inheritdoc/>
     public ISetBuilder<TModel, TEvent, TBuilder> SetThisValue()
     {
-        var setBuilder = new SetBuilder<TModel, TEvent, TBuilder>((this as TBuilder)!, new PropertyPath("$this"), false);
-        _propertyExpressions.Add(setBuilder);
+        var propertyPath = new PropertyPath("$this");
+        var setBuilder = new SetBuilder<TModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, false);
+        _propertyExpressions[propertyPath] = setBuilder;
         return setBuilder;
     }
 
     /// <inheritdoc/>
     public TBuilder Count<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
     {
-        _propertyExpressions.Add(new CountBuilder<TModel, TEvent, TProperty>(modelPropertyAccessor.GetPropertyPath()));
+        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        _propertyExpressions[propertyPath] = new CountBuilder<TModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
     }
 
@@ -146,7 +108,7 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
         var sourcePropertyInfo = eventProperty.GetPropertyInfo();
         if (sourcePropertyInfo.PropertyType.IsAPrimitiveType())
         {
-            _projectionBuilder
+            projectionBuilder
                 .Children(targetProperty, childrenBuilder => childrenBuilder
                     .FromEventProperty(eventProperty));
         }
@@ -161,7 +123,7 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
     /// <inheritdoc/>
     public TBuilder AddChild<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IAddChildBuilder<TChildModel, TEvent>> builderCallback)
     {
-        _projectionBuilder.Children(targetProperty, childrenBuilder =>
+        projectionBuilder.Children(targetProperty, childrenBuilder =>
         {
             childrenBuilder.From<TEvent>(fromBuilder =>
             {

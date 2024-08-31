@@ -17,6 +17,12 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     where TBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
 {
     /// <summary>
+    /// Automatically map event properties to model properties on the events added.
+    /// </summary>
+    /// <returns>Builder continuation.</returns>
+    TBuilder AutoMap();
+
+    /// <summary>
     /// Define what key to use. This is optional, if not set - it will default to using the event source identifier on the event.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
@@ -53,10 +59,9 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// Define what property on the event represents the parent key based on a property in the <see cref="EventContext"/>. This is typically used in child relationships to identify the parent model to
     /// work with.
     /// </summary>
-    /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <param name="keyAccessor">Accessor for the property to use.</param>
     /// <returns>Builder continuation.</returns>
-    TBuilder UsingParentKeyFromContext<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
+    TBuilder UsingParentKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor);
 
     /// <summary>
     /// Define what key to use based on a composite of expressions.

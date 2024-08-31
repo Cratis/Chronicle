@@ -2,13 +2,14 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+/* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { FailedPartition } from '../Concepts/Observation/FailedPartition';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/failed-partitions/{{observerId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/failed-partitions/{{observerId}}');
 
 class AllFailedPartitionsSortBy {
     private _id: SortingActionsForObservableQuery<FailedPartition[]>;

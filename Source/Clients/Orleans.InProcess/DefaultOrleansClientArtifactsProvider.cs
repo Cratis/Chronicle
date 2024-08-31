@@ -1,33 +1,69 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-extern alias Server;
-
 using Cratis.Chronicle.Orleans.Aggregates;
 using Cratis.Reflection;
-using Cratis.Types;
 
 namespace Cratis.Chronicle.Orleans.InProcess;
 
 /// <summary>
 /// Represents a default implementation of <see cref="IClientArtifactsProvider"/> for Orleans.
 /// </summary>
-public class DefaultOrleansClientArtifactsProvider : DefaultClientArtifactsProvider
+/// <remarks>
+/// Initializes a new instance of the <see cref="DefaultOrleansClientArtifactsProvider"/> class.
+/// </remarks>
+/// <param name="provider">The base <see cref="IClientArtifactsProvider"/>.</param>
+public class DefaultOrleansClientArtifactsProvider(IClientArtifactsProvider provider) : IClientArtifactsProvider
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultOrleansClientArtifactsProvider"/> class.
-    /// </summary>
-    /// <param name="assembliesProvider"><see cref="ICanProvideAssembliesForDiscovery"/> for discovering types.</param>
-    public DefaultOrleansClientArtifactsProvider(ICanProvideAssembliesForDiscovery assembliesProvider) : base(assembliesProvider)
-    {
-#pragma warning disable MA0056 // Don't call a virtual member in the constructor
-        AggregateRootStateTypes = AggregateRoots
+    /// <inheritdoc/>
+    public IEnumerable<Type> AggregateRootStateTypes { get; } = provider.AggregateRoots
                                             .SelectMany(_ => _.AllBaseAndImplementingTypes())
                                             .Where(_ => _.IsDerivedFromOpenGeneric(typeof(AggregateRoot<>)))
                                             .Select(_ => _.GetGenericArguments()[0])
                                             .ToArray();
-    }
 
     /// <inheritdoc/>
-    public override IEnumerable<Type> AggregateRootStateTypes { get; }
+    public IEnumerable<Type> EventTypes => provider.EventTypes;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> Projections => provider.Projections;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> Adapters => provider.Adapters;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> Reactions => provider.Reactions;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> Reducers => provider.Reducers;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> ReactionMiddlewares => provider.ReactionMiddlewares;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> ComplianceForTypesProviders => provider.ComplianceForTypesProviders;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> ComplianceForPropertiesProviders => provider.ComplianceForPropertiesProviders;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> Rules => provider.Rules;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> AdditionalEventInformationProviders => provider.AdditionalEventInformationProviders;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> AggregateRoots => provider.AggregateRoots;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> ConstraintTypes => provider.ConstraintTypes;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> UniqueConstraints => provider.UniqueConstraints;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> UniqueEventTypeConstraints => provider.UniqueEventTypeConstraints;
+
+    /// <inheritdoc/>
+    public void Initialize() => provider.Initialize();
 }

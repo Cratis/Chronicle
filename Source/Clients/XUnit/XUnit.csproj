@@ -6,8 +6,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>

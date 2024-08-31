@@ -14,6 +14,12 @@ public interface IProjectionBuilder<TModel, TBuilder>
     where TBuilder : class
 {
     /// <summary>
+    /// Automatically map event properties to model properties on the events added.
+    /// </summary>
+    /// <returns>Builder continuation.</returns>
+    IProjectionBuilder<TModel, TBuilder> AutoMap();
+
+    /// <summary>
     /// Sets the initial values to use for a new model instance.
     /// </summary>
     /// <param name="initialValueProviderCallback">Callback for building.</param>
@@ -28,18 +34,28 @@ public interface IProjectionBuilder<TModel, TBuilder>
     /// <summary>
     /// Start building the from expressions for a specific event type.
     /// </summary>
-    /// <param name="builderCallback">Callback for building.</param>
+    /// <param name="builderCallback">Optional callback for building.</param>
     /// <typeparam name="TEvent">Type of event.</typeparam>
     /// <returns>Builder continuation.</returns>
-    TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>> builderCallback);
+    /// <remarks>
+    /// If using .AutoMap() the properties will be automatically mapped.
+    /// In many cases you then don't need to provide a builder callback.
+    /// You can override the mapping by providing a builder callback.
+    /// </remarks>
+    TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>>? builderCallback = default);
 
     /// <summary>
     /// Start building a join expressions for a specific event type.
     /// </summary>
-    /// <param name="builderCallback">Callback for building.</param>
+    /// <param name="builderCallback">Optional callback for building.</param>
     /// <typeparam name="TEvent">Type of event.</typeparam>
     /// <returns>Builder continuation.</returns>
-    TBuilder Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>> builderCallback);
+    /// <remarks>
+    /// If using .AutoMap() the properties will be automatically mapped.
+    /// In many cases you then don't need to provide a builder callback.
+    /// You can override the mapping by providing a builder callback.
+    /// </remarks>
+    TBuilder Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>>? builderCallback = default);
 
     /// <summary>
     /// Start building property expressions that applies for every events being projected from.
@@ -52,8 +68,9 @@ public interface IProjectionBuilder<TModel, TBuilder>
     /// Defines what event removes a child. This is optional, your system can chose to not support removal.
     /// </summary>
     /// <typeparam name="TEvent">Type of event.</typeparam>
+    /// <param name="builderCallback">Optional callback for building.</param>
     /// <returns>Builder continuation.</returns>
-    TBuilder RemovedWith<TEvent>();
+    TBuilder RemovedWith<TEvent>(Action<RemovedWithBuilder<TModel, TEvent>>? builderCallback = default);
 
     /// <summary>
     /// Start building the children projection for a specific child model.

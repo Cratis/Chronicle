@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -16,7 +18,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 {
     readonly IMongoDatabase _database;
-    readonly HashSet<EventSequenceId> _indexedEventSequences = [];
+    readonly ConcurrentDictionary<EventSequenceId, bool> _indexedEventSequences = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreNamespaceDatabase"/> class.
@@ -24,17 +26,17 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <param name="eventStore"><see cref="EventStoreName"/> the database is for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the database is for.</param>
     /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
-    /// <param name="configuration"><see cref="Concepts.Configuration.Storage"/> configuration.</param>
+    /// <param name="mongoDBOptions"><see cref="Concepts.Configuration.Storage"/> configuration.</param>
     public EventStoreNamespaceDatabase(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         IMongoDBClientManager clientManager,
-        Concepts.Configuration.Storage configuration)
+        IOptions<MongoDBOptions> mongoDBOptions)
     {
         // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
         var databaseName = $"{eventStore}+es+{@namespace}";
 
-        var urlBuilder = new MongoUrlBuilder(configuration.ConnectionDetails.ToString())
+        var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server)
         {
             DatabaseName = databaseName
         };
@@ -70,7 +72,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 
     void CreateIndexesForEventSequenceIfNotCreated(IMongoCollection<Event> collection, EventSequenceId eventSequenceId)
     {
-        if (!_indexedEventSequences.Contains(eventSequenceId))
+        if (!_indexedEventSequences.ContainsKey(eventSequenceId))
         {
             collection.Indexes.CreateOne(
                 new CreateIndexModel<Event>(
@@ -110,7 +112,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
                         Background = true
                     }));
 
-            _indexedEventSequences.Add(eventSequenceId);
+            _indexedEventSequences.TryAdd(eventSequenceId, true);
         }
     }
 

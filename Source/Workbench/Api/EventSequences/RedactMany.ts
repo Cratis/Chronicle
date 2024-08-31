@@ -2,15 +2,17 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+/* eslint-disable sort-imports */
+/* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandValidator, CommandPropertyValidators } from '@cratis/applications/commands';
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
 import { Causation } from '../Auditing/Causation';
 import { Identity } from '../Identities/Identity';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/redact-events');
+const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/redact-events');
 
 export interface IRedactMany {
     eventStore?: string;

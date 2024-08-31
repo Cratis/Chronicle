@@ -34,7 +34,7 @@ public static class ProjectionExtensions
     /// </summary>
     /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
     /// <param name="onModelProperty">The property on the model to join on.</param>
-    /// <returns>An observable for continuation.</returns>
+    /// <returns>A new observable for the Join operation.</returns>
     public static IObservable<ProjectionEventContext> Join(
         this IObservable<ProjectionEventContext> observable,
         PropertyPath onModelProperty)
@@ -42,8 +42,11 @@ public static class ProjectionExtensions
         var joinSubject = new Subject<ProjectionEventContext>();
         observable.Subscribe(_ =>
         {
-            _.Changeset.Join(onModelProperty, _.Key.Value, _.Key.ArrayIndexers);
-            joinSubject.OnNext(_);
+            var changeset = _.Changeset.Join(onModelProperty, _.Key.Value, _.Key.ArrayIndexers);
+            joinSubject.OnNext(_ with
+            {
+                Changeset = changeset
+            });
         });
         return joinSubject;
     }
@@ -55,7 +58,7 @@ public static class ProjectionExtensions
     /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for getting the event in the past.</param>
     /// <param name="joinEventType">Type of event to be joined.</param>
     /// <param name="onModelProperty">The property on the model to join on.</param>
-    /// <returns>The observable for continuation.</returns>
+    /// <returns>A new observable for the ResolveJoin operation.</returns>
     public static IObservable<ProjectionEventContext> ResolveJoin(
         this IObservable<ProjectionEventContext> observable,
         IEventSequenceStorage eventSequenceStorage,
@@ -65,27 +68,34 @@ public static class ProjectionExtensions
         var joinSubject = new Subject<ProjectionEventContext>();
         observable.Subscribe(_ =>
         {
-            var onValue = onModelProperty.GetValue(_.Changeset.CurrentState, ArrayIndexers.NoIndexers);
-
+            var onValue = onModelProperty.GetValue(_.Changeset.CurrentState, _.Key.ArrayIndexers);
             if (onValue is not null)
             {
-                var checkTask = eventSequenceStorage.HasInstanceFor(joinEventType.Id, onValue.ToString()!);
-                checkTask.Wait();
-                if (checkTask.Result)
+                var hasInstance = eventSequenceStorage.HasInstanceFor(joinEventType.Id, onValue.ToString()!).GetAwaiter().GetResult();
+                if (hasInstance)
                 {
-                    var lastEventInstanceTask = eventSequenceStorage.GetLastInstanceFor(joinEventType.Id, onValue.ToString()!);
-                    lastEventInstanceTask.Wait();
-                    var lastEventInstance = lastEventInstanceTask.Result;
-
-                    _.Changeset.ResolvedJoin(onModelProperty, _.Key.Value, lastEventInstance, _.Key.ArrayIndexers);
+                    var lastEventInstance = eventSequenceStorage.GetLastInstanceFor(joinEventType.Id, onValue.ToString()!).GetAwaiter().GetResult();
+                    var changeset = _.Changeset.ResolvedJoin(onModelProperty, _.Key.Value, lastEventInstance, _.Key.ArrayIndexers);
                     joinSubject.OnNext(_ with
                     {
-                        Event = lastEventInstance
+                        Event = lastEventInstance,
+                        Changeset = changeset
                     });
                 }
             }
         });
         return joinSubject;
+    }
+
+    /// <summary>
+    /// Optimize the changeset.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> Optimize(this IObservable<ProjectionEventContext> observable)
+    {
+        observable.Subscribe(_ => _.Changeset.Optimize());
+        return observable;
     }
 
     /// <summary>
@@ -157,11 +167,45 @@ public static class ProjectionExtensions
     /// Remove item based on event.
     /// </summary>
     /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
-    /// <param name="eventType"><see cref="EventType"/> causing the remove.</param>
     /// <returns>The observable for continuation.</returns>
-    public static IObservable<ProjectionEventContext> RemovedWith(this IObservable<ProjectionEventContext> observable, EventType eventType)
+    public static IObservable<ProjectionEventContext> Remove(this IObservable<ProjectionEventContext> observable)
     {
-        observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id).Subscribe(_ => _.Changeset.Remove());
+        observable.Subscribe(_ => _.Changeset.Remove());
+        return observable;
+    }
+
+    /// <summary>
+    /// Remove child based on event.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="childrenProperty">The property in which children are stored on the object.</param>
+    /// <param name="identifiedByProperty">The property that identifies a child.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> RemoveChild(this IObservable<ProjectionEventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty)
+    {
+        observable.Subscribe(_ =>
+        {
+            var items = _.Changeset.InitialState.EnsureCollection<object>(childrenProperty, _.Key.ArrayIndexers);
+            var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
+            if (identifiedByProperty.IsSet &&
+                items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
+            {
+                _.Changeset.RemoveChild(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, _.Key.ArrayIndexers);
+            }
+        });
+        return observable;
+    }
+
+    /// <summary>
+    /// Remove children from all projections that has a child that is identified by the event.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="childrenProperty">The property in which children are stored on the object.</param>
+    /// <param name="identifiedByProperty">The property that identifies a child.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> RemoveChildFromAll(this IObservable<ProjectionEventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty)
+    {
+        observable.Subscribe(_ => _.Changeset.RemoveChildFromAll(childrenProperty, identifiedByProperty, _.Key.Value, _.Key.ArrayIndexers));
         return observable;
     }
 }

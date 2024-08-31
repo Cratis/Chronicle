@@ -10,9 +10,9 @@ namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 /// <summary>
 /// Represents a <see cref="IModelPropertyExpressionResolver"/> for resolving value from <see cref="EventSourceId"/> of the <see cref="AppendedEvent"/>.
 /// </summary>
-public class EventContextPropertyExpressionResolver : IEventValueProviderExpressionResolver
+public partial class EventContextPropertyExpressionResolver : IEventValueProviderExpressionResolver
 {
-    static readonly Regex _regularExpression = new("\\$eventContext\\((?<property>[A-Za-z.]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+    static readonly Regex _regularExpression = EventContextRegEx();
 
     /// <inheritdoc/>
     public bool CanResolve(string expression) => _regularExpression.Match(expression).Success;
@@ -23,4 +23,7 @@ public class EventContextPropertyExpressionResolver : IEventValueProviderExpress
         var match = _regularExpression.Match(expression);
         return EventValueProviders.EventContext(match.Groups["property"].Value);
     }
+
+    [GeneratedRegex("\\$eventContext\\((?<property>[A-Za-z.]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex EventContextRegEx();
 }
