@@ -29,7 +29,6 @@ public static class ApiApplicationBuilderExtensions
         app.UseRouting();
         app.UseWebSockets();
         app.UseEndpoints(endpoints => endpoints.MapControllers());
-        app.UseMicrosoftIdentityPlatformIdentityResolver();
         app.UseSwagger();
         app.UseSwaggerUI(options => options.InjectStylesheet("/swagger-ui/SwaggerDark.css"));
         return app;
