@@ -38,7 +38,7 @@
         <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
             <!-- <PrivateAssets>all</PrivateAssets> -->
         </ProjectReference>
-        
+
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj">
             <!-- <PrivateAssets>all</PrivateAssets> -->
         </ProjectReference>
@@ -66,7 +66,6 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference> -->
-        <PackageReference Include="Microsoft.Extensions.DependencyModel" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />

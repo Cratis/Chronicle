@@ -14,6 +14,5 @@
 
     <ItemGroup>
         <PackageReference Include="Cratis.Applications" />
-        <PackageReference Include="Microsoft.Extensions.DependencyModel" />
     </ItemGroup>
 </Project>
