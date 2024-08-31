@@ -11,7 +11,7 @@ import { Validator } from '@cratis/applications/validation';
 import { Guid } from '@cratis/fundamentals';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/recommendations/{{recommendationId}}/perform');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/recommendations/{{recommendationId}}/perform');
 
 export interface IPerform {
     eventStore?: string;

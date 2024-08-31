@@ -10,7 +10,7 @@ import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applic
 import { Validator } from '@cratis/applications/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/observers/{{namespace}}/replay/{{observerId}}/{{partition}}');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/observers/{{namespace}}/replay/{{observerId}}/{{partition}}');
 
 export interface IReplayPartition {
     eventStore?: string;

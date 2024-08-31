@@ -9,7 +9,7 @@ import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, 
 import { ObserverInformation } from '../Concepts/Observation/ObserverInformation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/observers/observe');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/observers/observe');
 
 class AllObserversSortBy {
     private _observerId: SortingActionsForObservableQuery<ObserverInformation[]>;

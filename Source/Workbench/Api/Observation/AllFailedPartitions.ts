@@ -9,7 +9,7 @@ import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, 
 import { FailedPartition } from '../Concepts/Observation/FailedPartition';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/failed-partitions/{{observerId}}');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/failed-partitions/{{observerId}}');
 
 class AllFailedPartitionsSortBy {
     private _id: SortingActionsForObservableQuery<FailedPartition[]>;

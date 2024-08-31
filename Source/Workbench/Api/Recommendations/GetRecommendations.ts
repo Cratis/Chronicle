@@ -9,7 +9,7 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { RecommendationInformation } from '../Concepts/Recommendations/RecommendationInformation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/recommendations');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/recommendations');
 
 class GetRecommendationsSortBy {
     private _id: SortingActionsForQuery<RecommendationInformation[]>;

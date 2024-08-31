@@ -9,7 +9,7 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { EventType } from './EventType';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/types');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/types');
 
 class AllEventTypesSortBy {
     private _id: SortingActionsForQuery<EventType[]>;
