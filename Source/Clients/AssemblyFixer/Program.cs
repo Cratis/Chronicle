@@ -1,3 +1,6 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using Mono.Cecil;
 
 var assemblyPath = "/Volumes/Code/Cratis/Chronicle/Source/Clients/Orleans/bin/release/net8.0/Cratis.Chronicle.Orleans.dll";
