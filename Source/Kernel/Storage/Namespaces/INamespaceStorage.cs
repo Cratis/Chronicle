@@ -12,6 +12,13 @@ namespace Cratis.Chronicle.Storage.Namespaces;
 public interface INamespaceStorage
 {
     /// <summary>
+    /// Ensures that a namespace exists.
+    /// </summary>
+    /// <param name="name">Name of namespace.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Ensure(EventStoreNamespaceName name);
+
+    /// <summary>
     /// Retrieves all namespace states.
     /// </summary>
     /// <returns>An asynchronous operation that returns a collection of NamespaceState objects.</returns>

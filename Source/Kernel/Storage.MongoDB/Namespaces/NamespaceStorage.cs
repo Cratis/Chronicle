@@ -21,6 +21,16 @@ public class NamespaceStorage(
     ILogger<NamespaceStorage> logger) : INamespaceStorage
 {
     /// <inheritdoc/>
+    public async Task Ensure(EventStoreNamespaceName name)
+    {
+        var result = await GetCollection().FindAsync(Builders<MongoDBNamespace>.Filter.Eq(_ => _.Name, (string)name));
+        if (!result.Any())
+        {
+            await Create(name, DateTimeOffset.UtcNow);
+        }
+    }
+
+    /// <inheritdoc/>
     public Task Create(EventStoreNamespaceName name, DateTimeOffset created)
     {
         logger.Creating(name);
