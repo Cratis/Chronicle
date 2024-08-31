@@ -2,6 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <ApplicationModel>13.4.0</ApplicationModel>
+    <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Cratis.Fundamentals" Version="5.3.7" />
