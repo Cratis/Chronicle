@@ -25,6 +25,9 @@ public class Namespaces(
     readonly IBroadcastChannelProvider _namespaceAddedChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.NamespaceAdded);
 
     /// <inheritdoc/>
+    public Task EnsureDefault() => Ensure(EventStoreNamespaceName.Default);
+
+    /// <inheritdoc/>
     public async Task Ensure(EventStoreNamespaceName @namespace)
     {
         if (State.Namespaces.Any(_ => _.Name == @namespace)) return;
