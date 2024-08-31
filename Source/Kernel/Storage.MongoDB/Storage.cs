@@ -70,7 +70,7 @@ public class Storage(
         var collection = GetCollection();
         collection.ReplaceOne(_ => _.Name == eventStore, new EventStore(eventStore), new ReplaceOptions { IsUpsert = true });
 
-        return _eventStores[eventStore] = new EventStoreStorage(
+        var eventStoreStorage = new EventStoreStorage(
             eventStore,
             database.GetEventStoreDatabase(eventStore),
             projectionSerializer,
@@ -80,6 +80,10 @@ public class Storage(
             jsonSerializerOptions,
             sinkFactories,
             loggerFactory);
+
+        eventStoreStorage.Namespaces.Ensure(EventStoreNamespaceName.Default).GetAwaiter().GetResult();
+
+        return _eventStores[eventStore] = eventStoreStorage;
     }
 
     IMongoCollection<EventStore> GetCollection() => database.GetCollection<EventStore>(WellKnownCollectionNames.EventStores);
