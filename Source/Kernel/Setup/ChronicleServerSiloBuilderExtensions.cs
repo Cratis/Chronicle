@@ -32,7 +32,8 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
             .AddStorageProviders()
             .ConfigureCpuBoundWorkers()
-            .ConfigureSerialization();
+            .ConfigureSerialization()
+            .AddStartupTask<ChronicleServerStartupTask>();
 
         builder.Services.AddChronicleMeter();
         var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration);
