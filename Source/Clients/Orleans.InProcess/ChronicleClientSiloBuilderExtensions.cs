@@ -94,7 +94,7 @@ public static class ChronicleClientSiloBuilderExtensions
         builder.AddIncomingGrainCallFilter<UnitOfWorkIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UnitOfWorkOutgoingCallFilter>();
         builder.AddChronicleToSilo(configureChronicle);
-        builder.AddStartupTask<ChronicleStartupTask>();
+        builder.AddStartupTask<ChronicleClientStartupTask>();
         builder.ConfigureServices(services =>
         {
             services.AddTypeDiscovery();

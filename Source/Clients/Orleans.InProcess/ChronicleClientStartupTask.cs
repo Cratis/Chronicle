@@ -9,10 +9,10 @@ namespace Cratis.Chronicle.Orleans.InProcess;
 /// Represents a startup task for Chronicle.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ChronicleStartupTask"/> class.
+/// Initializes a new instance of the <see cref="ChronicleClientStartupTask"/> class.
 /// </remarks>
 /// <param name="eventStore"><see cref="IEventStore"/> to use for working with events.</param>
-public class ChronicleStartupTask(IEventStore eventStore) : IStartupTask
+public class ChronicleClientStartupTask(IEventStore eventStore) : IStartupTask
 {
     /// <inheritdoc/>
     public async Task Execute(CancellationToken cancellationToken)
