@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Reactive;
 /// <typeparam name="TResult">Type of converted result.</typeparam>
 public class TransformingSubject<TSource, TResult> : ISubject<TResult>, IDisposable
 {
-    private readonly ISubject<TSource> _sourceSubject;
-    private readonly Subject<TResult> _resultSubject;
+    readonly ISubject<TSource> _sourceSubject;
+    readonly Subject<TResult> _resultSubject;
 
     /// <summary>
     /// Initializes a new instance of <see cref="TransformingSubject{TSource, TResult}"/>.
