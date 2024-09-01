@@ -31,13 +31,7 @@ export const DefaultLayout = (props: IDefaultLayoutProps) => {
 
     const namespaceSelected = (namespace: Namespace) => {
         setNamespace(namespace.name);
-
-        let newRoute = location.pathname;
-        if (!params.namespace) {
-            newRoute = `${location.pathname}/${namespace.name}`;
-        } else {
-            newRoute = location.pathname.replace(params.namespace!, namespace.name);
-        }
+        const newRoute = location.pathname.replace(params.namespace!, namespace.name);
         navigate(newRoute);
     };
 
