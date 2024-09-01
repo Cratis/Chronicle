@@ -26,20 +26,8 @@
             "Api/*": [
                 "./Api/*"
             ],
-            "Infrastructure/*": [
-                "./Infrastructure/*"
-            ],
-            "Browser": [
-                "./Infrastructure/Browser/index.ts"
-            ],
-            "Browser/*": [
-                "./Infrastructure/Browser/*"
-            ],
-            "MVVM": [
-                "Infrastructure/MVVM/index.ts"
-            ],
-            "MVVM/*": [
-                "Infrastructure/MVVM/*"
+            "State/*": [
+                "State/*"
             ],
             "Components/*": [
                 "Components/*"

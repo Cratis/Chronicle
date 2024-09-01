@@ -9,7 +9,7 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { ObserverInformation } from '../Concepts/Observation/ObserverInformation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/observers');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/observers/all-observers');
 
 class GetObserversSortBy {
     private _observerId: SortingActionsForQuery<ObserverInformation[]>;
@@ -109,7 +109,7 @@ export interface GetObserversArguments {
 }
 
 export class GetObservers extends QueryFor<ObserverInformation[], GetObserversArguments> {
-    readonly route: string = '/api/event-store/{eventStore}/{namespace}/observers';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/observers/all-observers';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverInformation[] = [];
     private readonly _sortBy: GetObserversSortBy;

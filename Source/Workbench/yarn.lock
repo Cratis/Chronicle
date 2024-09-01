@@ -351,11 +351,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/applications.react.mvvm@npm:13.4.0":
-  version: 13.4.0
-  resolution: "@cratis/applications.react.mvvm@npm:13.4.0"
+"@cratis/applications.react.mvvm@npm:13.4.1":
+  version: 13.4.1
+  resolution: "@cratis/applications.react.mvvm@npm:13.4.1"
   dependencies:
-    "@cratis/applications": 13.4.0
+    "@cratis/applications": 13.4.1
     "@cratis/fundamentals": 5.3.7
     mobx: 6.13.1
     mobx-react: 9.1.1
@@ -363,41 +363,41 @@ __metadata:
     reflect-metadata: 0.2.2
     rxjs: 7.8.1
     tsyringe: 4.8.0
-  checksum: f865d3c85f76cdeacdba37a5016b232cafc24b2299f2a2d9f563b5f98b47718739c9bc375d57f69a82ba2b628683954ecf908c31698087fb434de849f65084ea
+  checksum: 507c6ddb9cfa837d9db5dd8fcc7e3dac0734485ee5b307c0a978e66fa7c974598baae0ebfb298d188f5b4521ba1b525e2afa4a8f4b6d6779c72ebbc7b54079de
   languageName: node
   linkType: hard
 
-"@cratis/applications.react@npm:13.4.0":
-  version: 13.4.0
-  resolution: "@cratis/applications.react@npm:13.4.0"
+"@cratis/applications.react@npm:13.4.1":
+  version: 13.4.1
+  resolution: "@cratis/applications.react@npm:13.4.1"
   dependencies:
-    "@cratis/applications": 13.4.0
+    "@cratis/applications": 13.4.1
     "@cratis/fundamentals": 5.3.7
     handlebars: 4.7.8
     react: 18.3.1
-  checksum: 3bf95efe1569616ca7d8f944e62b5a877598efdf6a664e50392e2a6e3190038fa2d32df7e99b2a730b60191a9b15acfbe55f869b0898ca6c6009b8671711ae31
+  checksum: 6178aaa2b83556cef87c66f553cf563339525f9d0fe986785294a5365e69f25bbb4538df8ef70e4b875c7d6091439a86b003bff26f5a5618388e46491163f219
   languageName: node
   linkType: hard
 
-"@cratis/applications.vite@npm:13.4.0":
-  version: 13.4.0
-  resolution: "@cratis/applications.vite@npm:13.4.0"
+"@cratis/applications.vite@npm:13.4.1":
+  version: 13.4.1
+  resolution: "@cratis/applications.vite@npm:13.4.1"
   dependencies:
-    "@cratis/applications": 13.4.0
+    "@cratis/applications": 13.4.1
     "@cratis/fundamentals": 5.3.7
     handlebars: 4.7.8
     react: 18.3.1
-  checksum: 012e12242e3098308715239cc3a0f56bc23a5ccc73ae29b215dd72a47588a8521b337c51b757e07365acd08c19e0ce5ea21e961922d1b5d420ff7706e6962da2
+  checksum: 01d8067c3c4d37de4e1e169b7887cbb3a69e4df4ec8cdbe4caefe3091657f6437e727e44ee01c2aa7b97ad685e8e30456d2cde82d6bb696d7cfd6572425eb579
   languageName: node
   linkType: hard
 
-"@cratis/applications@npm:13.4.0":
-  version: 13.4.0
-  resolution: "@cratis/applications@npm:13.4.0"
+"@cratis/applications@npm:13.4.1":
+  version: 13.4.1
+  resolution: "@cratis/applications@npm:13.4.1"
   dependencies:
     "@cratis/fundamentals": 5.3.7
     handlebars: 4.7.8
-  checksum: a3fa8ce7dbd28a50f7a7a82f7d0949030faaa6b4f2447619f9418e66793aa4be6799dfb5d356a37532560f2c4babfd6c29cfc9da99929737c3ede8ca388c78d6
+  checksum: 78140ad02be47442fb2be63ee3195d2a2ff8644e61abed021653d9cba2503ae512d01714d5332ade74f02edec3c1118f8d7822972d302bf0205a96ce2722d1a8
   languageName: node
   linkType: hard
 
@@ -5914,10 +5914,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workbench@workspace:."
   dependencies:
-    "@cratis/applications": 13.4.0
-    "@cratis/applications.react": 13.4.0
-    "@cratis/applications.react.mvvm": 13.4.0
-    "@cratis/applications.vite": 13.4.0
+    "@cratis/applications": 13.4.1
+    "@cratis/applications.react": 13.4.1
+    "@cratis/applications.react.mvvm": 13.4.1
+    "@cratis/applications.vite": 13.4.1
     "@types/chai": 4.3.4
     "@types/chai-as-promised": 7.1.5
     "@types/mocha": 10.0.1

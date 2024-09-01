@@ -10,8 +10,9 @@ import './Styles/theme.css';
 import React from 'react';
 import App from "./App";
 import { configure as configureMobx } from 'mobx';
-import { Bindings } from '@cratis/applications.react.mvvm';
+import { Bindings } from './Bindings';
 import { FakeData } from './FakeData';
+
 
 Bindings.initialize();
 // FakeData.initialize();
