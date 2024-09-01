@@ -17,6 +17,7 @@ export class NamespaceSelectorViewModel {
 
         _namespaces.currentNamespace.subscribe(namespace => {
             this.currentNamespace = namespace;
+            this._props.onNamespaceSelected(namespace);
         });
 
         _namespaces.namespaces.subscribe(namespaces => {
@@ -32,5 +33,4 @@ export class NamespaceSelectorViewModel {
         this._props.onNamespaceSelected(namespace);
         this._namespaces.setCurrentNamespace(namespace);
     }
-
 }
