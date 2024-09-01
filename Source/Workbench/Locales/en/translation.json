@@ -27,6 +27,16 @@
         }
     },
     "eventStore": {
+        "general": {
+            "types": {
+                "title": "Types",
+                "columns": {
+                    "name": "Name",
+                    "generation": "Generation",
+                    "tombstone": "Tombstone"
+                }
+            }
+        },
         "namespaces": {
             "recommendations": {
                 "title": "Recommendations"
