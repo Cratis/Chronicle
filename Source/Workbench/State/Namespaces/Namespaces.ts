@@ -33,7 +33,7 @@ export class Namespaces implements INamespaces {
                 this.setCurrentNamespace(this._namespaces.value[0]);
             }
         }, {
-            eventStore: _params.eventStoreId
+            eventStore: _params.eventStore
         });
     }
 

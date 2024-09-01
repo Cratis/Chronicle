@@ -46,8 +46,8 @@ export const EventStore = () => {
     ];
     return (<>
         <Routes>
-            <Route path=':eventStoreId'
-                element={<DefaultLayout menu={menuItems} basePath={'/event-store/:eventStoreId'} />}>
+            <Route path=':eventStore'
+                element={<DefaultLayout menu={menuItems} basePath={'/event-store/:eventStore'} />}>
 
                 <Route path={'types'} element={<Types />} errorElement={<Projections />} />
                 <Route path={'projections'} element={<Projections />} />

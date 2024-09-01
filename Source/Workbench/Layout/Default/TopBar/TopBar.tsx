@@ -10,14 +10,10 @@ import { Notifications } from './Notifications';
 import { Connection } from './Connection';
 import { useParams } from 'react-router-dom';
 import { EventStore } from './EventStore';
-
-type Params = {
-    eventStoreId: string;
-};
-
+import * as Shared from 'Shared';
 
 export const TopBar = () => {
-    const params = useParams() as Params;
+    const params = useParams<Shared.EventStoreAndNamespaceParams>();
 
     const { toggleLeftSidebarOpen } = useLayoutContext();
 
@@ -34,7 +30,7 @@ export const TopBar = () => {
                     </Button>
                 </div>
                 <div className="flex-1 flex align-center justify-center">
-                    <div className="font-extrabold text-2xl m-2">{params.eventStoreId}</div>
+                    <div className="font-extrabold text-2xl m-2">{params.eventStore}</div>
                 </div>
 
             </div>

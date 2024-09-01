@@ -3,13 +3,12 @@
 
 import { withViewModel } from '@cratis/applications.react.mvvm';
 import { ObserversViewModel } from './ObserversViewModel';
-import { DataTable, DataTableFilterMeta } from 'primereact/datatable';
+import { DataTableFilterMeta } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { ObserverType } from 'Api/Concepts/Observation/ObserverType';
 import { Page } from 'Components/Common/Page';
 import { ObserverInformation } from 'Api/Concepts/Observation/ObserverInformation';
 import { FilterMatchMode } from 'primereact/api';
-import { useState } from 'react';
 import { ColumnFilterProps } from 'Components/ColumnFilter/ColumnFilter';
 import {
     ObserverRunningStateFilterTemplate,
@@ -19,6 +18,10 @@ import { Menubar } from 'primereact/menubar';
 import { MenuItem } from 'primereact/menuitem';
 import { FaArrowsRotate } from "react-icons/fa6";
 import strings from 'Strings';
+import { DataTableForObservableQuery } from 'Components/DataTables';
+import { AllObservers, AllObserversArguments } from 'Api/Observation';
+import { useParams } from 'react-router-dom';
+import * as Shared from 'Shared';
 
 const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {
@@ -39,7 +42,11 @@ const defaultFilters: DataTableFilterMeta = {
 };
 
 export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
-    const [filters, setFilters] = useState<DataTableFilterMeta>(defaultFilters);
+    const params = useParams<Shared.EventStoreAndNamespaceParams>();
+    const queryArgs: AllObserversArguments = {
+        eventStore: params.eventStore!,
+        namespace: viewModel.currentNamespace.name
+    };
 
     const hasSelectedObserver = viewModel.selectedObserver !== undefined;
 
@@ -53,30 +60,21 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     ];
 
     return (
-        <Page title={strings.eventStore.namespaces.observers.title} mainClassName={'overflow-hidden flex flex-col h-full'}>
+        <Page title={strings.eventStore.namespaces.observers.title}>
 
             <div className="px-4 py-2">
                 <Menubar aria-label='Actions' model={menuItems} />
             </div>
 
             <div className={'flex-1 overflow-hidden'}>
-                <DataTable
-                    value={viewModel.observers}
-                    rows={100}
-                    paginator
-                    alwaysShowPaginator={false}
-                    scrollable
-                    scrollHeight={'flex'}
-                    selectionMode='single'
-                    selection={viewModel.selectedObserver}
+                <DataTableForObservableQuery
+                    query={AllObservers}
+                    queryArguments={queryArgs}
                     onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverInformation)}
                     dataKey='observerId'
-                    filters={filters}
-                    filterDisplay='menu'
-                    onFilter={(e) => setFilters(e.filters)}
+                    defaultFilters={defaultFilters}
                     globalFilterFields={['name', 'type', 'runningState']}
-                    emptyMessage='No observers found'
-                >
+                    emptyMessage='No observers found'>
                     <Column field='observerId' header={strings.eventStore.namespaces.observers.columns.id} sortable />
                     <Column
                         field='type'
@@ -98,7 +96,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                         body={(data: ObserverInformation) => getObserverRunningStateAsText(data.runningState)}
                         filterElement={ObserverRunningStateFilterTemplate}
                         showFilterMatchModes={false} />
-                </DataTable>
+                </DataTableForObservableQuery>
             </div>
         </Page>
     );

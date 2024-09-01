@@ -3,17 +3,16 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Api.EventTypes;
 
 /// <summary>
 /// Represents the API for working with event types.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="EventTypeQueries"/> class.
-/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 [Route("/api/event-store/{eventStore}/types")]
-public class EventTypeQueries() : ControllerBase
+public class EventTypeQueries(IStorage storage) : ControllerBase
 {
     /// <summary>
     /// Gets all event types.
@@ -23,7 +22,9 @@ public class EventTypeQueries() : ControllerBase
     [HttpGet]
     public async Task<IEnumerable<EventType>> AllEventTypes([FromRoute] string eventStore)
     {
-        throw new NotImplementedException();
+        var eventStoreStorage = storage.GetEventStore(eventStore);
+        var eventTypes = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+        return eventTypes.Select(_ => new EventType(_.Type.Id, _.Type.Generation)).ToArray();
     }
 
     /// <summary>
@@ -48,6 +49,8 @@ public class EventTypeQueries() : ControllerBase
     [HttpGet("schemas")]
     public async Task<IEnumerable<EventTypeWithSchemas>> AllEventTypesWithSchemas([FromRoute] string eventStore)
     {
-        throw new NotImplementedException();
+        var eventStoreStorage = storage.GetEventStore(eventStore);
+        var eventTypes = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+        return eventTypes.Select(_ => new EventTypeWithSchemas(new EventType(_.Type.Id, _.Type.Generation), [JsonDocument.Parse(_.Schema.ToJson())])).ToArray();
     }
 }
