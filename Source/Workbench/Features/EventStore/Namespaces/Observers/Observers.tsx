@@ -55,7 +55,9 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             id: 'replay',
             label: 'Replay',
             icon: <FaArrowsRotate className={'mr-2'} />,
-            disabled: !hasSelectedObserver
+            disabled: !hasSelectedObserver,
+            command: () => viewModel.replay()
+
         }
     ];
 
