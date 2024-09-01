@@ -20,7 +20,7 @@ public class ObserverQueries(IStorage storage) : ControllerBase
     /// <param name="eventStore">The event store the observers are for.</param>
     /// <param name="namespace">The namespace within the event store the observers are for.</param>
     /// <returns>Collection of <see cref="ObserverInformation"/>.</returns>
-    [HttpGet]
+    [HttpGet("all-observers")]
     public Task<IEnumerable<ObserverInformation>> GetObservers(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
@@ -32,7 +32,7 @@ public class ObserverQueries(IStorage storage) : ControllerBase
     /// <param name="eventStore">The event store the observers are for.</param>
     /// <param name="namespace">The namespace within the event store the observers are for.</param>
     /// <returns>An observable of a collection of <see cref="ObserverInformation"/>.</returns>
-    [HttpGet("observe")]
+    [HttpGet("all-observers/observe")]
     public ISubject<IEnumerable<ObserverInformation>> AllObservers(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace)
