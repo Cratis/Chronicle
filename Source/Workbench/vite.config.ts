@@ -40,6 +40,7 @@ export default defineConfig({
         alias: {
             'Api': path.resolve('./Api'),
             'assets': path.resolve('./assets'),
+            'Shared': path.resolve('./Shared'),
             'State': path.resolve('./State'),
             'Components': path.resolve('./Components'),
             'Browser': path.resolve('./Infrastructure/Browser'),

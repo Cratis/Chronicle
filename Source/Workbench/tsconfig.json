@@ -26,6 +26,9 @@
             "Api/*": [
                 "./Api/*"
             ],
+            "Shared/*": [
+                "Shared/*"
+            ],
             "State/*": [
                 "State/*"
             ],
