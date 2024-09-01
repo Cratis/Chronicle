@@ -19,7 +19,7 @@ export const Types = () => {
     const params = useParams<Shared.EventStoreAndNamespaceParams>();
 
     const queryArgs: AllEventTypesArguments = {
-        eventStore: params.eventStore
+        eventStore: params.eventStore!
     };
 
     return (
