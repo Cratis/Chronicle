@@ -41,11 +41,14 @@ const defaultFilters: DataTableFilterMeta = {
 export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(defaultFilters);
 
+    const hasSelectedObserver = viewModel.selectedObserver !== undefined;
+
     const menuItems: MenuItem[] = [
         {
             id: 'replay',
             label: 'Replay',
             icon: <FaArrowsRotate className={'mr-2'} />,
+            disabled: !hasSelectedObserver
         }
     ];
 
