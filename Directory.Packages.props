@@ -87,7 +87,7 @@
     <PackageVersion Include="Testcontainers" Version="3.9.0" />
     <PackageVersion Include="xunit" Version="2.9.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
-    <PackageVersion Include="moq" Version="4.20.70" />
+    <PackageVersion Include="moq" Version="4.20.71" />
     <PackageVersion Include="NSubstitute" Version="5.1.0" />
     <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.11.0" />
   </ItemGroup>
