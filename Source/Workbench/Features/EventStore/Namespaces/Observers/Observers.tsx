@@ -57,7 +57,6 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             icon: <FaArrowsRotate className={'mr-2'} />,
             disabled: !hasSelectedObserver,
             command: () => viewModel.replay()
-
         }
     ];
 
@@ -72,6 +71,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                 <DataTableForObservableQuery
                     query={AllObservers}
                     queryArguments={queryArgs}
+                    selection={viewModel.selectedObserver}
                     onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverInformation)}
                     dataKey='observerId'
                     defaultFilters={defaultFilters}
