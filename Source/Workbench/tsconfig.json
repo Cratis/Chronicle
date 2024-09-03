@@ -27,28 +27,33 @@
                 "./Api/*"
             ],
             "Shared/*": [
-                "Shared/*"
+                "./Shared/*"
             ],
             "State/*": [
-                "State/*"
+                "./State/*"
             ],
             "Components/*": [
-                "Components/*"
+                "./Components/*"
             ],
             "Layout/*": [
-                "Layout/*"
+                "./Layout/*"
             ],
             "Features/*": [
-                "Features/*"
+                "./Features/*"
             ],
             "Strings": [
                 "Strings"
+            ],
+            "given": [
+                "given"
             ]
         }
     },
     "include": [
         "global.d.ts",
-        "API",
+        "Api",
+        "Shared",
+        "State",
         "Components",
         "FakeData",
         "Layout",
@@ -57,7 +62,7 @@
         "App.tsx",
         "index.tsx",
         "Features"
-    ],
+, "given.ts"    ],
     "exclude": [
     ],
     "references": [
