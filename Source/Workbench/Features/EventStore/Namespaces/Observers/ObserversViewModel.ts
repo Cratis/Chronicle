@@ -8,7 +8,7 @@ import { Replay } from 'Api/Observation';
 import { INamespaces } from 'State/Namespaces';
 import { DialogButtons, IDialogs } from '@cratis/applications.react.mvvm/dialogs';
 import { DialogResult } from '@cratis/applications.react/dialogs';
-import * as Shared from 'Shared';
+import { type EventStoreAndNamespaceParams } from 'Shared';
 
 @injectable()
 export class ObserversViewModel {
@@ -17,7 +17,7 @@ export class ObserversViewModel {
         namespaces: INamespaces,
         private readonly _replay: Replay,
         private readonly _dialogs: IDialogs,
-        @inject('params') private readonly _params: Shared.EventStoreAndNamespaceParams) {
+        @inject('params') private readonly _params: EventStoreAndNamespaceParams) {
         this.currentNamespace = { name: '', description: '' };
 
         namespaces.currentNamespace.subscribe(namespace => {

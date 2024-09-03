@@ -8,7 +8,7 @@ import { INamespaces } from 'State/Namespaces';
 import { Namespace } from 'Api/Namespaces';
 import { Replay } from 'Api/Observation';
 import { Dialogs } from '@cratis/applications.react.mvvm/dialogs';
-import * as Shared from 'Shared';
+import { type EventStoreAndNamespaceParams } from 'Shared';
 
 export class a_view_model {
     constructor() {
@@ -29,7 +29,7 @@ export class a_view_model {
     namespaces: INamespaces;
     replay: Replay;
     dialogs: SinonStubbedInstance<Dialogs>;
-    params: Shared.EventStoreAndNamespaceParams;
+    params: EventStoreAndNamespaceParams;
     viewModel: ObserversViewModel;
 }
 

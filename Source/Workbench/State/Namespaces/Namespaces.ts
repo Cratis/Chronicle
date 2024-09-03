@@ -8,7 +8,7 @@ import { ILocalStorage } from '@cratis/applications.react.mvvm/browser';
 import { BehaviorSubject } from 'rxjs';
 import { CurrentNamespaceChanged } from './CurrentNamespaceChanged';
 import { INamespaces } from './INamespaces';
-import * as Shared from 'Shared';
+import { type EventStoreAndNamespaceParams } from 'Shared';
 
 /**
  * Represents an implementation of {@link INamespaces}
@@ -22,7 +22,7 @@ export class Namespaces implements INamespaces {
         readonly namespacesQuery: AllNamespaces,
         private readonly _localStorage: ILocalStorage,
         private readonly _messenger: IMessenger,
-        @inject('params') private readonly _params: Shared.EventStoreAndNamespaceParams) {
+        @inject('params') private readonly _params: EventStoreAndNamespaceParams) {
 
         namespacesQuery.subscribe(result => {
             this._namespaces.next(result.data);
