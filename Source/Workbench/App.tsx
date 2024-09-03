@@ -7,14 +7,14 @@ import { BlankLayout } from "./Layout/Blank/BlankLayout";
 import { Home } from "./Features/Home";
 import { EventStore } from "./Features/EventStore/EventStore";
 import { LayoutProvider } from './Layout/Default/context/LayoutContext';
-import { StandardDialogs } from '@cratis/applications.react.mvvm/dialogs';
-import { StandardDialog } from 'Components/Dialogs';
+import { ConfirmationDialogs } from '@cratis/applications.react.mvvm/dialogs';
+import { ConfirmationDialog } from 'Components/Dialogs';
 
 function App() {
     useTheme();
     return (
         <LayoutProvider>
-            <StandardDialogs component={StandardDialog}>
+            <ConfirmationDialogs component={ConfirmationDialog}>
                 <BrowserRouter>
                     <Routes>
                         <Route path='/' element={<Navigate to={'/home'} />} />
@@ -24,7 +24,7 @@ function App() {
                         <Route path='/event-store/*' element={<EventStore />} />
                     </Routes>
                 </BrowserRouter>
-            </StandardDialogs>
+            </ConfirmationDialogs>
         </LayoutProvider>
     );
 }
