@@ -37,6 +37,11 @@ export interface DataTableForObservableQueryProps<TQuery extends IObservableQuer
     dataKey: string;
 
     /**
+     * The current selection.
+     */
+    selection?: any[number] | undefined | null;
+
+    /**
      * Callback for when the selection changes
      */
     onSelectionChange?(event: DataTableSelectionSingleChangeEvent<any>): void;
@@ -70,6 +75,7 @@ export const DataTableForObservableQuery = <TQuery extends IObservableQueryFor<T
             scrollable
             scrollHeight={'flex'}
             selectionMode='single'
+            selection={props.selection}
             onSelectionChange={props.onSelectionChange}
             dataKey={props.dataKey}
             filters={filters}
