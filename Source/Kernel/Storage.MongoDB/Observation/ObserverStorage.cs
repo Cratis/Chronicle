@@ -58,7 +58,7 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
     /// <inheritdoc/>
     public async Task<ObserverState> GetState(ObserverKey observerKey)
     {
-        var filter = GetKeyFilter(observerKey.ObserverId, observerKey);
+        var filter = GetKeyFilter(observerKey.ObserverId);
         var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
         return await cursor.FirstOrDefaultAsync().ConfigureAwait(false) ?? new ObserverState(
             [],
@@ -74,7 +74,7 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
     /// <inheritdoc/>
     public async Task SaveState(ObserverKey observerKey, ObserverState state)
     {
-        var filter = GetKeyFilter(observerKey.ObserverId, observerKey);
+        var filter = GetKeyFilter(observerKey.ObserverId);
         await Collection.ReplaceOneAsync(
             filter,
             state!,
@@ -110,8 +110,6 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
         state.Handled,
         []);
 
-    string GetKeyFrom(ObserverId observerId, ObserverKey key) => $"{key.EventSequenceId} : {observerId}";
-
-    FilterDefinition<ObserverState> GetKeyFilter(ObserverId observerId, ObserverKey key) =>
-        Builders<ObserverState>.Filter.Eq(new StringFieldDefinition<ObserverState, string>("_id"), GetKeyFrom(observerId, key));
+    FilterDefinition<ObserverState> GetKeyFilter(ObserverId observerId) =>
+        Builders<ObserverState>.Filter.Eq(new StringFieldDefinition<ObserverState, string>("_id"), observerId);
 }
