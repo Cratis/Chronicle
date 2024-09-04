@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Collections;
-using Cratis.Types;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -14,7 +13,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="constraintsProviders">Instances of <see cref="ICanProvideConstraints"/>.</param>
 public class Constraints(
     IEventStore eventStore,
-    IInstancesOf<ICanProvideConstraints> constraintsProviders) : IConstraints
+    IEnumerable<ICanProvideConstraints> constraintsProviders) : IConstraints
 {
     readonly List<IConstraintDefinition> _constraints = [];
 

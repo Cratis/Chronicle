@@ -77,7 +77,10 @@ public class EventStore : IEventStore
 
         Constraints = new Constraints(
             this,
-            serviceProvider.GetRequiredService<IInstancesOf<ICanProvideConstraints>>());
+            [
+                new UniqueConstraintProvider(clientArtifactsProvider, EventTypes),
+                new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes),
+            ]);
 
         EventLog = new EventLog(
             eventStoreName,
