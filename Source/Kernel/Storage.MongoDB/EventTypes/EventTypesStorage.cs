@@ -80,7 +80,7 @@ public class EventTypesStorage(
         var mongoEventSchema = eventSchema.ToMongoDB();
         value[type.Generation] = eventSchema;
         await GetCollection().ReplaceOneAsync(
-            _ => _.Id == mongoEventSchema.Id,
+            _ => _.EventType == mongoEventSchema.EventType,
             mongoEventSchema,
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
