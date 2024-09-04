@@ -6,8 +6,8 @@
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
 import { Guid } from '@cratis/fundamentals';
-import { Key } from '../Keys/Key';
 import { FailedPartitionAttempt } from './FailedPartitionAttempt';
+import { Key } from '../Keys/Key';
 
 export class FailedPartition {
 

@@ -5,9 +5,10 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
+import { Guid } from '@cratis/fundamentals';
 import { Causation } from '../Auditing/Causation';
-import { Identity } from '../Identities/Identity';
 import { EventObservationState } from './EventObservationState';
+import { Identity } from '../Identities/Identity';
 
 export class EventContext {
 
@@ -26,8 +27,8 @@ export class EventContext {
     @field(String)
     namespace!: string;
 
-    @field(String)
-    correlationId!: string;
+    @field(Guid)
+    correlationId!: Guid;
 
     @field(Causation, true)
     causation!: Causation[];

@@ -4,7 +4,7 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-export * from './PropertyPath';
+export * from './ArrayIndexer';
 export * from './ArrayIndexers';
 export * from './IPropertyPathSegment';
-export * from './ArrayIndexer';
+export * from './PropertyPath';

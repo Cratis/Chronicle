@@ -8,9 +8,9 @@
 import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
-import { EventToAppend } from './EventToAppend';
 import { Causation } from '../Auditing/Causation';
 import { Identity } from '../Identities/Identity';
+import { EventToAppend } from './EventToAppend';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/append-many');
