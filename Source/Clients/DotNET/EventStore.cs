@@ -15,8 +15,6 @@ using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Transactions;
 using Cratis.Models;
-using Cratis.Types;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle;
