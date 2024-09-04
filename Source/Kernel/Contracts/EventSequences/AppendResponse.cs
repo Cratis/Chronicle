@@ -17,8 +17,8 @@ public class AppendResponse
     /// <summary>
     /// Gets or sets the <see cref="CorrelationId"/> for the operation.
     /// </summary>
-    [ProtoMember(1)]
-    public string CorrelationId { get; set; } = string.Empty;
+    [ProtoMember(1, IsRequired = true)]
+    public Guid CorrelationId { get; set; } = Guid.Empty;
 
     /// <summary>
     /// Gets or sets the sequence number of the event that was appended, if successful.

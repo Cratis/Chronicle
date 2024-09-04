@@ -49,7 +49,7 @@ public class known_event : given.an_event_sequence
 
         _response = new()
         {
-            CorrelationId = Guid.NewGuid().ToString(),
+            CorrelationId = Guid.NewGuid(),
             SequenceNumber = 42,
             ConstraintViolations = [],
             Errors = []

@@ -44,6 +44,6 @@ public class GetInstanceByIdForSessionRequest
     /// <summary>
     /// Gets or sets the session id.
     /// </summary>
-    [ProtoMember(6)]
-    public string SessionId { get; set; }
+    [ProtoMember(6, IsRequired = true)]
+    public Guid SessionId { get; set; }
 }

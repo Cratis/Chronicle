@@ -17,8 +17,8 @@ public class AppendManyResponse
     /// <summary>
     /// Gets or sets the <see cref="CorrelationId"/> for the operation.
     /// </summary>
-    [ProtoMember(1)]
-    public string CorrelationId { get; set; } = string.Empty;
+    [ProtoMember(1, IsRequired = true)]
+    public Guid CorrelationId { get; set; } = Guid.Empty;
 
     /// <summary>
     /// Gets or sets the sequence numbers of the events that was appended in the same order as requested events, if successful.

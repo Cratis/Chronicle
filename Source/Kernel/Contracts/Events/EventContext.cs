@@ -48,7 +48,7 @@ public class EventContext
     /// Gets or sets the correlation id for the event.
     /// </summary>
     [ProtoMember(6)]
-    public string CorrelationId { get; set; }
+    public Guid CorrelationId { get; set; }
 
     /// <summary>
     /// Gets or sets a collection of causation for what caused the event.
