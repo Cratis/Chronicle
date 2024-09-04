@@ -35,36 +35,36 @@ async Task AddItemToCart()
             Description: "This is a description"));
 }
 
-// async Task AddBulkOfItemsToCart()
-// {
-//     var events = Enumerable.Range(1, 1000).Select(_ => new ItemAddedToCart(
-//         PersonId: new(Guid.NewGuid()),
-//         MaterialId: new(Guid.NewGuid()),
-//         Quantity: 1,
-//         Price: 42,
-//         Description: "This is a description"));
+async Task AddBulkOfItemsToCart()
+{
+    var events = Enumerable.Range(1, 1000).Select(_ => new ItemAddedToCart(
+        PersonId: new(Guid.NewGuid()),
+        MaterialId: new(Guid.NewGuid()),
+        Quantity: 1,
+        Price: 42,
+        Description: "This is a description"));
 
-//     foreach (var @event in events)
-//     {
-//         await eventStore.EventLog.Append(
-//             eventSourceId: Guid.NewGuid(),
-//             @event);
-//     }
-// }
+    foreach (var @event in events)
+    {
+        await eventStore.EventLog.Append(
+            eventSourceId: Guid.NewGuid(),
+            @event);
+    }
+}
 
-// async Task AddManyItemsToCart()
-// {
-//     var events = Enumerable.Range(1, 1000).Select(_ => new ItemAddedToCart(
-//         PersonId: new(Guid.NewGuid()),
-//         MaterialId: new(Guid.NewGuid()),
-//         Quantity: 1,
-//         Price: 42,
-//         Description: "This is a description"));
+async Task AddManyItemsToCart()
+{
+    var events = Enumerable.Range(1, 1000).Select(_ => new ItemAddedToCart(
+        PersonId: new(Guid.NewGuid()),
+        MaterialId: new(Guid.NewGuid()),
+        Quantity: 1,
+        Price: 42,
+        Description: "This is a description"));
 
-//     await eventStore.EventLog.AppendMany(
-//         eventSourceId: Guid.NewGuid(),
-//         events);
-// }
+    await eventStore.EventLog.AppendMany(
+        eventSourceId: Guid.NewGuid(),
+        events);
+}
 
 var app = builder.Build();
 
@@ -85,6 +85,7 @@ app.MapGet(
     async () => await AddItemToCart());
 
 await app.RunAsync();
+
 
 // while (true)
 // {
