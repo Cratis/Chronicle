@@ -20,6 +20,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
 /// <param name="constraints">Known <see cref="IConstraints"/>.</param>
 /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
+/// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> for getting correlation.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
 /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
 public class EventLog(
@@ -29,16 +30,18 @@ public class EventLog(
      IEventTypes eventTypes,
      IConstraints constraints,
      IEventSerializer eventSerializer,
+     ICorrelationIdAccessor correlationIdAccessor,
      ICausationManager causationManager,
      IIdentityProvider identityProvider) : EventSequence(
-         eventStoreName,
-         @namespace,
-         EventSequenceId.Log,
-         connection,
-         eventTypes,
-         constraints,
-         eventSerializer,
-         causationManager,
-         identityProvider), IEventLog
+        eventStoreName,
+        @namespace,
+        EventSequenceId.Log,
+        connection,
+        eventTypes,
+        constraints,
+        eventSerializer,
+        correlationIdAccessor,
+        causationManager,
+        identityProvider), IEventLog
 {
 }

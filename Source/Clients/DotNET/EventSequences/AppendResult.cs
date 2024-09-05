@@ -14,7 +14,7 @@ public record AppendResult
     /// <summary>
     /// Gets the <see cref="CorrelationId"/> for the operation.
     /// </summary>
-    public CorrelationId CorrelationId { get; init; } = CorrelationId.New();
+    public CorrelationId CorrelationId { get; init; } = CorrelationId.NotSet;
 
     /// <summary>
     /// Gets the sequence number of the event that was appended, if successful.

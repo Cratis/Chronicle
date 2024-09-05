@@ -25,6 +25,7 @@ namespace Cratis.Chronicle;
 public class EventStore : IEventStore
 {
     readonly EventStoreName _eventStoreName;
+    readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
     readonly IEventSerializer _eventSerializer;
@@ -37,6 +38,7 @@ public class EventStore : IEventStore
     /// <param name="namespace">Namespace for the event store.</param>
     /// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Chronicle.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
+    /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> for getting correlation.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
@@ -49,6 +51,7 @@ public class EventStore : IEventStore
         EventStoreNamespaceName @namespace,
         IChronicleConnection connection,
         IClientArtifactsProvider clientArtifactsProvider,
+        ICorrelationIdAccessor correlationIdAccessor,
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
         IJsonSchemaGenerator schemaGenerator,
@@ -64,8 +67,10 @@ public class EventStore : IEventStore
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
+        _correlationIdAccessor = correlationIdAccessor;
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
         UnitOfWorkManager = new UnitOfWorkManager(this);
+        _correlationIdAccessor = correlationIdAccessor;
 
         _eventSerializer = new EventSerializer(
             clientArtifactsProvider,
@@ -87,6 +92,7 @@ public class EventStore : IEventStore
             EventTypes,
             Constraints,
             _eventSerializer,
+            correlationIdAccessor,
             causationManager,
             identityProvider);
 
@@ -138,7 +144,8 @@ public class EventStore : IEventStore
                 this,
                 new AggregateRootStateProviders(Reducers, Projections),
                 new AggregateRootEventHandlersFactory(EventTypes),
-                _eventSerializer),
+                _eventSerializer,
+                correlationIdAccessor),
             UnitOfWorkManager,
             serviceProvider);
     }
@@ -216,6 +223,7 @@ public class EventStore : IEventStore
             EventTypes,
             Constraints,
             _eventSerializer,
+            _correlationIdAccessor,
             _causationManager,
             _identityProvider);
 }

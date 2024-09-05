@@ -41,35 +41,38 @@ public interface IEventSequenceStorage
     /// <param name="sequenceNumber">The unique <see cref="EventSequenceNumber">sequence number</see> within the event sequence.</param>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
     /// <param name="occurred">The date and time the event occurred.</param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<AppendedEvent> Append(EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
+    Task<AppendedEvent> Append(EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
 
     /// <summary>
     /// Compensate a single event to the event store.
     /// </summary>
     /// <param name="sequenceNumber">The unique <see cref="EventSequenceNumber">sequence number</see> within the event sequence.</param>
     /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
     /// <param name="occurred">The date and time the compensation occurred.</param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
+    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
 
     /// <summary>
     /// Redact an event at a specific sequence number.
     /// </summary>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>
     /// <param name="reason">Reason for redacting.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
     /// <param name="occurred">The date and time the redaction occurred.</param>
     /// <returns>Affected event.</returns>
-    Task<AppendedEvent> Redact(EventSequenceNumber sequenceNumber, RedactionReason reason, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred);
+    Task<AppendedEvent> Redact(EventSequenceNumber sequenceNumber, RedactionReason reason, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred);
 
     /// <summary>
     /// Redact all events for a specific <see cref="EventSourceId"/>.
@@ -77,11 +80,12 @@ public interface IEventSequenceStorage
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to redact.</param>
     /// <param name="reason">Reason for redacting.</param>
     /// <param name="eventTypes">Optionally any specific event types.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
     /// <param name="occurred">The date and time the redaction occurred.</param>
     /// <returns>Affected event types.</returns>
-    Task<IEnumerable<EventType>> Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType>? eventTypes, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred);
+    Task<IEnumerable<EventType>> Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType>? eventTypes, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred);
 
     /// <summary>
     /// Get the sequence number of the first event as part of the filtered event types.

@@ -99,12 +99,12 @@ public class EventSequenceStorage(
         EventSequenceNumber sequenceNumber,
         EventSourceId eventSourceId,
         EventType eventType,
+        CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
         ExpandoObject content)
     {
-        var correlationId = CorrelationId.New(); // TODO: Fix this when we have a proper correlation id
         try
         {
             var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
@@ -170,6 +170,7 @@ public class EventSequenceStorage(
     public Task Compensate(
         EventSequenceNumber sequenceNumber,
         EventType eventType,
+        CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
@@ -179,6 +180,7 @@ public class EventSequenceStorage(
     public async Task<AppendedEvent> Redact(
         EventSequenceNumber sequenceNumber,
         RedactionReason reason,
+        CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred)
@@ -193,7 +195,7 @@ public class EventSequenceStorage(
             return @event;
         }
 
-        var updateModel = CreateRedactionUpdateModelFor(@event, reason, causation, causedByChain, occurred);
+        var updateModel = CreateRedactionUpdateModelFor(@event, reason, correlationId, causation, causedByChain, occurred);
         await collection.UpdateOneAsync(updateModel.Filter, updateModel.Update).ConfigureAwait(false);
 
         return @event;
@@ -204,6 +206,7 @@ public class EventSequenceStorage(
         EventSourceId eventSourceId,
         RedactionReason reason,
         IEnumerable<EventType>? eventTypes,
+        CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred)
@@ -224,7 +227,7 @@ public class EventSequenceStorage(
                     continue;
                 }
 
-                updates.Add(CreateRedactionUpdateModelFor(@event, reason, causation, causedByChain, occurred));
+                updates.Add(CreateRedactionUpdateModelFor(@event, reason, correlationId, causation, causedByChain, occurred));
                 affectedEventTypes.Add(@event.Metadata.Type);
             }
 
@@ -560,6 +563,7 @@ public class EventSequenceStorage(
     UpdateOneModel<Event> CreateRedactionUpdateModelFor(
         AppendedEvent @event,
         RedactionReason reason,
+        CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedById,
         DateTimeOffset occurred)
@@ -568,7 +572,7 @@ public class EventSequenceStorage(
             reason,
             @event.Metadata.Type.Id,
             occurred,
-            CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
+            correlationId,
             causation,
             causedById);
 

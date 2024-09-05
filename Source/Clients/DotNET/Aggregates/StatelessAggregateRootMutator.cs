@@ -12,11 +12,13 @@ namespace Cratis.Chronicle.Aggregates;
 /// <param name="eventStore">The <see cref="IEventStore"/> to work with.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="eventHandlers">The <see cref="IAggregateRootEventHandlers"/> for the aggregate root.</param>
+/// <param name="correlationIdAccessor">The <see cref="ICorrelationIdAccessor"/> for correlation id.</param>
 public class StatelessAggregateRootMutator(
     IAggregateRootContext aggregateRootContext,
     IEventStore eventStore,
     IEventSerializer eventSerializer,
-    IAggregateRootEventHandlers eventHandlers) : IAggregateRootMutator
+    IAggregateRootEventHandlers eventHandlers,
+    ICorrelationIdAccessor correlationIdAccessor) : IAggregateRootMutator
 {
     /// <inheritdoc/>
     public async Task Rehydrate()
@@ -56,7 +58,8 @@ public class StatelessAggregateRootMutator(
                             eventStore.Name,
                             eventStore.Namespace,
                             aggregateRootContext.EventSourceId,
-                            EventSequenceNumber.Unavailable))
+                            EventSequenceNumber.Unavailable,
+                            correlationIdAccessor.Current))
                 ]);
         }
     }

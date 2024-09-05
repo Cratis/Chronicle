@@ -19,6 +19,7 @@ public class all_dependencies : Specification
     protected IChronicleConnection _connection;
     protected IEventSequences _eventSequences;
     protected IServices services;
+    protected ICorrelationIdAccessor _correlationIdAccessor;
 
 
     void Establish()
@@ -33,5 +34,7 @@ public class all_dependencies : Specification
         services = Substitute.For<IServices>();
         _connection.Services.Returns(services);
         services.EventSequences.Returns(_eventSequences);
+        _correlationIdAccessor = Substitute.For<ICorrelationIdAccessor>();
+        _correlationIdAccessor.Current.Returns((CorrelationId)Guid.Empty);
     }
 }

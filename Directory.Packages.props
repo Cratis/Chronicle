@@ -1,12 +1,13 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>13.5.2</ApplicationModel>
+    <ApplicationModel>13.5.4</ApplicationModel>
+    <Fundamentals>5.4.2</Fundamentals>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Cratis.Fundamentals" Version="5.3.9" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="5.3.9" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="$(Fundamentals)" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="$(Fundamentals)" />
     <PackageVersion Include="Cratis.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.MongoDB" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Orleans" Version="$(ApplicationModel)" />

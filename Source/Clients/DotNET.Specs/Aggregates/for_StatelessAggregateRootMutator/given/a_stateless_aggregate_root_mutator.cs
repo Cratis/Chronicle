@@ -19,6 +19,7 @@ public class a_stateless_aggregate_root_mutator : Specification
     protected IAggregateRootEventHandlers _eventHandlers;
     protected IEventSequence _eventSequence;
     protected IUnitOfWork _unitOfWork;
+    protected ICorrelationIdAccessor _correlationIdAccessor;
 
     void Establish()
     {
@@ -36,11 +37,13 @@ public class a_stateless_aggregate_root_mutator : Specification
 
         _eventSerializer = Substitute.For<IEventSerializer>();
         _eventHandlers = Substitute.For<IAggregateRootEventHandlers>();
+        _correlationIdAccessor = Substitute.For<ICorrelationIdAccessor>();
 
         _mutator = new StatelessAggregateRootMutator(
             _aggregateRootContext,
             _eventStore,
             _eventSerializer,
-            _eventHandlers);
+            _eventHandlers,
+            _correlationIdAccessor);
     }
 }

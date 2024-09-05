@@ -33,7 +33,7 @@ public record EventContext(
     /// Creates an 'empty' <see cref="EventContext"/> with the event source id set to empty and all properties default.
     /// </summary>
     /// <returns>A new <see cref="EventContext"/>.</returns>
-    public static readonly EventContext Empty = From(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Guid.Empty, EventSequenceNumber.Unavailable);
+    public static readonly EventContext Empty = From(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Guid.Empty, EventSequenceNumber.Unavailable, CorrelationId.NotSet);
 
     /// <summary>
     /// Creates a new <see cref="EventContext"/> from <see cref="EventSourceId"/> and other optional parameters.
@@ -42,9 +42,10 @@ public record EventContext(
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the context is for.</param>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to create from.</param>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event as persisted in the event sequence.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="occurred">Optional occurred.</param>
     /// <returns>A new <see cref="EventContext"/>.</returns>
-    public static EventContext From(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, DateTimeOffset? occurred = default)
+    public static EventContext From(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, CorrelationId correlationId, DateTimeOffset? occurred = default)
     {
         return new(
             eventSourceId,
@@ -52,7 +53,7 @@ public record EventContext(
             occurred ?? DateTimeOffset.Now,
             eventStore,
             @namespace,
-            CorrelationId.New(), // TODO: Fix this when we have a proper correlation id
+            correlationId,
             [],
             Identity.NotSet);
     }
@@ -62,7 +63,7 @@ public record EventContext(
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to create for.</param>
     /// <returns>A new <see cref="EventContext"/>.</returns>
-    public static EventContext EmptyWithEventSourceId(EventSourceId eventSourceId) => From(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, eventSourceId, EventSequenceNumber.Unavailable);
+    public static EventContext EmptyWithEventSourceId(EventSourceId eventSourceId) => From(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, eventSourceId, EventSequenceNumber.Unavailable, CorrelationId.NotSet);
 
     /// <summary>
     /// Creates a copy of the context object with the new desired state.

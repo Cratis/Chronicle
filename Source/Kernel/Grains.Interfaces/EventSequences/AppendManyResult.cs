@@ -15,7 +15,7 @@ public class AppendManyResult
     /// <summary>
     /// Gets the <see cref="CorrelationId"/> for the operation.
     /// </summary>
-    public CorrelationId CorrelationId { get; init; } = CorrelationId.New();
+    public CorrelationId CorrelationId { get; init; } = CorrelationId.NotSet;
 
     /// <summary>
     /// Gets the sequence numbers of the events that were appended, if successful. In the same sequence as the events were provided.
