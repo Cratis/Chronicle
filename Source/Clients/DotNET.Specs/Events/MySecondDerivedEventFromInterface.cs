@@ -7,5 +7,5 @@ namespace Cratis.Chronicle.Events;
 public record MySecondDerivedEventFromInterface() : IMyEvent
 {
     public const string EventTypeId = "b91c21cd-56db-4edc-805b-b1d1ff9aa772";
-    public static EventType EventType = new(EventTypeId, EventGeneration.First);
+    public static EventType EventType = new(EventTypeId, EventTypeGeneration.First);
 }

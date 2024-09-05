@@ -20,7 +20,7 @@ public class when_resolving_message_for_violation : given.two_constraints
         _firstConstraint.MessageCallback(Arg.Any<ConstraintViolation>()).Returns((ConstraintViolationMessage)$"First {{{_firstProperty}}} second {{{_secondProperty}}}");
 
         _violation = new ConstraintViolation(
-            new EventType("SomeEvent", EventGeneration.First),
+            new EventType("SomeEvent", EventTypeGeneration.First),
             EventSequenceNumber.First,
             _firstConstraintName,
             string.Empty,

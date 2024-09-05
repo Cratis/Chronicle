@@ -23,9 +23,9 @@ public class when_providing : Specification
         _clientArtifactsProvider = Substitute.For<IClientArtifactsProvider>();
         _eventTypes = Substitute.For<IEventTypes>();
 
-        _firstEventType = new EventType(nameof(FirstEvent), EventGeneration.First);
+        _firstEventType = new EventType(nameof(FirstEvent), EventTypeGeneration.First);
         _eventTypes.GetEventTypeFor(typeof(FirstEvent)).Returns(_firstEventType);
-        _secondEventType = new EventType(nameof(SecondEvent), EventGeneration.First);
+        _secondEventType = new EventType(nameof(SecondEvent), EventTypeGeneration.First);
         _eventTypes.GetEventTypeFor(typeof(SecondEvent)).Returns(_secondEventType);
 
         _clientArtifactsProvider.UniqueEventTypeConstraints.Returns(

@@ -27,7 +27,7 @@ public class known_event : given.an_event_sequence
     {
         _eventSourceId = Guid.NewGuid();
         _event = "Actual event";
-        _eventType = new(Guid.NewGuid().ToString(), EventGeneration.First);
+        _eventType = new(Guid.NewGuid().ToString(), EventTypeGeneration.First);
 
         _eventContext = [];
         _eventSerializer.Serialize(_event).Returns(_eventContext);
