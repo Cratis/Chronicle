@@ -24,7 +24,7 @@ public class and_a_catch_up_is_already_running : given.a_catch_up_state
                             observer_key,
                             subscription,
                             42,
-                            [new EventType(Guid.NewGuid().ToString(), EventGeneration.First)]),
+                            [new EventType(Guid.NewGuid().ToString(), EventTypeGeneration.First)]),
                         StatusChanges =
                         [
                             new JobStatusChanged

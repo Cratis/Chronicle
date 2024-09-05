@@ -28,7 +28,7 @@ public class EventTypesStorage(
     IEventStoreDatabase sharedDatabase,
     ILogger<EventTypesStorage> logger) : IEventTypesStorage
 {
-    ConcurrentDictionary<EventTypeId, ConcurrentDictionary<EventGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = [];
+    ConcurrentDictionary<EventTypeId, ConcurrentDictionary<EventTypeGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = [];
 
     /// <inheritdoc/>
     public async Task Populate()
@@ -42,7 +42,7 @@ public class EventTypesStorage(
             allSchemas!.GroupBy(_ => _.EventType)
             .ToDictionary(
                 _ => (EventTypeId)_.Key,
-                _ => new ConcurrentDictionary<EventGeneration, EventTypeSchema>(_.ToDictionary(es => (EventGeneration)es.Generation, es => es.ToEventSchema()))));
+                _ => new ConcurrentDictionary<EventTypeGeneration, EventTypeSchema>(_.ToDictionary(es => (EventTypeGeneration)es.Generation, es => es.ToEventSchema()))));
     }
 
     /// <inheritdoc/>
@@ -108,9 +108,9 @@ public class EventTypesStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<EventTypeSchema> GetFor(EventTypeId type, EventGeneration? generation = default)
+    public async Task<EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
-        generation ??= EventGeneration.First;
+        generation ??= EventTypeGeneration.First;
         if (_schemasByTypeAndGeneration.TryGetValue(type, out var generationalSchemas) && generationalSchemas.TryGetValue(generation, out var schema))
         {
             return schema;
@@ -119,7 +119,7 @@ public class EventTypesStorage(
         var filter = GetFilterForSpecificSchema(type, generation);
         var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
-        _schemasByTypeAndGeneration[type] = new ConcurrentDictionary<EventGeneration, EventTypeSchema>(schemas.ToDictionary(_ => (EventGeneration)_.Generation, _ => _.ToEventSchema()));
+        _schemasByTypeAndGeneration[type] = new ConcurrentDictionary<EventTypeGeneration, EventTypeSchema>(schemas.ToDictionary(_ => (EventTypeGeneration)_.Generation, _ => _.ToEventSchema()));
 
         if (schemas.Count == 0)
         {
@@ -133,9 +133,9 @@ public class EventTypesStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<bool> HasFor(EventTypeId type, EventGeneration? generation = default)
+    public async Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
-        generation ??= EventGeneration.First;
+        generation ??= EventTypeGeneration.First;
         if (_schemasByTypeAndGeneration.TryGetValue(type, out var generationalSchemas) && generationalSchemas.ContainsKey(generation))
         {
             return true;
@@ -149,7 +149,7 @@ public class EventTypesStorage(
 
     IMongoCollection<EventSchemaMongoDB> GetCollection() => sharedDatabase.GetCollection<EventSchemaMongoDB>(WellKnownCollectionNames.Schemas);
 
-    FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(EventTypeId type, EventGeneration? generation) => Builders<EventSchemaMongoDB>.Filter.And(
+    FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(EventTypeId type, EventTypeGeneration? generation) => Builders<EventSchemaMongoDB>.Filter.And(
                    Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Value),
-                   Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.Generation, (generation ?? EventGeneration.First).Value));
+                   Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.Generation, (generation ?? EventTypeGeneration.First).Value));
 }

@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer.given;
 
 public class an_observer_with_subscription_for_specific_event_type : an_observer
 {
-    protected static readonly EventType event_type = new("d9a13e10-21a4-4cfc-896e-fda8dfeb79bb", EventGeneration.First);
+    protected static readonly EventType event_type = new("d9a13e10-21a4-4cfc-896e-fda8dfeb79bb", EventTypeGeneration.First);
     protected ObserverSubscription subscription;
     protected ObserverSubscriberKey subscriber_key;
 

@@ -21,7 +21,7 @@ public class EventSchemaMongoDB
     /// <summary>
     /// Gets the generation part of the <see cref="EventType"/>>.
     /// </summary>
-    public uint Generation { get; init; } = EventGeneration.First.Value;
+    public uint Generation { get; init; } = EventTypeGeneration.First.Value;
 
     /// <summary>
     /// Gets the actual schema as JSON.

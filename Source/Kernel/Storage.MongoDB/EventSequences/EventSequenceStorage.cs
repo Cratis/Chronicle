@@ -575,7 +575,7 @@ public class EventSequenceStorage(
         var document = BsonDocument.Parse(JsonSerializer.Serialize(content, jsonSerializerOptions));
         var generationalContent = new Dictionary<string, BsonDocument>
                 {
-                        { EventGeneration.First.ToString(), document }
+                        { EventTypeGeneration.First.ToString(), document }
                 };
 
         return new UpdateOneModel<Event>(

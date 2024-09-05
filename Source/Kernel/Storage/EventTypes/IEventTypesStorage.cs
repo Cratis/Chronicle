@@ -44,21 +44,21 @@ public interface IEventTypesStorage
     /// Check if an <see cref="EventTypeSchema"/> for a specific <see cref="EventType"/> exists.
     /// </summary>
     /// <param name="type"><see cref="EventTypeId"/> to check for.</param>
-    /// <param name="generation">Optional <see cref="EventGeneration"/>.</param>
+    /// <param name="generation">Optional <see cref="EventTypeGeneration"/>.</param>
     /// <returns>True if there is a schema for the type, false if not.</returns>
     /// <remarks>
     /// If generation is not provided, it will get what is associated with the <see cref="EventType"/>.
     /// </remarks>
-    Task<bool> HasFor(EventTypeId type, EventGeneration? generation = default);
+    Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = default);
 
     /// <summary>
     /// Gets a <see cref="EventTypeSchema"/> for a specific <see cref="Type"/>.
     /// </summary>
     /// <param name="type"><see cref="EventTypeId"/> to get for.</param>
-    /// <param name="generation">Optional <see cref="EventGeneration"/>.</param>
+    /// <param name="generation">Optional <see cref="EventTypeGeneration"/>.</param>
     /// <returns><see cref="EventTypeSchema"/> for the type.</returns>
     /// <remarks>
     /// If generation is not provided, it will get what is associated with the <see cref="EventType"/>.
     /// </remarks>
-    Task<EventTypeSchema> GetFor(EventTypeId type, EventGeneration? generation = default);
+    Task<EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = default);
 }

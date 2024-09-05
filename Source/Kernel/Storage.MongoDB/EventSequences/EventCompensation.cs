@@ -21,4 +21,4 @@ public record EventCompensation(
     IEnumerable<Causation> Causation,
     IdentityId CausedBy,
     DateTimeOffset Occurred,
-    IDictionary<EventGeneration, BsonDocument> Content);
+    IDictionary<EventTypeGeneration, BsonDocument> Content);
