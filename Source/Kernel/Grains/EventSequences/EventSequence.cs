@@ -29,9 +29,6 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequence"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of <see cref="EventSequence"/>.
-/// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
 /// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
 /// <param name="meter">The meter to use for metrics.</param>
