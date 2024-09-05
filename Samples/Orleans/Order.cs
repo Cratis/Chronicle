@@ -21,6 +21,16 @@ public class Order : AggregateRoot<OrderState>, IOrder
         Console.WriteLine($"After : {State?.CartItems?.Count()}");
     }
 
+    public async Task AddItem(MaterialId materialId)
+    {
+        await Apply(new ItemAddedToCart(
+            new(Guid.NewGuid()),
+            materialId,
+            1,
+            null,
+            null));
+    }
+
     public async Task DoOtherStuff()
     {
         await Apply(new ItemRemovedFromCart(

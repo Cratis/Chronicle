@@ -24,6 +24,16 @@ public class StatelessOrder : AggregateRoot, IOrder
             new(Guid.NewGuid())));
     }
 
+    public async Task AddItem(MaterialId materialId)
+    {
+        await Apply(new ItemAddedToCart(
+            new(Guid.NewGuid()),
+            materialId,
+            1,
+            null,
+            null));
+    }
+
     public void On(ItemAddedToCart @event)
     {
         Console.WriteLine("Added");
