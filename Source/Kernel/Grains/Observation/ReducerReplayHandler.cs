@@ -19,14 +19,12 @@ public class ReducerReplayHandler : ICanHandleReplayForObserver
     /// <inheritdoc/>
     public async Task BeginReplayFor(ObserverDetails observerDetails)
     {
-        // TODO: Get reducer instance and start replay
         await Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails)
     {
-        // TODO: Get reducer instance and end replay
         await Task.CompletedTask;
     }
 }
