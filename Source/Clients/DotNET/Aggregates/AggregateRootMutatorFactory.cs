@@ -13,11 +13,13 @@ namespace Cratis.Chronicle.Aggregates;
 /// <param name="aggregateRootStateProviders"><see cref="IAggregateRootStateProviders"/> for creating state providers.</param>
 /// <param name="aggregateRootEventHandlersFactory"><see cref="IAggregateRootEventHandlersFactory"/> for creating event handlers.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
+/// <param name="correlationIdAccessor">The <see cref="ICorrelationIdAccessor"/> for correlation id.</param>
 public class AggregateRootMutatorFactory(
     IEventStore eventStore,
     IAggregateRootStateProviders aggregateRootStateProviders,
     IAggregateRootEventHandlersFactory aggregateRootEventHandlersFactory,
-    IEventSerializer eventSerializer) : IAggregateRootMutatorFactory
+    IEventSerializer eventSerializer,
+    ICorrelationIdAccessor correlationIdAccessor) : IAggregateRootMutatorFactory
 {
     /// <inheritdoc/>
     public async Task<IAggregateRootMutator> Create<TAggregateRoot>(IAggregateRootContext context)
@@ -38,7 +40,7 @@ public class AggregateRootMutatorFactory(
         else
         {
             var eventHandlers = aggregateRootEventHandlersFactory.GetFor(context.AggregateRoot);
-            mutator = new StatelessAggregateRootMutator(context, eventStore, eventSerializer, eventHandlers);
+            mutator = new StatelessAggregateRootMutator(context, eventStore, eventSerializer, eventHandlers, correlationIdAccessor);
         }
 
         return mutator;

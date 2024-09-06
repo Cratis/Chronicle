@@ -2,12 +2,13 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+/* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
 import { Guid } from '@cratis/fundamentals';
-import { ObserverType } from './ObserverType';
 import { EventType } from '../Events/EventType';
 import { ObserverRunningState } from './ObserverRunningState';
+import { ObserverType } from './ObserverType';
 
 export class ObserverInformation {
 

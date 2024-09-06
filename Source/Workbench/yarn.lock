@@ -351,61 +351,62 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/applications.react.mvvm@npm:^12.1.5":
-  version: 12.1.5
-  resolution: "@cratis/applications.react.mvvm@npm:12.1.5"
+"@cratis/applications.react.mvvm@npm:13.4.0":
+  version: 13.4.0
+  resolution: "@cratis/applications.react.mvvm@npm:13.4.0"
   dependencies:
-    "@cratis/applications": 12.1.5
-    "@cratis/fundamentals": 5.2.4
-    mobx: 6.12.3
+    "@cratis/applications": 13.4.0
+    "@cratis/fundamentals": 5.3.7
+    mobx: 6.13.1
     mobx-react: 9.1.1
     react: 18.3.1
     reflect-metadata: 0.2.2
+    rxjs: 7.8.1
     tsyringe: 4.8.0
-  checksum: ca4af364c9b3de4a37c9f213a6a120f0648804a4992297a13b9980931718186d13cf513a26996548e977dd5dd170b0a782fff79f5a9404c5d0b39dc431e5ef83
+  checksum: f865d3c85f76cdeacdba37a5016b232cafc24b2299f2a2d9f563b5f98b47718739c9bc375d57f69a82ba2b628683954ecf908c31698087fb434de849f65084ea
   languageName: node
   linkType: hard
 
-"@cratis/applications.react@npm:^12.1.5":
-  version: 12.1.5
-  resolution: "@cratis/applications.react@npm:12.1.5"
+"@cratis/applications.react@npm:13.4.0":
+  version: 13.4.0
+  resolution: "@cratis/applications.react@npm:13.4.0"
   dependencies:
-    "@cratis/applications": 12.1.5
-    "@cratis/fundamentals": 5.2.4
-    handlebars: 4.7.7
+    "@cratis/applications": 13.4.0
+    "@cratis/fundamentals": 5.3.7
+    handlebars: 4.7.8
     react: 18.3.1
-  checksum: a46a27e87aab4532571baa08a41112c637906c0fa817e0c0474dfcd28e2f77c2604e46c37827da546da56ab5eb397f6d05e33fb7134f7b89d8957097380e844e
+  checksum: 3bf95efe1569616ca7d8f944e62b5a877598efdf6a664e50392e2a6e3190038fa2d32df7e99b2a730b60191a9b15acfbe55f869b0898ca6c6009b8671711ae31
   languageName: node
   linkType: hard
 
-"@cratis/applications.vite@npm:^12.1.5":
-  version: 12.1.5
-  resolution: "@cratis/applications.vite@npm:12.1.5"
+"@cratis/applications.vite@npm:13.4.0":
+  version: 13.4.0
+  resolution: "@cratis/applications.vite@npm:13.4.0"
   dependencies:
-    "@cratis/applications": 12.1.5
-    "@cratis/fundamentals": 5.2.4
-    handlebars: 4.7.7
+    "@cratis/applications": 13.4.0
+    "@cratis/fundamentals": 5.3.7
+    handlebars: 4.7.8
     react: 18.3.1
-  checksum: deadd382a5ae71c7ca55df3fc18c76fcbb8b943e376d4f8da42fbf20681c32499880e5424d5760cf956c57daa70b8d8003e345a41686b0c66ec839ed29b9b55d
+  checksum: 012e12242e3098308715239cc3a0f56bc23a5ccc73ae29b215dd72a47588a8521b337c51b757e07365acd08c19e0ce5ea21e961922d1b5d420ff7706e6962da2
   languageName: node
   linkType: hard
 
-"@cratis/applications@npm:12.1.5, @cratis/applications@npm:^12.1.5":
-  version: 12.1.5
-  resolution: "@cratis/applications@npm:12.1.5"
+"@cratis/applications@npm:13.4.0":
+  version: 13.4.0
+  resolution: "@cratis/applications@npm:13.4.0"
   dependencies:
-    "@cratis/fundamentals": 5.2.4
-    handlebars: 4.7.7
-  checksum: a3bf02d6fd40246e14ca686b03489954fd3bac1c5e8b99e64984d2cff19fb2cb1a6cd58ab85be9bdf393794654a05b1421008bdb3c81d13af7bd7a944c59dcfa
+    "@cratis/fundamentals": 5.3.7
+    handlebars: 4.7.8
+  checksum: a3fa8ce7dbd28a50f7a7a82f7d0949030faaa6b4f2447619f9418e66793aa4be6799dfb5d356a37532560f2c4babfd6c29cfc9da99929737c3ede8ca388c78d6
   languageName: node
   linkType: hard
 
-"@cratis/fundamentals@npm:5.2.4":
-  version: 5.2.4
-  resolution: "@cratis/fundamentals@npm:5.2.4"
+"@cratis/fundamentals@npm:5.3.7":
+  version: 5.3.7
+  resolution: "@cratis/fundamentals@npm:5.3.7"
   dependencies:
-    reflect-metadata: 0.1.13
-  checksum: f56a91fc5f5a756375acb575a13ee5b0cb5b663a1fbe22a230d4a3865879ac818648ceff3140f902785292796bfb25238f4ebc0ca767a0eec2e762cf462cf522
+    reflect-metadata: 0.2.2
+  checksum: cc6cb70c455876dd13647cd9e56a5318faf37c60e1a72f5519501a598bc6563a85548cf3c9a60918a4fc19d1e23d0f7b9d8e2a7e228960cafa32966f3632e182
   languageName: node
   linkType: hard
 
@@ -1676,7 +1677,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"braces@npm:^3.0.2, braces@npm:~3.0.2":
+"braces@npm:^3.0.3, braces@npm:~3.0.2":
   version: 3.0.3
   resolution: "braces@npm:3.0.3"
   dependencies:
@@ -3110,12 +3111,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"handlebars@npm:4.7.7":
-  version: 4.7.7
-  resolution: "handlebars@npm:4.7.7"
+"handlebars@npm:4.7.8":
+  version: 4.7.8
+  resolution: "handlebars@npm:4.7.8"
   dependencies:
     minimist: ^1.2.5
-    neo-async: ^2.6.0
+    neo-async: ^2.6.2
     source-map: ^0.6.1
     uglify-js: ^3.1.4
     wordwrap: ^1.0.0
@@ -3124,7 +3125,7 @@ __metadata:
       optional: true
   bin:
     handlebars: bin/handlebars
-  checksum: 1e79a43f5e18d15742977cb987923eab3e2a8f44f2d9d340982bcb69e1735ed049226e534d7c1074eaddaf37e4fb4f471a8adb71cddd5bc8cf3f894241df5cee
+  checksum: 00e68bb5c183fd7b8b63322e6234b5ac8fbb960d712cb3f25587d559c2951d9642df83c04a1172c918c41bcfc81bfbd7a7718bbce93b893e0135fc99edea93ff
   languageName: node
   linkType: hard
 
@@ -3842,12 +3843,12 @@ __metadata:
   linkType: hard
 
 "micromatch@npm:^4.0.4, micromatch@npm:^4.0.5":
-  version: 4.0.5
-  resolution: "micromatch@npm:4.0.5"
+  version: 4.0.8
+  resolution: "micromatch@npm:4.0.8"
   dependencies:
-    braces: ^3.0.2
+    braces: ^3.0.3
     picomatch: ^2.3.1
-  checksum: 02a17b671c06e8fefeeb6ef996119c1e597c942e632a21ef589154f23898c9c6a9858526246abb14f8bca6e77734aa9dcf65476fca47cedfb80d9577d52843fc
+  checksum: 79920eb634e6f400b464a954fcfa589c4e7c7143209488e44baf627f9affc8b1e306f41f4f0deedde97e69cb725920879462d3e750ab3bd3c1aed675bb3a8966
   languageName: node
   linkType: hard
 
@@ -4036,10 +4037,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mobx@npm:6.12.3":
-  version: 6.12.3
-  resolution: "mobx@npm:6.12.3"
-  checksum: 95d5a81ca80c943b0e7fe0a44cbaeb5447d1bd6be72380a3c9b22ce27dbedcf36c7597f5600d742ed3c74699e809f1d2055c26482df04c3ec4b3ac2e181414bb
+"mobx@npm:6.13.1":
+  version: 6.13.1
+  resolution: "mobx@npm:6.13.1"
+  checksum: 59d1f36c82e1f822e5d462a960dba28f1c4d7c5b8123fa48423b5d1bf70b00affa39922e914d473b5505016379f2ce27ba76893044276a0e909c401553de29eb
   languageName: node
   linkType: hard
 
@@ -4148,7 +4149,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"neo-async@npm:^2.6.0":
+"neo-async@npm:^2.6.2":
   version: 2.6.2
   resolution: "neo-async@npm:2.6.2"
   checksum: deac9f8d00eda7b2e5cd1b2549e26e10a0faa70adaa6fdadca701cc55f49ee9018e427f424bac0c790b7c7e2d3068db97f3093f1093975f2acb8f8818b936ed9
@@ -4786,13 +4787,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"reflect-metadata@npm:0.1.13":
-  version: 0.1.13
-  resolution: "reflect-metadata@npm:0.1.13"
-  checksum: 798d379a7b6f6455501145419505c97dd11cbc23857a386add2b9ef15963ccf15a48d9d15507afe01d4cd74116df8a213247200bac00320bd7c11ddeaa5e8fb4
-  languageName: node
-  linkType: hard
-
 "reflect-metadata@npm:0.2.1":
   version: 0.2.1
   resolution: "reflect-metadata@npm:0.2.1"
@@ -4986,6 +4980,15 @@ __metadata:
   dependencies:
     queue-microtask: ^1.2.2
   checksum: cb4f97ad25a75ebc11a8ef4e33bb962f8af8516bb2001082ceabd8902e15b98f4b84b4f8a9b222e5d57fc3bd1379c483886ed4619367a7680dad65316993021d
+  languageName: node
+  linkType: hard
+
+"rxjs@npm:7.8.1":
+  version: 7.8.1
+  resolution: "rxjs@npm:7.8.1"
+  dependencies:
+    tslib: ^2.1.0
+  checksum: de4b53db1063e618ec2eca0f7965d9137cabe98cf6be9272efe6c86b47c17b987383df8574861bcced18ebd590764125a901d5506082be84a8b8e364bf05f119
   languageName: node
   linkType: hard
 
@@ -5588,6 +5591,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tslib@npm:^2.1.0":
+  version: 2.7.0
+  resolution: "tslib@npm:2.7.0"
+  checksum: 1606d5c89f88d466889def78653f3aab0f88692e80bb2066d090ca6112ae250ec1cfa9dbfaab0d17b60da15a4186e8ec4d893801c67896b277c17374e36e1d28
+  languageName: node
+  linkType: hard
+
 "tsyringe@npm:4.8.0":
   version: 4.8.0
   resolution: "tsyringe@npm:4.8.0"
@@ -5904,10 +5914,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workbench@workspace:."
   dependencies:
-    "@cratis/applications": ^12.1.5
-    "@cratis/applications.react": ^12.1.5
-    "@cratis/applications.react.mvvm": ^12.1.5
-    "@cratis/applications.vite": ^12.1.5
+    "@cratis/applications": 13.4.0
+    "@cratis/applications.react": 13.4.0
+    "@cratis/applications.react.mvvm": 13.4.0
+    "@cratis/applications.vite": 13.4.0
     "@types/chai": 4.3.4
     "@types/chai-as-promised": 7.1.5
     "@types/mocha": 10.0.1

@@ -26,9 +26,9 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> Adapters { get; }
 
     /// <summary>
-    /// Gets all the available reaction types.
+    /// Gets all the available Reactor types.
     /// </summary>
-    IEnumerable<Type> Reactions { get; }
+    IEnumerable<Type> Reactors { get; }
 
     /// <summary>
     /// Gets all the available reducer types.
@@ -36,9 +36,9 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> Reducers { get; }
 
     /// <summary>
-    /// Gets all the available reaction middleware types.
+    /// Gets all the available Reactor middleware types.
     /// </summary>
-    IEnumerable<Type> ReactionMiddlewares { get; }
+    IEnumerable<Type> ReactorMiddlewares { get; }
 
     /// <summary>
     /// Gets all the available providers of compliance metadata for types.

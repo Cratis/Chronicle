@@ -9,7 +9,7 @@ public class a_unique_constraint_builder_with_owner_and_an_event_type : a_unique
 
     void Establish()
     {
-        _eventType = new EventType(nameof(EventWithStringProperty), EventGeneration.First);
+        _eventType = new EventType(nameof(EventWithStringProperty), EventTypeGeneration.First);
         _eventTypes.GetSchemaFor(_eventType.Id).Returns(_generator.Generate(typeof(EventWithStringProperty)));
     }
 }

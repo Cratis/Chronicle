@@ -105,7 +105,7 @@ public static class TagExtensions
     {
         var observerTypeTag = observerType switch
         {
-            Concepts.Observation.ObserverType.Client => "Reaction",
+            Concepts.Observation.ObserverType.Client => "Reactor",
             Concepts.Observation.ObserverType.Projection => "Projection",
             Concepts.Observation.ObserverType.Reducer => "Reducer",
             _ => "Unknown"

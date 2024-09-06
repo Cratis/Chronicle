@@ -9,6 +9,6 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 /// <summary>
 /// Represents a key used for the <see cref="IReducerMediator"/> to track observer subscriptions.
 /// </summary>
-/// <param name="ReducerId">The reaction the key is for.</param>
+/// <param name="ReducerId">The Reactor the key is for.</param>
 /// <param name="ConnectionId">Connection the key is for.</param>
 public record ReducerMediatorKey(ReducerId ReducerId, ConnectionId ConnectionId);

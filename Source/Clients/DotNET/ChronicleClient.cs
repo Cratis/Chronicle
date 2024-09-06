@@ -104,6 +104,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             @namespace,
             _connection!,
             _options.ArtifactsProvider,
+            _options.CorrelationIdAccessor,
             _causationManager,
             _options.IdentityProvider,
             _jsonSchemaGenerator,

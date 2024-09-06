@@ -55,7 +55,7 @@ public record ImmediateProjectionKey(
         var modelKey = (ModelKey)elements[4];
         if (elements.Length == 6)
         {
-            var sessionId = (ProjectionSessionId)elements[5];
+            var sessionId = (ProjectionSessionId)Guid.Parse(elements[5]);
             return new(projectionId, eventStore, @namespace, eventSequenceId, modelKey, sessionId);
         }
         return new(projectionId, eventStore, @namespace, eventSequenceId, modelKey);

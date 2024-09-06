@@ -29,7 +29,7 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
                         Request = new ReplayObserverRequest(
                             observer_key,
                             subscription,
-                            [new EventType(Guid.NewGuid().ToString(), EventGeneration.First)]),
+                            [new EventType(Guid.NewGuid().ToString(), EventTypeGeneration.First)]),
                         StatusChanges =
                         [
                             new JobStatusChanged

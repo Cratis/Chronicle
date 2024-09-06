@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 module.exports = {
-    require: ['ts-node/register', __dirname+'/mocha-setup.cjs'],
+    require: ['ts-node/register', __dirname+'/mocha-setup.js'],
     diff: true,
     "node-option": [
         "experimental-specifier-resolution=node",

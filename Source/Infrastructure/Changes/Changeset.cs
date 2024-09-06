@@ -116,7 +116,6 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                 }
                 else
                 {
-                    // TODO: Should support non ref/class type objects as children.
                     item = new TChild();
                     identifiedByProperty.SetValue(item, key, ArrayIndexers.NoIndexers);
                 }
@@ -124,7 +123,6 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         }
         else
         {
-            // TODO: Should support non ref/class type objects as children.
             item = new TChild();
             arrayIndexers = new ArrayIndexers(
             [

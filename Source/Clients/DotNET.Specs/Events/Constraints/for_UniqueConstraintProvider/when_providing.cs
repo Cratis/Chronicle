@@ -30,22 +30,22 @@ public class when_providing : Specification
         _clientArtifactsProvider = Substitute.For<IClientArtifactsProvider>();
         _eventTypes = Substitute.For<IEventTypes>();
 
-        _firstEventWithFirstConstraintEventType = new EventType(nameof(FirstEventWithFirstConstraint), EventGeneration.First);
+        _firstEventWithFirstConstraintEventType = new EventType(nameof(FirstEventWithFirstConstraint), EventTypeGeneration.First);
         _firstEventWithFirstConstraintSchema = JsonSchema.FromType<FirstEventWithFirstConstraint>();
         _eventTypes.GetEventTypeFor(typeof(FirstEventWithFirstConstraint)).Returns(_firstEventWithFirstConstraintEventType);
         _eventTypes.GetSchemaFor(_firstEventWithFirstConstraintEventType.Id).Returns(_firstEventWithFirstConstraintSchema);
 
-        _secondEventWithFirstConstraintEventType = new EventType(nameof(SecondEventWithFirstConstraint), EventGeneration.First);
+        _secondEventWithFirstConstraintEventType = new EventType(nameof(SecondEventWithFirstConstraint), EventTypeGeneration.First);
         _secondEventWithFirstConstraintSchema = JsonSchema.FromType<SecondEventWithFirstConstraint>();
         _eventTypes.GetEventTypeFor(typeof(SecondEventWithFirstConstraint)).Returns(_secondEventWithFirstConstraintEventType);
         _eventTypes.GetSchemaFor(_secondEventWithFirstConstraintEventType.Id).Returns(_secondEventWithFirstConstraintSchema);
 
-        _firstEventWithSecondConstraintEventType = new EventType(nameof(FirstEventWithSecondConstraint), EventGeneration.First);
+        _firstEventWithSecondConstraintEventType = new EventType(nameof(FirstEventWithSecondConstraint), EventTypeGeneration.First);
         _firstEventWithSecondConstraintSchema = JsonSchema.FromType<FirstEventWithSecondConstraint>();
         _eventTypes.GetEventTypeFor(typeof(FirstEventWithSecondConstraint)).Returns(_firstEventWithSecondConstraintEventType);
         _eventTypes.GetSchemaFor(_firstEventWithSecondConstraintEventType.Id).Returns(_firstEventWithSecondConstraintSchema);
 
-        _secondEventWithSecondConstraintEventType = new EventType(nameof(SecondEventWithSecondConstraint), EventGeneration.First);
+        _secondEventWithSecondConstraintEventType = new EventType(nameof(SecondEventWithSecondConstraint), EventTypeGeneration.First);
         _secondEventWithSecondConstraintSchema = JsonSchema.FromType<SecondEventWithSecondConstraint>();
         _eventTypes.GetEventTypeFor(typeof(SecondEventWithSecondConstraint)).Returns(_secondEventWithSecondConstraintEventType);
         _eventTypes.GetSchemaFor(_secondEventWithSecondConstraintEventType.Id).Returns(_secondEventWithSecondConstraintSchema);

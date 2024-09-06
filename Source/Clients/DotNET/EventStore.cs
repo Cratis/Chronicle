@@ -9,14 +9,12 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Transactions;
 using Cratis.Models;
-using Cratis.Types;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle;
@@ -27,6 +25,7 @@ namespace Cratis.Chronicle;
 public class EventStore : IEventStore
 {
     readonly EventStoreName _eventStoreName;
+    readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
     readonly IEventSerializer _eventSerializer;
@@ -39,6 +38,7 @@ public class EventStore : IEventStore
     /// <param name="namespace">Namespace for the event store.</param>
     /// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Chronicle.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
+    /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> for getting correlation.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
@@ -51,6 +51,7 @@ public class EventStore : IEventStore
         EventStoreNamespaceName @namespace,
         IChronicleConnection connection,
         IClientArtifactsProvider clientArtifactsProvider,
+        ICorrelationIdAccessor correlationIdAccessor,
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
         IJsonSchemaGenerator schemaGenerator,
@@ -66,8 +67,10 @@ public class EventStore : IEventStore
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
+        _correlationIdAccessor = correlationIdAccessor;
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
         UnitOfWorkManager = new UnitOfWorkManager(this);
+        _correlationIdAccessor = correlationIdAccessor;
 
         _eventSerializer = new EventSerializer(
             clientArtifactsProvider,
@@ -77,7 +80,10 @@ public class EventStore : IEventStore
 
         Constraints = new Constraints(
             this,
-            serviceProvider.GetRequiredService<IInstancesOf<ICanProvideConstraints>>());
+            [
+                new UniqueConstraintProvider(clientArtifactsProvider, EventTypes),
+                new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes),
+            ]);
 
         EventLog = new EventLog(
             eventStoreName,
@@ -86,18 +92,19 @@ public class EventStore : IEventStore
             EventTypes,
             Constraints,
             _eventSerializer,
+            correlationIdAccessor,
             causationManager,
             identityProvider);
 
-        Reactions = new Reactions.Reactions(
+        Reactors = new Reactors.Reactors(
             this,
             EventTypes,
             clientArtifactsProvider,
             serviceProvider,
-            new ReactionMiddlewares(clientArtifactsProvider, serviceProvider),
+            new ReactorMiddlewares(clientArtifactsProvider, serviceProvider),
             _eventSerializer,
             causationManager,
-            loggerFactory.CreateLogger<Reactions.Reactions>(),
+            loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 
         var modelNameResolver = new ModelNameResolver(modelNameConvention);
@@ -137,7 +144,8 @@ public class EventStore : IEventStore
                 this,
                 new AggregateRootStateProviders(Reducers, Projections),
                 new AggregateRootEventHandlersFactory(EventTypes),
-                _eventSerializer),
+                _eventSerializer,
+                correlationIdAccessor),
             UnitOfWorkManager,
             serviceProvider);
     }
@@ -167,7 +175,7 @@ public class EventStore : IEventStore
     public IEventLog EventLog { get; }
 
     /// <inheritdoc/>
-    public IReactions Reactions { get; }
+    public IReactors Reactors { get; }
 
     /// <inheritdoc/>
     public IReducers Reducers { get; }
@@ -185,7 +193,7 @@ public class EventStore : IEventStore
         await Constraints.Discover();
 
         await Task.WhenAll(
-            Reactions.Discover(),
+            Reactors.Discover(),
             Reducers.Discover(),
             Projections.Discover());
     }
@@ -200,7 +208,7 @@ public class EventStore : IEventStore
         await Constraints.Register();
 
         await Task.WhenAll(
-            Reactions.Register(),
+            Reactors.Register(),
             Reducers.Register(),
             Projections.Register());
     }
@@ -215,6 +223,7 @@ public class EventStore : IEventStore
             EventTypes,
             Constraints,
             _eventSerializer,
+            _correlationIdAccessor,
             _causationManager,
             _identityProvider);
 }

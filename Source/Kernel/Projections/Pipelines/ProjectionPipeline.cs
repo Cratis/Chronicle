@@ -54,7 +54,6 @@ public class ProjectionPipeline(
     public async Task Handle(AppendedEvent @event)
     {
         logger.HandlingEvent(@event.Metadata.SequenceNumber);
-        var correlationId = CorrelationId.New(); // TODO: Fix this when we have a proper correlation id
         var keyResolver = Projection.GetKeyResolverFor(@event.Metadata.Type);
         var key = await keyResolver(eventSequenceStorage, @event);
         key = EnsureCorrectTypeForArrayIndexersOnKey(key);
@@ -80,7 +79,7 @@ public class ProjectionPipeline(
         if (changeset.HasChanges)
         {
             await Sink.ApplyChanges(key, changeset);
-            await changesetStorage.Save(correlationId, changeset);
+            await changesetStorage.Save(@event.Context.CorrelationId, changeset);
             logger.SavingResult(@event.Metadata.SequenceNumber);
         }
     }

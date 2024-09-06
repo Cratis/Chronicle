@@ -13,26 +13,15 @@ namespace Cratis.Events.MongoDB.EventTypes;
 public class EventSchemaMongoDB
 {
     /// <summary>
-    /// Gets or sets the unique identifier.
-    /// </summary>
-    [BsonId]
-    public string Id
-    {
-        get => $"{EventType}+{Generation}";
-        set
-        {
-        }
-    }
-
-    /// <summary>
     /// Gets the identifier part of <see cref="EventType"/>.
     /// </summary>
+    [BsonId]
     public string EventType { get; init; } = EventTypeId.Unknown.Value;
 
     /// <summary>
     /// Gets the generation part of the <see cref="EventType"/>>.
     /// </summary>
-    public uint Generation { get; init; } = EventGeneration.First.Value;
+    public uint Generation { get; init; } = EventTypeGeneration.First.Value;
 
     /// <summary>
     /// Gets the tombstone part of the <see cref="EventType"/>>.

@@ -8,12 +8,12 @@
 
     <ItemGroup>
         <ProjectReference Include="../Grains/Grains.csproj" />
-        <ProjectReference Include="../Concepts/Concepts.csproj"/>
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="OrleansTestKit" />
-        <PackageReference Include="protobuf-net.Grpc"/>
+        <PackageReference Include="protobuf-net.Grpc" />
     </ItemGroup>
 
 </Project>

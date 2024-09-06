@@ -8,7 +8,7 @@ using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -89,7 +89,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public IObserver GetObserverFor<T>() => Services.GetRequiredService<IGrainFactory>()
         .GetGrain<IObserver>(
             new ObserverKey(
-                typeof(T).GetReactionId().Value,
+                typeof(T).GetReactorId().Value,
                 Constants.EventStore,
                 Concepts.EventStoreNamespaceName.Default,
                 EventSequenceId.Log));
@@ -128,9 +128,9 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public virtual IEnumerable<Type> EventTypes { get; } = [];
     public virtual IEnumerable<Type> Projections { get; } = [];
     public virtual IEnumerable<Type> Adapters { get; } = [];
-    public virtual IEnumerable<Type> Reactions { get; } = [];
+    public virtual IEnumerable<Type> Reactors { get; } = [];
     public virtual IEnumerable<Type> Reducers { get; } = [];
-    public virtual IEnumerable<Type> ReactionMiddlewares { get; } = [];
+    public virtual IEnumerable<Type> ReactorMiddlewares { get; } = [];
     public virtual IEnumerable<Type> ComplianceForTypesProviders { get; } = [];
     public virtual IEnumerable<Type> ComplianceForPropertiesProviders { get; } = [];
     public virtual IEnumerable<Type> Rules { get; } = [];

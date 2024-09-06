@@ -54,5 +54,5 @@ public class NullLogger<T> : NullLogger, ILogger<T>
     /// <summary>
     /// Gets the instance of the <see cref="NullLogger"/>.
     /// </summary>
-    public static readonly new ILogger<T> Instance = new NullLogger<T>();
+    public static new readonly ILogger<T> Instance = new NullLogger<T>();
 }

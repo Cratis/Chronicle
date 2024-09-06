@@ -16,15 +16,15 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
         public static TaskCompletionSource Tsc = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public EventSourceId EventSourceId;
         public SomeEvent Event;
-        public SomeReaction Reaction;
+        public SomeReactor Reactor;
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
-        public override IEnumerable<Type> Reactions => [typeof(SomeReaction)];
+        public override IEnumerable<Type> Reactors => [typeof(SomeReactor)];
 
         protected override void ConfigureServices(IServiceCollection services)
         {
-            Reaction = new SomeReaction(Tsc);
-            services.AddSingleton(Reaction);
+            Reactor = new SomeReactor(Tsc);
+            services.AddSingleton(Reactor);
         }
 
         void Establish()
@@ -35,7 +35,7 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
 
         async Task Because()
         {
-            await GetObserverFor<SomeReaction>().WaitTillActive();
+            await GetObserverFor<SomeReactor>().WaitTillActive();
             await EventStore.EventLog.Append(EventSourceId, Event);
             await Tsc.Task.WaitAsync(TimeSpan.FromSeconds(10));
         }
@@ -45,5 +45,5 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
 
     [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveCorrectTailSequenceNumber(Concepts.Events.EventSequenceNumber.First);
 
-    [Fact] void should_have_handled_the_event() => Context.Reaction.HandledEvents.ShouldEqual(1);
+    [Fact] void should_have_handled_the_event() => Context.Reactor.HandledEvents.ShouldEqual(1);
 }

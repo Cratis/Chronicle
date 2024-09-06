@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
 
 #pragma warning disable SA1402
@@ -25,6 +26,7 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     IEventStore? _eventStore;
     IEventLog? _eventLog;
     IEventSerializer? _eventSerializer;
+    ICorrelationIdAccessor? _correlationIdAccessor;
 
     /// <inheritdoc/>
     public IAggregateRootContext? Context { get; set; }
@@ -42,7 +44,8 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
             context,
             _eventStore!,
             _eventSerializer!,
-            _eventHandlers!);
+            _eventHandlers!,
+            _correlationIdAccessor!);
         _mutation = new AggregateRootMutation(context, _mutator, _eventLog!);
 
         await _mutator.Rehydrate();
@@ -54,6 +57,7 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
         _eventStore = ServiceProvider.GetRequiredService<IEventStore>();
         _eventLog = ServiceProvider.GetRequiredService<IEventLog>();
         _eventSerializer = ServiceProvider.GetRequiredService<IEventSerializer>();
+        _correlationIdAccessor = ServiceProvider.GetRequiredService<ICorrelationIdAccessor>();
 
         var eventHandlersFactory = ServiceProvider.GetRequiredService<IAggregateRootEventHandlersFactory>();
         _eventHandlers = eventHandlersFactory.GetFor(this);

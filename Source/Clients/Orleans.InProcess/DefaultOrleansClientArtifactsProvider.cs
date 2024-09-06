@@ -32,13 +32,13 @@ public class DefaultOrleansClientArtifactsProvider(IClientArtifactsProvider prov
     public IEnumerable<Type> Adapters => provider.Adapters;
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Reactions => provider.Reactions;
+    public IEnumerable<Type> Reactors => provider.Reactors;
 
     /// <inheritdoc/>
     public IEnumerable<Type> Reducers => provider.Reducers;
 
     /// <inheritdoc/>
-    public IEnumerable<Type> ReactionMiddlewares => provider.ReactionMiddlewares;
+    public IEnumerable<Type> ReactorMiddlewares => provider.ReactorMiddlewares;
 
     /// <inheritdoc/>
     public IEnumerable<Type> ComplianceForTypesProviders => provider.ComplianceForTypesProviders;

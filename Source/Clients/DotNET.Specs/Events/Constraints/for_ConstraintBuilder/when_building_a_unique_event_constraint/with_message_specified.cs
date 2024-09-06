@@ -17,7 +17,7 @@ public class with_message_specified : given.a_constraint_builder_with_owner
     void Establish()
     {
         _violation = new ConstraintViolation(_eventType, EventSequenceNumber.First, "Some Constraint", "Error", []);
-        _eventType = new EventType(nameof(SomeEvent), EventGeneration.First);
+        _eventType = new EventType(nameof(SomeEvent), EventTypeGeneration.First);
         _eventTypes.GetEventTypeFor(typeof(SomeEvent)).Returns(_eventType);
     }
 

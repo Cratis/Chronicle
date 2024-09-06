@@ -36,6 +36,7 @@ public class EventSequences(
             request.EventSourceId,
             request.EventType.ToChronicle(),
             JsonSerializer.Deserialize<JsonNode>(request.Content, jsonSerializerOptions)!.AsObject(),
+            request.CorrelationId,
             request.Causation.ToChronicle(),
             request.CausedBy.ToChronicle());
 
@@ -48,6 +49,7 @@ public class EventSequences(
         var eventSequence = GetEventSequenceGrain(request);
         var result = await eventSequence.AppendMany(
             request.Events.ToChronicle(),
+            request.CorrelationId,
             request.Causation.ToChronicle(),
             request.CausedBy.ToChronicle());
 

@@ -38,7 +38,7 @@
         <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
             <!-- <PrivateAssets>all</PrivateAssets> -->
         </ProjectReference>
-        
+
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj">
             <!-- <PrivateAssets>all</PrivateAssets> -->
         </ProjectReference>
