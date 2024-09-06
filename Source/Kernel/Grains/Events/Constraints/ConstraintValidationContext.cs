@@ -28,11 +28,11 @@ public record ConstraintValidationContext
         EventType eventType,
         ExpandoObject content)
     {
-        _updaters = validators.OfType<IHaveUpdateConstraintIndex>().Select(v => v.GetUpdateFor(this));
-        _validators = validators.Where(_ => _.CanValidate(this));
         EventSourceId = eventSourceId;
         EventType = eventType;
         Content = content;
+        _updaters = validators.OfType<IHaveUpdateConstraintIndex>().Select(v => v.GetUpdateFor(this)).ToArray();
+        _validators = validators.Where(_ => _.CanValidate(this)).ToArray();
     }
 
     /// <summary>
