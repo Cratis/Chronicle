@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
 using Cratis.Strings;
+using NJsonSchema;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -16,6 +17,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = default) : IUniqueConstraintBuilder
 {
     readonly List<UniqueConstraintEventDefinition> _eventTypesAndProperties = [];
+    readonly Dictionary<EventTypeId, JsonSchema> _eventTypeSchemas = [];
     ConstraintName? _name;
     ConstraintViolationMessageProvider? _messageProvider;
     EventTypeId? _removedWith;
@@ -35,7 +37,8 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
         ThrowIfPropertyIsMissing(eventType, property);
         ThrowIfPropertyTypeMismatch(eventType, property);
 
-        _eventTypesAndProperties.Add(new UniqueConstraintEventDefinition(eventType.Id, eventTypes.GetSchemaFor(eventType.Id), property));
+        _eventTypesAndProperties.Add(new UniqueConstraintEventDefinition(eventType.Id, property));
+        _eventTypeSchemas[eventType.Id] = eventTypes.GetSchemaFor(eventType.Id);
         return this;
     }
 
@@ -114,7 +117,8 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
     {
         var schema = eventTypes.GetSchemaFor(eventType.Id);
         var propertySchema = schema.GetFlattenedProperties().First(p => p.Name == property);
-        if (_eventTypesAndProperties.Exists(_ => _.Schema.GetFlattenedProperties().First(p => p.Name == _.Property).Type != propertySchema.Type))
+
+        if (_eventTypesAndProperties.Exists(_ => _eventTypeSchemas[_.EventTypeId].GetFlattenedProperties().First(p => p.Name == _.Property).Type != propertySchema.Type))
         {
             throw new PropertyTypeMismatchInUniqueConstraint(eventType, property);
         }

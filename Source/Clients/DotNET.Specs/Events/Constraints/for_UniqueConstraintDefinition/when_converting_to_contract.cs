@@ -25,8 +25,8 @@ public class when_converting_to_contract : Specification
             _constraintName,
             _ => "",
             [
-                new(_firstEventType.Id, null!, "First Property"),
-                new(_secondEventType.Id, null!, "Second Property")
+                new(_firstEventType.Id, "First Property"),
+                new(_secondEventType.Id, "Second Property")
             ],
             _removedWithEventType);
     }
