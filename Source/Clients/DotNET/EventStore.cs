@@ -9,7 +9,7 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
@@ -96,15 +96,15 @@ public class EventStore : IEventStore
             causationManager,
             identityProvider);
 
-        Reactions = new Reactions.Reactions(
+        Reactors = new Reactors.Reactors(
             this,
             EventTypes,
             clientArtifactsProvider,
             serviceProvider,
-            new ReactionMiddlewares(clientArtifactsProvider, serviceProvider),
+            new ReactorMiddlewares(clientArtifactsProvider, serviceProvider),
             _eventSerializer,
             causationManager,
-            loggerFactory.CreateLogger<Reactions.Reactions>(),
+            loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 
         var modelNameResolver = new ModelNameResolver(modelNameConvention);
@@ -175,7 +175,7 @@ public class EventStore : IEventStore
     public IEventLog EventLog { get; }
 
     /// <inheritdoc/>
-    public IReactions Reactions { get; }
+    public IReactors Reactors { get; }
 
     /// <inheritdoc/>
     public IReducers Reducers { get; }
@@ -193,7 +193,7 @@ public class EventStore : IEventStore
         await Constraints.Discover();
 
         await Task.WhenAll(
-            Reactions.Discover(),
+            Reactors.Discover(),
             Reducers.Discover(),
             Projections.Discover());
     }
@@ -208,7 +208,7 @@ public class EventStore : IEventStore
         await Constraints.Register();
 
         await Task.WhenAll(
-            Reactions.Register(),
+            Reactors.Register(),
             Reducers.Register(),
             Projections.Register());
     }

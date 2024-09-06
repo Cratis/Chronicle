@@ -8,15 +8,15 @@ Following the [Bank sample](../../../Samples/Banking/Bank/) we can imagine a par
 activity that could resemble money laundering. For the simplicity of the sample the logic will basically be
 looking for an unusual amount of debit accounts being opened.
 
-In the sample we will refer to this type of observers as *Reactions*. Its purpose is to react to certain conditions.
-For structural purposes, it is recommended that you keep these in a separate C# project called **Reactions**.
+In the sample we will refer to this type of observers as *Reactors*. Its purpose is to react to certain conditions.
+For structural purposes, it is recommended that you keep these in a separate C# project called **Reactors**.
 
 Within this new project, since this is related to **Accounts**, add a folder called **Accounts**.
 Then create an observer that will react to the `DebitAccountOpened`. Create a C# file called `MoneyLaundering`
 and add the following to it:
 
 ```csharp
-namespace Reactions.Accounts;
+namespace Reactors.Accounts;
 
 [Observer("6f71990b-8a96-4bf0-92ad-76f31cd7819f")]
 public class MoneyLaundering
@@ -34,7 +34,7 @@ a model to keep the count and a projection that defines the projection.
 Add a file called `AccountsCounter.cs` and add the following:
 
 ```csharp
-namespace Reactions.Accounts;
+namespace Reactors.Accounts;
 
 public record AccountsCounter(int Count);
 ```
@@ -44,7 +44,7 @@ Then add a file for the projection called `AccountsCounterProjection.cs`:
 ```csharp
 using Events.Accounts.Debit;
 
-namespace Reactions.Accounts;
+namespace Reactors.Accounts;
 
 public class AccountsCounterProjection : IImmediateProjectionFor<AccountsCounter>
 {
@@ -55,7 +55,7 @@ public class AccountsCounterProjection : IImmediateProjectionFor<AccountsCounter
 }
 ```
 
-We are now ready to start using this projection in our **Reaction**, we do this by adding a constructor
+We are now ready to start using this projection in our **Reactor**, we do this by adding a constructor
 that takes a dependency to `IImmediateProjections`.
 
 ```csharp
@@ -95,7 +95,7 @@ public class MoneyLaundering
         var count = await _immediateProjections.GetInstanceById<AccountsCounter>(context.EventSourceId);
         if (count.Count > 42)
         {
-            // Perform an action as the reaction
+            // Perform an action as the Reactor
         }
     }
 }
@@ -121,7 +121,7 @@ namespace Events.Accounts.Debit;
 public record PossibleMoneyLaunderingDetected(CustomerId CustomerId, EventSourceId AccountId);
 ```
 
-In the `MoneyLaundering` we can now take the `IEventLog` as a dependency and change our **reaction**:
+In the `MoneyLaundering` we can now take the `IEventLog` as a dependency and change our **Reactor**:
 
 ```csharp
 [Observer("6f71990b-8a96-4bf0-92ad-76f31cd7819f")]

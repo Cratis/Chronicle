@@ -9,7 +9,7 @@ using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Contracts.Observation.Reactions;
+using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Tasks;
@@ -116,7 +116,7 @@ public class ChronicleConnection : IChronicleConnection
                 _channel.CreateGrpcService<IEventTypes>(),
                 _channel.CreateGrpcService<IConstraints>(),
                 _channel.CreateGrpcService<IObservers>(),
-                _channel.CreateGrpcService<IReactions>(),
+                _channel.CreateGrpcService<IReactors>(),
                 _channel.CreateGrpcService<IReducers>(),
                 _channel.CreateGrpcService<IProjections>(),
                 _channel.CreateGrpcService<IServer>());

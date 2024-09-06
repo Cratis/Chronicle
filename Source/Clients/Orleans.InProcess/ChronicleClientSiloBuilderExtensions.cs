@@ -5,7 +5,7 @@ extern alias Server;
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Grains.Observation.Reactions.Clients;
+using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Orleans.InProcess;
@@ -101,7 +101,7 @@ public static class ChronicleClientSiloBuilderExtensions
             services.AddBindingsByConvention();
             services.AddSelfBindings();
 
-            services.AddSingleton<IReactionMediator, ReactionMediator>();
+            services.AddSingleton<IReactorMediator, ReactorMediator>();
             services.AddSingleton<IReducerMediator, ReducerMediator>();
             services.AddSingleton<IRules, Rules>();
 
@@ -123,7 +123,7 @@ public static class ChronicleClientSiloBuilderExtensions
                     new EventTypes(storage),
                     new Constraints(grainFactory),
                     new Observers(),
-                    new Server::Cratis.Chronicle.Services.Observation.Reactions.Reactions(grainFactory, sp.GetRequiredService<IReactionMediator>()),
+                    new Server::Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>()),
                     new Server::Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IExpandoObjectConverter>()),
                     new Server::Cratis.Chronicle.Services.Projections.Projections(grainFactory),
                     new Server::Cratis.Chronicle.Services.Host.Server(clusterClient));
@@ -145,7 +145,7 @@ public static class ChronicleClientSiloBuilderExtensions
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().AggregateRootFactory);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().EventTypes);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().EventLog);
-            services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Reactions);
+            services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Reactors);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Reducers);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Projections);
         });

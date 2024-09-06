@@ -5,7 +5,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Transactions;
 
@@ -45,7 +45,7 @@ public class EventStoreForTesting : IEventStore
     public IEventLog EventLog => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IReactions Reactions => throw new NotImplementedException();
+    public IReactors Reactors => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public IReducers Reducers => throw new NotImplementedException();

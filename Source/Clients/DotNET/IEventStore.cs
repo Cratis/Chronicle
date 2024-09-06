@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Transactions;
 
@@ -58,9 +58,9 @@ public interface IEventStore
     IEventLog EventLog { get; }
 
     /// <summary>
-    /// Gets the <see cref="IReactions"/> for the event store.
+    /// Gets the <see cref="IReactors"/> for the event store.
     /// </summary>
-    IReactions Reactions { get; }
+    IReactors Reactors { get; }
 
     /// <summary>
     /// Gets the <see cref="IReducers"/> for the event store.
