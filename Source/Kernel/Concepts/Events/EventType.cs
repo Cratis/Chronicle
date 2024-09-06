@@ -8,8 +8,8 @@ namespace Cratis.Chronicle.Concepts.Events;
 /// </summary>
 /// <param name="Id"><see cref="EventTypeId">Unique identifier</see>.</param>
 /// <param name="Generation"><see cref="EventTypeGeneration">Generation</see> of the event.</param>
-/// <param name="Tombstone">Whether or not the event is a tombstone event.</param>
-public record EventType(EventTypeId Id, EventTypeGeneration Generation, bool Tombstone)
+/// <param name="Tombstone">Whether or not the event is a tombstone event, default false.</param>
+public record EventType(EventTypeId Id, EventTypeGeneration Generation, bool Tombstone = false)
 {
     /// <summary>
     /// Represents an unknown event type.
