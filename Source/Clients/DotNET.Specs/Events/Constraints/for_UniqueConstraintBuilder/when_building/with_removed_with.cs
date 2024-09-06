@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_b
 
 public class with_removed_with : given.a_unique_constraint_builder_with_owner_and_an_event_type
 {
-    IConstraintDefinition _result;
+    UniqueConstraintDefinition _result;
     EventType _removedWithEventType;
 
     void Establish()
@@ -15,7 +15,7 @@ public class with_removed_with : given.a_unique_constraint_builder_with_owner_an
         _constraintBuilder.RemovedWith(_removedWithEventType);
     }
 
-    void Because() => _result = _constraintBuilder.Build();
+    void Because() => _result = _constraintBuilder.Build() as UniqueConstraintDefinition;
 
     [Fact] void should_have_the_removed_with_event_type_id() => _result.RemovedWith.ShouldEqual(_removedWithEventType.Id);
 }

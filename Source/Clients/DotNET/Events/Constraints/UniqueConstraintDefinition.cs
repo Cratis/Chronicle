@@ -29,7 +29,7 @@ public record UniqueConstraintDefinition(
         {
             EventDefinitions = EventsWithProperties.Select(_ => new Contracts.Events.Constraints.UniqueConstraintEventDefinition
             {
-                EventType = _.EventType.ToContract(),
+                EventTypeId = _.EventTypeId,
                 Property = _.Property,
             }).ToList()
         })

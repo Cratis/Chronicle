@@ -29,7 +29,7 @@ public static class ConstraintConverters
             Contracts.Events.Constraints.ConstraintType.UniqueEventType =>
                 new UniqueEventTypeConstraintDefinition(
                     constraint.Name,
-                    constraint.Definition.Value1!.EventType.ToChronicle()),
+                    constraint.Definition.Value1!.EventTypeId),
 
             _ => null!
         };

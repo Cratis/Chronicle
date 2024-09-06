@@ -18,6 +18,6 @@ public class UniqueEventTypeConstraintsProvider(IClientArtifactsProvider clientA
             .Select(eventType => new UniqueEventTypeConstraintDefinition(
                 eventType.GetConstraintName(),
                 et => eventType.GetConstraintMessage() ?? string.Empty,
-                eventTypes.GetEventTypeFor(eventType),
+                eventTypes.GetEventTypeFor(eventType).Id,
                 null) as IConstraintDefinition).ToImmutableList();
 }

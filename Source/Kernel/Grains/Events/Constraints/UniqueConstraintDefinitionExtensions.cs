@@ -18,7 +18,7 @@ public static class UniqueConstraintDefinitionExtensions
     /// <returns>Tuple with property and value.</returns>
     public static (string Property, string? Value) GetPropertyAndValue(this UniqueConstraintDefinition definition, ConstraintValidationContext context)
     {
-        var property = definition.EventDefinitions.Single(_ => _.EventType == context.EventType).Property;
+        var property = definition.EventDefinitions.Single(_ => _.EventTypeId == context.EventType).Property;
         var contentAsDictionary = (context.Content as IDictionary<string, object>)!;
         var value = contentAsDictionary[property]?.ToString();
 

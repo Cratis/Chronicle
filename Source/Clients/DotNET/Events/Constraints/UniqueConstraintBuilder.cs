@@ -35,7 +35,7 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
         ThrowIfPropertyIsMissing(eventType, property);
         ThrowIfPropertyTypeMismatch(eventType, property);
 
-        _eventTypesAndProperties.Add(new UniqueConstraintEventDefinition(eventType, eventTypes.GetSchemaFor(eventType.Id), property));
+        _eventTypesAndProperties.Add(new UniqueConstraintEventDefinition(eventType.Id, eventTypes.GetSchemaFor(eventType.Id), property));
         return this;
     }
 
@@ -104,7 +104,7 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
 
     void ThrowIfEventTypeAlreadyAdded(EventType eventType, string property)
     {
-        if (_eventTypesAndProperties.Exists(_ => _.EventType == eventType))
+        if (_eventTypesAndProperties.Exists(_ => _.EventTypeId == eventType.Id))
         {
             throw new EventTypeAlreadyAddedToUniqueConstraint(string.Empty, eventType, property);
         }

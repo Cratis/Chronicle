@@ -25,8 +25,8 @@ public class when_converting_to_contract : Specification
             _constraintName,
             _ => "",
             [
-                new(_firstEventType, null!, "First Property"),
-                new(_secondEventType, null!, "Second Property")
+                new(_firstEventType.Id, null!, "First Property"),
+                new(_secondEventType.Id, null!, "Second Property")
             ],
             _removedWithEventType);
     }
@@ -40,8 +40,8 @@ public class when_converting_to_contract : Specification
     [Fact] void should_have_correct_name() => _contract.Name.ShouldEqual(_constraintName.Value);
     [Fact] void should_have_correct_type() => _contract.Type.ShouldEqual(ConstraintType.Unique);
     [Fact] void should_have_correct_removed_with() => _contract.RemovedWith.ShouldEqual(_removedWithEventType);
-    [Fact] void should_have_first_event_type() => _definitionContract.EventDefinitions[0].EventType.Id.ShouldEqual(_firstEventType.Id.Value);
+    [Fact] void should_have_first_event_type() => _definitionContract.EventDefinitions[0].EventTypeId.ShouldEqual(_firstEventType.Id.Value);
     [Fact] void should_have_first_event_property() => _definitionContract.EventDefinitions[0].Property.ShouldEqual(_definition.EventsWithProperties.First().Property);
-    [Fact] void should_have_second_event_type() => _definitionContract.EventDefinitions[1].EventType.Id.ShouldEqual(_secondEventType.Id.Value);
+    [Fact] void should_have_second_event_type() => _definitionContract.EventDefinitions[1].EventTypeId.ShouldEqual(_secondEventType.Id.Value);
     [Fact] void should_have_second_event_property() => _definitionContract.EventDefinitions[1].Property.ShouldEqual(_definition.EventsWithProperties.Last().Property);
 }

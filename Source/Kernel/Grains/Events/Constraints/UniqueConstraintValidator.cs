@@ -20,7 +20,7 @@ public class UniqueConstraintValidator(
 
     /// <inheritdoc/>
     public bool CanValidate(ConstraintValidationContext context) =>
-        definition.EventDefinitions.Any(_ => _.EventType == context.EventType);
+        definition.EventDefinitions.Any(_ => _.EventTypeId == context.EventType);
 
     /// <inheritdoc/>
     public IUpdateConstraintIndex GetUpdateFor(ConstraintValidationContext context) => new UniqueConstraintIndexUpdater(definition, context, storage);

@@ -11,12 +11,12 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// </summary>
 /// <param name="Name">Name of the constraint.</param>
 /// <param name="MessageCallback">the callback that provides the <see cref="ConstraintViolationMessage"/> of the constraint.</param>
-/// <param name="EventType">The <see cref="EventType"/> the constraint is for.</param>
-/// <param name="RemovedWith">The <see cref="EventTypeId"/> of the event that removes the constraint.</param>
+/// <param name="EventTypeId">The <see cref="EventTypeId"/> the constraint is for.</param>
+/// <param name="RemovedWith">The <see cref="Events.EventTypeId"/> of the event that removes the constraint.</param>
 public record UniqueEventTypeConstraintDefinition(
     ConstraintName Name,
     ConstraintViolationMessageProvider MessageCallback,
-    EventType EventType,
+    EventTypeId EventTypeId,
     EventTypeId? RemovedWith) : IConstraintDefinition
 {
     /// <inheritdoc/>
@@ -26,7 +26,7 @@ public record UniqueEventTypeConstraintDefinition(
         Type = ConstraintType.UniqueEventType,
         Definition = new(new UniqueEventTypeConstraintDefinitionContract
         {
-            EventType = EventType.ToContract()
+            EventTypeId = EventTypeId
         })
     };
 }

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <summary>
 /// Represents a definition of a unique event type and property constraint.
 /// </summary>
-/// <param name="EventType">The <see cref="EventType"/>.</param>
+/// <param name="EventTypeId">The <see cref="EventTypeId"/>.</param>
 /// <param name="Schema">The <see cref="JsonSchema"/> for the event type.</param>
 /// <param name="Property">The property on the event type.</param>
-public record UniqueConstraintEventDefinition(EventType EventType, JsonSchema Schema, string Property);
+public record UniqueConstraintEventDefinition(EventTypeId EventTypeId, JsonSchema Schema, string Property);
