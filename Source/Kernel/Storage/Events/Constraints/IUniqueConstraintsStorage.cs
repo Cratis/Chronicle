@@ -30,6 +30,14 @@ public interface IUniqueConstraintsStorage
     /// <param name="name"><see cref="ConstraintName"/> to save for.</param>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> the value exists at.</param>
     /// <param name="value"><see cref="UniqueConstraintValue"/>to save.</param>
-    /// <returns>True if it exists, false if not.</returns>
+    /// <returns>Awaitable task.</returns>
     Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value);
+
+    /// <summary>
+    /// Remove a constraint value.
+    /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to remove for.</param>
+    /// <param name="name"><see cref="ConstraintName"/> to remove for.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Remove(EventSourceId eventSourceId, ConstraintName name);
 }

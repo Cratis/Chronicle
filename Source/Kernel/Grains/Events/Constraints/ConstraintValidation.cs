@@ -13,14 +13,6 @@ namespace Cratis.Chronicle.Grains.Events.Constraints;
 public class ConstraintValidation(IEnumerable<IConstraintValidator> validators) : IConstraintValidation
 {
     /// <inheritdoc/>
-    public ConstraintValidationContext Establish(EventSourceId eventSourceId, EventType eventType, ExpandoObject content)
-    {
-        var context = new ConstraintValidationContext(
-            [],
-            eventSourceId,
-            eventType,
-            content);
-        context = context with { Validators = validators.Where(v => v.CanValidate(context)).ToArray() };
-        return context;
-    }
+    public ConstraintValidationContext Establish(EventSourceId eventSourceId, EventType eventType, ExpandoObject content) =>
+        new(validators, eventSourceId, eventType, content);
 }

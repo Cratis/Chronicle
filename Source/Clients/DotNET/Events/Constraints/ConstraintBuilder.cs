@@ -38,7 +38,8 @@ public class ConstraintBuilder(IEventTypes eventTypes, Type? owner = default) : 
         AddConstraint(new UniqueEventTypeConstraintDefinition(
             name ?? eventType.Id.Value,
             messageCallback,
-            eventType));
+            eventType,
+            null));
 
         return this;
     }

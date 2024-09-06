@@ -18,6 +18,7 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
     readonly List<UniqueConstraintEventDefinition> _eventTypesAndProperties = [];
     ConstraintName? _name;
     ConstraintViolationMessageProvider? _messageProvider;
+    EventTypeId? _removedWith;
 
     /// <inheritdoc/>
     public IUniqueConstraintBuilder On<TEventType>(Expression<Func<TEventType, object>> property)
@@ -56,6 +57,17 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
     }
 
     /// <inheritdoc/>
+    public IUniqueConstraintBuilder RemovedWith<TEventType>() =>
+        RemovedWith(eventTypes.GetEventTypeFor(typeof(TEventType)));
+
+    /// <inheritdoc/>
+    public IUniqueConstraintBuilder RemovedWith(EventType eventType)
+    {
+        _removedWith = eventType.Id;
+        return this;
+    }
+
+    /// <inheritdoc/>
     public IConstraintDefinition Build()
     {
         ThrowIfNoEventTypesAdded();
@@ -65,7 +77,11 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
         ConstraintViolationMessageProvider defaultMessageProvider = _ => string.Empty;
         var messageProvider = _messageProvider ?? defaultMessageProvider;
 
-        return new UniqueConstraintDefinition(name, messageProvider, [.. _eventTypesAndProperties]);
+        return new UniqueConstraintDefinition(
+            name,
+            messageProvider,
+            [.. _eventTypesAndProperties],
+            _removedWith);
     }
 
     void ThrowIfNoEventTypesAdded()

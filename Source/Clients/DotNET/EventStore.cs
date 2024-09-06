@@ -83,6 +83,7 @@ public class EventStore : IEventStore
             [
                 new UniqueConstraintProvider(clientArtifactsProvider, EventTypes),
                 new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes),
+                new ConstraintsByBuilderProvider(clientArtifactsProvider, EventTypes, serviceProvider)
             ]);
 
         EventLog = new EventLog(

@@ -20,7 +20,8 @@ public class when_converting_to_contract : Specification
         _definition = new UniqueEventTypeConstraintDefinition(
             _constraintName,
             _ => "",
-            _eventType);
+            _eventType,
+            null);
     }
 
     void Because()

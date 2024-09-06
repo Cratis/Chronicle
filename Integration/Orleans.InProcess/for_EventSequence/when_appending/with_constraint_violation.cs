@@ -1,0 +1,37 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Integration.Base;
+using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending.with_constraint_violation.context;
+
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
+
+[Collection(GlobalCollection.Name)]
+public class with_constraint_violation(context context) : Given<context>(context)
+{
+    public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
+    {
+        public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueUserConstraint)];
+        public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted)];
+
+        public UserOnboardingStarted Event { get; private set; }
+
+        public AppendResult FirstResult { get; private set; }
+        public AppendResult SecondResult { get; private set; }
+
+        public void Establish()
+        {
+            Event = new UserOnboardingStarted(Guid.NewGuid().ToString());
+        }
+
+        public async Task Because()
+        {
+            FirstResult = await EventStore.EventLog.Append(Guid.NewGuid().ToString(), Event);
+            SecondResult = await EventStore.EventLog.Append(Guid.NewGuid().ToString(), Event);
+        }
+    }
+
+    [Fact] void should_succeed_on_first_attempt() => Context.FirstResult.IsSuccess.ShouldBeTrue();
+    [Fact] void should_not_succeed_on_second_attempt() => Context.SecondResult.IsSuccess.ShouldBeFalse();
+}

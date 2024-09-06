@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintDefinition;
 public class when_converting_to_contract : Specification
 {
     static ConstraintName _constraintName = "My Constraint";
+    string _removedWithEventType;
     UniqueConstraintDefinition _definition;
     EventType _firstEventType;
     Constraint _contract;
@@ -19,13 +20,15 @@ public class when_converting_to_contract : Specification
     {
         _firstEventType = new EventType("First Event Type", EventTypeGeneration.First);
         _secondEventType = new EventType("Second Event Type", EventTypeGeneration.First);
+        _removedWithEventType = Guid.NewGuid().ToString();
         _definition = new UniqueConstraintDefinition(
             _constraintName,
             _ => "",
             [
                 new(_firstEventType, null!, "First Property"),
                 new(_secondEventType, null!, "Second Property")
-            ]);
+            ],
+            _removedWithEventType);
     }
 
     void Because()
@@ -36,6 +39,7 @@ public class when_converting_to_contract : Specification
 
     [Fact] void should_have_correct_name() => _contract.Name.ShouldEqual(_constraintName.Value);
     [Fact] void should_have_correct_type() => _contract.Type.ShouldEqual(ConstraintType.Unique);
+    [Fact] void should_have_correct_removed_with() => _contract.RemovedWith.ShouldEqual(_removedWithEventType);
     [Fact] void should_have_first_event_type() => _definitionContract.EventDefinitions[0].EventType.Id.ShouldEqual(_firstEventType.Id.Value);
     [Fact] void should_have_first_event_property() => _definitionContract.EventDefinitions[0].Property.ShouldEqual(_definition.EventsWithProperties.First().Property);
     [Fact] void should_have_second_event_type() => _definitionContract.EventDefinitions[1].EventType.Id.ShouldEqual(_secondEventType.Id.Value);

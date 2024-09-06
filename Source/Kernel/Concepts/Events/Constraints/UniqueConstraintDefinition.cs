@@ -8,4 +8,5 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// </summary>
 /// <param name="Name">Name of the constraint.</param>
 /// <param name="EventDefinitions">Collection of <see cref="UniqueConstraintEventDefinition"/>.</param>
-public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<UniqueConstraintEventDefinition> EventDefinitions) : IConstraintDefinition;
+/// <param name="RemovedWith">The <see cref="EventTypeId"/> of the event that removes the constraint.</param>
+public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<UniqueConstraintEventDefinition> EventDefinitions, EventTypeId? RemovedWith) : IConstraintDefinition;
