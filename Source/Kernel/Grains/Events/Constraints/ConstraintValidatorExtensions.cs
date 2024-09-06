@@ -28,7 +28,7 @@ public static class ConstraintValidatorExtensions
         ConstraintViolationDetails? details = default)
     {
         details ??= [];
-        return new(context.EventType, sequenceNumber, validator.ToConstraintType(), validator.Definition.Name, message, details);
+        return new(context.EventTypeId, sequenceNumber, validator.ToConstraintType(), validator.Definition.Name, message, details);
     }
 
     static ConstraintType ToConstraintType(this IConstraintValidator validator) =>

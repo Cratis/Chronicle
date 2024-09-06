@@ -11,14 +11,14 @@ public class with_message_specified : given.a_constraint_builder_with_owner
 {
     const string _message = "Some message";
     IImmutableList<IConstraintDefinition> _result;
-    EventType _eventType;
+    EventTypeId _eventTypeId;
     ConstraintViolation _violation;
 
     void Establish()
     {
-        _violation = new ConstraintViolation(_eventType, EventSequenceNumber.First, "Some Constraint", "Error", []);
-        _eventType = new EventType(nameof(SomeEvent), EventTypeGeneration.First);
-        _eventTypes.GetEventTypeFor(typeof(SomeEvent)).Returns(_eventType);
+        _violation = new ConstraintViolation(_eventTypeId, EventSequenceNumber.First, "Some Constraint", "Error", []);
+        _eventTypeId = nameof(SomeEvent);
+        _eventTypes.GetEventTypeFor(typeof(SomeEvent)).Returns(new EventType(_eventTypeId, EventTypeGeneration.First));
     }
 
     void Because()
@@ -29,7 +29,7 @@ public class with_message_specified : given.a_constraint_builder_with_owner
 
     [Fact] void should_have_the_correct_number_of_constraints() => _result.Count.ShouldEqual(1);
     [Fact] void should_have_the_correct_constraint() => _result[0].ShouldBeOfExactType<UniqueEventTypeConstraintDefinition>();
-    [Fact] void should_have_the_correct_name() => _result[0].Name.Value.ShouldEqual(_eventType.Id.Value);
+    [Fact] void should_have_the_correct_name() => _result[0].Name.Value.ShouldEqual(_eventTypeId.Value);
     [Fact] void should_have_the_correct_message() => _result[0].MessageCallback(_violation).Value.ShouldEqual(_message);
 
     record SomeEvent();

@@ -12,10 +12,10 @@ namespace Cratis.Chronicle.Contracts.Events.Constraints;
 public class ConstraintViolation
 {
     /// <summary>
-    /// Gets the <see cref="EventType"/> that caused the violation.
+    /// Gets the <see cref="EventTypeId"/> that caused the violation.
     /// </summary>
     [ProtoMember(1)]
-    public EventType EventType { get; init; }
+    public string EventTypeId { get; init; }
 
     /// <summary>
     /// Gets or sets the sequence number where the violation occurred.

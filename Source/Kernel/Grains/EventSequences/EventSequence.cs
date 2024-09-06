@@ -161,7 +161,7 @@ public class EventSequence(
             var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
             var compliantEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
 
-            var constraintContext = _constraints!.Establish(eventSourceId, eventType, compliantEventAsExpandoObject);
+            var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject);
             var constraintValidationResult = await constraintContext.Validate();
             if (!constraintValidationResult.IsValid)
             {

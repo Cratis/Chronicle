@@ -20,7 +20,7 @@ public class UniqueConstraintValidator(
 
     /// <inheritdoc/>
     public bool CanValidate(ConstraintValidationContext context) =>
-        definition.EventDefinitions.Any(_ => _.EventTypeId == context.EventType);
+        definition.EventDefinitions.Any(_ => _.EventTypeId == context.EventTypeId);
 
     /// <inheritdoc/>
     public IUpdateConstraintIndex GetUpdateFor(ConstraintValidationContext context) => new UniqueConstraintIndexUpdater(definition, context, storage);
@@ -44,7 +44,7 @@ public class UniqueConstraintValidator(
                     this.CreateViolation(
                         context,
                         sequenceNumber,
-                        $"Event '{context.EventType}' with value '{value}' on member '{property}' violated a unique constraint on sequence number {sequenceNumber}",
+                        $"Event '{context.EventTypeId}' with value '{value}' on member '{property}' violated a unique constraint on sequence number {sequenceNumber}",
                         new() { { WellKnownConstraintDetailKeys.PropertyName, property }, { WellKnownConstraintDetailKeys.PropertyValue, value } })
                 ]
             };

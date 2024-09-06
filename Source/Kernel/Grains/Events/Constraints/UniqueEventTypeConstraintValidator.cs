@@ -19,12 +19,12 @@ public class UniqueEventTypeConstraintValidator(
     public IConstraintDefinition Definition => definition;
 
     /// <inheritdoc/>
-    public bool CanValidate(ConstraintValidationContext context) => definition.EventType == context.EventType;
+    public bool CanValidate(ConstraintValidationContext context) => definition.EventTypeId == context.EventTypeId;
 
     /// <inheritdoc/>
     public async Task<ConstraintValidationResult> Validate(ConstraintValidationContext context)
     {
-        var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventType, context.EventSourceId);
+        var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventTypeId, context.EventSourceId);
         return isAllowed ?
             ConstraintValidationResult.Success :
             new()
@@ -34,7 +34,7 @@ public class UniqueEventTypeConstraintValidator(
                     this.CreateViolation(
                         context,
                         sequenceNumber,
-                        $"Event '{context.EventType}' with event source id '{context.EventSourceId}' violated a unique event type constraint on sequence number {sequenceNumber}")
+                        $"Event '{context.EventTypeId}' with event source id '{context.EventSourceId}' violated a unique event type constraint on sequence number {sequenceNumber}")
                 ]
             };
     }

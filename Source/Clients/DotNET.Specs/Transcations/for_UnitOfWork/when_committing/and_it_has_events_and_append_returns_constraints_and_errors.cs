@@ -26,8 +26,8 @@ public class and_it_has_events_and_append_returns_constraints_and_errors : given
             CorrelationId = _correlationId,
             ConstraintViolations =
             [
-                new ConstraintViolation(EventType.Unknown, EventSequenceNumber.First, "some constraint", "some message", []),
-                new ConstraintViolation(EventType.Unknown, 42UL, "some other constraint", "some message", [])
+                new ConstraintViolation(EventTypeId.Unknown, EventSequenceNumber.First, "some constraint", "some message", []),
+                new ConstraintViolation(EventTypeId.Unknown, 42UL, "some other constraint", "some message", [])
             ],
             Errors =
             [

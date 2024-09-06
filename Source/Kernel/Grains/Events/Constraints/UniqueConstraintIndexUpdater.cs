@@ -21,7 +21,7 @@ public class UniqueConstraintIndexUpdater(
     /// <inheritdoc/>
     public async Task Update(EventSequenceNumber eventSequenceNumber)
     {
-        if (context.EventType.Id == definition.RemovedWith)
+        if (context.EventTypeId == definition.RemovedWith)
         {
             await storage.Remove(context.EventSourceId, definition.Name);
         }

@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// Represents a definition of a unique event type constraint.
 /// </summary>
 /// <param name="Name">Name of the constraint.</param>
-/// <param name="EventType">The <see cref="EventType"/> and properties the constraint is for.</param>
+/// <param name="EventTypeId">The <see cref="EventTypeId"/> and properties the constraint is for.</param>
 public record UniqueEventTypeConstraintDefinition(
     ConstraintName Name,
-    EventType EventType) : IConstraintDefinition;
+    EventTypeId EventTypeId) : IConstraintDefinition;

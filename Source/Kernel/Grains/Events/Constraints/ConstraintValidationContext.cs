@@ -20,16 +20,16 @@ public record ConstraintValidationContext
     /// </summary>
     /// <param name="validators">The <see cref="IConstraintValidator">validators</see> involved in the context.</param>
     /// <param name="eventSourceId">The <see cref="Concepts.Events.EventSourceId"/> to validate for.</param>
-    /// <param name="eventType">The <see cref="EventType"/> to validate for.</param>
+    /// <param name="eventTypeId">The <see cref="EventTypeId"/> to validate for.</param>
     /// <param name="content">The content of the event.</param>
     public ConstraintValidationContext(
         IEnumerable<IConstraintValidator> validators,
         EventSourceId eventSourceId,
-        EventType eventType,
+        EventTypeId eventTypeId,
         ExpandoObject content)
     {
         EventSourceId = eventSourceId;
-        EventType = eventType;
+        EventTypeId = eventTypeId;
         Content = content;
         _updaters = validators.OfType<IHaveUpdateConstraintIndex>().Select(v => v.GetUpdateFor(this)).ToArray();
         _validators = validators.Where(_ => _.CanValidate(this)).ToArray();
@@ -41,9 +41,9 @@ public record ConstraintValidationContext
     public EventSourceId EventSourceId { get; }
 
     /// <summary>
-    /// Gets the <see cref="EventType"/> to validate for.
+    /// Gets the <see cref="EventTypeId"/> to validate for.
     /// </summary>
-    public EventType EventType { get; }
+    public EventTypeId EventTypeId { get; }
 
     /// <summary>
     /// Gets the content of the event.

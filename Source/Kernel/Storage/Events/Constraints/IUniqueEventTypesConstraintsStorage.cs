@@ -13,11 +13,11 @@ public interface IUniqueEventTypesConstraintsStorage
     /// <summary>
     /// Check if a constraint value exists.
     /// </summary>
-    /// <param name="eventType"><see cref="EventType"/> to check.</param>
+    /// <param name="eventTypeId"><see cref="EventType"/> to check.</param>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to check.</param>
     /// <returns>
     /// Tuple containing a boolean saying whether or not its allowed to perform and the <see cref="EventSequenceNumber"/> for the item it violates.
     /// Returns <see cref="EventSequenceNumber.Unavailable"/> if it doesn't exist.
     /// </returns>
-    Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventType eventType, EventSourceId eventSourceId);
+    Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventTypeId eventTypeId, EventSourceId eventSourceId);
 }
