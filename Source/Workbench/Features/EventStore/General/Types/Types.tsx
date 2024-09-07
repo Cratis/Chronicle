@@ -6,7 +6,7 @@ import { Column } from 'primereact/column';
 import strings from 'Strings';
 import { DataTableForQuery } from 'Components/DataTables';
 import { AllEventTypes, AllEventTypesArguments } from 'Api/EventTypes';
-import * as Shared from 'Shared';
+import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { FilterMatchMode } from 'primereact/api';
 import { DataTableFilterMeta } from 'primereact/datatable';
@@ -23,7 +23,7 @@ const defaultFilters: DataTableFilterMeta = {
 };
 
 export const Types = withViewModel(TypesViewModel, ({ viewModel }) => {
-    const params = useParams<Shared.EventStoreAndNamespaceParams>();
+    const params = useParams<EventStoreAndNamespaceParams>();
     const [AddEventTypeDialogWrapper, addEventTypeDialogContext, addEventTypeDialogResolver]  = useDialogRequest<AddEventTypeRequest, AddEventTypeResponse>(AddEventTypeRequest);
 
     const queryArgs: AllEventTypesArguments = {
@@ -48,7 +48,7 @@ export const Types = withViewModel(TypesViewModel, ({ viewModel }) => {
             <div className={'flex-1 overflow-hidden'}>
                 <DataTableForQuery
                     query={AllEventTypes}
-                    arguments={queryArgs}
+                    queryArguments={queryArgs}
                     dataKey='id'
                     defaultFilters={defaultFilters}
                     globalFilterFields={['tombstone']}

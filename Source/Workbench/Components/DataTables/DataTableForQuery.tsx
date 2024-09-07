@@ -24,7 +24,7 @@ export interface DataTableForQueryProps<TQuery extends IQueryFor<TDataType>, TDa
     /**
      * Optional Arguments to pass to the query
      */
-    arguments?: TArguments;
+    queryArguments?: TArguments;
 
     /**
      * The message to show when there is no data
@@ -64,7 +64,7 @@ export interface DataTableForQueryProps<TQuery extends IQueryFor<TDataType>, TDa
  */
 export const DataTableForQuery = <TQuery extends IQueryFor<TDataType, TArguments>, TDataType, TArguments extends {}>(props: DataTableForQueryProps<TQuery, TDataType, TArguments>) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(props.defaultFilters ?? {});
-    const [result] = useQuery<TDataType, TQuery>(props.query, props.arguments);
+    const [result] = useQuery<TDataType, TQuery>(props.query, props.queryArguments);
 
     return (
         <DataTable
