@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Recommendations;
 using Cratis.Chronicle.Storage.Recommendations;
 using MongoDB.Driver;
@@ -47,10 +48,7 @@ public class RecommendationStorage(IEventStoreNamespaceDatabase database) : IRec
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<RecommendationState>> ObserveRecommendations()
-    {
-        throw new NotImplementedException();
-    }
+    public ISubject<IEnumerable<RecommendationState>> ObserveRecommendations() => Collection.Observe();
 
     FilterDefinition<RecommendationState> GetIdFilter(Guid id) => Builders<RecommendationState>.Filter.Eq(new StringFieldDefinition<RecommendationState, Guid>("_id"), id);
 }

@@ -61,7 +61,6 @@ export const FailedPartitions = withViewModel(FailedPartitionsViewModel, ({ view
                 <Menubar aria-label='Actions' model={menuItems} />
             </div>
 
-
             <div className={'flex-1 overflow-hidden'}>
                 <DataTableForObservableQuery
                     query={AllFailedPartitions}

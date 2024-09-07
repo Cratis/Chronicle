@@ -4,17 +4,18 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Recommendations;
+using Cratis.Chronicle.Reactive;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Recommendations;
 
 namespace Cratis.Api.Recommendations;
 
 /// <summary>
 /// Represents the API for working with recommendations.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="RecommendationQueries"/> class.
-/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for recommendations.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/recommendations")]
-public class RecommendationQueries() : ControllerBase
+public class RecommendationQueries(IStorage storage) : ControllerBase
 {
     /// <summary>
     /// Get all observers for an event store and namespace.
@@ -36,11 +37,24 @@ public class RecommendationQueries() : ControllerBase
     /// <param name="eventStore"><see cref="EventStoreName"/> the recommendations are for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the recommendations are for.</param>
     /// <returns>An observable of a collection of <see cref="RecommendationInformation"/>.</returns>
-    [HttpGet("observe")]
-    public ISubject<IEnumerable<RecommendationInformation>> AllRecommendations(
+    [HttpGet("all-recommendations/observe")]
+    public async Task<ISubject<IEnumerable<RecommendationInformation>>> AllRecommendations(
         [FromRoute] EventStoreName eventStore,
         [FromRoute] EventStoreNamespaceName @namespace)
     {
-        throw new NotImplementedException();
+        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
+        var recommendations = namespaceStorage.Recommendations.ObserveRecommendations();
+
+        return new TransformingSubject<IEnumerable<RecommendationState>, IEnumerable<RecommendationInformation>>(
+            recommendations,
+            recommendations => recommendations.Select(_ =>
+            {
+                return new RecommendationInformation(
+                    _.Id,
+                    _.Name,
+                    _.Description,
+                    _.Type,
+                    _.Occurred);
+            }).ToArray());
     }
 }

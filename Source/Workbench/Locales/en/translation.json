@@ -41,7 +41,17 @@
         },
         "namespaces": {
             "recommendations": {
-                "title": "Recommendations"
+                "title": "Recommendations",
+                "empty": "No recommendations found",
+                "actions": {
+                    "reject": "Reject"
+                },
+                "columns": {
+                    "name": "Name",
+                    "description": "Description",
+                    "type": "Type",
+                    "occurred": "Occurred at"
+                }
             },
             "jobs": {
                 "title": "Jobs"
