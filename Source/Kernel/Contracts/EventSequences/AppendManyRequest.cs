@@ -27,20 +27,26 @@ public class AppendManyRequest : IEventSequenceRequest
     public string EventSequenceId { get; set; }
 
     /// <summary>
-    /// Gets or sets the events to append.
+    /// Gets or sets the correlation identifier.
     /// </summary>
     [ProtoMember(4)]
+    public Guid CorrelationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the events to append.
+    /// </summary>
+    [ProtoMember(5)]
     public IList<EventToAppend> Events { get; set; }
 
     /// <summary>
     /// Gets or sets the causation.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(6)]
     public IList<Causation> Causation { get; set; }
 
     /// <summary>
     /// Gets or sets the caused by.
     /// </summary>
-    [ProtoMember(6)]
+    [ProtoMember(7)]
     public Identity CausedBy { get; set; }
 }

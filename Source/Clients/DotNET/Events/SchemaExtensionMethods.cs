@@ -45,7 +45,7 @@ public static class SchemaExtensionMethods
             return new(elements[0], uint.Parse(elements[1]));
         }
 
-        return new(EventTypeId.Unknown, EventGeneration.First);
+        return new(EventTypeId.Unknown, EventTypeGeneration.First);
     }
 
     /// <summary>

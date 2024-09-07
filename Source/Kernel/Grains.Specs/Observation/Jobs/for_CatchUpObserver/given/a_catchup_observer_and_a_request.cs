@@ -15,8 +15,8 @@ public class a_catchup_observer_and_a_request : a_catchup_observer
             ObserverSubscription.Unsubscribed,
             42UL,
             [
-                new EventType(Guid.NewGuid().ToString(), EventGeneration.First),
-                new EventType(Guid.NewGuid().ToString(), EventGeneration.First)
+                new EventType(Guid.NewGuid().ToString(), EventTypeGeneration.First),
+                new EventType(Guid.NewGuid().ToString(), EventTypeGeneration.First)
             ]);
     }
 }

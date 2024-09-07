@@ -20,8 +20,9 @@ namespace Cratis.Chronicle;
 /// <param name="modelNameConvention">Optional <see cref="IModelNameConvention"/> to use.</param>
 /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/> to use. Will revert to default if not configured.</param>
 /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
-/// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving instances of things like event types, reactions, reducers, projections and other artifacts. Will revert to <see cref="DefaultServiceProvider"/> if not configured.</param>
+/// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving instances of things like event types, Reactors, reducers, projections and other artifacts. Will revert to <see cref="DefaultServiceProvider"/> if not configured.</param>
 /// <param name="artifactsProvider">Optional <see cref="IClientArtifactsProvider"/>. If not specified, it will use the <see cref="DefaultClientArtifactsProvider"/> with both project and package referenced assemblies.</param>
+/// <param name="correlationIdAccessor">Optional <see cref="ICorrelationIdAccessor"/> to use. Will revert to default if not configured.</param>
 /// <param name="connectTimeout">Optional timeout when connecting in seconds. Defaults to 5.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> to use internally in client for logging.</param>
 public class ChronicleOptions(
@@ -31,6 +32,7 @@ public class ChronicleOptions(
     JsonSerializerOptions? jsonSerializerOptions = null,
     IServiceProvider? serviceProvider = null,
     IClientArtifactsProvider? artifactsProvider = null,
+    ICorrelationIdAccessor? correlationIdAccessor = null,
     int connectTimeout = 5,
     ILoggerFactory? loggerFactory = null)
 {
@@ -80,6 +82,11 @@ public class ChronicleOptions(
     /// Gets the <see cref="IClientArtifactsProvider"/> to use.
     /// </summary>
     public IClientArtifactsProvider ArtifactsProvider { get; set; } = artifactsProvider ?? new DefaultClientArtifactsProvider(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
+
+    /// <summary>
+    /// Gets the <see cref="ICorrelationIdAccessor"/> to use.
+    /// </summary>
+    public ICorrelationIdAccessor CorrelationIdAccessor { get; set; } = correlationIdAccessor ?? new CorrelationIdAccessor();
 
     /// <summary>
     /// Gets the <see cref="IModelNameConvention"/> to use.

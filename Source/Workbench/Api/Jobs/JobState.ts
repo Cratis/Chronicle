@@ -6,9 +6,9 @@
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
 import { Guid } from '@cratis/fundamentals';
+import { JobProgress } from './JobProgress';
 import { JobStatus } from './JobStatus';
 import { JobStatusChanged } from './JobStatusChanged';
-import { JobProgress } from './JobProgress';
 
 export class JobState {
 

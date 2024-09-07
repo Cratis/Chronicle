@@ -5,8 +5,8 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
-import { EventMetadata } from '../Concepts/Events/EventMetadata';
 import { EventContext } from '../Concepts/Events/EventContext';
+import { EventMetadata } from '../Concepts/Events/EventMetadata';
 
 export class AppendedEventWithJsonAsContent {
 

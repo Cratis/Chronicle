@@ -22,10 +22,12 @@ public class Testing
                 1,
                 null,
                 null));
-        await order.DoStuff();
+
+        MaterialId materialId = Guid.NewGuid();
+        await order.AddItem(materialId);
         var result = await order.Commit();
         result.ShouldBeSuccessful();
-        result.ShouldContainEvent<ItemAddedToCart>();
+        result.ShouldContainEvent<ItemAddedToCart>(e => e.MaterialId == materialId);
     }
 
     [Fact]
@@ -36,9 +38,10 @@ public class Testing
             "123123",
             new OrderState(15, []));
 
-        await statefulOrder.DoStuff();
+        MaterialId materialId = Guid.NewGuid();
+        await statefulOrder.AddItem(materialId);
         var result = await statefulOrder.Commit();
         result.ShouldBeSuccessful();
-        result.ShouldContainEvent<ItemAddedToCart>();
+        result.ShouldContainEvent<ItemAddedToCart>(e => e.MaterialId == materialId);
     }
 }

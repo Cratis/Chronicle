@@ -7,13 +7,13 @@ namespace Cratis.Chronicle.Projections;
 /// Represents a session for a projection, typically used when asking to project immediately.
 /// </summary>
 /// <param name="Value">Inner value.</param>
-public record ProjectionSessionId(string Value) : ConceptAs<string>(Value)
+public record ProjectionSessionId(Guid Value) : ConceptAs<Guid>(Value)
 {
     /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ProjectionSessionId"/>.
     /// </summary>
     /// <param name="value">String to convert from.</param>
-    public static implicit operator ProjectionSessionId(string value) => new(value);
+    public static implicit operator ProjectionSessionId(Guid value) => new(value);
 
     /// <summary>
     /// Implicitly convert from <see cref="CorrelationId"/> to <see cref="ProjectionSessionId"/>.

@@ -4,5 +4,5 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-export * from './Projection';
 export * from './AllProjections';
+export * from './Projection';

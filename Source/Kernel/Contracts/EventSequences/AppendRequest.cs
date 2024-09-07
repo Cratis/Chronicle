@@ -27,32 +27,38 @@ public class AppendRequest : IEventSequenceRequest
     public string EventSequenceId { get; set; }
 
     /// <summary>
-    /// Gets or sets the event source identifier.
+    /// Gets or sets the correlation identifier.
     /// </summary>
     [ProtoMember(4)]
+    public Guid CorrelationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event source identifier.
+    /// </summary>
+    [ProtoMember(5)]
     public string EventSourceId { get; set; }
 
     /// <summary>
     /// Gets or sets the event type.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(6)]
     public EventType EventType { get; set; }
 
     /// <summary>
     /// Gets or sets the content of the event - in the form of a JSON payload.
     /// </summary>
-    [ProtoMember(6)]
+    [ProtoMember(7)]
     public string Content { get; set; }
 
     /// <summary>
     /// Gets or sets the causation.
     /// </summary>
-    [ProtoMember(7)]
+    [ProtoMember(8)]
     public IList<Causation> Causation { get; set; }
 
     /// <summary>
     /// Gets or sets the caused by.
     /// </summary>
-    [ProtoMember(8)]
+    [ProtoMember(9)]
     public Identity CausedBy { get; set; }
 }

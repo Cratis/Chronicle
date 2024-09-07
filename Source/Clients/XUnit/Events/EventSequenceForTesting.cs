@@ -22,7 +22,7 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
     readonly AppendedEvent[] _events = events.Select((@event, index) => new AppendedEvent(
             new((ulong)index, eventTypes.GetEventTypeFor(@event.Event.GetType())),
             EventContext.Empty with { EventSourceId = @event.EventSourceId },
-            @event.Event.AsExpandoObject())).ToArray();
+            @event.Event.AsExpandoObject(true))).ToArray();
 
     /// <inheritdoc/>
     public EventSequenceId Id => EventSequenceId.Log;

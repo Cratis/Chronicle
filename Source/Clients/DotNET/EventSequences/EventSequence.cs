@@ -22,6 +22,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
 /// <param name="constraints">Known <see cref="IConstraints"/>.</param>
 /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
+/// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> for getting correlation.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
 /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
 public class EventSequence(
@@ -32,6 +33,7 @@ public class EventSequence(
     IEventTypes eventTypes,
     IConstraints constraints,
     IEventSerializer eventSerializer,
+    ICorrelationIdAccessor correlationIdAccessor,
     ICausationManager causationManager,
     IIdentityProvider identityProvider) : IEventSequence
 {
@@ -55,6 +57,7 @@ public class EventSequence(
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             EventSourceId = eventSourceId,
+            CorrelationId = correlationIdAccessor.Current,
             EventType = new()
             {
                 Id = eventType.Id,
@@ -163,6 +166,7 @@ public class EventSequence(
             EventStoreName = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
+            CorrelationId = correlationIdAccessor.Current,
             Events = eventsToAppend,
             Causation = causationChain,
             CausedBy = identity.ToContract()

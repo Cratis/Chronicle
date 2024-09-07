@@ -5,20 +5,20 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Chronicle.Reactions.for_ReactionHandler.given;
+namespace Cratis.Chronicle.Reactors.for_ReactorHandler.given;
 
 public class all_dependencies : Specification
 {
-    protected ReactionId reaction_id;
+    protected ReactorId Reactor_id;
     protected EventSequenceId event_sequence_id;
-    protected Mock<IReactionInvoker> reaction_invoker;
+    protected Mock<IReactorInvoker> Reactor_invoker;
     protected Mock<ICausationManager> causation_manager;
 
     void Establish()
     {
-        reaction_id = Guid.NewGuid().ToString();
+        Reactor_id = Guid.NewGuid().ToString();
         event_sequence_id = Guid.NewGuid().ToString();
-        reaction_invoker = new();
+        Reactor_invoker = new();
         causation_manager = new();
     }
 }

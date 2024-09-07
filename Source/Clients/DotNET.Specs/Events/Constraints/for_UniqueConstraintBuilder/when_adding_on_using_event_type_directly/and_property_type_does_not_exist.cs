@@ -15,7 +15,7 @@ public class and_property_type_does_not_exist : given.a_unique_constraint_builde
     void Establish()
     {
         var generator = new NJsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings());
-        _eventType = new EventType(nameof(EventWithStringProperty), EventGeneration.First);
+        _eventType = new EventType(nameof(EventWithStringProperty), EventTypeGeneration.First);
         var firstEventTypeSchema = generator.Generate(typeof(EventWithStringProperty));
         _eventTypes.GetSchemaFor(_eventType.Id).Returns(firstEventTypeSchema);
     }

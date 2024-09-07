@@ -12,7 +12,7 @@ public class with_name_specified : given.a_constraint_builder_with_owner
 
     void Establish()
     {
-        _eventType = new EventType(nameof(SomeEvent), EventGeneration.First);
+        _eventType = new EventType(nameof(SomeEvent), EventTypeGeneration.First);
         _eventTypes.GetEventTypeFor(typeof(SomeEvent)).Returns(_eventType);
     }
 

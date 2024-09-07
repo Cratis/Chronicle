@@ -17,8 +17,8 @@ public class when_converting_to_contract : Specification
 
     void Establish()
     {
-        _firstEventType = new EventType("First Event Type", EventGeneration.First);
-        _secondEventType = new EventType("Second Event Type", EventGeneration.First);
+        _firstEventType = new EventType("First Event Type", EventTypeGeneration.First);
+        _secondEventType = new EventType("Second Event Type", EventTypeGeneration.First);
         _definition = new UniqueConstraintDefinition(
             _constraintName,
             _ => "",

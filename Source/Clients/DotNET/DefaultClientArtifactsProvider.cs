@@ -7,7 +7,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Integration;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Reactions;
+using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Reflection;
@@ -39,13 +39,13 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     public virtual IEnumerable<Type> Adapters { get; private set; } = [];
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Reactions { get; private set; } = [];
+    public virtual IEnumerable<Type> Reactors { get; private set; } = [];
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> Reducers { get; private set; } = [];
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ReactionMiddlewares { get; private set; } = [];
+    public virtual IEnumerable<Type> ReactorMiddlewares { get; private set; } = [];
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> ComplianceForTypesProviders { get; private set; } = [];
@@ -86,8 +86,8 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         Rules = assembliesProvider.DefinedTypes.Where(_ => _.BaseType?.IsGenericType == true && _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
         Adapters = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAdapterFor<,>)) && !_.IsGenericType).ToArray();
         Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
-        Reactions = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReaction)) && !_.IsGenericType).ToArray();
-        ReactionMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReactionMiddleware))).ToArray();
+        Reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReactor)) && !_.IsGenericType).ToArray();
+        ReactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReactorMiddleware))).ToArray();
         Reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
         AdditionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(ICanProvideAdditionalEventInformation))).ToArray();
         var aggregateRoots = AggregateRoots = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAggregateRoot))).ToArray();

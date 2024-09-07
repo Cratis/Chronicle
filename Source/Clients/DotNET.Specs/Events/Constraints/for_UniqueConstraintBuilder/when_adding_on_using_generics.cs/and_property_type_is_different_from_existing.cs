@@ -16,12 +16,12 @@ public class and_property_type_is_different_from_existing : given.a_unique_const
 
     void Establish()
     {
-        _firstEventType = new EventType(nameof(EventWithStringProperty), EventGeneration.First);
+        _firstEventType = new EventType(nameof(EventWithStringProperty), EventTypeGeneration.First);
         _eventTypes.GetEventTypeFor(typeof(EventWithStringProperty)).Returns(_firstEventType);
 
         _eventTypes.GetSchemaFor(_firstEventType.Id).Returns(_generator.Generate(typeof(EventWithStringProperty)));
 
-        _secondEventType = new EventType(nameof(EventWithIntProperty), EventGeneration.First);
+        _secondEventType = new EventType(nameof(EventWithIntProperty), EventTypeGeneration.First);
         _eventTypes.GetEventTypeFor(typeof(EventWithIntProperty)).Returns(_secondEventType);
 
         _eventTypes.GetSchemaFor(_secondEventType.Id).Returns(_generator.Generate(typeof(EventWithIntProperty)));

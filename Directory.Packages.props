@@ -1,12 +1,13 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>13.5.1</ApplicationModel>
+    <ApplicationModel>13.5.4</ApplicationModel>
+    <Fundamentals>5.4.2</Fundamentals>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Cratis.Fundamentals" Version="5.3.7" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="5.3.7" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="$(Fundamentals)" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="$(Fundamentals)" />
     <PackageVersion Include="Cratis.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.MongoDB" Version="$(ApplicationModel)" />
     <PackageVersion Include="Cratis.Applications.Orleans" Version="$(ApplicationModel)" />
@@ -84,10 +85,10 @@
     <!-- Testing & Specifications -->
     <PackageVersion Include="Cratis.Specifications" Version="3.0.4" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.4" />
-    <PackageVersion Include="Testcontainers" Version="3.9.0" />
+    <PackageVersion Include="Testcontainers" Version="3.10.0" />
     <PackageVersion Include="xunit" Version="2.9.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
-    <PackageVersion Include="moq" Version="4.20.70" />
+    <PackageVersion Include="moq" Version="4.20.71" />
     <PackageVersion Include="NSubstitute" Version="5.1.0" />
     <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.11.0" />
   </ItemGroup>

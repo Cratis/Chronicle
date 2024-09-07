@@ -19,7 +19,7 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Events.Constraints.IConstraints, Services.Events.Constraints.Constraints>();
         services.AddSingleton<Contracts.Clients.IConnectionService, Services.Clients.ConnectionService>();
         services.AddSingleton<Contracts.Observation.IObservers, Services.Observation.Observers>();
-        services.AddSingleton<Contracts.Observation.Reactions.IReactions, Services.Observation.Reactions.Reactions>();
+        services.AddSingleton<Contracts.Observation.Reactors.IReactors, Services.Observation.Reactors.Reactors>();
         services.AddSingleton<Contracts.Observation.Reducers.IReducers, Services.Observation.Reducers.Reducers>();
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
         services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();
@@ -38,7 +38,7 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.Events.Constraints.Constraints>();
             _.MapGrpcService<Services.Clients.ConnectionService>();
             _.MapGrpcService<Services.Observation.Observers>();
-            _.MapGrpcService<Services.Observation.Reactions.Reactions>();
+            _.MapGrpcService<Services.Observation.Reactors.Reactors>();
             _.MapGrpcService<Services.Observation.Reducers.Reducers>();
             _.MapGrpcService<Services.Projections.Projections>();
             _.MapGrpcService<Services.Host.Server>();

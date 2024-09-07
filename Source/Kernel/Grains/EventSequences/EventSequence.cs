@@ -29,9 +29,6 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequence"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of <see cref="EventSequence"/>.
-/// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
 /// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
 /// <param name="meter">The meter to use for metrics.</param>
@@ -145,14 +142,12 @@ public class EventSequence(
         EventSourceId eventSourceId,
         EventType eventType,
         JsonObject content,
+        CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
         bool updateSequenceNumber;
         var eventName = "[N/A]";
-
-        // TODO: Get correct correlation id
-        var correlationId = CorrelationId.New();
 
         try
         {
@@ -190,6 +185,7 @@ public class EventSequence(
                         State.SequenceNumber,
                         eventSourceId,
                         eventType,
+                        correlationId,
                         causation,
                         await IdentityStorage.GetFor(causedBy),
                         occurred,
@@ -254,12 +250,10 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<AppendManyResult> AppendMany(
         IEnumerable<EventToAppend> events,
+        CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
-        // TODO: Get correct correlation id
-        var correlationId = CorrelationId.New();
-
         var results = new List<AppendResult>();
 
         foreach (var @event in events)
@@ -268,6 +262,7 @@ public class EventSequence(
                 @event.EventSourceId,
                 @event.EventType,
                 @event.Content,
+                correlationId,
                 causation,
                 causedBy));
         }
@@ -286,6 +281,7 @@ public class EventSequence(
         EventSequenceNumber sequenceNumber,
         EventType eventType,
         JsonObject content,
+        CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
@@ -303,6 +299,7 @@ public class EventSequence(
     public async Task Redact(
         EventSequenceNumber sequenceNumber,
         RedactionReason reason,
+        CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
@@ -315,6 +312,7 @@ public class EventSequence(
         var affectedEvent = await EventSequenceStorage.Redact(
             sequenceNumber,
             reason,
+            correlationId,
             causation,
             await IdentityStorage.GetFor(causedBy),
             DateTimeOffset.UtcNow);
@@ -326,6 +324,7 @@ public class EventSequence(
         EventSourceId eventSourceId,
         RedactionReason reason,
         IEnumerable<EventType> eventTypes,
+        CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
@@ -340,6 +339,7 @@ public class EventSequence(
             eventSourceId,
             reason,
             eventTypes,
+            correlationId,
             causation,
             await IdentityStorage.GetFor(causedBy),
             DateTimeOffset.UtcNow);

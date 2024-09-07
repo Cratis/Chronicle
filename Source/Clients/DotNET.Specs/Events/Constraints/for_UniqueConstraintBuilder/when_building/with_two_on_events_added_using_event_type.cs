@@ -14,10 +14,10 @@ public class with_two_on_events_added_using_event_type : given.a_unique_constrai
 
     void Establish()
     {
-        _firstEventType = new EventType(nameof(EventWithStringProperty), EventGeneration.First);
+        _firstEventType = new EventType(nameof(EventWithStringProperty), EventTypeGeneration.First);
         _eventTypes.GetSchemaFor(_firstEventType.Id).Returns(_generator.Generate(typeof(EventWithStringProperty)));
         _constraintBuilder.On(_firstEventType, nameof(EventWithStringProperty.SomeProperty));
-        _secondEventType = new EventType(nameof(AnotherEventWithStringProperty), EventGeneration.First);
+        _secondEventType = new EventType(nameof(AnotherEventWithStringProperty), EventTypeGeneration.First);
         _eventTypes.GetSchemaFor(_secondEventType.Id).Returns(_generator.Generate(typeof(AnotherEventWithStringProperty)));
         _constraintBuilder.On(_secondEventType, nameof(AnotherEventWithStringProperty.SomeProperty));
     }
