@@ -119,7 +119,7 @@ export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllO
         this._sortBy = new AllObserversSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',

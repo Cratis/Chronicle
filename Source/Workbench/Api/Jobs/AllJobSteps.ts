@@ -93,7 +93,7 @@ export class AllJobSteps extends ObservableQueryFor<JobStepState[], AllJobStepsA
         this._sortBy = new AllJobStepsSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',

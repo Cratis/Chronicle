@@ -38,7 +38,7 @@ export class GenerationSchemasForType extends QueryFor<any[], GenerationSchemasF
         this._sortBy = new GenerationSchemasForTypeSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'eventTypeId',

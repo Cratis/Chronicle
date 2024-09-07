@@ -83,7 +83,7 @@ export class AllRecommendations extends ObservableQueryFor<RecommendationInforma
         this._sortBy = new AllRecommendationsSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',

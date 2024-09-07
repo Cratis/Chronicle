@@ -115,7 +115,7 @@ export class AllPeople extends ObservableQueryFor<Person[]> {
         this._sortBy = new AllPeopleSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
         ];
     }

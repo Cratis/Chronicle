@@ -26,7 +26,7 @@ export class Tail extends QueryFor<number, TailArguments> {
         super(Number, false);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',

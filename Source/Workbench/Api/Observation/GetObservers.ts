@@ -120,7 +120,7 @@ export class GetObservers extends QueryFor<ObserverInformation[], GetObserversAr
         this._sortBy = new GetObserversSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',

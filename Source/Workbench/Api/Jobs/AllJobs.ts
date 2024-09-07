@@ -101,7 +101,7 @@ export class AllJobs extends ObservableQueryFor<JobState[], AllJobsArguments> {
         this._sortBy = new AllJobsSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',

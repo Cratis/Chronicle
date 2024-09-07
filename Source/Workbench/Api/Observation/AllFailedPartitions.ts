@@ -9,7 +9,7 @@ import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, 
 import { FailedPartition } from '../Concepts/Observation/FailedPartition';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/failed-partitions/{{observerId}}');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/failed-partitions/{{observerId?}}');
 
 class AllFailedPartitionsSortBy {
     private _id: SortingActionsForObservableQuery<FailedPartition[]>;
@@ -82,7 +82,7 @@ export interface AllFailedPartitionsArguments {
     observerId?: string;
 }
 export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], AllFailedPartitionsArguments> {
-    readonly route: string = '/api/event-store/{eventStore}/{namespace}/failed-partitions/{observerId}';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/failed-partitions/{observerId?}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: FailedPartition[] = [];
     private readonly _sortBy: AllFailedPartitionsSortBy;
@@ -93,11 +93,10 @@ export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], A
         this._sortBy = new AllFailedPartitionsSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',
-            'observerId',
         ];
     }
 

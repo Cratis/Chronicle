@@ -84,7 +84,7 @@ export class GetRecommendations extends QueryFor<RecommendationInformation[], Ge
         this._sortBy = new GetRecommendationsSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',

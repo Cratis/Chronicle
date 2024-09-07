@@ -56,7 +56,7 @@ export class AllEventTypes extends QueryFor<EventType[], AllEventTypesArguments>
         this._sortBy = new AllEventTypesSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
         ];

@@ -65,7 +65,7 @@ export class AllProjections extends QueryFor<Projection[], AllProjectionsArgumen
         this._sortBy = new AllProjectionsSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
         ];

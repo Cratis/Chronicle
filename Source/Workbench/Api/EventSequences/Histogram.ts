@@ -52,7 +52,7 @@ export class Histogram extends QueryFor<EventHistogramEntry[]> {
         this._sortBy = new HistogramSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
         ];
     }

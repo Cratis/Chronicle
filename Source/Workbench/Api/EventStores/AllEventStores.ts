@@ -52,7 +52,7 @@ export class AllEventStores extends ObservableQueryFor<EventStore[]> {
         this._sortBy = new AllEventStoresSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
         ];
     }

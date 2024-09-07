@@ -52,7 +52,7 @@ export class AllEventSequences extends QueryFor<EventSequenceInformation[]> {
         this._sortBy = new AllEventSequencesSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
         ];
     }

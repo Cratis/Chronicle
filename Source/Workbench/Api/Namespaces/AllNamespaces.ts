@@ -55,7 +55,7 @@ export class AllNamespaces extends ObservableQueryFor<Namespace[], AllNamespaces
         this._sortBy = new AllNamespacesSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
         ];

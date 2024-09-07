@@ -26,7 +26,7 @@ export class Next extends QueryFor<number, NextArguments> {
         super(Number, false);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',

@@ -68,12 +68,11 @@ export class GetAllAppendedEvents extends QueryFor<AppendedEventWithJsonAsConten
         this._sortBy = new GetAllAppendedEventsSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',
             'eventSequenceId',
-            'eventSourceId',
         ];
     }
 

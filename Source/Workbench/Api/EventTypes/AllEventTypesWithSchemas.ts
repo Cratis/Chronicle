@@ -56,7 +56,7 @@ export class AllEventTypesWithSchemas extends QueryFor<EventTypeWithSchemas[], A
         this._sortBy = new AllEventTypesWithSchemasSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
         ];

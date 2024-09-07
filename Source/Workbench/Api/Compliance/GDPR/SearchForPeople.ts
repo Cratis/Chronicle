@@ -119,7 +119,7 @@ export class SearchForPeople extends QueryFor<Person[], SearchForPeopleArguments
         this._sortBy = new SearchForPeopleSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'query',
         ];
