@@ -49,6 +49,9 @@
             },
             "observers": {
                 "title": "Observers",
+                "actions": {
+                    "replay": "Replay"
+                },
                 "columns": {
                     "id": "Identifier",
                     "observerType": "Observer type",
@@ -56,8 +59,16 @@
                     "nextEventSequenceNumber": "Next event sequence number"
                 }
             },
-            "faledPartitions": {
-                "title": "Failed partitions"
+            "failedPartitions": {
+                "title": "Failed partitions",
+                "actions": {
+                    "retry": "Retry"
+                },
+                "columns": {
+                    "partition": "Partition",
+                    "attempts": "Attempts",
+                    "lastAttempt": "Last attempt"
+                }
             },
             "identities": {
                 "title": "Identities"

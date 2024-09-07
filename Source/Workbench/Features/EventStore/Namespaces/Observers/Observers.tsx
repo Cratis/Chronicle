@@ -53,7 +53,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const menuItems: MenuItem[] = [
         {
             id: 'replay',
-            label: 'Replay',
+            label: strings.eventStore.namespaces.observers.actions.replay,
             icon: <FaArrowsRotate className={'mr-2'} />,
             disabled: !hasSelectedObserver,
             command: () => viewModel.replay()

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Storage.Observation;
@@ -15,7 +16,7 @@ public interface IFailedPartitionsStorage
     /// </summary>
     /// <param name="observerId">Optional <see cref="ObserverId"/> it is for.</param>
     /// <returns>An observable of a collection of <see cref="FailedPartition"/>.</returns>
-    IObservable<IEnumerable<FailedPartition>> ObserveAllFor(ObserverId? observerId = default);
+    ISubject<IEnumerable<FailedPartition>> ObserveAllFor(ObserverId? observerId = default);
 
     /// <summary>
     /// Save all the failed partitions.

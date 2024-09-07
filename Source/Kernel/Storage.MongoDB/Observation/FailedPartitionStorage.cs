@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using MongoDB.Driver;
@@ -19,9 +20,10 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     IMongoCollection<FailedPartition> Collection => database.GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<FailedPartition>> ObserveAllFor(ObserverId? observerId = default)
+    public ISubject<IEnumerable<FailedPartition>> ObserveAllFor(ObserverId? observerId = default)
     {
-        throw new NotImplementedException();
+        if (observerId == default) return Collection.Observe();
+        return Collection.Observe(_ => _.ObserverId == observerId);
     }
 
     /// <inheritdoc/>

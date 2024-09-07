@@ -6,7 +6,7 @@ using Cratis.Chronicle.Reactors;
 
 namespace Basic;
 
-public class CartObserver : IReactor
+public class CartReactor : IReactor
 {
     public Task ItemAdded(ItemAddedToCart @event, EventContext context)
     {

@@ -4,17 +4,16 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Api.Observation;
 
 /// <summary>
 /// Represents the API for getting failed partitions.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ObserverQueries"/> class.
-/// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/failed-partitions")]
-public class FailedPartitions() : ControllerBase
+public class FailedPartitions(IStorage storage) : ControllerBase
 {
     /// <summary>
     /// Gets all failed partitions for an event store and namespace.
@@ -23,12 +22,13 @@ public class FailedPartitions() : ControllerBase
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the failed partitions are for.</param>
     /// <param name="observerId">Optional <see cref="ObserverId"/> to filter down which observer it is for.</param>
     /// <returns>Client observable of a collection of <see cref="FailedPartitions"/>.</returns>
-    [HttpGet("{observerId}")]
+    [HttpGet("{observerId?}")]
     public ISubject<IEnumerable<FailedPartition>> AllFailedPartitions(
         [FromRoute] EventStoreName eventStore,
         [FromRoute] EventStoreNamespaceName @namespace,
-        [FromRoute] string? observerId = default)
+        [FromRoute] ObserverId? observerId = default)
     {
-        throw new NotImplementedException();
+        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
+        return namespaceStorage.FailedPartitions.ObserveAllFor(observerId);
     }
 }
