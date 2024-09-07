@@ -21,8 +21,10 @@
         "general": {
             "groupLabel": "General",
             "types": "Types",
-            "projections": "Projections",
             "sequences": "Sequences",
+            "projections": "Projections",
+            "reducers": "Reducers",
+            "reactors": "Reactors",
             "sinks": "Sinks"
         }
     },

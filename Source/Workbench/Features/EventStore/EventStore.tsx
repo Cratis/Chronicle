@@ -7,6 +7,7 @@ import { Sequences } from "./Namespaces/Sequences/Sequences";
 import { IMenuItemGroup } from "../../Layout/Default/Sidebar/MenuItem/MenuItem";
 import * as mdIcons from 'react-icons/md';
 import * as devIcons from 'react-icons/di';
+import * as gameIcons from 'react-icons/gi';
 import { Types } from "./General/Types/Types";
 import { Observers } from "./Namespaces/Observers/Observers";
 import { Projections } from "./General/Projections/Projections";
@@ -16,6 +17,8 @@ import { Jobs } from './Namespaces/Jobs/Jobs';
 import { Identities } from './Namespaces/Identities/Identities';
 import { Sequences as GeneralSequences } from './General/Sequences/Sequences';
 import { Sinks } from './General/Sinks/Sinks';
+import { Reducers } from './General/Reducers/Reducers';
+import { Reactors } from './General/Reactors/Reactors';
 import strings from 'Strings';
 
 export const EventStore = () => {
@@ -38,8 +41,10 @@ export const EventStore = () => {
             label: strings.mainMenu.general.groupLabel,
             items: [
                 { label: strings.mainMenu.general.types, url: 'types', icon: mdIcons.MdDataObject },
-                { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
                 { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
+                { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
+                { label: strings.mainMenu.general.reducers, url: 'reducers', icon: gameIcons.GiTransform },
+                { label: strings.mainMenu.general.reactors, url: 'reactors', icon: gameIcons.GiReactor },
                 { label: strings.mainMenu.general.sinks, url: 'sinks', icon: devIcons.DiDatabase }
             ]
         }
@@ -50,8 +55,10 @@ export const EventStore = () => {
                 element={<DefaultLayout menu={menuItems} basePath={'/event-store/:eventStore'} />}>
 
                 <Route path={'types'} element={<Types />} errorElement={<Projections />} />
-                <Route path={'projections'} element={<Projections />} />
                 <Route path={'sequences'} element={<GeneralSequences />} />
+                <Route path={'projections'} element={<Projections />} />
+                <Route path={'reducers'} element={<Reducers />} />
+                <Route path={'reactors'} element={<Reactors />} />
                 <Route path={'sinks'} element={<Sinks />} />
 
                 <Route path={':namespace'}>
