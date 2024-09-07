@@ -41,7 +41,7 @@ public class CatchUp(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        using var scope = logger.BeginCatchUpScope(state.ObserverId, observerKey);
+        using var scope = logger.BeginCatchUpScope(state.Id, observerKey);
 
         var subscription = await Observer.GetSubscription();
 

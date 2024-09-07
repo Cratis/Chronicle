@@ -47,7 +47,7 @@ public class Routing(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        using var logScope = logger.BeginRoutingScope(state.ObserverId, observerKey);
+        using var logScope = logger.BeginRoutingScope(state.Id, observerKey);
         _subscription = await Observer.GetSubscription();
 
         logger.Entering();
@@ -105,7 +105,7 @@ public class Routing(
             await StateMachine.TransitionTo<ResumeReplay>();
         }
         else if (await replayEvaluator.Evaluate(new(
-            state.ObserverId,
+            state.Id,
             observerKey,
             state,
             _subscription,

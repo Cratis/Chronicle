@@ -26,9 +26,9 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
     /// <inheritdoc/>
     public ISubject<IEnumerable<ObserverInformation>> ObserveAll()
     {
-        var observerInformation = GetAll().GetAwaiter().GetResult();
+        var collectionSubject = Collection.Observe();
         return new TransformingSubject<IEnumerable<ObserverState>, IEnumerable<ObserverInformation>>(
-            Collection.Observe(),
+            collectionSubject,
             observers => observers.Select(_ => ToObserverInformation(_)).ToArray());
     }
 
@@ -36,7 +36,7 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
     public Task<ObserverInformation> Get(ObserverId observerId) =>
         Collection
             .Aggregate()
-            .Match(_ => _.ObserverId == observerId)
+            .Match(_ => _.Id == observerId)
             .JoinWithFailedPartitions()
             .FirstAsync();
 
@@ -65,9 +65,9 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
         var filter = GetKeyFilter(observerKey.ObserverId);
         var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
         return await cursor.FirstOrDefaultAsync().ConfigureAwait(false) ?? new ObserverState(
+            observerKey.ObserverId,
             [],
             observerKey.EventSequenceId,
-            observerKey.ObserverId,
             ObserverType.Unknown,
             EventSequenceNumber.First,
             EventSequenceNumber.First,
@@ -85,7 +85,7 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
     ObserverInformation ToObserverInformation(ObserverState state) => new(
-        state.ObserverId,
+        state.Id,
         state.EventSequenceId,
         state.Type,
         state.EventTypes,

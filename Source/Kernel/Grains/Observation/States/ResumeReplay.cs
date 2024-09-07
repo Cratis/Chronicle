@@ -52,7 +52,7 @@ public class ResumeReplay(
         }
 
         _replayStarted = true;
-        await replayStateServiceClient.BeginReplayFor(new(state.ObserverId, observerKey, state.Type));
+        await replayStateServiceClient.BeginReplayFor(new(state.Id, observerKey, state.Type));
 
         var pausedJob = jobsForThisObserver.FirstOrDefault(_ => _.Status == JobStatus.Paused);
         if (pausedJob is not null)
@@ -68,7 +68,7 @@ public class ResumeReplay(
     {
         if (_replayStarted)
         {
-            await replayStateServiceClient.EndReplayFor(new(state.ObserverId, observerKey, state.Type));
+            await replayStateServiceClient.EndReplayFor(new(state.Id, observerKey, state.Type));
             _replayStarted = false;
         }
         return state;

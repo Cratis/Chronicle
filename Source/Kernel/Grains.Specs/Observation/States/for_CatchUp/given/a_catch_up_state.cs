@@ -34,13 +34,13 @@ public class a_catch_up_state : Specification
 
         stored_state = new ObserverState
         {
-            ObserverId = observer_id,
+            Id = observer_id,
             RunningState = ObserverRunningState.CatchingUp,
         };
 
         subscription = new ObserverSubscription(
-            stored_state.ObserverId,
-            new(stored_state.ObserverId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
+            stored_state.Id,
+            new(stored_state.Id, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
             [],
             typeof(object),
             SiloAddress.Zero,
