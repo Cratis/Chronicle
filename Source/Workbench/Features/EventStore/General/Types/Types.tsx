@@ -3,7 +3,7 @@
 
 import { Column } from 'primereact/column';
 import strings from 'Strings';
-import { AllEventTypes, AllEventTypesArguments } from 'Api/EventTypes';
+import { AllEventTypes, AllEventTypesArguments, EventType } from 'Api/EventTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { FilterMatchMode } from 'primereact/api';
@@ -17,6 +17,10 @@ import * as faIcons from 'react-icons/fa';
 
 const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
+};
+
+const renderTombstone = (type: EventType) => {
+    return 'no';
 };
 
 export const Types = withViewModel(TypesViewModel, ({ viewModel }) => {
@@ -46,7 +50,7 @@ export const Types = withViewModel(TypesViewModel, ({ viewModel }) => {
 
                     <Column field='id' header={strings.eventStore.general.types.columns.name} sortable />
                     <Column field='generation' header={strings.eventStore.general.types.columns.generation} sortable />
-                    <Column field='tombstone' header={strings.eventStore.general.types.columns.tombstone} sortable />
+                    <Column field='tombstone' header={strings.eventStore.general.types.columns.tombstone} sortable body={renderTombstone}  />
                 </DataPage.Columns>
             </DataPage>
             <AddEventTypeDialogWrapper>
