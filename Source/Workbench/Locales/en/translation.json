@@ -1,6 +1,5 @@
 {
-    "general": {
-    },
+    "general": {},
     "layout": {
         "topBar": {
             "profile": {
@@ -74,6 +73,20 @@
                     "observerType": "Observer type",
                     "state": "State",
                     "nextEventSequenceNumber": "Next event sequence number"
+                },
+                "states": {
+                    "new": "New",
+                    "routing": "Routing",
+                    "replaying": "Rplaying",
+                    "catchingUp": "Catching Up",
+                    "active": "Active",
+                    "paused": "Paused",
+                    "stopped": "Stopped",
+                    "suspended": "Suspended",
+                    "failed": "Failed",
+                    "tailOfReplay": "Tail Of Replay",
+                    "disconnected": "Disconnected",
+                    "indexing": "Indexing"
                 }
             },
             "failedPartitions": {

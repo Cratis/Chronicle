@@ -14,6 +14,7 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
+import { ObserverRunningState } from 'Api/Concepts/Observation';
 
 const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {
@@ -28,6 +29,36 @@ const observerType = (observer: ObserverInformation) => {
     }
     return '[N/A]';
 };
+
+const runningState = (observer: ObserverInformation) => {
+    switch (observer.runningState) {
+        case ObserverRunningState.new:
+            return strings.eventStore.namespaces.observers.states.new;
+        case ObserverRunningState.routing:
+            return strings.eventStore.namespaces.observers.states.routing;
+        case ObserverRunningState.replaying:
+            return strings.eventStore.namespaces.observers.states.replaying;
+        case ObserverRunningState.catchingUp:
+            return strings.eventStore.namespaces.observers.states.catchingUp;
+        case ObserverRunningState.active:
+            return strings.eventStore.namespaces.observers.states.active;
+        case ObserverRunningState.paused:
+            return strings.eventStore.namespaces.observers.states.paused;
+        case ObserverRunningState.stopped:
+            return strings.eventStore.namespaces.observers.states.stopped;
+        case ObserverRunningState.suspended:
+            return strings.eventStore.namespaces.observers.states.suspended;
+        case ObserverRunningState.failed:
+            return strings.eventStore.namespaces.observers.states.failed;
+        case ObserverRunningState.tailOfReplay:
+            return strings.eventStore.namespaces.observers.states.tailOfReplay;
+        case ObserverRunningState.disconnected:
+            return strings.eventStore.namespaces.observers.states.disconnected;
+        case ObserverRunningState.indexing:
+            return strings.eventStore.namespaces.observers.states.indexing;
+    }
+    return '[N/A]';
+}
 
 const defaultFilters: DataTableFilterMeta = {
     runningState: { value: null, matchMode: FilterMatchMode.IN },
@@ -70,6 +101,13 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                     dataType='numeric'
                     header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
                     sortable />
+
+                <Column
+                    field='runningState'
+                    dataType='numeric'
+                    header={strings.eventStore.namespaces.observers.columns.state}
+                    sortable
+                    body={runningState}/>
             </DataPage.Columns>
         </DataPage>
     );
