@@ -74,6 +74,12 @@
                     "state": "State",
                     "nextEventSequenceNumber": "Next event sequence number"
                 },
+                "types": {
+                    "unknown": "Unknown",
+                    "reactor": "Reactor",
+                    "projection": "Projection",
+                    "reducer": "Reducer"
+                },
                 "states": {
                     "new": "New",
                     "routing": "Routing",
@@ -86,7 +92,8 @@
                     "failed": "Failed",
                     "tailOfReplay": "Tail Of Replay",
                     "disconnected": "Disconnected",
-                    "indexing": "Indexing"
+                    "indexing": "Indexing",
+                    "unknown": "Unknown"
                 }
             },
             "failedPartitions": {

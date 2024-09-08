@@ -19,15 +19,15 @@ import { ObserverRunningState } from 'Api/Concepts/Observation';
 const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {
         case ObserverType.unknown:
-            return 'Unknown';
+            return strings.eventStore.namespaces.observers.types.unknown;
         case ObserverType.client:
-            return 'Client';
+            return strings.eventStore.namespaces.observers.types.reactor;
         case ObserverType.projection:
-            return 'Projection';
+            return strings.eventStore.namespaces.observers.types.projection;
         case ObserverType.reducer:
-            return 'Reducer';
+            return strings.eventStore.namespaces.observers.types.reducer;
     }
-    return '[N/A]';
+    return strings.eventStore.namespaces.observers.types.unknown;
 };
 
 const runningState = (observer: ObserverInformation) => {
@@ -57,7 +57,7 @@ const runningState = (observer: ObserverInformation) => {
         case ObserverRunningState.indexing:
             return strings.eventStore.namespaces.observers.states.indexing;
     }
-    return '[N/A]';
+    return strings.eventStore.namespaces.observers.states.unknown;
 }
 
 const defaultFilters: DataTableFilterMeta = {
