@@ -32,6 +32,10 @@
         "general": {
             "types": {
                 "title": "Types",
+                "empty": "No types found",
+                "actions": {
+                    "create": "Create"
+                },
                 "columns": {
                     "name": "Name",
                     "generation": "Generation",
@@ -61,6 +65,7 @@
             },
             "observers": {
                 "title": "Observers",
+                "empty": "No observers found",
                 "actions": {
                     "replay": "Replay"
                 },
@@ -73,6 +78,7 @@
             },
             "failedPartitions": {
                 "title": "Failed partitions",
+                "empty": "No failed partitions found",
                 "actions": {
                     "retry": "Retry"
                 },

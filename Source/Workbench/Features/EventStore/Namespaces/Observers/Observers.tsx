@@ -6,22 +6,14 @@ import { ObserversViewModel } from './ObserversViewModel';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { ObserverType } from 'Api/Concepts/Observation/ObserverType';
-import { Page } from 'Components/Common/Page';
 import { ObserverInformation } from 'Api/Concepts/Observation/ObserverInformation';
 import { FilterMatchMode } from 'primereact/api';
-import { ColumnFilterProps } from 'Components/ColumnFilter/ColumnFilter';
-import {
-    ObserverRunningStateFilterTemplate,
-    getObserverRunningStateAsText,
-} from './ObserverRunningStateHelpers';
-import { Menubar } from 'primereact/menubar';
-import { MenuItem } from 'primereact/menuitem';
-import { FaArrowsRotate } from "react-icons/fa6";
 import strings from 'Strings';
-import { DataTableForObservableQuery } from 'Components/DataTables';
 import { AllObservers, AllObserversArguments } from 'Api/Observation';
 import { useParams } from 'react-router-dom';
-import * as Shared from 'Shared';
+import { type EventStoreAndNamespaceParams } from 'Shared';
+import { DataPage, MenuItem } from 'Components';
+import * as faIcons from 'react-icons/fa6';
 
 const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {
@@ -42,64 +34,43 @@ const defaultFilters: DataTableFilterMeta = {
 };
 
 export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
-    const params = useParams<Shared.EventStoreAndNamespaceParams>();
+    const params = useParams<EventStoreAndNamespaceParams>();
     const queryArgs: AllObserversArguments = {
         eventStore: params.eventStore!,
         namespace: viewModel.currentNamespace.name
     };
 
-    const hasSelectedObserver = viewModel.selectedObserver !== undefined;
-
-    const menuItems: MenuItem[] = [
-        {
-            id: 'replay',
-            label: strings.eventStore.namespaces.observers.actions.replay,
-            icon: <FaArrowsRotate className={'mr-2'} />,
-            disabled: !hasSelectedObserver,
-            command: () => viewModel.replay()
-        }
-    ];
-
     return (
-        <Page title={strings.eventStore.namespaces.observers.title}>
+        <DataPage
+            title={strings.eventStore.namespaces.observers.title}
+            query={AllObservers}
+            queryArguments={queryArgs}
+            emptyMessage={strings.eventStore.namespaces.observers.empty}
+            defaultFilters={defaultFilters}
+            globalFilterFields={['runningState']}
+            dataKey='observerId'
+            onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverInformation)}>
+            <DataPage.MenuItems>
+                <MenuItem
+                    id="replay"
+                    label={strings.eventStore.namespaces.observers.actions.replay} icon={faIcons.FaArrowsRotate}
+                    disableOnUnselected
+                    command={() => viewModel.replay()} />
+            </DataPage.MenuItems>
+            <DataPage.Columns>
+                <Column field='observerId' header={strings.eventStore.namespaces.observers.columns.id} sortable />
+                <Column
+                    field='type'
+                    header={strings.eventStore.namespaces.observers.columns.observerType}
+                    sortable
+                    body={observerType} />
 
-            <div className="px-4 py-2">
-                <Menubar aria-label='Actions' model={menuItems} />
-            </div>
-
-            <div className={'flex-1 overflow-hidden'}>
-                <DataTableForObservableQuery
-                    query={AllObservers}
-                    queryArguments={queryArgs}
-                    selection={viewModel.selectedObserver}
-                    onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverInformation)}
-                    dataKey='observerId'
-                    defaultFilters={defaultFilters}
-                    globalFilterFields={['name', 'type', 'runningState']}
-                    emptyMessage='No observers found'>
-                    <Column field='observerId' header={strings.eventStore.namespaces.observers.columns.id} sortable />
-                    <Column
-                        field='type'
-                        header={strings.eventStore.namespaces.observers.columns.observerType}
-                        sortable
-                        body={observerType} />
-
-                    <Column
-                        field='nextEventSequenceNumber'
-                        dataType='numeric'
-                        header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
-                        sortable />
-
-                    <Column
-                        {...ColumnFilterProps}
-                        field='runningState'
-                        header={strings.eventStore.namespaces.observers.columns.state}
-                        sortable
-                        body={(data: ObserverInformation) => getObserverRunningStateAsText(data.runningState)}
-                        filterElement={ObserverRunningStateFilterTemplate}
-                        showFilterMatchModes={false} />
-                </DataTableForObservableQuery>
-            </div>
-        </Page>
+                <Column
+                    field='nextEventSequenceNumber'
+                    dataType='numeric'
+                    header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
+                    sortable />
+            </DataPage.Columns>
+        </DataPage>
     );
 });

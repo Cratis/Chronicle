@@ -5,7 +5,7 @@ import { DataTable, DataTableFilterMeta, DataTableSelectionSingleChangeEvent } f
 import { Constructor } from '@cratis/fundamentals';
 import { IObservableQueryFor } from '@cratis/applications/queries';
 import { useObservableQuery } from '@cratis/applications.react/queries';
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 
 /**
  * Props for the DataTableForQuery component
@@ -14,7 +14,7 @@ export interface DataTableForObservableQueryProps<TQuery extends IObservableQuer
     /**
      * Children to render
      */
-    children?: JSX.Element | JSX.Element[];
+    children?: ReactNode;
 
     /**
      * The type of query to use
