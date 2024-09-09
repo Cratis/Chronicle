@@ -47,14 +47,14 @@ public class KeyBuilder<TEvent, TBuilder> : IKeyBuilder<TEvent, TBuilder>
     }
 
     /// <inheritdoc/>
-    public TBuilder UsingParentKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor)
+    public TBuilder UsingParentKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor)
     {
         _parentKeyExpression = new EventContextPropertyExpression(keyAccessor.GetPropertyPath()).Build();
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
-    public TBuilder UsingKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor)
+    public TBuilder UsingKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor)
     {
         _parentKeyExpression = new EventContextPropertyExpression(keyAccessor.GetPropertyPath()).Build();
         return (this as TBuilder)!;
