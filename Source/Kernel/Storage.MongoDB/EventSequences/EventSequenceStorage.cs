@@ -99,6 +99,7 @@ public class EventSequenceStorage(
         EventSequenceNumber sequenceNumber,
         EventSourceId eventSourceId,
         EventType eventType,
+        bool tombstone,
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
@@ -123,6 +124,7 @@ public class EventSequenceStorage(
                 eventType.Id,
                 occurred,
                 eventSourceId,
+                tombstone,
                 new Dictionary<string, BsonDocument>
                 {
                     { eventType.Generation.ToString(), document }

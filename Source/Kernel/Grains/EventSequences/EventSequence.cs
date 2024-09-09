@@ -181,6 +181,7 @@ public class EventSequence(
                         State.SequenceNumber,
                         eventSourceId,
                         eventType,
+                        eventType.Tombstone,
                         correlationId,
                         causation,
                         await IdentityStorage.GetFor(causedBy),

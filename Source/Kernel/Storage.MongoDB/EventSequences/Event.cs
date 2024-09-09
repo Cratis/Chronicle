@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="Type">The <see cref="EventTypeId">type identifier</see> of the event.</param>
 /// <param name="Occurred">The time the event occurred.</param>
 /// <param name="EventSourceId">The <see cref="EventSourceId"/> for the event.</param>
+/// <param name="Tombstone">Whether or not the event is a tombstone event for the <see cref="EventSourceId"/>.</param>
 /// <param name="Content">The content per event type generation.</param>
 /// <param name="Compensations">Any compensations for the event.</param>
 public record Event(
@@ -28,5 +29,6 @@ public record Event(
     EventTypeId Type,
     DateTimeOffset Occurred,
     EventSourceId EventSourceId,
+    bool Tombstone,
     IDictionary<string, BsonDocument> Content,
     IEnumerable<EventCompensation> Compensations);
