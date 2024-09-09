@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>13.7.0</ApplicationModel>
-    <Fundamentals>5.4.2</Fundamentals>
+    <ApplicationModel>13.7.1</ApplicationModel>
+    <Fundamentals>5.5.0</Fundamentals>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
