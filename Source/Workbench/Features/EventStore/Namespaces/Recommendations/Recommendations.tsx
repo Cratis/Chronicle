@@ -50,7 +50,6 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
             </DataPage.MenuItems>
 
             <DataPage.Columns>
-
                 <Column field='name' header={strings.eventStore.namespaces.recommendations.columns.name} sortable />
                 <Column field='description' header={strings.eventStore.namespaces.recommendations.columns.description} />
                 <Column field='occurred' header={strings.eventStore.namespaces.recommendations.columns.occurred} body={occurred} />
