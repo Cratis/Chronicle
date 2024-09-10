@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>13.5.4</ApplicationModel>
+    <ApplicationModel>13.7.0</ApplicationModel>
     <Fundamentals>5.4.2</Fundamentals>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
@@ -90,6 +90,6 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="moq" Version="4.20.71" />
     <PackageVersion Include="NSubstitute" Version="5.1.0" />
-    <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.11.0" />
+    <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.11.1" />
   </ItemGroup>
 </Project>
