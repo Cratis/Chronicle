@@ -34,11 +34,9 @@ public interface IAggregateRootMutation
     /// <summary>
     /// Apply a single event to the aggregate root mutation.
     /// </summary>
-    /// <typeparam name="TEvent">Type of event to apply.</typeparam>
     /// <param name="event">Event to apply.</param>
     /// <returns>Awaitable task.</returns>
-    Task Apply<TEvent>(TEvent @event)
-        where TEvent : class;
+    Task Apply(object @event);
 
     /// <summary>
     /// Commit the mutation.
