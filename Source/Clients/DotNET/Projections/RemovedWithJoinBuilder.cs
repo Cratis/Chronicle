@@ -10,12 +10,11 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
-public class RemovedWithBuilder<TModel, TEvent> : KeyAndParentKeyBuilder<TEvent, RemovedWithBuilder<TModel, TEvent>>, IRemovedWithBuilder<TModel, TEvent, RemovedWithBuilder<TModel, TEvent>>
+public class RemovedWithJoinBuilder<TModel, TEvent> : KeyBuilder<TEvent, RemovedWithJoinBuilder<TModel, TEvent>>, IRemovedWithJoinBuilder<TModel, TEvent, RemovedWithJoinBuilder<TModel, TEvent>>
 {
     /// <inheritdoc/>
-    public RemovedWithDefinition Build() => new()
+    public RemovedWithJoinDefinition Build() => new()
     {
         Key = _keyExpression,
-        ParentKey = _parentKeyExpression
     };
 }

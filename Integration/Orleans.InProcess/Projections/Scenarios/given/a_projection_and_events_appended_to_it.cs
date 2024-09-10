@@ -13,7 +13,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
     where TProjection : class, IProjectionFor<TModel>, new()
 {
 #pragma warning disable CA2213 // Disposable fields should be disposed
-    GlobalFixture _globalFixture = globalFixture;
+    protected GlobalFixture _globalFixture = globalFixture;
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
     public EventSourceId EventSourceId;

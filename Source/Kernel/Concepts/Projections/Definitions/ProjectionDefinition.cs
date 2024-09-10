@@ -26,6 +26,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="FromEvery">The full <see cref="FromEveryDefinition"/>.</param>
 /// <param name="Sink">The <see cref="SinkDefinition"/>.</param>
 /// <param name="RemovedWith">All the <see cref="RemovedWithDefinition"/> for <see cref="EventType">event types</see>.</param>
+/// <param name="RemovedWithJoin">All the <see cref="RemovedWithJoinDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
 /// <param name="LastUpdated">The last time the projection definition was updated.</param>
 public record ProjectionDefinition(
@@ -42,6 +43,7 @@ public record ProjectionDefinition(
     FromEveryDefinition FromEvery,
     SinkDefinition Sink,
     IDictionary<EventType, RemovedWithDefinition> RemovedWith,
+    IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
     FromEventPropertyDefinition? FromEventProperty = default,
     DateTimeOffset? LastUpdated = default)
 {

@@ -20,6 +20,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
 /// <param name="All">The full <see cref="FromEveryDefinition"/>.</param>
 /// <param name="RemovedWith">All the <see cref="RemovedWithDefinition"/> for <see cref="EventType">event types</see>.</param>
+/// <param name="RemovedWithJoin">All the <see cref="RemovedWithJoinDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
 public record ChildrenDefinition(
     PropertyPath IdentifiedBy,
@@ -30,6 +31,7 @@ public record ChildrenDefinition(
     IDictionary<PropertyPath, ChildrenDefinition> Children,
     FromEveryDefinition All,
     IDictionary<EventType, RemovedWithDefinition> RemovedWith,
+    IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
     FromEventPropertyDefinition? FromEventProperty = default) :
     ProjectionDefinition(
         EventSequences.EventSequenceId.Unspecified,
@@ -45,4 +47,5 @@ public record ChildrenDefinition(
         All,
         SinkDefinition.None,
         RemovedWith,
+        RemovedWithJoin,
         FromEventProperty);

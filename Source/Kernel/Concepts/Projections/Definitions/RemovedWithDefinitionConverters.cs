@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 
 /// <summary>
-/// Converter methods for <see cref="FromEventPropertyDefinition"/>.
+/// Converter methods for <see cref="RemovedWithDefinition"/>.
 /// </summary>
 public static class RemovedWithDefinitionConverters
 {
