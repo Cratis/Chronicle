@@ -66,8 +66,7 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     }
 
     /// <inheritdoc/>
-    public Task Apply<T>(T @event)
-        where T : class
+    public Task Apply(object @event)
     {
         return _mutation?.Apply(@event) ?? Task.CompletedTask;
     }
@@ -137,8 +136,7 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     }
 
     /// <inheritdoc/>
-    public Task Apply<T>(T @event)
-        where T : class
+    public Task Apply(object @event)
     {
         return _mutation?.Apply(@event) ?? Task.CompletedTask;
     }

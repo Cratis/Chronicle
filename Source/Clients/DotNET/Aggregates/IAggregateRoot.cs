@@ -11,11 +11,9 @@ public interface IAggregateRoot
     /// <summary>
     /// Apply a single event to the aggregate root.
     /// </summary>
-    /// <typeparam name="T">Type of event to apply.</typeparam>
     /// <param name="event">Event to apply.</param>
     /// <returns>Awaitable task.</returns>
-    Task Apply<T>(T @event)
-        where T : class;
+    Task Apply(object @event);
 
     /// <summary>
     /// Commits the aggregate root.

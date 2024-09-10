@@ -45,6 +45,13 @@ public class and_it_has_events_and_append_returns_constraints_and_errors : given
 
     [Fact] void should_append_events_to_event_sequence() => _events.ShouldContainOnly(new(_firstEventEventSourceId, _firstEvent, _firstEventCausation), new(_secondEventEventSourceId, _secondEvent, _secondEventCausation));
     [Fact] void should_have_events_in_unit_of_work() => _unitOfWork.GetEvents().ShouldContainOnly(_firstEvent, _secondEvent);
+    [Fact] void should_have_events_in_unit_of_work_in_correct_order()
+    {
+        var events = _unitOfWork.GetEvents().ToArray();
+        events[0].ShouldEqual(_firstEvent);
+        events[1].ShouldEqual(_secondEvent);
+    }
+
     [Fact] void should_call_on_completed() => _onCompletedCalled.ShouldBeTrue();
     [Fact] void should_have_constraint_violations() => _unitOfWork.GetConstraintViolations().ShouldContainOnly(_result.ConstraintViolations);
     [Fact] void should_have_errors() => _unitOfWork.GetAppendErrors().ShouldContainOnly(_result.Errors);
