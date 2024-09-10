@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Aggregates;
 public class AggregateRootCommitResult
 {
     /// <summary>
-    /// Gets a value indicating whether or not the commit was successful.
+    /// Gets list of committed events ordered by their sequence number.
     /// </summary>
     public IEnumerable<object> Events { get; init; } = [];
 
@@ -24,7 +24,7 @@ public class AggregateRootCommitResult
     public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
 
     /// <summary>
-    /// Gets a value indicating whether or not the commit was successful.
+    /// Gets a value indicating whether the commit was successful.
     /// </summary>
     public bool IsSuccess => !ConstraintViolations.Any();
 
@@ -51,13 +51,11 @@ public class AggregateRootCommitResult
     /// </summary>
     /// <param name="unitOfWork"><see cref="IUnitOfWork"/> to create from.</param>
     /// <returns>A new instance of <see cref="AggregateRootCommitResult"/>.</returns>
-    public static AggregateRootCommitResult CreateFrom(IUnitOfWork unitOfWork)
-    {
-        return new AggregateRootCommitResult
+    public static AggregateRootCommitResult CreateFrom(IUnitOfWork unitOfWork) =>
+        new()
         {
             Events = unitOfWork.GetEvents(),
             ConstraintViolations = unitOfWork.GetConstraintViolations(),
             Errors = unitOfWork.GetAppendErrors()
         };
-    }
 }
