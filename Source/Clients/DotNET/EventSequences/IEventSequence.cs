@@ -32,6 +32,15 @@ public interface IEventSequence
     Task<bool> HasEventsFor(EventSourceId eventSourceId);
 
     /// <summary>
+    /// Get all events after and including the given <see cref="EventSequenceNumber"/> with optional <see cref="EventSourceId"/> and <see cref="IEnumerable{T}"/> of <see cref="EventType"/> for filtering.
+    /// </summary>
+    /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the first event to get from.</param>
+    /// <param name="eventSourceId">The optional <see cref="EventSourceId"/>.</param>
+    /// <param name="eventTypes">The optional <see cref="IEnumerable{T}"/> of <see cref="EventType"/>.</param>
+    /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
+    Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default);
+
+    /// <summary>
     /// Get the next sequence number.
     /// </summary>
     /// <returns>Next sequence number.</returns>
