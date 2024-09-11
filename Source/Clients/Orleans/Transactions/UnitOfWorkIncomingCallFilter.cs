@@ -7,7 +7,6 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Orleans.Aggregates;
 using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
-using Cratis.Reflection;
 using IAggregateRoot = Cratis.Chronicle.Orleans.Aggregates.IAggregateRoot;
 
 namespace Cratis.Chronicle.Orleans.Transactions;
@@ -24,9 +23,8 @@ public class UnitOfWorkIncomingCallFilter(
     /// <inheritdoc/>
     public async Task Invoke(IIncomingGrainCallContext context)
     {
-        var correlationId = RequestContext.Get(Constants.CorrelationIdKey) as CorrelationId;
-        if (correlationId is not null &&
-            (context.InterfaceMethod.DeclaringType?.HasInterface<IAggregateRoot>() ?? false) &&
+        if (RequestContext.Get(Constants.CorrelationIdKey) is CorrelationId correlationId &&
+            context.IsMessageToAggregateRoot() &&
             unitOfWorkManager.TryGetFor(correlationId, out var unitOfWork))
         {
             var aggregate = (context.TargetContext.GrainInstance as IAggregateRoot)!;

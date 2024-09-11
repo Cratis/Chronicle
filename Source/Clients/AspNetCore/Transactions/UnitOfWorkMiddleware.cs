@@ -21,6 +21,7 @@ public class UnitOfWorkMiddleware(IUnitOfWorkManager unitOfWorkManager, RequestD
     /// <returns>Awaitable task.</returns>
     public async Task InvokeAsync(HttpContext context)
     {
+        // TODO: Create Issue: Maybe there should be a try catch here and dispose the unit of work if an exception is thrown.
         unitOfWorkManager.Begin(CorrelationId.New());
         await next(context);
     }

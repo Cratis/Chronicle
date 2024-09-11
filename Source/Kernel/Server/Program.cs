@@ -2,90 +2,102 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
+using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using ProtoBuf.Grpc.Configuration;
+using ProtoBuf.Grpc.Server;
 
-#pragma warning disable SA1600
-namespace Cratis.Chronicle.Server;
+AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
 
-public static class Program
+// Force invariant culture for the Kernel
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile("chronicle.json", optional: true, reloadOnChange: true);
+
+var chronicleOptions = new ChronicleOptions();
+builder.Configuration.Bind(chronicleOptions);
+builder.Services.Configure<ChronicleOptions>(builder.Configuration);
+
+builder.WebHost.ConfigureKestrel(options =>
 {
-    public static Task Main(string[] args)
+    options.ListenAnyIP(chronicleOptions.Port, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+    options.Limits.Http2.MaxStreamsPerConnection = 100;
+});
+
+builder.Host
+   .UseDefaultServiceProvider(_ =>
+   {
+       _.ValidateScopes = false;
+       _.ValidateOnBuild = false;
+   })
+   .UseCratisApplicationModel()
+   .UseCratisMongoDB(mongo =>
+   {
+       mongo.Server = chronicleOptions.Storage.ConnectionDetails;
+       mongo.Database = "chronicle";
+   })
+   .UseOrleans(_ => _
+       .UseLocalhostClustering() // TODO: Implement MongoDB clustering
+       .AddChronicleToSilo(_ => _
+           .WithMongoDB())
+       .UseDashboard(options =>
+       {
+           options.Host = "*";
+           options.Port = 8081;
+           options.HostSelf = true;
+       }))
+   .ConfigureServices((context, services) =>
+   {
+       services
+          .AddSingleton(Globals.JsonSerializerOptions)
+          .AddBindingsByConvention()
+          .AddChronicleTelemetry(context.Configuration)
+          .AddSelfBindings()
+          .AddGrpcServices()
+          .AddSingleton(BinderConfiguration.Default);
+
+       services.AddCodeFirstGrpc();
+   });
+
+var app = builder.Build();
+app
+    .UseRouting()
+    .MapGrpcServices()
+    .UseCratisApplicationModel();
+
+await app.RunAsync();
+
+static void PrintExceptionInfo(Exception exception)
+{
+    Console.WriteLine($"Exception type: {exception.GetType().FullName}");
+    Console.WriteLine($"Exception message: {exception.Message}");
+    Console.WriteLine($"Stack Trace: {exception.StackTrace}");
+}
+
+static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
+{
+    if (args.ExceptionObject is Exception exception)
     {
-        AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
+        Console.WriteLine("************ BEGIN UNHANDLED EXCEPTION ************");
+        PrintExceptionInfo(exception);
 
-        // Force invariant culture for the Kernel
-        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
-        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
-        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
-
-        return CreateHostBuilder(args).RunConsoleAsync();
-    }
-
-    public static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder(args)
-           .UseConfiguration()
-           .UseDefaultServiceProvider(_ =>
-           {
-               _.ValidateScopes = false;
-               _.ValidateOnBuild = false;
-           })
-           .UseCratisApplicationModel()
-           .UseCratisMongoDB(mongo =>
-           {
-               mongo.Server = "mongodb://localhost:27017";
-               mongo.Database = "chronicle";
-           })
-           .ConfigureServices((context, services) => services
-               .AddSingleton(Globals.JsonSerializerOptions)
-               .AddBindingsByConvention()
-               .AddChronicleTelemetry(context.Configuration)
-               .AddSelfBindings())
-           .UseOrleans(_ => _
-               .UseLocalhostClustering() // TODO: Implement MongoDB clustering
-               .AddChronicleToSilo(_ => _
-                   .WithMongoDB())
-               .UseDashboard(options =>
-               {
-                   options.Host = "*";
-                   options.Port = 8081;
-                   options.HostSelf = true;
-               }))
-           .ConfigureWebHostDefaults(_ => _
-               .ConfigureKestrel(options =>
-               {
-                   options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
-                   options.Limits.Http2.MaxStreamsPerConnection = 100;
-               })
-               .UseStartup<Startup>());
-
-    static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
-    {
-        if (args.ExceptionObject is Exception exception)
+        while (exception.InnerException != null)
         {
-            Console.WriteLine("************ BEGIN UNHANDLED EXCEPTION ************");
-            PrintExceptionInfo(exception);
-
-            while (exception.InnerException != null)
-            {
-                Console.WriteLine("\n------------ BEGIN INNER EXCEPTION ------------");
-                PrintExceptionInfo(exception.InnerException);
-                exception = exception.InnerException;
-                Console.WriteLine("------------ END INNER EXCEPTION ------------\n");
-            }
-
-            Console.WriteLine("************ END UNHANDLED EXCEPTION ************ ");
+            Console.WriteLine("\n------------ BEGIN INNER EXCEPTION ------------");
+            PrintExceptionInfo(exception.InnerException);
+            exception = exception.InnerException;
+            Console.WriteLine("------------ END INNER EXCEPTION ------------\n");
         }
-    }
 
-    static void PrintExceptionInfo(Exception exception)
-    {
-        Console.WriteLine($"Exception type: {exception.GetType().FullName}");
-        Console.WriteLine($"Exception message: {exception.Message}");
-        Console.WriteLine($"Stack Trace: {exception.StackTrace}");
+        Console.WriteLine("************ END UNHANDLED EXCEPTION ************ ");
     }
 }

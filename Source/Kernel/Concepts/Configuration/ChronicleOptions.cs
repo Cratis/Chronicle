@@ -4,17 +4,17 @@
 namespace Cratis.Chronicle.Concepts.Configuration;
 
 /// <summary>
-/// Represents the storage configuration.
+/// Represents the Chronicle options.
 /// </summary>
-public class Storage
+public class ChronicleOptions
 {
     /// <summary>
-    /// Gets the type of storage used.
+    /// Port to listen on for gRPC.
     /// </summary>
-    public string Type { get; init; } = string.Empty;
+    public int Port { get; init; } = 35000;
 
     /// <summary>
-    /// Gets the connection details for the storage.
+    /// Gets or inits the storage configuration.
     /// </summary>
-    public string ConnectionDetails { get; init; } = string.Empty;
+    public Storage Storage { get; init; } = new Storage();
 }

@@ -40,7 +40,7 @@ public class last_child_removed(context context) : Given<context>(context)
     }
 
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
-    [Fact] void should_only_have_no_children() => Context.Result.Users.ShouldBeEmpty();
+    [Fact] void should_have_no_children() => Context.Result.Users.ShouldBeEmpty();
     [Fact] void should_only_have_one_group() => Context.Groups.Length.ShouldEqual(1);
     [Fact] void should_only_have_the_correct_group() => Context.Groups[0].Id.Value.ShouldEqual(Context.ModelId);
 }
