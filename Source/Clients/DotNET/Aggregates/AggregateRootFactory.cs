@@ -33,7 +33,7 @@ public class AggregateRootFactory(
         var aggregateRoot = ActivatorUtilities.CreateInstance<TAggregateRoot>(serviceProvider);
         var eventSequence = eventStore.GetEventSequence(EventSequenceId.Log);
 
-        var context = new AggregateRootContext(id, eventSequence, aggregateRoot, unitOfWork);
+        var context = new AggregateRootContext(id, eventSequence, aggregateRoot, unitOfWork, EventSequenceNumber.First);
         var mutator = await mutatorFactory.Create<TAggregateRoot>(context);
 
         await mutator.Rehydrate();

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Aggregates;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Orleans.Aggregates;
 using Cratis.Chronicle.Transactions;
@@ -36,7 +37,8 @@ public class UnitOfWorkIncomingCallFilter(
                 aggregate.GetPrimaryKeyString(),
                 eventStore.GetEventSequence(EventSequenceId.Log),
                 aggregate,
-                unitOfWork);
+                unitOfWork,
+                aggregateContextHolder.Context?.NextSequenceNumber ?? EventSequenceNumber.First);
 
             await aggregateContextHolder.SetContext(aggregateRootContext);
         }
