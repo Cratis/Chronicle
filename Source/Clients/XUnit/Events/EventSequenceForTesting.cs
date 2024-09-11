@@ -40,6 +40,16 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
     public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes) => Task.FromResult<IImmutableList<AppendedEvent>>(_events.ToImmutableList());
 
     /// <inheritdoc/>
+    public Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(
+        EventSequenceNumber sequenceNumber,
+        EventSourceId? eventSourceId = default,
+        IEnumerable<EventType>? eventTypes = default) =>
+        Task.FromResult<IImmutableList<AppendedEvent>>(_events.Where(_ =>
+            _.Metadata.SequenceNumber >= sequenceNumber
+            && (eventSourceId is null || _.Context.EventSourceId == eventSourceId)
+            && eventTypes?.Contains(_.Metadata.Type) != false).ToImmutableList());
+
+    /// <inheritdoc/>
     public Task<EventSequenceNumber> GetNextSequenceNumber() => Task.FromResult(EventSequenceNumber.First);
 
     /// <inheritdoc/>
