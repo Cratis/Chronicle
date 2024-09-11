@@ -25,7 +25,7 @@ public class AggregateRoot : IAggregateRoot
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => _context.NextSequenceNumber != EventSequenceNumber.First;
+    protected bool IsNew => _context.NextSequenceNumber == EventSequenceNumber.First;
 
     /// <inheritdoc/>
     public async Task Apply(object @event) => await _mutation.Apply(@event);

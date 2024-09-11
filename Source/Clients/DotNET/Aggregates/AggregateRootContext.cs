@@ -35,7 +35,7 @@ public class AggregateRootContext(
     public IUnitOfWork UnitOfWOrk { get; } = unitOfWork;
 
     /// <inheritdoc/>
-    public EventSequenceNumber NextSequenceNumber { get; } = nextSequenceNumber;
+    public EventSequenceNumber NextSequenceNumber { get; set; } = nextSequenceNumber;
 
     /// <inheritdoc/>
     public bool HasEventsForRehydration { get; set; }

@@ -33,7 +33,19 @@ public class StatelessAggregateRootMutator(
             }).ToArray();
 
             var deserializedEvents = await Task.WhenAll(deserializedEventsTasks);
-            await eventHandlers.Handle(aggregateRootContext.AggregateRoot, deserializedEvents);
+
+            // TODO: Create Issue: There is a potential problem here with aggregate root state if for some reason one On method throws an exception, then the next time the aggregate is retrieved it will get that new corrupted state
+
+            // Scenario is when state is partially modified before throwing an exception.
+            await eventHandlers.Handle(aggregateRootContext.AggregateRoot, deserializedEvents, _ =>
+            {
+                var sequenceNumber = _.Context.SequenceNumber;
+                if (sequenceNumber != EventSequenceNumber.Unavailable &&
+                    sequenceNumber + 1 > aggregateRootContext.NextSequenceNumber)
+                {
+                    aggregateRootContext.NextSequenceNumber = sequenceNumber + 1;
+                }
+            });
         }
 
         if (aggregateRootContext is AggregateRootContext actualContext)
