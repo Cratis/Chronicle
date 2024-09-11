@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+
 #pragma warning disable SA1402 // File may only contain a single type
 
 namespace Cratis.Chronicle.Aggregates;
@@ -23,7 +25,7 @@ public class AggregateRoot : IAggregateRoot
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => !_context.HasEventsForRehydration;
+    protected bool IsNew => _context.NextSequenceNumber != EventSequenceNumber.First;
 
     /// <inheritdoc/>
     public async Task Apply(object @event) => await _mutation.Apply(@event);
