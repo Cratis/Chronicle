@@ -35,12 +35,7 @@ public interface IAggregateRootContext
     IUnitOfWork UnitOfWOrk { get; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether there are events available for rehydration.
-    /// </summary>
-    bool HasEventsForRehydration { get; set; }
-
-    /// <summary>
     /// Gets the last processed <see cref="EventSequenceNumber"/>.
     /// </summary>
-    internal EventSequenceNumber NextSequenceNumber { get; set; }
+    EventSequenceNumber NextSequenceNumber { get; set; }
 }

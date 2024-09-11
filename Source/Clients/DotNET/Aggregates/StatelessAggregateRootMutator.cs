@@ -47,11 +47,6 @@ public class StatelessAggregateRootMutator(
                 }
             });
         }
-
-        if (aggregateRootContext is AggregateRootContext actualContext)
-        {
-            actualContext.HasEventsForRehydration = events.Any();
-        }
     }
 
     /// <inheritdoc/>

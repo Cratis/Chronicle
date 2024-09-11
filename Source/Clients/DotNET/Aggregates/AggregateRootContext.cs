@@ -36,7 +36,4 @@ public class AggregateRootContext(
 
     /// <inheritdoc/>
     public EventSequenceNumber NextSequenceNumber { get; set; } = nextSequenceNumber;
-
-    /// <inheritdoc/>
-    public bool HasEventsForRehydration { get; set; }
 }

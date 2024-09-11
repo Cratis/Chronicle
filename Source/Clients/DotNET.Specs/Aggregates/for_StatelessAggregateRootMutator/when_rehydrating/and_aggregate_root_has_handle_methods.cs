@@ -27,7 +27,7 @@ public class and_aggregate_root_has_handle_methods : given.a_stateless_aggregate
             _secondEvent
         ];
 
-        _appendedEvents = new AppendedEvent[]
+        _appendedEvents = new[]
         {
             AppendedEvent.EmptyWithContent(_firstEvent),
             AppendedEvent.EmptyWithContent(_secondEvent)
@@ -35,10 +35,8 @@ public class and_aggregate_root_has_handle_methods : given.a_stateless_aggregate
 
         _eventHandlers.HasHandleMethods.Returns(true);
         _eventSequence
-            .GetForEventSourceIdAndEventTypes(_eventSourceId, Arg.Any<IEnumerable<EventType>>())
+            .GetFromSequenceNumber(EventSequenceNumber.First, _eventSourceId, Arg.Any<IEnumerable<EventType>>())
             .Returns(_appendedEvents);
-
-        _eventSequence.HasEventsFor(_eventSourceId).Returns(true);
 
         _eventSerializer
             .Deserialize(Arg.Any<AppendedEvent>())
@@ -47,7 +45,6 @@ public class and_aggregate_root_has_handle_methods : given.a_stateless_aggregate
 
     async Task Because() => await _mutator.Rehydrate();
 
-    [Fact] void should_handle_events() => _eventHandlers.Received().Handle(_aggregateRoot, Arg.Is<IEnumerable<EventAndContext>>(arg => arg.Select(_ => _.Event).SequenceEqual(_events)));
-    [Fact] void should_ask_if_there_are_events_for_the_event_source_id() => _eventSequence.Received(1).HasEventsFor(_eventSourceId);
-    [Fact] void should_set_has_events_for_rehydration_to_true() => _aggregateRootContext.HasEventsForRehydration.ShouldBeTrue();
+    [Fact] void should_handle_events() => _eventHandlers.Received().Handle(_aggregateRoot, Arg.Is<IEnumerable<EventAndContext>>(arg => arg.Select(_ => _.Event).SequenceEqual(_events)), Arg.Any<Action<EventAndContext>>());
+    [Fact] void should_ask_if_there_are_events_for_the_event_source_id() => _eventSequence.Received(1).GetFromSequenceNumber(EventSequenceNumber.First, _eventSourceId, _eventHandlers.EventTypes);
 }
