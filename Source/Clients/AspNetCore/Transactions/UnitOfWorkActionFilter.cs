@@ -19,6 +19,8 @@ public class UnitOfWorkActionFilter(IUnitOfWorkManager unitOfWorkManager) : IAsy
         await next();
 
         var unitOfWork = unitOfWorkManager.Current;
+
+        // TODO: Create Issue: unitOfWork.Commit here throws an exception if it's already commited, which maybe is a bit strict. Consider maybe to not throw in Commit()?
         await unitOfWork.Commit();
         if (!unitOfWork.IsSuccess)
         {
