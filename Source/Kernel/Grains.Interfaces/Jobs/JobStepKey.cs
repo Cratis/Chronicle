@@ -27,19 +27,12 @@ public record JobStepKey(JobId JobId, EventStoreName EventStore, EventStoreNames
     public static implicit operator string(JobStepKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{JobId}+{EventStore}+{Namespace}";
+    public override string ToString() => KeyHelper.Combine(JobId, EventStore, Namespace);
 
     /// <summary>
     /// Parse a key from a string.
     /// </summary>
     /// <param name="key">String representation of the key.</param>
     /// <returns>A <see cref="JobKey"/> instance.</returns>
-    public static JobStepKey Parse(string key)
-    {
-        var elements = key.Split('+');
-        var jobId = (JobId)elements[0];
-        var eventStore = (EventStoreName)elements[1];
-        var @namespace = (EventStoreNamespaceName)elements[2];
-        return new(jobId, eventStore, @namespace);
-    }
+    public static JobStepKey Parse(string key) => KeyHelper.Parse<JobStepKey>(key);
 }

@@ -34,10 +34,10 @@ public record ImmediateProjectionKey(
     {
         if (SessionId != default)
         {
-            return $"{ProjectionId}+{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}+{SessionId}";
+            return KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId, ModelKey, SessionId);
         }
 
-        return $"{ProjectionId}+{EventStore}+{Namespace}+{EventSequenceId}+{ModelKey}";
+        return KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId, ModelKey);
     }
 
     /// <summary>
@@ -45,19 +45,5 @@ public record ImmediateProjectionKey(
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ProjectionKey"/> instance.</returns>
-    public static ImmediateProjectionKey Parse(string key)
-    {
-        var elements = key.Split('+');
-        var projectionId = (ProjectionId)elements[0];
-        var eventStore = (EventStoreName)elements[1];
-        var @namespace = (EventStoreNamespaceName)elements[2];
-        var eventSequenceId = (EventSequenceId)elements[3];
-        var modelKey = (ModelKey)elements[4];
-        if (elements.Length == 6)
-        {
-            var sessionId = (ProjectionSessionId)Guid.Parse(elements[5]);
-            return new(projectionId, eventStore, @namespace, eventSequenceId, modelKey, sessionId);
-        }
-        return new(projectionId, eventStore, @namespace, eventSequenceId, modelKey);
-    }
+    public static ImmediateProjectionKey Parse(string key) => KeyHelper.Parse<ImmediateProjectionKey>(key);
 }

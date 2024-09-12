@@ -30,18 +30,12 @@ public record RecommendationKey(EventStoreName EventStore, EventStoreNamespaceNa
     public static implicit operator string(RecommendationKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{EventStore}+{Namespace}";
+    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
 
     /// <summary>
     /// Parse a key from a string.
     /// </summary>
     /// <param name="key">String representation of the key.</param>
     /// <returns>A <see cref="RecommendationKey"/> instance.</returns>
-    public static RecommendationKey Parse(string key)
-    {
-        var elements = key.Split('+');
-        var eventStore = (EventStoreName)elements[0];
-        var @namespace = (EventStoreNamespaceName)elements[1];
-        return new(eventStore, @namespace);
-    }
+    public static RecommendationKey Parse(string key) => KeyHelper.Parse<RecommendationKey>(key);
 }

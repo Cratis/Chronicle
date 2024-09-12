@@ -34,28 +34,14 @@ public record ObserverSubscriberKey(
     public static implicit operator string(ObserverSubscriberKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString()
-    {
-        return $"{ObserverId}+{EventStore}+{Namespace}+{EventSequenceId}+{EventSourceId}+{SiloAddress}";
-    }
+    public override string ToString() => KeyHelper.Combine(ObserverId, EventStore, Namespace, EventSequenceId, EventSourceId, SiloAddress);
 
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ObserverKey"/> instance.</returns>
-    public static ObserverSubscriberKey Parse(string key)
-    {
-        var elements = key.Split('+');
-        var observerId = (ObserverId)elements[0];
-        var eventStore = (EventStoreName)elements[1];
-        var @namespace = (EventStoreNamespaceName)elements[2];
-        var eventSequenceId = (EventSequenceId)elements[3];
-        var eventSourceId = (EventSourceId)elements[4];
-        var siloAddress = elements[5];
-
-        return new(observerId, eventStore, @namespace, eventSequenceId, eventSourceId, siloAddress);
-    }
+    public static ObserverSubscriberKey Parse(string key) => KeyHelper.Parse<ObserverSubscriberKey>(key);
 
     /// <summary>
     /// Creates an ObserverSubscriberKey from an ObserverKey and an EventSourceId.

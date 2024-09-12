@@ -30,18 +30,12 @@ public record JobsManagerKey(EventStoreName EventStore, EventStoreNamespaceName 
     public static implicit operator JobsManagerKey(string key) => Parse(key);
 
     /// <inheritdoc/>
-    public override string ToString() => $"{EventStore}+{Namespace}";
+    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
 
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="JobsManagerKey"/> instance.</returns>
-    public static JobsManagerKey Parse(string key)
-    {
-        var elements = key.Split('+');
-        var eventStore = (EventStoreName)elements[0];
-        var @namespace = (EventStoreNamespaceName)elements[1];
-        return new JobsManagerKey(eventStore, @namespace);
-    }
+    public static JobsManagerKey Parse(string key) => KeyHelper.Parse<JobsManagerKey>(key);
 }
