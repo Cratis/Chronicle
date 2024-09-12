@@ -7,7 +7,7 @@ using Cratis.Reflection;
 namespace Cratis.Chronicle.Orleans.Transactions;
 
 /// <summary>
-/// Extension methods for <see cref="IGrainCallContext"/>. 
+/// Extension methods for <see cref="IGrainCallContext"/>.
 /// </summary>
 internal static class GrainCallContextExtensions
 {
