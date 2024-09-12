@@ -33,6 +33,9 @@ public class UnitOfWork(
     EventSequenceNumber _currentSequenceNumber = EventSequenceNumber.First;
 
     /// <inheritdoc/>
+    public bool IsCompleted => _isCommitted || _isRolledBack;
+
+    /// <inheritdoc/>
     public CorrelationId CorrelationId => correlationId;
 
     /// <inheritdoc/>

@@ -15,6 +15,14 @@ namespace Cratis.Chronicle.Transactions;
 public interface IUnitOfWork : IDisposable
 {
     /// <summary>
+    /// Gets the value indicating whether the unit of work is completed.
+    /// </summary>
+    /// <remarks>
+    /// Unit of work being completed is semantically equal to it being disposed.
+    /// </remarks>
+    bool IsCompleted { get; }
+
+    /// <summary>
     /// Gets the <see cref="CorrelationId"/> for the <see cref="IUnitOfWork"/>.
     /// </summary>
     CorrelationId CorrelationId { get; }

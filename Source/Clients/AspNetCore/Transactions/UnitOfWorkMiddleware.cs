@@ -28,7 +28,10 @@ public class UnitOfWorkMiddleware(IUnitOfWorkManager unitOfWorkManager, RequestD
         }
         catch
         {
-            unitOfWork.Dispose();
+            if (!unitOfWork.IsCompleted)
+            {
+                unitOfWork.Dispose();
+            }
             throw;
         }
     }
