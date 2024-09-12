@@ -62,7 +62,7 @@
     <PackageVersion Include="Microsoft.Orleans.Sdk" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
-    <PackageVersion Include="OrleansTestKit" Version="8.2.0" />
+    <PackageVersion Include="OrleansTestKit" Version="8.2.1" />
     <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
     <!-- Open Telemetry -->
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
