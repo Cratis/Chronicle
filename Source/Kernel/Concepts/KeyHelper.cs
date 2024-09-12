@@ -39,6 +39,12 @@ public static class KeyHelper
 
         for (var parameterIndex = 0; parameterIndex < parameters.Length; parameterIndex++)
         {
+            if (parameterIndex >= elements.Length)
+            {
+                arguments.Add(null!);
+                continue;
+            }
+
             var element = elements[parameterIndex];
             object argument = string.IsNullOrEmpty(element) ? null! : element;
 
