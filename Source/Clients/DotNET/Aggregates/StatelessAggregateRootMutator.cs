@@ -48,6 +48,15 @@ public class StatelessAggregateRootMutator(
                 }
             });
         }
+
+        // Temporary fix for edge case where there are events for an aggregate root that there are not event handlers for,
+        // since aggregate root uses NextSequenceNumber to determine whether it is new we just need to give it a value greater than
+        // 0 if there are events for the event source.
+        if (aggregateRootContext.NextSequenceNumber == EventSequenceNumber.First &&
+            await aggregateRootContext.EventSequence.HasEventsFor(aggregateRootContext.EventSourceId))
+        {
+            aggregateRootContext.NextSequenceNumber = aggregateRootContext.NextSequenceNumber.Next();
+        }
     }
 
     /// <inheritdoc/>
