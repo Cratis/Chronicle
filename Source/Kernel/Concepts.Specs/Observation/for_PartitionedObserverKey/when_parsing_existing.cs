@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Grains.Observation.for_PartitionedObserverKey;
@@ -11,7 +12,7 @@ public class when_parsing_existing : Specification
     const string event_store = "7a28c4fa-cfd4-405e-9873-753bab4fd2e3";
     const string event_sequence_id = "c7b1abce-9a6a-43aa-89e8-7ee6e154bdf7";
     const string event_source_id = "181d06d6-2b0a-49cc-802d-734e3fab2a9b";
-    const string combined = $"{event_store}+{@namespace}+{event_sequence_id}+{event_source_id}";
+    string combined = $"{event_store}{KeyHelper.Separator}{@namespace}{KeyHelper.Separator}{event_sequence_id}{KeyHelper.Separator}{event_source_id}";
 
     PartitionedObserverKey result;
 

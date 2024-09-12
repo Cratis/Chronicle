@@ -22,22 +22,14 @@ public record PartitionedObserverKey(EventStoreName EventStore, EventStoreNamesp
     public static implicit operator string(PartitionedObserverKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{EventStore}+{Namespace}+{EventSequenceId}+{EventSourceId}";
+    public override string ToString() => KeyHelper.Combine(EventStore, Namespace, EventSequenceId, EventSourceId);
 
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="PartitionedObserverKey"/> instance.</returns>
-    public static PartitionedObserverKey Parse(string key)
-    {
-        var elements = key.Split('+');
-        var eventStore = (EventStoreName)elements[0];
-        var @namespace = (EventStoreNamespaceName)elements[1];
-        var eventSequenceId = (EventSequenceId)elements[2];
-        var eventSourceId = (EventSourceId)elements[3];
-        return new(eventStore, @namespace, eventSequenceId, eventSourceId);
-    }
+    public static PartitionedObserverKey Parse(string key) => KeyHelper.Parse<PartitionedObserverKey>(key);
 
     /// <summary>
     /// Creates a <see cref="PartitionedObserverKey"/> based on an Observer key and the partition key.

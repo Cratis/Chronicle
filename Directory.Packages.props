@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>13.7.0</ApplicationModel>
-    <Fundamentals>5.4.2</Fundamentals>
+    <ApplicationModel>13.8.1</ApplicationModel>
+    <Fundamentals>5.5.0</Fundamentals>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
@@ -62,7 +62,7 @@
     <PackageVersion Include="Microsoft.Orleans.Sdk" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="$(Orleans)" />
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
-    <PackageVersion Include="OrleansTestKit" Version="8.2.0" />
+    <PackageVersion Include="OrleansTestKit" Version="8.2.1" />
     <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
     <!-- Open Telemetry -->
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
@@ -88,7 +88,7 @@
     <PackageVersion Include="Testcontainers" Version="3.10.0" />
     <PackageVersion Include="xunit" Version="2.9.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
-    <PackageVersion Include="moq" Version="4.20.71" />
+    <PackageVersion Include="moq" Version="4.20.72" />
     <PackageVersion Include="NSubstitute" Version="5.1.0" />
     <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.11.1" />
   </ItemGroup>
