@@ -24,7 +24,7 @@ public class context_for_aggregate_root<TAggregate, TInternalState>(GlobalFixtur
     public IUnitOfWork UnitOfWork;
 
     public override IEnumerable<Type> AggregateRoots => [typeof(User)];
-    public override IEnumerable<Type> EventTypes => [typeof(UserOnBoarded), typeof(UserDeleted), typeof(UserNameChanged)];
+    public override IEnumerable<Type> EventTypes => [typeof(UserOnBoarded), typeof(UserCreated), typeof(UserDeleted), typeof(UserNameChanged)];
 
     protected List<EventAndEventSourceId> EventsWithEventSourceIdToAppend = [];
     protected IAggregateRootFactory AggregateRootFactory => Services.GetRequiredService<IAggregateRootFactory>();
