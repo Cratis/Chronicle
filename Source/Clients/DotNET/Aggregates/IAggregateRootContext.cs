@@ -35,7 +35,7 @@ public interface IAggregateRootContext
     IUnitOfWork UnitOfWOrk { get; }
 
     /// <summary>
-    /// Gets the next <see cref="EventSequenceNumber"/> to process for the aggregate root in the unit of work.
+    /// Gets or sets the next <see cref="EventSequenceNumber"/> to process for the aggregate root in the unit of work.
     /// </summary>
     EventSequenceNumber NextSequenceNumber { get; set; }
 }
