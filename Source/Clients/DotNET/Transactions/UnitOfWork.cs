@@ -53,7 +53,9 @@ public class UnitOfWork(
 
     /// <inheritdoc/>
     public IEnumerable<object> GetEvents() =>
-        _events.Values.SelectMany(_ => _).Select(_ => _.Event).ToArray();
+        _events.Values.SelectMany(_ => _)
+            .OrderBy(_ => _.SequenceNumber.Value)
+            .Select(_ => _.Event).ToArray();
 
     /// <inheritdoc/>
     public IEnumerable<AppendError> GetAppendErrors() => [.. _appendErrors];

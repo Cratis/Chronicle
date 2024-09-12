@@ -30,7 +30,8 @@ public static class ChildrenDefinitionConverters
             Children = definition.Children.ToDictionary(_ => (string)_.Key, _ => _.Value.ToContract()),
             All = definition.FromEvery.ToContract(),
             FromEventProperty = definition.FromEventProperty?.ToContract() ?? null!,
-            RemovedWith = definition.RemovedWith.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract())
+            RemovedWith = definition.RemovedWith.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
+            RemovedWithJoin = definition.RemovedWithJoin.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract())
         };
     }
 
@@ -50,6 +51,7 @@ public static class ChildrenDefinitionConverters
             contract.Children.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value.ToChronicle()),
             contract.All.ToChronicle(),
             contract.RemovedWith.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
+            contract.RemovedWithJoin.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
             contract.FromEventProperty?.ToChronicle() ?? null!
         );
     }

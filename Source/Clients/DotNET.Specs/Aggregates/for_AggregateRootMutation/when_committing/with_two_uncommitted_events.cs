@@ -38,6 +38,12 @@ public class with_two_uncommitted_events : given.an_aggregate_mutation
 
     [Fact] void should_return_a_successful_commit_result() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_return_the_correct_events_in_the_commit_result() => _result.Events.ShouldContainOnly(_events);
+    [Fact] void should_have_events_in_unit_of_work_in_correct_order()
+    {
+        var events = _unitOfWork.GetEvents().ToArray();
+        events[0].ShouldEqual(_firstEvent);
+        events[1].ShouldEqual(_secondEvent);
+    }
     [Fact] void should_commit_the_unit_of_work() => _unitOfWork.Received(1).Commit();
     [Fact] void should_clear_the_uncommitted_events() => _mutation.UncommittedEvents.ShouldBeEmpty();
 }

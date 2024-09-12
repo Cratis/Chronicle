@@ -73,6 +73,14 @@ public interface IProjectionBuilder<TModel, TBuilder>
     TBuilder RemovedWith<TEvent>(Action<RemovedWithBuilder<TModel, TEvent>>? builderCallback = default);
 
     /// <summary>
+    /// Defines what event removes a child through a join. This is optional, your system can chose to not support removal.
+    /// </summary>
+    /// <typeparam name="TEvent">Type of event.</typeparam>
+    /// <param name="builderCallback">Optional callback for building.</param>
+    /// <returns>Builder continuation.</returns>
+    TBuilder RemovedWithJoin<TEvent>(Action<RemovedWithJoinBuilder<TModel, TEvent>>? builderCallback = default);
+
+    /// <summary>
     /// Start building the children projection for a specific child model.
     /// </summary>
     /// <param name="targetProperty">Expression for expressing the target property.</param>

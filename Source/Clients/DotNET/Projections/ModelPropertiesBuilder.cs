@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Projections;
 /// <typeparam name="TBuilder">Type of actual builder.</typeparam>
 /// <typeparam name="TParentBuilder">The type of parent builder.</typeparam>
 public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder>(IProjectionBuilder<TModel, TParentBuilder> projectionBuilder)
-    : KeyBuilder<TEvent, TBuilder>, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
+    : KeyAndParentKeyBuilder<TEvent, TBuilder>, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
         where TBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
         where TParentBuilder : class
 {

@@ -29,16 +29,12 @@ public record EventSequenceKey(EventSequenceId EventSequenceId, EventStoreName E
     public static implicit operator EventSequenceKey(string key) => Parse(key);
 
     /// <inheritdoc/>
-    public override string ToString() => $"{EventSequenceId}+{EventStore}+{Namespace}";
+    public override string ToString() => KeyHelper.Combine(EventSequenceId, EventStore, Namespace);
 
     /// <summary>
     /// Parse a <see cref="EventSequenceKey"/> from a string.
     /// </summary>
     /// <param name="key">String to parse.</param>
     /// <returns>A parsed <see cref="EventSequenceKey"/>.</returns>
-    public static EventSequenceKey Parse(string key)
-    {
-        var parts = key.Split('+');
-        return new EventSequenceKey(parts[0], parts[1], parts[2]);
-    }
+    public static EventSequenceKey Parse(string key) => KeyHelper.Parse<EventSequenceKey>(key);
 }

@@ -18,6 +18,11 @@ public static class EventTypeExtensions
     /// <returns>True if it is an event type, false if not.</returns>
     public static bool IsEventType(this Type type, IEnumerable<Type> eventTypes)
     {
+        if (type == typeof(object))
+        {
+            return false;
+        }
+
         if (type.GetCustomAttribute<EventTypeAttribute>() != null)
         {
             return true;

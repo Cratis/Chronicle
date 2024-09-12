@@ -6,7 +6,7 @@ using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.Model
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_removing;
 
-public class UserProjectionWithExternalRemovedWith : IProjectionFor<User>
+public class UserProjectionWithRemovedWithJoin : IProjectionFor<User>
 {
     public void Define(IProjectionBuilderFor<User> builder) => builder
         .AutoMap()
@@ -15,5 +15,5 @@ public class UserProjectionWithExternalRemovedWith : IProjectionFor<User>
             .IdentifiedBy(e => e.GroupId)
             .From<UserAddedToGroup>(b => b
                 .UsingParentKey(e => e.UserId))
-            .RemovedWith<GroupRemoved>());
+            .RemovedWithJoin<GroupRemoved>());
 }

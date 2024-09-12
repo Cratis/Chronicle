@@ -21,20 +21,12 @@ public record ProjectionKey(ProjectionId ProjectionId, EventStoreName EventStore
     public static implicit operator string(ProjectionKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{ProjectionId}+{EventStore}+{Namespace}+{EventSequenceId}";
+    public override string ToString() => KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId);
 
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ProjectionKey"/> instance.</returns>
-    public static ProjectionKey Parse(string key)
-    {
-        var elements = key.Split('+');
-        var projectionId = (ProjectionId)elements[0];
-        var eventStore = (EventStoreName)elements[1];
-        var @namespace = (EventStoreNamespaceName)elements[2];
-        var eventSequenceId = (EventSequenceId)elements[3];
-        return new(projectionId, eventStore, @namespace, eventSequenceId);
-    }
+    public static ProjectionKey Parse(string key) => KeyHelper.Parse<ProjectionKey>(key);
 }

@@ -58,7 +58,7 @@ public class ProjectionFactory(
         PropertyPath childrenAccessorProperty,
         PropertyPath identifiedByProperty,
         ProjectionPath path,
-        bool hasParent)
+        bool isChild)
     {
         var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
         var model = new Model(projectionDefinition.Model.Name, modelSchema);
@@ -86,7 +86,7 @@ public class ProjectionFactory(
             childProjections);
 
         SetParentOnAllChildProjections(projection, childProjections);
-        ResolveEventsForProjection(projection, childProjections, projectionDefinition, actualIdentifiedByProperty, hasParent);
+        ResolveEventsForProjection(projection, childProjections, projectionDefinition, actualIdentifiedByProperty, isChild);
 
         if (projectionDefinition.FromEventProperty is not null)
         {
@@ -122,10 +122,21 @@ public class ProjectionFactory(
                 actualIdentifiedByProperty,
                 projection,
                 fromDefinition,
-                hasParent);
+                isChild);
         }
 
-        SetupRemovedWith(projectionDefinition, childrenAccessorProperty, hasParent, actualIdentifiedByProperty, projection);
+        SetupRemovedWith(
+            projectionDefinition,
+            childrenAccessorProperty,
+            isChild,
+            actualIdentifiedByProperty,
+            projection);
+
+        SetupRemovedWithJoin(
+            projectionDefinition,
+            childrenAccessorProperty,
+            actualIdentifiedByProperty,
+            projection);
 
         if (projectionDefinition.FromDerivatives is not null)
         {
@@ -149,7 +160,7 @@ public class ProjectionFactory(
                         actualIdentifiedByProperty,
                         projection,
                         fromDerivativesDefinition.From,
-                        hasParent);
+                        isChild);
                 }
             }
         }
@@ -178,31 +189,34 @@ public class ProjectionFactory(
         return projection;
     }
 
-    void SetupRemovedWith(ProjectionDefinition projectionDefinition, PropertyPath childrenAccessorProperty, bool hasParent, PropertyPath actualIdentifiedByProperty, Projection projection)
+    void SetupRemovedWith(ProjectionDefinition projectionDefinition, PropertyPath childrenAccessorProperty, bool isChild, PropertyPath actualIdentifiedByProperty, Projection projection)
     {
-        foreach (var (eventType, removedWithDefinition) in projectionDefinition.RemovedWith)
+        foreach (var (eventType, _) in projectionDefinition.RemovedWith)
         {
             var observable = projection.Event
                     .WhereEventTypeEquals(eventType);
-            if (hasParent)
+            if (isChild)
             {
-                if (removedWithDefinition.ParentKey?.IsSet() == false)
-                {
-                    observable.RemoveChildFromAll(
-                        childrenAccessorProperty,
-                        actualIdentifiedByProperty);
-                }
-                else
-                {
-                    observable.RemoveChild(
-                        childrenAccessorProperty,
-                        actualIdentifiedByProperty);
-                }
+                observable.RemoveChild(
+                    childrenAccessorProperty,
+                    actualIdentifiedByProperty);
             }
             else
             {
                 observable.Remove();
             }
+        }
+    }
+
+    void SetupRemovedWithJoin(ProjectionDefinition projectionDefinition, PropertyPath childrenAccessorProperty, PropertyPath actualIdentifiedByProperty, Projection projection)
+    {
+        foreach (var (eventType, _) in projectionDefinition.RemovedWithJoin)
+        {
+            projection.Event
+                   .WhereEventTypeEquals(eventType)
+                   .RemoveChildFromAll(
+                       childrenAccessorProperty,
+                       actualIdentifiedByProperty);
         }
     }
 
@@ -302,12 +316,8 @@ public class ProjectionFactory(
         // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
         var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
         eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
-        eventsForProjection.AddRange(projectionDefinition.RemovedWith.Select(kvp =>
-        {
-            // For RemovedWith that doesn't have a parent key reference, we ignore parent all together.
-            var includeParent = hasParent && kvp.Value.ParentKey?.IsSet() == true;
-            return GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, includeParent, kvp.Value.ParentKey);
-        }));
+        eventsForProjection.AddRange(projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)));
+        eventsForProjection.AddRange(projectionDefinition.RemovedWithJoin.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
 
         if (projectionDefinition.FromDerivatives is not null)
         {

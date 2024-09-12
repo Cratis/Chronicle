@@ -21,20 +21,12 @@ public record ReducerKey(ReducerId ReducerId, EventStoreName EventStore, EventSt
     public static implicit operator string(ReducerKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{ReducerId}+{EventStore}+{Namespace}+{EventSequenceId}";
+    public override string ToString() => KeyHelper.Combine(ReducerId, EventStore, Namespace, EventSequenceId);
 
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ReducerKey"/> instance.</returns>
-    public static ReducerKey Parse(string key)
-    {
-        var elements = key.Split('+');
-        var projectionId = (ReducerId)elements[0];
-        var eventStore = (EventStoreName)elements[1];
-        var @namespace = (EventStoreNamespaceName)elements[2];
-        var eventSequenceId = (EventSequenceId)elements[3];
-        return new(projectionId, eventStore, @namespace, eventSequenceId);
-    }
+    public static ReducerKey Parse(string key) => KeyHelper.Parse<ReducerKey>(key);
 }

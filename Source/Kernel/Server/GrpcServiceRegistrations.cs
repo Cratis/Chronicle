@@ -12,7 +12,8 @@ public static class GrpcServiceRegistrations
     /// Add all Grpc services to the service collection.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
-    public static void AddGrpcServices(this IServiceCollection services)
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
+    public static IServiceCollection AddGrpcServices(this IServiceCollection services)
     {
         services.AddSingleton<Contracts.EventSequences.IEventSequences, Services.EventSequences.EventSequences>();
         services.AddSingleton<Contracts.Events.IEventTypes, Services.Events.EventTypes>();
@@ -23,13 +24,16 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Observation.Reducers.IReducers, Services.Observation.Reducers.Reducers>();
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
         services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();
+
+        return services;
     }
 
     /// <summary>
     /// Map all Grpc services and expose them on the endpoint.
     /// </summary>
     /// <param name="app"><see cref="IApplicationBuilder"/> to add to.</param>
-    public static void MapGrpcServices(this IApplicationBuilder app)
+    /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
+    public static IApplicationBuilder MapGrpcServices(this IApplicationBuilder app)
     {
         app.UseEndpoints(_ =>
         {
@@ -43,5 +47,7 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.Projections.Projections>();
             _.MapGrpcService<Services.Host.Server>();
         });
+
+        return app;
     }
 }

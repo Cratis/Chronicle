@@ -19,7 +19,6 @@ public class KeyBuilder<TEvent, TBuilder> : IKeyBuilder<TEvent, TBuilder>
 #pragma warning disable CA1051 // Visible instance fields
 #pragma warning disable SA1600 // Elements should be documented
     protected PropertyExpression _keyExpression = new EventSourceIdExpression().Build();
-    protected PropertyExpression _parentKeyExpression = new NoExpression().Build();
 #pragma warning restore CA1600 // Elements should be documented
 #pragma warning restore CA1051 // Visible instance fields
 
@@ -31,32 +30,9 @@ public class KeyBuilder<TEvent, TBuilder> : IKeyBuilder<TEvent, TBuilder>
     }
 
     /// <inheritdoc/>
-    public TBuilder UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
+    public TBuilder UsingKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor)
     {
-        _parentKeyExpression = new EventContentPropertyExpression(keyAccessor.GetPropertyPath()).Build();
-        return (this as TBuilder)!;
-    }
-
-    /// <inheritdoc/>
-    public TBuilder UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
-    {
-        var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>();
-        builderCallback(compositeKeyBuilder);
-        _parentKeyExpression = compositeKeyBuilder.Build();
-        return (this as TBuilder)!;
-    }
-
-    /// <inheritdoc/>
-    public TBuilder UsingParentKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor)
-    {
-        _parentKeyExpression = new EventContextPropertyExpression(keyAccessor.GetPropertyPath()).Build();
-        return (this as TBuilder)!;
-    }
-
-    /// <inheritdoc/>
-    public TBuilder UsingKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor)
-    {
-        _parentKeyExpression = new EventContextPropertyExpression(keyAccessor.GetPropertyPath()).Build();
+        _keyExpression = new EventContextPropertyExpression(keyAccessor.GetPropertyPath()).Build();
         return (this as TBuilder)!;
     }
 

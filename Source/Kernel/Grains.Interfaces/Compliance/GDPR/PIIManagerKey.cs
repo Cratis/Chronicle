@@ -30,16 +30,12 @@ public record PIIManagerKey(EventStoreName EventStore, EventStoreNamespaceName N
     public static implicit operator PIIManagerKey(string key) => Parse(key);
 
     /// <inheritdoc/>
-    public override string ToString() => $"{EventStore}+{Namespace}";
+    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
 
     /// <summary>
     /// Parse a <see cref="PIIManagerKey"/> from a string.
     /// </summary>
     /// <param name="key">String to parse.</param>
     /// <returns>A parsed <see cref="PIIManagerKey"/>.</returns>
-    public static PIIManagerKey Parse(string key)
-    {
-        var part = key.Split('+');
-        return new PIIManagerKey(part[0], part[1]);
-    }
+    public static PIIManagerKey Parse(string key) => KeyHelper.Parse<PIIManagerKey>(key);
 }

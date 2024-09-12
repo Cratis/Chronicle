@@ -26,8 +26,7 @@ public class AggregateRoot : IAggregateRoot
     protected bool IsNew => !_context.HasEventsForRehydration;
 
     /// <inheritdoc/>
-    public async Task Apply<T>(T @event)
-        where T : class => await _mutation.Apply(@event);
+    public async Task Apply(object @event) => await _mutation.Apply(@event);
 
     /// <inheritdoc/>
     public async Task<AggregateRootCommitResult> Commit()
