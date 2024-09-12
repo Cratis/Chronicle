@@ -17,7 +17,10 @@ public class UnitOfWorkOutgoingCallFilter(IUnitOfWorkManager unitOfWorkManager) 
     {
         var correlationId = unitOfWorkManager.HasCurrent ? unitOfWorkManager.Current.CorrelationId : CorrelationId.New();
         RequestContext.Set(Constants.CorrelationIdKey, correlationId);
-
+        if (context.IsMessageToAggregateRoot() && !unitOfWorkManager.HasCurrent)
+        {
+            unitOfWorkManager.Begin(correlationId);
+        }
         await context.Invoke();
     }
 }

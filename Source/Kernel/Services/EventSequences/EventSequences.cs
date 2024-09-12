@@ -88,6 +88,30 @@ public class EventSequences(
         };
     }
 
+    /// <inheritdoc/>
+    public async Task<GetFromEventSequenceNumberResponse> GetEventsFromEventSequenceNumber(
+        GetFromEventSequenceNumberRequest request,
+        CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceStorage(request);
+
+        var cursor = await eventSequence.GetFromSequenceNumber(
+            request.EventSequenceNumber,
+            string.IsNullOrWhiteSpace(request.EventSourceId) ? null! : request.EventSourceId,
+            request.EventTypes.ToChronicle());
+
+        var events = new List<Contracts.Events.AppendedEvent>();
+        while (await cursor.MoveNext())
+        {
+            var current = cursor.Current;
+            events.AddRange(current.ToContract());
+        }
+        return new()
+        {
+            Events = events
+        };
+    }
+
     IEventSequenceStorage GetEventSequenceStorage(IEventSequenceRequest request) =>
         storage.GetEventStore(request.EventStoreName).GetNamespace(request.Namespace).GetEventSequence(request.EventSequenceId);
 

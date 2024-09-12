@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Transactions;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.AspNetCore.Transactions;
 
@@ -11,7 +12,8 @@ namespace Cratis.Chronicle.AspNetCore.Transactions;
 /// Represents an implementation of <see cref="IAsyncActionFilter"/> for managing units of work and errors.
 /// </summary>
 /// <param name="unitOfWorkManager">The <see cref="IUnitOfWorkManager"/> to use.</param>
-public class UnitOfWorkActionFilter(IUnitOfWorkManager unitOfWorkManager) : IAsyncActionFilter
+/// <param name="logger">The <see cref="ILogger{TCategoryName}"/>.</param>
+public class UnitOfWorkActionFilter(IUnitOfWorkManager unitOfWorkManager, ILogger<UnitOfWorkActionFilter> logger) : IAsyncActionFilter
 {
     /// <inheritdoc/>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -19,7 +21,15 @@ public class UnitOfWorkActionFilter(IUnitOfWorkManager unitOfWorkManager) : IAsy
         await next();
 
         var unitOfWork = unitOfWorkManager.Current;
-        await unitOfWork.Commit();
+
+        if (!unitOfWork.IsCompleted)
+        {
+            await unitOfWork.Commit();
+        }
+        else
+        {
+            logger.AlreadyCompletedManually(unitOfWork.CorrelationId);
+        }
         if (!unitOfWork.IsSuccess)
         {
             foreach (var violation in unitOfWork.GetConstraintViolations())

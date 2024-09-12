@@ -26,6 +26,7 @@ public interface IAggregateRootEventHandlers
     /// </summary>
     /// <param name="target">The target <see cref="IAggregateRoot"/> to handle for.</param>
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to handle.</param>
+    /// <param name="onHandledEvent">The optional callback to do on each handled event.</param>
     /// <returns>Awaitable task.</returns>
-    Task Handle(IAggregateRoot target, IEnumerable<EventAndContext> events);
+    Task Handle(IAggregateRoot target, IEnumerable<EventAndContext> events, Action<EventAndContext>? onHandledEvent = default);
 }

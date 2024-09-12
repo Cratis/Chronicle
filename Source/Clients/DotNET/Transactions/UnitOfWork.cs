@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
@@ -24,10 +25,15 @@ public class UnitOfWork(
     readonly ConcurrentDictionary<EventSequenceId, ConcurrentBag<EventForEventSourceIdWithSequenceNumber>> _events = [];
     readonly ConcurrentBag<ConstraintViolation> _constraintViolations = [];
     readonly ConcurrentBag<AppendError> _appendErrors = [];
+
+    EventSequenceNumber? _lastCommittedEventSequenceNumber;
     Action<IUnitOfWork> _onCompleted = onCompleted;
     bool _isCommitted;
     bool _isRolledBack;
     EventSequenceNumber _currentSequenceNumber = EventSequenceNumber.First;
+
+    /// <inheritdoc/>
+    public bool IsCompleted => _isCommitted || _isRolledBack;
 
     /// <inheritdoc/>
     public CorrelationId CorrelationId => correlationId;
@@ -76,6 +82,7 @@ public class UnitOfWork(
             var result = await eventSequence.AppendMany(sorted);
             result.ConstraintViolations.ForEach(_constraintViolations.Add);
             result.Errors.ForEach(_appendErrors.Add);
+            _lastCommittedEventSequenceNumber = result.SequenceNumbers.OrderBy(_ => _.Value).LastOrDefault();
         }
 
         _onCompleted(this);
@@ -95,6 +102,13 @@ public class UnitOfWork(
 
     /// <inheritdoc/>
     public void OnCompleted(Action<IUnitOfWork> callback) => _onCompleted = callback;
+
+    /// <inheritdoc/>
+    public bool TryGetLastCommittedEventSequenceNumber([NotNullWhen(true)] out EventSequenceNumber? eventSequenceNumber)
+    {
+        eventSequenceNumber = _lastCommittedEventSequenceNumber;
+        return eventSequenceNumber is not null;
+    }
 
     /// <inheritdoc/>
     public void Dispose()

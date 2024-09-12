@@ -65,6 +65,12 @@ public class AggregateRootMutation(
     public async Task<AggregateRootCommitResult> Commit()
     {
         await aggregateRootContext.UnitOfWOrk.Commit();
+        if (aggregateRootContext.UnitOfWOrk.TryGetLastCommittedEventSequenceNumber(
+                out var lastCommittedEventSequenceNumber))
+        {
+            aggregateRootContext.NextSequenceNumber = lastCommittedEventSequenceNumber + 1;
+        }
+
         UncommittedEvents = ImmutableList<object>.Empty;
         return AggregateRootCommitResult.CreateFrom(aggregateRootContext.UnitOfWOrk);
     }

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
@@ -14,12 +15,20 @@ namespace Cratis.Chronicle.Transactions;
 public interface IUnitOfWork : IDisposable
 {
     /// <summary>
+    /// Gets the value indicating whether the unit of work is completed.
+    /// </summary>
+    /// <remarks>
+    /// Unit of work being completed is semantically equal to it being disposed.
+    /// </remarks>
+    bool IsCompleted { get; }
+
+    /// <summary>
     /// Gets the <see cref="CorrelationId"/> for the <see cref="IUnitOfWork"/>.
     /// </summary>
     CorrelationId CorrelationId { get; }
 
     /// <summary>
-    /// Gets a value indicating whether or not the <see cref="IUnitOfWork"/> was successful.
+    /// Gets a value indicating whether the <see cref="IUnitOfWork"/> was successful.
     /// </summary>
     bool IsSuccess { get; }
 
@@ -67,4 +76,11 @@ public interface IUnitOfWork : IDisposable
     /// </summary>
     /// <param name="callback">The callback to call.</param>
     void OnCompleted(Action<IUnitOfWork> callback);
+
+    /// <summary>
+    /// Try to get the <see cref="EventSequenceNumber"/> of the last committed event.
+    /// </summary>
+    /// <param name="eventSequenceNumber">The outputted <see cref="EventSequenceNumber"/> of the last committed event.</param>
+    /// <returns>True if events were committed, false if not.</returns>
+    bool TryGetLastCommittedEventSequenceNumber([NotNullWhen(true)]out EventSequenceNumber? eventSequenceNumber);
 }

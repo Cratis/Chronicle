@@ -33,7 +33,8 @@ public class a_stateless_aggregate_root_mutator : Specification
             _eventSourceId,
             _eventSequence,
             _aggregateRoot,
-            _unitOfWork);
+            _unitOfWork,
+            EventSequenceNumber.First);
 
         _eventSerializer = Substitute.For<IEventSerializer>();
         _eventHandlers = Substitute.For<IAggregateRootEventHandlers>();
