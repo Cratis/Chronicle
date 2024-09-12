@@ -28,7 +28,7 @@ public interface IUnitOfWork : IDisposable
     CorrelationId CorrelationId { get; }
 
     /// <summary>
-    /// Gets a value indicating whether or not the <see cref="IUnitOfWork"/> was successful.
+    /// Gets a value indicating whether the <see cref="IUnitOfWork"/> was successful.
     /// </summary>
     bool IsSuccess { get; }
 
