@@ -81,6 +81,7 @@ public class EventStore : IEventStore
         Constraints = new Constraints(
             this,
             [
+                new ConstraintsByBuilderProvider(clientArtifactsProvider, EventTypes, serviceProvider),
                 new UniqueConstraintProvider(clientArtifactsProvider, EventTypes),
                 new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes),
             ]);
