@@ -44,7 +44,7 @@ public class context_for_aggregate_root<TAggregate, TInternalState>(GlobalFixtur
         UnitOfWorkManager.TryGetFor(correlationId, out UnitOfWork);
         if (commitUnitOfWork)
         {
-            await UnitOfWork!.Commit();
+            await user.Commit();
         }
     }
 

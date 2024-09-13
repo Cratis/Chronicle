@@ -8,6 +8,7 @@ public record UserInternalState(StateProperty<UserName> Name, StateProperty<bool
 
 public interface IUser : IIntegrationTestAggregateRoot<UserInternalState>
 {
+    Task Create();
     Task Onboard(UserName name);
     Task Delete();
     Task ChangeUserName(UserName newName);
