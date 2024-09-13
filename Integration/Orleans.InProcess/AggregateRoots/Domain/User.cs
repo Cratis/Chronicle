@@ -38,5 +38,11 @@ public class User(IAggregateRootFactory aggregateRootFactory) : AggregateRoot, I
         return Task.CompletedTask;
     }
 
+    public Task On(UserNameChanged evt)
+    {
+        Name = Name.New(evt.NewName);
+        return Task.CompletedTask;
+    }
+
     public Task<UserInternalState> GetState() => Task.FromResult(new UserInternalState(Name, Deleted));
 }

@@ -44,9 +44,17 @@ public class StatelessAggregateRootMutator(
                 }
                 if (nextSequenceNumber.IsActualValue && nextSequenceNumber > aggregateRootContext.NextSequenceNumber)
                 {
+                    aggregateRootContext.HasEvents = true;
                     aggregateRootContext.NextSequenceNumber = nextSequenceNumber;
                 }
             });
+        }
+
+        // We should look at improving how we set the NextSequenceNumber and instead rely only on that, perhaps by returing the last event sequence number. https://github.com/Cratis/Chronicle/issues/1400
+        if (aggregateRootContext.NextSequenceNumber == EventSequenceNumber.First &&
+            await aggregateRootContext.EventSequence.HasEventsFor(aggregateRootContext.EventSourceId))
+        {
+            aggregateRootContext.HasEvents = true;
         }
     }
 
@@ -55,6 +63,7 @@ public class StatelessAggregateRootMutator(
     {
         if (eventHandlers.HasHandleMethods)
         {
+            aggregateRootContext.HasEvents = true;
             await eventHandlers.Handle(
                 aggregateRootContext.AggregateRoot,
                 [
