@@ -38,4 +38,9 @@ public interface IAggregateRootContext
     /// Gets or sets the next <see cref="EventSequenceNumber"/> to process for the aggregate root in the unit of work.
     /// </summary>
     EventSequenceNumber NextSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether aggregate root has events.
+    /// </summary>
+    bool HasEvents { get; set; }
 }

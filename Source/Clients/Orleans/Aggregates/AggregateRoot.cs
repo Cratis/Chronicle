@@ -34,7 +34,7 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => Context?.NextSequenceNumber == EventSequenceNumber.First;
+    protected bool IsNew => !Context?.HasEvents ?? true;
 
     /// <inheritdoc/>
     public async Task SetContext(IAggregateRootContext context)
