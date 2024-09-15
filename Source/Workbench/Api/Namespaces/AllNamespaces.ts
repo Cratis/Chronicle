@@ -12,14 +12,19 @@ import Handlebars from 'handlebars';
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/namespaces');
 
 class AllNamespacesSortBy {
+    private _id: SortingActionsForObservableQuery<Namespace[]>;
     private _name: SortingActionsForObservableQuery<Namespace[]>;
     private _description: SortingActionsForObservableQuery<Namespace[]>;
 
     constructor(readonly query: AllNamespaces) {
+        this._id = new SortingActionsForObservableQuery<Namespace[]>('id', query);
         this._name = new SortingActionsForObservableQuery<Namespace[]>('name', query);
         this._description = new SortingActionsForObservableQuery<Namespace[]>('description', query);
     }
 
+    get id(): SortingActionsForObservableQuery<Namespace[]> {
+        return this._id;
+    }
     get name(): SortingActionsForObservableQuery<Namespace[]> {
         return this._name;
     }
@@ -29,9 +34,13 @@ class AllNamespacesSortBy {
 }
 
 class AllNamespacesSortByWithoutQuery {
+    private _id: SortingActions  = new SortingActions('id');
     private _name: SortingActions  = new SortingActions('name');
     private _description: SortingActions  = new SortingActions('description');
 
+    get id(): SortingActions {
+        return this._id;
+    }
     get name(): SortingActions {
         return this._name;
     }

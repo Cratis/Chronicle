@@ -8,6 +8,10 @@ namespace Cratis.Chronicle.Storage.Namespaces;
 /// <summary>
 /// Represents the state of a namespace.
 /// </summary>
+/// <param name="Id"><see cref="EventStoreNamespaceId"/> for the namespace.</param>
 /// <param name="Name"><see cref="EventStoreNamespaceName"/> for the namespace. </param>
 /// <param name="Created">WHen it was created.</param>
-public record NamespaceState(EventStoreNamespaceName Name, DateTimeOffset Created);
+public record NamespaceState(
+    EventStoreNamespaceId Id,
+    EventStoreNamespaceName Name,
+    DateTimeOffset Created);

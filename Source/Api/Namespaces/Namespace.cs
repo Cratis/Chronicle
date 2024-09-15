@@ -8,6 +8,10 @@ namespace Cratis.Api.Namespaces;
 /// <summary>
 /// Represents a namespace.
 /// </summary>
+/// <param name="Id">The <see cref="EventStoreNamespaceId"/> for the namespace.</param>
 /// <param name="Name">The name of the namespace.</param>
 /// <param name="Description">The description of the namespace.</param>
-public record Namespace(EventStoreNamespaceName Name, string Description);
+public record Namespace(
+    EventStoreNamespaceId Id,
+    EventStoreNamespaceName Name,
+    string Description);

@@ -20,6 +20,7 @@ import { Sinks } from './General/Sinks/Sinks';
 import { Reducers } from './General/Reducers/Reducers';
 import { Reactors } from './General/Reactors/Reactors';
 import strings from 'Strings';
+import { Namespaces } from './General/Namespaces/Namespaces';
 
 export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
@@ -41,6 +42,7 @@ export const EventStore = () => {
             label: strings.mainMenu.general.groupLabel,
             items: [
                 { label: strings.mainMenu.general.types, url: 'types', icon: mdIcons.MdDataObject },
+                { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdDataArray },
                 { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
                 { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
                 { label: strings.mainMenu.general.reducers, url: 'reducers', icon: gameIcons.GiTransform },
@@ -55,6 +57,7 @@ export const EventStore = () => {
                 element={<DefaultLayout menu={menuItems} basePath={'/event-store/:eventStore'} />}>
 
                 <Route path={'types'} element={<Types />} errorElement={<Projections />} />
+                <Route path={'namespaces'} element={<Namespaces />} />
                 <Route path={'sequences'} element={<GeneralSequences />} />
                 <Route path={'projections'} element={<Projections />} />
                 <Route path={'reducers'} element={<Reducers />} />
@@ -65,7 +68,7 @@ export const EventStore = () => {
                     <Route path={''} element={<Navigate to={'recommendations'} />} />
                     <Route path={'recommendations'} element={<Recommendations />} />
                     <Route path={'jobs'} element={<Jobs />} />
-                    <Route path={'sequences/*'} element={<Sequences />} />
+                    <Route path={'sequences'} element={<Sequences />} />
                     <Route path={'observers'} element={<Observers />} />
                     <Route path={'failed-partitions'} element={<FailedPartitions />} />
                     <Route path={'identities'} element={<Identities />} />

@@ -1,5 +1,10 @@
 {
-    "general": {},
+    "general": {
+        "buttons": {
+            "ok": "OK",
+            "cancel": "Cancel"
+        }
+    },
     "layout": {
         "topBar": {
             "profile": {
@@ -20,6 +25,7 @@
         "general": {
             "groupLabel": "General",
             "types": "Types",
+            "namespaces": "Namespaces",
             "sequences": "Sequences",
             "projections": "Projections",
             "reducers": "Reducers",
@@ -39,6 +45,29 @@
                     "name": "Name",
                     "generation": "Generation",
                     "tombstone": "Tombstone"
+                },
+                "dialogs": {
+                    "addEventType": {
+                        "title": "Add event type",
+                        "name": "Name"
+                    }
+                }
+            },
+            "namespaces": {
+                "title": "Namespaces",
+                "empty": "No namespaces found",
+                "actions": {
+                    "create": "Create"
+                },
+                "columns": {
+                    "id": "Identifier",
+                    "name": "Name"
+                },
+                "dialogs": {
+                    "addNamespace": {
+                        "title": "Add namespace",
+                        "name": "Name"
+                    }
                 }
             }
         },
