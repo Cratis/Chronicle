@@ -56,7 +56,7 @@ export const EventStore = () => {
             <Route path=':eventStore'
                 element={<DefaultLayout menu={menuItems} basePath={'/event-store/:eventStore'} />}>
 
-                <Route path={'types'} element={<Types />} errorElement={<Projections />} />
+                <Route path={'types'} element={<Types />} />
                 <Route path={'namespaces'} element={<Namespaces />} />
                 <Route path={'sequences'} element={<GeneralSequences />} />
                 <Route path={'projections'} element={<Projections />} />

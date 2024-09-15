@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Collections;
 using Microsoft.Extensions.Logging;
@@ -112,6 +114,12 @@ public class IdentityStorage(
 
         return _identitiesByIdentityId.ContainsKey(identityId);
     }
+
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<Identity>> ObserveAll() =>
+        new TransformingSubject<IEnumerable<MongoDBIdentity>, IEnumerable<Identity>>(
+            GetCollection().Observe(),
+            _ => _.Select(_ => new Identity(_.Subject, _.Name, _.UserName)));
 
     bool TryGetSingleFor(Identity identity, out IdentityId identityId)
     {

@@ -164,7 +164,13 @@
                 }
             },
             "identities": {
-                "title": "Identities"
+                "title": "Identities",
+                "empty": "No identities",
+                "columns": {
+                    "subject": "Subject",
+                    "name": "Name",
+                    "userName": "UserName"
+                }
             }
         }
     }
