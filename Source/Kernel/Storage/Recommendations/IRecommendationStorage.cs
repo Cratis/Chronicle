@@ -38,7 +38,7 @@ public interface IRecommendationStorage
     /// Get all recommendations.
     /// </summary>
     /// <returns>A collection of <see cref="RecommendationState"/>.</returns>
-    Task<IImmutableList<RecommendationState>> GeAll();
+    Task<IImmutableList<RecommendationState>> GetAll();
 
     /// <summary>
     /// Observe all recommendations.

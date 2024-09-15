@@ -24,11 +24,21 @@ public class RecommendationQueries(IStorage storage) : ControllerBase
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the recommendations are for.</param>
     /// <returns>Collection of <see cref="RecommendationInformation"/>.</returns>
     [HttpGet]
-    public Task<IEnumerable<RecommendationInformation>> GetRecommendations(
+    public async Task<IEnumerable<RecommendationInformation>> GetRecommendations(
         [FromRoute] EventStoreName eventStore,
         [FromRoute] EventStoreNamespaceName @namespace)
     {
-        throw new NotImplementedException();
+        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
+        var recommendations = await namespaceStorage.Recommendations.GetAll();
+        return recommendations.Select(_ =>
+        {
+            return new RecommendationInformation(
+                _.Id,
+                _.Name,
+                _.Description,
+                _.Type,
+                _.Occurred);
+        }).ToArray();
     }
 
     /// <summary>

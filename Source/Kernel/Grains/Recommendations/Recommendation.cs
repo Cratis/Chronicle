@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Grains.Recommendations;
 /// <typeparam name="TRequest">Type of request for the recommendation.</typeparam>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Recommendations)]
 public class Recommendation<TRequest> : Grain<RecommendationState>, IRecommendation<TRequest>
-    where TRequest : class
+    where TRequest : class, IRecommendationRequest
 {
     /// <inheritdoc/>
     public async Task Initialize(

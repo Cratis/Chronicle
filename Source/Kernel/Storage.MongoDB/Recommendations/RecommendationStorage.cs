@@ -40,7 +40,7 @@ public class RecommendationStorage(IEventStoreNamespaceDatabase database) : IRec
         await Collection.ReplaceOneAsync(GetIdFilter(recommendationId), recommendationState, new ReplaceOptions { IsUpsert = true });
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<RecommendationState>> GeAll()
+    public async Task<IImmutableList<RecommendationState>> GetAll()
     {
         var cursor = await Collection.FindAsync(_ => true).ConfigureAwait(false);
         var deserialized = cursor.ToList();

@@ -18,7 +18,7 @@ public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsM
     /// <inheritdoc/>
     public async Task<RecommendationId> Add<TRecommendation, TRequest>(RecommendationDescription description, TRequest request)
         where TRecommendation : IRecommendation<TRequest>
-        where TRequest : class
+        where TRequest : class, IRecommendationRequest
     {
         var id = RecommendationId.New();
         var recommendation = GrainFactory.GetGrain<TRecommendation>(id, keyExtension: GetRecommendationKey());

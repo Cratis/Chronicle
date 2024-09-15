@@ -47,7 +47,8 @@
                 "title": "Recommendations",
                 "empty": "No recommendations found",
                 "actions": {
-                    "reject": "Reject"
+                    "perform": "Perform",
+                    "ignore": "Ignore"
                 },
                 "columns": {
                     "name": "Name",

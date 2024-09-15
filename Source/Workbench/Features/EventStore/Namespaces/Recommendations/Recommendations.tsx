@@ -43,10 +43,15 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
 
             <DataPage.MenuItems>
                 <MenuItem
-                    id='reject'
-                    label={strings.eventStore.namespaces.recommendations.actions.reject} icon={faIcons.FaArrowsRotate}
+                    id='perform'
+                    label={strings.eventStore.namespaces.recommendations.actions.perform} icon={faIcons.FaArrowsRotate}
                     disableOnUnselected
-                    command={() => viewModel.reject()} />
+                    command={() => viewModel.perform()} />
+                <MenuItem
+                    id='ignore'
+                    label={strings.eventStore.namespaces.recommendations.actions.ignore} icon={faIcons.FaArrowsRotate}
+                    disableOnUnselected
+                    command={() => viewModel.ignore()} />
             </DataPage.MenuItems>
 
             <DataPage.Columns>

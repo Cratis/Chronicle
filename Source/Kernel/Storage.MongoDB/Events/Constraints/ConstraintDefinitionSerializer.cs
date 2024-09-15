@@ -22,7 +22,7 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
         var type = value.GetType();
         var actualSerializer = BsonSerializer.SerializerRegistry.GetSerializer(type);
         var document = value.ToBsonDocument(type, actualSerializer);
-        document.Remove("_t");
+        document.RemoveTypeInfo();
         document.Add(ConstraintTypeElementName, GetConstraintTypeAsString(type));
         using var rawDocument = new ByteArrayBuffer(document.ToBson());
         context.Writer.WriteRawBsonDocument(rawDocument);
