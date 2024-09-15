@@ -74,8 +74,7 @@ var app = builder.Build();
 app
     .UseRouting()
     .MapGrpcServices()
-    .UseCratisChronicleApi()
-    .UseCratisApplicationModel();
+    .UseCratisChronicleApi();
 
 await app.RunAsync();
 
