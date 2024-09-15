@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
@@ -23,8 +24,8 @@ public class JobQueries(IStorage storage) : ControllerBase
     /// <returns>An observable for observing a collection of <see cref="JobInformation"/>.</returns>
     [HttpGet]
     public ISubject<IEnumerable<JobInformation>> AllJobs(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace)
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace )
     {
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var jobs = namespaceStorage.Jobs.ObserveJobs();
