@@ -9,7 +9,7 @@ import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, 
 import { EventStore } from './EventStore';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-stores');
+const routeTemplate = Handlebars.compile('/api/event-stores/observe');
 
 class AllEventStoresSortBy {
     private _name: SortingActionsForObservableQuery<EventStore[]>;
@@ -41,7 +41,7 @@ class AllEventStoresSortByWithoutQuery {
 }
 
 export class AllEventStores extends ObservableQueryFor<EventStore[]> {
-    readonly route: string = '/api/event-stores';
+    readonly route: string = '/api/event-stores/observe';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventStore[] = [];
     private readonly _sortBy: AllEventStoresSortBy;

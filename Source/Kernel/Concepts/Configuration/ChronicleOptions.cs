@@ -14,6 +14,11 @@ public class ChronicleOptions
     public int Port { get; init; } = 35000;
 
     /// <summary>
+    /// Gets the port for the REST API.
+    /// </summary>
+    public int ApiPort { get; init; } = 8080;
+
+    /// <summary>
     /// Gets or inits the storage configuration.
     /// </summary>
     public Storage Storage { get; init; } = new Storage();

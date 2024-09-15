@@ -16,10 +16,17 @@ namespace Cratis.Api.EventStores;
 public class EventStoreQueries(IStorage storage) : ControllerBase
 {
     /// <summary>
+    /// Get all event stores registered.
+    /// </summary>
+    /// <returns>A collection of <see cref="EventStoreName"/>.</returns>
+    [HttpGet]
+    public Task<IEnumerable<EventStoreName>> GetEventStores() => storage.GetEventStores();
+
+    /// <summary>
     /// Observes all event stores registered..
     /// </summary>
     /// <returns>An observable for observing a collection of <see cref="EventStoreName"/>.</returns>
-    [HttpGet]
+    [HttpGet("observe")]
     public ISubject<IEnumerable<EventStore>> AllEventStores() =>
         new TransformingSubject<IEnumerable<EventStoreName>, IEnumerable<EventStore>>(
             storage.ObserveEventStores(),

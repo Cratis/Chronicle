@@ -24,10 +24,10 @@ public static class ApiApplicationBuilderExtensions
             app.UseDeveloperExceptionPage();
         }
 
-        app.UseCratisApplicationModel();
-        app.UseStaticFiles();
         app.UseRouting();
         app.UseWebSockets();
+        app.UseCratisApplicationModel();
+        app.UseStaticFiles();
         app.UseEndpoints(endpoints => endpoints.MapControllers());
         app.UseSwagger();
         app.UseSwaggerUI(options => options.InjectStylesheet("/swagger-ui/SwaggerDark.css"));
