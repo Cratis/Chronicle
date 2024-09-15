@@ -52,10 +52,10 @@ export const Jobs = () => {
 
     return (
         <DataPage
-            title={strings.eventStore.namespaces.observers.title}
+            title={strings.eventStore.namespaces.jobs.title}
             query={AllJobs}
             queryArguments={queryArgs}
-            emptyMessage={strings.eventStore.namespaces.observers.empty}
+            emptyMessage={strings.eventStore.namespaces.jobs.empty}
             dataKey='observerId'>
             <DataPage.MenuItems>
                 <MenuItem
