@@ -67,8 +67,13 @@ public class Sink(
             return;
         }
 
-        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, _isReplaying);
+        // Run through and remove all children affected by ChildRemovedFromAll
+        foreach (var childRemoved in changeset.Changes.OfType<ChildRemovedFromAll>())
+        {
+            await RemoveChildFromAll(key, childRemoved);
+        }
 
+        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, _isReplaying);
         if (!converted.hasChanges) return;
 
         await Collection.UpdateOneAsync(
@@ -79,12 +84,6 @@ public class Sink(
                 IsUpsert = true,
                 ArrayFilters = converted.ArrayFilters
             });
-
-        // Run through and remove all children affected by ChildRemovedFromAll
-        foreach (var childRemoved in changeset.Changes.OfType<ChildRemovedFromAll>())
-        {
-            await RemoveChildFromAll(key, childRemoved);
-        }
     }
 
     /// <inheritdoc/>

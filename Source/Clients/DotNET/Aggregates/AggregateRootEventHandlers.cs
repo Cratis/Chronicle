@@ -37,7 +37,7 @@ public class AggregateRootEventHandlers : IAggregateRootEventHandlers
     public IImmutableList<EventType> EventTypes { get; }
 
     /// <inheritdoc/>
-    public async Task Handle(IAggregateRoot target, IEnumerable<EventAndContext> events)
+    public async Task Handle(IAggregateRoot target, IEnumerable<EventAndContext> events, Action<EventAndContext>? onHandledEvent = default)
     {
         if (_methodsByEventType.Count == 0) return;
 
@@ -59,6 +59,7 @@ public class AggregateRootEventHandlers : IAggregateRootEventHandlers
                 }
 
                 if (returnValue is not null) await returnValue;
+                onHandledEvent?.Invoke(eventAndContext);
             }
         }
     }

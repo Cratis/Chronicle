@@ -27,20 +27,12 @@ public record ConstraintsKey(EventStoreName EventStore)
     public static implicit operator ConstraintsKey(string key) => Parse(key);
 
     /// <inheritdoc/>
-    public override string ToString()
-    {
-        return $"{EventStore}";
-    }
+    public override string ToString() => KeyHelper.Combine(EventStore);
 
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ConstraintsKey"/> instance.</returns>
-    public static ConstraintsKey Parse(string key)
-    {
-        var elements = key.Split('+');
-        var eventStore = (EventStoreName)elements[0];
-        return new(eventStore);
-    }
+    public static ConstraintsKey Parse(string key) => KeyHelper.Parse<ConstraintsKey>(key);
 }

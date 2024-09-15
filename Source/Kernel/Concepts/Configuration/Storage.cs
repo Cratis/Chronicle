@@ -9,7 +9,12 @@ namespace Cratis.Chronicle.Concepts.Configuration;
 public class Storage
 {
     /// <summary>
-    /// The type of storage used.
+    /// Gets the type of storage used.
     /// </summary>
-    public string Type { get; init; } = "Not Configured";
+    public string Type { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the connection details for the storage.
+    /// </summary>
+    public string ConnectionDetails { get; init; } = string.Empty;
 }

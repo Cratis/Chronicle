@@ -34,7 +34,7 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => !Context?.HasEventsForRehydration ?? true;
+    protected bool IsNew => !Context?.HasEvents ?? true;
 
     /// <inheritdoc/>
     public async Task SetContext(IAggregateRootContext context)
@@ -66,8 +66,7 @@ public class AggregateRoot : Grain, IAggregateRoot, IAggregateRootContextHolder
     }
 
     /// <inheritdoc/>
-    public Task Apply<T>(T @event)
-        where T : class
+    public Task Apply(object @event)
     {
         return _mutation?.Apply(@event) ?? Task.CompletedTask;
     }
@@ -113,7 +112,7 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     /// <summary>
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
-    protected bool IsNew => !Context?.HasEventsForRehydration ?? true;
+    protected bool IsNew => Context?.NextSequenceNumber is null || Context?.NextSequenceNumber != EventSequenceNumber.First;
 
     /// <inheritdoc/>
     public async Task SetContext(IAggregateRootContext context)
@@ -137,8 +136,7 @@ public class AggregateRoot<TState> : Grain, IAggregateRoot, IAggregateRootContex
     }
 
     /// <inheritdoc/>
-    public Task Apply<T>(T @event)
-        where T : class
+    public Task Apply(object @event)
     {
         return _mutation?.Apply(@event) ?? Task.CompletedTask;
     }

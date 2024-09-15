@@ -47,10 +47,9 @@ public class AggregateRootMutation(
     public IAggregateRootMutator Mutator => mutator;
 
     /// <inheritdoc/>
-    public async Task Apply<TEvent>(TEvent @event)
-        where TEvent : class
+    public async Task Apply(object @event)
     {
-        typeof(TEvent).ValidateEventType();
+        @event.GetType().ValidateEventType();
         var causation = new Causation(DateTimeOffset.Now, CausationType, new Dictionary<string, string>
         {
             { CausationAggregateRootTypeProperty, aggregateRootContext.AggregateRoot.GetType().AssemblyQualifiedName! },
@@ -66,6 +65,12 @@ public class AggregateRootMutation(
     public async Task<AggregateRootCommitResult> Commit()
     {
         await aggregateRootContext.UnitOfWOrk.Commit();
+        if (aggregateRootContext.UnitOfWOrk.TryGetLastCommittedEventSequenceNumber(
+                out var lastCommittedEventSequenceNumber))
+        {
+            aggregateRootContext.NextSequenceNumber = lastCommittedEventSequenceNumber + 1;
+        }
+
         UncommittedEvents = ImmutableList<object>.Empty;
         return AggregateRootCommitResult.CreateFrom(aggregateRootContext.UnitOfWOrk);
     }

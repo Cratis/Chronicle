@@ -18,6 +18,8 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="AggregateRoots\Domain\" />
+      <Folder Include="AggregateRoots\Scenarios\given\" />
       <Folder Include="for_Observers\when_appending_event\" />
     </ItemGroup>
 

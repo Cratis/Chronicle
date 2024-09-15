@@ -5,19 +5,23 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.Models;
-using context = Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_removing.child_removed_using_event_without_parent_reference.context;
+using MongoDB.Driver;
+using context = Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_removing.child_removed_with_join.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_removing;
 
 [Collection(GlobalCollection.Name)]
-public class child_removed_using_event_without_parent_reference(context context) : Given<context>(context)
+public class child_removed_with_join(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : given.a_projection_and_events_appended_to_it<UserProjectionWithExternalRemovedWith, User>(globalFixture)
+    public class context(GlobalFixture globalFixture) : given.a_projection_and_events_appended_to_it<UserProjectionWithRemovedWithJoin, User>(globalFixture)
     {
         public EventSourceId UserId;
         public EventSourceId FirstGroupId;
         public EventSourceId SecondGroupId;
+
         public override IEnumerable<Type> EventTypes => [typeof(GroupCreated), typeof(UserCreated), typeof(UserAddedToGroup), typeof(GroupRemoved)];
+
+        public User[] Users;
 
         void Establish()
         {
@@ -34,10 +38,17 @@ public class child_removed_using_event_without_parent_reference(context context)
             EventsWithEventSourceIdToAppend.Add(new(SecondGroupId, new UserAddedToGroup(userId)));
             EventsWithEventSourceIdToAppend.Add(new(FirstGroupId, new GroupRemoved()));
         }
+
+        async Task Because()
+        {
+            var result = await _globalFixture.ReadModels.Database.GetCollection<User>().FindAsync(_ => true);
+            Users = result.ToList().ToArray();
+        }
     }
 
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_only_have_one_child() => Context.Result.Groups.Count().ShouldEqual(1);
+    [Fact] void should_only_have_one_user_in_collection() => Context.Users.Length.ShouldEqual(1);
     [Fact] void should_have_the_correct_group_left() => Context.Result.Groups.First().GroupId.ShouldEqual(Context.SecondGroupId);
     [Fact] void should_not_have_the_removed_group() => Context.Result.Groups.Any(_ => _.GroupId == Context.FirstGroupId).ShouldBeFalse();
 }

@@ -21,7 +21,18 @@ public class UnitOfWorkMiddleware(IUnitOfWorkManager unitOfWorkManager, RequestD
     /// <returns>Awaitable task.</returns>
     public async Task InvokeAsync(HttpContext context)
     {
-        unitOfWorkManager.Begin(CorrelationId.New());
-        await next(context);
+        var unitOfWork = unitOfWorkManager.Begin(CorrelationId.New());
+        try
+        {
+            await next(context);
+        }
+        catch
+        {
+            if (!unitOfWork.IsCompleted)
+            {
+                unitOfWork.Dispose();
+            }
+            throw;
+        }
     }
 }

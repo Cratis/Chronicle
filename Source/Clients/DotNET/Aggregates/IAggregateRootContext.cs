@@ -35,7 +35,12 @@ public interface IAggregateRootContext
     IUnitOfWork UnitOfWOrk { get; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether there are events available for rehydration.
+    /// Gets or sets the next <see cref="EventSequenceNumber"/> to process for the aggregate root in the unit of work.
     /// </summary>
-    bool HasEventsForRehydration { get; set; }
+    EventSequenceNumber NextSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether aggregate root has events.
+    /// </summary>
+    bool HasEvents { get; set; }
 }

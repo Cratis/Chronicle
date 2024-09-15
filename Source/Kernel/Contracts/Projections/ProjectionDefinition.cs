@@ -93,14 +93,20 @@ public class ProjectionDefinition
     public IDictionary<EventType, RemovedWithDefinition> RemovedWith { get; set; } = new Dictionary<EventType, RemovedWithDefinition>();
 
     /// <summary>
+    /// Gets or sets the definition of what removes a child through joining, if any.
+    /// </summary>
+    [ProtoMember(13, IsRequired = true)]
+    public IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin { get; set; } = new Dictionary<EventType, RemovedWithJoinDefinition>();
+
+    /// <summary>
     /// Gets or sets the last time the projection definition was updated.
     /// </summary>
-    [ProtoMember(13)]
+    [ProtoMember(14)]
     public SerializableDateTimeOffset? LastUpdated { get; set; }
 
     /// <summary>
     /// Gets or sets the projection sink definition.
     /// </summary>
-    [ProtoMember(14)]
+    [ProtoMember(15)]
     public SinkDefinition Sink { get; set; }
 }

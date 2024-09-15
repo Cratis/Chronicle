@@ -30,24 +30,12 @@ public record ObserverKey(
     public static implicit operator string(ObserverKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString()
-    {
-        return $"{ObserverId}+{EventStore}+{Namespace}+{EventSequenceId}";
-    }
+    public override string ToString() => KeyHelper.Combine(ObserverId, EventStore, Namespace, EventSequenceId);
 
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ObserverKey"/> instance.</returns>
-    public static ObserverKey Parse(string key)
-    {
-        var elements = key.Split('+');
-        var observerId = (ObserverId)elements[0];
-        var eventStore = (EventStoreName)elements[1];
-        var @namespace = (EventStoreNamespaceName)elements[2];
-        var eventSequenceId = (EventSequenceId)elements[3];
-
-        return new(observerId, eventStore, @namespace, eventSequenceId);
-    }
+    public static ObserverKey Parse(string key) => KeyHelper.Parse<ObserverKey>(key);
 }

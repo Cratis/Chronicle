@@ -44,7 +44,7 @@ public static class AggregateRootTestSiloExtensions
 
         var aggregateRoot = await silo.CreateGrainAsync<TAggregateRoot>(eventSourceId);
         var unitOfWork = new UnitOfWork(CorrelationId.New(), _ => { }, Defaults.Instance.EventStore);
-        await aggregateRoot.SetContext(new AggregateRootContext(eventSourceId, eventLog, aggregateRoot, unitOfWork));
+        await aggregateRoot.SetContext(new AggregateRootContext(eventSourceId, eventLog, aggregateRoot, unitOfWork, EventSequenceNumber.First));
 
         return aggregateRoot;
     }
@@ -75,7 +75,7 @@ public static class AggregateRootTestSiloExtensions
             aggregateRoot.SetState(initialState);
         }
         var unitOfWork = new UnitOfWork(CorrelationId.New(), _ => { }, Defaults.Instance.EventStore);
-        await aggregateRoot.SetContext(new AggregateRootContext(eventSourceId, eventLog, aggregateRoot, unitOfWork));
+        await aggregateRoot.SetContext(new AggregateRootContext(eventSourceId, eventLog, aggregateRoot, unitOfWork, EventSequenceNumber.First));
 
         return aggregateRoot;
     }

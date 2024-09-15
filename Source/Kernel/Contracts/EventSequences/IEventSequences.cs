@@ -47,4 +47,13 @@ public interface IEventSequences
     /// <returns>True if it has, false if not.</returns>
     [Operation]
     Task<HasEventsForEventSourceIdResponse> HasEventsForEventSourceId(HasEventsForEventSourceIdRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Gets events from a specific event sequence number.
+    /// </summary>
+    /// <param name="request"><see cref="GetFromEventSequenceNumberRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>True if it has, false if not.</returns>
+    [Operation]
+    Task<GetFromEventSequenceNumberResponse> GetEventsFromEventSequenceNumber(GetFromEventSequenceNumberRequest request, CallContext context = default);
 }

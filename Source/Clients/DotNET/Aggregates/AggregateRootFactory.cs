@@ -28,12 +28,13 @@ public class AggregateRootFactory(
     public async Task<TAggregateRoot> Get<TAggregateRoot>(EventSourceId id)
         where TAggregateRoot : IAggregateRoot
     {
+        // TODO: Create Issue: Must dispose of unit of work in some way or else it's a memory leak.
         var unitOfWork = unitOfWorkManager.HasCurrent ? unitOfWorkManager.Current : unitOfWorkManager.Begin(CorrelationId.New());
 
         var aggregateRoot = ActivatorUtilities.CreateInstance<TAggregateRoot>(serviceProvider);
         var eventSequence = eventStore.GetEventSequence(EventSequenceId.Log);
 
-        var context = new AggregateRootContext(id, eventSequence, aggregateRoot, unitOfWork);
+        var context = new AggregateRootContext(id, eventSequence, aggregateRoot, unitOfWork, EventSequenceNumber.First);
         var mutator = await mutatorFactory.Create<TAggregateRoot>(context);
 
         await mutator.Rehydrate();

@@ -120,6 +120,25 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
+    public async Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(
+        EventSequenceNumber sequenceNumber,
+        EventSourceId? eventSourceId = default,
+        IEnumerable<EventType>? eventTypes = default)
+    {
+        var result = await connection.Services.EventSequences.GetEventsFromEventSequenceNumber(new()
+        {
+            EventStoreName = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSequenceNumber = sequenceNumber,
+            EventSourceId = eventSourceId?.Value ?? default,
+            EventTypes = eventTypes?.ToContract() ?? []
+        });
+
+        return result.Events.ToClient();
+    }
+
+    /// <inheritdoc/>
     public async Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes)
     {
         var result = await connection.Services.EventSequences.GetForEventSourceIdAndEventTypes(new()

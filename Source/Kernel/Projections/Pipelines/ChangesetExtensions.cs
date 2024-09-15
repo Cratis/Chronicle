@@ -46,5 +46,6 @@ public static class ChangesetExtensions
     /// <param name="changeset">Changeset to check.</param>
     /// <returns>True if it has, false if not.</returns>
     public static bool HasJoined(this IChangeset<AppendedEvent, ExpandoObject> changeset) =>
-        changeset.Changes.OfType<Joined>().Any();
+        changeset.Changes.OfType<Joined>().Any() ||
+        changeset.Changes.OfType<ChildRemovedFromAll>().Any();
 }

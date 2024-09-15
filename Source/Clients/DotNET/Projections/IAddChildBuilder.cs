@@ -24,9 +24,10 @@ public interface IAddChildBuilder<TChildModel, TEvent>
     /// <summary>
     /// Define what key to use based on a value in the <see cref="EventContext"/>.
     /// </summary>
+    /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <param name="keyAccessor">Accessor for the property within <see cref="EventContext"/> to use.</param>
     /// <returns>Builder continuation.</returns>
-    IAddChildBuilder<TChildModel, TEvent> UsingKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor);
+    IAddChildBuilder<TChildModel, TEvent> UsingKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor);
 
     /// <summary>
     /// Define what property on the event represents the parent key. This is typically used in child relationships to identify the parent model to
@@ -50,9 +51,10 @@ public interface IAddChildBuilder<TChildModel, TEvent>
     /// Define what property on the event represents the parent key based on a property in the <see cref="EventContext"/>. This is typically used in child relationships to identify the parent model to
     /// work with.
     /// </summary>
+    /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <param name="keyAccessor">Accessor for the property to use.</param>
     /// <returns>Builder continuation.</returns>
-    IAddChildBuilder<TChildModel, TEvent> UsingParentKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor);
+    IAddChildBuilder<TChildModel, TEvent> UsingParentKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor);
 
     /// <summary>
     /// Sets the property that identifies the child model in the collection within the parent.

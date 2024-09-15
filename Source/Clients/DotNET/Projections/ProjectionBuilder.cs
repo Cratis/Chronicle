@@ -44,6 +44,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     protected readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = [];
     protected readonly List<FromDerivativesDefinition> _fromDerivativesDefinitions = [];
     protected readonly Dictionary<EventType, RemovedWithDefinition> _removedWithDefinitions = [];
+    protected readonly Dictionary<EventType, RemovedWithJoinDefinition> _removedWithJoinDefinitions = [];
     protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected bool _autoMap = autoMap;
@@ -150,6 +151,24 @@ public class ProjectionBuilder<TModel, TBuilder>(
         var removedWithBuilder = new RemovedWithBuilder<TModel, TEvent>();
         builderCallback?.Invoke(removedWithBuilder);
         _removedWithDefinitions[removedWithEvent] = removedWithBuilder.Build();
+
+        return (this as TBuilder)!;
+    }
+
+    /// <inheritdoc/>
+    public TBuilder RemovedWithJoin<TEvent>(Action<RemovedWithJoinBuilder<TModel, TEvent>>? builderCallback = default)
+    {
+        var type = typeof(TEvent);
+
+        if (!type.IsEventType(eventTypes.AllClrTypes))
+        {
+            throw new TypeIsNotAnEventType(typeof(TEvent));
+        }
+
+        var removedWithJoinEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
+        var removedWithJoinBuilder = new RemovedWithJoinBuilder<TModel, TEvent>();
+        builderCallback?.Invoke(removedWithJoinBuilder);
+        _removedWithJoinDefinitions[removedWithJoinEvent] = removedWithJoinBuilder.Build();
 
         return (this as TBuilder)!;
     }

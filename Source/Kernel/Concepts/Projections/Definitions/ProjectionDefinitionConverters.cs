@@ -37,6 +37,7 @@ public static class ProjectionDefinitionConverters
             All = definition.FromEvery.ToContract(),
             FromEventProperty = definition.FromEventProperty?.ToContract() ?? null!,
             RemovedWith = definition.RemovedWith.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
+            RemovedWithJoin = definition.RemovedWithJoin.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
             LastUpdated = definition.LastUpdated ?? null!
         };
     }
@@ -62,6 +63,7 @@ public static class ProjectionDefinitionConverters
             contract.All.ToChronicle(),
             contract.Sink.ToChronicle(),
             contract.RemovedWith.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
+            contract.RemovedWithJoin.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
             contract.FromEventProperty?.ToChronicle() ?? null!,
             contract.LastUpdated ?? null!
         );

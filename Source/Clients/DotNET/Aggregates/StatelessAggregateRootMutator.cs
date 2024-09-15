@@ -23,11 +23,9 @@ public class StatelessAggregateRootMutator(
     /// <inheritdoc/>
     public async Task Rehydrate()
     {
-        var hasEventsForRehydration = await aggregateRootContext.EventSequence.HasEventsFor(aggregateRootContext.EventSourceId);
-
+        var events = await aggregateRootContext.EventSequence.GetFromSequenceNumber(aggregateRootContext.NextSequenceNumber, aggregateRootContext.EventSourceId, eventHandlers.EventTypes);
         if (eventHandlers.HasHandleMethods)
         {
-            var events = await aggregateRootContext.EventSequence.GetForEventSourceIdAndEventTypes(aggregateRootContext.EventSourceId, eventHandlers.EventTypes);
             var deserializedEventsTasks = events.Select(async _ =>
             {
                 var @event = await eventSerializer.Deserialize(_);
@@ -35,12 +33,28 @@ public class StatelessAggregateRootMutator(
             }).ToArray();
 
             var deserializedEvents = await Task.WhenAll(deserializedEventsTasks);
-            await eventHandlers.Handle(aggregateRootContext.AggregateRoot, deserializedEvents);
+
+            // Scenario is when state is partially modified before throwing an exception.
+            await eventHandlers.Handle(aggregateRootContext.AggregateRoot, deserializedEvents, handledEventAndContext =>
+            {
+                var nextSequenceNumber = handledEventAndContext.Context.SequenceNumber.Next();
+                if (handledEventAndContext.Context.SequenceNumber == EventSequenceNumber.Unavailable)
+                {
+                    return;
+                }
+                if (nextSequenceNumber.IsActualValue && nextSequenceNumber > aggregateRootContext.NextSequenceNumber)
+                {
+                    aggregateRootContext.HasEvents = true;
+                    aggregateRootContext.NextSequenceNumber = nextSequenceNumber;
+                }
+            });
         }
 
-        if (aggregateRootContext is AggregateRootContext actualContext)
+        // We should look at improving how we set the NextSequenceNumber and instead rely only on that, perhaps by returing the last event sequence number. https://github.com/Cratis/Chronicle/issues/1400
+        if (aggregateRootContext.NextSequenceNumber == EventSequenceNumber.First &&
+            await aggregateRootContext.EventSequence.HasEventsFor(aggregateRootContext.EventSourceId))
         {
-            actualContext.HasEventsForRehydration = hasEventsForRehydration;
+            aggregateRootContext.HasEvents = true;
         }
     }
 
@@ -49,6 +63,7 @@ public class StatelessAggregateRootMutator(
     {
         if (eventHandlers.HasHandleMethods)
         {
+            aggregateRootContext.HasEvents = true;
             await eventHandlers.Handle(
                 aggregateRootContext.AggregateRoot,
                 [
