@@ -3,31 +3,49 @@
 
 import strings from 'Strings';
 import { DataPage, MenuItem } from 'Components';
-import { AllObservers, AllObserversArguments } from 'Api/Observation';
 import { Column } from 'primereact/column';
 import * as faIcons from 'react-icons/fa6';
-import { ObserverInformation, ObserverType } from 'Api/Concepts/Observation';
+import { AllJobs, AllJobsArguments, JobInformation, JobStatus } from 'Api/Jobs';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 
-const observerType = (observer: ObserverInformation) => {
-    switch (observer.type) {
-        case ObserverType.unknown:
-            return 'Unknown';
-        case ObserverType.client:
-            return 'Client';
-        case ObserverType.projection:
-            return 'Projection';
-        case ObserverType.reducer:
-            return 'Reducer';
+const jobStatus = (job: JobInformation) => {
+    switch (job.status) {
+        case JobStatus.none:
+            return strings.eventStore.namespaces.jobs.status.none;
+        case JobStatus.preparing:
+            return strings.eventStore.namespaces.jobs.status.preparing;
+        case JobStatus.preparingSteps:
+            return strings.eventStore.namespaces.jobs.status.preparingSteps;
+        case JobStatus.preparingStepsForRunning:
+            return strings.eventStore.namespaces.jobs.status.preparingStepsForRunning;
+        case JobStatus.startingSteps:
+            return strings.eventStore.namespaces.jobs.status.startingSteps;
+        case JobStatus.running:
+            return strings.eventStore.namespaces.jobs.status.running;
+        case JobStatus.completedSuccessfully:
+            return strings.eventStore.namespaces.jobs.status.completedSuccessfully;
+        case JobStatus.completedWithFailures:
+            return strings.eventStore.namespaces.jobs.status.completedWithFailures;
+        case JobStatus.paused:
+            return strings.eventStore.namespaces.jobs.status.paused;
+        case JobStatus.stopped:
+            return strings.eventStore.namespaces.jobs.status.stopped;
+        case JobStatus.failed:
+            return strings.eventStore.namespaces.jobs.status.failed;
     }
-    return '[N/A]';
+    return strings.eventStore.namespaces.jobs.status.none;
 };
 
+const progress = (job: JobInformation) => {
+    const completedSteps = job.progress.failedSteps + job.progress.successfulSteps;
+    const progress = completedSteps / job.progress.totalSteps;
+    return `${Math.abs(progress)}%`;
+};
 
 export const Jobs = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const queryArgs: AllObserversArguments = {
+    const queryArgs: AllJobsArguments = {
         eventStore: params.eventStore!,
         namespace: params.namespace!
     };
@@ -35,30 +53,37 @@ export const Jobs = () => {
     return (
         <DataPage
             title={strings.eventStore.namespaces.observers.title}
-            query={AllObservers}
+            query={AllJobs}
             queryArguments={queryArgs}
             emptyMessage={strings.eventStore.namespaces.observers.empty}
             dataKey='observerId'>
             <DataPage.MenuItems>
                 <MenuItem
-                    id="replay"
-                    label={strings.eventStore.namespaces.observers.actions.replay} icon={faIcons.FaArrowsRotate}
+                    id="stop"
+                    label={strings.eventStore.namespaces.jobs.actions.pause} icon={faIcons.FaPause}
+                    disableOnUnselected
+                    command={() => { }} />
+                <MenuItem
+                    id="stop"
+                    label={strings.eventStore.namespaces.jobs.actions.stop} icon={faIcons.FaStop}
                     disableOnUnselected
                     command={() => { }} />
             </DataPage.MenuItems>
             <DataPage.Columns>
-                <Column field='observerId' header={strings.eventStore.namespaces.observers.columns.id} sortable />
+                <Column field='type' header={strings.eventStore.namespaces.jobs.columns.type} sortable />
+                <Column field='name' header={strings.eventStore.namespaces.jobs.columns.name} sortable />
+                <Column field='details' header={strings.eventStore.namespaces.jobs.columns.details} sortable />
                 <Column
-                    field='type'
-                    header={strings.eventStore.namespaces.observers.columns.observerType}
+                    field='status'
+                    header={strings.eventStore.namespaces.jobs.columns.status}
                     sortable
-                    body={observerType} />
+                    body={jobStatus} />
 
                 <Column
-                    field='nextEventSequenceNumber'
-                    dataType='numeric'
-                    header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
-                    sortable />
+                    field='progress'
+                    header={strings.eventStore.namespaces.jobs.columns.progress}
+                    sortable
+                    body={progress} />
             </DataPage.Columns>
         </DataPage>
     );

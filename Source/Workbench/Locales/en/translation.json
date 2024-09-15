@@ -58,7 +58,31 @@
                 }
             },
             "jobs": {
-                "title": "Jobs"
+                "title": "Jobs",
+                "empty": "No jobs found",
+                "actions": {
+                    "stop": "Stop"
+                },
+                "columns": {
+                    "type": "Type",
+                    "name": "Name",
+                    "details": "Details",
+                    "status": "Status",
+                    "progress": "Progress"
+                },
+                "status": {
+                    "none": "None",
+                    "preparing": "Preparing",
+                    "preparingSteps": "Preparing steps",
+                    "preparingStepsForRunning": "Preparing steps for running",
+                    "startingSteps": "Starting steps",
+                    "running": "Running",
+                    "completedSuccessfully": "Completed successfully",
+                    "completedWithFailures": "Completed with failures",
+                    "paused": "Paused",
+                    "stopped": "Stopped",
+                    "failed": "Failed"
+                }
             },
             "sequences": {
                 "title": "Sequences"

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Strings;
@@ -36,9 +37,16 @@ public class JobStorage(IEventStoreNamespaceDatabase database) : IJobStorage
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<JobState>> ObserveJobs(params JobStatus[] statuses)
+    public ISubject<IEnumerable<JobState>> ObserveJobs(params JobStatus[] statuses)
     {
-        throw new NotImplementedException();
+        var statusFilters = statuses.Select(status =>
+            Builders<JobState>.Filter.Eq(_ => _.Status, status));
+
+        var filter = statuses.Length == 0 ?
+                                Builders<JobState>.Filter.Empty :
+                                Builders<JobState>.Filter.Or(statusFilters);
+
+        return Collection.Observe(filter);
     }
 
     /// <inheritdoc/>

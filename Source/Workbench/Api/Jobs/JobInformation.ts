@@ -10,7 +10,7 @@ import { JobProgress } from './JobProgress';
 import { JobStatus } from './JobStatus';
 import { JobStatusChanged } from './JobStatusChanged';
 
-export class JobState {
+export class JobInformation {
 
     @field(Guid)
     id!: Guid;

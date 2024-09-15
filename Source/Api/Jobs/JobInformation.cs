@@ -13,4 +13,11 @@ namespace Cratis.Api.Jobs;
 /// <param name="Status">The <see cref="JobStatus"/> for the job.</param>
 /// <param name="StatusChanges">Any <see cref="JobStatusChanged"/> changes.</param>
 /// <param name="Progress">Current progress.</param>
-public record JobState(Guid Id, string Type, string Name, string Details, JobStatus Status, IEnumerable<JobStatusChanged> StatusChanges, JobProgress Progress);
+public record JobInformation(
+    Guid Id,
+    string Type,
+    string Name,
+    string Details,
+    JobStatus Status,
+    IEnumerable<JobStatusChanged> StatusChanges,
+    JobProgress Progress);

@@ -11,4 +11,9 @@ namespace Cratis.Api.Jobs;
 /// <param name="FailedSteps">Number of failed steps.</param>
 /// <param name="IsCompleted">Whether or not the job has completed.</param>
 /// <param name="Message">Current message from the job.</param>
-public record JobProgress(int TotalSteps, int SuccessfulSteps, int FailedSteps, bool IsCompleted, string Message);
+public record JobProgress(
+    int TotalSteps,
+    int SuccessfulSteps,
+    int FailedSteps,
+    bool IsCompleted,
+    string Message);
