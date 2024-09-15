@@ -18,7 +18,7 @@ export const Home = () => {
                             <StoreCard
                                 id={eventStore.name}
                                 title={eventStore.name}
-                                path={`/event-store/${eventStore.name}`}
+                                path={`/event-store/${eventStore.name}/Default`}
                                 footer={<CardFooter />}
                                 description={eventStore.description}
                             />
