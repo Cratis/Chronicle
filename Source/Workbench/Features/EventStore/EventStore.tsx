@@ -42,7 +42,7 @@ export const EventStore = () => {
             label: strings.mainMenu.general.groupLabel,
             items: [
                 { label: strings.mainMenu.general.types, url: 'types', icon: mdIcons.MdDataObject },
-                { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdDataArray },
+                { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
                 { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
                 { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
                 { label: strings.mainMenu.general.reducers, url: 'reducers', icon: gameIcons.GiTransform },
