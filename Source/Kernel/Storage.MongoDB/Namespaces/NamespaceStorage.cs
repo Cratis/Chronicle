@@ -65,7 +65,7 @@ public class NamespaceStorage(
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<NamespaceState>> ObserveNamespaces() =>
+    public ISubject<IEnumerable<NamespaceState>> ObserveAll() =>
          new TransformingSubject<IEnumerable<MongoDBNamespace>, IEnumerable<NamespaceState>>(
             GetCollection().Observe(),
             _ => _.Select(_ => new NamespaceState(_.Id, _.Name, _.Created)));

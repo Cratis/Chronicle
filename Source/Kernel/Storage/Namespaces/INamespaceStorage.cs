@@ -43,5 +43,5 @@ public interface INamespaceStorage
     /// Observes all namespaces.
     /// </summary>
     /// <returns>Subject with all namespaces.</returns>
-    ISubject<IEnumerable<NamespaceState>> ObserveNamespaces();
+    ISubject<IEnumerable<NamespaceState>> ObserveAll();
 }

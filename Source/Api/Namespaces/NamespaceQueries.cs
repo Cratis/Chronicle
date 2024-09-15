@@ -27,7 +27,7 @@ public class NamespaceQueries(IStorage storage) : ControllerBase
     {
         var store = storage.GetEventStore(eventStore);
         return new TransformingSubject<IEnumerable<NamespaceState>, IEnumerable<Namespace>>(
-            store.Namespaces.ObserveNamespaces(),
+            store.Namespaces.ObserveAll(),
             _ => _.Select(_ => new Namespace(_.Id, _.Name, string.Empty)));
     }
 }
