@@ -97,7 +97,7 @@ public class EventSequences(
 
         var cursor = await eventSequence.GetFromSequenceNumber(
             request.EventSequenceNumber,
-            string.IsNullOrWhiteSpace(request.EventSourceId) ? null! : request.EventSourceId,
+            string.IsNullOrWhiteSpace(request.EventSourceId) ? (EventSourceId)null! : request.EventSourceId,
             request.EventTypes.ToChronicle());
 
         var events = new List<Contracts.Events.AppendedEvent>();
