@@ -1,16 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Grains.Observation;
+
 namespace Cratis.Api.Observation;
 
 /// <summary>
 /// Represents the API for working with observers.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ObserverCommands"/> class.
-/// </remarks>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 [Route("/api/event-store/{eventStore}/observers")]
-public class ObserverCommands : ControllerBase
+public class ObserverCommands(IGrainFactory grainFactory) : ControllerBase
 {
     /// <summary>
     /// Rewind a specific observer in an event store and specific namespace.
@@ -25,7 +27,7 @@ public class ObserverCommands : ControllerBase
         [FromRoute] string @namespace,
         [FromRoute] string observerId)
     {
-        throw new NotImplementedException();
+        await grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, EventSequenceId.Log)).Replay();
     }
 
     /// <summary>

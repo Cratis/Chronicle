@@ -35,6 +35,7 @@ export class ObserversViewModel {
             if (result == DialogResult.Yes) {
                 this._replay.eventStore = this._params.eventStore!;
                 this._replay.namespace = this.currentNamespace.name;
+                this._replay.observerId = observerId;
                 const commandResult = await this._replay.execute();
                 commandResult
                     .onSuccess(() => {
