@@ -24,12 +24,14 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// Initializes a new instance of the <see cref="Projection"/> class.
 /// </remarks>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
+/// <param name="projectionManager"><see cref="IProjectionManager"/> for managing projections.</param>
 /// <param name="projectionDefinitionComparer"><see cref="IProjectionDefinitionComparer"/> for comparing projection definitions.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
 /// <param name="logger">Logger for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class Projection(
     IProjectionFactory projectionFactory,
+    IProjectionManager projectionManager,
     IProjectionDefinitionComparer projectionDefinitionComparer,
     ILocalSiloDetails localSiloDetails,
     ILogger<Projection> logger) : Grain<ProjectionDefinition>, IProjection
@@ -64,6 +66,7 @@ public class Projection(
         {
             _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, key.Namespace, key.EventSequenceId));
             var projection = await projectionFactory.Create(key.EventStore, key.Namespace, definition);
+            projectionManager.Register(key.EventStore, key.Namespace, projection);
 
             await _observer.Subscribe<IProjectionObserverSubscriber>(
                 ObserverType.Projection,

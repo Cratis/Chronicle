@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Projections.Definitions;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Projections.Pipelines;
@@ -10,7 +9,7 @@ namespace Cratis.Chronicle.Projections.Pipelines;
 /// <summary>
 /// Defines a system for working with <see cref="IProjectionPipeline">projection pipelines</see>.
 /// </summary>
-public interface IProjectionPipelineFactory
+public interface IProjectionPipelineManager
 {
     /// <summary>
     /// Create a projection pipeline for a given <see cref="EngineProjection"/>.
@@ -18,7 +17,6 @@ public interface IProjectionPipelineFactory
     /// <param name="eventStore">The <see cref="EventStoreName"/> the pipeline is for.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the pipeline is for.</param>
     /// <param name="projection"><see cref="EngineProjection"/> the pipeline is for.</param>
-    /// <param name="definition">The <see cref="ProjectionDefinition"/> to register.</param>
     /// <returns>The <see cref="IProjectionPipeline"/> instance.</returns>
-    IProjectionPipeline Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection, ProjectionDefinition definition);
+    IProjectionPipeline GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection);
 }

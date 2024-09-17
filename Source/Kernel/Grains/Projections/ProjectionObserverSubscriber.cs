@@ -20,12 +20,14 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
 /// </remarks>
+/// <param name="projectionManager"><see cref="IProjectionManager"/> for getting projections.</param>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
-/// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> for creating projection pipelines.</param>
+/// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineManager"/> for creating projection pipelines.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class ProjectionObserverSubscriber(
+    IProjectionManager projectionManager,
     IProjectionFactory projectionFactory,
-    IProjectionPipelineFactory projectionPipelineFactory) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
+    IProjectionPipelineManager projectionPipelineFactory) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
     ObserverSubscriberKey _key = new(ObserverId.Unspecified, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Unspecified, EventSourceId.Unspecified, string.Empty);
     IProjectionPipeline? _pipeline;
@@ -77,7 +79,10 @@ public class ProjectionObserverSubscriber(
 
     async Task HandlePipeline()
     {
-        var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State);
-        _pipeline = projectionPipelineFactory.Create(_key.EventStore, _key.Namespace, projection, State);
+        if (!projectionManager.TryGet(_key.EventStore, _key.Namespace, _key.ObserverId, out var projection))
+        {
+            projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State);
+        }
+        _pipeline = projectionPipelineFactory.GetFor(_key.EventStore, _key.Namespace, projection);
     }
 }

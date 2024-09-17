@@ -7,6 +7,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections;
@@ -23,6 +24,7 @@ public class Projection : IProjection, IDisposable
     /// Initializes a new instance of the <see cref="Projection"/> class.
     /// </summary>
     /// <param name="identifier">The unique identifier of the projection.</param>
+    /// <param name="sink">The <see cref="SinkDefinition">sink</see> to store the results of the projection.</param>
     /// <param name="initialModelState">The initial state to use for new model instances.</param>
     /// <param name="path">The qualified path of the projection.</param>
     /// <param name="childrenPropertyPath">The fully qualified path of the array that holds the children, if this is a child projection.</param>
@@ -31,6 +33,7 @@ public class Projection : IProjection, IDisposable
     /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
     public Projection(
         ProjectionId identifier,
+        SinkDefinition sink,
         ExpandoObject initialModelState,
         ProjectionPath path,
         PropertyPath childrenPropertyPath,
@@ -39,6 +42,7 @@ public class Projection : IProjection, IDisposable
         IEnumerable<IProjection> childProjections)
     {
         Identifier = identifier;
+        Sink = sink;
         InitialModelState = initialModelState;
         Model = model;
         IsRewindable = rewindable;
@@ -50,6 +54,9 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public ProjectionId Identifier { get; }
+
+    /// <inheritdoc/>
+    public SinkDefinition Sink { get; }
 
     /// <inheritdoc/>
     public ExpandoObject InitialModelState { get; }
