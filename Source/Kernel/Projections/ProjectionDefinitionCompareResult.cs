@@ -16,7 +16,12 @@ public enum ProjectionDefinitionCompareResult
     Same = 0,
 
     /// <summary>
+    /// The definitions is new.
+    /// </summary>
+    New = 1,
+
+    /// <summary>
     /// The definitions are different.
     /// </summary>
-    Different = 1
+    Different = 2
 }
