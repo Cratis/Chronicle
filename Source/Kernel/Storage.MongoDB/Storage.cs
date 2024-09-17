@@ -81,8 +81,6 @@ public class Storage(
             sinkFactories,
             loggerFactory);
 
-        eventStoreStorage.Namespaces.Ensure(EventStoreNamespaceName.Default).GetAwaiter().GetResult();
-
         return _eventStores[eventStore] = eventStoreStorage;
     }
 
