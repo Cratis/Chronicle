@@ -11,6 +11,12 @@ namespace Cratis.Chronicle.Grains.Projections;
 public interface IProjectionsManager : IGrainWithStringKey
 {
     /// <summary>
+    /// Ensure the existence of the projections manager.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Ensure();
+
+    /// <summary>
     /// Register a set of <see cref="ProjectionDefinition"/> for the event store it belongs to.
     /// </summary>
     /// <param name="definitions">A collection of <see cref="ProjectionDefinition"/>.</param>

@@ -6,6 +6,7 @@ using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.Observation.Placement;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Orleans.Hosting;
 
@@ -32,8 +33,9 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
             .AddStorageProviders()
             .ConfigureCpuBoundWorkers()
-            .ConfigureSerialization()
-            .AddStartupTask<ChronicleServerStartupTask>();
+            .ConfigureSerialization();
+
+        builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
 
         builder.Services.AddChronicleMeter();
         var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration);
