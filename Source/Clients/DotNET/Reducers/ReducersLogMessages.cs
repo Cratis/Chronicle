@@ -15,6 +15,6 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Trace, "Registering reducer with id '{ReducerId}', for event sequence '{EventSequenceId}'")]
     internal static partial void RegisterReducer(this ILogger<Reducers> logger, ReducerId reducerId, EventSequenceId eventSequenceId);
 
-    [LoggerMessage(LogLevel.Warning, "An error occurred while handling events with sequence number {StartSequenceNumber} to {EndSequenceNumber} was for Reactor {ReactorId}")]
+    [LoggerMessage(LogLevel.Warning, "An error occurred while handling events with sequence number {StartSequenceNumber} to {EndSequenceNumber} was for Reducer {ReducerId}")]
     internal static partial void ErrorWhileHandlingEvents(this ILogger<Reducers> logger, Exception ex, EventSequenceNumber startSequenceNumber, EventSequenceNumber endSequenceNumber, ReducerId reducerId);
 }
