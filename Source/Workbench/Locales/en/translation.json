@@ -90,8 +90,9 @@
                 "title": "Jobs",
                 "empty": "No jobs found",
                 "actions": {
-                    "pause": "Pause",
-                    "stop": "Stop"
+                    "resume": "Resume",
+                    "stop": "Stop",
+                    "delete": "Delete"
                 },
                 "columns": {
                     "type": "Type",

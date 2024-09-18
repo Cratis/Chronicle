@@ -8,6 +8,8 @@ import * as faIcons from 'react-icons/fa6';
 import { AllJobs, AllJobsArguments, JobInformation, JobStatus } from 'Api/Jobs';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
+import { withViewModel } from '@cratis/applications.react.mvvm';
+import { JobViewModels } from './JobViewModels';
 
 const jobStatus = (job: JobInformation) => {
     switch (job.status) {
@@ -39,11 +41,11 @@ const jobStatus = (job: JobInformation) => {
 
 const progress = (job: JobInformation) => {
     const completedSteps = job.progress.failedSteps + job.progress.successfulSteps;
-    const progress = completedSteps / job.progress.totalSteps;
-    return `${Math.abs(progress)}%`;
+    const progress = (completedSteps / job.progress.totalSteps) * 100;
+    return `${Math.abs(progress).toFixed()}%`;
 };
 
-export const Jobs = () => {
+export const Jobs = withViewModel(JobViewModels, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const queryArgs: AllJobsArguments = {
         eventStore: params.eventStore!,
@@ -56,18 +58,24 @@ export const Jobs = () => {
             query={AllJobs}
             queryArguments={queryArgs}
             emptyMessage={strings.eventStore.namespaces.jobs.empty}
-            dataKey='observerId'>
+            dataKey='id'
+            onSelectionChange={e => viewModel.selectedJob = e.value as JobInformation}>
             <DataPage.MenuItems>
-                <MenuItem
-                    id="stop"
-                    label={strings.eventStore.namespaces.jobs.actions.pause} icon={faIcons.FaPause}
-                    disableOnUnselected
-                    command={() => { }} />
                 <MenuItem
                     id="stop"
                     label={strings.eventStore.namespaces.jobs.actions.stop} icon={faIcons.FaStop}
                     disableOnUnselected
-                    command={() => { }} />
+                    command={(e) => viewModel.stop()} />
+                <MenuItem
+                    id="resume"
+                    label={strings.eventStore.namespaces.jobs.actions.resume} icon={faIcons.FaPlay}
+                    disableOnUnselected
+                    command={() => viewModel.resume()} />
+                <MenuItem
+                    id="delete"
+                    label={strings.eventStore.namespaces.jobs.actions.delete} icon={faIcons.FaDeleteLeft}
+                    disableOnUnselected
+                    command={() => viewModel.delete()} />
             </DataPage.MenuItems>
             <DataPage.Columns>
                 <Column field='type' header={strings.eventStore.namespaces.jobs.columns.type} sortable />
@@ -87,4 +95,4 @@ export const Jobs = () => {
             </DataPage.Columns>
         </DataPage>
     );
-};
+});
