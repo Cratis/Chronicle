@@ -74,12 +74,14 @@ public class ReactorObserverSubscriber(
                 tcs);
             return await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         }
-        catch (TaskCanceledException)
+        catch (TaskCanceledException taskCanceledException)
         {
+            logger.OnNextException(taskCanceledException, _observerId, _eventStore, _namespace);
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
         }
-        catch (TimeoutException)
+        catch (TimeoutException timeoutException)
         {
+            logger.OnNextException(timeoutException, _observerId, _eventStore, _namespace);
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Timeout");
         }
     }

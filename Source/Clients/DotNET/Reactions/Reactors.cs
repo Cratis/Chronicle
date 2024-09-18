@@ -18,6 +18,8 @@ namespace Cratis.Chronicle.Reactors;
 /// </summary>
 public class Reactors : IReactors
 {
+    static readonly object _registerLock = new();
+
     readonly IEventStore _eventStore;
     readonly IEventTypes _eventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
@@ -28,6 +30,8 @@ public class Reactors : IReactors
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IDictionary<Type, ReactorHandler> _handlers = new Dictionary<Type, ReactorHandler>();
+
+    bool _registered;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Reactors"/> class.
@@ -93,10 +97,21 @@ public class Reactors : IReactors
     /// <inheritdoc/>
     public Task Register()
     {
+        if (_registered)
+        {
+            return Task.CompletedTask;
+        }
+
         foreach (var handler in _handlers.Values)
         {
             RegisterReactor(handler);
         }
+
+        lock (_registerLock)
+        {
+            _registered = true;
+        }
+
         return Task.CompletedTask;
     }
 
