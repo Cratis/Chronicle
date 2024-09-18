@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation.Placement;
 using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 
 namespace Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 
