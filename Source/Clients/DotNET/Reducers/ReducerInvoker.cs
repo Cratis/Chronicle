@@ -62,9 +62,8 @@ public class ReducerInvoker : IReducerInvoker
 
             try
             {
-                if (_methodsByEventType.ContainsKey(eventType))
+                if (_methodsByEventType.TryGetValue(eventType, out var method))
                 {
-                    var method = _methodsByEventType[eventType];
                     var parameters = method.GetParameters();
 
                     if (parameters.Length == 3)
