@@ -9,9 +9,6 @@ namespace Cratis.Api.Jobs;
 /// <summary>
 /// Represents the API for working with jobs.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Jobs"/> class.
-/// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to work with grains.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/jobs")]
 public class JobCommands(IGrainFactory grainFactory) : ControllerBase
@@ -27,7 +24,7 @@ public class JobCommands(IGrainFactory grainFactory) : ControllerBase
     public async Task ResumeJob(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
-        [FromRoute] Guid jobId)
+        [FromRoute] JobId jobId)
     {
         var jobsManager = grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(eventStore, @namespace));
         await jobsManager.Resume(jobId);
@@ -44,7 +41,7 @@ public class JobCommands(IGrainFactory grainFactory) : ControllerBase
     public async Task StopJob(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
-        [FromRoute] Guid jobId)
+        [FromRoute] JobId jobId)
     {
         var jobsManager = grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(eventStore, @namespace));
         await jobsManager.Stop(jobId);
@@ -61,7 +58,7 @@ public class JobCommands(IGrainFactory grainFactory) : ControllerBase
     public async Task DeleteJob(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
-        [FromRoute] Guid jobId)
+        [FromRoute] JobId jobId)
     {
         var jobsManager = grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(eventStore, @namespace));
         await jobsManager.Delete(jobId);
