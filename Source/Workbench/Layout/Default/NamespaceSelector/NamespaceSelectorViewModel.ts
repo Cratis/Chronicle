@@ -4,6 +4,7 @@
 import { inject, injectable } from 'tsyringe';
 import { Namespace } from 'Api/Namespaces';
 import { INamespaces } from 'State/Namespaces';
+import { Guid } from '@cratis/fundamentals';
 
 export interface INamespaceSelectorProps {
     onNamespaceSelected: (namespace: Namespace) => void;
@@ -25,7 +26,7 @@ export class NamespaceSelectorViewModel {
         });
     }
 
-    currentNamespace: Namespace = { name: '', description: '' };
+    currentNamespace: Namespace = { id: Guid.empty, name: '', description: '' };
     namespaces: Namespace[] = [];
 
     onNamespaceSelected(namespace: Namespace) {

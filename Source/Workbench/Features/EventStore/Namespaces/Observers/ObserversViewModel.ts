@@ -9,6 +9,7 @@ import { INamespaces } from 'State/Namespaces';
 import { DialogButtons, IDialogs } from '@cratis/applications.react.mvvm/dialogs';
 import { DialogResult } from '@cratis/applications.react/dialogs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
+import { Guid } from '@cratis/fundamentals';
 
 @injectable()
 export class ObserversViewModel {
@@ -18,7 +19,7 @@ export class ObserversViewModel {
         private readonly _replay: Replay,
         private readonly _dialogs: IDialogs,
         @inject('params') private readonly _params: EventStoreAndNamespaceParams) {
-        this.currentNamespace = { name: '', description: '' };
+        this.currentNamespace = { id: Guid.empty, name: '', description: '' };
 
         namespaces.currentNamespace.subscribe(namespace => {
             this.currentNamespace = namespace;
