@@ -119,7 +119,7 @@ public class ChronicleConnection : IChronicleConnection
                 _channel.CreateGrpcService<IProjections>(),
                 _channel.CreateGrpcService<IServer>());
 
-            await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_options.ConnectTimeout), _cancellationToken);
+            await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_options.ConnectTimeout));
             _logger.Connected();
             await Lifecycle.Connected();
         }
