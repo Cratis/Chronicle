@@ -29,6 +29,9 @@ public class Reactors : IReactors
     readonly ILoggerFactory _loggerFactory;
     readonly IDictionary<Type, ReactorHandler> _handlers = new Dictionary<Type, ReactorHandler>();
 
+    bool _registered;
+    static readonly object _registerLock = new();
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Reactors"/> class.
     /// </summary>
@@ -93,10 +96,21 @@ public class Reactors : IReactors
     /// <inheritdoc/>
     public Task Register()
     {
+        if (_registered)
+        {
+            return Task.CompletedTask;
+        }
+
         foreach (var handler in _handlers.Values)
         {
             RegisterReactor(handler);
         }
+
+        lock (_registerLock)
+        {
+            _registered = true;
+        }
+
         return Task.CompletedTask;
     }
 
