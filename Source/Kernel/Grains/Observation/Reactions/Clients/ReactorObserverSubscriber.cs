@@ -64,7 +64,7 @@ public class ReactorObserverSubscriber(
         {
             throw new MissingStateForReactorSubscriber(_observerId);
         }
-        var tcs = new TaskCompletionSource<ObserverSubscriberResult>();
+        var tcs = new TaskCompletionSource<ObserverSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         try
         {
             reactorMediator.OnNext(

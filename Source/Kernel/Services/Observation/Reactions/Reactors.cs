@@ -29,7 +29,7 @@ public class Reactors(
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default)
     {
-        var registrationTcs = new TaskCompletionSource<RegisterReactor>();
+        var registrationTcs = new TaskCompletionSource<RegisterReactor>(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource<ObserverSubscriberResult>? observationResultTcs = null;
         TaskCompletionSource<IEnumerable<AppendedEvent>>? eventsTcs;
         IReactor clientObserver = null!;
@@ -83,7 +83,7 @@ public class Reactors(
                 connectionId = registration.ConnectionId;
                 observerId = registration.ObserverId;
 
-                eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>();
+                eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>(TaskCreationOptions.RunContinuationsAsynchronously);
                 reactorMediator.Subscribe(
                     registration.ObserverId,
                     registration.ConnectionId,
@@ -103,7 +103,7 @@ public class Reactors(
                         break;
                     }
 
-                    eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>();
+                    eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>(TaskCreationOptions.RunContinuationsAsynchronously);
                 }
             }
             catch (OperationCanceledException)

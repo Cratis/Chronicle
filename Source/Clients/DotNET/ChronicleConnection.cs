@@ -98,10 +98,8 @@ public class ChronicleConnection : IChronicleConnection
 
         _channel = CreateGrpcChannel();
         _connectionService = _channel.CreateGrpcService<IConnectionService>();
-
         _lastKeepAlive = DateTimeOffset.UtcNow;
-
-        _connectTcs = new TaskCompletionSource();
+        _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         _keepAliveSubscription = _connectionService.Connect(new()
         {
@@ -121,7 +119,7 @@ public class ChronicleConnection : IChronicleConnection
                 _channel.CreateGrpcService<IProjections>(),
                 _channel.CreateGrpcService<IServer>());
 
-            await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_options.ConnectTimeout));
+            await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_options.ConnectTimeout), _cancellationToken);
             _logger.Connected();
             await Lifecycle.Connected();
         }
