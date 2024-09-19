@@ -75,7 +75,7 @@ public class ReactorInvoker : IReactorInvoker
                     returnValue = (Task)method.Invoke(actualReactor, [content])!;
                 }
 
-                if (returnValue is not null) await returnValue;
+                await returnValue;
                 await _middlewares.AfterInvoke(eventContext, content);
             }
         }

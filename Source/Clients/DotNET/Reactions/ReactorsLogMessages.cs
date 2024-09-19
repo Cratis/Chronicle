@@ -19,4 +19,7 @@ internal static partial class ReactorsLogMessages
 
     [LoggerMessage(LogLevel.Warning, "An error occurred while handling event of type {EventTypeId} was for Reactor {ReactorId}")]
     internal static partial void ErrorWhileHandlingEvent(this ILogger<Reactors> logger, Exception ex, EventTypeId eventTypeId, ReactorId reactorId);
+
+    [LoggerMessage(LogLevel.Trace, "Handling of events received for Reactor {ReactorId} completed")]
+    internal static partial void EventHandlingComplted(this ILogger<Reactors> logger, ReactorId reactorId);
 }

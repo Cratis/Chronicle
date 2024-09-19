@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reflection;
 using System.Text.Json.Nodes;
@@ -18,8 +19,6 @@ namespace Cratis.Chronicle.Reactors;
 /// </summary>
 public class Reactors : IReactors
 {
-    static readonly object _registerLock = new();
-
     readonly IEventStore _eventStore;
     readonly IEventTypes _eventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
@@ -30,8 +29,6 @@ public class Reactors : IReactors
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IDictionary<Type, ReactorHandler> _handlers = new Dictionary<Type, ReactorHandler>();
-
-    bool _registered;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Reactors"/> class.
@@ -97,21 +94,10 @@ public class Reactors : IReactors
     /// <inheritdoc/>
     public Task Register()
     {
-        if (_registered)
-        {
-            return Task.CompletedTask;
-        }
-
         foreach (var handler in _handlers.Values)
         {
             RegisterReactor(handler);
         }
-
-        lock (_registerLock)
-        {
-            _registered = true;
-        }
-
         return Task.CompletedTask;
     }
 
@@ -148,9 +134,15 @@ public class Reactors : IReactors
         var messages = new BehaviorSubject<ReactorMessage>(new(new(registration)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var eventsToObserve = _eventStore.Connection.Services.Reactors.Observe(messages);
-        eventsToObserve.Subscribe(
-            events => ObserverMethod(messages, handler, events).Wait(),
-            messages.Dispose);
+
+        eventsToObserve
+            .Select(events => Observable.FromAsync(async () =>
+            {
+                await ObserverMethod(messages, handler, events);
+                _logger.EventHandlingComplted(handler.Id);
+            }))
+            .Concat()
+            .Subscribe();
     }
 
     async Task ObserverMethod(ISubject<ReactorMessage> messages, ReactorHandler handler, EventsToObserve events)
@@ -182,6 +174,7 @@ public class Reactors : IReactors
                 exceptionMessages = ex.GetAllMessages();
                 exceptionStackTrace = ex.StackTrace ?? string.Empty;
                 state = ObservationState.Failed;
+                break;
             }
         }
 
