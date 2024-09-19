@@ -36,7 +36,7 @@ public class Reducers(
     /// <inheritdoc/>
     public IObservable<ReduceOperationMessage> Observe(IObservable<ReducerMessage> messages, CallContext context = default)
     {
-        var registrationTcs = new TaskCompletionSource<RegisterReducer>();
+        var registrationTcs = new TaskCompletionSource<RegisterReducer>(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource<ReducerSubscriberResult>? reducerResultTcs = null;
         TaskCompletionSource<ReduceOperation>? reduceOperationTcs;
 
@@ -103,7 +103,7 @@ public class Reducers(
                 connectionId = registration.ConnectionId;
                 observerId = registration.Reducer.ReducerId;
 
-                reduceOperationTcs = new TaskCompletionSource<ReduceOperation>();
+                reduceOperationTcs = new TaskCompletionSource<ReduceOperation>(TaskCreationOptions.RunContinuationsAsynchronously);
                 reducerMediator.Subscribe(
                     registration.Reducer.ReducerId,
                     registration.ConnectionId,
@@ -129,7 +129,7 @@ public class Reducers(
                         break;
                     }
 
-                    reduceOperationTcs = new TaskCompletionSource<ReduceOperation>();
+                    reduceOperationTcs = new TaskCompletionSource<ReduceOperation>(TaskCreationOptions.RunContinuationsAsynchronously);
                 }
             }
             catch (OperationCanceledException)
