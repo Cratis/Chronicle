@@ -43,12 +43,11 @@ public class Projection(
     /// <inheritdoc/>
     public async Task SetDefinitionAndSubscribe(ProjectionDefinition definition)
     {
-        var compareResult = projectionDefinitionComparer.Compare(State, definition);
+        var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
+        var compareResult = await projectionDefinitionComparer.Compare(key, State, definition);
 
         State = definition;
         await WriteStateAsync();
-
-        var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
 
         if (compareResult == ProjectionDefinitionCompareResult.Different)
         {

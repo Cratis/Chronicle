@@ -20,7 +20,7 @@ public class when_comparing_object_with_no_changes : given.an_object_comparer
         right = new TheType("FortyTwo", 42);
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_be_considered_equal() => result.ShouldBeTrue();
     [Fact] void should_not_have_any_differences() => differences.ShouldBeEmpty();

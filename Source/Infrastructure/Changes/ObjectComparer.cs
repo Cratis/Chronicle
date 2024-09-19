@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Changes;
 public class ObjectComparer : IObjectComparer
 {
     /// <inheritdoc/>
-    public bool Equals(object? left, object? right, out IEnumerable<PropertyDifference> differences)
+    public bool Compare(object? left, object? right, out IEnumerable<PropertyDifference> differences)
     {
         var allDifferences = new List<PropertyDifference>();
         differences = allDifferences;

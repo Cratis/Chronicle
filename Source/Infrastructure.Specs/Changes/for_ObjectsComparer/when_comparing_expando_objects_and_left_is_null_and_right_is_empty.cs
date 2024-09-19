@@ -20,7 +20,7 @@ public class when_comparing_expando_objects_and_left_is_null_and_right_is_empty 
         right = new ExpandoObject();
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_be_considered_equal() => result.ShouldBeTrue();
     [Fact] void should_have_no_differences() => differences.ShouldBeEmpty();

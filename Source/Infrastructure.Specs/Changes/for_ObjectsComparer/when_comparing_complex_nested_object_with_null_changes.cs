@@ -24,7 +24,7 @@ public class when_comparing_complex_nested_object_with_null_changes : given.an_o
         right = new TopLevel("FortyFive", 45, new(null!, 46, new("FortySeven", 47)));
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_not_be_considered_equal() => result.ShouldBeFalse();
     [Fact] void should_have_first_difference_be_the_first_property_on_top_level() => differences.ToArray()[0].PropertyPath.Path.ShouldEqual(nameof(TopLevel.StringValue).ToCamelCase());

@@ -21,7 +21,7 @@ public class when_comparing_object_with_collections_that_have_different_number_o
         right = new([4, 5]);
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_not_be_equal() => result.ShouldBeFalse();
     [Fact] void should_only_have_one_property_difference() => differences.Count().ShouldEqual(1);

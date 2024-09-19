@@ -19,7 +19,7 @@ public class when_comparing_object_with_equal_guid_values : given.an_object_comp
         right = new(Guid.Parse("240409fd-43db-4675-9345-025526c9c7e4"));
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_be_equal() => result.ShouldBeTrue();
     [Fact] void should_have_no_differences() => differences.ShouldBeEmpty();

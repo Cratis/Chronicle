@@ -24,7 +24,7 @@ public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
 
         objects_comparer = new();
         objects_comparer
-            .Setup(_ => _.Equals(initial, IsAny<Model>(), out Ref<IEnumerable<PropertyDifference>>.IsAny))
+            .Setup(_ => _.Compare(initial, IsAny<Model>(), out Ref<IEnumerable<PropertyDifference>>.IsAny))
             .Returns((object? _, object? __, out IEnumerable<PropertyDifference> differences) =>
             {
                 differences =

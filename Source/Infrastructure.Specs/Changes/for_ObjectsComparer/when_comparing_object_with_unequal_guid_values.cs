@@ -21,7 +21,7 @@ public class when_comparing_object_with_unequal_guid_values : given.an_object_co
         right = new(Guid.NewGuid());
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_not_be_equal() => result.ShouldBeFalse();
     [Fact] void should_only_have_one_property_difference() => differences.Count().ShouldEqual(1);

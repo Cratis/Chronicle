@@ -35,7 +35,7 @@ public class when_setting_properties_that_does_not_cause_changes : Specification
         source = new ExpandoObject();
 
         objects_comparer = new();
-        objects_comparer.Setup(_ => _.Equals(initial_state, IsAny<ExpandoObject>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
+        objects_comparer.Setup(_ => _.Compare(initial_state, IsAny<ExpandoObject>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
         changeset = new(objects_comparer.Object, source, initial_state);
     }
 

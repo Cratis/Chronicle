@@ -22,7 +22,7 @@ public class when_comparing_object_with_collections_with_different_element_type_
         right = new(new string[] { "1" });
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_not_be_equal() => result.ShouldBeFalse();
     [Fact] void should_only_have_one_property_difference() => differences.Count().ShouldEqual(1);
