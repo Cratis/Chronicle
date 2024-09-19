@@ -135,6 +135,7 @@ public class Reactors : IReactors
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var eventsToObserve = _eventStore.Connection.Services.Reactors.Observe(messages);
 
+        // https://github.com/dotnet/reactive/issues/459
         eventsToObserve
             .Select(events => Observable.FromAsync(async () =>
             {
