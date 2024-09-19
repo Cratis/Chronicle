@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Observation;
@@ -151,9 +152,16 @@ public class Reducers(
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
         var operationsToObserve = eventStore.Connection.Services.Reducers.Observe(messages);
-        operationsToObserve.Subscribe(
-            events => ObserverMethod(messages, handler, events).Wait(),
-            messages.Dispose);
+
+        // https://github.com/dotnet/reactive/issues/459
+        operationsToObserve
+            .Select(events => Observable.FromAsync(async () =>
+            {
+                await ObserverMethod(messages, handler, events);
+                logger.EventHandlingCompleted(handler.Id);
+            }))
+            .Concat()
+            .Subscribe(_ => { }, messages.Dispose);
     }
 
     async Task ObserverMethod(ISubject<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation)

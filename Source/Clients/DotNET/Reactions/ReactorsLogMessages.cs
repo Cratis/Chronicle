@@ -21,5 +21,5 @@ internal static partial class ReactorsLogMessages
     internal static partial void ErrorWhileHandlingEvent(this ILogger<Reactors> logger, Exception ex, EventTypeId eventTypeId, ReactorId reactorId);
 
     [LoggerMessage(LogLevel.Trace, "Handling of events received for Reactor {ReactorId} completed")]
-    internal static partial void EventHandlingComplted(this ILogger<Reactors> logger, ReactorId reactorId);
+    internal static partial void EventHandlingCompleted(this ILogger<Reactors> logger, ReactorId reactorId);
 }

@@ -140,10 +140,10 @@ public class Reactors : IReactors
             .Select(events => Observable.FromAsync(async () =>
             {
                 await ObserverMethod(messages, handler, events);
-                _logger.EventHandlingComplted(handler.Id);
+                _logger.EventHandlingCompleted(handler.Id);
             }))
             .Concat()
-            .Subscribe();
+            .Subscribe(_ => { }, messages.Dispose);
     }
 
     async Task ObserverMethod(ISubject<ReactorMessage> messages, ReactorHandler handler, EventsToObserve events)
