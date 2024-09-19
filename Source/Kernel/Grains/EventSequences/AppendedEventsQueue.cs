@@ -17,7 +17,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
     readonly IGrainFactory _grainFactory;
     readonly ConcurrentQueue<IEnumerable<AppendedEvent>> _queue = new();
-    readonly ManualResetEventSlim _queueEvent = new(false);
+    readonly AsyncManualResetEvent _queueEvent = new();
     readonly TaskCompletionSource _queueTaskCompletionSource = new();
     ConcurrentBag<AppendedEventsQueueObserverSubscription> _subscriptions = [];
 
@@ -63,26 +63,30 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     public void Dispose()
     {
         _queueTaskCompletionSource.SetCanceled();
-        _queueEvent.Dispose();
     }
 
     async Task QueueHandler()
     {
         while (!_queueTaskCompletionSource.Task.IsCanceled)
         {
-            _queueEvent.Wait();
+            await _queueEvent.WaitAsync();
+            if (_queueTaskCompletionSource.Task.IsCanceled)
+            {
+                return;
+            }
 
             while (_queue.TryDequeue(out var events))
             {
                 foreach (var subscription in _subscriptions)
                 {
                     var actualEvents = events.Where(@event => subscription.EventTypeIds.Contains(@event.Metadata.Type.Id)).ToList();
-                    if (actualEvents.Count > 0)
+                    if (actualEvents.Count == 0)
                     {
-                        var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                        var partition = actualEvents[0].Context.EventSourceId;
-                        await observer.Handle(partition, actualEvents);
+                        continue;
                     }
+                    var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
+                    var partition = actualEvents[0].Context.EventSourceId;
+                    await observer.Handle(partition, actualEvents);
                 }
 
                 _queueEvent.Reset();
