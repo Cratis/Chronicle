@@ -111,11 +111,15 @@ public class UnitOfWork(
     }
 
     /// <inheritdoc/>
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        if (_isCommitted || _isRolledBack)
+        {
+            return;
+        }
         if (!_isCommitted && !_isRolledBack)
         {
-            Rollback().Wait();
+            await Rollback();
         }
 
         _onCompleted(this);

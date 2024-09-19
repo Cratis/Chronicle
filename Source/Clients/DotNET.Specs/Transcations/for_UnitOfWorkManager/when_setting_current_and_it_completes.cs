@@ -15,10 +15,10 @@ public class when_setting_current_and_it_completes : given.a_unit_of_work_manage
         _unitOfWork = new UnitOfWork(_correlationId, _ => { }, _eventStore);
     }
 
-    void Because()
+    async Task Because()
     {
         _manager.SetCurrent(_unitOfWork);
-        _unitOfWork.Dispose();
+        await _unitOfWork.DisposeAsync();
         _hasCurrent = _manager.HasCurrent;
     }
 
