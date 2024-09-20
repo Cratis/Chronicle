@@ -35,7 +35,7 @@ public class and_not_waiting_for_observer_to_be_active(context context) : Given<
         async Task Because()
         {
             await EventStore.EventLog.Append(EventSourceId, Event);
-            await Tsc.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await Tsc.Task.WaitAsync(TimeSpan.FromMilliseconds(10));
         }
     }
 
