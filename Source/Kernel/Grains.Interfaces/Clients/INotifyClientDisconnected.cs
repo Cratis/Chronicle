@@ -14,5 +14,6 @@ public interface INotifyClientDisconnected : IGrainObserver
     /// Called when a client is disconnected.
     /// </summary>
     /// <param name="client">Details about the client.</param>
-    void OnClientDisconnected(ConnectedClient client);
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task OnClientDisconnected(ConnectedClient client);
 }
