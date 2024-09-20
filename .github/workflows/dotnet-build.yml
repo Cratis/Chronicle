@@ -35,24 +35,6 @@ jobs:
 
       - name: Run tests
         run: dotnet test --no-build --configuration Release --settings specs.runsettings
-  
-  dotnet-integration-tests:
-    runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@master
-
-      - name: Build
-        run: dotnet build --configuration Release
-
-      - name: Run tests
+      - name: Run integration tests
         run: dotnet test --no-build --configuration Release --settings integration.runsettings
