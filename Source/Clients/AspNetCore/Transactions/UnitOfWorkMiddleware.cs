@@ -30,7 +30,7 @@ public class UnitOfWorkMiddleware(IUnitOfWorkManager unitOfWorkManager, RequestD
         {
             if (!unitOfWork.IsCompleted)
             {
-                await unitOfWork.DisposeAsync();
+                unitOfWork.Dispose();
             }
             throw;
         }

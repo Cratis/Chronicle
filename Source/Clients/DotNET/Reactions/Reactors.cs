@@ -109,7 +109,7 @@ public class Reactors : IReactors
         return reactorHandler!;
     }
 
-    void ThrowIfUnknownReactorId(ReactorHandler? handler, ReactorId reactorId)
+    static void ThrowIfUnknownReactorId(ReactorHandler? handler, ReactorId reactorId)
     {
         if (handler is null)
         {

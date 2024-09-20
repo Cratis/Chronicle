@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Transactions;
 /// <summary>
 /// Represents a unit of work.
 /// </summary>
-public interface IUnitOfWork : IAsyncDisposable
+public interface IUnitOfWork : IDisposable
 {
     /// <summary>
     /// Gets the value indicating whether the unit of work is completed.

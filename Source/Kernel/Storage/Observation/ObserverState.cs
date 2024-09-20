@@ -28,7 +28,7 @@ public record ObserverState(
     EventCount Handled,
     ObserverRunningState RunningState)
 {
-    EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
+    readonly EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverState"/> class.

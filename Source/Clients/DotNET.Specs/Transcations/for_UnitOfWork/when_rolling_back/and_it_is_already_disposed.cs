@@ -12,9 +12,9 @@ public class and_it_is_already_disposed : given.a_unit_of_work
 {
     Exception _exception;
 
-    async Task Establish()
+    void Establish()
     {
-        await _unitOfWork.DisposeAsync();
+        _unitOfWork.Dispose();
     }
 
     async Task Because() => _exception = await Catch.Exception(_unitOfWork.Rollback);

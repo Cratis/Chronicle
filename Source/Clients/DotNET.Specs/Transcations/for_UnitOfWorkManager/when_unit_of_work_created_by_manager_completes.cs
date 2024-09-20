@@ -14,10 +14,10 @@ public class when_unit_of_work_created_by_manager_completes : given.a_unit_of_wo
         _correlationId = CorrelationId.New();
     }
 
-    async Task Because()
+    void Because()
     {
         _result = _manager.Begin(_correlationId);
-        await _result.DisposeAsync();
+        _result.Dispose();
         _hasCurrent = _manager.HasCurrent;
     }
 
