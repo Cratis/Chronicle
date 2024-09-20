@@ -46,8 +46,8 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
         {
             await GetObserverFor<SomeReactor>().WaitTillActive(TimeSpan.FromMinutes(1));
             await EventStore.EventLog.Append(EventSourceId, Event);
-            await Tcs.Task.WaitAsync(TimeSpan.FromSeconds(60));
-            WaitingForObserverStateError = await Catch.Exception(async () => await ReactorObserver.WaitForState(ObserverRunningState.Active, TimeSpan.FromSeconds(60)));
+            await Tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            WaitingForObserverStateError = await Catch.Exception(async () => await ReactorObserver.WaitForState(ObserverRunningState.Active, TimeSpan.FromSeconds(5)));
             ReactorObserverState = await ReactorObserver.GetState();
             FailedPartitions = await new FailedPartitionStorage(Services.GetRequiredService<IDatabase>().GetEventStoreDatabase(EventStore.Name.Value).GetNamespaceDatabase(Concepts.EventStoreNamespaceName.Default)).GetFor(ReactorObserverState.ObserverId);
         }

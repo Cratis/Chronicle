@@ -104,18 +104,18 @@ public class Reactors : IReactors
 
         lock (_registerLock)
         {
+            if (_registered)
+            {
+                return Task.CompletedTask;
+            }
+
+            foreach (var handler in _handlers.Values)
+            {
+                RegisterReactor(handler);
+            }
             _registered = true;
         }
 
-        if (_registered)
-        {
-            return Task.CompletedTask;
-        }
-
-        foreach (var handler in _handlers.Values)
-        {
-            RegisterReactor(handler);
-        }
         return Task.CompletedTask;
     }
 
