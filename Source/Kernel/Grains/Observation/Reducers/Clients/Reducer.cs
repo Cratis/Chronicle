@@ -49,12 +49,11 @@ public class Reducer(
     /// <inheritdoc/>
     public async Task SetDefinitionAndSubscribe(ReducerDefinition definition)
     {
-        var compareResult = reducerDefinitionComparer.Compare(State, definition);
+        var key = ReducerKey.Parse(this.GetPrimaryKeyString());
+        var compareResult = await reducerDefinitionComparer.Compare(key, State, definition);
 
         State = definition;
         await WriteStateAsync();
-
-        var key = ReducerKey.Parse(this.GetPrimaryKeyString());
 
         if (compareResult == ReducerDefinitionCompareResult.Different)
         {
