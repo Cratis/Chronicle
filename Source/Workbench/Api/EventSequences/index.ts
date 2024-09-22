@@ -6,14 +6,13 @@
 // eslint-disable-next-line header/header
 export * from './AllEventSequences';
 export * from './Append';
+export * from './AppendedEvents';
+export * from './AppendedEventsInRange';
 export * from './AppendedEventWithJsonAsContent';
 export * from './AppendMany';
 export * from './EventHistogramEntry';
 export * from './EventSequenceInformation';
 export * from './EventToAppend';
-export * from './GetAllAppendedEvents';
-export * from './GetAppendedEvents';
-export * from './GetAppendedEventsInRange';
 export * from './Histogram';
 export * from './Next';
 export * from './Redact';
