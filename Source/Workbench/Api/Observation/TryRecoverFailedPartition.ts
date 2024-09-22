@@ -10,16 +10,16 @@ import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applic
 import { Validator } from '@cratis/applications/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/observers/{{namespace}}/failed-partitions/{{observerId}}/retry/{{partition}}');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/observers/{{namespace}}/failed-partitions/{{observerId}}/try-recover-failed-partition/{{partition}}');
 
-export interface IRetryPartition {
+export interface ITryRecoverFailedPartition {
     eventStore?: string;
     namespace?: string;
     observerId?: string;
     partition?: string;
 }
 
-export class RetryPartitionValidator extends CommandValidator {
+export class TryRecoverFailedPartitionValidator extends CommandValidator {
     readonly properties: CommandPropertyValidators = {
         eventStore: new Validator(),
         namespace: new Validator(),
@@ -28,10 +28,10 @@ export class RetryPartitionValidator extends CommandValidator {
     };
 }
 
-export class RetryPartition extends Command<IRetryPartition> implements IRetryPartition {
-    readonly route: string = '/api/event-store/{eventStore}/observers/{namespace}/failed-partitions/{observerId}/retry/{partition}';
+export class TryRecoverFailedPartition extends Command<ITryRecoverFailedPartition> implements ITryRecoverFailedPartition {
+    readonly route: string = '/api/event-store/{eventStore}/observers/{namespace}/failed-partitions/{observerId}/try-recover-failed-partition/{partition}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly validation: CommandValidator = new RetryPartitionValidator();
+    readonly validation: CommandValidator = new TryRecoverFailedPartitionValidator();
 
     private _eventStore!: string;
     private _namespace!: string;
@@ -93,7 +93,7 @@ export class RetryPartition extends Command<IRetryPartition> implements IRetryPa
         this.propertyChanged('partition');
     }
 
-    static use(initialValues?: IRetryPartition): [RetryPartition, SetCommandValues<IRetryPartition>, ClearCommandValues] {
-        return useCommand<RetryPartition, IRetryPartition>(RetryPartition, initialValues);
+    static use(initialValues?: ITryRecoverFailedPartition): [TryRecoverFailedPartition, SetCommandValues<ITryRecoverFailedPartition>, ClearCommandValues] {
+        return useCommand<TryRecoverFailedPartition, ITryRecoverFailedPartition>(TryRecoverFailedPartition, initialValues);
     }
 }
