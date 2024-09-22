@@ -3,8 +3,8 @@
 
 import { DataTable, DataTableFilterMeta, DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
 import { Constructor } from '@cratis/fundamentals';
-import { IQueryFor } from '@cratis/applications/queries';
-import { useQuery } from '@cratis/applications.react/queries';
+import { IQueryFor, Paging } from '@cratis/applications/queries';
+import { useQueryWithPaging } from '@cratis/applications.react/queries';
 import { ReactNode, useState } from 'react';
 
 /**
@@ -57,6 +57,8 @@ export interface DataTableForQueryProps<TQuery extends IQueryFor<TDataType>, TDa
     defaultFilters?: DataTableFilterMeta;
 }
 
+const paging = new Paging(0, 20);
+
 /**
  * Represents a DataTable for a query.
  * @param props Props for the component
@@ -64,14 +66,18 @@ export interface DataTableForQueryProps<TQuery extends IQueryFor<TDataType>, TDa
  */
 export const DataTableForQuery = <TQuery extends IQueryFor<TDataType, TArguments>, TDataType, TArguments extends {}>(props: DataTableForQueryProps<TQuery, TDataType, TArguments>) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(props.defaultFilters ?? {});
-    const [result] = useQuery<TDataType, TQuery>(props.query, props.queryArguments);
+    const [result, _, __, setPage] = useQueryWithPaging(props.query, paging, props.queryArguments);
 
     return (
         <DataTable
             value={result.data as any}
-            rows={100}
+            lazy
+            rows={paging.pageSize}
+            totalRecords={result.paging.totalItems}
             paginator
             alwaysShowPaginator={false}
+            first={result.paging.page * paging.pageSize}
+            onPage={(e) => setPage(e.page ?? 0)}
             scrollable
             scrollHeight={'flex'}
             selectionMode='single'
@@ -82,8 +88,8 @@ export const DataTableForQuery = <TQuery extends IQueryFor<TDataType, TArguments
             filterDisplay='menu'
             onFilter={(e) => setFilters(e.filters)}
             globalFilterFields={props.globalFilterFields}
-            emptyMessage={props.emptyMessage}>
+            emptyMessage={props.emptyMessage} >
             {props.children}
-        </DataTable>
+        </DataTable >
     );
 };

@@ -3,8 +3,8 @@
 
 import { DataTable, DataTableFilterMeta, DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
 import { Constructor } from '@cratis/fundamentals';
-import { IObservableQueryFor } from '@cratis/applications/queries';
-import { useObservableQuery } from '@cratis/applications.react/queries';
+import { IObservableQueryFor, Paging } from '@cratis/applications/queries';
+import { useObservableQueryWithPaging } from '@cratis/applications.react/queries';
 import { ReactNode, useState } from 'react';
 
 /**
@@ -57,6 +57,8 @@ export interface DataTableForObservableQueryProps<TQuery extends IObservableQuer
     defaultFilters?: DataTableFilterMeta;
 }
 
+const paging = new Paging(0, 20);
+
 /**
  * Represents a DataTable for a query.
  * @param props Props for the component
@@ -64,14 +66,18 @@ export interface DataTableForObservableQueryProps<TQuery extends IObservableQuer
  */
 export const DataTableForObservableQuery = <TQuery extends IObservableQueryFor<TDataType, TArguments>, TDataType, TArguments extends {}>(props: DataTableForObservableQueryProps<TQuery, TDataType, TArguments>) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(props.defaultFilters ?? {});
-    const [result] = useObservableQuery<TDataType, TQuery>(props.query, props.queryArguments);
+    const [result, _, setPage] = useObservableQueryWithPaging(props.query, paging, props.queryArguments);
 
     return (
         <DataTable
             value={result.data as any}
-            rows={100}
+            lazy
+            rows={paging.pageSize}
+            totalRecords={result.paging.totalItems}
             paginator
             alwaysShowPaginator={false}
+            first={result.paging.page * paging.pageSize}
+            onPage={(e) => setPage(e.page ?? 0)}
             scrollable
             scrollHeight={'flex'}
             selectionMode='single'
