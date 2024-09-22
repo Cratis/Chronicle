@@ -48,9 +48,16 @@ export const Types = withViewModel(TypesViewModel, ({ viewModel }) => {
 
                 <DataPage.Columns>
 
-                    <Column field='id' header={strings.eventStore.general.types.columns.name} sortable />
-                    <Column field='generation' header={strings.eventStore.general.types.columns.generation} sortable />
-                    <Column field='tombstone' header={strings.eventStore.general.types.columns.tombstone} sortable body={renderTombstone}  />
+                    <Column field='id' header={strings.eventStore.general.types.columns.name} />
+                    <Column
+                        field='generation'
+                        style={{ width: '100px' }}
+                        header={strings.eventStore.general.types.columns.generation} />
+                    <Column
+                        field='tombstone'
+                        style={{ width: '100px' }}
+                        header={strings.eventStore.general.types.columns.tombstone}
+                        body={renderTombstone} />
                 </DataPage.Columns>
             </DataPage>
             <AddEventTypeDialogWrapper>
