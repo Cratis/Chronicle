@@ -9,8 +9,7 @@
         <ServerGarbageCollection>false</ServerGarbageCollection>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);RCS1140;CS1998</NoWarn>
-        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../Workbench/Api</CratisProxiesOutputPath>
-        <CratisProxiesSegmentsToSkip>2</CratisProxiesSegmentsToSkip>
+        <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">false</DisableProxyGenerator>
     </PropertyGroup>
 
     <ItemGroup>
@@ -22,10 +21,18 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Swashbuckle.AspNetCore" />
-      <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
-      <PackageReference Include="Cratis.Applications" />
-      <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
-      <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
+        <PackageReference Include="Swashbuckle.AspNetCore" />
+        <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
+        <PackageReference Include="Cratis.Applications" />
+        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
+        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../Workbench/Api</CratisProxiesOutputPath>
+        <CratisProxiesSegmentsToSkip>2</CratisProxiesSegmentsToSkip>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
+        <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
     </ItemGroup>
 </Project>
