@@ -104,8 +104,8 @@
         "cleanupCacheHistory": false,
         "disableGitFeatures": false,
         "globalMetadata": {
-            "_appTitle": "Cratis",
-            "_appName": "Cratis",
+            "_appTitle": "Cratis Chronicle",
+            "_appName": "Cratis Chronicle",
             "_appFaviconPath": "images/favicon.png",
             "_appLogoPath": "images/logo.png",
             "_appFooter": "Documentation",
