@@ -28,20 +28,6 @@ public class EventTypeQueries(IStorage storage) : ControllerBase
     }
 
     /// <summary>
-    /// Gets generation schema for type.
-    /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> to get event type for.</param>
-    /// <param name="eventTypeId">Type to get for.</param>
-    /// <returns>Schemas.</returns>
-    [HttpGet("schemas/{eventTypeId}")]
-    public async Task<IEnumerable<JsonDocument>> GenerationSchemasForType(
-        [FromQuery] EventStoreName eventStore,
-        [FromRoute] string eventTypeId)
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
     /// Gets all event types with schemas.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get event types for.</param>
