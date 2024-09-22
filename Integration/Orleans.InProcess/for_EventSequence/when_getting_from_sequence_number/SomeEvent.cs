@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Events;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_getting_from_sequence_number;
 
 [EventType]
-public record UserDeleted;
+public record SomeEvent(string Content);

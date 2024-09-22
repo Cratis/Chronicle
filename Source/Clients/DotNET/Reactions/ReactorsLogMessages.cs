@@ -15,5 +15,11 @@ internal static partial class ReactorsLogMessages
     internal static partial void DiscoverAllReactors(this ILogger<Reactors> logger);
 
     [LoggerMessage(LogLevel.Trace, "Event of type {EventTypeId} was received for Reactor {ReactorId}")]
-    internal static partial void EventReceived(this ILogger<Reactors> logger, EventTypeId eventTypeId, ReactorId ReactorId);
+    internal static partial void EventReceived(this ILogger<Reactors> logger, EventTypeId eventTypeId, ReactorId reactorId);
+
+    [LoggerMessage(LogLevel.Warning, "An error occurred while handling event of type {EventTypeId} was for Reactor {ReactorId}")]
+    internal static partial void ErrorWhileHandlingEvent(this ILogger<Reactors> logger, Exception ex, EventTypeId eventTypeId, ReactorId reactorId);
+
+    [LoggerMessage(LogLevel.Trace, "Handling of events received for Reactor {ReactorId} completed")]
+    internal static partial void EventHandlingCompleted(this ILogger<Reactors> logger, ReactorId reactorId);
 }

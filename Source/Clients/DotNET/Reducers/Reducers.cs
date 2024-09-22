@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Observation;
@@ -124,7 +125,7 @@ public class Reducers(
             handler.Id,
             handler.EventSequenceId);
 
-        var registration = new RegisterReducer()
+        var registration = new RegisterReducer
         {
             ConnectionId = eventStore.Connection.Lifecycle.ConnectionId,
             EventStoreName = eventStore.Name,
@@ -134,12 +135,12 @@ public class Reducers(
                 ReducerId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray(),
-                Model = new Contracts.Models.ModelDefinition()
+                Model = new Contracts.Models.ModelDefinition
                 {
                     Name = modelNameResolver.GetNameFor(handler.ReadModelType),
                     Schema = jsonSchemaGenerator.Generate(handler.ReadModelType).ToJson()
                 },
-                Sink = new SinkDefinition()
+                Sink = new SinkDefinition
                 {
                     TypeId = WellKnownSinkTypes.MongoDB
                 }
@@ -151,9 +152,16 @@ public class Reducers(
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
         var operationsToObserve = eventStore.Connection.Services.Reducers.Observe(messages);
-        operationsToObserve.Subscribe(
-            events => ObserverMethod(messages, handler, events).Wait(),
-            messages.Dispose);
+
+        // https://github.com/dotnet/reactive/issues/459
+        operationsToObserve
+            .Select(events => Observable.FromAsync(async () =>
+            {
+                await ObserverMethod(messages, handler, events);
+                logger.EventHandlingCompleted(handler.Id);
+            }))
+            .Concat()
+            .Subscribe(_ => { }, messages.Dispose);
     }
 
     async Task ObserverMethod(ISubject<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation)
@@ -168,27 +176,25 @@ public class Reducers(
         {
             var metadata = @event.Metadata.ToClient();
             var context = @event.Context.ToClient();
-            var eventType = eventTypes.GetClrTypeFor(metadata.Type.Id);
             var contentAsExpando = JsonSerializer.Deserialize<ExpandoObject>(@event.Content)!;
             return new AppendedEvent(
                 metadata,
                 context,
                 contentAsExpando);
-        });
+        }).ToList();
 
         try
         {
             BaseIdentityProvider.SetCurrentIdentity(Identity.System);
             var initialState = operation.InitialState is null ? null : JsonSerializer.Deserialize(operation.InitialState, handler.ReadModelType, jsonSerializerOptions);
-            var reduceResult = await handler.OnNext(
-                appendedEvents,
-                initialState);
+            var reduceResult = await handler.OnNext(appendedEvents, initialState);
 
             modelState = JsonSerializer.Serialize(reduceResult.ModelState, jsonSerializerOptions);
-            lastSuccessfullyObservedEvent = appendedEvents.Last().Metadata.SequenceNumber;
+            lastSuccessfullyObservedEvent = appendedEvents[^1].Metadata.SequenceNumber;
         }
         catch (Exception ex)
         {
+            logger.ErrorWhileHandlingEvents(ex, appendedEvents[0].Context.SequenceNumber, appendedEvents[^1].Context.SequenceNumber, handler.Id);
             exceptionMessages = ex.GetAllMessages();
             exceptionStackTrace = ex.StackTrace ?? string.Empty;
             state = ObservationState.Failed;

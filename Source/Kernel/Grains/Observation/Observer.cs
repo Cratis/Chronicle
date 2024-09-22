@@ -241,15 +241,9 @@ public class Observer(
             sequenceNumber);
 
         var failure = Failures.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
-        var time = TimeSpan.FromSeconds((failure.Attempts.Count() - 1) * 2);
-        if (time.TotalMilliseconds == 0)
-        {
-            time = TimeSpan.FromMilliseconds(100);
-        }
-
         if (failure.Attempts.Count() < 10)
         {
-            await this.RegisterOrUpdateReminder(partition.ToString(), time, TimeSpan.FromHours(48));
+            await this.RegisterOrUpdateReminder(partition.ToString(), GetNextRetryDelay(failure), TimeSpan.FromHours(48));
         }
         else
         {
@@ -307,8 +301,7 @@ public class Observer(
             return;
         }
 
-        var shouldHandle = events.Any(_ => _subscription.EventTypes.Contains(_.Metadata.Type));
-        if (!shouldHandle)
+        if (!events.Any(_ => _subscription.EventTypes.Contains(_.Metadata.Type)))
         {
             State = State with { NextEventSequenceNumber = events.Last().Metadata.SequenceNumber.Next() };
             await WriteStateAsync();
@@ -320,14 +313,18 @@ public class Observer(
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
 
-        events = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber).ToArray();
-        var handledCount = EventCount.Zero;
-        if (events.Any())
+        var eventsToHandle = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber).ToArray();
+        var numEventsSuccessfullyHandled = EventCount.Zero;
+        if (eventsToHandle.Length != 0)
         {
             using (new WriteSuspension(this))
             {
                 try
                 {
+                    if (State.Handled == EventCount.NotSet)
+                    {
+                        State = State with { Handled = EventCount.Zero };
+                    }
                     var key = new ObserverSubscriberKey(
                         _observerKey.ObserverId,
                         _observerKey.EventStore,
@@ -336,28 +333,23 @@ public class Observer(
                         partition,
                         _subscription.SiloAddress.ToParsableString());
 
-                    var firstEvent = events.First();
-                    var lastEvent = events.Last();
+                    var firstEvent = eventsToHandle[0];
 
                     var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                     tailEventSequenceNumber = firstEvent.Metadata.SequenceNumber;
-                    var result = await subscriber.OnNext(events, new(_subscription.Arguments));
-                    if (result.LastSuccessfulObservation != EventSequenceNumber.Unavailable)
-                    {
-                        handledCount = events.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation);
-                    }
-                    else
-                    {
-                        handledCount = EventCount.Zero;
-                    }
+                    var result = await subscriber.OnNext(eventsToHandle, new(_subscription.Arguments));
+                    numEventsSuccessfullyHandled = result.HandledAnyEvents
+                        ? eventsToHandle.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation)
+                        : EventCount.Zero;
+
                     if (result.State == ObserverSubscriberState.Failed)
                     {
                         failed = true;
                         exceptionMessages = result.ExceptionMessages;
                         exceptionStackTrace = result.ExceptionStackTrace;
-                        tailEventSequenceNumber = result.LastSuccessfulObservation == EventSequenceNumber.Unavailable ?
-                            firstEvent.Metadata.SequenceNumber :
-                            result.LastSuccessfulObservation;
+                        tailEventSequenceNumber = result.HandledAnyEvents
+                            ? result.LastSuccessfulObservation
+                            : firstEvent.Metadata.SequenceNumber;
                     }
                     else if (result.State == ObserverSubscriberState.Disconnected)
                     {
@@ -369,12 +361,18 @@ public class Observer(
                     }
 
                     State = State with { NextEventSequenceNumber = result.LastSuccessfulObservation.Next() };
-                    if (!State.LastHandledEventSequenceNumber.IsActualValue || State.LastHandledEventSequenceNumber < result.LastSuccessfulObservation)
+                    if (numEventsSuccessfullyHandled > 0)
                     {
+                        var previousLastHandled = State.LastHandledEventSequenceNumber;
+                        var shouldSetLastHandled =
+                            previousLastHandled == EventSequenceNumber.Unavailable ||
+                            previousLastHandled < result.LastSuccessfulObservation;
                         State = State with
                         {
-                            LastHandledEventSequenceNumber = result.LastSuccessfulObservation,
-                            Handled = State.Handled + handledCount
+                            LastHandledEventSequenceNumber = shouldSetLastHandled
+                                ? result.LastSuccessfulObservation
+                                : previousLastHandled,
+                            Handled = State.Handled + numEventsSuccessfullyHandled
                         };
                     }
                 }
@@ -385,7 +383,6 @@ public class Observer(
                     exceptionStackTrace = ex.StackTrace ?? string.Empty;
                 }
             }
-
             if (failed)
             {
                 await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
@@ -439,6 +436,12 @@ public class Observer(
     {
         if (_stateWritingSuspended) return;
         await base.WriteStateAsync();
+    }
+
+    static TimeSpan GetNextRetryDelay(FailedPartition failure)
+    {
+        var time = TimeSpan.FromSeconds((failure.Attempts.Count() - 1) * 2);
+        return time.TotalMilliseconds == 0 ? TimeSpan.FromMilliseconds(100) : time;
     }
 
     async Task RemoveReminder(string reminderName)

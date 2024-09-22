@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reflection;
 using System.Text.Json.Nodes;
@@ -18,6 +19,7 @@ namespace Cratis.Chronicle.Reactors;
 /// </summary>
 public class Reactors : IReactors
 {
+    static readonly object _registerLock = new();
     readonly IEventStore _eventStore;
     readonly IEventTypes _eventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
@@ -28,6 +30,8 @@ public class Reactors : IReactors
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IDictionary<Type, ReactorHandler> _handlers = new Dictionary<Type, ReactorHandler>();
+
+    bool _registered;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Reactors"/> class.
@@ -93,10 +97,25 @@ public class Reactors : IReactors
     /// <inheritdoc/>
     public Task Register()
     {
-        foreach (var handler in _handlers.Values)
+        if (_registered)
         {
-            RegisterReactor(handler);
+            return Task.CompletedTask;
         }
+
+        lock (_registerLock)
+        {
+            if (_registered)
+            {
+                return Task.CompletedTask;
+            }
+
+            foreach (var handler in _handlers.Values)
+            {
+                RegisterReactor(handler);
+            }
+            _registered = true;
+        }
+
         return Task.CompletedTask;
     }
 
@@ -108,7 +127,7 @@ public class Reactors : IReactors
         return reactorHandler!;
     }
 
-    void ThrowIfUnknownReactorId(ReactorHandler? handler, ReactorId reactorId)
+    static void ThrowIfUnknownReactorId(ReactorHandler? handler, ReactorId reactorId)
     {
         if (handler is null)
         {
@@ -133,9 +152,16 @@ public class Reactors : IReactors
         var messages = new BehaviorSubject<ReactorMessage>(new(new(registration)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var eventsToObserve = _eventStore.Connection.Services.Reactors.Observe(messages);
-        eventsToObserve.Subscribe(
-            events => ObserverMethod(messages, handler, events).Wait(),
-            messages.Dispose);
+
+        // https://github.com/dotnet/reactive/issues/459
+        eventsToObserve
+            .Select(events => Observable.FromAsync(async () =>
+            {
+                await ObserverMethod(messages, handler, events);
+                _logger.EventHandlingCompleted(handler.Id);
+            }))
+            .Concat()
+            .Subscribe(_ => { }, messages.Dispose);
     }
 
     async Task ObserverMethod(ISubject<ReactorMessage> messages, ReactorHandler handler, EventsToObserve events)
@@ -156,7 +182,6 @@ public class Reactors : IReactors
 
                 BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
                 var eventType = _eventTypes.GetClrTypeFor(metadata.Type.Id);
-
                 var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
 
                 await handler.OnNext(metadata, context, content);
@@ -164,9 +189,11 @@ public class Reactors : IReactors
             }
             catch (Exception ex)
             {
+                _logger.ErrorWhileHandlingEvent(ex, @event.Metadata.Type.Id, handler.Id);
                 exceptionMessages = ex.GetAllMessages();
                 exceptionStackTrace = ex.StackTrace ?? string.Empty;
                 state = ObservationState.Failed;
+                break;
             }
         }
 

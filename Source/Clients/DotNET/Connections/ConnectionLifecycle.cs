@@ -56,9 +56,7 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     public async Task Disconnected()
     {
         IsConnected = false;
-
         logger.Disconnected();
-
         var tasks = OnDisconnected.GetInvocationList().Select(_ => Task.Run(async () =>
         {
             try

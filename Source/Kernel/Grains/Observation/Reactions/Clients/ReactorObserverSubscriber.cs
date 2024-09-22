@@ -64,7 +64,7 @@ public class ReactorObserverSubscriber(
         {
             throw new MissingStateForReactorSubscriber(_observerId);
         }
-        var tcs = new TaskCompletionSource<ObserverSubscriberResult>();
+        var tcs = new TaskCompletionSource<ObserverSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         try
         {
             reactorMediator.OnNext(
@@ -74,12 +74,14 @@ public class ReactorObserverSubscriber(
                 tcs);
             return await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         }
-        catch (TaskCanceledException)
+        catch (TaskCanceledException taskCanceledException)
         {
+            logger.OnNextException(taskCanceledException, _observerId, _eventStore, _namespace);
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
         }
-        catch (TimeoutException)
+        catch (TimeoutException timeoutException)
         {
+            logger.OnNextException(timeoutException, _observerId, _eventStore, _namespace);
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Timeout");
         }
     }
