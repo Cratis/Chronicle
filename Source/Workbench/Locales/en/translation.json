@@ -139,7 +139,7 @@
                 "states": {
                     "new": "New",
                     "routing": "Routing",
-                    "replaying": "Rplaying",
+                    "replaying": "Relaying",
                     "catchingUp": "Catching Up",
                     "active": "Active",
                     "paused": "Paused",
