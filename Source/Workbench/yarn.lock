@@ -4581,20 +4581,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"primereact@npm:10.8.2":
-  version: 10.8.2
-  resolution: "primereact@npm:10.8.2"
+"primereact@npm:10.5.1":
+  version: 10.5.1
+  resolution: "primereact@npm:10.5.1"
   dependencies:
     "@types/react-transition-group": ^4.4.1
     react-transition-group: ^4.4.1
   peerDependencies:
-    "@types/react": ^17.0.0 || ^18.0.0 || ^19.0.0
-    react: ^17.0.0 || ^18.0.0 || ^19.0.0
-    react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
+    "@types/react": ^17.0.0 || ^18.0.0
+    react: ^17.0.0 || ^18.0.0
+    react-dom: ^17.0.0 || ^18.0.0
   peerDependenciesMeta:
     "@types/react":
       optional: true
-  checksum: 6736399d2e4ff1d78dda4c1b9077a79e1469711f21723f937f891ae638363525421be62e9712a5859691fec7e91ab7239b885f209585000345500c47eb9c6f57
+  checksum: aecc95f993f9eaef5c45a7dec25ba4733be681ac301453ae6c3ba3b4ccfe4e415fc4580b151f5a8fe454b5b52f99e073d90431b23094e6f031cf00221eee72c1
   languageName: node
   linkType: hard
 
@@ -5935,7 +5935,7 @@ __metadata:
     mocha: 10.7.3
     postcss: 8.4.35
     primeicons: 6.0.1
-    primereact: 10.8.2
+    primereact: 10.5.1
     react: 18.2.0
     react-dom: 18.2.0
     react-icons: 5.0.1
