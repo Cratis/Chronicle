@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.Sinks;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.for_Projection.given;
@@ -15,6 +16,7 @@ public class a_projection : Specification
     {
         projection = new Projection(
             "0b7325dd-7a25-4681-9ab7-c387a6073547",
+            SinkDefinition.None,
             new ExpandoObject(),
             string.Empty,
             string.Empty,
