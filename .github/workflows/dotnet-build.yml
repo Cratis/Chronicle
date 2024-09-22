@@ -54,4 +54,4 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Run integration tests
-        run: dotnet test --no-build --configuration Release --settings integration.runsettings
+        run: dotnet test --configuration Release --settings integration.runsettings
