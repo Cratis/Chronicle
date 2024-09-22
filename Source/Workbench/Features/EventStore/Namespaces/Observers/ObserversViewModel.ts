@@ -39,9 +39,6 @@ export class ObserversViewModel {
                 this._replay.observerId = observerId;
                 const commandResult = await this._replay.execute();
                 commandResult
-                    .onSuccess(() => {
-                        this._dialogs.showConfirmation('Replay', `Replay ${observerId} has started`, DialogButtons.Ok);
-                    })
                     .onException((error) => {
                         this._dialogs.showConfirmation('Replay', `Replay ${observerId} failed: ${error}`, DialogButtons.Ok);
                     });
