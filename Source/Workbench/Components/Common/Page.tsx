@@ -12,7 +12,7 @@ export const Page = ({ title, children, ...rest }: PageProps) => {
     return (
         <div className='px-6 py-4 flex flex-col h-full' {...rest}>
             <h1 className='text-3xl mt-3 mb-4'>{title}</h1>
-            <main className={`overflow-hidden flex flex-col h-full panel flex-1}`}>
+            <main className={`panel overflow-hidden h-full flex flex-col flex-1`}>
                 {children}
             </main>
         </div>
