@@ -70,14 +70,29 @@ const buildContextNode = (event: AppendedEventWithJsonAsContent) => {
         data: {
             name: 'Causation'
         },
-        children: event.context.causation.map((c, index) => {
-            return {
+        children: event.context.causation.map((causation, index) => {
+            const node: TreeNode = {
                 key: `0-4-${index}`,
                 data: {
-                    name: `causation ${index}`,
-                    value: c.toString()
-                }
+                    name: causation.type,
+                },
+                children: []
             };
+
+            let propertyIndex = 0;
+            for( const property in causation.properties) {
+                const propertyNode: TreeNode = {
+                    key: `0-4-${index}-${propertyIndex}`,
+                    data: {
+                        name: property,
+                        value: causation.properties[property]
+                    }
+                };
+                node.children!.push(propertyNode);
+                propertyIndex++;
+            }
+
+            return node;
         })
     };
     contextNode.children!.push(causationNode);
