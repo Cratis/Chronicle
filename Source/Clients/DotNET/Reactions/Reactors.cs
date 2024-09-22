@@ -171,7 +171,6 @@ public class Reactors : IReactors
 
                 BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
                 var eventType = _eventTypes.GetClrTypeFor(metadata.Type.Id);
-
                 var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
 
                 await handler.OnNext(metadata, context, content);
@@ -179,6 +178,7 @@ public class Reactors : IReactors
             }
             catch (Exception ex)
             {
+                _logger.ErrorWhileHandlingEvent(ex, @event.Metadata.Type.Id, handler.Id);
                 exceptionMessages = ex.GetAllMessages();
                 exceptionStackTrace = ex.StackTrace ?? string.Empty;
                 state = ObservationState.Failed;

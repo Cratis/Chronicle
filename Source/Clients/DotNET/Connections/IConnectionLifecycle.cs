@@ -19,7 +19,7 @@ public interface IConnectionLifecycle
     event Disconnected OnDisconnected;
 
     /// <summary>
-    /// Gets whether or not the client is connected.
+    /// Gets whether, or not the client is connected.
     /// </summary>
     bool IsConnected { get; }
 

@@ -69,7 +69,7 @@ public class ReducerObserverSubscriber(
             throw new MissingStateForReducerSubscriber(_observerId);
         }
 
-        var tcs = new TaskCompletionSource<ObserverSubscriberResult>();
+        var tcs = new TaskCompletionSource<ObserverSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         try
         {
             var firstEvent = events.First();
@@ -79,7 +79,7 @@ public class ReducerObserverSubscriber(
 
             await (_pipeline?.Handle(reducerContext, async (events, initialState) =>
             {
-                var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>();
+                var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 reducerMediator.OnNext(
                     _observerId,

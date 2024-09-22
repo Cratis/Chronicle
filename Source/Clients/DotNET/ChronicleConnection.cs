@@ -98,10 +98,8 @@ public class ChronicleConnection : IChronicleConnection
 
         _channel = CreateGrpcChannel();
         _connectionService = _channel.CreateGrpcService<IConnectionService>();
-
         _lastKeepAlive = DateTimeOffset.UtcNow;
-
-        _connectTcs = new TaskCompletionSource();
+        _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         _keepAliveSubscription = _connectionService.Connect(new()
         {
