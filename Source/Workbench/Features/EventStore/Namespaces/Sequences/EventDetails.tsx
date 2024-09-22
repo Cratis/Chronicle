@@ -104,11 +104,9 @@ export const EventDetails = (props: IDetailsComponentProps<AppendedEventWithJson
     addContent(contentNode, current, currentLevel);
 
     return (
-        <>
-            <TreeTable value={contextNodes} showGridlines={false} >
-                <Column field='name' header='Property' expander />
-                <Column field='value' header='Value' />
-            </TreeTable>
-        </>
+        <TreeTable value={contextNodes} showGridlines={false} >
+            <Column field='name' header='Property' expander />
+            <Column field='value' header='Value' />
+        </TreeTable>
     );
 };
