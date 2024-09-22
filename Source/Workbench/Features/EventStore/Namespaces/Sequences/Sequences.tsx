@@ -7,6 +7,7 @@ import { AppendedEvents, AppendedEventsArguments, AppendedEventWithJsonAsContent
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { Column } from 'primereact/column';
+import { EventDetails } from './EventDetails';
 
 const occurred = (event: AppendedEventWithJsonAsContent) => {
     return event.context.occurred.toLocaleString();
@@ -26,7 +27,8 @@ export const Sequences = () => {
             query={AppendedEvents}
             queryArguments={queryArgs}
             emptyMessage={strings.eventStore.namespaces.sequences.empty}
-            dataKey='metadata.sequenceNumber'>
+            dataKey='metadata.sequenceNumber'
+            detailsComponent={EventDetails}>
             <DataPage.Columns>
                 <Column field='metadata.sequenceNumber' header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
                 <Column field='metadata.type.id' header={strings.eventStore.namespaces.sequences.columns.eventType} />
