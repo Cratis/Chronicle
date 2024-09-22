@@ -9,14 +9,14 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { AppendedEventWithJsonAsContent } from './AppendedEventWithJsonAsContent';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/range');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}');
 
-class GetAppendedEventsInRangeSortBy {
+class AppendedEventsSortBy {
     private _metadata: SortingActionsForQuery<AppendedEventWithJsonAsContent[]>;
     private _context: SortingActionsForQuery<AppendedEventWithJsonAsContent[]>;
     private _content: SortingActionsForQuery<AppendedEventWithJsonAsContent[]>;
 
-    constructor(readonly query: GetAppendedEventsInRange) {
+    constructor(readonly query: AppendedEvents) {
         this._metadata = new SortingActionsForQuery<AppendedEventWithJsonAsContent[]>('metadata', query);
         this._context = new SortingActionsForQuery<AppendedEventWithJsonAsContent[]>('context', query);
         this._content = new SortingActionsForQuery<AppendedEventWithJsonAsContent[]>('content', query);
@@ -33,7 +33,7 @@ class GetAppendedEventsInRangeSortBy {
     }
 }
 
-class GetAppendedEventsInRangeSortByWithoutQuery {
+class AppendedEventsSortByWithoutQuery {
     private _metadata: SortingActions  = new SortingActions('metadata');
     private _context: SortingActions  = new SortingActions('context');
     private _content: SortingActions  = new SortingActions('content');
@@ -49,25 +49,23 @@ class GetAppendedEventsInRangeSortByWithoutQuery {
     }
 }
 
-export interface GetAppendedEventsInRangeArguments {
+export interface AppendedEventsArguments {
     eventStore: string;
     namespace: string;
     eventSequenceId: string;
-    fromSequenceNumber: number;
-    toSequenceNumber: number;
     eventSourceId?: string;
 }
 
-export class GetAppendedEventsInRange extends QueryFor<AppendedEventWithJsonAsContent[], GetAppendedEventsInRangeArguments> {
-    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}/range';
+export class AppendedEvents extends QueryFor<AppendedEventWithJsonAsContent[], AppendedEventsArguments> {
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AppendedEventWithJsonAsContent[] = [];
-    private readonly _sortBy: GetAppendedEventsInRangeSortBy;
-    private static readonly _sortBy: GetAppendedEventsInRangeSortByWithoutQuery = new GetAppendedEventsInRangeSortByWithoutQuery();
+    private readonly _sortBy: AppendedEventsSortBy;
+    private static readonly _sortBy: AppendedEventsSortByWithoutQuery = new AppendedEventsSortByWithoutQuery();
 
     constructor() {
         super(AppendedEventWithJsonAsContent, true);
-        this._sortBy = new GetAppendedEventsInRangeSortBy(this);
+        this._sortBy = new AppendedEventsSortBy(this);
     }
 
     get requiredRequestArguments(): string[] {
@@ -75,24 +73,22 @@ export class GetAppendedEventsInRange extends QueryFor<AppendedEventWithJsonAsCo
             'eventStore',
             'namespace',
             'eventSequenceId',
-            'fromSequenceNumber',
-            'toSequenceNumber',
         ];
     }
 
-    get sortBy(): GetAppendedEventsInRangeSortBy {
+    get sortBy(): AppendedEventsSortBy {
         return this._sortBy;
     }
 
-    static get sortBy(): GetAppendedEventsInRangeSortByWithoutQuery {
+    static get sortBy(): AppendedEventsSortByWithoutQuery {
         return this._sortBy;
     }
 
-    static use(args?: GetAppendedEventsInRangeArguments, sorting?: Sorting): [QueryResultWithState<AppendedEventWithJsonAsContent[]>, PerformQuery<GetAppendedEventsInRangeArguments>, SetSorting] {
-        return useQuery<AppendedEventWithJsonAsContent[], GetAppendedEventsInRange, GetAppendedEventsInRangeArguments>(GetAppendedEventsInRange, args, sorting);
+    static use(args?: AppendedEventsArguments, sorting?: Sorting): [QueryResultWithState<AppendedEventWithJsonAsContent[]>, PerformQuery<AppendedEventsArguments>, SetSorting] {
+        return useQuery<AppendedEventWithJsonAsContent[], AppendedEvents, AppendedEventsArguments>(AppendedEvents, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: GetAppendedEventsInRangeArguments, sorting?: Sorting): [QueryResultWithState<AppendedEventWithJsonAsContent[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
-        return useQueryWithPaging<AppendedEventWithJsonAsContent[], GetAppendedEventsInRange>(GetAppendedEventsInRange, new Paging(0, pageSize), args, sorting);
+    static useWithPaging(pageSize: number, args?: AppendedEventsArguments, sorting?: Sorting): [QueryResultWithState<AppendedEventWithJsonAsContent[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+        return useQueryWithPaging<AppendedEventWithJsonAsContent[], AppendedEvents>(AppendedEvents, new Paging(0, pageSize), args, sorting);
     }
 }
