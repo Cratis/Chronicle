@@ -1,5 +1,8 @@
 name: .NET Build
 
+env:
+  DOTNET_VERSION: "8.0.x"
+
 on:
   workflow_dispatch:
   push:
@@ -7,6 +10,7 @@ on:
       - "main"
     paths:
       - "Source/**"
+      - "Integration/**"
       - "!Source/Node/**"
       - "!Source/Workbench/**"
   pull_request:
@@ -14,6 +18,7 @@ on:
       - "**"
     paths:
       - "Source/**"
+      - "Integration/**"
       - "!Source/Node/**"
       - "!Source/Workbench/**"
 
@@ -28,13 +33,25 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Build
         run: dotnet build --configuration Release
 
       - name: Run tests
         run: dotnet test --no-build --configuration Release --settings specs.runsettings
+
+  integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Run integration tests
         run: dotnet test --no-build --configuration Release --settings integration.runsettings
