@@ -32,7 +32,7 @@ export const MenuItems = ({ children }: MenuItemsProps) => {
     const context = React.useContext(DataPageContext);
 
     const isDisabled = useMemo(() => {
-        return context.selectedItem === undefined;
+        return !context.selectedItem;
     }, [context.selectedItem]);
 
     const items = useMemo(() => {
