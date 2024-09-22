@@ -38,14 +38,14 @@ public class ObserverCommands(IGrainFactory grainFactory) : ControllerBase
     /// <param name="observerId">Identifier of the observer to rewind.</param>
     /// <param name="partition">Partition to retry.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("{namespace}/failed-partitions/{observerId}/retry/{partition}")]
-    public async Task RetryPartition(
+    [HttpPost("{namespace}/failed-partitions/{observerId}/try-recover-failed-partition/{partition}")]
+    public async Task TryRecoverFailedPartition(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string observerId,
         [FromRoute] string partition)
     {
-        throw new NotImplementedException();
+        await grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, EventSequenceId.Log)).TryRecoverFailedPartition(partition);
     }
 
     /// <summary>
@@ -63,6 +63,6 @@ public class ObserverCommands(IGrainFactory grainFactory) : ControllerBase
         [FromRoute] string observerId,
         [FromRoute] string partition)
     {
-        throw new NotImplementedException();
+        await grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, EventSequenceId.Log)).ReplayPartition(partition);
     }
 }
