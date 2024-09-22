@@ -10,6 +10,7 @@ import { IObservableQueryFor, IQueryFor, QueryFor } from '@cratis/applications/q
 import { DataTableForObservableQuery, DataTableForObservableQueryProps } from '../DataTables/DataTableForObservableQuery';
 import { DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
 import { DataTableForQuery } from '../DataTables/DataTableForQuery';
+import { Allotment } from 'allotment';
 
 
 export interface MenuItemProps extends PrimeMenuItem {
@@ -74,6 +75,11 @@ export const Columns = ({ children }: ColumnProps) => {
     }
 };
 
+export interface IDetailsComponentProps<TDataType> {
+    item: TDataType;
+
+}
+
 interface IDataPageContext extends DataPageProps<any, any, any> {
     selectedItem: any;
     onSelectionChanged: (e: DataTableSelectionSingleChangeEvent<any>) => void;
@@ -94,6 +100,11 @@ export interface DataPageProps<TQuery extends IQueryFor<TDataType> | IObservable
      * Children to render, for this it means menu items and columns. Use <DataPage.MenuItems> and <DataPage.Columns> for this.
      */
     children: ReactNode;
+
+    /**
+     * Component to render when the selection changes
+     */
+    detailsComponent?: React.FC<IDetailsComponentProps<any>>;
 }
 
 /**
@@ -116,7 +127,17 @@ const DataPage = <TQuery extends IQueryFor<TDataType> | IObservableQueryFor<TDat
     return (
         <DataPageContext.Provider value={context}>
             <Page title={props.title}>
-                {props.children}
+                <Allotment className="h-full" proportionalLayout={false}>
+                    <Allotment.Pane className="flex-grow">
+                        {props.children}
+
+                    </Allotment.Pane>
+                    {props.detailsComponent && selectedItem &&
+                        <Allotment.Pane preferredSize="450px">
+                            <props.detailsComponent item={selectedItem} />
+                        </Allotment.Pane>
+                    }
+                </Allotment>
             </Page>
         </DataPageContext.Provider>
     );
