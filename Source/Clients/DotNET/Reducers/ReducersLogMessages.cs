@@ -17,4 +17,7 @@ internal static partial class ReducersLogMessages
 
     [LoggerMessage(LogLevel.Warning, "An error occurred while handling events with sequence number {StartSequenceNumber} to {EndSequenceNumber} was for Reducer {ReducerId}")]
     internal static partial void ErrorWhileHandlingEvents(this ILogger<Reducers> logger, Exception ex, EventSequenceNumber startSequenceNumber, EventSequenceNumber endSequenceNumber, ReducerId reducerId);
+
+    [LoggerMessage(LogLevel.Trace, "Handling of events received for Reducer {ReducerId} completed")]
+    internal static partial void EventHandlingCompleted(this ILogger<Reducers> logger, ReducerId reducerId);
 }

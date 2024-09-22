@@ -17,7 +17,7 @@ public class many_events(context context, ITestOutputHelper testLogger) : Given<
     {
         public Events.EventSourceId EventSourceId { get; } = "source";
         public IList<SomeEvent> Events { get; private set; }
-        public IImmutableList<AppendedEvent> AppendedEvents { get; private set;}
+        public IImmutableList<AppendedEvent> AppendedEvents { get; private set; }
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
 
@@ -37,7 +37,7 @@ public class many_events(context context, ITestOutputHelper testLogger) : Given<
 
     [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveCorrectTailSequenceNumber((ulong)Context.Events.Count - 1);
 
-    [Fact] void should_get_all_the_appended_events() => Context.AppendedEvents.Count().ShouldEqual(3);
+    [Fact] void should_get_all_the_appended_events() => Context.AppendedEvents.Count.ShouldEqual(3);
     [Fact]
     async Task should_have_stored_all_the_events_in_correct_order()
     {
