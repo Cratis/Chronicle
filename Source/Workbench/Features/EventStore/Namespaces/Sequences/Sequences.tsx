@@ -12,7 +12,6 @@ const occurred = (event: AppendedEventWithJsonAsContent) => {
     return event.context.occurred.toLocaleString();
 };
 
-
 export const Sequences = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const queryArgs: AppendedEventsArguments = {

@@ -1,37 +1,38 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
-import { DataTable } from 'primereact/datatable';
+
 import { Column } from 'primereact/column';
+import { DataTableForQuery } from 'Components/index';
+import { AppendedEvents, AppendedEventsArguments, AppendedEventWithJsonAsContent } from 'Api/EventSequences';
+import { type EventStoreAndNamespaceParams } from 'Shared';
+import strings from 'Strings';
+import { useParams } from 'react-router-dom';
 
 export interface EventListProps {
     events: any[];
 }
 
+const occurred = (event: AppendedEventWithJsonAsContent) => {
+    return event.context.occurred.toLocaleString();
+};
+
 export const EventList = (props: EventListProps) => {
+    const params = useParams<EventStoreAndNamespaceParams>();
+    const queryArgs: AppendedEventsArguments = {
+        eventStore: params.eventStore!,
+        namespace: params.namespace!,
+        eventSequenceId: 'event-log'
+    };
 
     return (
-        <>
-            <DataTable
-                rows={100}
-                paginator
-                scrollable
-                scrollHeight={'flex'}
-                selectionMode='single'
-                filterDisplay='menu'
-                emptyMessage='No events'
-                dataKey='id'
-                value={props.events}>
-                <Column field='sequenceId' header='Id' sortable />
-                <Column field='name' header='Name' sortable />
-                <Column field='type' header='Sequence' sortable />
-                <Column
-                    field='nextEventSequenceNumber'
-                    dataType='numeric'
-                    header='Next event sequence number'
-                    sortable
-                />
-                <Column field='runningState' header='State' sortable />
-            </DataTable>
-        </>
+        <DataTableForQuery
+            query={AppendedEvents}
+            queryArguments={queryArgs}
+            emptyMessage={strings.eventStore.namespaces.sequences.empty}
+            dataKey='metadata.sequenceNumber'>
+            <Column field='metadata.sequenceNumber' header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
+            <Column field='metadata.type.id' header={strings.eventStore.namespaces.sequences.columns.eventType} />
+            <Column field='context.occurred' header={strings.eventStore.namespaces.sequences.columns.occurred} body={occurred} />
+        </DataTableForQuery>
     );
 };
