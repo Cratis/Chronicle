@@ -1,12 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { injectable } from 'tsyringe';
+import { inject, injectable } from 'tsyringe';
 import { FailedPartition } from 'Api/Concepts/Observation';
+import { type EventStoreAndNamespaceParams } from 'Shared';
+import { TryRecoverFailedPartition } from 'Api/Observation';
 
 @injectable()
 export class FailedPartitionsViewModel {
-    constructor() {
+    constructor(@inject('params') private readonly _params: EventStoreAndNamespaceParams) {
 
     }
 
@@ -14,7 +16,12 @@ export class FailedPartitionsViewModel {
 
     async retry() {
         if (this.selectedFailedPartition) {
-            console.log('Retry');
+            const command = new TryRecoverFailedPartition();
+            command.eventStore = this._params.eventStore!;
+            command.namespace = this._params.namespace!;
+            command.observerId = this.selectedFailedPartition.observerId;
+            command.partition = this.selectedFailedPartition.partition.value;
+            await command.execute();
         }
     }
 }

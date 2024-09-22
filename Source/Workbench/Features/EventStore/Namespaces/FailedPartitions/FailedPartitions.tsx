@@ -50,7 +50,12 @@ export const FailedPartitions = withViewModel(FailedPartitionsViewModel, ({ view
             emptyMessage={strings.eventStore.namespaces.failedPartitions.empty}>
 
             <DataPage.MenuItems>
-                <MenuItem id='retry' label={strings.eventStore.namespaces.failedPartitions.actions.retry} icon={faIcons.FaArrowsRotate} command={() => viewModel.retry()} />
+                <MenuItem
+                    id='retry'
+                    label={strings.eventStore.namespaces.failedPartitions.actions.retry}
+                    icon={faIcons.FaArrowsRotate}
+                    disableOnUnselected
+                    command={() => viewModel.retry()} />
             </DataPage.MenuItems>
 
             <DataPage.Columns>
