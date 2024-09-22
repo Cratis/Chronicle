@@ -9,13 +9,14 @@ import { BehaviorSubject } from 'rxjs';
 import { CurrentNamespaceChanged } from './CurrentNamespaceChanged';
 import { INamespaces } from './INamespaces';
 import { type EventStoreAndNamespaceParams } from 'Shared';
+import { Guid } from '@cratis/fundamentals';
 
 /**
  * Represents an implementation of {@link INamespaces}
  */
 @injectable()
 export class Namespaces implements INamespaces {
-    private _currentNamespace: BehaviorSubject<Namespace> = new BehaviorSubject({ name: '', description: '' });
+    private _currentNamespace: BehaviorSubject<Namespace> = new BehaviorSubject({ id: Guid.empty, name: '', description: '' });
     private _namespaces: BehaviorSubject<Namespace[]> = new BehaviorSubject<Namespace[]>([]);
 
     constructor(

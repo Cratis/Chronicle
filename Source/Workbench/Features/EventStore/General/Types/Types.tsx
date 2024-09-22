@@ -19,11 +19,11 @@ const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
 };
 
-const renderTombstone = (type: EventTypeWithSchemas) => {
+const renderTombstone = (_: EventTypeWithSchemas) => {
     return 'no';
 };
 
-export const Types = withViewModel(TypesViewModel, ({ viewModel }) => {
+export const Types = withViewModel(TypesViewModel, () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [AddEventTypeDialogWrapper, addEventTypeDialogContext, addEventTypeDialogResolver] = useDialogRequest<AddEventTypeRequest, AddEventTypeResponse>(AddEventTypeRequest);
 

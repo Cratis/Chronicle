@@ -65,7 +65,7 @@ export const Jobs = withViewModel(JobViewModels, ({ viewModel }) => {
                     id="stop"
                     label={strings.eventStore.namespaces.jobs.actions.stop} icon={faIcons.FaStop}
                     disableOnUnselected
-                    command={(e) => viewModel.stop()} />
+                    command={() => viewModel.stop()} />
                 <MenuItem
                     id="resume"
                     label={strings.eventStore.namespaces.jobs.actions.resume} icon={faIcons.FaPlay}

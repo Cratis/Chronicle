@@ -9,11 +9,12 @@ import { Namespace } from 'Api/Namespaces';
 import { Replay } from 'Api/Observation';
 import { Dialogs } from '@cratis/applications.react.mvvm/dialogs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
+import { Guid } from '@cratis/fundamentals';
 
 export class a_view_model {
     constructor() {
         this.namespaces = {
-            currentNamespace: new BehaviorSubject<Namespace>({ name: '', description: '' }),
+            currentNamespace: new BehaviorSubject<Namespace>({ id: Guid.empty, name: '', description: '' }),
             setCurrentNamespace: sinon.stub(),
             namespaces: new BehaviorSubject<Namespace[]>([])
 

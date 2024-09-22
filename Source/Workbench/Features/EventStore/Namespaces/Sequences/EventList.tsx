@@ -16,7 +16,7 @@ const occurred = (event: AppendedEventWithJsonAsContent) => {
     return event.context.occurred.toLocaleString();
 };
 
-export const EventList = (props: EventListProps) => {
+export const EventList = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const queryArgs: AppendedEventsArguments = {
         eventStore: params.eventStore!,

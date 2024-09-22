@@ -7,17 +7,18 @@ import React from 'react';
 import { MenuItem as PrimeMenuItem } from 'primereact/menuitem';
 import { Menubar } from 'primereact/menubar';
 import { IObservableQueryFor, IQueryFor, QueryFor } from '@cratis/applications/queries';
-import { DataTableForObservableQuery, DataTableForObservableQueryProps } from '../DataTables/DataTableForObservableQuery';
-import { DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
+import { DataTableForObservableQuery } from '../DataTables/DataTableForObservableQuery';
+import { DataTableFilterMeta, DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
 import { DataTableForQuery } from '../DataTables/DataTableForQuery';
 import { Allotment } from 'allotment';
+import { Constructor } from '@cratis/fundamentals';
 
 
 export interface MenuItemProps extends PrimeMenuItem {
     disableOnUnselected?: boolean;
 }
 
-export const MenuItem = (props: MenuItemProps) => {
+export const MenuItem = (_: MenuItemProps) => {
     return null;
 };
 
@@ -90,7 +91,7 @@ const DataPageContext = React.createContext<IDataPageContext>(null as any);
 /**
  * Props for the DataPage component
  */
-export interface DataPageProps<TQuery extends IQueryFor<TDataType> | IObservableQueryFor<TDataType>, TDataType, TArguments> extends DataTableForObservableQueryProps<TQuery, TDataType, TArguments> {
+export interface DataPageProps<TQuery extends IQueryFor<TDataType> | IObservableQueryFor<TDataType>, TDataType, TArguments> {
     /**
      * The title of the page
      */
@@ -105,6 +106,46 @@ export interface DataPageProps<TQuery extends IQueryFor<TDataType> | IObservable
      * Component to render when the selection changes
      */
     detailsComponent?: React.FC<IDetailsComponentProps<any>>;
+
+    /**
+     * The type of query to use
+     */
+    query: Constructor<TQuery>;
+
+    /**
+     * Optional arguments to pass to the query
+     */
+    queryArguments?: TArguments;
+
+    /**
+     * The message to show when there is no data
+     */
+    emptyMessage: string;
+
+    /**
+     * The key to use for the data
+     */
+    dataKey: string;
+
+    /**
+     * The current selection.
+     */
+    selection?: any[number] | undefined | null;
+
+    /**
+     * Callback for when the selection changes
+     */
+    onSelectionChange?(event: DataTableSelectionSingleChangeEvent<any>): void;
+
+    /**
+     * Fields to use for global filtering
+     */
+    globalFilterFields?: string[] | undefined;
+
+    /**
+     * Default filters to use
+     */
+    defaultFilters?: DataTableFilterMeta;
 }
 
 /**
