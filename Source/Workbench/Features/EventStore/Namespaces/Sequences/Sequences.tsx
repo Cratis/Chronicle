@@ -32,8 +32,7 @@ export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
 
     return (
         <Page
-            title='Sequences'
-            mainClassName={'overflow-hidden h-full'}>
+            title='Sequences'>
 
             <Allotment className="h-full" proportionalLayout={false}>
                 <Allotment.Pane preferredSize="270px">
