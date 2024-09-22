@@ -41,6 +41,7 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
                 <DataPage.Columns>
                     <Column
                         field='id'
+                        style={{ width: '400px' }}
                         header={strings.eventStore.general.namespaces.columns.id}
                         sortable
                         body={renderId}/>
