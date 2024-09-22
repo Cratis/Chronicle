@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Grains.EventSequences;
+namespace Cratis.Chronicle.Tasks;
 
 /// <summary>
 /// Represents an async implementation of <see cref="ManualResetEventSlim"/> that is more suited to working in a modern .net environment.

@@ -7,6 +7,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Tasks;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
 
