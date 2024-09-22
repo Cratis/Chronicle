@@ -58,7 +58,7 @@ const runningState = (observer: ObserverInformation) => {
             return strings.eventStore.namespaces.observers.states.indexing;
     }
     return strings.eventStore.namespaces.observers.states.unknown;
-}
+};
 
 const defaultFilters: DataTableFilterMeta = {
     runningState: { value: null, matchMode: FilterMatchMode.IN },

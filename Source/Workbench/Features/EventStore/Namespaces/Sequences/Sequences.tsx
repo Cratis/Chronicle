@@ -1,58 +1,38 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { SequencesViewModel } from './SequencesViewModel';
-import { withViewModel } from '@cratis/applications.react.mvvm';
-import { Page } from 'Components/Common/Page';
-import { Button } from 'primereact/button';
-import { Bookmark } from './Bookmark/Bookmark';
-import { TabMenu } from 'primereact/tabmenu';
-import { MenuItem } from 'primereact/menuitem';
-import { Query } from './Query';
-import { Allotment } from 'allotment';
+import { DataPage } from 'Components';
+import strings from 'Strings';
+import { AppendedEvents, AppendedEventsArguments, AppendedEventWithJsonAsContent } from 'Api/EventSequences';
+import { type EventStoreAndNamespaceParams } from 'Shared';
+import { useParams } from 'react-router-dom';
+import { Column } from 'primereact/column';
 
-export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
-    const openQueries = viewModel.queries.map(_ => {
-        return {
-            label: _.name
-        } as MenuItem;
-    });
+const occurred = (event: AppendedEventWithJsonAsContent) => {
+    return event.context.occurred.toLocaleString();
+};
 
-    const menuItems: MenuItem[] = [...openQueries, {
-        template: () =>
-            <>
-                <Button
-                    text
-                    icon='pi pi-plus'
-                    onClick={() => viewModel.addQuery()}
-                />
 
-            </>
-    }];
+export const Sequences = () => {
+    const params = useParams<EventStoreAndNamespaceParams>();
+    const queryArgs: AppendedEventsArguments = {
+        eventStore: params.eventStore!,
+        namespace: params.namespace!,
+        eventSequenceId: 'event-log'
+    };
 
     return (
-        <Page
-            title='Sequences'>
-
-            <Allotment className="h-full" proportionalLayout={false}>
-                <Allotment.Pane preferredSize="270px">
-                    <Bookmark />
-                </Allotment.Pane>
-                <Allotment.Pane className="h-full">
-                    <div className="flex flex-col h-full w-full">
-                        <TabMenu
-                            className="pb-1"
-                            onTabChange={(e) => viewModel.currentQuery = viewModel.queries[e.index]}
-                            model={menuItems} />
-
-                        <div className="flex flex-col h-full">
-                            {viewModel.currentQuery &&
-                                <Query query={viewModel.currentQuery} />
-                            }
-                        </div>
-                    </div>
-                </Allotment.Pane>
-            </Allotment>
-        </Page>
+        <DataPage
+            title={strings.eventStore.namespaces.sequences.title}
+            query={AppendedEvents}
+            queryArguments={queryArgs}
+            emptyMessage={strings.eventStore.namespaces.sequences.empty}
+            dataKey='metadata.sequenceNumber'>
+            <DataPage.Columns>
+                <Column field='metadata.sequenceNumber' header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
+                <Column field='metadata.type.id' header={strings.eventStore.namespaces.sequences.columns.eventType} />
+                <Column field='context.occurred' header={strings.eventStore.namespaces.sequences.columns.occurred} body={occurred} />
+            </DataPage.Columns>
+        </DataPage>
     );
-});
+};

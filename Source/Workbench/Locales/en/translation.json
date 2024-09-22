@@ -116,7 +116,13 @@
                 }
             },
             "sequences": {
-                "title": "Sequences"
+                "title": "Sequences",
+                "empty": "No sequences found",
+                "columns": {
+                    "sequenceNumber": "Sequence number",
+                    "eventType": "Event Type",
+                    "occurred": "Occurred"
+                }
             },
             "observers": {
                 "title": "Observers",

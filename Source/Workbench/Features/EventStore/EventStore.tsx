@@ -3,7 +3,7 @@
 
 import { DefaultLayout } from "../../Layout/Default/DefaultLayout";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { Sequences } from "./Namespaces/Sequences/Sequences";
+import { SequencesFuture } from "./Namespaces/Sequences/SequencesFuture";
 import { IMenuItemGroup } from "../../Layout/Default/Sidebar/MenuItem/MenuItem";
 import * as mdIcons from 'react-icons/md';
 import * as devIcons from 'react-icons/di';
@@ -21,6 +21,7 @@ import { Reducers } from './General/Reducers/Reducers';
 import { Reactors } from './General/Reactors/Reactors';
 import strings from 'Strings';
 import { Namespaces } from './General/Namespaces/Namespaces';
+import { Sequences } from './Namespaces/Sequences/Sequences';
 
 export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
@@ -69,6 +70,7 @@ export const EventStore = () => {
                     <Route path={'recommendations'} element={<Recommendations />} />
                     <Route path={'jobs'} element={<Jobs />} />
                     <Route path={'sequences'} element={<Sequences />} />
+                    <Route path={'sequences-future'} element={<SequencesFuture />} />
                     <Route path={'observers'} element={<Observers />} />
                     <Route path={'failed-partitions'} element={<FailedPartitions />} />
                     <Route path={'identities'} element={<Identities />} />
