@@ -6,8 +6,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { SequencesFuture } from "./Namespaces/Sequences/SequencesFuture";
 import { IMenuItemGroup } from "../../Layout/Default/Sidebar/MenuItem/MenuItem";
 import * as mdIcons from 'react-icons/md';
-import * as devIcons from 'react-icons/di';
-import * as gameIcons from 'react-icons/gi';
+// import * as devIcons from 'react-icons/di';
+// import * as gameIcons from 'react-icons/gi';
 import { Types } from "./General/Types/Types";
 import { Observers } from "./Namespaces/Observers/Observers";
 import { Projections } from "./General/Projections/Projections";
@@ -44,11 +44,11 @@ export const EventStore = () => {
             items: [
                 { label: strings.mainMenu.general.types, url: 'types', icon: mdIcons.MdDataObject },
                 { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
-                { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
-                { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
-                { label: strings.mainMenu.general.reducers, url: 'reducers', icon: gameIcons.GiTransform },
-                { label: strings.mainMenu.general.reactors, url: 'reactors', icon: gameIcons.GiReactor },
-                { label: strings.mainMenu.general.sinks, url: 'sinks', icon: devIcons.DiDatabase }
+                // { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
+                // { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
+                // { label: strings.mainMenu.general.reducers, url: 'reducers', icon: gameIcons.GiTransform },
+                // { label: strings.mainMenu.general.reactors, url: 'reactors', icon: gameIcons.GiReactor },
+                // { label: strings.mainMenu.general.sinks, url: 'sinks', icon: devIcons.DiDatabase }
             ]
         }
     ];

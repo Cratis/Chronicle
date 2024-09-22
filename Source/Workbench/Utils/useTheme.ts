@@ -5,7 +5,8 @@ import { useDarkMode } from "usehooks-ts";
 import { useLayoutEffect } from "react";
 
 export const useTheme = () => {
-    const { isDarkMode, toggle, enable, disable } = useDarkMode();
+    const { toggle, enable, disable } = useDarkMode();
+    const isDarkMode = true;
 
     useLayoutEffect(() => {
         const theme = isDarkMode ? 'dark' : 'light';
