@@ -5,10 +5,4 @@ using Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Concepts;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Domain.Interfaces;
 
-public interface IUser : IIntegrationTestAggregateRoot<UserInternalState>
-{
-    Task Onboard(UserName name);
-    Task Delete();
-    Task ChangeUserName(UserName newName);
-    Task<bool> Exists();
-}
+public record UserInternalState(StateProperty<UserName> Name, StateProperty<bool> Deleted);
