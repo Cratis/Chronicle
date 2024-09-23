@@ -47,6 +47,11 @@ public class ReducerPipeline(
         {
             changeset.Add(new PropertiesChanged<ExpandoObject>(null!, differences));
         }
-        await Sink.ApplyChanges(context.Key, changeset);
+
+        if (changeset.HasChanges)
+        {
+            changeset.SetSequenceNumber();
+            await Sink.ApplyChanges(context.Key, changeset);
+        }
     }
 }

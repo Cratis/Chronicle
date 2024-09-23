@@ -131,14 +131,13 @@ public class MongoDBConverter(
     /// <inheritdoc/>
     public BsonValue ToBsonValue(object? input, PropertyPath property)
     {
-        BsonValue value = BsonNull.Value;
         var schemaProperty = model.Schema.GetSchemaPropertyForPropertyPath(property);
         if (schemaProperty is not null)
         {
             return ToBsonValue(input, schemaProperty);
         }
 
-        return value;
+        return ToBsonValue(input!);
     }
 
     /// <inheritdoc/>
