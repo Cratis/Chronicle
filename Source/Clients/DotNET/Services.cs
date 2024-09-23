@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
@@ -15,6 +16,8 @@ namespace Cratis.Chronicle;
 /// <summary>
 /// Represents an implementation of <see cref="IServices"/>.
 /// </summary>
+/// <param name="EventStores"><see cref="IEventStores"/> instance.</param>
+/// <param name="Namespaces"><see cref="INamespaces"/> instance.</param>
 /// <param name="EventSequences"><see cref="IEventSequences"/> instance.</param>
 /// <param name="EventTypes"><see cref="IEventTypes"/> instance.</param>
 /// <param name="Constraints"><see cref="IConstraints"/> instance.</param>
@@ -24,6 +27,8 @@ namespace Cratis.Chronicle;
 /// <param name="Projections"><see cref="IProjections"/> instance.</param>
 /// <param name="server"><see cref="IServer"/> instance.</param>
 public record Services(
+    IEventStores EventStores,
+    INamespaces Namespaces,
     IEventSequences EventSequences,
     IEventTypes EventTypes,
     IConstraints Constraints,

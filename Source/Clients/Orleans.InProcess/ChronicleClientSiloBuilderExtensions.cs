@@ -13,6 +13,7 @@ using Cratis.Chronicle.Orleans.Transactions;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Microsoft.Extensions.Configuration;
@@ -119,6 +120,8 @@ public static class ChronicleClientSiloBuilderExtensions
                 options.ArtifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
                 var storage = sp.GetRequiredService<IStorage>();
                 var services = new Cratis.Chronicle.Services(
+                    new Server::Cratis.Chronicle.Services.EventStores(storage),
+                    new Server::Cratis.Chronicle.Services.Namespaces(storage),
                     new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
                     new EventTypes(storage),
                     new Constraints(grainFactory),

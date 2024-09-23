@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
@@ -16,6 +17,16 @@ namespace Cratis.Chronicle;
 /// </summary>
 public interface IServices
 {
+    /// <summary>
+    /// Gets the <see cref="IEventStores"/> service.
+    /// </summary>
+    IEventStores EventStores { get; }
+
+    /// <summary>
+    /// Gets the <see cref="INamespaces"/>  service.
+    /// </summary>
+    INamespaces Namespaces { get; }
+
     /// <summary>
     /// Gets the <see cref="IEventSequences"/> service.
     /// </summary>

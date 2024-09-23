@@ -227,4 +227,11 @@ public class EventStore : IEventStore
             _correlationIdAccessor,
             _causationManager,
             _identityProvider);
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
+    {
+        var namespaces = await Connection.Services.Namespaces.GetNamespaces(new(_eventStoreName));
+        return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
+    }
 }

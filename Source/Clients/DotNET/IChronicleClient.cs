@@ -31,5 +31,5 @@ public interface IChronicleClient
     /// </summary>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns>An asynchronous enumerable.</returns>
-    IAsyncEnumerable<EventStoreName> ListEventStores(CancellationToken cancellationToken = default);
+    Task<IEnumerable<EventStoreName>> GetEventStores(CancellationToken cancellationToken = default);
 }

@@ -120,7 +120,16 @@ public class ChronicleClient : IChronicleClient, IDisposable
     }
 
     /// <inheritdoc/>
-    public IAsyncEnumerable<EventStoreName> ListEventStores(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+    public async Task<IEnumerable<EventStoreName>> GetEventStores(CancellationToken cancellationToken = default)
+    {
+        if (_connection is null)
+        {
+            return [];
+        }
+
+        var eventStores = await _connection.Services.EventStores.GetEventStores();
+        return eventStores.Select(_ => (EventStoreName)_).ToArray();
+    }
 
     (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator) Initialize()
     {

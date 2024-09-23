@@ -15,6 +15,8 @@ public static class GrpcServiceRegistrations
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddGrpcServices(this IServiceCollection services)
     {
+        services.AddSingleton<Contracts.IEventStores, Services.EventStores>();
+        services.AddSingleton<Contracts.INamespaces, Services.Namespaces>();
         services.AddSingleton<Contracts.EventSequences.IEventSequences, Services.EventSequences.EventSequences>();
         services.AddSingleton<Contracts.Events.IEventTypes, Services.Events.EventTypes>();
         services.AddSingleton<Contracts.Events.Constraints.IConstraints, Services.Events.Constraints.Constraints>();
@@ -37,6 +39,8 @@ public static class GrpcServiceRegistrations
     {
         app.UseEndpoints(_ =>
         {
+            _.MapGrpcService<Services.EventStores>();
+            _.MapGrpcService<Services.Namespaces>();
             _.MapGrpcService<Services.EventSequences.EventSequences>();
             _.MapGrpcService<Services.Events.EventTypes>();
             _.MapGrpcService<Services.Events.Constraints.Constraints>();
