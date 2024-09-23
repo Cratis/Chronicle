@@ -1,21 +1,19 @@
 # Chronicle
 
-## Community
+## Event Sourcing database for .NET built on top of MongoDB
 
-[![Discord](https://img.shields.io/discord/1182595891576717413.svg?label=Discord&logo=discord&color=7289da)](https://discord.gg/kt4AMpV8WV)
-
-## Artifacts
-
+[![Discord](https://img.shields.io/discord/1182595891576717413?label=Discord&logo=discord&color=7289da)](https://discord.gg/kt4AMpV8WV)
 [![Nuget](https://img.shields.io/nuget/v/Cratis.Chronicle?logo=nuget)](http://nuget.org/packages/cratis.chronicle)
 [![Docker](https://img.shields.io/docker/v/cratis/chronicle?label=Chronicle&logo=docker&sort=semver)](https://hub.docker.com/r/cratis/chronicle)
-
-## Builds
-
 [![C# Build](https://github.com/cratis/Chronicle/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/Cratis/Chronicle/actions/workflows/dotnet-build.yml)
 [![Publish](https://github.com/cratis/Chronicle/actions/workflows/publish.yml/badge.svg)](https://github.com/Cratis/Chronicle/actions/workflows/publish.yml)
 [![Documentation Site](https://github.com/cratis/Chronicle/actions/workflows/pages.yml/badge.svg)](https://github.com/Cratis/Chronicle/actions/workflows/pages.yml)
 
-## Statistics
+<div align="center">
+    <img src="full-logo.png">
+</div>
+
+## Stats
 
 ![Alt](https://repobeats.axiom.co/api/embed/5785d95f0b975264a07f625c7ddf5a4064ce4e66.svg "Repobeats analytics image")
 
