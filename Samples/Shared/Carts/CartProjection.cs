@@ -3,12 +3,12 @@
 
 using Cratis.Chronicle.Projections;
 
-namespace Basic;
+namespace Shared.Carts;
 
-public class OrderStateProjection : IProjectionFor<OrderState>
+public class CartProjection : IProjectionFor<CartFromProjection>
 {
-    public void Define(IProjectionBuilderFor<OrderState> builder) => builder
-        .Children(_ => _.CartItems, cb => cb
+    public void Define(IProjectionBuilderFor<CartFromProjection> builder) => builder
+        .Children(_ => _.Items, cb => cb
             .IdentifiedBy(m => m.MaterialId)
             .From<ItemAddedToCart>(_ => _
                 .UsingKey(e => e.MaterialId)

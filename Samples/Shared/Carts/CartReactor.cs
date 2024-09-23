@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
 
-namespace Basic;
+namespace Shared.Carts;
 
 public class CartReactor : IReactor
 {

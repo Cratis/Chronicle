@@ -1,9 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
+using Shared.Carts;
 
-namespace Basic;
+namespace Shared.Orders;
 
-[EventType]
-public record ItemRemovedFromCart(PersonId PersonId, MaterialId MaterialId);
+public record OrderState(int Items, IEnumerable<CartItem> CartItems);

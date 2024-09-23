@@ -3,16 +3,17 @@
 
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Events;
+using Shared.Carts;
 
-namespace Basic;
+namespace Shared.Orders;
 
 public class Order : AggregateRoot<OrderState>
 {
-    public void DoStuff()
+    public async Task DoStuff()
     {
         Console.WriteLine($"Before : {State?.CartItems?.Count()}");
 
-        Apply(new ItemAddedToCart(
+        await Apply(new ItemAddedToCart(
             new(Guid.NewGuid()),
             new(Guid.NewGuid()),
             1,
@@ -22,9 +23,9 @@ public class Order : AggregateRoot<OrderState>
         Console.WriteLine($"After : {State?.CartItems?.Count()}");
     }
 
-    public void DoOtherStuff()
+    public async Task DoOtherStuff()
     {
-        Apply(new ItemRemovedFromCart(
+        await Apply(new ItemRemovedFromCart(
             new(Guid.NewGuid()),
             new(Guid.NewGuid())));
     }

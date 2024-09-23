@@ -2,10 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Shared.Carts;
 
-namespace Basic;
+namespace Shared.Orders;
 
-public class OrderStateReduce // : IReducerFor<OrderState>
+public class OrderStateReducer // : IReducerFor<OrderState>
 {
     public Task<OrderState> ItemAdded(ItemAddedToCart @event, OrderState? initial, EventContext context)
     {

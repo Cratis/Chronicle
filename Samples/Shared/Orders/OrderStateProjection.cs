@@ -2,13 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Projections;
+using Shared.Carts;
 
-namespace Basic;
+namespace Shared.Orders;
 
-public class CartProjection : IProjectionFor<CartFromProjection>
+public class OrderStateProjection : IProjectionFor<OrderState>
 {
-    public void Define(IProjectionBuilderFor<CartFromProjection> builder) => builder
-        .Children(_ => _.Items, cb => cb
+    public void Define(IProjectionBuilderFor<OrderState> builder) => builder
+        .Children(_ => _.CartItems, cb => cb
             .IdentifiedBy(m => m.MaterialId)
             .From<ItemAddedToCart>(_ => _
                 .UsingKey(e => e.MaterialId)

@@ -3,6 +3,9 @@
 
 using Cratis.Concepts;
 
-namespace Basic;
+namespace Shared.Products;
 
-public record PersonId(Guid Value) : ConceptAs<Guid>(Value);
+public record Price(decimal Value) : ConceptAs<decimal>(Value)
+{
+    public static implicit operator Price(decimal value) => new(value);
+}

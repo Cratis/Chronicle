@@ -3,6 +3,6 @@
 
 using Cratis.Concepts;
 
-namespace Basic;
+namespace Shared.Customers;
 
-public record MaterialId(Guid Value) : ConceptAs<Guid>(Value);
+public record PersonId(Guid Value) : ConceptAs<Guid>(Value);

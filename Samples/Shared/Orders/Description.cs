@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Concepts;
 
-namespace Basic;
+namespace Shared.Orders;
 
 public record Description(string Value) : ConceptAs<string>(Value)
 {

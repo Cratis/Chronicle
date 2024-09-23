@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Concepts;
 
-namespace Basic;
+namespace Shared.Carts;
 
 public record CartId(Guid Value) : ConceptAs<Guid>(Value)
 {

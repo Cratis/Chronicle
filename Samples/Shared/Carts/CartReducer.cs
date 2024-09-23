@@ -5,7 +5,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Reducers;
 
-namespace Basic;
+namespace Shared.Carts;
 
 public class CartReducer : IReducerFor<Cart>
 {
