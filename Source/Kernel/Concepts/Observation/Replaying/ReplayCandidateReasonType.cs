@@ -17,12 +17,17 @@ public record ReplayCandidateReasonType(string Value) : ConceptAs<string>(Value)
     /// <summary>
     /// Gets the <see cref="ReplayCandidateReasonType"/> for when event types has changed.
     /// </summary>
-    public static readonly ReplayCandidateReasonType ProjectionDefinitionChanged = "ProjectionDefinitionChanged";
+    public static readonly ReplayCandidateReasonType ReactorDefinitionChanged = "ReactorDefinitionChanged";
 
     /// <summary>
     /// Gets the <see cref="ReplayCandidateReasonType"/> for when event types has changed.
     /// </summary>
     public static readonly ReplayCandidateReasonType ReducerDefinitionChanged = "ReducerDefinitionChanged";
+
+    /// <summary>
+    /// Gets the <see cref="ReplayCandidateReasonType"/> for when event types has changed.
+    /// </summary>
+    public static readonly ReplayCandidateReasonType ProjectionDefinitionChanged = "ProjectionDefinitionChanged";
 
     /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ReplayCandidateReasonType"/>.

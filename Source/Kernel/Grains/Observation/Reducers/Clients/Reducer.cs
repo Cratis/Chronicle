@@ -94,6 +94,8 @@ public class Reducer(
         await Task.WhenAll(
             observer.Unsubscribe(),
             _connectedClients!.UnsubscribeDisconnected(this.AsReference<INotifyClientDisconnected>()));
+
+        _subscribed = false;
     }
 
     async Task AddReplayRecommendationForAllNamespaces(ReducerKey key, IEnumerable<EventStoreNamespaceName> namespaces)
