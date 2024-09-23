@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation.Reactors;
 
 namespace Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 
@@ -13,7 +13,7 @@ public interface IReactor : IGrainWithStringKey
     /// <summary>
     /// Start the observer.
     /// </summary>
-    /// <param name="eventTypes">The <see cref="EventType">event types</see> the observer is expecting.</param>
+    /// <param name="definition">The <see cref="ReactorDefinition"/> to start observing.</param>
     /// <returns>Awaitable task.</returns>
-    Task Start(IEnumerable<EventType> eventTypes);
+    Task SetDefinitionAndSubscribe(ReactorDefinition definition);
 }

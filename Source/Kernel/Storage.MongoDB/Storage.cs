@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation.Reactors.Json;
 using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
 using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Reactive;
@@ -24,6 +25,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </remarks>
 /// <param name="database">The MongoDB <see cref="IDatabase"/>.</param>
 /// <param name="projectionSerializer"><see cref="IJsonProjectionDefinitionSerializer"/> for handling serialization of projection definitions.</param>
+/// <param name="reactorSerializer"><see cref="IJsonReactorDefinitionSerializer"/> for handling serialization of reactor definitions.</param>
 /// <param name="reducerSerializer"><see cref="IJsonReducerDefinitionSerializer"/> for handling serialization of reducer definitions.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
@@ -33,6 +35,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public class Storage(
     IDatabase database,
     IJsonProjectionDefinitionSerializer projectionSerializer,
+    IJsonReactorDefinitionSerializer reactorSerializer,
     IJsonReducerDefinitionSerializer reducerSerializer,
     IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
@@ -74,6 +77,7 @@ public class Storage(
             eventStore,
             database.GetEventStoreDatabase(eventStore),
             projectionSerializer,
+            reactorSerializer,
             reducerSerializer,
             complianceManager,
             expandoObjectConverter,

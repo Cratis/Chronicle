@@ -5,7 +5,7 @@ using Cratis.Chronicle.Contracts.Events;
 
 using ProtoBuf;
 
-namespace Cratis.Chronicle.Contracts.Observation.Reducers;
+namespace Cratis.Chronicle.Contracts.Observation;
 
 /// <summary>
 /// Represents the definition of an event type with key.

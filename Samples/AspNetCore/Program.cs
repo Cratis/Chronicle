@@ -10,6 +10,7 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddTransient<OrderStateProjection>();
 builder.Services.AddTransient<OrderStateReducer>();
+builder.Services.AddTransient<OrderReactor>();
 builder.Services.AddTransient<CartProjection>();
 builder.Services.AddTransient<CartReactor>();
 builder.Services.AddTransient<CartReducer>();

@@ -143,9 +143,12 @@ public class Reactors : IReactors
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStoreName = _eventStore.Name,
             Namespace = _eventStore.Namespace,
-            EventSequenceId = handler.EventSequenceId,
-            ObserverId = handler.Id,
-            EventTypes = handler.EventTypes.Select(_ => _.ToContract()).ToArray()
+            Reactor = new ReactorDefinition
+            {
+                ReactorId = handler.Id,
+                EventSequenceId = handler.EventSequenceId,
+                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray()
+            }
         };
 
 #pragma warning disable CA2000 // Dispose objects before losing scope

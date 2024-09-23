@@ -40,15 +40,15 @@ public class Reactors(
             {
                 case RegisterReactor register:
                     var key = new ConnectedObserverKey(
-                        register.ObserverId,
+                        register.Reactor.ReactorId,
                         register.EventStoreName,
                         register.Namespace,
-                        register.EventSequenceId,
+                        register.Reactor.EventSequenceId,
                         register.ConnectionId);
                     using (Tracing.RegisterObserver(key, ObserverType.Client))
                     {
                         clientObserver = grainFactory.GetGrain<IReactor>(key);
-                        clientObserver.Start(register.EventTypes.Select(_ => _.ToChronicle()).ToArray());
+                        clientObserver.SetDefinitionAndSubscribe(register.Reactor.ToChronicle());
                     }
                     registrationTcs.SetResult(register);
                     break;
@@ -81,11 +81,11 @@ public class Reactors(
             {
                 var registration = await registrationTcs.Task;
                 connectionId = registration.ConnectionId;
-                observerId = registration.ObserverId;
+                observerId = registration.Reactor.ReactorId;
 
                 eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>(TaskCreationOptions.RunContinuationsAsynchronously);
                 reactorMediator.Subscribe(
-                    registration.ObserverId,
+                    registration.Reactor.ReactorId,
                     registration.ConnectionId,
                     (events, tcs) =>
                     {
