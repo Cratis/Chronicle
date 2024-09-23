@@ -19,7 +19,7 @@ builder.Host.UseDefaultServiceProvider(_ => _.ValidateOnBuild = false);
 
 builder.Services.AddSingleton(Globals.JsonSerializerOptions);
 builder.Services.AddControllers();
-builder.UseCratisChronicle();
+builder.AddCratisChronicle();
 
 builder.Host.UseOrleans(silo =>
     {

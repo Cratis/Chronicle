@@ -45,7 +45,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
                 services.Configure<ChronicleOptions>(opts => opts.ArtifactsProvider = this);
                 ConfigureServices(services);
             });
-        builder.UseCratisChronicle();
+        builder.AddCratisChronicle();
 
         builder.UseOrleans(silo =>
             {

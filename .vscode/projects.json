@@ -10,9 +10,14 @@
         "outputPath": "${workspaceFolder}/Source/Api/bin/Debug/net8.0/Cratis.Chronicle.Api.dll"
     },
     {
+        "name": "AspNetCore Sample",
+        "path": "${workspaceFolder}/Samples/AspNetCore",
+        "outputPath": "${workspaceFolder}/Samples/AspNetCore/bin/Debug/net8.0/AspNetCore.dll"
+    },
+    {
         "name": "Basic Sample",
         "path": "${workspaceFolder}/Samples/Basic",
-        "outputPath": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll"
+        "outputPath": "${workspaceFolder}/Samples/Basic/bin/Debug/net8.0/Basic.dll"
     },
     {
         "name": "Orleans Sample",

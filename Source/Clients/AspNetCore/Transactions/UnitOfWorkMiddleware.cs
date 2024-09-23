@@ -10,16 +10,16 @@ namespace Cratis.Chronicle.AspNetCore.Transactions;
 /// <summary>
 /// Represents a middleware for managing units of work.
 /// </summary>
-/// <param name="unitOfWorkManager">The <see cref="IUnitOfWorkManager"/> to use.</param>
 /// <param name="next">The next middleware.</param>
-public class UnitOfWorkMiddleware(IUnitOfWorkManager unitOfWorkManager, RequestDelegate next)
+public class UnitOfWorkMiddleware(RequestDelegate next)
 {
     /// <summary>
     /// Invoke the middleware.
     /// </summary>
     /// <param name="context">The <see cref="HttpContext"/>. </param>
+    /// <param name="unitOfWorkManager">The <see cref="IUnitOfWorkManager"/> to use.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, IUnitOfWorkManager unitOfWorkManager)
     {
         var unitOfWork = unitOfWorkManager.Begin(CorrelationId.New());
         try

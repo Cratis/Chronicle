@@ -12,10 +12,10 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class RulesServiceCollectionExtensions
 {
     /// <summary>
-    /// Add CQRS setup.
+    /// Add rules.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
-    /// <returns><see cref="MvcOptions"/> for building continuation.</returns>
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddRules(this IServiceCollection services)
     {
         services.Configure<MvcOptions>(options => options.ModelValidatorProviders.Insert(0, new RulesModelValidatorProvider()));

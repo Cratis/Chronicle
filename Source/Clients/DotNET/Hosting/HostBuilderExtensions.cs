@@ -16,7 +16,7 @@ public static class HostBuilderExtensions
     /// <param name="hostBuilder"><see cref="IHostBuilder"/> to build on.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
     /// <returns><see cref="IHostBuilder"/> for configuration continuation.</returns>
-    public static IHostBuilder UseCratisChronicle(
+    public static IHostBuilder AddCratisChronicle(
         this IHostBuilder hostBuilder,
         ILoggerFactory? loggerFactory = default)
     {

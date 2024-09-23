@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Transactions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -13,14 +14,19 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class UnitOfWorkServiceCollectionExtensions
 {
     /// <summary>
-    /// Add CQRS setup.
+    /// Add Unit of work support.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
-    /// <returns><see cref="MvcOptions"/> for building continuation.</returns>
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddUnitOfWork(this IServiceCollection services)
     {
         services.Configure<MvcOptions>(options => options.Filters.Add<UnitOfWorkActionFilter>(0));
         services.AddTransient<IStartupFilter, UnitOfWorkStartupFilter>();
+        services.AddScoped(sp =>
+        {
+            var eventStore = sp.GetRequiredService<IEventStore>();
+            return eventStore.UnitOfWorkManager;
+        });
 
         return services;
     }
