@@ -8,6 +8,7 @@ fi
 
 cp ./out/$ARCH_FOLDER/*.dll .
 cp ./out/$ARCH_FOLDER/*.json .
+cp ./out/$ARCH_FOLDER/*.xml .
 cp ./out/$ARCH_FOLDER/*.so .
 cp ./out/$ARCH_FOLDER/Cratis.Chronicle.Server .
 rm -rf ./out
