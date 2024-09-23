@@ -4,7 +4,7 @@
 # Cratis Chronicle Server
 # Build runtime image.
 ####################################
-FROM cratis/base
+FROM cratis/base-mongodb
 ARG VERSION
 ARG ENTRYPOINT=entrypoint.sh
 
