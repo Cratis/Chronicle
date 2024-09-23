@@ -14,7 +14,7 @@
 </div>
 
 Cratis Chronicle is an Event Sourcing database built with ease of use, productivity, compliance and maintainability in mind.
-It provides the core server, referred to as the **Kernel** with a .nET client SDK to access it and tooling built into it.
+It provides the core server, referred to as the **Kernel** with a .NET client SDK to access it and tooling built into it.
 
 Although optimized for MongoDB, its extensible model provides extension points for other data stores.
 
