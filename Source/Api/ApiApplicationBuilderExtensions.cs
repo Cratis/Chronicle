@@ -27,6 +27,7 @@ public static class ApiApplicationBuilderExtensions
         app.UseRouting();
         app.UseWebSockets();
         app.UseCratisApplicationModel();
+        app.UseDefaultFiles();
         app.UseStaticFiles();
         app.UseEndpoints(endpoints => endpoints.MapControllers());
         app.UseSwagger();
