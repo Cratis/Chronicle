@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// </summary>
 public static class ChangesetExtensions
 {
-    const string SequenceNumberProperty = "__eventSequenceNumber";
+    const string SequenceNumberProperty = "__lastHandlerEventSequenceNumber";
 
     /// <summary>
     /// Add a change to set the sequence number on the state.
