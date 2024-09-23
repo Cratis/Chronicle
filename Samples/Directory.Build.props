@@ -6,6 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <IsPackable>false</IsPackable>
 
         <NoWarn>$(NoWarn);SA1600;IDE0051;RCS1213;IDE0060;SA0001</NoWarn>
     </PropertyGroup>
