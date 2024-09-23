@@ -78,10 +78,14 @@ public class ProjectionPipeline(
 
         if (changeset.HasChanges)
         {
-            changeset.SetSequenceNumber();
+            logger.SavingResult(@event.Metadata.SequenceNumber);
+
+            if (!changeset.HasJoined())
+            {
+                changeset.SetSequenceNumber();
+            }
             await Sink.ApplyChanges(key, changeset);
             await changesetStorage.Save(@event.Context.CorrelationId, changeset);
-            logger.SavingResult(@event.Metadata.SequenceNumber);
         }
     }
 
