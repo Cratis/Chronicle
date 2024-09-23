@@ -21,7 +21,7 @@ Although optimized for MongoDB, its extensible model provides extension points f
 Read the documentation on our site [https://cratis.io](https://cratis.io) for all the details.
 For general guidance on the core values and principles we adhere to, read more [here](https://github.com/Cratis/.github/blob/main/profile/README.md).
 
-## GitHelp Support
+# Support
 
 [![githelp.app shield](https://rbpwwcsvhmbmfiphokrm.supabase.co/storage/v1/object/public/public_resources/Badge2%20-%20round%20corners.svg?t=2023-12-11T13%3A11%3A05.524Z)](https://githelp.app/repos/cratis)
 
