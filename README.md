@@ -1,6 +1,10 @@
 # Chronicle
 
-## Packages / Deployables
+## Community
+
+[![Discord](https://img.shields.io/discord/1182595891576717413.svg?label=Discord&logo=discord&color=7289da)](https://discord.gg/kt4AMpV8WV})
+
+## Artifacts
 
 [![Nuget](https://img.shields.io/nuget/v/Cratis.Chronicle?logo=nuget)](http://nuget.org/packages/cratis.chronicle)
 [![Docker](https://img.shields.io/docker/v/cratis/chronicle?label=Chronicle&logo=docker&sort=semver)](https://hub.docker.com/r/cratis/chronicle)
@@ -29,51 +33,6 @@ If you want to jump into building this repository and possibly contributing, ple
 ## Opening in VSCode online
 
 If you prefer to browse the code in VSCode, you can do so by clicking [here](https://vscode.dev/github/cratis/chronicle).
-
-## Running the samples
-
-Make sure you have the following installed:
-
-- [Docker](https://www.docker.com/products/docker-desktop)
-- [.NET Core 7](https://dotnet.microsoft.com/download/dotnet/7.0)
-
-The sample consists of a backend and a frontend.
-Navigate to the [Bank Sample](./Samples/Banking/Bank) folder.
-
-Before running the microservice backend and frontend, we will need to run the Cratis Kernel.
-
-```shell
-docker compose up -d
-```
-
-This will bring up the Cratis Kernel and expose the following ports:
-
-| Port | Description |
-| ---- | ----------- |
-| 27017 | MongoDB - used for events and projection results |
-| 8080 | Workbench and API for kernel |
-| 8081 | Orleans Dashboard |
-| 11111 | Clustering port |
-| 30000 | Client to Kernel connectivity |
-
-Within here you'll see a folder called [Main](./Samples/Banking/Bank/Main), which represents the backend startup.
-Navigate to this and start the backend by running:
-
-```shell
-dotnet run
-```
-
-The frontend is located in the [Web](./Samples/Banking/Bank/Web) folder. While the backend is running in another terminal,
-navigate to that folder and start it by running:
-
-```shell
-yarn start:dev
-```
-
-Open a browser and navigate to [http://localhost:9100/](http://localhost:9100/) and you can start playing
-around with the sample.
-
-> Note: The Cratis workbench is available [http://localhost:8080/](http://localhost:8080/)
 
 ## Contributing / Running locally
 
