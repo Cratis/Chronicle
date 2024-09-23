@@ -36,4 +36,5 @@ public class using_composite_key_from_property_and_context_property(context cont
     }
 
     [Fact] void should_return_model() => Context.Model.ShouldNotBeNull();
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Model.__eventSequenceNumber.ShouldEqual(Context.AppendedEvents[^1].Metadata.SequenceNumber);
 }

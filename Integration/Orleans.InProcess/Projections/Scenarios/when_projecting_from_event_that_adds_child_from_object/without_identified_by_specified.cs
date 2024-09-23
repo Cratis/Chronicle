@@ -74,4 +74,6 @@ public class without_identified_by_specified(context context) : Given<context>(c
     [Fact] void should_set_the_float_concept_value_for_second_child() => Context.SecondChild.FloatConceptValue.ShouldEqual(Context.SecondEventAppended.Child.FloatConceptValue);
     [Fact] void should_set_the_double_concept_value_for_second_child() => Context.SecondChild.DoubleConceptValue.ShouldEqual(Context.SecondEventAppended.Child.DoubleConceptValue);
     [Fact] void should_set_the_guid_concept_value_for_second_child() => Context.SecondChild.GuidConceptValue.ShouldEqual(Context.SecondEventAppended.Child.GuidConceptValue);
+
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__eventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

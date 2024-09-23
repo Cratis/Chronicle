@@ -35,4 +35,5 @@ public class with_root_and_child_events_auto_mapping_properties(context context)
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_have_group_name() => Context.Result.Name.ShouldEqual(GroupName);
     [Fact] void should_have_user_id_on_child() => Context.Result.Users.First().UserId.ShouldEqual(Context.UserId);
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__eventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

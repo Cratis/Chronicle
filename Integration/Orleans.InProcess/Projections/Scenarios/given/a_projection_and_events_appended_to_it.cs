@@ -21,6 +21,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
 
     public TModel Result;
     public AppendedEvent[] AppendedEvents;
+    public EventSequenceNumber LastEventSequenceNumber = EventSequenceNumber.First;
     public override IEnumerable<Type> Projections => [typeof(TProjection)];
     protected List<object> EventsToAppend = [];
     protected List<EventAndEventSourceId> EventsWithEventSourceIdToAppend = [];
@@ -45,11 +46,13 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
         foreach (var @event in EventsToAppend)
         {
             appendResult = await EventStore.EventLog.Append(EventSourceId, @event);
+            LastEventSequenceNumber = appendResult.SequenceNumber;
         }
 
         foreach (var @event in EventsWithEventSourceIdToAppend)
         {
             appendResult = await EventStore.EventLog.Append(@event.EventSourceId, @event.Event);
+            LastEventSequenceNumber = appendResult.SequenceNumber;
         }
 
         var appendedEvents = await EventStore.EventLog.GetForEventSourceIdAndEventTypes(EventSourceId, EventTypes.Select(_ => _.GetEventType()));
