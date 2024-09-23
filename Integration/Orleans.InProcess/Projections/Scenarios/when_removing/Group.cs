@@ -10,4 +10,4 @@ public record Group(
     EventSourceId Id,
     string Name,
     IEnumerable<UserOnGroup> Users,
-    EventSequenceNumber __eventSequenceNumber);
+    EventSequenceNumber __lastHandledEventSequenceNumber);

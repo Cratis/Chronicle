@@ -24,5 +24,5 @@ public class with_event_of_instances_of_two_event_types_applied(context context)
     }
 
     [Fact] void should_set_the_last_updated_property_to_be_occurred_for_second_event() => Context.Result.LastUpdated.Ticks.ShouldEqual(Context.AppendedEvents[1].Context.Occurred.Ticks);
-    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__eventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

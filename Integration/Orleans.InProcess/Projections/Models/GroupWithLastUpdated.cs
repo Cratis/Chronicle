@@ -10,4 +10,4 @@ public record GroupWithLastUpdated(
     string Name,
     IEnumerable<UserOnGroup> Users,
     DateTimeOffset LastUpdated,
-    EventSequenceNumber __eventSequenceNumber);
+    EventSequenceNumber __lastHandledEventSequenceNumber);

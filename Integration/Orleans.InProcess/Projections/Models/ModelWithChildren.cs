@@ -6,4 +6,4 @@ using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Concepts;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Models;
 
-public record ModelWithChildren(IEnumerable<Model> Children, EventSequenceNumber __eventSequenceNumber);
+public record ModelWithChildren(IEnumerable<Model> Children, EventSequenceNumber __lastHandledEventSequenceNumber);

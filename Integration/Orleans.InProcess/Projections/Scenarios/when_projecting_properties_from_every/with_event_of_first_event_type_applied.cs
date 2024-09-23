@@ -23,5 +23,5 @@ public class with_event_of_first_event_type_applied(context context) : Given<con
     }
 
     [Fact] void should_set_the_last_updated_property_to_occurred_for_event() => Context.Result.LastUpdated.ShouldEqual(Context.AppendedEvents[0].Context.Occurred);
-    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__eventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

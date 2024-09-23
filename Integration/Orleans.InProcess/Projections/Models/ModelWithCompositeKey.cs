@@ -6,4 +6,4 @@ using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Concepts;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Models;
 
-public record ModelWithCompositeKey(CompositeKey Id, DateTimeOffset LastUpdated, EventSequenceNumber __eventSequenceNumber = default);
+public record ModelWithCompositeKey(CompositeKey Id, DateTimeOffset LastUpdated, EventSequenceNumber __lastHandledEventSequenceNumber = default);

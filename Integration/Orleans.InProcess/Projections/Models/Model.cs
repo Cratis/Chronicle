@@ -26,7 +26,7 @@ public record Model(
     DoubleConcept DoubleConceptValue,
     GuidConcept GuidConceptValue,
     DateTimeOffset LastUpdated,
-    EventSequenceNumber? __eventSequenceNumber = default)
+    EventSequenceNumber? __lastHandledEventSequenceNumber = default)
 {
     static Random random = new();
 

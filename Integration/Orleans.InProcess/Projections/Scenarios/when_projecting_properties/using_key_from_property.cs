@@ -28,5 +28,5 @@ public class using_key_from_property(context context) : Given<context>(context)
     }
 
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
-    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__eventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

@@ -39,5 +39,5 @@ public class with_initial_values_and_no_operations(context context) : Given<cont
     [Fact] void should_set_the_float_concept_value() => Context.Result.FloatConceptValue.ShouldEqual(KnownValues.FloatConceptValue);
     [Fact] void should_set_the_double_concept_value() => Context.Result.DoubleConceptValue.ShouldEqual(KnownValues.DoubleConceptValue);
     [Fact] void should_set_the_guid_concept_value() => Context.Result.GuidConceptValue.ShouldEqual(KnownValues.GuidConceptValue);
-    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__eventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }
