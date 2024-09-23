@@ -13,7 +13,7 @@ WORKDIR /app
 RUN echo Configuration = ${CONFIGURATION}
 RUN echo Version = ${VERSION}
 
-EXPOSE 80 11111 30000
+EXPOSE 8080 11111 30000 35000
 
 COPY Docker/copy-server-files.sh ./copy-server-files.sh
 RUN chmod +x ./copy-server-files.sh
