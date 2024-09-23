@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,8 +20,7 @@ public static class CausationServiceCollectionExtensions
     public static IServiceCollection AddCausation(this IServiceCollection services)
     {
         services.AddTransient<IStartupFilter, CausationStartupFilter>();
-        services.AddSingleton<ICausationManager, CausationManager>();
-
+        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().CausationManager);
         return services;
     }
 }

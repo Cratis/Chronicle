@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Auditing;
+
 namespace Cratis.Chronicle;
 
 /// <summary>
@@ -8,6 +10,11 @@ namespace Cratis.Chronicle;
 /// </summary>
 public interface IChronicleClient
 {
+    /// <summary>
+    /// Gets the <see cref="ICausationManager"/> for the client.
+    /// </summary>
+    ICausationManager CausationManager { get; }
+
     /// <summary>
     /// Get an event store by name and optional namespace.
     /// </summary>

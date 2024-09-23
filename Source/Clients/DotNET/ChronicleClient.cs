@@ -25,7 +25,6 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
     readonly IChronicleConnection? _connection;
     readonly ChronicleOptions _options;
-    readonly ICausationManager _causationManager;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
 
@@ -55,7 +54,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     {
         _options = options;
         var result = Initialize();
-        _causationManager = result.CausationManager;
+        CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
 
         var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
@@ -76,10 +75,13 @@ public class ChronicleClient : IChronicleClient, IDisposable
     {
         _options = options;
         var result = Initialize();
-        _causationManager = result.CausationManager;
+        CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _connection = connection;
     }
+
+    /// <inheritdoc/>
+    public ICausationManager CausationManager { get; }
 
     /// <inheritdoc/>
     public void Dispose()
@@ -105,7 +107,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             _connection!,
             _options.ArtifactsProvider,
             _options.CorrelationIdAccessor,
-            _causationManager,
+            CausationManager,
             _options.IdentityProvider,
             _jsonSchemaGenerator,
             _options.ModelNameConvention,
