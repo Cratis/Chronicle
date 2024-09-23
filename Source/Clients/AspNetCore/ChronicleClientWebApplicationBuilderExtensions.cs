@@ -40,6 +40,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         builder.Services
             .AddRules()
             .AddUnitOfWork()
+            .AddAggregates()
             .AddCompliance()
             .AddCausation()
             .AddChronicleClient()
