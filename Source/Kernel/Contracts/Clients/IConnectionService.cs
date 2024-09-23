@@ -29,5 +29,6 @@ public interface IConnectionService
     /// </summary>
     /// <param name="keepAlive"><see cref="ConnectionKeepAlive"/> with information about the client.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Operation]
     Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive);
 }

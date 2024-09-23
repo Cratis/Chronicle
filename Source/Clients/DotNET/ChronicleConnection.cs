@@ -144,8 +144,10 @@ public class ChronicleConnection : IChronicleConnection
             EnableMultipleHttp2Connections = true
         };
 
+        var address = $"http://{_options.Url.ServerAddress.Host}:{_options.Url.ServerAddress.Port}";
+
         return GrpcChannel.ForAddress(
-            "http://localhost:35000",
+            address,
             new GrpcChannelOptions
             {
                 HttpHandler = httpHandler,
@@ -177,7 +179,11 @@ public class ChronicleConnection : IChronicleConnection
             _connectTcs?.SetResult();
         }
         _lastKeepAlive = DateTimeOffset.UtcNow;
-        _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
+
+        if (!Debugger.IsAttached)
+        {
+            _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
+        }
     }
 
     void StartWatchDog()
