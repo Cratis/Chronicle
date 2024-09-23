@@ -2,7 +2,7 @@
 
 ## Community
 
-[![Discord](https://img.shields.io/discord/1182595891576717413.svg?label=Discord&logo=discord&color=7289da)](https://discord.gg/kt4AMpV8WV})
+[![Discord](https://img.shields.io/discord/1182595891576717413.svg?label=Discord&logo=discord&color=7289da)](https://discord.gg/kt4AMpV8WV)
 
 ## Artifacts
 
