@@ -67,5 +67,8 @@ public class EventStoreForTesting : IEventStore
         _defaultEventSequence ??= new(Defaults.Instance.EventTypes);
 
     /// <inheritdoc/>
+    public Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
     public Task RegisterAll() => Task.CompletedTask;
 }

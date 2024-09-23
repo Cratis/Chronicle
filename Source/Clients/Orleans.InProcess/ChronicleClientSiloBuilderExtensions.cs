@@ -13,7 +13,6 @@ using Cratis.Chronicle.Orleans.Transactions;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Microsoft.Extensions.Configuration;
