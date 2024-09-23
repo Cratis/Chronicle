@@ -17,11 +17,11 @@ public class when_creating_for_stateful_aggregate_root : given.an_aggregate_root
     {
         _aggregateRoot = new StatefulAggregateRoot();
         _context = new AggregateRootContext(
-        EventSourceId.New(),
-        Substitute.For<IEventSequence>(),
-        new StatefulAggregateRoot(),
-        Substitute.For<IUnitOfWork>(),
-        EventSequenceNumber.First);
+            EventSourceId.New(),
+            Substitute.For<IEventSequence>(),
+            _aggregateRoot,
+            Substitute.For<IUnitOfWork>(),
+            EventSequenceNumber.First);
     }
 
     async Task Because() => _result = await _factory.Create<StatefulAggregateRoot>(_context);
