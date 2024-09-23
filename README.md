@@ -19,12 +19,11 @@ It provides the core server, referred to as the **Kernel** with a .nET client SD
 Although optimized for MongoDB, its extensible model provides extension points for other data stores.
 
 Read the documentation on our site [https://cratis.io](https://cratis.io) for all the details.
-For general guidance on the core values and principles we @ use, read more [here](https://github.com/Cratis/.github/blob/main/profile/README.md).
+For general guidance on the core values and principles we adhere to, read more [here](https://github.com/Cratis/.github/blob/main/profile/README.md).
 
 ## Stats
 
 ![Alt](https://repobeats.axiom.co/api/embed/5785d95f0b975264a07f625c7ddf5a4064ce4e66.svg "Repobeats analytics image")
-
 
 ## Opening in VSCode online
 
