@@ -10,7 +10,7 @@ The following configures a `docker-compose-yml` with Chronicle and [Microsoft As
 ```yml
 services:
   chronicle:
-    image: cratis/chronicle:10.0.1
+    image: cratis/chronicle:latest-development
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
     ports:
