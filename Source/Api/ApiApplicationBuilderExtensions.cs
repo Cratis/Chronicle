@@ -24,6 +24,7 @@ public static class ApiApplicationBuilderExtensions
             app.UseDeveloperExceptionPage();
         }
 
+        app.UseCratisApplicationModel();
         app.UseRouting();
         app.UseWebSockets();
         app.UseDefaultFiles();
@@ -31,7 +32,6 @@ public static class ApiApplicationBuilderExtensions
         app.MapControllers();
         app.UseSwagger();
         app.UseSwaggerUI(options => options.InjectStylesheet("/swagger-ui/SwaggerDark.css"));
-        app.UseCratisApplicationModel();
         app.MapFallbackToFile("/index.html");
 
         return app;
