@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <ApplicationModel>13.10.2</ApplicationModel>
-    <Fundamentals>5.5.0</Fundamentals>
+    <Fundamentals>5.5.1</Fundamentals>
     <Fundamentals>5.5.1</Fundamentals>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
@@ -87,7 +87,7 @@
     <PackageVersion Include="Cratis.Specifications" Version="3.0.4" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.4" />
     <PackageVersion Include="Testcontainers" Version="3.10.0" />
-    <PackageVersion Include="xunit" Version="2.9.0" />
+    <PackageVersion Include="xunit" Version="2.9.1" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="moq" Version="4.20.72" />
     <PackageVersion Include="NSubstitute" Version="5.1.0" />
