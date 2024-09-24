@@ -26,5 +26,6 @@ public class RewindRequest
     /// <summary>
     /// Gets or sets the observer identifier.
     /// </summary>
+    [ProtoMember(3)]
     public Guid ObserverId { get; set; }
 }
