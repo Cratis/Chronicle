@@ -56,35 +56,15 @@ public static class ChronicleClientServiceCollectionExtensions
             return _eventStores[namespaceName] = eventStore;
         });
 
-        services.AddScoped(sp =>
-        {
-            var eventStore = sp.GetRequiredService<IEventStore>();
-            return eventStore.EventLog;
-        });
-
-        services.AddScoped(sp =>
-        {
-            var eventStore = sp.GetRequiredService<IEventStore>();
-            return eventStore.EventTypes;
-        });
-
-        services.AddSingleton(sp =>
-        {
-            var client = sp.GetRequiredService<IChronicleClient>();
-            return client.Options.ArtifactsProvider;
-        });
-
-        services.AddSingleton(sp =>
-        {
-            var client = sp.GetRequiredService<IChronicleClient>();
-            return client.Options.ModelNameConvention;
-        });
-
-        services.AddSingleton(sp =>
-        {
-            var client = sp.GetRequiredService<IChronicleClient>();
-            return client.Options.CorrelationIdAccessor;
-        });
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Constraints);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().EventLog);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().EventTypes);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reactors);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reducers);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
+        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ArtifactsProvider);
+        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ModelNameConvention);
+        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.CorrelationIdAccessor);
 
         return services;
     }
