@@ -2,7 +2,7 @@
 
 All PRs that are marked as **draft** will have binary artifacts built for it so that one can test things out before the PR is accepted and merged in.
 The artifacts are not published to the production sources, as everything is built in debug mode and not considered ready
-for production. We leverage GitHub packages for these builds. You can find all the packages built [here](https://github.com/orgs/cratis/packages?repo_name=Cratis).
+for production. We leverage GitHub packages for these builds. You can find all the packages built [here](https://github.com/orgs/cratis/packages?repo_name=Chronicle).
 
 Whenever packages have been built, the build with add comments with links to the artifacts into the pull request:
 
