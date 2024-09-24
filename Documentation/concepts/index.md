@@ -11,4 +11,4 @@ This area contains explanations and guidance on the concepts in Cratis.
 | [Event Sequence](./event-sequence.md) | What is an event sequence |
 | [Observer](./observer.md) | What is an observer |
 | [Projection](./projection.md) | What is a projection |
-| [Tenancy](./tenancy.md) | What does tenancy mean |
+| [Namespaces](./namespaces.md) | What are namespaces within an event store |

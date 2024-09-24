@@ -11,13 +11,10 @@ Assuming you have an event as defined [here](./creating-an-event.md), you can do
 ```csharp
 using Cratis.Events;
 
-public class DebitAccounts
+public class DebitAccounts(IEventLog eventLog)
 {
-    readonly IEventLog _eventLog;
-
-    public DebitAccounts(IEventLog eventLog) => _eventLog = eventLog;
-
-    public Task OpenDebitAccount(AccountName Name, CustomerId Owner) => _eventLog.Append(Guid.NewGuid().ToString(), new DebitAccountOpened(Name, Owner));
+    public Task OpenDebitAccount(AccountName Name, CustomerId Owner) =>
+        eventLog.Append(Guid.NewGuid().ToString(), new DebitAccountOpened(Name, Owner));
 }
 ```
 
@@ -25,5 +22,6 @@ public class DebitAccounts
 > The `EventSourceId` is the identifier that identifies the unique instance of a concept in your domain, often referred
 > to as an aggregate.
 
-The choice of using a **Guid** as the unique identifier is that there is no centralized primary key sequence that
-can give you unique keys. A generated **Guid** can however be generated anywhere and will be unique.
+Since Chronicle does not provide a centralized key generator, it is common to use a `Guid` that can be
+generated on the fly. This is very common in modern systems, as it removes tension in inserts. The `EventSourceId` type
+provides an implicit conversion from `Guid` to `EventSourceId`.

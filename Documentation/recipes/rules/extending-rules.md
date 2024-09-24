@@ -71,8 +71,6 @@ With this in place, we can use it in a rules implementation:
 ```csharp
 public class OpenDebitAccountRules : RulesFor<OpenDebitAccountRules, OpenDebitAccount>
 {
-    public override RuleId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
-
     public IEnumerable<AccountName> Accounts { get; set; } = Array.Empty<AccountName>();
 
     public OpenDebitAccountRules()

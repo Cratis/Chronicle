@@ -1,8 +1,8 @@
 # Rules
 
 When performing operations (referred to as where we do **writes** or perform **commands**),
-in addition [validating the correctness of the input](./validation.md) you might have
-domain specific rules associated with the action being performed.
+in addition to input validation you might have domain specific rules associated with the action
+being performed.
 
 In the pipeline, validation is run before the rules, so that your rules can trust that
 the input has been sanitized.
@@ -24,7 +24,7 @@ later, you will get a stateless rule.
 
 The value based rules are building on top of the ASP.NET Core pipelines [custom attributes](https://docs.microsoft.com/en-us/aspnet/core/mvc/models/validation?view=aspnetcore-6.0#custom-attributes).
 
-Following the [Bank sample](../../../Samples/Banking/Bank/) we can imagine a part of the system that enables
+Take the sample of a banking solution, we can imagine a part of the system that enables
 the closing of an existing account. We want to make sure we don't allow closing accounts that has either a
 positive or a negative balance.
 
@@ -37,8 +37,6 @@ namespace Domain.Accounts;
 [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Property, AllowMultiple = false)]
 public sealed class AccountMustBeEmptyAttribute : RuleAttribute
 {
-    public override RuleId Identifier => "bc2042a9-3908-4ac4-8637-b2058ba8cead";
-
     protected override bool IsValid(object? value)
     {
         return true;
@@ -56,8 +54,6 @@ namespace Domain.Accounts;
 [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Property, AllowMultiple = false)]
 public sealed class AccountMustBeEmptyAttribute : RuleAttribute
 {
-    public override RuleId Identifier => "bc2042a9-3908-4ac4-8637-b2058ba8cead";
-
     // The state we want to check
     public double Balance { get; set; }
 
@@ -123,7 +119,6 @@ Scaffold it with the following:
 ```csharp
 public class OpenDebitAccountRules : RulesFor<OpenDebitAccountRules, OpenDebitAccount>
 {
-    public override RuleId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
 }
 ```
 
@@ -136,8 +131,6 @@ Next thing we need is to give it some state that we can add rules for:
 ```csharp
 public class OpenDebitAccountRules : RulesFor<OpenDebitAccountRules, OpenDebitAccount>
 {
-    public override RuleId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
-
     // The state we want to have rules for
     public IEnumerable<AccountName> Accounts { get; set; } = Array.Empty<AccountName>();
 
@@ -161,8 +154,6 @@ that leverages it:
 ```csharp
 public class OpenDebitAccountRules : RulesFor<OpenDebitAccountRules, OpenDebitAccount>
 {
-    public override RuleId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
-
     public IEnumerable<AccountName> Accounts { get; set; } = Array.Empty<AccountName>();
 
     public OpenDebitAccountRules()
@@ -192,8 +183,6 @@ Lets change to using a generic `.Unique()` rule:
 ```csharp
 public class OpenDebitAccountRules : RulesFor<OpenDebitAccountRules, OpenDebitAccount>
 {
-    public override RuleId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
-
     public IEnumerable<AccountName> Accounts { get; set; } = Array.Empty<AccountName>();
 
     public OpenDebitAccountRules()

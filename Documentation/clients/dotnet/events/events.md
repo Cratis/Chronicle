@@ -8,9 +8,9 @@ With C# 9 we got the construct `record` which is perfect for this.
 Below is an example of what an event could be:
 
 ```csharp
-using Cratis.Events;
+using Cratis.Chronicle.Events;
 
-[EventType("aa4e1a9e-c481-4a2a-abe8-4799a6bbe3b7")]
+[EventType]
 public record EmployeeRegistered(string FirstName, string LastName);
 ```
 
@@ -20,20 +20,14 @@ To save an event to the event log, all you need is to take a dependency to `IEve
 and call the appropriate `Append` method.
 
 ```csharp
-using Cratis.Events;
+using Cratis.Chronicle.Events;
 
 [Route("/api/employees")]
-public class EmployeesController : ControllerBase
+public class EmployeesController(IEventLog eventLog) : ControllerBase
 {
-    readonly IEventLog _eventLog;
-
-    public EmployeesController(IEventLog eventLog) => _eventLog = eventLog;
-
     [HttpPost("registration")]
-    public async Task Register()
-    {
-        await _eventLog.Append(Guid.NewGuid(), new EmployeeRegistered(..., ....));
-    }
+    public Task Register() =>
+        eventLog.Append(Guid.NewGuid(), new EmployeeRegistered(..., ....));
 }
 ```
 
@@ -49,18 +43,15 @@ All you need to do is create a class that implements the `ICanProvideAdditionalE
 interface:
 
 ```csharp
-using Cratis.Events;
+using Cratis.Chronicle.Events;
 
-namespace Sample
+public class MyAdditionalEventInformationProvider : ICanProvideAdditionalEventInformation
 {
-    public class MyAdditionalEventInformationProvider : ICanProvideAdditionalEventInformation
+    public Task ProvideFor(JsonObject @event)
     {
-        public Task ProvideFor(JsonObject @event)
-        {
-            @event.Add("something", Guid.NewGuid());
-            @event.Add("someTime", DateTimeOffset.UtcNow);
-            return Task.CompletedTask;
-        }
+        @event.Add("something", Guid.NewGuid());
+        @event.Add("someTime", DateTimeOffset.UtcNow);
+        return Task.CompletedTask;
     }
 }
 ```
