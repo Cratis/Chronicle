@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
 
@@ -22,8 +23,8 @@ public class ObserverQueries(IStorage storage) : ControllerBase
     /// <returns>Collection of <see cref="ObserverInformation"/>.</returns>
     [HttpGet("all-observers")]
     public Task<IEnumerable<ObserverInformation>> GetObservers(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace) =>
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace) =>
         throw new NotImplementedException();
 
     /// <summary>
@@ -34,8 +35,8 @@ public class ObserverQueries(IStorage storage) : ControllerBase
     /// <returns>An observable of a collection of <see cref="ObserverInformation"/>.</returns>
     [HttpGet("all-observers/observe")]
     public ISubject<IEnumerable<ObserverInformation>> AllObservers(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace)
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace)
     {
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         return namespaceStorage.Observers.ObserveAll();
