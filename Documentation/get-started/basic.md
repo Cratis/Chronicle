@@ -11,8 +11,7 @@ the [concepts section](../concepts).
 To work with Cratis you'll need the following installed:
 
 - [Docker](https://docs.docker.com/engine/install/)
-- [.NET 6.0 or better](https://dotnet.microsoft.com/en-us/download)
-
+- [.NET 8.0 or better](https://dotnet.microsoft.com/en-us/download)
 
 Also recommend database tools to be able to see what is happening in the database:
 
@@ -32,9 +31,8 @@ following in a shell.
 ```shell
 docker run -d \
     -p 27017:27017 \
-    -p 8080:80 \
-    -p 8081:81 \
-    --add-host="host.docker.internal:host-gateway" \
+    -p 35000:35000 \
+    -p 8080:8080 \
     cratis/chronicle:latest-development
 ```
 
@@ -69,16 +67,16 @@ dotnet new web
 You need to add the Cratis package, do so by running the following in the shell:
 
 ```shell
-dotnet add package Cratis.AspNetCore
+dotnet add package Cratis.Chronicle.AspNetCore
 ```
 
 Open up the `Program.cs` file that was generated and change it to the following:
 
-```c#
+```csharp
 var builder = WebApplication.CreateBuilder(args);
-builder.UseCratis();    // Adds the necessary Cratis configuration
+builder.AddCratisChronicle(options => options.EventStore = "MyFirstEventStore");
 var app = builder.Build();
-app.UseCratis();        // Makes sure to get Cratis client started
+app.UseCratisChronicle();
 app.Run();
 ````
 
@@ -97,42 +95,14 @@ You should be seeing something like the following:
 
 ```shell
 Building...
-info: Cratis.ClientBuilder[0]
-      Configuring Cratis client
-info: Cratis.ClientBuilder[1]
-      Configuring services
-info: Cratis.ClientBuilder[2]
-      Configuring compliance
-info: Cratis.ClientBuilder[3]
-      Using single kernel client @ 'http://localhost:8080/'
 info: Microsoft.Hosting.Lifetime[14]
-      Now listening on: http://localhost:5288
+      Now listening on: http://localhost:5000
 info: Microsoft.Hosting.Lifetime[0]
       Application started. Press Ctrl+C to shut down.
 info: Microsoft.Hosting.Lifetime[0]
       Hosting environment: Development
 info: Microsoft.Hosting.Lifetime[0]
-      Content root path: /Users/einari/Projects/Playground/CratisTutorial
-info: Cratis.Connections.RestKernelConnection[14]
-      Attempting to connect
-info: Cratis.EventSequences.Outbox.OutboxProjectionsRegistrar[1]
-      Registering outbox projections
-info: Cratis.Observation.ObserversRegistrar[0]
-      Registering observers
-info: Cratis.Reducers.ReducersRegistrar[0]
-      Registering reducers
-info: Cratis.Projections.ProjectionsRegistrar[1]
-      Registering projections
-info: Cratis.Schemas.SchemasConnectionLifecycleParticipant[1]
-      Registering event types
-info: Cratis.Connections.RestKernelConnection[11]
-      Connected to Cratis Kernel
-info: Cratis.Connections.RestKernelConnection[12]
-      Setting up client ping
 ```
-
-Make sure it says `Connected to Cratis Kernel` in the one of log lines.
-You can stop the client at this stage (Ctrl+C - break).
 
 ## Create your first event
 
@@ -148,11 +118,10 @@ Lets add an event type called `ItemAddedToCart` by adding a file called `ItemAdd
 Add the following to it:
 
 ```csharp
-using Cratis.Events;
+using Cratis.ChronicleEvents;
 
 namespace ECommerce;
 
-[EventType("1e9bbdfb-444f-4b48-9087-8b1b8a1de996")]
 public record ItemAddedToCart(string ItemId, int Quantity);
 ```
 
@@ -203,7 +172,6 @@ using Cratis.Reducers;
 
 namespace ECommerce;
 
-[Reducer("2040382a-62ef-4aa1-9d83-7f65aa57e611")]
 public class CartReducer : IReducerFor<Cart>
 {
     public Task<Cart> ItemAdded(ItemAddedToCart @event, Cart? initial, EventContext context)
@@ -284,12 +252,13 @@ using Cratis.EventSequences;
 using ECommerce;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.UseCratis();
+builder.AddCratisChronicle(options => options.EventStore = "MyFirstEventStore");
+var app = builder.Build();
 
 builder.Services.AddTransient<CartReducer>();
 
 var app = builder.Build();
-app.UseCratis();
+app.UseCratisChronicle();
 
 app.MapPost("/api/cart", async () =>
 {
@@ -308,7 +277,7 @@ This can be done using things like [curl](https://curl.se).
 Run the following from your shell (remember to put in the correct port shown in the log output):
 
 ```shell
-curl -iX POST http://localhost:5288/api/cart
+curl -iX POST http://localhost:5000/api/cart
 ```
 
 You should then see the following:
@@ -336,7 +305,6 @@ To view the actual data that was produced, you can do so by opening your tool of
 see an instance of a `Cart` with one `CartItem` on it. The `carts` collection will be in the
 `cratis-shared` database.
 
-
 ![](./mongodb-read-model.png)
 
 Congratulations 🎉 you have produced your first end to end **event** to **read model** flow.
@@ -344,8 +312,6 @@ Congratulations 🎉 you have produced your first end to end **event** to **read
 ## Whats next
 
 This is a fairly simple sample, we recommend reading more in our [recipes](../recipes/).
-
-For more complex configuration options, head over [here](../configuration/).
 
 If you want to use something like Docker Compose to run things, you can find a recipe for
 that [here](../recipes/docker-compose.md).
