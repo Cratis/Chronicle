@@ -11,6 +11,11 @@ namespace Cratis.Chronicle;
 public interface IChronicleClient
 {
     /// <summary>
+    /// Gets the <see cref="ChronicleOptions"/> for the client.
+    /// </summary>
+    ChronicleOptions Options { get; }
+
+    /// <summary>
     /// Gets the <see cref="ICausationManager"/> for the client.
     /// </summary>
     ICausationManager CausationManager { get; }

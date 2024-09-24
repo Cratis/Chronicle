@@ -27,4 +27,19 @@ public class ChronicleAspNetCoreOptions
     /// </summary>
     [Required]
     public string NamespaceHttpHeader { get; set; } = "x-cratis-tenant-id";
+
+    /// <summary>
+    /// Gets or sets the software version.
+    /// </summary>
+    public string SoftwareVersion { get; set; } = "0.0.0";
+
+    /// <summary>
+    /// Gets or sets the software commit.
+    /// </summary>
+    public string SoftwareCommit { get; set; } = "[N/A]";
+
+    /// <summary>
+    /// Gets or sets the program identifier.
+    /// </summary>
+    public string ProgramIdentifier { get; set; } = "[N/A]";
 }
