@@ -39,15 +39,15 @@ If you want to set it up locally for your repository, you can drop inn a `NuGet.
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
     <packageSources>
-        <add key="CratisPreReleases" value="https://nuget.pkg.github.com/cratis/index.json" />
+        <add key="ChroniclePreReleases" value="https://nuget.pkg.github.com/cratis/index.json" />
     </packageSources>
 
 
     <packageSourceCredentials>
-        <CratisPreReleases>
+        <ChroniclePreReleases>
             <add key="Username" value="USERNAME" />
             <add key="cleartextpassword" value="TOKEN" />
-        </CratisPreReleases>
+        </ChroniclePreReleases>
     </packageSourceCredentials>
 </configuration>
 ```
@@ -56,11 +56,7 @@ Then all you need to do is use the correct version number for the package refere
 For instance in your `.csproj` file(s):
 
 ```xml
-<PackageReference Include="Cratis" Version="6.11.6-pr537.adedc72"/>
+<PackageReference Include="Cratis.Chronicle" Version="6.11.6-pr537.adedc72"/>
 ```
 
 > For more details, read the [GitHub documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry#authenticating-to-github-packages).
-
-## NPM
-
-> Note: For the time being we're not producing pre-release NPM packages.
