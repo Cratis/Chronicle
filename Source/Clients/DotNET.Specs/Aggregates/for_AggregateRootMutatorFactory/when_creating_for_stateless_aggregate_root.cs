@@ -14,6 +14,8 @@ public class when_creating_for_stateless_aggregate_root : given.an_aggregate_roo
 
     void Establish() => _context = new AggregateRootContext(
         EventSourceId.New(),
+        EventStreamType.All,
+        EventStreamId.Default,
         Substitute.For<IEventSequence>(),
         new StatelessAggregateRoot(),
         Substitute.For<IUnitOfWork>(),

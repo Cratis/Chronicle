@@ -22,6 +22,8 @@ public class an_aggregate_root_that_handles_two_event_types : a_reducer_aggregat
         _unitOfWork = Substitute.For<IUnitOfWork>();
         _aggregateRootContext = new AggregateRootContext(
             _eventSourceId,
+            _aggregateRoot.GetEventStreamType(),
+            EventStreamId.Default,
             _eventSequence,
             _aggregateRoot,
             _unitOfWork,

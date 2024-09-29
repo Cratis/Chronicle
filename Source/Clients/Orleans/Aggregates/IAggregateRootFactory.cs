@@ -14,12 +14,13 @@ public interface IAggregateRootFactory
     /// Get an instance of an <see cref="IAggregateRoot"/> for a specific <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="id"><see cref="EventSourceId"/> to get.</param>
+    /// <param name="streamId">Optional <see cref="EventStreamId"/> to get. Will default to <see cref="EventStreamId.Default"/>.</param>
     /// <typeparam name="TAggregateRoot">Type of <see cref="IAggregateRoot"/> to get.</typeparam>
     /// <returns>The aggregate root instance.</returns>
     /// <remarks>
     /// If the aggregate has event handler methods, the events for the specified <see cref="EventSourceId"/>
     /// will be retrieved and the event handler methods will be invoked.
     /// </remarks>
-    Task<TAggregateRoot> Get<TAggregateRoot>(EventSourceId id)
+    Task<TAggregateRoot> Get<TAggregateRoot>(EventSourceId id, EventStreamId? streamId = default)
         where TAggregateRoot : IAggregateRoot;
 }

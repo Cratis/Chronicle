@@ -18,6 +18,8 @@ public class when_creating_for_stateful_aggregate_root : given.an_aggregate_root
         _aggregateRoot = new StatefulAggregateRoot();
         _context = new AggregateRootContext(
             EventSourceId.New(),
+            EventStreamType.All,
+            EventStreamId.Default,
             Substitute.For<IEventSequence>(),
             _aggregateRoot,
             Substitute.For<IUnitOfWork>(),

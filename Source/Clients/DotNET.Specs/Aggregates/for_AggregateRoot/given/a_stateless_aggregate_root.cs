@@ -18,7 +18,14 @@ public class a_stateless_aggregate_root : all_dependencies
         _aggregateRoot = new();
         _eventSourceId = Guid.NewGuid().ToString();
         _unitOfWork = Substitute.For<IUnitOfWork>();
-        _aggregateRootContext = new AggregateRootContext(_eventSourceId, _eventSequence, _aggregateRoot, _unitOfWork, EventSequenceNumber.First);
+        _aggregateRootContext = new AggregateRootContext(
+            _eventSourceId,
+            _aggregateRoot.GetEventStreamType(),
+            EventStreamId.Default,
+            _eventSequence,
+            _aggregateRoot,
+            _unitOfWork,
+            EventSequenceNumber.First);
 
         _aggregateRoot._context = _aggregateRootContext;
         _aggregateRoot._mutation = _mutation;

@@ -17,7 +17,7 @@ public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer
     {
         @event = new();
         current = new();
-        event_context = new(Guid.Empty, 0, DateTimeOffset.UtcNow, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System);
+        event_context = EventContext.Empty;
     }
 
     async Task Because() => result = await invoker.Invoke([new(@event, event_context)], current);
