@@ -28,16 +28,16 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
     public EventSequenceId Id => EventSequenceId.Log;
 
     /// <inheritdoc/>
-    public Task<AppendResult> Append(EventSourceId eventSourceId, object @event) => Task.FromResult(AppendResult.Success(CorrelationId.New(), EventSequenceNumber.Unavailable));
+    public Task<AppendResult> Append(EventSourceId eventSourceId, object @event, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default) => Task.FromResult(AppendResult.Success(CorrelationId.New(), EventSequenceNumber.Unavailable));
 
     /// <inheritdoc/>
-    public Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<object> events) => Task.FromResult(AppendManyResult.Success(CorrelationId.New(), []));
+    public Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<object> events, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default) => Task.FromResult(AppendManyResult.Success(CorrelationId.New(), []));
 
     /// <inheritdoc/>
     public Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events) => Task.FromResult(AppendManyResult.Success(CorrelationId.New(), []));
 
     /// <inheritdoc/>
-    public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes) => Task.FromResult<IImmutableList<AppendedEvent>>(_events.ToImmutableList());
+    public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default) => Task.FromResult<IImmutableList<AppendedEvent>>(_events.ToImmutableList());
 
     /// <inheritdoc/>
     public Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(

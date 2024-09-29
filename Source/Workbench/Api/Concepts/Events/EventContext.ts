@@ -15,6 +15,12 @@ export class EventContext {
     @field(String)
     eventSourceId!: string;
 
+    @field(String)
+    eventStreamType!: string;
+
+    @field(String)
+    eventStreamId!: string;
+
     @field(Number)
     sequenceNumber!: number;
 

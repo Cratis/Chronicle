@@ -19,6 +19,8 @@ public static class EventContextConverters
     public static Contracts.Events.EventContext ToContract(this EventContext context) => new()
     {
         EventSourceId = context.EventSourceId,
+        EventStreamType = context.EventStreamType,
+        EventStreamId = context.EventStreamId,
         SequenceNumber = context.SequenceNumber,
         Occurred = context.Occurred!,
         EventStore = context.EventStore,
@@ -36,6 +38,8 @@ public static class EventContextConverters
     /// <returns>Converted <see cref="EventContext"/>.</returns>
     public static EventContext ToClient(this Contracts.Events.EventContext context) => new(
         context.EventSourceId,
+        context.EventStreamType,
+        context.EventStreamId,
         context.SequenceNumber,
         context.Occurred,
         context.EventStore,

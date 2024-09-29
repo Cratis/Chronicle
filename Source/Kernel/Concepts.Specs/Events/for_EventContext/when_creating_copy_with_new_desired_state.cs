@@ -13,6 +13,8 @@ public class when_creating_copy_with_new_desired_state : Specification
 
     void Establish() => original = new(
         Guid.NewGuid().ToString(),
+        Guid.NewGuid().ToString(),
+        Guid.NewGuid().ToString(),
         42,
         DateTimeOffset.UtcNow,
         Guid.NewGuid().ToString(),
@@ -25,6 +27,8 @@ public class when_creating_copy_with_new_desired_state : Specification
 
     [Fact] void should_be_a_new_object() => copy.ShouldNotBeSame(original);
     [Fact] void should_have_same_event_source_id() => copy.EventSourceId.ShouldEqual(original.EventSourceId);
+    [Fact] void should_have_same_event_stream_type() => copy.EventStreamType.ShouldEqual(original.EventStreamType);
+    [Fact] void should_have_same_event_stream_id() => copy.EventStreamId.ShouldEqual(original.EventStreamId);
     [Fact] void should_have_same_event_sequence_number() => copy.SequenceNumber.ShouldEqual(original.SequenceNumber);
     [Fact] void should_have_same_occurred() => copy.Occurred.ShouldEqual(original.Occurred);
     [Fact] void should_have_same_event_store() => copy.EventStore.ShouldEqual(original.EventStore);

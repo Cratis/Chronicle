@@ -140,6 +140,8 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<AppendResult> Append(
         EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
         EventType eventType,
         JsonObject content,
         CorrelationId correlationId,
@@ -184,6 +186,8 @@ public class EventSequence(
                     var appendedEvent = await EventSequenceStorage.Append(
                         State.SequenceNumber,
                         eventSourceId,
+                        eventStreamType,
+                        eventStreamId,
                         eventType,
                         correlationId,
                         causation,
@@ -260,6 +264,8 @@ public class EventSequence(
         {
             results.Add(await Append(
                 @event.EventSourceId,
+                @event.eventStreamType,
+                @event.eventStreamId,
                 @event.EventType,
                 @event.Content,
                 correlationId,
