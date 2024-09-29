@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Concepts;
+using Cratis.Concepts;
+
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Represents a key helper for combining and parsing keys.
