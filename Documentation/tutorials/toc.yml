@@ -1,8 +1,0 @@
-- name: Introduction
-  href: index.md
-- name: Immediate projections
-  href: immediate-projections/index.md
-- name: Outbox
-  href: outbox/index.md
-- name: Inbox
-  href: inbox/index.md

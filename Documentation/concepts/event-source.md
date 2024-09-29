@@ -11,4 +11,4 @@ by this unique identifier, this is what we call an **event source id**.
 
 It can be compared to the **primary key** often used in database modelling.
 
-When events are appended in Cratis, you'll see that the first argument is the `EventSourceId`.
+When events are appended in Chronicle, you'll see that the first argument is the `EventSourceId`.

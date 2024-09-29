@@ -28,7 +28,10 @@ public static class ChronicleClientServiceCollectionExtensions
             var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
             var chronicleOptions = new ChronicleOptions(options.Url)
             {
-                ServiceProvider = sp
+                ServiceProvider = sp,
+                SoftwareVersion = options.SoftwareVersion,
+                SoftwareCommit = options.SoftwareCommit,
+                ProgramIdentifier = options.ProgramIdentifier
             };
             return new ChronicleClient(chronicleOptions);
         });
@@ -53,11 +56,15 @@ public static class ChronicleClientServiceCollectionExtensions
             return _eventStores[namespaceName] = eventStore;
         });
 
-        services.AddScoped(sp =>
-        {
-            var eventStore = sp.GetRequiredService<IEventStore>();
-            return eventStore.EventLog;
-        });
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Constraints);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().EventLog);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().EventTypes);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reactors);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reducers);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
+        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ArtifactsProvider);
+        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ModelNameConvention);
+        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.CorrelationIdAccessor);
 
         return services;
     }

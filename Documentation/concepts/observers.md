@@ -29,3 +29,11 @@ you can react to it and perform an action. This could be any type of action, e.g
 like sending emails or calling an API. You could also append new events in an observer and make
 your observer become a pattern matcher or a state machine that responds to certain conditions and
 then generate more specific events for that condition.
+
+## Reducers
+
+While projections is a declarative approach and has some limitations, a reducer can help give you more
+capabilities. With a reducer, Chronicle manages the actual storage. Chronicle will call you on every
+event you are interested in for your reducer and you will get the existing state of the read model, if any,
+and you can then provide a new representation of state as a consequence of the event. The result will then
+be stored.

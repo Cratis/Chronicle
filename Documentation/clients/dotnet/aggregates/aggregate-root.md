@@ -5,5 +5,5 @@ Its role is to govern the interaction of domain objects that should be treated a
 With event sourcing, an aggregate root typically is responsible for applying events as it sees fit according
 to its domain logic and rules.
 
-Said in another way, Aggregate Root objects is responsible for managing the domain transaction.
-
+Said in another way, Aggregate Root objects are responsible for managing the domain transaction and governs the
+integrity of the state changes that goes together.

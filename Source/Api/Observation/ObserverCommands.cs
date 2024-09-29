@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation;
@@ -23,9 +24,9 @@ public class ObserverCommands(IGrainFactory grainFactory) : ControllerBase
     /// <returns>Awaitable task.</returns>
     [HttpPost("{namespace}/replay/{observerId}")]
     public async Task Replay(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace,
-        [FromRoute] string observerId)
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
+        [FromRoute] ObserverId observerId)
     {
         await grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, EventSequenceId.Log)).Replay();
     }
@@ -40,9 +41,9 @@ public class ObserverCommands(IGrainFactory grainFactory) : ControllerBase
     /// <returns>Awaitable task.</returns>
     [HttpPost("{namespace}/failed-partitions/{observerId}/try-recover-failed-partition/{partition}")]
     public async Task TryRecoverFailedPartition(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace,
-        [FromRoute] string observerId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
+        [FromRoute] ObserverId observerId,
         [FromRoute] string partition)
     {
         await grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, EventSequenceId.Log)).TryRecoverFailedPartition(partition);
@@ -58,9 +59,9 @@ public class ObserverCommands(IGrainFactory grainFactory) : ControllerBase
     /// <returns>Awaitable task.</returns>
     [HttpPost("{namespace}/replay/{observerId}/{partition}")]
     public async Task ReplayPartition(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace,
-        [FromRoute] string observerId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
+        [FromRoute] ObserverId observerId,
         [FromRoute] string partition)
     {
         await grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, EventSequenceId.Log)).ReplayPartition(partition);

@@ -26,10 +26,12 @@ public class RetryPartitionRequest
     /// <summary>
     /// Gets or sets the observer identifier.
     /// </summary>
+    [ProtoMember(3)]
     public Guid ObserverId { get; set; }
 
     /// <summary>
     /// Gets or sets the partition to rewind.
     /// </summary>
+    [ProtoMember(4)]
     public string Partition { get; set; }
 }

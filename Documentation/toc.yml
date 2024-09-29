@@ -1,21 +1,11 @@
-- name: Introduction
-  href: intro.md
 - name: Getting started
   href: get-started/toc.yml
 - name: Concepts
   href: concepts/toc.yml
 - name: Recipes
   href: recipes/toc.yml
-- name: Tutorials
-  href: tutorials/toc.yml
-- name: Configuration
-  href: configuration/toc.yml
-- name: Kernel
-  href: kernel/toc.yml
 - name: Clients
   href: clients/toc.yml
-- name: Writing automated specs / tests
-  href: specifications/toc.yml
 - name: Contributing
   href: contributing/toc.yml
 - name: Consuming pre releases

@@ -17,21 +17,23 @@ public static class ApiApplicationBuilderExtensions
     /// </summary>
     /// <param name="app"><see cref="IApplicationBuilder"/> to configure.</param>
     /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
-    public static IApplicationBuilder UseCratisChronicleApi(this IApplicationBuilder app)
+    public static WebApplication UseCratisChronicleApi(this WebApplication app)
     {
         if (RuntimeEnvironment.IsDevelopment)
         {
             app.UseDeveloperExceptionPage();
         }
 
+        app.UseCratisApplicationModel();
         app.UseRouting();
         app.UseWebSockets();
-        app.UseCratisApplicationModel();
         app.UseDefaultFiles();
         app.UseStaticFiles();
-        app.UseEndpoints(endpoints => endpoints.MapControllers());
+        app.MapControllers();
         app.UseSwagger();
         app.UseSwaggerUI(options => options.InjectStylesheet("/swagger-ui/SwaggerDark.css"));
+        app.MapFallbackToFile("/index.html");
+
         return app;
     }
 }
