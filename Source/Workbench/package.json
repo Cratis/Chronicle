@@ -9,7 +9,7 @@
         "lint": "eslint . --cache --quiet --fix --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
         "lint:ci": "eslint . --cache --quiet --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
         "test": "mocha --no-cache --config ./.mocharc.cjs",
-        "ci": "cd $INIT_CWD && yarn clean && yarn lint:ci && tsc -b && yarn test",
+        "ci": "cd $INIT_CWD && yarn lint:ci && tsc -b && yarn test",
         "up": "cd $INIT_CWD && ncu -u \\!'@aksio/*'",
         "preview": "vite preview"
     },
