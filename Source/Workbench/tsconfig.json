@@ -61,10 +61,10 @@
         "Utils",
         "App.tsx",
         "index.tsx",
-        "Features"
-, "given.ts"    ],
-    "exclude": [
+        "Features",
+        "given.ts"
     ],
+    "exclude": [],
     "references": [
         {
             "path": "./tsconfig.node.json"
