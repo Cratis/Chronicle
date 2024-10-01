@@ -118,10 +118,11 @@ Lets add an event type called `ItemAddedToCart` by adding a file called `ItemAdd
 Add the following to it:
 
 ```csharp
-using Cratis.ChronicleEvents;
+using Cratis.Chronicle.Events;
 
 namespace ECommerce;
 
+[EventType]
 public record ItemAddedToCart(string ItemId, int Quantity);
 ```
 

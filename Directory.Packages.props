@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <ApplicationModel>13.10.2</ApplicationModel>
-    <Fundamentals>5.5.0</Fundamentals>
+    <Fundamentals>5.5.1</Fundamentals>
     <Fundamentals>5.5.1</Fundamentals>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
@@ -32,7 +32,7 @@
     <PackageVersion Include="Mono.Cecil" Version="0.11.5" />
     <PackageVersion Include="NJsonSchema" Version="11.0.2" />
     <PackageVersion Include="OpenTelemetry" Version="1.9.0" />
-    <PackageVersion Include="Polly.Core" Version="8.4.1" />
+    <PackageVersion Include="Polly.Core" Version="8.4.2" />
     <PackageVersion Include="protobuf-net.BuildTools" Version="3.2.33">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -41,7 +41,7 @@
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.1.1" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.66.0" />
     <PackageVersion Include="mongodb.driver" Version="2.25.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.7.3" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.8.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="8.0.2" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.8.6" />
     <PackageVersion Include="System.Net.NameResolution" Version="4.3.0" />
@@ -81,13 +81,13 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" Version="4.11.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
-    <PackageVersion Include="Roslynator.Analyzers" Version="4.12.5" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.163" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="4.12.6" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.168" />
     <!-- Testing & Specifications -->
     <PackageVersion Include="Cratis.Specifications" Version="3.0.4" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.4" />
     <PackageVersion Include="Testcontainers" Version="3.10.0" />
-    <PackageVersion Include="xunit" Version="2.9.0" />
+    <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="moq" Version="4.20.72" />
     <PackageVersion Include="NSubstitute" Version="5.1.0" />
