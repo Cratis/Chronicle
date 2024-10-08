@@ -1,10 +1,10 @@
 - name: .NET Client
-  href: clients/dotnet/toc.yml
+  href: chronicle/clients/dotnet/toc.yml
 - name: ASP.NET Client
-  href: clients/aspnetcore/toc.yml
+  href: chronicle/clients/aspnetcore/toc.yml
 - name: XUnit
-  href: clients/xunit/toc.yml
+  href: chronicle/clients/xunit/toc.yml
 - name: Orleans InProcess
-  href: clients/orleans.inprocess/toc.yml
+  href: chronicle/clients/orleans.inprocess/toc.yml
 - name: Orleans XUnit
-  href: clients/orleans.xunit/toc.yml
+  href: chronicle/clients/orleans.xunit/toc.yml
