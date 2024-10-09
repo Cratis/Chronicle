@@ -49,6 +49,8 @@ public class EventConverter(
             new(@event.SequenceNumber, eventType),
             new(
                 @event.EventSourceId,
+                @event.EventStreamType,
+                @event.EventStreamId,
                 @event.SequenceNumber,
                 @event.Occurred,
                 eventStoreName,

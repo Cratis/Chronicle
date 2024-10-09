@@ -20,6 +20,16 @@ public interface IAggregateRootContext
     EventSourceId EventSourceId { get; }
 
     /// <summary>
+    /// Gets the <see cref="EventStreamType"/> for the context.
+    /// </summary>
+    EventStreamType EventStreamType { get; }
+
+    /// <summary>
+    /// Gets the <see cref="EventStreamId"/> for the context.
+    /// </summary>
+    EventStreamId EventStreamId { get; }
+
+    /// <summary>
     /// Gets the <see cref="EventSequenceId"/> for the context.
     /// </summary>
     IEventSequence EventSequence { get; }

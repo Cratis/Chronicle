@@ -25,7 +25,7 @@ public class AggregateRootFactory(
     IServiceProvider serviceProvider) : IAggregateRootFactory
 {
     /// <inheritdoc/>
-    public async Task<TAggregateRoot> Get<TAggregateRoot>(EventSourceId id)
+    public async Task<TAggregateRoot> Get<TAggregateRoot>(EventSourceId id, EventStreamId? streamId = default)
         where TAggregateRoot : IAggregateRoot
     {
         // TODO: Create Issue: Must dispose of unit of work in some way or else it's a memory leak.
@@ -33,8 +33,10 @@ public class AggregateRootFactory(
 
         var aggregateRoot = ActivatorUtilities.CreateInstance<TAggregateRoot>(serviceProvider);
         var eventSequence = eventStore.GetEventSequence(EventSequenceId.Log);
+        var eventStreamType = aggregateRoot.GetEventStreamType();
+        streamId ??= EventStreamId.Default;
 
-        var context = new AggregateRootContext(id, eventSequence, aggregateRoot, unitOfWork, EventSequenceNumber.First);
+        var context = new AggregateRootContext(id, eventStreamType, streamId, eventSequence, aggregateRoot, unitOfWork, EventSequenceNumber.First);
         var mutator = await mutatorFactory.Create<TAggregateRoot>(context);
 
         await mutator.Rehydrate();

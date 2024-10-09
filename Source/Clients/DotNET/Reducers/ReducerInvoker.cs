@@ -34,7 +34,7 @@ public class ReducerInvoker : IReducerInvoker
         _serviceProvider = serviceProvider;
         _targetType = targetType;
         ReadModelType = readModelType;
-        _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+        _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                                         .Where(_ => _.IsReducerMethod(readModelType, eventTypes.AllClrTypes))
                                         .SelectMany(_ => _.GetParameters()[0].ParameterType.GetEventTypes(eventTypes.AllClrTypes).Select(eventType => (eventType, method: _)))
                                         .ToDictionary(_ => _.eventType, _ => _.method);

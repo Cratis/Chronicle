@@ -71,7 +71,7 @@ public class HandleEventsForPartition(
         using var events = await eventSequenceStorage.GetFromSequenceNumber(
             request.StartEventSequenceNumber,
             eventSourceId,
-            request.EventTypes);
+            eventTypes: request.EventTypes);
 
         var subscriberContext = new ObserverSubscriberContext(request.ObserverSubscription.Arguments);
 

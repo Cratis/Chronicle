@@ -18,6 +18,10 @@ public class an_aggregate_root_that_handles_two_event_types_and_two_appended_eve
             AppendedEvent.EmptyWithEventType(FirstEventType.EventTypeId),
             AppendedEvent.EmptyWithEventType(SecondEventType.EventTypeId)
         }.ToImmutableList();
-        _eventSequence.GetForEventSourceIdAndEventTypes(_eventSourceId, _eventTypes).Returns(events);
+        _eventSequence.GetForEventSourceIdAndEventTypes(
+            _eventSourceId,
+            _eventTypes,
+            _aggregateRootContext.EventStreamType,
+            _aggregateRootContext.EventStreamId).Returns(events);
     }
 }
