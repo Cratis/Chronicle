@@ -56,7 +56,8 @@ public class ReactorInvoker : IReactorInvoker
     {
         try
         {
-            var actualReactor = _serviceProvider.GetRequiredService(_targetType);
+            await using var serviceScope = _serviceProvider.CreateAsyncScope();
+            var actualReactor = serviceScope.ServiceProvider.GetRequiredService(_targetType);
             var eventType = content.GetType();
 
             if (_methodsByEventType.TryGetValue(eventType, out var method))
