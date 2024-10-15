@@ -14,7 +14,7 @@ public class when_providing_with_events_in_sequence : given.an_aggregate_root_th
     void Establish()
     {
         _state = new(Guid.NewGuid().ToString());
-        _reducer.OnNext(events, null).Returns(new ReduceResult(_state, 2, [], string.Empty));
+        _reducer.OnNext(events, null, _serviceProvider).Returns(new ReduceResult(_state, 2, [], string.Empty));
     }
 
     async Task Because() => _result = await _provider.Provide();

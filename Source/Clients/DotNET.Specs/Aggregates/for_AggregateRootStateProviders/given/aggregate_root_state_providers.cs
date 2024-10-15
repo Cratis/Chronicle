@@ -15,15 +15,17 @@ public class aggregate_root_state_providers : Specification
 
     protected IAggregateRootContext _aggregateRootContext;
     protected EventSourceId _eventSourceId;
+    protected IServiceProvider _serviceProvider;
 
     void Establish()
     {
         _reducers = Substitute.For<IReducers>();
         _projections = Substitute.For<IProjections>();
-
+        _serviceProvider = Substitute.For<IServiceProvider>();
         _stateProviders = new(
             _reducers,
-            _projections);
+            _projections,
+            _serviceProvider);
 
         _aggregateRootContext = Substitute.For<IAggregateRootContext>();
         _eventSourceId = Guid.NewGuid();
