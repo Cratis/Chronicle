@@ -22,7 +22,7 @@ public class AggregateRootEventHandlers : IAggregateRootEventHandlers
     /// <param name="aggregateRootType">Type of <see cref="IAggregateRoot"/>.</param>
     public AggregateRootEventHandlers(IEventTypes eventTypes, Type aggregateRootType)
     {
-        _methodsByEventType = aggregateRootType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+        _methodsByEventType = aggregateRootType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                                         .Where(_ => _.IsEventHandlerMethod(eventTypes.AllClrTypes))
                                         .SelectMany(_ => _.GetParameters()[0].ParameterType.GetEventTypes(eventTypes.AllClrTypes).Select(eventType => (eventType, method: _)))
                                         .ToDictionary(_ => _.eventType, _ => _.method);

@@ -31,8 +31,20 @@ public class GetForEventSourceIdAndEventTypesRequest : IEventSequenceRequest
     public string EventSourceId { get; set; }
 
     /// <summary>
+    /// Gets or sets the event stream type.
+    /// </summary>
+    [ProtoMember(5)]
+    public string EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event stream type.
+    /// </summary>
+    [ProtoMember(6)]
+    public string EventStreamId { get; set; }
+
+    /// <summary>
     /// Gets or sets the event types to get.
     /// </summary>
-    [ProtoMember(5, IsRequired = true)]
+    [ProtoMember(7, IsRequired = true)]
     public IList<EventType> EventTypes { get; set; } = [];
 }

@@ -32,6 +32,8 @@ public static class AggregateRootTestFactory
 
         var aggregateRootContext = new AggregateRootContext(
             eventSourceId,
+            aggregateRoot.GetEventStreamType(),
+            EventStreamId.Default,
             eventSequence,
             aggregateRoot,
             unitOfWork,
@@ -63,6 +65,8 @@ public static class AggregateRootTestFactory
 
         var aggregateRootContext = new AggregateRootContext(
             eventSourceId,
+            aggregateRoot.GetEventStreamType(),
+            EventStreamId.Default,
             eventSequence,
             aggregateRoot,
             unitOfWork,

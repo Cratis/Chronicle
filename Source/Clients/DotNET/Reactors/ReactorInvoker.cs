@@ -40,7 +40,7 @@ public class ReactorInvoker : IReactorInvoker
         _middlewares = middlewares;
         _targetType = targetType;
         _logger = logger;
-        _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+        _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                                         .Where(_ => _.IsEventHandlerMethod(eventTypes.AllClrTypes))
                                         .SelectMany(_ => _.GetParameters()[0].ParameterType.GetEventTypes(eventTypes.AllClrTypes).Select(eventType => (eventType, method: _)))
                                         .ToDictionary(_ => _.eventType, _ => _.method);

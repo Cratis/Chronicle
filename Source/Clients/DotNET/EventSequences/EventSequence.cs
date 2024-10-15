@@ -41,9 +41,15 @@ public class EventSequence(
     public EventSequenceId Id => eventSequenceId;
 
     /// <inheritdoc/>
-    public async Task<AppendResult> Append(EventSourceId eventSourceId, object @event)
+    public async Task<AppendResult> Append(
+        EventSourceId eventSourceId,
+        object @event,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default)
     {
         var eventClrType = @event.GetType();
+        eventStreamType ??= EventStreamType.All;
+        eventStreamId ??= EventStreamId.Default;
 
         ThrowIfUnknownEventType(eventTypes, eventClrType);
 
@@ -57,6 +63,8 @@ public class EventSequence(
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             EventSourceId = eventSourceId,
+            EventStreamType = eventStreamType,
+            EventStreamId = eventStreamId,
             CorrelationId = correlationIdAccessor.Current,
             EventType = new()
             {
@@ -72,7 +80,11 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public async Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<object> events)
+    public async Task<AppendManyResult> AppendMany(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default)
     {
         var eventsToAppend = events.Select(@event =>
         {
@@ -80,6 +92,8 @@ public class EventSequence(
             return new Contracts.Events.EventToAppend
             {
                 EventSourceId = eventSourceId,
+                EventStreamType = eventStreamType ?? EventStreamType.All,
+                EventStreamId = eventStreamId ?? EventStreamId.Default,
                 EventType = eventType.ToContract(),
                 Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString()
             };
@@ -97,6 +111,8 @@ public class EventSequence(
             return new Contracts.Events.EventToAppend
             {
                 EventSourceId = @event.EventSourceId,
+                EventStreamType = @event.EventStreamType,
+                EventStreamId = @event.EventStreamId,
                 EventType = eventType.ToContract(),
                 Content = eventSerializer.Serialize(@event.Event).GetAwaiter().GetResult().ToString()
             };
@@ -139,11 +155,17 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes)
+    public async Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(
+        EventSourceId eventSourceId,
+        IEnumerable<EventType> eventTypes,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default)
     {
         var result = await connection.Services.EventSequences.GetForEventSourceIdAndEventTypes(new()
         {
             EventStoreName = eventStoreName,
+            EventStreamType = eventStreamType ?? EventStreamType.All,
+            EventStreamId = eventStreamId ?? EventStreamId.Default,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             EventSourceId = eventSourceId,
