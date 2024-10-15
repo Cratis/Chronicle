@@ -32,7 +32,7 @@ public interface IReducerHandler
     Type ReadModelType { get; }
 
     /// <summary>
-    /// Gets whether or not the reducer should be actively running on the Kernel.
+    /// Gets whether the reducer should be actively running on the Kernel.
     /// </summary>
     bool IsActive { get; }
 
@@ -46,6 +46,7 @@ public interface IReducerHandler
     /// </summary>
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to handle.</param>
     /// <param name="initial">Initial read model value.</param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for creating the actual instance of the reducer.</param>
     /// <returns>Reduced read model.</returns>
-    Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial);
+    Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial, IServiceProvider serviceProvider);
 }

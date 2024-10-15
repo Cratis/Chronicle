@@ -3,13 +3,13 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Reflection;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors;
@@ -76,15 +76,11 @@ public class Reactors : IReactors
         var handlers = _clientArtifactsProvider.Reactors
                             .ToDictionary(
                                 _ => _,
-                                reactorType =>
-                                {
-                                    var reactor = reactorType.GetCustomAttribute<ReactorAttribute>()!;
-                                    return new ReactorHandler(
-                                        reactorType.GetReactorId(),
-                                        reactorType.GetEventSequenceId(),
-                                        new ReactorInvoker(_serviceProvider, _eventStore.EventTypes, _middlewares, reactorType, logger),
-                                        _causationManager);
-                                });
+                                reactorType => new ReactorHandler(
+                                    reactorType.GetReactorId(),
+                                    reactorType.GetEventSequenceId(),
+                                    new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, logger),
+                                    _causationManager));
 
         foreach (var handler in handlers)
         {
@@ -173,7 +169,7 @@ public class Reactors : IReactors
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var state = ObservationState.Success;
-
+        await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
         foreach (var @event in events.Events)
         {
             _logger.EventReceived(@event.Metadata.Type.Id, handler.Id);
@@ -187,7 +183,7 @@ public class Reactors : IReactors
                 var eventType = _eventTypes.GetClrTypeFor(metadata.Type.Id);
                 var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
 
-                await handler.OnNext(metadata, context, content);
+                await handler.OnNext(metadata, context, content, serviceProviderScope.ServiceProvider);
                 lastSuccessfullyObservedEvent = @event.Metadata.SequenceNumber;
             }
             catch (Exception ex)

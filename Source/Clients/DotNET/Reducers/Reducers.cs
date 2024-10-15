@@ -13,6 +13,7 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
 using Cratis.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reducers;
@@ -64,7 +65,6 @@ public class Reducers(
                                         reducerType.GetReducerId(),
                                         eventSequenceId,
                                         new ReducerInvoker(
-                                            serviceProvider,
                                             eventTypes,
                                             reducerType,
                                             readModelType),
@@ -185,9 +185,10 @@ public class Reducers(
 
         try
         {
+            await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
             BaseIdentityProvider.SetCurrentIdentity(Identity.System);
             var initialState = operation.InitialState is null ? null : JsonSerializer.Deserialize(operation.InitialState, handler.ReadModelType, jsonSerializerOptions);
-            var reduceResult = await handler.OnNext(appendedEvents, initialState);
+            var reduceResult = await handler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider);
 
             modelState = JsonSerializer.Serialize(reduceResult.ModelState, jsonSerializerOptions);
             lastSuccessfullyObservedEvent = appendedEvents[^1].Metadata.SequenceNumber;

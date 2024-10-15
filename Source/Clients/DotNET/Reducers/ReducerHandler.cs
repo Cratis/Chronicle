@@ -43,7 +43,7 @@ public class ReducerHandler(
     public IReducerInvoker Invoker => invoker;
 
     /// <inheritdoc/>
-    public async Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial)
+    public async Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial, IServiceProvider serviceProvider)
     {
         var tasks = events.Select(async @event =>
         {
@@ -51,6 +51,6 @@ public class ReducerHandler(
             return new EventAndContext(content, @event.Context);
         });
         var eventAndContexts = await Task.WhenAll(tasks.ToArray()!);
-        return await invoker.Invoke(eventAndContexts, initial);
+        return await invoker.Invoke(serviceProvider, eventAndContexts, initial);
     }
 }

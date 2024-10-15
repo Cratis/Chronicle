@@ -14,8 +14,7 @@ namespace Cratis.Chronicle.Events;
 [Singleton]
 public class EventSerializer : IEventSerializer
 {
-    readonly IClientArtifactsProvider _clientArtifacts;
-    readonly IServiceProvider _serviceProvider;
+    readonly IEnumerable<ICanProvideAdditionalEventInformation> _additionalEventInformationProviders;
     readonly IEventTypes _eventTypes;
     readonly JsonSerializerOptions _serializerOptions;
 
@@ -32,8 +31,6 @@ public class EventSerializer : IEventSerializer
         IEventTypes eventTypes,
         JsonSerializerOptions serializerOptions)
     {
-        _clientArtifacts = clientArtifacts;
-        _serviceProvider = serviceProvider;
         _eventTypes = eventTypes;
         _serializerOptions = new JsonSerializerOptions(serializerOptions)
         {
@@ -42,6 +39,9 @@ public class EventSerializer : IEventSerializer
                 new EventRedactedConverter(eventTypes)
             }
         };
+        _additionalEventInformationProviders = clientArtifacts.AdditionalEventInformationProviders
+            .Select(type => serviceProvider.GetRequiredService(type) as ICanProvideAdditionalEventInformation)
+            .Where(provider => provider != null)!;
     }
 
     /// <inheritdoc/>
@@ -52,9 +52,8 @@ public class EventSerializer : IEventSerializer
     {
         var eventAsJson = (JsonSerializer.SerializeToNode(@event, _serializerOptions) as JsonObject)!;
 
-        foreach (var providerType in _clientArtifacts.AdditionalEventInformationProviders)
+        foreach (var provider in _additionalEventInformationProviders)
         {
-            var provider = (_serviceProvider.GetRequiredService(providerType) as ICanProvideAdditionalEventInformation)!;
             await provider.ProvideFor(eventAsJson);
         }
 

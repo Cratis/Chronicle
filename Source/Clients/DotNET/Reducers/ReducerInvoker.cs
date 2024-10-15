@@ -15,23 +15,19 @@ public class ReducerInvoker : IReducerInvoker
 {
     static readonly MethodInfo _getResultMethod = typeof(ReducerInvoker).GetMethod(nameof(GetResult), BindingFlags.Instance | BindingFlags.NonPublic)!;
     readonly Dictionary<Type, MethodInfo> _methodsByEventType = [];
-    readonly IServiceProvider _serviceProvider;
     readonly Type _targetType;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerInvoker"/> class.
     /// </summary>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances of actual reducer.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
     /// <param name="targetType">Type of reducer.</param>
     /// <param name="readModelType">Type of read model for the reducer.</param>
     public ReducerInvoker(
-        IServiceProvider serviceProvider,
         IEventTypes eventTypes,
         Type targetType,
         Type readModelType)
     {
-        _serviceProvider = serviceProvider;
         _targetType = targetType;
         ReadModelType = readModelType;
         _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -49,9 +45,9 @@ public class ReducerInvoker : IReducerInvoker
     public Type ReadModelType { get; }
 
     /// <inheritdoc/>
-    public Task<ReduceResult> Invoke(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
+    public Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
     {
-        var actualReducer = _serviceProvider.GetRequiredService(_targetType);
+        var actualReducer = serviceProvider.GetRequiredService(_targetType);
 
         EventAndContext? lastSuccessfulObservedEventAndContext = default;
 
