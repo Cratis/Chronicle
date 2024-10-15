@@ -15,6 +15,11 @@ namespace Cratis.Chronicle.Aggregates;
 public interface IAggregateRootContext
 {
     /// <summary>
+    /// Gets the <see cref="EventSource"/> for the context.
+    /// </summary>
+    EventSource EventSource { get; }
+
+    /// <summary>
     /// Gets the <see cref="EventSourceId"/> for the context.
     /// </summary>
     EventSourceId EventSourceId { get; }

@@ -33,6 +33,7 @@ public class EventSequences(
     {
         var eventSequence = GetEventSequenceGrain(request);
         var result = await eventSequence.Append(
+            request.EventSource,
             request.EventSourceId,
             request.EventStreamType,
             request.EventStreamId,

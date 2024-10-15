@@ -139,6 +139,7 @@ public class EventSequence(
 
     /// <inheritdoc/>
     public async Task<AppendResult> Append(
+        EventSource eventSource,
         EventSourceId eventSourceId,
         EventStreamType eventStreamType,
         EventStreamId eventStreamId,
@@ -185,6 +186,7 @@ public class EventSequence(
                     _metrics?.AppendedEvent(eventSourceId, eventName);
                     var appendedEvent = await EventSequenceStorage.Append(
                         State.SequenceNumber,
+                        eventSource,
                         eventSourceId,
                         eventStreamType,
                         eventStreamId,
@@ -263,6 +265,7 @@ public class EventSequence(
         foreach (var @event in events)
         {
             results.Add(await Append(
+                @event.EventSource,
                 @event.EventSourceId,
                 @event.eventStreamType,
                 @event.eventStreamId,

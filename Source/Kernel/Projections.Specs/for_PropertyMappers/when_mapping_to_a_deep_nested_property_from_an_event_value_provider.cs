@@ -22,6 +22,7 @@ public class when_mapping_to_a_deep_nested_property_from_an_event_value_provider
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new(
+                EventSource.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,
                 EventStreamId.Default,

@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Aggregates;
 /// <summary>
 /// Represents an implementation of <see cref="IAggregateRootContext"/>.
 /// </summary>
+/// <param name="eventSource">The <see cref="EventSource"/> for the context.</param>
 /// <param name="eventSourceId">The <see cref="EventSourceId"/> for the context.</param>
 /// <param name="eventStreamType">The <see cref="EventStreamType"/> for the context.</param>
 /// <param name="eventStreamId">The <see cref="EventStreamId"/> for the context.</param>
@@ -18,6 +19,7 @@ namespace Cratis.Chronicle.Aggregates;
 /// <param name="unitOfWork">The <see cref="IUnitOfWork"/> for the context.</param>
 /// <param name="nextSequenceNumber">The next <see cref="EventSequenceNumber"/>.</param>
 public class AggregateRootContext(
+    EventSource eventSource,
     EventSourceId eventSourceId,
     EventStreamType eventStreamType,
     EventStreamId eventStreamId,
@@ -26,6 +28,9 @@ public class AggregateRootContext(
     IUnitOfWork unitOfWork,
     EventSequenceNumber nextSequenceNumber) : IAggregateRootContext
 {
+    /// <inheritdoc/>
+    public EventSource EventSource { get; } = eventSource;
+
     /// <inheritdoc/>
     public EventSourceId EventSourceId { get; } = eventSourceId;
 

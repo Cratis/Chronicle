@@ -8,9 +8,10 @@ namespace Cratis.Chronicle.Orleans.Aggregates;
 /// <summary>
 /// Represents a key for an aggregate root.
 /// </summary>
+/// <param name="EventSource">The <see cref="Events.EventSource"/> part of the key.</param>
 /// <param name="EventSourceId">The <see cref="Events.EventSourceId"/> part of the key.</param>
 /// <param name="EventStreamId">The <see cref="EventStreamId"/> it belongs to.</param>
-public record AggregateRootKey(EventSourceId EventSourceId, EventStreamId EventStreamId)
+public record AggregateRootKey(EventSource EventSource, EventSourceId EventSourceId, EventStreamId EventStreamId)
 {
     /// <summary>
     /// Implicitly convert to a string.
@@ -25,7 +26,7 @@ public record AggregateRootKey(EventSourceId EventSourceId, EventStreamId EventS
     public static implicit operator AggregateRootKey(string key) => Parse(key);
 
     /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(EventSourceId, EventStreamId);
+    public override string ToString() => KeyHelper.Combine(EventSource, EventSourceId, EventStreamId);
 
     /// <summary>
     /// Parse a key into its components.

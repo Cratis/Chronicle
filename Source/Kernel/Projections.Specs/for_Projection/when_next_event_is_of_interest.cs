@@ -40,6 +40,7 @@ public class when_next_event_is_of_interest : given.a_projection
         first_event = new(
             new(0, event_a),
             new(
+                EventSource.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,
                 EventStreamId.Default,
@@ -57,6 +58,7 @@ public class when_next_event_is_of_interest : given.a_projection
         second_event = new(
             new(0, event_b),
             new(
+                EventSource.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,
                 EventStreamId.Default,

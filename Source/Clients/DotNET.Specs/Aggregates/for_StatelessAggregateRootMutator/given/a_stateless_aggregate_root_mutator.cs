@@ -30,6 +30,7 @@ public class a_stateless_aggregate_root_mutator : Specification
         _eventSequence = Substitute.For<IEventSequence>();
         _unitOfWork = Substitute.For<IUnitOfWork>();
         _aggregateRootContext = new AggregateRootContext(
+            EventSource.Default,
             _eventSourceId,
             _aggregateRoot.GetEventStreamType(),
             EventStreamId.Default,

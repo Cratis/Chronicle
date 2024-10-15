@@ -23,4 +23,9 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     /// Gets or inits the <see cref="EventStreamId"/> for the event. Defaults to <see cref="EventStreamId.Default"/>.
     /// </summary>
     public EventStreamId EventStreamId { get; init; } = EventStreamId.Default;
+
+    /// <summary>
+    /// Gets or inits the <see cref="EventSource"/> for the event. Defaults to <see cref="EventSource.Default"/>.
+    /// </summary>
+    public EventSource EventSource { get; init; } = EventSource.Default;
 }

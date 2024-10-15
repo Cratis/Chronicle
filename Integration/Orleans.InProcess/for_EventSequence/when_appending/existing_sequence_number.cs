@@ -34,6 +34,7 @@ public class existing_sequence_number(context context) : Given<context>(context)
                 [],
                 typeof(SomeEvent).GetEventType().Id.Value,
                 DateTimeOffset.UtcNow,
+                Concepts.Events.EventSource.Default,
                 EventSourceId.Value,
                 Concepts.Events.EventStreamType.All,
                 Concepts.Events.EventStreamId.Default,

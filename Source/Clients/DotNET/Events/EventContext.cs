@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// Represents the context in which an event exists in - typically what it was appended with.
 /// </summary>
+/// <param name="EventSource">The <see cref="EventSource"/>.</param>
 /// <param name="EventSourceId">The <see cref="EventSourceId"/>.</param>
 /// <param name="EventStreamType">The <see cref="EventStreamType"/>.</param>
 /// <param name="EventStreamId">The <see cref="EventStreamId"/>.</param>
@@ -21,6 +22,7 @@ namespace Cratis.Chronicle.Events;
 /// <param name="CausedBy">A collection of Identities that caused the event.</param>
 /// <param name="ObservationState">Holds the state relevant for the observer observing.</param>
 public record EventContext(
+    EventSource EventSource,
     EventSourceId EventSourceId,
     EventStreamType EventStreamType,
     EventStreamId EventStreamId,
@@ -40,6 +42,7 @@ public record EventContext(
     public static readonly EventContext Empty = From(
         EventStoreName.NotSet,
         EventStoreNamespaceName.NotSet,
+        EventSource.Default,
         Guid.Empty,
         EventStreamType.All,
         EventStreamId.Default,
@@ -51,6 +54,7 @@ public record EventContext(
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the context is for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the context is for.</param>
+    /// <param name="eventSource"><see cref="EventSource"/> to create from.</param>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to create from.</param>
     /// <param name="eventStreamType"><see cref="EventStreamType"/> to create from.</param>
     /// <param name="eventStreamId"><see cref="EventStreamId"/> to create from.</param>
@@ -61,6 +65,7 @@ public record EventContext(
     public static EventContext From(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
+        EventSource eventSource,
         EventSourceId eventSourceId,
         EventStreamType eventStreamType,
         EventStreamId eventStreamId,
@@ -69,6 +74,7 @@ public record EventContext(
         DateTimeOffset? occurred = default)
     {
         return new(
+            eventSource,
             eventSourceId,
             eventStreamType,
             eventStreamId,
@@ -90,6 +96,7 @@ public record EventContext(
         From(
             EventStoreName.NotSet,
             EventStoreNamespaceName.NotSet,
+            EventSource.Default,
             eventSourceId,
             EventStreamType.All,
             EventStreamId.Default,
@@ -103,6 +110,7 @@ public record EventContext(
     /// <returns>A new copy with the desired state set.</returns>
     public EventContext WithState(EventObservationState desiredState) =>
         new(
+            EventSource,
             EventSourceId,
             EventStreamType,
             EventStreamId,

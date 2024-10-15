@@ -13,8 +13,8 @@ public class when_applying_external_model_with_one_property_changed : given.one_
     void Establish()
     {
         event_log
-            .Setup(_ => _.AppendMany(IsAny<EventSourceId>(), IsAny<IEnumerable<object>>(), IsAny<EventStreamType>(), IsAny<EventStreamId>()))
-            .Callback((EventSourceId _, IEnumerable<object> events, EventStreamType __, EventStreamId ___) =>
+            .Setup(_ => _.AppendMany(IsAny<EventSourceId>(), IsAny<IEnumerable<object>>(), IsAny<EventStreamType>(), IsAny<EventStreamId>(), IsAny<EventSource>()))
+            .Callback((EventSourceId _, IEnumerable<object> events, EventStreamType __, EventStreamId ___, EventSource ____) =>
             {
                 var @event = events.First();
                 event_appended_to_event_log = (@event as SomeEvent)!;

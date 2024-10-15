@@ -44,6 +44,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
         return new(
             new(sequenceNumber, type),
             new(
+                EventSource.Default,
                 eventSourceId,
                 EventStreamType.All,
                 EventStreamId.Default,

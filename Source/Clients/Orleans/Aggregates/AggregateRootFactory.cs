@@ -12,10 +12,10 @@ namespace Cratis.Chronicle.Orleans.Aggregates;
 public class AggregateRootFactory(IGrainFactory grainFactory) : IAggregateRootFactory
 {
     /// <inheritdoc/>
-    public Task<TAggregateRoot> Get<TAggregateRoot>(EventSourceId id, EventStreamId? streamId = default)
+    public Task<TAggregateRoot> Get<TAggregateRoot>(EventSourceId id, EventStreamId? streamId = default, EventSource? eventSource = default)
         where TAggregateRoot : IAggregateRoot
     {
-        var key = new AggregateRootKey(id, streamId ?? EventStreamId.Default);
+        var key = new AggregateRootKey(eventSource ?? EventSource.Default, id, streamId ?? EventStreamId.Default);
         return Task.FromResult(grainFactory.GetGrain<TAggregateRoot>((string)key));
     }
 }

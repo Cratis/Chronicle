@@ -23,8 +23,9 @@ public interface IEventSequence
     /// <param name="eventTypes">Collection of <see cref="EventType"/> to get for.</param>
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to append to. Defaults to <see cref="EventStreamType.All"/>.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
+    /// <param name="eventSource">Optional <see cref="EventSource"/> to append to. Defaults to <see cref="EventSource.Default"/>.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
-    Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default);
+    Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, EventSource? eventSource = default);
 
     /// <summary>
     /// Check if there are events for a specific <see cref="EventSourceId"/>.
@@ -71,8 +72,9 @@ public interface IEventSequence
     /// <param name="event">The event.</param>
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to append to. Defaults to <see cref="EventStreamType.All"/>.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
+    /// <param name="eventSource">Optional <see cref="EventSource"/> to append to. Defaults to <see cref="EventSource.Default"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<AppendResult> Append(EventSourceId eventSourceId, object @event, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default);
+    Task<AppendResult> Append(EventSourceId eventSourceId, object @event, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, EventSource? eventSource = default);
 
     /// <summary>
     /// Append a collection of events to the event store.
@@ -81,11 +83,12 @@ public interface IEventSequence
     /// <param name="events">Collection of events to append.</param>
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to append to. Defaults to <see cref="EventStreamType.All"/>.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
+    /// <param name="eventSource">Optional <see cref="EventSource"/> to append to. Defaults to <see cref="EventSource.Default"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
     /// </remarks>
-    Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<object> events, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default);
+    Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<object> events, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, EventSource? eventSource = default);
 
     /// <summary>
     /// Append a collection of events to the event store as a transaction.
