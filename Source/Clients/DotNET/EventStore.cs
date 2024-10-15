@@ -143,7 +143,7 @@ public class EventStore : IEventStore
             this,
             new AggregateRootMutatorFactory(
                 this,
-                new AggregateRootStateProviders(Reducers, Projections),
+                new AggregateRootStateProviders(Reducers, Projections, serviceProvider),
                 new AggregateRootEventHandlersFactory(EventTypes),
                 _eventSerializer,
                 correlationIdAccessor),

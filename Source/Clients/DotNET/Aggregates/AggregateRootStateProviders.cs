@@ -14,9 +14,11 @@ namespace Cratis.Chronicle.Aggregates;
 /// </remarks>
 /// <param name="reducers">All the reducers in the system.</param>
 /// <param name="projections"><see cref="IProjections"/> to possibly get state from.</param>
+/// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
 public class AggregateRootStateProviders(
     IReducers reducers,
-    IProjections projections) : IAggregateRootStateProviders
+    IProjections projections,
+    IServiceProvider serviceProvider) : IAggregateRootStateProviders
 {
     /// <inheritdoc/>
     public Task<IAggregateRootStateProvider<TState>> CreateFor<TState>(IAggregateRootContext aggregateRootContext)
@@ -38,7 +40,7 @@ public class AggregateRootStateProviders(
         if (hasReducer)
         {
             var reducer = reducers.GetForModelType(stateType);
-            return Task.FromResult<IAggregateRootStateProvider<TState>>(new ReducerAggregateRootStateProvider<TState>(aggregateRootContext, reducer));
+            return Task.FromResult<IAggregateRootStateProvider<TState>>(new ReducerAggregateRootStateProvider<TState>(aggregateRootContext, reducer, serviceProvider));
         }
 
         return Task.FromResult<IAggregateRootStateProvider<TState>>(new ProjectionAggregateRootStateProvider<TState>(aggregateRootContext, projections));

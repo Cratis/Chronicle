@@ -15,7 +15,6 @@ public class ReducerInvoker : IReducerInvoker
 {
     static readonly MethodInfo _getResultMethod = typeof(ReducerInvoker).GetMethod(nameof(GetResult), BindingFlags.Instance | BindingFlags.NonPublic)!;
     readonly Dictionary<Type, MethodInfo> _methodsByEventType = [];
-    readonly IServiceProvider _serviceProvider;
     readonly Type _targetType;
 
     /// <summary>
@@ -48,7 +47,7 @@ public class ReducerInvoker : IReducerInvoker
     /// <inheritdoc/>
     public Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
     {
-        var actualReducer = _serviceProvider.GetRequiredService(_targetType);
+        var actualReducer = serviceProvider.GetRequiredService(_targetType);
 
         EventAndContext? lastSuccessfulObservedEventAndContext = default;
 
