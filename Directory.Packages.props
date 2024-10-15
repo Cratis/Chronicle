@@ -37,8 +37,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
-    <PackageVersion Include="protobuf-net.Grpc" Version="1.1.1" />
-    <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.1.1" />
+    <PackageVersion Include="protobuf-net.Grpc" Version="1.2.2" />
+    <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.66.0" />
     <PackageVersion Include="mongodb.driver" Version="2.25.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.8.1" />
