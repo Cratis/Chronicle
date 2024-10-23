@@ -1,9 +1,9 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ApplicationModel>14.1.4</ApplicationModel>
-    <Fundamentals>5.6.1</Fundamentals>
-    <Fundamentals>5.6.1</Fundamentals>
+    <ApplicationModel>14.6.0</ApplicationModel>
+    <Fundamentals>5.6.2</Fundamentals>
+    <Fundamentals>5.6.2</Fundamentals>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
