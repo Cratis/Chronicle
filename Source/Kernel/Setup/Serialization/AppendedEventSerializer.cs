@@ -36,7 +36,14 @@ public class AppendedEventSerializer(
     public bool IsSupportedType(Type type) => type == typeof(AppendedEvent);
 
     /// <inheritdoc/>
-    public bool? IsTypeAllowed(Type type) => type == typeof(AppendedEvent);
+    public bool? IsTypeAllowed(Type type)
+    {
+        if (type == typeof(AppendedEvent))
+        {
+            return true;
+        }
+        return null;
+    }
 
     /// <inheritdoc/>
     public object ReadValue<TInput>(ref Reader<TInput> reader, Field field)
