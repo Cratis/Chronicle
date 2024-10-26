@@ -6,7 +6,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Orleans.Aggregates;
 using Cratis.Chronicle.Transactions;
-using Cratis.Execution;
 using IAggregateRoot = Cratis.Chronicle.Orleans.Aggregates.IAggregateRoot;
 
 namespace Cratis.Chronicle.Orleans.Transactions;
@@ -23,7 +22,7 @@ public class UnitOfWorkIncomingCallFilter(
     /// <inheritdoc/>
     public async Task Invoke(IIncomingGrainCallContext context)
     {
-        if (RequestContext.Get(Constants.CorrelationIdKey) is CorrelationId correlationId &&
+        if (RequestContext.Get(Constants.CorrelationIdKey) is Guid correlationId &&
             context.IsMessageToAggregateRoot() &&
             unitOfWorkManager.TryGetFor(correlationId, out var unitOfWork))
         {
