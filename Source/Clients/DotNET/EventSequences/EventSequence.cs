@@ -46,12 +46,12 @@ public class EventSequence(
         object @event,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSource? eventSource = default)
+        EventSourceType? eventSource = default)
     {
         var eventClrType = @event.GetType();
         eventStreamType ??= EventStreamType.All;
         eventStreamId ??= EventStreamId.Default;
-        eventSource ??= EventSource.Default;
+        eventSource ??= EventSourceType.Default;
 
         ThrowIfUnknownEventType(eventTypes, eventClrType);
 
@@ -64,7 +64,7 @@ public class EventSequence(
             EventStoreName = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
-            EventSource = eventSource,
+            EventSourceType = eventSource,
             EventSourceId = eventSourceId,
             EventStreamType = eventStreamType,
             EventStreamId = eventStreamId,
@@ -88,14 +88,14 @@ public class EventSequence(
         IEnumerable<object> events,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSource? eventSource = default)
+        EventSourceType? eventSource = default)
     {
         var eventsToAppend = events.Select(@event =>
         {
             var eventType = eventTypes.GetEventTypeFor(@event.GetType());
             return new Contracts.Events.EventToAppend
             {
-                EventSource = eventSource ?? EventSource.Default,
+                EventSourceType = eventSource ?? EventSourceType.Default,
                 EventSourceId = eventSourceId,
                 EventStreamType = eventStreamType ?? EventStreamType.All,
                 EventStreamId = eventStreamId ?? EventStreamId.Default,
@@ -165,7 +165,7 @@ public class EventSequence(
         IEnumerable<EventType> eventTypes,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSource? eventSource = default)
+        EventSourceType? eventSource = default)
     {
         var result = await connection.Services.EventSequences.GetForEventSourceIdAndEventTypes(new()
         {
@@ -174,7 +174,7 @@ public class EventSequence(
             EventStreamId = eventStreamId ?? EventStreamId.Default,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
-            EventSource = eventSource ?? EventSource.Default,
+            EventSourceType = eventSource ?? EventSourceType.Default,
             EventSourceId = eventSourceId,
             EventTypes = eventTypes.ToContract()
         });

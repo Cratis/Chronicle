@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="CausedBy">Chain of person, system or service that caused the event.</param>
 /// <param name="Type">The <see cref="EventTypeId">type identifier</see> of the event.</param>
 /// <param name="Occurred">The time the event occurred.</param>
-/// <param name="EventSource">The <see cref="EventSource"/> for the event.</param>
+/// <param name="EventSourceType">The <see cref="EventSourceType"/> for the event.</param>
 /// <param name="EventSourceId">The <see cref="EventSourceId"/> for the event.</param>
 /// <param name="EventStreamType">the <see cref="EventStreamType"/> to append to.</param>
 /// <param name="EventStreamId">The <see cref="EventStreamId"/> to append to.</param>
@@ -30,7 +30,7 @@ public record Event(
     IEnumerable<IdentityId> CausedBy,
     EventTypeId Type,
     DateTimeOffset Occurred,
-    EventSource EventSource,
+    EventSourceType EventSourceType,
     EventSourceId EventSourceId,
     EventStreamType EventStreamType,
     EventStreamId EventStreamId,

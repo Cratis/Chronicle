@@ -34,7 +34,7 @@ public class UnitOfWorkIncomingCallFilter(
             var key = (AggregateRootKey)aggregate.GetPrimaryKeyString();
 
             var aggregateRootContext = new AggregateRootContext(
-                key.EventSource,
+                key.EventSourceType,
                 key.EventSourceId,
                 aggregate.GetEventStreamType(),
                 key.EventStreamId,

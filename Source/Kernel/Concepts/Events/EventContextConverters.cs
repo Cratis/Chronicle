@@ -18,7 +18,7 @@ public static class EventContextConverters
     /// <returns>Converted <see cref="Contracts.Events.EventContext"/>.</returns>
     public static Contracts.Events.EventContext ToContract(this EventContext context) => new()
     {
-        EventSource = context.EventSource,
+        EventSourceType = context.EventSourceType,
         EventSourceId = context.EventSourceId,
         EventStreamType = context.EventStreamType,
         EventStreamId = context.EventStreamId,
@@ -38,7 +38,7 @@ public static class EventContextConverters
     /// <param name="context"><see cref="Contracts.Events.EventContext"/> to convert.</param>
     /// <returns>Converted <see cref="EventContext"/>.</returns>
     public static EventContext ToChronicle(this Contracts.Events.EventContext context) => new(
-        context.EventSource,
+        context.EventSourceType,
         context.EventSourceId,
         context.EventStreamType,
         context.EventStreamId,

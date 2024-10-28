@@ -24,7 +24,7 @@ public class when_trying_to_resolve_valid_count_expression_against_model_with_co
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new(
-                EventSource.Default,
+                EventSourceType.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,
                 EventStreamId.Default,

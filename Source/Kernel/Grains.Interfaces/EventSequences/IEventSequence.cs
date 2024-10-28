@@ -60,7 +60,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <summary>
     /// Append a single event to the event store.
     /// </summary>
-    /// <param name="eventSource">The <see cref="EventSource"/> to append for.</param>
+    /// <param name="eventSourceType">The <see cref="EventSourceType"/> to append for.</param>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="eventStreamType">the <see cref="EventStreamType"/> to append to.</param>
     /// <param name="eventStreamId">The <see cref="EventStreamId"/> to append to.</param>
@@ -70,7 +70,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the event, defined by <see cref="Identity"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<AppendResult> Append(EventSource eventSource, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, JsonObject content, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
+    Task<AppendResult> Append(EventSourceType eventSourceType, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, JsonObject content, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Append a single event to the event store.

@@ -45,7 +45,7 @@ public static class AggregateRootTestSiloExtensions
         var aggregateRoot = await silo.CreateGrainAsync<TAggregateRoot>(eventSourceId);
         var unitOfWork = new UnitOfWork(CorrelationId.New(), _ => { }, Defaults.Instance.EventStore);
         await aggregateRoot.SetContext(new AggregateRootContext(
-            EventSource.Default,
+            EventSourceType.Default,
             eventSourceId,
             aggregateRoot.GetEventStreamType(),
             EventStreamId.Default,
@@ -84,7 +84,7 @@ public static class AggregateRootTestSiloExtensions
         }
         var unitOfWork = new UnitOfWork(CorrelationId.New(), _ => { }, Defaults.Instance.EventStore);
         await aggregateRoot.SetContext(new AggregateRootContext(
-            EventSource.Default,
+            EventSourceType.Default,
             eventSourceId,
             aggregateRoot.GetEventStreamType(),
             EventStreamId.Default,

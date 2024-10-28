@@ -25,10 +25,10 @@ public class GetForEventSourceIdAndEventTypesRequest : IEventSequenceRequest
     public string EventSequenceId { get; set; }
 
     /// <summary>
-    /// Gets or sets the event source.
+    /// Gets or sets the event source type.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSource { get; set; }
+    public string EventSourceType { get; set; }
 
     /// <summary>
     /// Gets or sets the event source identifier.

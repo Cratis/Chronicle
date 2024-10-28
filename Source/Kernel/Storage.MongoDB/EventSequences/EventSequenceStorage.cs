@@ -97,7 +97,7 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<AppendedEvent> Append(
         EventSequenceNumber sequenceNumber,
-        EventSource eventSource,
+        EventSourceType eventSourceType,
         EventSourceId eventSourceId,
         EventStreamType eventStreamType,
         EventStreamId eventStreamId,
@@ -125,7 +125,7 @@ public class EventSequenceStorage(
                 causedByChain,
                 eventType.Id,
                 occurred,
-                eventSource,
+                eventSourceType,
                 eventSourceId,
                 eventStreamType,
                 eventStreamId,
@@ -140,7 +140,7 @@ public class EventSequenceStorage(
             return new AppendedEvent(
                 new(sequenceNumber, eventType),
                 new(
-                    eventSource,
+                    eventSourceType,
                     eventSourceId,
                     eventStreamType,
                     eventStreamId,

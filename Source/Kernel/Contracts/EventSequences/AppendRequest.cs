@@ -33,10 +33,10 @@ public class AppendRequest : IEventSequenceRequest
     public Guid CorrelationId { get; set; }
 
     /// <summary>
-    /// Gets or sets the event source.
+    /// Gets or sets the event source type.
     /// </summary>
     [ProtoMember(5)]
-    public string EventSource { get; set; }
+    public string EventSourceType { get; set; }
 
     /// <summary>
     /// Gets or sets the event source identifier.

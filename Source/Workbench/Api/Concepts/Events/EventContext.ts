@@ -13,6 +13,9 @@ import { Identity } from '../Identities/Identity';
 export class EventContext {
 
     @field(String)
+    eventSourceType!: string;
+
+    @field(String)
     eventSourceId!: string;
 
     @field(String)

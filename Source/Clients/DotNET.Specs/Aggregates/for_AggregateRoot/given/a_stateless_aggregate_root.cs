@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Aggregates.for_AggregateRoot.given;
 public class a_stateless_aggregate_root : all_dependencies
 {
     protected StatelessAggregateRoot _aggregateRoot;
-    protected EventSource _eventSource;
+    protected EventSourceType EventSourceType;
     protected EventSourceId _eventSourceId;
     protected IAggregateRootContext _aggregateRootContext;
     protected IUnitOfWork _unitOfWork;
@@ -17,11 +17,11 @@ public class a_stateless_aggregate_root : all_dependencies
     void Establish()
     {
         _aggregateRoot = new();
-        _eventSource = EventSource.Default;
+        EventSourceType = EventSourceType.Default;
         _eventSourceId = Guid.NewGuid().ToString();
         _unitOfWork = Substitute.For<IUnitOfWork>();
         _aggregateRootContext = new AggregateRootContext(
-            _eventSource,
+            EventSourceType,
             _eventSourceId,
             _aggregateRoot.GetEventStreamType(),
             EventStreamId.Default,

@@ -15,10 +15,10 @@ namespace Cratis.Chronicle.Contracts.Events;
 public class EventContext
 {
     /// <summary>
-    /// Gets or sets the event source id.
+    /// Gets or sets the event source type.
     /// </summary>
     [ProtoMember(1)]
-    public string EventSource { get; set; }
+    public string EventSourceType { get; set; }
 
     /// <summary>
     /// Gets or sets the event source id.

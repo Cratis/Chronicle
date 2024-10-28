@@ -23,7 +23,7 @@ public static class EventToAppendConverters
     /// <returns>A converted <see cref="EventToAppend"/>.</returns>
     public static EventToAppend ToChronicle(this Contracts.Events.EventToAppend eventToAppend) =>
         new(
-            eventToAppend.EventSource,
+            eventToAppend.EventSourceType,
             eventToAppend.EventSourceId,
             eventToAppend.EventStreamType,
             eventToAppend.EventStreamId,

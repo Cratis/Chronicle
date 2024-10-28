@@ -39,7 +39,7 @@ public interface IEventSequenceStorage
     /// Append a single event to the event store.
     /// </summary>
     /// <param name="sequenceNumber">The unique <see cref="EventSequenceNumber">sequence number</see> within the event sequence.</param>
-    /// <param name="eventSource">The <see cref="EventSource">event source</see> to append for.</param>
+    /// <param name="eventSourceType">The <see cref="EventSourceType">event source</see> to append for.</param>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="eventStreamType">the <see cref="EventStreamType"/> to append to.</param>
     /// <param name="eventStreamId">The <see cref="EventStreamId"/> to append to.</param>
@@ -50,7 +50,7 @@ public interface IEventSequenceStorage
     /// <param name="occurred">The date and time the event occurred.</param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<AppendedEvent> Append(EventSequenceNumber sequenceNumber, EventSource eventSource, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
+    Task<AppendedEvent> Append(EventSequenceNumber sequenceNumber, EventSourceType eventSourceType, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
 
     /// <summary>
     /// Compensate a single event to the event store.
