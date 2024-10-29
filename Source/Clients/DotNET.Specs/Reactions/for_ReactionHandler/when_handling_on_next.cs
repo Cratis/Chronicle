@@ -29,7 +29,7 @@ public class when_handling_on_next : given.a_reactor_handler
             .Callback((CausationType _, IDictionary<string, string> properties) => causation_properties = properties);
     }
 
-    async Task Because() => await handler.OnNext(metadata, context, event_content);
+    async Task Because() => await handler.OnNext(metadata, context, event_content, service_provider.Object);
 
     [Fact] void should_add_causation() => causation_manager.Verify(_ => _.Add(ReactorHandler.CausationType, IsAny<IDictionary<string, string>>()), Once);
     [Fact] void should_add_causation_with_observer_id() => causation_properties[ReactorHandler.CausationReactorIdProperty].ShouldEqual(Reactor_id.ToString());
@@ -37,5 +37,5 @@ public class when_handling_on_next : given.a_reactor_handler
     [Fact] void should_add_causation_with_event_type_generation() => causation_properties[ReactorHandler.CausationEventTypeGenerationProperty].ShouldEqual(metadata.Type.Generation.ToString());
     [Fact] void should_add_causation_with_event_sequence_id() => causation_properties[ReactorHandler.CausationEventSequenceIdProperty].ShouldEqual(event_sequence_id.ToString());
     [Fact] void should_add_causation_with_event_sequence_number() => causation_properties[ReactorHandler.CausationEventSequenceNumberProperty].ShouldEqual(metadata.SequenceNumber.Value.ToString());
-    [Fact] void should_invoke_observer_invoker() => Reactor_invoker.Verify(_ => _.Invoke(event_content, context), Once);
+    [Fact] void should_invoke_observer_invoker() => Reactor_invoker.Verify(_ => _.Invoke(service_provider.Object, event_content, context), Once);
 }

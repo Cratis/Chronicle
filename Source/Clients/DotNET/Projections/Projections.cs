@@ -195,7 +195,7 @@ public class Projections(
         });
     }
 
-    IDictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
+    static IDictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
         IJsonSchemaGenerator schemaGenerator,

@@ -42,7 +42,9 @@
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
             },
-            "sourceFileMap": {}
+            "sourceFileMap": {
+                "/home/runner/work/orleans/orleans": "/Volumes/Code/Microsoft/dotnet/orleans"
+            }
         },
         {
             "name": ".NET Core Launch (Server)",

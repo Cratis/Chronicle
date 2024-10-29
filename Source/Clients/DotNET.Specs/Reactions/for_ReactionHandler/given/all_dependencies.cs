@@ -13,6 +13,7 @@ public class all_dependencies : Specification
     protected EventSequenceId event_sequence_id;
     protected Mock<IReactorInvoker> Reactor_invoker;
     protected Mock<ICausationManager> causation_manager;
+    protected Mock<IServiceProvider> service_provider;
 
     void Establish()
     {
@@ -20,5 +21,6 @@ public class all_dependencies : Specification
         event_sequence_id = Guid.NewGuid().ToString();
         Reactor_invoker = new();
         causation_manager = new();
+        service_provider = new();
     }
 }

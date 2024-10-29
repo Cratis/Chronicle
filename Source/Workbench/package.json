@@ -6,10 +6,10 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc && vite build",
-        "lint": "eslint . --cache --quiet --fix --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-        "lint:ci": "eslint . --cache --quiet --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+        "lint": "eslint . --cache --fix --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+        "lint:ci": "eslint . --cache --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
         "test": "mocha --no-cache --config ./.mocharc.cjs",
-        "ci": "cd $INIT_CWD && yarn clean && yarn lint:ci && tsc -b && yarn test",
+        "ci": "cd $INIT_CWD && yarn lint:ci && tsc -b && yarn test",
         "up": "cd $INIT_CWD && ncu -u \\!'@aksio/*'",
         "preview": "vite preview"
     },
@@ -64,7 +64,7 @@
         "tailwindcss": "3.4.1",
         "ts-node": "10.9.1",
         "tsconfig-paths": "4.2.0",
-        "typescript": "5.5.4",
+        "typescript": "5.3.3",
         "vite": "5.3.6"
     }
 }

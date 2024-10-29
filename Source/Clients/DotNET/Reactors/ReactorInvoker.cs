@@ -16,7 +16,6 @@ namespace Cratis.Chronicle.Reactors;
 public class ReactorInvoker : IReactorInvoker
 {
     readonly Dictionary<Type, MethodInfo> _methodsByEventType;
-    readonly IServiceProvider _serviceProvider;
     readonly IReactorMiddlewares _middlewares;
     readonly Type _targetType;
     readonly ILogger<ReactorInvoker> _logger;
@@ -24,19 +23,16 @@ public class ReactorInvoker : IReactorInvoker
     /// <summary>
     /// Initializes a new instance of the <see cref="ReactorInvoker"/> class.
     /// </summary>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances of actual Reactor.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
     /// <param name="middlewares"><see cref="IReactorMiddlewares"/> to call.</param>
     /// <param name="targetType">Type of Reactor.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ReactorInvoker(
-        IServiceProvider serviceProvider,
         IEventTypes eventTypes,
         IReactorMiddlewares middlewares,
         Type targetType,
         ILogger<ReactorInvoker> logger)
     {
-        _serviceProvider = serviceProvider;
         _middlewares = middlewares;
         _targetType = targetType;
         _logger = logger;
@@ -52,11 +48,11 @@ public class ReactorInvoker : IReactorInvoker
     public IImmutableList<EventType> EventTypes { get; }
 
     /// <inheritdoc/>
-    public async Task Invoke(object content, EventContext eventContext)
+    public async Task Invoke(IServiceProvider serviceProvider, object content, EventContext eventContext)
     {
         try
         {
-            var actualReactor = _serviceProvider.GetRequiredService(_targetType);
+            var actualReactor = serviceProvider.GetRequiredService(_targetType);
             var eventType = content.GetType();
 
             if (_methodsByEventType.TryGetValue(eventType, out var method))

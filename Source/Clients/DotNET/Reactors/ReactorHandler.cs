@@ -75,8 +75,9 @@ public class ReactorHandler(
     /// <param name="metadata"><see cref="EventMetadata"/> for the event.</param>
     /// <param name="context"><see cref="EventContext"/> for the event.</param>
     /// <param name="content">Actual content.</param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for creating the actual instance of the reactor.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task OnNext(EventMetadata metadata, EventContext context, object content)
+    public async Task OnNext(EventMetadata metadata, EventContext context, object content, IServiceProvider serviceProvider)
     {
         BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
 
@@ -89,7 +90,7 @@ public class ReactorHandler(
             { CausationEventSequenceNumberProperty, metadata.SequenceNumber.ToString() }
         });
 
-        await reactorInvoker.Invoke(content, context);
+        await reactorInvoker.Invoke(serviceProvider, content, context);
 
         BaseIdentityProvider.ClearCurrentIdentity();
     }

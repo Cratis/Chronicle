@@ -24,11 +24,12 @@ public interface IReducerInvoker
     /// <summary>
     /// Invoke the reducer for a set of events.
     /// </summary>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for creating the actual instance of the reducer.</param>
     /// <param name="eventsAndContexts">The events to reduce from.</param>
     /// <param name="initialReadModelContent">The initial state of the read model, can be null.</param>
     /// <returns>The reduced read model.</returns>
     /// <remarks>
     /// This is to be used for events that all have a key the same as the read model.
     /// </remarks>
-    Task<ReduceResult> Invoke(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent);
+    Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent);
 }

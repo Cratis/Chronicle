@@ -20,7 +20,6 @@ public class an_reactor_invoker_for<TReactor> : Specification
         middlewares = new();
 
         invoker = new ReactorInvoker(
-            service_provider.Object,
             event_types,
             middlewares.Object,
             typeof(TReactor),
