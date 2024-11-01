@@ -22,7 +22,7 @@ public class when_comparing_expando_objects_and_left_has_properties_and_right_is
         left.IntValue = 44;
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_not_be_considered_equal() => result.ShouldBeFalse();
     [Fact] void should_have_first_difference_be_the_string_value() => differences.ToArray()[0].PropertyPath.Path.ShouldEqual("stringValue");

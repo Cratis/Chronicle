@@ -10,11 +10,9 @@ import './Styles/theme.css';
 import React from 'react';
 import App from "./App";
 import { configure as configureMobx } from 'mobx';
-import { Bindings } from '@cratis/applications.react.mvvm';
-import { FakeData } from './FakeData';
+import { Bindings } from './Bindings';
 
 Bindings.initialize();
-FakeData.initialize();
 
 configureMobx({
     enforceActions: 'never'

@@ -9,7 +9,7 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { EventType } from './EventType';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/types');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/types');
 
 class AllEventTypesSortBy {
     private _id: SortingActionsForQuery<EventType[]>;
@@ -45,7 +45,7 @@ export interface AllEventTypesArguments {
 }
 
 export class AllEventTypes extends QueryFor<EventType[], AllEventTypesArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/types';
+    readonly route: string = '/api/event-store/{eventStore}/types';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventType[] = [];
     private readonly _sortBy: AllEventTypesSortBy;
@@ -56,7 +56,7 @@ export class AllEventTypes extends QueryFor<EventType[], AllEventTypesArguments>
         this._sortBy = new AllEventTypesSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
         ];

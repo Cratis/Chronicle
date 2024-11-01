@@ -15,6 +15,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Cratis.Json;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -68,6 +69,11 @@ public static class ChronicleClientSiloBuilderExtensions
         Action<ChronicleOrleansInProcessOptions> configureOptions,
         Action<IChronicleBuilder>? configureChronicle = default)
     {
+        // We disable the AspNet client registration.
+        // The AspNetCore client uses an `IHostedService` to register the client, which then runs before the Silo is ready.
+        // Leading to crashing the entire process.
+        ChronicleClientStartupTask.RegistrationEnabled = false;
+
         builder.ConfigureServices(services => AddOptions(services, configureOptions));
         ConfigureChronicle(builder, configureChronicle);
 
@@ -94,7 +100,7 @@ public static class ChronicleClientSiloBuilderExtensions
         builder.AddIncomingGrainCallFilter<UnitOfWorkIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UnitOfWorkOutgoingCallFilter>();
         builder.AddChronicleToSilo(configureChronicle);
-        builder.AddStartupTask<ChronicleStartupTask>();
+        builder.AddStartupTask<ChronicleOrleansClientStartupTask>();
         builder.ConfigureServices(services =>
         {
             services.AddTypeDiscovery();
@@ -119,6 +125,8 @@ public static class ChronicleClientSiloBuilderExtensions
                 options.ArtifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
                 var storage = sp.GetRequiredService<IStorage>();
                 var services = new Cratis.Chronicle.Services(
+                    new Server::Cratis.Chronicle.Services.EventStores(storage),
+                    new Server::Cratis.Chronicle.Services.Namespaces(storage),
                     new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
                     new EventTypes(storage),
                     new Constraints(grainFactory),

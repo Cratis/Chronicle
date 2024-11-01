@@ -62,7 +62,7 @@ export const Query = withViewModel<QueryViewModel, QueryProps>(QueryViewModel, (
             </div>
 
             <div className={'flex-1 overflow-hidden'}>
-                <EventList events={[]} />
+                <EventList />
             </div>
         </>
     );

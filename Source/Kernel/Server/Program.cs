@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using Cratis.Api.Server;
 using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
@@ -26,9 +27,11 @@ builder.Configuration.AddJsonFile("chronicle.json", optional: true, reloadOnChan
 var chronicleOptions = new ChronicleOptions();
 builder.Configuration.Bind(chronicleOptions);
 builder.Services.Configure<ChronicleOptions>(builder.Configuration);
+builder.Services.AddCratisChronicleApi();
 
-builder.WebHost.ConfigureKestrel(options =>
+builder.WebHost.UseKestrel(options =>
 {
+    options.ListenAnyIP(chronicleOptions.ApiPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
     options.ListenAnyIP(chronicleOptions.Port, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
@@ -70,9 +73,8 @@ builder.Host
 
 var app = builder.Build();
 app
-    .UseRouting()
-    .MapGrpcServices()
-    .UseCratisApplicationModel();
+    .UseCratisChronicleApi()
+    .MapGrpcServices();
 
 await app.RunAsync();
 

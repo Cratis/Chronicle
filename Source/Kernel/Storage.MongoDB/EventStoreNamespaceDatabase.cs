@@ -33,9 +33,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         IMongoDBClientManager clientManager,
         IOptions<MongoDBOptions> mongoDBOptions)
     {
-        // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
         var databaseName = $"{eventStore}+es+{@namespace}";
-
         var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server)
         {
             DatabaseName = databaseName
@@ -43,6 +41,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 
         var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
 
+        // TODO: Performance optimization - separate reads from writes in a clustered setup. Read from secondary.
         // settings.ReadPreference = ReadPreference.SecondaryPreferred;
         var client = clientManager.GetClientFor(settings);
         _database = client.GetDatabase(databaseName);
@@ -109,6 +108,60 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
                     new CreateIndexOptions
                     {
                         Name = "eventSourceId_eventTypeId",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                    new CreateIndexOptions
+                    {
+                        Name = "eventStreamType",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId),
+                    new CreateIndexOptions
+                    {
+                        Name = "eventStreamId",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Combine(
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId)),
+                    new CreateIndexOptions
+                    {
+                        Name = "eventStreamType_eventStreamId",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Combine(
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId)),
+                    new CreateIndexOptions
+                    {
+                        Name = "eventSourceId_eventStreamType_eventStreamId",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Combine(
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.Type),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId)),
+                    new CreateIndexOptions
+                    {
+                        Name = "eventSourceId_eventTypeId_eventStreamType_eventStreamId",
                         Background = true
                     }));
 

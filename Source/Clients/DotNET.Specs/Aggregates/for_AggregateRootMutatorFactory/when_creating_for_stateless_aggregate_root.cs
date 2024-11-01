@@ -13,7 +13,10 @@ public class when_creating_for_stateless_aggregate_root : given.an_aggregate_roo
     IAggregateRootMutator _result;
 
     void Establish() => _context = new AggregateRootContext(
+        EventSourceType.Default,
         EventSourceId.New(),
+        EventStreamType.All,
+        EventStreamId.Default,
         Substitute.For<IEventSequence>(),
         new StatelessAggregateRoot(),
         Substitute.For<IUnitOfWork>(),

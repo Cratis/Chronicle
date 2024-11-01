@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public static class WellKnownCollectionNames
 {
     /// <summary>
+    /// The collection that holds <see cref="EventStore"/>.
+    /// </summary>
+    public const string EventStores = "event-stores";
+
+    /// <summary>
     /// The collection that holds <see cref="Event"/>.
     /// </summary>
     public const string EventLog = "event-log";
@@ -79,14 +84,19 @@ public static class WellKnownCollectionNames
     public const string Recommendations = "recommendations";
 
     /// <summary>
-    /// The collection that holds projection definitions.
+    /// The collection that holds reducer definitions.
     /// </summary>
-    public const string ProjectionDefinitions = "projection-definitions";
+    public const string ReactorDefinitions = "reactor-definitions";
 
     /// <summary>
     /// The collection that holds reducer definitions.
     /// </summary>
     public const string ReducerDefinitions = "reducer-definitions";
+
+    /// <summary>
+    /// The collection that holds projection definitions.
+    /// </summary>
+    public const string ProjectionDefinitions = "projection-definitions";
 
     /// <summary>
     /// The collection that holds the definitions of constraints.

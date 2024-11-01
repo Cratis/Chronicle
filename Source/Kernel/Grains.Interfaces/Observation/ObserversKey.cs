@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 
-namespace Cratis.Observation;
+namespace Cratis.Chronicle.Grains.Observation;
 
 /// <summary>
 /// Represents a key for an observer.

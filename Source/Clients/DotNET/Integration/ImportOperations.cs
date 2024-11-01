@@ -95,7 +95,7 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         var mappedInstance = Mapper.Map<TModel>(instance)!;
         var changeset = new Changeset<TModel, TModel>(_objectComparer, mappedInstance, initialProjectionResult.Model);
 
-        if (!_objectComparer.Equals(initialProjectionResult.Model, mappedInstance, out var differences))
+        if (!_objectComparer.Compare(initialProjectionResult.Model, mappedInstance, out var differences))
         {
             changeset.Add(new PropertiesChanged<TModel>(mappedInstance, differences));
         }

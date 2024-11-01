@@ -11,7 +11,7 @@ import { Validator } from '@cratis/applications/validation';
 import { EventTypeRegistration } from '../Contracts/Events/EventTypeRegistration';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStoreName}}/types');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStoreName}}/types');
 
 export interface IRegister {
     eventStoreName?: string;
@@ -26,7 +26,7 @@ export class RegisterValidator extends CommandValidator {
 }
 
 export class Register extends Command<IRegister> implements IRegister {
-    readonly route: string = '/api/events/store/{eventStoreName}/types';
+    readonly route: string = '/api/event-store/{eventStoreName}/types';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RegisterValidator();
 

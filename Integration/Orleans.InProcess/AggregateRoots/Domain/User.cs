@@ -1,4 +1,6 @@
-using Cratis.Chronicle.Aggregates;
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Concepts;
 using Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Domain.Interfaces;
@@ -23,7 +25,9 @@ public class User(IAggregateRootFactory aggregateRootFactory) : AggregateRoot, I
 
     public Task<bool> Exists() => Task.FromResult(!IsNew && !Deleted.Value);
     public Task<CorrelationId> GetCorrelationId() => Task.FromResult(Context!.UnitOfWOrk.CorrelationId);
+#pragma warning disable CA1721
     public Task<bool> GetIsNew() => Task.FromResult(IsNew);
+#pragma warning restore CA1721
 
     Task ApplyIfNotDeleted(object evt) => Deleted.Value ? throw new UserDeleted(IdentityString) : Apply(evt);
 

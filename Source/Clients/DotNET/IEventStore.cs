@@ -90,4 +90,11 @@ public interface IEventStore
     /// <param name="id">The identifier of the event sequence to get.</param>
     /// <returns><see cref="IEventSequence"/> instance.</returns>
     IEventSequence GetEventSequence(EventSequenceId id);
+
+    /// <summary>
+    /// List namespaces in the event store.
+    /// </summary>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+    /// <returns>An asynchronous enumerable for all namespace names.</returns>
+    Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default);
 }

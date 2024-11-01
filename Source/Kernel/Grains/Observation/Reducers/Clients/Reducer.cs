@@ -49,12 +49,11 @@ public class Reducer(
     /// <inheritdoc/>
     public async Task SetDefinitionAndSubscribe(ReducerDefinition definition)
     {
-        var compareResult = reducerDefinitionComparer.Compare(State, definition);
+        var key = ReducerKey.Parse(this.GetPrimaryKeyString());
+        var compareResult = await reducerDefinitionComparer.Compare(key, State, definition);
 
         State = definition;
         await WriteStateAsync();
-
-        var key = ReducerKey.Parse(this.GetPrimaryKeyString());
 
         if (compareResult == ReducerDefinitionCompareResult.Different)
         {
@@ -84,16 +83,19 @@ public class Reducer(
     }
 
     /// <inheritdoc/>
-    public void OnClientDisconnected(ConnectedClient client)
+    public async Task OnClientDisconnected(ConnectedClient client)
     {
         if (client.ConnectionId != _observerKey!.ConnectionId) return;
 
         logger.ClientDisconnected(client.ConnectionId, _observerKey!.EventStore, _observerKey.ObserverId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
         var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         var observer = GrainFactory.GetGrain<IObserver>(key);
-        observer.Unsubscribe();
-        _connectedClients!.UnsubscribeDisconnected(this.AsReference<INotifyClientDisconnected>()).Wait();
         DeactivateOnIdle();
+        await Task.WhenAll(
+            observer.Unsubscribe(),
+            _connectedClients!.UnsubscribeDisconnected(this.AsReference<INotifyClientDisconnected>()));
+
+        _subscribed = false;
     }
 
     async Task AddReplayRecommendationForAllNamespaces(ReducerKey key, IEnumerable<EventStoreNamespaceName> namespaces)

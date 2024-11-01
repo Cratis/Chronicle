@@ -14,6 +14,6 @@ public interface IObjectComparer
     /// <param name="left">Left object to compare.</param>
     /// <param name="right">Right object to compare.</param>
     /// <param name="differences">Out variable with a collection of <see cref="PropertyDifference"/>.</param>
-    /// <returns>True if there are differences, false if not.</returns>
-    bool Equals(object? left, object? right, out IEnumerable<PropertyDifference> differences);
+    /// <returns>True if they are the same, false if not.</returns>
+    bool Compare(object? left, object? right, out IEnumerable<PropertyDifference> differences);
 }

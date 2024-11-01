@@ -35,18 +35,40 @@ public class when_next_event_is_of_interest : given.a_projection
         state.Integer = 42;
 
         objects_comparer = new();
-        objects_comparer.Setup(_ => _.Equals(IsAny<ExpandoObject>(), IsAny<AppendedEvent>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
+        objects_comparer.Setup(_ => _.Compare(IsAny<ExpandoObject>(), IsAny<AppendedEvent>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
 
         first_event = new(
             new(0, event_a),
-            new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", CorrelationId.New(), [], Identity.System),
+            new(
+                EventSourceType.Default,
+                "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
+                EventStreamType.All,
+                EventStreamId.Default,
+                0,
+                DateTimeOffset.UtcNow,
+                "123b8935-a1a4-410d-aace-e340d48f0aa0",
+                "41f18595-4748-4b01-88f7-4c0d0907aa90",
+                CorrelationId.New(),
+                [],
+                Identity.System),
             new ExpandoObject());
 
         first_changeset = new(objects_comparer.Object, first_event, new());
 
         second_event = new(
             new(0, event_b),
-            new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", CorrelationId.New(), [], Identity.System),
+            new(
+                EventSourceType.Default,
+                "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
+                EventStreamType.All,
+                EventStreamId.Default,
+                0,
+                DateTimeOffset.UtcNow,
+                "123b8935-a1a4-410d-aace-e340d48f0aa0",
+                "41f18595-4748-4b01-88f7-4c0d0907aa90",
+                CorrelationId.New(),
+                [],
+                Identity.System),
             new ExpandoObject());
 
         second_changeset = new(objects_comparer.Object, second_event, initial_state);

@@ -14,6 +14,7 @@ import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
 import { useContext, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Namespace } from 'Api/Namespaces';
+import * as Shared from 'Shared';
 
 interface IDefaultLayoutProps {
     menu?: IMenuItemGroup[];
@@ -21,7 +22,7 @@ interface IDefaultLayoutProps {
 }
 
 export const DefaultLayout = (props: IDefaultLayoutProps) => {
-    const params = useParams();
+    const params = useParams<Shared.EventStoreAndNamespaceParams>();
     const sidebarBasePath = generatePath(props.basePath ?? '', params);
     const layoutContext = useContext(LayoutContext);
     const navigate = useNavigate();

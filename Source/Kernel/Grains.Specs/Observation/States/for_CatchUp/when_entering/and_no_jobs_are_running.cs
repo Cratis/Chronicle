@@ -46,7 +46,7 @@ public class and_no_jobs_are_running : given.a_catch_up_state
 
     [Fact] void should_return_same_state() => resulting_stored_state.ShouldBeSame(stored_state);
     [Fact] void should_start_catch_up_job() => jobs_manager.Verify(_ => _.Start<ICatchUpObserver, CatchUpObserverRequest>(IsAny<JobId>(), IsAny<CatchUpObserverRequest>()), Once);
-    [Fact] void should_start_catch_up_job_with_correct_observer_id() => request.ObserverKey.ObserverId.ShouldEqual(stored_state.ObserverId);
+    [Fact] void should_start_catch_up_job_with_correct_observer_id() => request.ObserverKey.ObserverId.ShouldEqual(stored_state.Id);
     [Fact] void should_start_catch_up_job_with_correct_observer_key() => request.ObserverKey.ShouldEqual(observer_key);
     [Fact] void should_start_catch_up_job_with_correct_subscription() => request.ObserverSubscription.ShouldEqual(subscription);
     [Fact] void should_start_catch_up_job_with_correct_event_sequence_number() => request.FromEventSequenceNumber.ShouldEqual(stored_state.NextEventSequenceNumber);

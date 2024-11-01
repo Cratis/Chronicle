@@ -22,7 +22,6 @@ public class a_reducer_invoker_for<TReducer> : Specification
         event_types = new EventTypesForSpecifications(GetEventTypes());
         event_type = new("d22efe41-41c6-408e-b5d2-c0d54757cbf8", 1);
         invoker = new ReducerInvoker(
-            service_provider.Object,
             event_types,
             typeof(TReducer),
             typeof(ReadModel));

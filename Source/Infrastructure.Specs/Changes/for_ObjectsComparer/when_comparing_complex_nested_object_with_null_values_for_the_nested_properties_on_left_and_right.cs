@@ -19,7 +19,7 @@ public class when_comparing_complex_nested_object_with_null_values_for_the_neste
         right = new(null);
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_be_considered_equal() => result.ShouldBeTrue();
     [Fact] void should_not_have_any_differences() => differences.ShouldBeEmpty();

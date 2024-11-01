@@ -78,6 +78,7 @@ public class ProjectionFactory(
 
         var projection = new Projection(
             projectionDefinition.Identifier,
+            projectionDefinition.Sink,
             initialState,
             path,
             childrenAccessorProperty,

@@ -71,4 +71,5 @@ public class with_identified_by_specified_and_two_events_with_children_with_same
     [Fact] void should_set_the_float_concept_value_for_second_child() => Context.child.FloatConceptValue.ShouldEqual(Context.SecondEventAppended.Child.FloatConceptValue);
     [Fact] void should_set_the_double_concept_value_for_second_child() => Context.child.DoubleConceptValue.ShouldEqual(Context.SecondEventAppended.Child.DoubleConceptValue);
     [Fact] void should_set_the_guid_concept_value_for_second_child() => Context.child.GuidConceptValue.ShouldEqual(Context.SecondEventAppended.Child.GuidConceptValue);
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

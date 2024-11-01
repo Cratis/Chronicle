@@ -39,4 +39,5 @@ public class with_set_to_value_operations(context context) : Given<context>(cont
     [Fact] void should_set_the_float_concept_value() => Context.Result.FloatConceptValue.ShouldEqual(KnownValues.FloatConceptValue);
     [Fact] void should_set_the_double_concept_value() => Context.Result.DoubleConceptValue.ShouldEqual(KnownValues.DoubleConceptValue);
     [Fact] void should_set_the_guid_concept_value() => Context.Result.GuidConceptValue.ShouldEqual(KnownValues.GuidConceptValue);
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

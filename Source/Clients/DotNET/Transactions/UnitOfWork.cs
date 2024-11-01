@@ -113,9 +113,13 @@ public class UnitOfWork(
     /// <inheritdoc/>
     public void Dispose()
     {
+        if (IsCompleted)
+        {
+            return;
+        }
         if (!_isCommitted && !_isRolledBack)
         {
-            Rollback().Wait();
+            Rollback().GetAwaiter().GetResult();
         }
 
         _onCompleted(this);

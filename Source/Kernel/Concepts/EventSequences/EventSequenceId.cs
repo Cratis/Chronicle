@@ -25,6 +25,16 @@ public record EventSequenceId(string Value) : ConceptAs<string>(Value)
     public static readonly EventSequenceId System = "system";
 
     /// <summary>
+    /// Gets <see cref="EventSequenceId"/> of the default outbox.
+    /// </summary>
+    public static readonly EventSequenceId Outbox = "outbox";
+
+    /// <summary>
+    /// Gets the prefix for inbox event sequences.
+    /// </summary>
+    public static readonly string InboxPrefix = "inbox-";
+
+    /// <summary>
     /// Get whether or not this is the default log event sequence.
     /// </summary>
     public bool IsEventLog => this == Log;

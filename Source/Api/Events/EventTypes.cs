@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Events;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Api.Events;
 
@@ -13,7 +12,7 @@ namespace Cratis.Api.Events;
 /// Initializes a new instance of the <see cref="EventTypes"/> class.
 /// </remarks>
 /// <param name="eventTypes"><see cref="IEventTypes"/> service for actual registration.</param>
-[Route("/api/events/store/{eventStoreName}/types")]
+[Route("/api/event-store/{eventStoreName}/types")]
 public class EventTypes(IEventTypes eventTypes) : Controller
 {
     /// <summary>

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Recommendations;
 
 namespace Cratis.Chronicle.Storage.Recommendations;
@@ -37,11 +38,11 @@ public interface IRecommendationStorage
     /// Get all recommendations.
     /// </summary>
     /// <returns>A collection of <see cref="RecommendationState"/>.</returns>
-    Task<IImmutableList<RecommendationState>> GeAll();
+    Task<IImmutableList<RecommendationState>> GetAll();
 
     /// <summary>
     /// Observe all recommendations.
     /// </summary>
     /// <returns>An observable of collection of recommendations.</returns>
-    IObservable<IEnumerable<RecommendationState>> ObserveRecommendations();
+    ISubject<IEnumerable<RecommendationState>> ObserveRecommendations();
 }

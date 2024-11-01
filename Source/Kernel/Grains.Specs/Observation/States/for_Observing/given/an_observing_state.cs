@@ -67,7 +67,7 @@ public class an_observing_state : Specification
         state.SetStateMachine(observer.Object);
         stored_state = new ObserverState
         {
-            ObserverId = observer_id,
+            Id = observer_id,
             EventTypes = event_types,
             RunningState = ObserverRunningState.Active,
         };

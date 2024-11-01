@@ -81,8 +81,9 @@ public class EventStore : IEventStore
         Constraints = new Constraints(
             this,
             [
+                new ConstraintsByBuilderProvider(clientArtifactsProvider, EventTypes, serviceProvider),
                 new UniqueConstraintProvider(clientArtifactsProvider, EventTypes),
-                new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes),
+                new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes)
             ]);
 
         EventLog = new EventLog(
@@ -142,7 +143,7 @@ public class EventStore : IEventStore
             this,
             new AggregateRootMutatorFactory(
                 this,
-                new AggregateRootStateProviders(Reducers, Projections),
+                new AggregateRootStateProviders(Reducers, Projections, serviceProvider),
                 new AggregateRootEventHandlersFactory(EventTypes),
                 _eventSerializer,
                 correlationIdAccessor),
@@ -226,4 +227,11 @@ public class EventStore : IEventStore
             _correlationIdAccessor,
             _causationManager,
             _identityProvider);
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
+    {
+        var namespaces = await Connection.Services.Namespaces.GetNamespaces(new(_eventStoreName));
+        return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
+    }
 }

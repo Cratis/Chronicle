@@ -60,5 +60,5 @@ public class and_a_paused_replay_job_exists : given.a_replay_state
 
     [Fact] void should_resume_paused_job() => jobs_manager.Verify(_ => _.Resume(paused_job.Id), Once);
     [Fact] void should_begin_replay_only_one() => observer_service_client.Verify(_ => _.BeginReplayFor(IsAny<ObserverDetails>()), Once);
-    [Fact] void should_begin_replay_for_correct_observer() => observer_details.ShouldEqual(new ObserverDetails(stored_state.ObserverId, observer_key, ObserverType.Client));
+    [Fact] void should_begin_replay_for_correct_observer() => observer_details.ShouldEqual(new ObserverDetails(stored_state.Id, observer_key, ObserverType.Client));
 }

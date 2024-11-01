@@ -2,19 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Chronicle.Contracts.Observation;
-using Microsoft.AspNetCore.Mvc;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Api.Observation;
 
 /// <summary>
 /// Represents the API for working with observers.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ObserverQueries"/> class.
-/// </remarks>
-[Route("/api/events/store/{eventStore}/{namespace}/observers")]
-public class ObserverQueries() : ControllerBase
+/// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
+[Route("/api/event-store/{eventStore}/{namespace}/observers")]
+public class ObserverQueries(IStorage storage) : ControllerBase
 {
     /// <summary>
     /// Get all observers for an event store and namespace.
@@ -22,10 +21,10 @@ public class ObserverQueries() : ControllerBase
     /// <param name="eventStore">The event store the observers are for.</param>
     /// <param name="namespace">The namespace within the event store the observers are for.</param>
     /// <returns>Collection of <see cref="ObserverInformation"/>.</returns>
-    [HttpGet]
+    [HttpGet("all-observers")]
     public Task<IEnumerable<ObserverInformation>> GetObservers(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace) =>
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace) =>
         throw new NotImplementedException();
 
     /// <summary>
@@ -34,11 +33,12 @@ public class ObserverQueries() : ControllerBase
     /// <param name="eventStore">The event store the observers are for.</param>
     /// <param name="namespace">The namespace within the event store the observers are for.</param>
     /// <returns>An observable of a collection of <see cref="ObserverInformation"/>.</returns>
-    [HttpGet("observe")]
+    [HttpGet("all-observers/observe")]
     public ISubject<IEnumerable<ObserverInformation>> AllObservers(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace)
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace)
     {
-        throw new NotImplementedException();
+        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
+        return namespaceStorage.Observers.ObserveAll();
     }
 }

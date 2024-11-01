@@ -4,7 +4,7 @@
 # Cratis Chronicle Server
 # Build runtime image.
 ####################################
-FROM cratis/base
+FROM cratis/base-mongodb
 ARG VERSION
 ARG ENTRYPOINT=entrypoint.sh
 
@@ -29,5 +29,5 @@ RUN ./copy-server-files.sh
 COPY ./Docker/Development/appsettings.json ./appsettings.json
 RUN rm appsettings.Development.json
 
-EXPOSE 80 11111 30000
+EXPOSE 8080 11111 30000 35000
 ENTRYPOINT ["/usr/bin/tini", "--", "/bin/bash", "/app/entrypoint.sh"]

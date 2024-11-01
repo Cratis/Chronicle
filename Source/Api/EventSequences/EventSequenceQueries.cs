@@ -1,19 +1,24 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
+using Cratis.Applications.Queries;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Microsoft.AspNetCore.Mvc;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Api.EventSequences;
 
 /// <summary>
 /// Represents the API for working with the event log.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="EventSequenceQueries"/> class.
-/// </remarks>
-[Route("/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
-public class EventSequenceQueries : ControllerBase
+/// <param name="storage"><see cref="IStorage"/> for working with the event log.</param>
+/// <param name="queryContextManager"><see cref="IQueryContextManager"/> for managing query contexts.</param>
+/// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+[Route("/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
+public class EventSequenceQueries(IStorage storage, IQueryContextManager queryContextManager, JsonSerializerOptions jsonSerializerOptions) : ControllerBase
 {
     /// <summary>
     /// Get the head sequence number.
@@ -24,9 +29,9 @@ public class EventSequenceQueries : ControllerBase
     /// <returns>The tail sequence number.</returns>
     [HttpGet("next-sequence-number")]
     public Task<EventSequenceNumber> Next(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace,
-        [FromRoute] string eventSequenceId) =>
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
+        [FromRoute] EventSequenceId eventSequenceId) =>
         throw new NotImplementedException();
 
     /// <summary>
@@ -38,9 +43,9 @@ public class EventSequenceQueries : ControllerBase
     /// <returns>The tail sequence number.</returns>
     [HttpGet("tail-sequence-number")]
     public Task<EventSequenceNumber> Tail(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace,
-        [FromRoute] string eventSequenceId) =>
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
+        [FromRoute] EventSequenceId eventSequenceId) =>
         throw new NotImplementedException();
 
     /// <summary>
@@ -57,9 +62,9 @@ public class EventSequenceQueries : ControllerBase
     /// </remarks>
     [HttpGet("tail-sequence-number/observer/{observerId}")]
     public async Task<EventSequenceNumber> TailForObserver(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace,
-        [FromRoute] string eventSequenceId,
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
+        [FromRoute] EventSequenceId eventSequenceId,
         [FromRoute] string observerId)
     {
         throw new NotImplementedException();
@@ -71,20 +76,48 @@ public class EventSequenceQueries : ControllerBase
     /// <param name="eventStore">Event store to get for.</param>
     /// <param name="namespace">Namespace to get for.</param>
     /// <param name="eventSequenceId">Event sequence to get for.</param>
-    /// <param name="pageSize">Size of page to return.</param>
-    /// <param name="pageNumber">Page number to return.</param>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet]
-    public async Task<IQueryable<AppendedEventWithJsonAsContent>> GetAppendedEvents(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace,
-        [FromRoute] string eventSequenceId,
-        [FromQuery] int pageSize = 100,
-        [FromQuery] int pageNumber = 0,
-        [FromQuery] string eventSourceId = null!)
+    public async Task<IEnumerable<AppendedEventWithJsonAsContent>> AppendedEvents(
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
+        [FromRoute] EventSequenceId eventSequenceId,
+        [FromQuery] EventSourceId? eventSourceId = null!)
     {
-        throw new NotImplementedException();
+        var queryContext = queryContextManager.Current;
+
+        var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
+
+        var result = new List<AppendedEventWithJsonAsContent>();
+
+        var tail = await eventSequence.GetTailSequenceNumber();
+        queryContext.TotalItems = (int)tail.Value;
+
+        var from = EventSequenceNumber.First + (queryContext.Paging.Page * queryContext.Paging.Size);
+
+        IEventCursor cursor;
+
+        if (queryContext.Paging.IsPaged)
+        {
+            cursor = await eventSequence.GetRange(
+                start: from,
+                end: from + (queryContext.Paging.Size - 1),
+                eventSourceId);
+        }
+        else
+        {
+            cursor = await eventSequence.GetFromSequenceNumber(from, eventSourceId);
+        }
+
+        while (await cursor.MoveNext())
+        {
+            result.AddRange(cursor.Current.Select(_ => new AppendedEventWithJsonAsContent(
+                _.Metadata,
+                _.Context,
+                JsonSerializer.SerializeToNode(_.Content, jsonSerializerOptions)!)));
+        }
+        return result;
     }
 
     /// <summary>
@@ -98,31 +131,13 @@ public class EventSequenceQueries : ControllerBase
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet("range")]
-    public async Task<IQueryable<AppendedEventWithJsonAsContent>> GetAppendedEventsInRange(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace,
-        [FromRoute] string eventSequenceId,
-        [FromQuery] ulong fromSequenceNumber,
-        [FromQuery] ulong toSequenceNumber,
-        [FromQuery] string eventSourceId = null!)
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
-    /// Get events for a specific event sequence in an event store in a specific namespace.
-    /// </summary>
-    /// <param name="eventStore">Event store to get for.</param>
-    /// <param name="namespace">Namespace to get for.</param>
-    /// <param name="eventSequenceId">Event sequence to get for.</param>
-    /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for.</param>
-    /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
-    [HttpGet("all")]
-    public async Task<IEnumerable<AppendedEventWithJsonAsContent>> GetAllAppendedEvents(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace,
-        [FromRoute] string eventSequenceId,
-        [FromQuery] string eventSourceId = null!)
+    public async Task<IQueryable<AppendedEventWithJsonAsContent>> AppendedEventsInRange(
+        [FromRoute] EventStoreName eventStore,
+        [FromRoute] EventStoreNamespaceName @namespace,
+        [FromRoute] EventSequenceId eventSequenceId,
+        [FromQuery] EventSequenceNumber fromSequenceNumber,
+        [FromQuery] EventSequenceNumber toSequenceNumber,
+        [FromQuery] EventSourceId? eventSourceId = null!)
     {
         throw new NotImplementedException();
     }

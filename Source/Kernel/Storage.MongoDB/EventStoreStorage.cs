@@ -5,15 +5,18 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation.Reactors.Json;
 using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
 using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.Namespaces;
+using Cratis.Chronicle.Storage.MongoDB.Observation.Reactors;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;
 using Cratis.Chronicle.Storage.MongoDB.Projections;
 using Cratis.Chronicle.Storage.Namespaces;
+using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.Sinks;
@@ -32,6 +35,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
 /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to use.</param>
 /// <param name="projectionSerializer"><see cref="IJsonProjectionDefinitionSerializer"/> for handling serialization of projection definitions.</param>
+/// <param name="reactorSerializer"><see cref="IJsonReactorDefinitionSerializer"/> for handling serialization of reactor definitions.</param>
 /// <param name="reducerSerializer"><see cref="IJsonReducerDefinitionSerializer"/> for handling serialization of reducer definitions.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
@@ -42,6 +46,7 @@ public class EventStoreStorage(
     EventStoreName eventStore,
     IEventStoreDatabase eventStoreDatabase,
     IJsonProjectionDefinitionSerializer projectionSerializer,
+    IJsonReactorDefinitionSerializer reactorSerializer,
     IJsonReducerDefinitionSerializer reducerSerializer,
     IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
@@ -59,6 +64,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IEventTypesStorage EventTypes { get; } = new EventTypesStorage(eventStore, eventStoreDatabase, loggerFactory.CreateLogger<EventTypesStorage>());
+
+    /// <inheritdoc/>
+    public IReactorDefinitionsStorage Reactors { get; } = new ReactorDefinitionsStorage(eventStoreDatabase, reactorSerializer);
 
     /// <inheritdoc/>
     public IReducerDefinitionsStorage Reducers { get; } = new ReducerDefinitionsStorage(eventStoreDatabase, reducerSerializer);

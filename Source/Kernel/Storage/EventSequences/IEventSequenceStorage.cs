@@ -39,7 +39,10 @@ public interface IEventSequenceStorage
     /// Append a single event to the event store.
     /// </summary>
     /// <param name="sequenceNumber">The unique <see cref="EventSequenceNumber">sequence number</see> within the event sequence.</param>
+    /// <param name="eventSourceType">The <see cref="EventSourceType">event source</see> to append for.</param>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
+    /// <param name="eventStreamType">the <see cref="EventStreamType"/> to append to.</param>
+    /// <param name="eventStreamId">The <see cref="EventStreamId"/> to append to.</param>
     /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
@@ -47,7 +50,7 @@ public interface IEventSequenceStorage
     /// <param name="occurred">The date and time the event occurred.</param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<AppendedEvent> Append(EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
+    Task<AppendedEvent> Append(EventSequenceNumber sequenceNumber, EventSourceType eventSourceType, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
 
     /// <summary>
     /// Compensate a single event to the event store.
@@ -173,10 +176,12 @@ public interface IEventSequenceStorage
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> to get from.</param>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to filter for.</param>
+    /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to filter for.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to filter for.</param>
     /// <param name="eventTypes">Optional collection of <see cref="EventType">event types</see> to filter for.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/>.</returns>
-    Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default);
+    Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get events within a specific sequence number range.

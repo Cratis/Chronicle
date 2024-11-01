@@ -10,9 +10,9 @@
   href: event-store.md
 - name: Event Sequence
   href: event-sequence.md
-- name: Observer
-  href: observer.md
+- name: Observers
+  href: observers.md
 - name: Projection
   href: projection.md
-- name: Tenancy
-  href: tenancy.md
+- name: Namespaces
+  href: namespaces.md

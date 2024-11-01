@@ -26,38 +26,34 @@
             "Api/*": [
                 "./Api/*"
             ],
-            "Infrastructure/*": [
-                "./Infrastructure/*"
+            "Shared/*": [
+                "./Shared/*"
             ],
-            "Browser": [
-                "./Infrastructure/Browser/index.ts"
-            ],
-            "Browser/*": [
-                "./Infrastructure/Browser/*"
-            ],
-            "MVVM": [
-                "Infrastructure/MVVM/index.ts"
-            ],
-            "MVVM/*": [
-                "Infrastructure/MVVM/*"
+            "State/*": [
+                "./State/*"
             ],
             "Components/*": [
-                "Components/*"
+                "./Components/*"
             ],
             "Layout/*": [
-                "Layout/*"
+                "./Layout/*"
             ],
             "Features/*": [
-                "Features/*"
+                "./Features/*"
             ],
             "Strings": [
                 "Strings"
+            ],
+            "given": [
+                "given"
             ]
         }
     },
     "include": [
         "global.d.ts",
-        "API",
+        "Api",
+        "Shared",
+        "State",
         "Components",
         "FakeData",
         "Layout",
@@ -65,10 +61,10 @@
         "Utils",
         "App.tsx",
         "index.tsx",
-        "Features"
+        "Features",
+        "given.ts"
     ],
-    "exclude": [
-    ],
+    "exclude": [],
     "references": [
         {
             "path": "./tsconfig.node.json"

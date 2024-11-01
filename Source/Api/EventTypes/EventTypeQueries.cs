@@ -3,18 +3,16 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
-using Microsoft.AspNetCore.Mvc;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Api.EventTypes;
 
 /// <summary>
 /// Represents the API for working with event types.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="EventTypeQueries"/> class.
-/// </remarks>
-[Route("/api/events/store/{eventStore}/types")]
-public class EventTypeQueries() : ControllerBase
+/// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
+[Route("/api/event-store/{eventStore}/types")]
+public class EventTypeQueries(IStorage storage) : ControllerBase
 {
     /// <summary>
     /// Gets all event types.
@@ -24,21 +22,9 @@ public class EventTypeQueries() : ControllerBase
     [HttpGet]
     public async Task<IEnumerable<EventType>> AllEventTypes([FromRoute] string eventStore)
     {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
-    /// Gets generation schema for type.
-    /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> to get event type for.</param>
-    /// <param name="eventTypeId">Type to get for.</param>
-    /// <returns>Schemas.</returns>
-    [HttpGet("schemas/{eventTypeId}")]
-    public async Task<IEnumerable<JsonDocument>> GenerationSchemasForType(
-        [FromQuery] EventStoreName eventStore,
-        [FromRoute] string eventTypeId)
-    {
-        throw new NotImplementedException();
+        var eventStoreStorage = storage.GetEventStore(eventStore);
+        var eventTypes = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+        return eventTypes.Select(_ => new EventType(_.Type.Id, _.Type.Generation)).ToArray();
     }
 
     /// <summary>
@@ -49,6 +35,8 @@ public class EventTypeQueries() : ControllerBase
     [HttpGet("schemas")]
     public async Task<IEnumerable<EventTypeWithSchemas>> AllEventTypesWithSchemas([FromRoute] string eventStore)
     {
-        throw new NotImplementedException();
+        var eventStoreStorage = storage.GetEventStore(eventStore);
+        var eventTypes = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+        return eventTypes.Select(_ => new EventTypeWithSchemas(new EventType(_.Type.Id, _.Type.Generation), [JsonDocument.Parse(_.Schema.ToJson())])).ToArray();
     }
 }

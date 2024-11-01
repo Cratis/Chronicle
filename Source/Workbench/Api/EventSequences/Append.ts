@@ -13,13 +13,15 @@ import { EventType } from '../EventTypes/EventType';
 import { Identity } from '../Identities/Identity';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}');
 
 export interface IAppend {
     eventStore?: string;
     namespace?: string;
     eventSequenceId?: string;
     eventSourceId?: string;
+    eventStreamType?: string;
+    eventStreamId?: string;
     eventType?: EventType;
     content?: any;
     causation?: Causation[];
@@ -32,6 +34,8 @@ export class AppendValidator extends CommandValidator {
         namespace: new Validator(),
         eventSequenceId: new Validator(),
         eventSourceId: new Validator(),
+        eventStreamType: new Validator(),
+        eventStreamId: new Validator(),
         eventType: new Validator(),
         content: new Validator(),
         causation: new Validator(),
@@ -40,7 +44,7 @@ export class AppendValidator extends CommandValidator {
 }
 
 export class Append extends Command<IAppend> implements IAppend {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new AppendValidator();
 
@@ -48,6 +52,8 @@ export class Append extends Command<IAppend> implements IAppend {
     private _namespace!: string;
     private _eventSequenceId!: string;
     private _eventSourceId!: string;
+    private _eventStreamType!: string;
+    private _eventStreamId!: string;
     private _eventType!: EventType;
     private _content!: any;
     private _causation!: Causation[];
@@ -71,6 +77,8 @@ export class Append extends Command<IAppend> implements IAppend {
             'namespace',
             'eventSequenceId',
             'eventSourceId',
+            'eventStreamType',
+            'eventStreamId',
             'eventType',
             'content',
             'causation',
@@ -109,6 +117,22 @@ export class Append extends Command<IAppend> implements IAppend {
     set eventSourceId(value: string) {
         this._eventSourceId = value;
         this.propertyChanged('eventSourceId');
+    }
+    get eventStreamType(): string {
+        return this._eventStreamType;
+    }
+
+    set eventStreamType(value: string) {
+        this._eventStreamType = value;
+        this.propertyChanged('eventStreamType');
+    }
+    get eventStreamId(): string {
+        return this._eventStreamId;
+    }
+
+    set eventStreamId(value: string) {
+        this._eventStreamId = value;
+        this.propertyChanged('eventStreamId');
     }
     get eventType(): EventType {
         return this._eventType;

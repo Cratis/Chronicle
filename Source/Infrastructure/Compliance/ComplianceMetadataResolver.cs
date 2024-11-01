@@ -18,8 +18,8 @@ public class ComplianceMetadataResolver(
     IInstancesOf<ICanProvideComplianceMetadataForType> typeProviders,
     IInstancesOf<ICanProvideComplianceMetadataForProperty> propertyProviders) : IComplianceMetadataResolver
 {
-    readonly IEnumerable<ICanProvideComplianceMetadataForType> _typeProviders = [..typeProviders];
-    readonly IEnumerable<ICanProvideComplianceMetadataForProperty> _propertyProviders = [..propertyProviders];
+    readonly IEnumerable<ICanProvideComplianceMetadataForType> _typeProviders = [..typeProviders.Where(_ => _ is not null)];
+    readonly IEnumerable<ICanProvideComplianceMetadataForProperty> _propertyProviders = [..propertyProviders.Where(_ => _ is not null)];
 
     /// <inheritdoc/>
     public bool HasMetadataFor(Type type) => _typeProviders.Any(_ => _.CanProvide(type));

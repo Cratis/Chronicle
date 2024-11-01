@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Jobs;
 
 namespace Cratis.Chronicle.Storage.Jobs;
@@ -36,7 +37,7 @@ public interface IJobStorage
     /// <remarks>
     /// If no job statuses are specified, all jobs of the given type will be returned.
     /// </remarks>
-    IObservable<IEnumerable<JobState>> ObserveJobs(params JobStatus[] statuses);
+    ISubject<IEnumerable<JobState>> ObserveJobs(params JobStatus[] statuses);
 
     /// <summary>
     /// Remove a job.

@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections;
@@ -18,6 +19,11 @@ public interface IProjection
     /// Gets the unique identifier of the <see cref="IProjection"/>.
     /// </summary>
     ProjectionId Identifier { get; }
+
+    /// <summary>
+    /// Gets the <see cref="SinkDefinition">sink</see> to store the results of the projection.
+    /// </summary>
+    SinkDefinition Sink { get; }
 
     /// <summary>
     /// Gets the initial state used for each model instance.

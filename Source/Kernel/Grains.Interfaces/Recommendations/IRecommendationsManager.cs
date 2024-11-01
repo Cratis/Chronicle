@@ -20,7 +20,7 @@ public interface IRecommendationsManager : IGrainWithIntegerCompoundKey
     /// <returns>The <see cref="RecommendationId"/> for the added recommendation.</returns>
     Task<RecommendationId> Add<TRecommendation, TRequest>(RecommendationDescription description, TRequest request)
         where TRecommendation : IRecommendation<TRequest>
-        where TRequest : class;
+        where TRequest : class, IRecommendationRequest;
 
     /// <summary>
     /// Perform a recommendation.

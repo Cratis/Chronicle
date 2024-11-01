@@ -18,7 +18,7 @@ public class when_comparing_object_with_comparable_that_are_equal : given.an_obj
         right = new(new(0));
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_be_equal() => result.ShouldBeTrue();
     [Fact] void should_have_no_differences() => differences.ShouldBeEmpty();

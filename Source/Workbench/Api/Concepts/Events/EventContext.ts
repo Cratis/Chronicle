@@ -13,7 +13,16 @@ import { Identity } from '../Identities/Identity';
 export class EventContext {
 
     @field(String)
+    eventSourceType!: string;
+
+    @field(String)
     eventSourceId!: string;
+
+    @field(String)
+    eventStreamType!: string;
+
+    @field(String)
+    eventStreamId!: string;
 
     @field(Number)
     sequenceNumber!: number;

@@ -20,7 +20,7 @@ public class when_comparing_object_with_equal_concept_value_concepts : given.an_
         right = new(new("FortyTwo"));
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_be_equal() => result.ShouldBeTrue();
     [Fact] void should_have_no_differences() => differences.ShouldBeEmpty();

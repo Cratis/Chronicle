@@ -1,6 +1,6 @@
 # Event
 
-Cratis is optimized for the scenario of [domain events](https://www.martinfowler.com/eaaDev/DomainEvent.html).
+Chronicle is optimized for the scenario of [domain events](https://www.martinfowler.com/eaaDev/DomainEvent.html).
 Figuring out the correct name of an [event type](./event-type.md) and what properties it should have is hard.
 This page walks through some general guidance on how to do so. Recommend also reading the [Microsoft guide](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation) on this.
 

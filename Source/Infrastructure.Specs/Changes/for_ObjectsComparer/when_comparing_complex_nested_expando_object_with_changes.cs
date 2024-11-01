@@ -51,7 +51,7 @@ public class when_comparing_complex_nested_expando_object_with_changes : given.a
 #pragma warning restore IDE0300 // Simplify collection initialization
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_not_be_considered_equal() => result.ShouldBeFalse();
     [Fact] void should_have_first_difference_be_the_first_property_on_top_level() => differences.ToArray()[0].PropertyPath.Path.ShouldEqual("stringValue");

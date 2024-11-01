@@ -25,7 +25,10 @@ public class an_aggregate_root_that_handles_two_event_types : a_projection_aggre
         _unitOfWork = Substitute.For<IUnitOfWork>();
         _unitOfWork.CorrelationId.Returns(_correlationId);
         _aggregateRootContext = new AggregateRootContext(
+            EventSourceType.Default,
             _eventSourceId,
+            _aggregateRoot.GetEventStreamType(),
+            EventStreamId.Default,
             _eventSequence,
             _aggregateRoot,
             _unitOfWork,

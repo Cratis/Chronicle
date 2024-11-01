@@ -21,7 +21,7 @@ public class when_comparing_complex_nested_object_with_null_values_for_the_neste
         right = new(null);
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_not_be_considered_equal() => result.ShouldBeFalse();
     [Fact] void should_only_have_one_property_difference() => differences.Count().ShouldEqual(1);

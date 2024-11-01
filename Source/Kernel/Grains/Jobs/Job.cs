@@ -11,6 +11,7 @@ using Cratis.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Orleans.Concurrency;
 using Orleans.Providers;
 using Orleans.Utilities;
 
@@ -22,6 +23,7 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
 /// <typeparam name="TJobState">Type of state for the job.</typeparam>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Jobs)]
+[Reentrant]
 public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest>
     where TRequest : class
     where TJobState : JobState
@@ -109,13 +111,13 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         await WriteStateAsync();
 
         var grainId = this.GetGrainId();
-        var tcs = new TaskCompletionSource<IImmutableList<JobStepDetails>>();
+        var tcs = new TaskCompletionSource<IImmutableList<JobStepDetails>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         PrepareAllSteps(request, tcs);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         tcs.Task.ContinueWith(
-            async (Task<IImmutableList<JobStepDetails>> jobStepsTask) =>
+            async jobStepsTask =>
             {
                 var jobSteps = await jobStepsTask;
                 if (jobSteps.Count == 0)

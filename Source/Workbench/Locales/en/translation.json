@@ -1,5 +1,9 @@
 {
     "general": {
+        "buttons": {
+            "ok": "OK",
+            "cancel": "Cancel"
+        }
     },
     "layout": {
         "topBar": {
@@ -21,36 +25,159 @@
         "general": {
             "groupLabel": "General",
             "types": "Types",
-            "projections": "Projections",
+            "namespaces": "Namespaces",
             "sequences": "Sequences",
+            "projections": "Projections",
+            "reducers": "Reducers",
+            "reactors": "Reactors",
             "sinks": "Sinks"
         }
     },
     "eventStore": {
+        "general": {
+            "types": {
+                "title": "Types",
+                "empty": "No types found",
+                "actions": {
+                    "create": "Create"
+                },
+                "columns": {
+                    "name": "Name",
+                    "generation": "Generation",
+                    "tombstone": "Tombstone"
+                },
+                "dialogs": {
+                    "addEventType": {
+                        "title": "Add event type",
+                        "name": "Name"
+                    }
+                }
+            },
+            "namespaces": {
+                "title": "Namespaces",
+                "empty": "No namespaces found",
+                "actions": {
+                    "create": "Create"
+                },
+                "columns": {
+                    "id": "Identifier",
+                    "name": "Name"
+                },
+                "dialogs": {
+                    "addNamespace": {
+                        "title": "Add namespace",
+                        "name": "Name"
+                    }
+                }
+            }
+        },
         "namespaces": {
             "recommendations": {
-                "title": "Recommendations"
+                "title": "Recommendations",
+                "empty": "No recommendations found",
+                "actions": {
+                    "perform": "Perform",
+                    "ignore": "Ignore"
+                },
+                "columns": {
+                    "name": "Name",
+                    "description": "Description",
+                    "type": "Type",
+                    "occurred": "Occurred at"
+                }
             },
             "jobs": {
-                "title": "Jobs"
+                "title": "Jobs",
+                "empty": "No jobs found",
+                "actions": {
+                    "resume": "Resume",
+                    "stop": "Stop",
+                    "delete": "Delete"
+                },
+                "columns": {
+                    "type": "Type",
+                    "name": "Name",
+                    "details": "Details",
+                    "status": "Status",
+                    "progress": "Progress"
+                },
+                "status": {
+                    "none": "None",
+                    "preparing": "Preparing",
+                    "preparingSteps": "Preparing steps",
+                    "preparingStepsForRunning": "Preparing steps for running",
+                    "startingSteps": "Starting steps",
+                    "running": "Running",
+                    "completedSuccessfully": "Completed successfully",
+                    "completedWithFailures": "Completed with failures",
+                    "paused": "Paused",
+                    "stopped": "Stopped",
+                    "failed": "Failed"
+                }
             },
             "sequences": {
-                "title": "Sequences"
+                "title": "Sequences",
+                "empty": "No sequences found",
+                "columns": {
+                    "sequenceNumber": "Sequence number",
+                    "eventType": "Event Type",
+                    "occurred": "Occurred"
+                }
             },
             "observers": {
                 "title": "Observers",
+                "empty": "No observers found",
+                "actions": {
+                    "replay": "Replay"
+                },
                 "columns": {
-                    "name": "Name",
+                    "id": "Identifier",
                     "observerType": "Observer type",
                     "state": "State",
                     "nextEventSequenceNumber": "Next event sequence number"
+                },
+                "types": {
+                    "unknown": "Unknown",
+                    "reactor": "Reactor",
+                    "projection": "Projection",
+                    "reducer": "Reducer"
+                },
+                "states": {
+                    "new": "New",
+                    "routing": "Routing",
+                    "replaying": "Relaying",
+                    "catchingUp": "Catching Up",
+                    "active": "Active",
+                    "paused": "Paused",
+                    "stopped": "Stopped",
+                    "suspended": "Suspended",
+                    "failed": "Failed",
+                    "tailOfReplay": "Tail Of Replay",
+                    "disconnected": "Disconnected",
+                    "indexing": "Indexing",
+                    "unknown": "Unknown"
                 }
             },
-            "faledPartitions": {
-                "title": "Failed partitions"
+            "failedPartitions": {
+                "title": "Failed partitions",
+                "empty": "No failed partitions found",
+                "actions": {
+                    "retry": "Retry"
+                },
+                "columns": {
+                    "partition": "Partition",
+                    "attempts": "Attempts",
+                    "lastAttempt": "Last attempt"
+                }
             },
             "identities": {
-                "title": "Identities"
+                "title": "Identities",
+                "empty": "No identities",
+                "columns": {
+                    "subject": "Subject",
+                    "name": "Name",
+                    "userName": "UserName"
+                }
             }
         }
     }

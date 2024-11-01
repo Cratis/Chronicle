@@ -25,12 +25,15 @@ public class Namespaces(
     readonly IBroadcastChannelProvider _namespaceAddedChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.NamespaceAdded);
 
     /// <inheritdoc/>
+    public Task EnsureDefault() => Ensure(EventStoreNamespaceName.Default);
+
+    /// <inheritdoc/>
     public async Task Ensure(EventStoreNamespaceName @namespace)
     {
         if (State.Namespaces.Any(_ => _.Name == @namespace)) return;
 
         logger.AddingNamespace(@namespace);
-        State.NewNamespaces.Add(new NamespaceState(@namespace, DateTimeOffset.UtcNow));
+        State.NewNamespaces.Add(new NamespaceState(EventStoreNamespaceId.Default, @namespace, DateTimeOffset.UtcNow));
 
         var eventStoreName = (EventStoreName)this.GetPrimaryKeyString();
         var channelId = ChannelId.Create(WellKnownBroadcastChannelNames.NamespaceAdded, eventStoreName);

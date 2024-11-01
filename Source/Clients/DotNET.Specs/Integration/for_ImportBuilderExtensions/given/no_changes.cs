@@ -24,7 +24,7 @@ public class no_changes : Specification
         modified_model = new Model(42, "Forty Two", "Two");
         original_model = new Model(42, "Forty Two", "Two");
         objects_comparer = new();
-        objects_comparer.Setup(_ => _.Equals(original_model, modified_model, out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
+        objects_comparer.Setup(_ => _.Compare(original_model, modified_model, out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
         changeset = new(objects_comparer.Object, modified_model, original_model);
         events_to_append = [];
     }

@@ -20,7 +20,7 @@ public static class ObserverStateAggregateExtensions
     public static IAggregateFluent<ObserverInformation> JoinWithFailedPartitions(this IAggregateFluent<ObserverState> aggregation) => aggregation
         .Lookup(
             WellKnownCollectionNames.FailedPartitions,
-            new ExpressionFieldDefinition<ObserverState>((ObserverState _) => _.ObserverId),
+            new ExpressionFieldDefinition<ObserverState>((ObserverState _) => _.Id),
             new ExpressionFieldDefinition<FailedPartition>((FailedPartition _) => _.ObserverId),
             new ExpressionFieldDefinition<ObserverInformation>((ObserverInformation _) => _.FailedPartitions));
 }

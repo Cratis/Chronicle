@@ -22,6 +22,8 @@ export const CurrentNamespace = ({ namespace: namespace, compact, ...rest }: ICu
     }, [namespace]);
 
     const getInitials = (name: string) => {
+        if( name === undefined || name === null || name === '' ) return '';
+
         const names = name.split(/-|\s|(?=[A-Z])/);
         let initials = names[0].substring(0, 1).toUpperCase();
         if (names.length > 1) {

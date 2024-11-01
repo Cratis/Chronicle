@@ -6,18 +6,18 @@
     },
     {
         "name": "API",
-        "path": "${workspaceFolder}/Source/API",
-        "outputPath": "${workspaceFolder}/Source/API/bin/Debug/net8.0/Cratis.API.dll"
+        "path": "${workspaceFolder}/Source/Api",
+        "outputPath": "${workspaceFolder}/Source/Api/bin/Debug/net8.0/Cratis.Chronicle.Api.dll"
     },
     {
-        "name": "ProxyGenerator",
-        "path": "${workspaceFolder}/Source/Tools/ProxyGenerator",
-        "outputPath": "${workspaceFolder}/Source/Tools/ProxyGenerator/bin/Debug/net8.0/Cratis.ProxyGenerator.dll"
+        "name": "AspNetCore Sample",
+        "path": "${workspaceFolder}/Samples/AspNetCore",
+        "outputPath": "${workspaceFolder}/Samples/AspNetCore/bin/Debug/net8.0/AspNetCore.dll"
     },
     {
         "name": "Basic Sample",
         "path": "${workspaceFolder}/Samples/Basic",
-        "outputPath": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll"
+        "outputPath": "${workspaceFolder}/Samples/Basic/bin/Debug/net8.0/Basic.dll"
     },
     {
         "name": "Orleans Sample",

@@ -56,6 +56,11 @@ public static class WellKnownGrainStorageProviders
     /// <summary>
     /// The name of the storage provider used for reducers.
     /// </summary>
+    public const string Reactors = "reactors";
+
+    /// <summary>
+    /// The name of the storage provider used for reducers.
+    /// </summary>
     public const string Reducers = "reducers";
 
     /// <summary>

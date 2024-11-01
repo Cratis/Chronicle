@@ -15,10 +15,10 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
     void Establish()
     {
         @event = new();
-        event_context = new(Guid.Empty, 0, DateTimeOffset.UtcNow, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, CorrelationId.New(), [], Identity.System);
+        event_context = EventContext.Empty;
     }
 
-    async Task Because() => reduce_result = (await invoker.Invoke([new(@event, event_context)], null))!;
+    async Task Because() => reduce_result = (await invoker.Invoke(service_provider.Object, [new(@event, event_context)], null))!;
 
     [Fact] void should_pass_the_event() => reducer.ReceivedEvents.First().ShouldEqual(@event);
     [Fact] void should_pass_no_read_model() => reducer.ReceivedReadModels.First().ShouldBeNull();

@@ -9,4 +9,4 @@ export * from './AllObservers';
 export * from './GetObservers';
 export * from './Replay';
 export * from './ReplayPartition';
-export * from './RetryPartition';
+export * from './TryRecoverFailedPartition';

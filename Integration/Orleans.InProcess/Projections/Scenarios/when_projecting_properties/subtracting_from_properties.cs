@@ -34,4 +34,5 @@ public class subtracting_from_properties(context context) : Given<context>(conte
     [Fact] void should_result_in_correct_integer_value() => Context.Result.IntValue.ShouldEqual(-(Context.FirstEventAppended.IntValue + Context.SecondEventAppended.IntValue));
     [Fact] void should_result_in_correct_float_value() => Math.Round(Context.Result.FloatValue, 3).ShouldEqual(-Math.Round(Context.FirstEventAppended.FloatValue + Context.SecondEventAppended.FloatValue, 3));
     [Fact] void should_result_in_correct_double_value() => Context.Result.DoubleValue.ShouldEqual(-(Context.FirstEventAppended.DoubleValue + Context.SecondEventAppended.DoubleValue));
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

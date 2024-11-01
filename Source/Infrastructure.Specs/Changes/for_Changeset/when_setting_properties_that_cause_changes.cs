@@ -36,7 +36,7 @@ public class when_setting_properties_that_cause_changes : Specification
 
         objects_comparer = new();
         objects_comparer
-            .Setup(_ => _.Equals(initial_state, IsAny<ExpandoObject>(), out Ref<IEnumerable<PropertyDifference>>.IsAny))
+            .Setup(_ => _.Compare(initial_state, IsAny<ExpandoObject>(), out Ref<IEnumerable<PropertyDifference>>.IsAny))
             .Returns((object? _, object? __, out IEnumerable<PropertyDifference> differences) =>
             {
                 differences =

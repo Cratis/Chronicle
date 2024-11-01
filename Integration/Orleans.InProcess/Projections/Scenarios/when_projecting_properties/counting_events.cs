@@ -24,4 +24,5 @@ public class counting_events(context context) : Given<context>(context)
     }
 
     [Fact] void should_hold_correct_count() => Context.Result.IntValue.ShouldEqual(2);
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

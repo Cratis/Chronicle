@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Microsoft.AspNetCore.Mvc;
-
 namespace Cratis.Api.EventSequences;
 
 /// <summary>
@@ -11,7 +9,7 @@ namespace Cratis.Api.EventSequences;
 /// <remarks>
 /// Initializes a new instance of the <see cref="EventSequenceCommands"/> class.
 /// </remarks>
-[Route("/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
+[Route("/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
 public class EventSequenceCommands : ControllerBase
 {
     /// <summary>

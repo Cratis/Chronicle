@@ -10,4 +10,8 @@ namespace Cratis.Api.Jobs;
 /// <param name="Occurred">When it occurred.</param>
 /// <param name="ExceptionMessages">Any exception messages.</param>
 /// <param name="ExceptionStackTrace">Exception stack trace, if errored.</param>
-public record JobStatusChanged(JobStatus Status, DateTimeOffset Occurred, IEnumerable<string> ExceptionMessages, string ExceptionStackTrace);
+public record JobStatusChanged(
+    JobStatus Status,
+    DateTimeOffset Occurred,
+    IEnumerable<string> ExceptionMessages,
+    string ExceptionStackTrace);

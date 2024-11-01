@@ -23,6 +23,9 @@ public class ProjectionsManager : Grain<ProjectionsManagerState>, IProjectionsMa
     EventStoreName _eventStoreName = EventStoreName.NotSet;
 
     /// <inheritdoc/>
+    public Task Ensure() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _eventStoreName = this.GetPrimaryKeyString();

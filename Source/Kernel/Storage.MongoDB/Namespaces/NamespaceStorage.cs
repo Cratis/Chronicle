@@ -1,7 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage.Namespaces;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
@@ -17,6 +20,16 @@ public class NamespaceStorage(
     IEventStoreDatabase database,
     ILogger<NamespaceStorage> logger) : INamespaceStorage
 {
+    /// <inheritdoc/>
+    public async Task Ensure(EventStoreNamespaceName name)
+    {
+        var result = await GetCollection().FindAsync(Builders<MongoDBNamespace>.Filter.Eq(_ => _.Name, (string)name));
+        if (!result.Any())
+        {
+            await Create(name, DateTimeOffset.UtcNow);
+        }
+    }
+
     /// <inheritdoc/>
     public Task Create(EventStoreNamespaceName name, DateTimeOffset created)
     {
@@ -48,8 +61,14 @@ public class NamespaceStorage(
     {
         var result = await GetCollection().FindAsync(_ => true);
         var namespaces = await result.ToListAsync();
-        return namespaces.Select(_ => new NamespaceState(_.Name, _.Created));
+        return namespaces.Select(_ => new NamespaceState(_.Id, _.Name, _.Created));
     }
+
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<NamespaceState>> ObserveAll() =>
+         new TransformingSubject<IEnumerable<MongoDBNamespace>, IEnumerable<NamespaceState>>(
+            GetCollection().Observe(),
+            _ => _.Select(_ => new NamespaceState(_.Id, _.Name, _.Created)));
 
     IMongoCollection<MongoDBNamespace> GetCollection() => database.GetCollection<MongoDBNamespace>(WellKnownCollectionNames.Namespaces);
 }

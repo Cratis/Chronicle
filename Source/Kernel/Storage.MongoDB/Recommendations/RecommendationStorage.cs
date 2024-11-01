@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Recommendations;
-using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.Recommendations;
 using MongoDB.Driver;
 
@@ -40,7 +40,7 @@ public class RecommendationStorage(IEventStoreNamespaceDatabase database) : IRec
         await Collection.ReplaceOneAsync(GetIdFilter(recommendationId), recommendationState, new ReplaceOptions { IsUpsert = true });
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<RecommendationState>> GeAll()
+    public async Task<IImmutableList<RecommendationState>> GetAll()
     {
         var cursor = await Collection.FindAsync(_ => true).ConfigureAwait(false);
         var deserialized = cursor.ToList();
@@ -48,39 +48,7 @@ public class RecommendationStorage(IEventStoreNamespaceDatabase database) : IRec
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<RecommendationState>> ObserveRecommendations()
-    {
-        var recommendations = GeAll().GetAwaiter().GetResult();
-        return Collection.Observe(recommendations, HandleChangesForRecommendations);
-    }
-
-    void HandleChangesForRecommendations(IChangeStreamCursor<ChangeStreamDocument<RecommendationState>> cursor, List<RecommendationState> recommendations)
-    {
-        foreach (var change in cursor.Current)
-        {
-            var changedRecommendation = change.FullDocument;
-            if (change.OperationType == ChangeStreamOperationType.Delete)
-            {
-                var recommendation = recommendations.Find(_ => _.Id == (RecommendationId)change.DocumentKey["_id"].AsGuid);
-                if (recommendation is not null)
-                {
-                    recommendations.Remove(recommendation);
-                }
-                continue;
-            }
-
-            var observer = recommendations.Find(_ => _.Id == changedRecommendation.Id);
-            if (observer is not null)
-            {
-                var index = recommendations.IndexOf(observer);
-                recommendations[index] = changedRecommendation;
-            }
-            else
-            {
-                recommendations.Add(changedRecommendation);
-            }
-        }
-    }
+    public ISubject<IEnumerable<RecommendationState>> ObserveRecommendations() => Collection.Observe();
 
     FilterDefinition<RecommendationState> GetIdFilter(Guid id) => Builders<RecommendationState>.Filter.Eq(new StringFieldDefinition<RecommendationState, Guid>("_id"), id);
 }

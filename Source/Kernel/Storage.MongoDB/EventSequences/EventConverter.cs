@@ -48,7 +48,10 @@ public class EventConverter(
         return new AppendedEvent(
             new(@event.SequenceNumber, eventType),
             new(
+                @event.EventSourceType,
                 @event.EventSourceId,
+                @event.EventStreamType,
+                @event.EventStreamId,
                 @event.SequenceNumber,
                 @event.Occurred,
                 eventStoreName,

@@ -50,4 +50,5 @@ public class one_child_from_one_of_two_parents(context context) : Given<context>
     [Fact] void should_only_have_one_child_on_second_group() => Context.Groups.First(_ => _.Id.Value == Context.SecondGroupId.Value).Users.Count().ShouldEqual(1);
     [Fact] void should_have_two_groups() => Context.Groups.Length.ShouldEqual(2);
     [Fact] void should_only_have_correct_two_groups() => Context.ResultingGroupIds.ShouldContainOnly([Context.FirstGroupId, Context.SecondGroupId]);
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

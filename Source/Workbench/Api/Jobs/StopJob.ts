@@ -11,7 +11,7 @@ import { Validator } from '@cratis/applications/validation';
 import { Guid } from '@cratis/fundamentals';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/jobs/{{jobId}}/stop');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/jobs/{{jobId}}/stop');
 
 export interface IStopJob {
     eventStore?: string;
@@ -28,7 +28,7 @@ export class StopJobValidator extends CommandValidator {
 }
 
 export class StopJob extends Command<IStopJob> implements IStopJob {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/jobs/{jobId}/stop';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/jobs/{jobId}/stop';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new StopJobValidator();
 

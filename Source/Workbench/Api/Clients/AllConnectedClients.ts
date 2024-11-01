@@ -70,7 +70,7 @@ export class AllConnectedClients extends QueryFor<ConnectedClient[]> {
         this._sortBy = new AllConnectedClientsSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
         ];
     }

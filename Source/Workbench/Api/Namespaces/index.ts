@@ -5,4 +5,5 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 export * from './AllNamespaces';
+export * from './EnsureNamespace';
 export * from './Namespace';

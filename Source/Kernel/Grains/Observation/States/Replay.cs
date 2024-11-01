@@ -45,7 +45,7 @@ public class Replay(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        using var scope = logger.BeginReplayScope(state.ObserverId, observerKey);
+        using var scope = logger.BeginReplayScope(state.Id, observerKey);
 
         logger.Entering();
 
@@ -60,7 +60,7 @@ public class Replay(
         }
 
         _replayStarted = true;
-        await replayStateServiceClient.BeginReplayFor(new(state.ObserverId, observerKey, state.Type));
+        await replayStateServiceClient.BeginReplayFor(new(state.Id, observerKey, state.Type));
 
         var pausedJob = jobsForThisObserver.FirstOrDefault(_ => _.Status == JobStatus.Paused);
         if (pausedJob is not null)
@@ -85,7 +85,7 @@ public class Replay(
     {
         if (_replayStarted)
         {
-            await replayStateServiceClient.EndReplayFor(new(state.ObserverId, observerKey, state.Type));
+            await replayStateServiceClient.EndReplayFor(new(state.Id, observerKey, state.Type));
             _replayStarted = false;
         }
         return state;

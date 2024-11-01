@@ -8,4 +8,5 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.M
 public record User(
     EventSourceId Id,
     string Name,
-    IEnumerable<GroupOnUser> Groups);
+    IEnumerable<GroupOnUser> Groups,
+    EventSequenceNumber __lastHandledEventSequenceNumber);

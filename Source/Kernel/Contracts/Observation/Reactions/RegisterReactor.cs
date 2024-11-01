@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Events;
 using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Observation.Reactors;
@@ -31,20 +30,8 @@ public class RegisterReactor
     public string Namespace { get; set; }
 
     /// <summary>
-    /// Gets or sets the event sequence identifier.
+    /// Gets or sets the <see cref="ReactorDefinition"/>.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSequenceId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the observer identifier.
-    /// </summary>
-    [ProtoMember(5, IsRequired = true)]
-    public string ObserverId { get; set; } = Guid.NewGuid().ToString();
-
-    /// <summary>
-    /// Gets or sets a collection of event types to observe.
-    /// </summary>
-    [ProtoMember(6, IsRequired = true)]
-    public IList<EventType> EventTypes { get; set; } = [];
+    public ReactorDefinition Reactor { get; set; }
 }

@@ -8,7 +8,7 @@ import { QueryFor, QueryResultWithState } from '@cratis/applications/queries';
 import { useQuery, PerformQuery } from '@cratis/applications.react/queries';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/tail-sequence-number/observer/{{observerId}}');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/tail-sequence-number/observer/{{observerId}}');
 
 
 export interface TailForObserverArguments {
@@ -19,7 +19,7 @@ export interface TailForObserverArguments {
 }
 
 export class TailForObserver extends QueryFor<number, TailForObserverArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}/tail-sequence-number/observer/{observerId}';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}/tail-sequence-number/observer/{observerId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: number = {} as any;
 
@@ -27,7 +27,7 @@ export class TailForObserver extends QueryFor<number, TailForObserverArguments> 
         super(Number, false);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',

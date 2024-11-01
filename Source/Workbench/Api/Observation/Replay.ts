@@ -10,7 +10,7 @@ import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applic
 import { Validator } from '@cratis/applications/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/observers/{{namespace}}/replay/{{observerId}}');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/observers/{{namespace}}/replay/{{observerId}}');
 
 export interface IReplay {
     eventStore?: string;
@@ -27,7 +27,7 @@ export class ReplayValidator extends CommandValidator {
 }
 
 export class Replay extends Command<IReplay> implements IReplay {
-    readonly route: string = '/api/events/store/{eventStore}/observers/{namespace}/replay/{observerId}';
+    readonly route: string = '/api/event-store/{eventStore}/observers/{namespace}/replay/{observerId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new ReplayValidator();
 

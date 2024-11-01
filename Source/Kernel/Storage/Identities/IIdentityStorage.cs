@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Identities;
 
 namespace Cratis.Chronicle.Storage.Identities;
@@ -54,4 +55,10 @@ public interface IIdentityStorage
     /// <param name="identityId"><see cref="IdentityId"/> to get for.</param>
     /// <returns><see cref="Identity"/> instance.</returns>
     Task<Identity> GetSingleFor(IdentityId identityId);
+
+    /// <summary>
+    /// Observe all identities.
+    /// </summary>
+    /// <returns>An observable of collection of <see cref="Identity"/>.</returns>
+    ISubject<IEnumerable<Identity>> ObserveAll();
 }

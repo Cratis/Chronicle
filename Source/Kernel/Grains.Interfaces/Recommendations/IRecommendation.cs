@@ -28,7 +28,7 @@ public interface IRecommendation : IGrainWithGuidCompoundKey
 /// </summary>
 /// <typeparam name="TRequest">Type of request for the task.</typeparam>
 public interface IRecommendation<TRequest> : IRecommendation
-    where TRequest : class
+    where TRequest : class, IRecommendationRequest
 {
     /// <summary>
     /// Initialize the recommendation.

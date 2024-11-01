@@ -5,19 +5,15 @@ import { useLayoutContext } from '../context/LayoutContext';
 import { Button } from 'primereact/button';
 import css from './TopBar.module.css';
 import { FaBars } from 'react-icons/fa6';
-import { Profile } from "./Profile";
-import { Notifications } from './Notifications';
-import { Connection } from './Connection';
+// import { Profile } from "./Profile";
+// import { Notifications } from './Notifications';
+// import { Connection } from './Connection';
 import { useParams } from 'react-router-dom';
 import { EventStore } from './EventStore';
-
-type Params = {
-    eventStoreId: string;
-};
-
+import * as Shared from 'Shared';
 
 export const TopBar = () => {
-    const params = useParams() as Params;
+    const params = useParams<Shared.EventStoreAndNamespaceParams>();
 
     const { toggleLeftSidebarOpen } = useLayoutContext();
 
@@ -34,7 +30,7 @@ export const TopBar = () => {
                     </Button>
                 </div>
                 <div className="flex-1 flex align-center justify-center">
-                    <div className="font-extrabold text-2xl m-2">{params.eventStoreId}</div>
+                    <div className="font-extrabold text-2xl m-2">{params.eventStore}</div>
                 </div>
 
             </div>
@@ -42,7 +38,7 @@ export const TopBar = () => {
                 <div>
                     <EventStore />
                 </div>
-                <div>
+                {/* <div>
                     <Connection />
                 </div>
                 <div>
@@ -50,7 +46,7 @@ export const TopBar = () => {
                 </div>
                 <div>
                     <Profile />
-                </div>
+                </div> */}
             </div>
         </div>
     );

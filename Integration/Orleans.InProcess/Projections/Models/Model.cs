@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Concepts;
 
@@ -24,7 +25,8 @@ public record Model(
     FloatConcept FloatConceptValue,
     DoubleConcept DoubleConceptValue,
     GuidConcept GuidConceptValue,
-    DateTimeOffset LastUpdated)
+    DateTimeOffset LastUpdated,
+    EventSequenceNumber? __lastHandledEventSequenceNumber = default)
 {
     static Random random = new();
 

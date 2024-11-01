@@ -43,10 +43,15 @@ public class ReducerPipeline(
         var reduced = await reducer(context.Events, initial);
 
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, context.Events.First(), initial ?? new ExpandoObject());
-        if (!objectComparer.Equals(initial, reduced, out var differences))
+        if (!objectComparer.Compare(initial, reduced, out var differences))
         {
             changeset.Add(new PropertiesChanged<ExpandoObject>(null!, differences));
         }
-        await Sink.ApplyChanges(context.Key, changeset);
+
+        if (changeset.HasChanges)
+        {
+            changeset.SetSequenceNumber();
+            await Sink.ApplyChanges(context.Key, changeset);
+        }
     }
 }

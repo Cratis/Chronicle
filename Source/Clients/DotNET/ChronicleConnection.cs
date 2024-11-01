@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
@@ -98,10 +99,8 @@ public class ChronicleConnection : IChronicleConnection
 
         _channel = CreateGrpcChannel();
         _connectionService = _channel.CreateGrpcService<IConnectionService>();
-
         _lastKeepAlive = DateTimeOffset.UtcNow;
-
-        _connectTcs = new TaskCompletionSource();
+        _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         _keepAliveSubscription = _connectionService.Connect(new()
         {
@@ -112,6 +111,8 @@ public class ChronicleConnection : IChronicleConnection
         try
         {
             _services = new Services(
+                _channel.CreateGrpcService<IEventStores>(),
+                _channel.CreateGrpcService<INamespaces>(),
                 _channel.CreateGrpcService<IEventSequences>(),
                 _channel.CreateGrpcService<IEventTypes>(),
                 _channel.CreateGrpcService<IConstraints>(),
@@ -146,8 +147,10 @@ public class ChronicleConnection : IChronicleConnection
             EnableMultipleHttp2Connections = true
         };
 
+        var address = $"http://{_options.Url.ServerAddress.Host}:{_options.Url.ServerAddress.Port}";
+
         return GrpcChannel.ForAddress(
-            "http://localhost:35000",
+            address,
             new GrpcChannelOptions
             {
                 HttpHandler = httpHandler,
@@ -179,7 +182,11 @@ public class ChronicleConnection : IChronicleConnection
             _connectTcs?.SetResult();
         }
         _lastKeepAlive = DateTimeOffset.UtcNow;
-        _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
+
+        if (!Debugger.IsAttached)
+        {
+            _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
+        }
     }
 
     void StartWatchDog()

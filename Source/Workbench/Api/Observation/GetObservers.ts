@@ -6,10 +6,10 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import { ObserverInformation } from '../Contracts/Observation/ObserverInformation';
+import { ObserverInformation } from '../Concepts/Observation/ObserverInformation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/observers');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/observers/all-observers');
 
 class GetObserversSortBy {
     private _observerId: SortingActionsForQuery<ObserverInformation[]>;
@@ -17,7 +17,10 @@ class GetObserversSortBy {
     private _type: SortingActionsForQuery<ObserverInformation[]>;
     private _eventTypes: SortingActionsForQuery<ObserverInformation[]>;
     private _nextEventSequenceNumber: SortingActionsForQuery<ObserverInformation[]>;
+    private _lastHandledEventSequenceNumber: SortingActionsForQuery<ObserverInformation[]>;
     private _runningState: SortingActionsForQuery<ObserverInformation[]>;
+    private _handled: SortingActionsForQuery<ObserverInformation[]>;
+    private _failedPartitions: SortingActionsForQuery<ObserverInformation[]>;
 
     constructor(readonly query: GetObservers) {
         this._observerId = new SortingActionsForQuery<ObserverInformation[]>('observerId', query);
@@ -25,7 +28,10 @@ class GetObserversSortBy {
         this._type = new SortingActionsForQuery<ObserverInformation[]>('type', query);
         this._eventTypes = new SortingActionsForQuery<ObserverInformation[]>('eventTypes', query);
         this._nextEventSequenceNumber = new SortingActionsForQuery<ObserverInformation[]>('nextEventSequenceNumber', query);
+        this._lastHandledEventSequenceNumber = new SortingActionsForQuery<ObserverInformation[]>('lastHandledEventSequenceNumber', query);
         this._runningState = new SortingActionsForQuery<ObserverInformation[]>('runningState', query);
+        this._handled = new SortingActionsForQuery<ObserverInformation[]>('handled', query);
+        this._failedPartitions = new SortingActionsForQuery<ObserverInformation[]>('failedPartitions', query);
     }
 
     get observerId(): SortingActionsForQuery<ObserverInformation[]> {
@@ -43,8 +49,17 @@ class GetObserversSortBy {
     get nextEventSequenceNumber(): SortingActionsForQuery<ObserverInformation[]> {
         return this._nextEventSequenceNumber;
     }
+    get lastHandledEventSequenceNumber(): SortingActionsForQuery<ObserverInformation[]> {
+        return this._lastHandledEventSequenceNumber;
+    }
     get runningState(): SortingActionsForQuery<ObserverInformation[]> {
         return this._runningState;
+    }
+    get handled(): SortingActionsForQuery<ObserverInformation[]> {
+        return this._handled;
+    }
+    get failedPartitions(): SortingActionsForQuery<ObserverInformation[]> {
+        return this._failedPartitions;
     }
 }
 
@@ -54,7 +69,10 @@ class GetObserversSortByWithoutQuery {
     private _type: SortingActions  = new SortingActions('type');
     private _eventTypes: SortingActions  = new SortingActions('eventTypes');
     private _nextEventSequenceNumber: SortingActions  = new SortingActions('nextEventSequenceNumber');
+    private _lastHandledEventSequenceNumber: SortingActions  = new SortingActions('lastHandledEventSequenceNumber');
     private _runningState: SortingActions  = new SortingActions('runningState');
+    private _handled: SortingActions  = new SortingActions('handled');
+    private _failedPartitions: SortingActions  = new SortingActions('failedPartitions');
 
     get observerId(): SortingActions {
         return this._observerId;
@@ -71,8 +89,17 @@ class GetObserversSortByWithoutQuery {
     get nextEventSequenceNumber(): SortingActions {
         return this._nextEventSequenceNumber;
     }
+    get lastHandledEventSequenceNumber(): SortingActions {
+        return this._lastHandledEventSequenceNumber;
+    }
     get runningState(): SortingActions {
         return this._runningState;
+    }
+    get handled(): SortingActions {
+        return this._handled;
+    }
+    get failedPartitions(): SortingActions {
+        return this._failedPartitions;
     }
 }
 
@@ -82,7 +109,7 @@ export interface GetObserversArguments {
 }
 
 export class GetObservers extends QueryFor<ObserverInformation[], GetObserversArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/observers';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/observers/all-observers';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverInformation[] = [];
     private readonly _sortBy: GetObserversSortBy;
@@ -93,7 +120,7 @@ export class GetObservers extends QueryFor<ObserverInformation[], GetObserversAr
         this._sortBy = new GetObserversSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',

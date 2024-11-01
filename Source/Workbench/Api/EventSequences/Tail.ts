@@ -8,7 +8,7 @@ import { QueryFor, QueryResultWithState } from '@cratis/applications/queries';
 import { useQuery, PerformQuery } from '@cratis/applications.react/queries';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/tail-sequence-number');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/tail-sequence-number');
 
 
 export interface TailArguments {
@@ -18,7 +18,7 @@ export interface TailArguments {
 }
 
 export class Tail extends QueryFor<number, TailArguments> {
-    readonly route: string = '/api/events/store/{eventStore}/{namespace}/sequence/{eventSequenceId}/tail-sequence-number';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}/tail-sequence-number';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: number = {} as any;
 
@@ -26,7 +26,7 @@ export class Tail extends QueryFor<number, TailArguments> {
         super(Number, false);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
             'eventStore',
             'namespace',

@@ -19,7 +19,7 @@ public class no_changes : all_dependencies_for<SomeEvent>
 
         projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(new AdapterProjectionResult<Model>(initial, [], 0)));
         mapper.Setup(_ => _.Map<Model>(incoming)).Returns(initial);
-        objects_comparer.Setup(_ => _.Equals(initial, IsAny<Model>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
+        objects_comparer.Setup(_ => _.Compare(initial, IsAny<Model>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
 
         operations = new(
             adapter.Object,

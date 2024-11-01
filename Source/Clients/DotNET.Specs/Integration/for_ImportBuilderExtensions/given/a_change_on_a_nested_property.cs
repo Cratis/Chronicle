@@ -23,7 +23,7 @@ public class a_change_on_a_nested_property : Specification
         import_builder = new ImportBuilderFor<ComplexModel, ExternalModel>(subject);
         objects_comparer = new();
         objects_comparer
-            .Setup(_ => _.Equals(original_model, modified_model, out Ref<IEnumerable<PropertyDifference>>.IsAny))
+            .Setup(_ => _.Compare(original_model, modified_model, out Ref<IEnumerable<PropertyDifference>>.IsAny))
             .Returns((object? _, object? __, out IEnumerable<PropertyDifference> differences) =>
             {
                 differences =

@@ -45,7 +45,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
                 services.Configure<ChronicleOptions>(opts => opts.ArtifactsProvider = this);
                 ConfigureServices(services);
             });
-        builder.UseCratisChronicle();
+        builder.AddCratisChronicle();
 
         builder.UseOrleans(silo =>
             {
@@ -118,7 +118,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
             _backupPerformed = true;
         }
         GlobalFixture.RemoveAllDatabases().GetAwaiter().GetResult();
-        base.Dispose(disposing);
+        base.Dispose(false);
     }
 
     protected virtual void ConfigureServices(IServiceCollection services)

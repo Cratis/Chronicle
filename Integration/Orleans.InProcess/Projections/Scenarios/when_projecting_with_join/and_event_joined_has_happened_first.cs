@@ -38,4 +38,5 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
     [Fact] void should_have_user_name() => Context.Result.Name.ShouldEqual(UserName);
     [Fact] void should_have_group_id() => Context.Result.GroupId.ShouldEqual(Context.GroupId);
     [Fact] void should_have_group_name() => Context.Result.GroupName.ShouldEqual(GroupName);
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

@@ -24,8 +24,6 @@ public class ChronicleClient : IChronicleClient, IDisposable
     const string ProcessMetadataKey = "process";
 
     readonly IChronicleConnection? _connection;
-    readonly ChronicleOptions _options;
-    readonly ICausationManager _causationManager;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
 
@@ -53,9 +51,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <param name="options"><see cref="ChronicleOptions"/> to use.</param>
     public ChronicleClient(ChronicleOptions options)
     {
-        _options = options;
+        Options = options;
         var result = Initialize();
-        _causationManager = result.CausationManager;
+        CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
 
         var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
@@ -74,12 +72,18 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <param name="options">Optional <see cref="ChronicleOptions"/>.</param>
     public ChronicleClient(IChronicleConnection connection, ChronicleOptions options)
     {
-        _options = options;
+        Options = options;
         var result = Initialize();
-        _causationManager = result.CausationManager;
+        CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _connection = connection;
     }
+
+    /// <inheritdoc/>
+    public ChronicleOptions Options { get; }
+
+    /// <inheritdoc/>
+    public ICausationManager CausationManager { get; }
 
     /// <inheritdoc/>
     public void Dispose()
@@ -97,45 +101,54 @@ public class ChronicleClient : IChronicleClient, IDisposable
             return eventStore;
         }
 
-        _options.ArtifactsProvider.Initialize();
+        Options.ArtifactsProvider.Initialize();
 
         eventStore = new EventStore(
             name,
             @namespace,
             _connection!,
-            _options.ArtifactsProvider,
-            _options.CorrelationIdAccessor,
-            _causationManager,
-            _options.IdentityProvider,
+            Options.ArtifactsProvider,
+            Options.CorrelationIdAccessor,
+            CausationManager,
+            Options.IdentityProvider,
             _jsonSchemaGenerator,
-            _options.ModelNameConvention,
-            _options.ServiceProvider,
-            _options.JsonSerializerOptions,
-            _options.LoggerFactory);
+            Options.ModelNameConvention,
+            Options.ServiceProvider,
+            Options.JsonSerializerOptions,
+            Options.LoggerFactory);
 
         _eventStores[key] = eventStore;
         return eventStore;
     }
 
     /// <inheritdoc/>
-    public IAsyncEnumerable<EventStoreName> ListEventStores(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+    public async Task<IEnumerable<EventStoreName>> GetEventStores(CancellationToken cancellationToken = default)
+    {
+        if (_connection is null)
+        {
+            return [];
+        }
+
+        var eventStores = await _connection.Services.EventStores.GetEventStores();
+        return eventStores.Select(_ => (EventStoreName)_).ToArray();
+    }
 
     (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator) Initialize()
     {
         var causationManager = new CausationManager();
         causationManager.DefineRoot(new Dictionary<string, string>
         {
-            { VersionMetadataKey, _options.SoftwareVersion },
-            { CommitMetadataKey, _options.SoftwareCommit },
-            { ProgramIdentifierMetadataKey, _options.ProgramIdentifier },
+            { VersionMetadataKey, Options.SoftwareVersion },
+            { CommitMetadataKey, Options.SoftwareCommit },
+            { ProgramIdentifierMetadataKey, Options.ProgramIdentifier },
             { OperatingSystemMetadataKey, Environment.OSVersion.ToString() },
             { MachineNameMetadataKey, Environment.MachineName },
             { ProcessMetadataKey, Environment.ProcessPath ?? string.Empty }
         });
 
         var complianceMetadataResolver = new ComplianceMetadataResolver(
-            new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, _options.ServiceProvider),
-            new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, _options.ServiceProvider));
+            new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, Options.ServiceProvider),
+            new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, Options.ServiceProvider));
         var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver);
 
         return (causationManager, jsonSchemaGenerator);

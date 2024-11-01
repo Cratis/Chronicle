@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
-using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -37,18 +37,16 @@ public class JobStorage(IEventStoreNamespaceDatabase database) : IJobStorage
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<JobState>> ObserveJobs(params JobStatus[] statuses)
+    public ISubject<IEnumerable<JobState>> ObserveJobs(params JobStatus[] statuses)
     {
         var statusFilters = statuses.Select(status =>
-            Builders<ChangeStreamDocument<JobState>>.Filter.Eq(_ => _.FullDocument.Status, status));
-
-        var initialItems = GetJobs(statuses).GetAwaiter().GetResult();
+            Builders<JobState>.Filter.Eq(_ => _.Status, status));
 
         var filter = statuses.Length == 0 ?
-                                Builders<ChangeStreamDocument<JobState>>.Filter.Empty :
-                                Builders<ChangeStreamDocument<JobState>>.Filter.Or(statusFilters);
+                                Builders<JobState>.Filter.Empty :
+                                Builders<JobState>.Filter.Or(statusFilters);
 
-        return Collection.Observe(initialItems, HandleChangesForJobs, filter);
+        return Collection.Observe(filter);
     }
 
     /// <inheritdoc/>
@@ -120,33 +118,5 @@ public class JobStorage(IEventStoreNamespaceDatabase database) : IJobStorage
 
         var aggregation = Collection.Aggregate().Match(filter);
         return await aggregation.ToListAsync().ConfigureAwait(false);
-    }
-
-    void HandleChangesForJobs(IChangeStreamCursor<ChangeStreamDocument<JobState>> cursor, List<JobState> jobs)
-    {
-        foreach (var change in cursor.Current)
-        {
-            var jobState = change.FullDocument;
-            if (change.OperationType == ChangeStreamOperationType.Delete)
-            {
-                var job = jobs.Find(_ => _.Id == (JobId)change.DocumentKey["_id"].AsGuid);
-                if (job is not null)
-                {
-                    jobs.Remove(job);
-                }
-                continue;
-            }
-
-            var observer = jobs.Find(_ => _.Id == jobState.Id);
-            if (observer is not null)
-            {
-                var index = jobs.IndexOf(observer);
-                jobs[index] = jobState;
-            }
-            else
-            {
-                jobs.Add(jobState);
-            }
-        }
     }
 }

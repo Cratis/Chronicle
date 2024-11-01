@@ -7,20 +7,24 @@ import { BlankLayout } from "./Layout/Blank/BlankLayout";
 import { Home } from "./Features/Home";
 import { EventStore } from "./Features/EventStore/EventStore";
 import { LayoutProvider } from './Layout/Default/context/LayoutContext';
+import { ConfirmationDialogs } from '@cratis/applications.react.mvvm/dialogs';
+import { ConfirmationDialog } from 'Components/Dialogs';
 
 function App() {
     useTheme();
     return (
         <LayoutProvider>
-            <BrowserRouter>
-                <Routes>
-                    <Route path='/' element={<Navigate to={'/home'} />} />
-                    <Route path='/home' element={<BlankLayout />}>
-                        <Route path={''} element={<Home />} />
-                    </Route>
-                    <Route path='/event-store/*' element={<EventStore />} />
-                </Routes>
-            </BrowserRouter>
+            <ConfirmationDialogs component={ConfirmationDialog}>
+                <BrowserRouter>
+                    <Routes>
+                        <Route path='/' element={<Navigate to={'/home'} />} />
+                        <Route path='/home' element={<BlankLayout />}>
+                            <Route path={''} element={<Home />} />
+                        </Route>
+                        <Route path='/event-store/*' element={<EventStore />} />
+                    </Routes>
+                </BrowserRouter>
+            </ConfirmationDialogs>
         </LayoutProvider>
     );
 }

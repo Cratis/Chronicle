@@ -4,7 +4,6 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
-using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -96,10 +95,7 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
     /// <inheritdoc/>
     public IObservable<IEnumerable<JobStepState>> ObserveForJob(JobId jobId)
     {
-        var filter = GetJobIdFilter<ChangeStreamDocument<JobStepState>>(jobId, "fullDocument.");
-        var initialItems = GetForJob(jobId).GetAwaiter().GetResult();
-
-        return Collection.Observe(initialItems, HandleChangesForJobSteps, filter);
+        throw new NotImplementedException();
     }
 
     /// <inheritdoc/>
@@ -156,8 +152,4 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
                     "jobStepId", new BsonBinaryData(jobStepId, GuidRepresentation.Standard)
                 }
             });
-
-    void HandleChangesForJobSteps(IChangeStreamCursor<ChangeStreamDocument<JobStepState>> cursor, List<JobStepState> jobs)
-    {
-    }
 }

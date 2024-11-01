@@ -33,6 +33,57 @@
             "dest": "api/clients/aspnetcore",
             "disableGitFeatures": false,
             "disableDefaultFilter": false
+        },
+        {
+            "src": [
+                {
+                    "files": [
+                        "Clients/XUnit/XUnit.csproj"
+                    ],
+                    "exclude": [
+                        "**/obj/**",
+                        "**/bin/**"
+                    ],
+                    "cwd": "../Source"
+                }
+            ],
+            "dest": "api/clients/xunit",
+            "disableGitFeatures": false,
+            "disableDefaultFilter": false
+        },
+        {
+            "src": [
+                {
+                    "files": [
+                        "Clients/Orleans.InProcess/Orleans.InProcess.csproj"
+                    ],
+                    "exclude": [
+                        "**/obj/**",
+                        "**/bin/**"
+                    ],
+                    "cwd": "../Source"
+                }
+            ],
+            "dest": "api/clients/orleans.inprocess",
+            "disableGitFeatures": false,
+            "disableDefaultFilter": false
+        },
+        {
+            "src": [
+                {
+                    "files": [
+                        "Clients/Orleans.XUnit/Orleans.XUnit.csproj"
+                    ],
+                    "exclude": [
+                        "**/obj/**",
+                        "**/bin/**"
+                    ],
+                    "cwd": "../Source"
+                }
+            ],
+            "dest": "api/clients/orleans.xunit",
+            "disableGitFeatures": false,
+            "disableDefaultFilter": false
         }
     ],
     "build": {
@@ -104,8 +155,8 @@
         "cleanupCacheHistory": false,
         "disableGitFeatures": false,
         "globalMetadata": {
-            "_appTitle": "Cratis",
-            "_appName": "Cratis",
+            "_appTitle": "Cratis Chronicle",
+            "_appName": "Cratis Chronicle",
             "_appFaviconPath": "images/favicon.png",
             "_appLogoPath": "images/logo.png",
             "_appFooter": "Documentation",

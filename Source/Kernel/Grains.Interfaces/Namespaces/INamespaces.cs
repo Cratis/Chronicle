@@ -11,6 +11,12 @@ namespace Cratis.Chronicle.Grains.Namespaces;
 public interface INamespaces : IGrainWithStringKey
 {
     /// <summary>
+    /// Ensure default namespaces.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task EnsureDefault();
+
+    /// <summary>
     /// Ensure that a namespace exists.
     /// </summary>
     /// <param name="namespace">The namespace to ensure.</param>

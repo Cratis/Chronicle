@@ -38,5 +38,5 @@ public class RecommendationState
     /// <summary>
     /// Gets or sets the request associated with the recommendation.
     /// </summary>
-    public object Request { get; set; } = default!;
+    public IRecommendationRequest Request { get; set; } = default!;
 }

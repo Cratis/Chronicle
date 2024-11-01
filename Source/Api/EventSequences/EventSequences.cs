@@ -2,14 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Api.EventSequences;
 
 /// <summary>
 /// Represents the API for working with event logs.
 /// </summary>
-[Route("/api/events/store/sequences")]
+[Route("/api/event-store/sequences")]
 public class EventSequences : ControllerBase
 {
     /// <summary>

@@ -9,17 +9,22 @@ import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, 
 import { Namespace } from './Namespace';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/namespaces');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/namespaces');
 
 class AllNamespacesSortBy {
+    private _id: SortingActionsForObservableQuery<Namespace[]>;
     private _name: SortingActionsForObservableQuery<Namespace[]>;
     private _description: SortingActionsForObservableQuery<Namespace[]>;
 
     constructor(readonly query: AllNamespaces) {
+        this._id = new SortingActionsForObservableQuery<Namespace[]>('id', query);
         this._name = new SortingActionsForObservableQuery<Namespace[]>('name', query);
         this._description = new SortingActionsForObservableQuery<Namespace[]>('description', query);
     }
 
+    get id(): SortingActionsForObservableQuery<Namespace[]> {
+        return this._id;
+    }
     get name(): SortingActionsForObservableQuery<Namespace[]> {
         return this._name;
     }
@@ -29,9 +34,13 @@ class AllNamespacesSortBy {
 }
 
 class AllNamespacesSortByWithoutQuery {
+    private _id: SortingActions  = new SortingActions('id');
     private _name: SortingActions  = new SortingActions('name');
     private _description: SortingActions  = new SortingActions('description');
 
+    get id(): SortingActions {
+        return this._id;
+    }
     get name(): SortingActions {
         return this._name;
     }
@@ -40,8 +49,11 @@ class AllNamespacesSortByWithoutQuery {
     }
 }
 
-export class AllNamespaces extends ObservableQueryFor<Namespace[]> {
-    readonly route: string = '/api/namespaces';
+export interface AllNamespacesArguments {
+    eventStore: string;
+}
+export class AllNamespaces extends ObservableQueryFor<Namespace[], AllNamespacesArguments> {
+    readonly route: string = '/api/event-store/{eventStore}/namespaces';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Namespace[] = [];
     private readonly _sortBy: AllNamespacesSortBy;
@@ -52,8 +64,9 @@ export class AllNamespaces extends ObservableQueryFor<Namespace[]> {
         this._sortBy = new AllNamespacesSortBy(this);
     }
 
-    get requestArguments(): string[] {
+    get requiredRequestArguments(): string[] {
         return [
+            'eventStore',
         ];
     }
 
@@ -65,11 +78,11 @@ export class AllNamespaces extends ObservableQueryFor<Namespace[]> {
         return this._sortBy;
     }
 
-    static use(sorting?: Sorting): [QueryResultWithState<Namespace[]>, SetSorting] {
-        return useObservableQuery<Namespace[], AllNamespaces>(AllNamespaces, undefined, sorting);
+    static use(args?: AllNamespacesArguments, sorting?: Sorting): [QueryResultWithState<Namespace[]>, SetSorting] {
+        return useObservableQuery<Namespace[], AllNamespaces, AllNamespacesArguments>(AllNamespaces, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, sorting?: Sorting): [QueryResultWithState<Namespace[]>, SetSorting, SetPage, SetPageSize] {
-        return useObservableQueryWithPaging<Namespace[], AllNamespaces>(AllNamespaces, new Paging(0, pageSize), undefined, sorting);
+    static useWithPaging(pageSize: number, args?: AllNamespacesArguments, sorting?: Sorting): [QueryResultWithState<Namespace[]>, SetSorting, SetPage, SetPageSize] {
+        return useObservableQueryWithPaging<Namespace[], AllNamespaces>(AllNamespaces, new Paging(0, pageSize), args, sorting);
     }
 }

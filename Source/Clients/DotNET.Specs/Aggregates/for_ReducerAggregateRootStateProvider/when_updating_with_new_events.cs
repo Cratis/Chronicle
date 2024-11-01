@@ -30,11 +30,11 @@ public class when_updating_with_new_events : given.an_aggregate_root_that_handle
         ];
 
         _invoker
-            .Invoke(Arg.Any<IEnumerable<EventAndContext>>(), Arg.Any<object>())
+            .Invoke(Arg.Any<IServiceProvider>(), Arg.Any<IEnumerable<EventAndContext>>(), Arg.Any<object>())
             .Returns((CallInfo callInfo) =>
             {
-                var ev = callInfo.ArgAt<IEnumerable<EventAndContext>>(0);
-                var initial = callInfo.ArgAt<object?>(1);
+                var ev = callInfo.ArgAt<IEnumerable<EventAndContext>>(1);
+                var initial = callInfo.ArgAt<object?>(2);
                 _initialStateInvokedWith = initial as StateForAggregateRoot;
                 _eventsInvokedWith = ev.Select(_ => _.Event);
                 return new ReduceResult(_state, EventSequenceNumber.Unavailable, [], string.Empty);

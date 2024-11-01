@@ -23,8 +23,8 @@ public class AppendManyResponse
     /// <summary>
     /// Gets or sets the sequence numbers of the events that was appended in the same order as requested events, if successful.
     /// </summary>
-    [ProtoMember(2)]
-    public IList<ulong> SequenceNumbers { get; set; }
+    [ProtoMember(2, IsRequired = true)]
+    public IList<ulong> SequenceNumbers { get; set; } = [];
 
     /// <summary>
     /// Gets a value indicating whether the operation was successful.

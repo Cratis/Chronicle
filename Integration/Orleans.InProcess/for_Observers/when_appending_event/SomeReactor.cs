@@ -11,10 +11,10 @@ public class SomeReactor(TaskCompletionSource tsc) : IReactor
 {
     public int HandledEvents;
 
-    public Task OnSomeEvent(SomeEvent evt, EventContext ctx)
+    public async Task OnSomeEvent(SomeEvent evt, EventContext ctx)
     {
         Interlocked.Increment(ref HandledEvents);
+        await Task.Delay(TimeSpan.FromMilliseconds(10));
         tsc.SetResult();
-        return Task.CompletedTask;
     }
 }

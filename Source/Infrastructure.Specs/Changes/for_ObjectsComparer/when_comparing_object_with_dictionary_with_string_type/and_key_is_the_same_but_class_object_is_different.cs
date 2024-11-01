@@ -27,7 +27,7 @@ public class and_key_is_the_same_but_class_object_is_different : given.an_object
         });
     }
 
-    void Because() => result = comparer.Equals(left, right, out differences);
+    void Because() => result = comparer.Compare(left, right, out differences);
 
     [Fact] void should_not_be_equal() => result.ShouldBeFalse();
     [Fact] void should_only_have_one_property_difference() => differences.Count().ShouldEqual(1);

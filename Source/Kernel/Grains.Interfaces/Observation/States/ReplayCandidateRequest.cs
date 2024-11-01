@@ -3,13 +3,16 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
+using Cratis.Chronicle.Concepts.Recommendations;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Grains.Observation.States;
 
 /// <summary>
 /// Represents the request for a replay candidate.
 /// </summary>
-public class ReplayCandidateRequest
+[DerivedType("08ff4094-0684-420e-8f9a-60b0d838ea86")]
+public class ReplayCandidateRequest : IRecommendationRequest
 {
     /// <summary>
     /// Gets or sets the <see cref="ObserverId"/> for the observer.

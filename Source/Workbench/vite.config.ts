@@ -39,10 +39,10 @@ export default defineConfig({
     resolve: {
         alias: {
             'Api': path.resolve('./Api'),
-            'MVVM': path.resolve('./MVVM'),
             'assets': path.resolve('./assets'),
+            'Shared': path.resolve('./Shared'),
+            'State': path.resolve('./State'),
             'Components': path.resolve('./Components'),
-            'Infrastructure': path.resolve('./Infrastructure'),
             'Browser': path.resolve('./Infrastructure/Browser'),
             'Layout': path.resolve('./Layout'),
             'Features': path.resolve('./Features'),
