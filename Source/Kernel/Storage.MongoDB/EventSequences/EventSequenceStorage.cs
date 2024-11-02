@@ -97,7 +97,10 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<AppendedEvent> Append(
         EventSequenceNumber sequenceNumber,
+        EventSourceType eventSourceType,
         EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
         EventType eventType,
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
@@ -122,7 +125,10 @@ public class EventSequenceStorage(
                 causedByChain,
                 eventType.Id,
                 occurred,
+                eventSourceType,
                 eventSourceId,
+                eventStreamType,
+                eventStreamId,
                 new Dictionary<string, BsonDocument>
                 {
                     { eventType.Generation.ToString(), document }
@@ -134,7 +140,10 @@ public class EventSequenceStorage(
             return new AppendedEvent(
                 new(sequenceNumber, eventType),
                 new(
+                    eventSourceType,
                     eventSourceId,
+                    eventStreamType,
+                    eventStreamId,
                     sequenceNumber,
                     occurred,
                     eventStore,
@@ -216,7 +225,7 @@ public class EventSequenceStorage(
         var updates = new List<UpdateOneModel<Event>>();
         var affectedEventTypes = new HashSet<EventType>();
 
-        using var cursor = await GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId, eventTypes);
+        using var cursor = await GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId, eventTypes: eventTypes);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)
@@ -496,6 +505,8 @@ public class EventSequenceStorage(
     public async Task<IEventCursor> GetFromSequenceNumber(
         EventSequenceNumber sequenceNumber,
         EventSourceId? eventSourceId = null,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = null,
         CancellationToken cancellationToken = default)
     {
@@ -510,6 +521,16 @@ public class EventSequenceStorage(
         if (eventSourceId?.IsSpecified == true)
         {
             filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
+        }
+
+        if (eventStreamType?.IsAll == false)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventStreamType, eventStreamType));
+        }
+
+        if (eventStreamId?.IsDefault == false)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventStreamId, eventStreamId));
         }
 
         if (eventTypes?.Any() == true)

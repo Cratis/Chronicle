@@ -60,14 +60,17 @@ public interface IEventSequence : IGrainWithStringKey
     /// <summary>
     /// Append a single event to the event store.
     /// </summary>
+    /// <param name="eventSourceType">The <see cref="EventSourceType"/> to append for.</param>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
+    /// <param name="eventStreamType">the <see cref="EventStreamType"/> to append to.</param>
+    /// <param name="eventStreamId">The <see cref="EventStreamId"/> to append to.</param>
     /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
     /// <param name="content">The JSON payload of the event.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the event, defined by <see cref="Identity"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<AppendResult> Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
+    Task<AppendResult> Append(EventSourceType eventSourceType, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, JsonObject content, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Append a single event to the event store.

@@ -30,8 +30,13 @@ public class UnitOfWorkIncomingCallFilter(
             var aggregateContextHolder = (aggregate as IAggregateRootContextHolder)!;
 
             unitOfWorkManager.SetCurrent(unitOfWork);
+            var key = (AggregateRootKey)aggregate.GetPrimaryKeyString();
+
             var aggregateRootContext = new AggregateRootContext(
-                aggregate.GetPrimaryKeyString(),
+                key.EventSourceType,
+                key.EventSourceId,
+                aggregate.GetEventStreamType(),
+                key.EventStreamId,
                 eventStore.GetEventSequence(EventSequenceId.Log),
                 aggregate,
                 unitOfWork,

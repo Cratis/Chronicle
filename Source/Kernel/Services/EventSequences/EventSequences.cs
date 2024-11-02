@@ -33,7 +33,10 @@ public class EventSequences(
     {
         var eventSequence = GetEventSequenceGrain(request);
         var result = await eventSequence.Append(
+            request.EventSourceType,
             request.EventSourceId,
+            request.EventStreamType,
+            request.EventStreamId,
             request.EventType.ToChronicle(),
             JsonSerializer.Deserialize<JsonNode>(request.Content, jsonSerializerOptions)!.AsObject(),
             request.CorrelationId,
@@ -64,6 +67,8 @@ public class EventSequences(
         var cursor = await eventSequence.GetFromSequenceNumber(
             EventSequenceNumber.First,
             request.EventSourceId,
+            request.EventStreamType,
+            request.EventStreamId,
             request.EventTypes.ToChronicle());
 
         var events = new List<Contracts.Events.AppendedEvent>();
@@ -98,6 +103,8 @@ public class EventSequences(
         var cursor = await eventSequence.GetFromSequenceNumber(
             request.EventSequenceNumber,
             string.IsNullOrWhiteSpace(request.EventSourceId) ? (EventSourceId)null! : request.EventSourceId,
+            EventStreamType.All,
+            EventStreamId.Default,
             request.EventTypes.ToChronicle());
 
         var events = new List<Contracts.Events.AppendedEvent>();

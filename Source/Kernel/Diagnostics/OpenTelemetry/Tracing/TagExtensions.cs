@@ -15,7 +15,8 @@ namespace Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 /// </summary>
 public static class TagExtensions
 {
-    const string EventSource = "cratis.eventsource";
+    const string EventSourceType = "cratis.eventsource.type";
+    const string EventSourceId = "cratis.eventsource.id";
     const string EventStoreName = "cratis.eventstore.name";
     const string EventStoreNamespace = "cratis.eventstore.namespace";
     const string EventSequenceId = "cratis.eventsequence.id";
@@ -27,11 +28,14 @@ public static class TagExtensions
     /// Tag <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="activity">The <see cref="Activity"/>.</param>
-    /// <param name="eventSource">The <see cref="EventSourceId"/>.</param>
+    /// <param name="eventSourceType">The <see cref="EventSourceType"/>.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/>.</param>
     /// <returns>The <see cref="Activity"/> with the tag.</returns>
-    public static Activity Tag(this Activity activity, EventSourceId eventSource)
+    public static Activity Tag(this Activity activity, EventSourceType eventSourceType, EventSourceId eventSourceId)
     {
-        activity.SetTag(EventSource, eventSource.Value);
+        activity
+            .SetTag(EventSourceType, eventSourceType.Value)
+            .SetTag(EventSourceId, eventSourceId.Value);
         return activity;
     }
 

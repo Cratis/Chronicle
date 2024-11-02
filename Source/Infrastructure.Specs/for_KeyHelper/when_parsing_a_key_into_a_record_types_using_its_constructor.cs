@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Concepts.for_KeyHelper;
+namespace Cratis.Chronicle.for_KeyHelper;
 
 public class when_parsing_a_key_into_a_record_types_using_its_constructor : Specification
 {

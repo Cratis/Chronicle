@@ -31,7 +31,10 @@ public static class AggregateRootTestFactory
 #pragma warning restore CA2000 // Call dispose
 
         var aggregateRootContext = new AggregateRootContext(
+            EventSourceType.Default,
             eventSourceId,
+            aggregateRoot.GetEventStreamType(),
+            EventStreamId.Default,
             eventSequence,
             aggregateRoot,
             unitOfWork,
@@ -62,7 +65,10 @@ public static class AggregateRootTestFactory
 #pragma warning restore CA2000 // Call dispose
 
         var aggregateRootContext = new AggregateRootContext(
+            EventSourceType.Default,
             eventSourceId,
+            aggregateRoot.GetEventStreamType(),
+            EventStreamId.Default,
             eventSequence,
             aggregateRoot,
             unitOfWork,

@@ -24,7 +24,11 @@ public class ReducerAggregateRootStateProvider<TState>(
     /// <inheritdoc/>
     public async Task<TState?> Provide()
     {
-        var events = await aggregateRootContext.EventSequence.GetForEventSourceIdAndEventTypes(aggregateRootContext.EventSourceId, reducer.EventTypes);
+        var events = await aggregateRootContext.EventSequence.GetForEventSourceIdAndEventTypes(
+            aggregateRootContext.EventSourceId,
+            reducer.EventTypes,
+            aggregateRootContext.EventStreamType,
+            aggregateRootContext.EventStreamId);
         var result = await reducer.OnNext(events, null, serviceProvider);
         return (TState?)result.ModelState;
     }

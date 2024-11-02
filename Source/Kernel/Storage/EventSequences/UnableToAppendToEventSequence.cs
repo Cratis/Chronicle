@@ -17,16 +17,18 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// <param name="eventStore">For which event store it is failing for.</param>
 /// <param name="namespace">For which namespace it is failing for.</param>
 /// <param name="sequenceNumber">The sequence number that is failing.</param>
-/// <param name="eventSourceId">EventSource it is failing for.</param>
+/// <param name="eventSourceType">EventSourceType it is failing for. </param>
+/// <param name="eventSourceId">EventSourceId it is failing for.</param>
 /// <param name="innerException">The inner exception.</param>
 public class UnableToAppendToEventSequence(
     EventSequenceId eventSequenceId,
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     EventSequenceNumber sequenceNumber,
+    EventSourceType eventSourceType,
     EventSourceId eventSourceId,
     Exception innerException)
-    : Exception($"Unable to append event at sequence {sequenceNumber} for event source {eventSourceId} in namespace {@namespace} in event store {eventStore} from event sequence {eventSequenceId}", innerException)
+    : Exception($"Unable to append event at sequence {sequenceNumber} for event source type {eventSourceType} and event source id {eventSourceId} in namespace {@namespace} in event store {eventStore} from event sequence {eventSequenceId}", innerException)
 {
     /// <summary>
     /// Gets the stream identifier.
@@ -42,6 +44,11 @@ public class UnableToAppendToEventSequence(
     /// Gets the sequence number within the event sequence.
     /// </summary>
     public EventSequenceNumber SequenceNumber { get; } = sequenceNumber;
+
+    /// <summary>
+    /// Gets the event source type.
+    /// </summary>
+    public EventSourceType EventSourceType { get; } = eventSourceType;
 
     /// <summary>
     /// Gets the event source identifier.

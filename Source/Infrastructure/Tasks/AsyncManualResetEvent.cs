@@ -13,7 +13,7 @@ public sealed class AsyncManualResetEvent
     volatile TaskCompletionSource<bool> _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>
-    /// Waits asynchrnously for the reset.
+    /// Waits asynchronously for the reset.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
     public Task WaitAsync()
