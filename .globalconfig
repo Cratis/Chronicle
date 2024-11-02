@@ -137,3 +137,4 @@ dotnet_diagnostic.MA0074.severity = none
 dotnet_diagnostic.MA0075.severity = none
 dotnet_diagnostic.MA0076.severity = none
 dotnet_diagnostic.MA0134.severity = none
+dotnet_diagnostic.MA0165.severity = none
