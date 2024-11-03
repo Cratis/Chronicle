@@ -3,7 +3,6 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <ApplicationModel>14.7.1</ApplicationModel>
     <Fundamentals>5.6.2</Fundamentals>
-    <Fundamentals>5.6.2</Fundamentals>
     <Orleans>8.2.0</Orleans>
   </PropertyGroup>
   <ItemGroup>
@@ -23,6 +22,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="8.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />

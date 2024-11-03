@@ -57,6 +57,7 @@
         "eslint-plugin-react": "7.31.11",
         "eslint-plugin-react-hooks": "4.6.0",
         "eslint-plugin-react-refresh": "0.4.5",
+        "hash-files": "1.1.1",
         "mocha": "10.7.3",
         "postcss": "8.4.35",
         "sinon": "18.0.0",
