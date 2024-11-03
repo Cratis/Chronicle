@@ -92,7 +92,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/wwwroot
+          path: ./Source/Workbench/Web/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Setup node v16
@@ -112,11 +112,11 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/package.json') }}
 
       - name: Yarn install
-        working-directory: ./Source/Workbench
+        working-directory: ./Source/Workbench/Web
         run: yarn install
 
       - name: Build Workbench
-        working-directory: ./Source/Workbench
+        working-directory: ./Source/Workbench/Web
         run: |
           yarn build
 
@@ -146,6 +146,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - uses: actions/cache@v3
+        id: workbench-output
+        with:
+          path: ./Source/Workbench/Web/wwwroot
+          key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -188,7 +194,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/wwwroot
+          path: ./Source/Workbench/Web/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU
@@ -232,7 +238,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/wwwroot
+          path: ./Source/Workbench/Web/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU
@@ -255,7 +261,7 @@ jobs:
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
-          file: ./Docker/Workbench/Dockerfile
+          file: ./Docker/Workbench/Web/Dockerfile
           push: true
           tags: |
             cratis/chronicle:${{ needs.release.outputs.version }}-workbench
@@ -287,7 +293,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/wwwroot
+          path: ./Source/Workbench/Web/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU

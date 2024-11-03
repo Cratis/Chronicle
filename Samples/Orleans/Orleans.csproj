@@ -11,6 +11,7 @@
         <ProjectReference Include="..\..\Source\Clients\Orleans.InProcess\Orleans.InProcess.csproj" />
         <ProjectReference Include="..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
         <ProjectReference Include="..\..\Source\Kernel\Storage.MongoDB\Storage.MongoDB.csproj" />
+        <ProjectReference Include="..\..\Source\Workbench/Embedded/Embedded.csproj" />
     </ItemGroup>
 
     <ItemGroup>

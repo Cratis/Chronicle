@@ -4,6 +4,7 @@
         <TargetFramework>net8.0</TargetFramework>
         <AssemblyName>Cratis.Chronicle.Api</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Api</RootNamespace>
+        <ResourceNamespace>$(RootNamespace)</ResourceNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <ServerGarbageCollection>false</ServerGarbageCollection>
@@ -28,11 +29,17 @@
     </ItemGroup>
 
     <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
-        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../Workbench/Api</CratisProxiesOutputPath>
+        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../Workbench/Web/Api</CratisProxiesOutputPath>
         <CratisProxiesSegmentsToSkip>2</CratisProxiesSegmentsToSkip>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
         <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="$(OutputPath)$(AssemblyName).xml">
+            <LogicalName>$(ResourceNamespace).XmlDocs.xml</LogicalName>
+        </EmbeddedResource>
     </ItemGroup>
 </Project>

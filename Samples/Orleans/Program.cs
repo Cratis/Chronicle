@@ -3,6 +3,7 @@
 
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.Workbench.Embedded;
 using Cratis.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,16 +25,17 @@ builder.AddCratisChronicle();
 builder.Host.UseOrleans(silo =>
     {
         silo
+            .UseLocalhostClustering()
+            .AddCratisChronicle(
+                options => options.EventStoreName = "sample",
+                _ => _.WithMongoDB())
+            .UseCratisChronicleWorkbench()
             .UseDashboard(options =>
             {
                 options.Host = "*";
                 options.Port = 8081;
                 options.HostSelf = true;
-            })
-            .UseLocalhostClustering()
-            .AddCratisChronicle(
-                options => options.EventStoreName = "sample",
-                _ => _.WithMongoDB());
+            });
     })
     .UseConsoleLifetime();
 
