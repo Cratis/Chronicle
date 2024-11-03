@@ -14,7 +14,7 @@
     </PropertyGroup>
 
     <Target Name="BuildFrontend" BeforeTargets="Build" Condition="'$(Configuration)'=='Debug'">
-        <Exec Command="yarn hash-files -f '$(FrontendSourcePattern)' -a sha256 &gt; $(FrontendHashFile).new" WorkingDirectory="$(FrontendSourceDir)" />
+        <Exec Command="yarn hash-files -f '$(FrontendSourcePattern)' -a sha256 &gt; $(FrontendHashFile).new" WorkingDirectory="$(FrontendSourceDir)" ContinueOnError="true"/>
 
         <ReadLinesFromFile File="$(FrontendHashFile)" Condition="Exists('$(FrontendHashFile)')">
             <Output TaskParameter="Lines" ItemName="SavedHash" />
