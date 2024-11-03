@@ -21,7 +21,6 @@ builder.Host.UseDefaultServiceProvider(_ => _.ValidateOnBuild = false);
 builder.Services.AddSingleton(Globals.JsonSerializerOptions);
 builder.Services.AddControllers();
 builder.AddCratisChronicle();
-builder.AddCratisChronicleWorkbench();
 
 builder.Host.UseOrleans(silo =>
     {
@@ -32,6 +31,7 @@ builder.Host.UseOrleans(silo =>
                 options.Port = 8081;
                 options.HostSelf = true;
             })
+            .UseCratisChronicleWorkbench()
             .UseLocalhostClustering()
             .AddCratisChronicle(
                 options => options.EventStoreName = "sample",
@@ -42,7 +42,6 @@ builder.Host.UseOrleans(silo =>
 var app = builder.Build();
 var f = app.Services.GetRequiredService<IMongoDBClientFactory>();
 app.UseCratisChronicle();
-app.UseCratisChronicleWorkbench();
 app.MapControllers();
 
 await app.RunAsync();
