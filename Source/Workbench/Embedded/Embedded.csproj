@@ -28,10 +28,10 @@
             <RunFrontendBuild Condition="'@(SavedHash)' != '@(NewHash)' or !Exists('$(FrontendHashFile)')">true</RunFrontendBuild>
         </PropertyGroup>
 
-        <Exec Command="yarn build" WorkingDirectory="$(FrontendSourceDir)" Condition="$(RunFrontendBuild) == 'true'" />
+        <Exec Command="yarn build" WorkingDirectory="$(FrontendSourceDir)" Condition="$(RunFrontendBuild) == 'true'" ContinueOnError="true" />
 
-        <Copy SourceFiles="$(FrontendHashFile).new" DestinationFiles="$(FrontendHashFile)" Condition="Exists('$(FrontendHashFile).new')" />
-        <Delete Files="$(FrontendHashFile).new" Condition="Exists('$(FrontendHashFile).new')" />
+        <Copy SourceFiles="$(FrontendHashFile).new" DestinationFiles="$(FrontendHashFile)" Condition="Exists('$(FrontendHashFile).new')" ContinueOnError="true" />
+        <Delete Files="$(FrontendHashFile).new" Condition="Exists('$(FrontendHashFile).new')" ContinueOnError="true" />
     </Target>
 
     <ItemGroup>
