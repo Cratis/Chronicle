@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <AssemblyName>Cratis.Chronicle.Workbench.Embedded</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Workbench.Embedded</RootNamespace>
+        <ResourceNamespace>$(RootNamespace).Files</ResourceNamespace>
+
+        <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+
+        <FrontendSourceDir>$(MSBuildThisFileDirectory)../Web</FrontendSourceDir>
+        <FrontendBuildDir>$(MSBuildThisFileDirectory)../Web/wwwroot</FrontendBuildDir>
+        <FrontendSourcePattern>["**/*.tsx", "**/*.ts"]</FrontendSourcePattern>
+        <FrontendHashFile>$(MSBuildThisFileDirectory)/.frontend_hash</FrontendHashFile>
+
+    </PropertyGroup>
+
+    <Target Name="BuildFrontend" BeforeTargets="Build">
+        <Exec Command="yarn hash-files -f '$(FrontendSourcePattern)' -a sha256 &gt; $(FrontendHashFile).new" WorkingDirectory="$(FrontendSourceDir)" />
+
+        <ReadLinesFromFile File="$(FrontendHashFile)" Condition="Exists('$(FrontendHashFile)')">
+            <Output TaskParameter="Lines" ItemName="SavedHash" />
+        </ReadLinesFromFile>
+
+        <ReadLinesFromFile File="$(FrontendHashFile).new">
+            <Output TaskParameter="Lines" ItemName="NewHash" />
+        </ReadLinesFromFile>
+
+        <PropertyGroup>
+            <RunFrontendBuild Condition="'@(SavedHash)' != '@(NewHash)' or !Exists('$(FrontendHashFile)')">true</RunFrontendBuild>
+        </PropertyGroup>
+
+        <Exec Command="yarn build" WorkingDirectory="$(FrontendSourceDir)" Condition="$(RunFrontendBuild) == 'true'" />
+
+        <Copy SourceFiles="$(FrontendHashFile).new" DestinationFiles="$(FrontendHashFile)" Condition="Exists('$(FrontendHashFile).new')" />
+        <Delete Files="$(FrontendHashFile).new" Condition="Exists('$(FrontendHashFile).new')" />
+    </Target>
+
+    <ItemGroup>
+        <EmbeddedResource Include="$(FrontendBuildDir)/**/*">
+            <LogicalName>$(ResourceNamespace)/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+        </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Api/Api.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
+    </ItemGroup>
+</Project>
