@@ -5,13 +5,10 @@
         <RootNamespace>Cratis.Chronicle.Workbench.Embedded</RootNamespace>
         <ResourceNamespace>$(RootNamespace).Files</ResourceNamespace>
 
-        <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
-
         <FrontendSourceDir>$(MSBuildThisFileDirectory)../Web</FrontendSourceDir>
         <FrontendBuildDir>$(MSBuildThisFileDirectory)../Web/wwwroot</FrontendBuildDir>
         <FrontendSourcePattern>["**/*.tsx", "**/*.ts"]</FrontendSourcePattern>
         <FrontendHashFile>$(MSBuildThisFileDirectory)/.frontend_hash</FrontendHashFile>
-
     </PropertyGroup>
 
     <Target Name="BuildFrontend" BeforeTargets="Build" Condition="'$(Configuration)'=='Debug'">
