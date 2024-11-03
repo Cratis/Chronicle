@@ -25,17 +25,17 @@ builder.AddCratisChronicle();
 builder.Host.UseOrleans(silo =>
     {
         silo
+            .UseLocalhostClustering()
+            .AddCratisChronicle(
+                options => options.EventStoreName = "sample",
+                _ => _.WithMongoDB())
+            .UseCratisChronicleWorkbench()
             .UseDashboard(options =>
             {
                 options.Host = "*";
                 options.Port = 8081;
                 options.HostSelf = true;
-            })
-            .UseCratisChronicleWorkbench()
-            .UseLocalhostClustering()
-            .AddCratisChronicle(
-                options => options.EventStoreName = "sample",
-                _ => _.WithMongoDB());
+            });
     })
     .UseConsoleLifetime();
 
