@@ -147,6 +147,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - uses: actions/cache@v3
+        id: workbench-output
+        with:
+          path: ./Source/Workbench/Web/wwwroot
+          key: ${{ env.WORKBENCH_CACHE }}
+
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
