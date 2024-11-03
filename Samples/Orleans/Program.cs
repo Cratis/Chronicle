@@ -3,6 +3,7 @@
 
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.Workbench.Embedded;
 using Cratis.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,7 @@ builder.Host.UseDefaultServiceProvider(_ => _.ValidateOnBuild = false);
 builder.Services.AddSingleton(Globals.JsonSerializerOptions);
 builder.Services.AddControllers();
 builder.AddCratisChronicle();
+builder.AddCratisChronicleWorkbench();
 
 builder.Host.UseOrleans(silo =>
     {
@@ -40,6 +42,7 @@ builder.Host.UseOrleans(silo =>
 var app = builder.Build();
 var f = app.Services.GetRequiredService<IMongoDBClientFactory>();
 app.UseCratisChronicle();
+app.UseCratisChronicleWorkbench();
 app.MapControllers();
 
 await app.RunAsync();
