@@ -115,6 +115,7 @@ public class EventSequence(
             var eventType = eventTypes.GetEventTypeFor(@event.Event.GetType());
             return new Contracts.Events.EventToAppend
             {
+                EventSourceType = @event.EventSourceType,
                 EventSourceId = @event.EventSourceId,
                 EventStreamType = @event.EventStreamType,
                 EventStreamId = @event.EventStreamId,
