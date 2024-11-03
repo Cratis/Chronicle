@@ -5,6 +5,8 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Xml;
+using System.Xml.XPath;
 
 namespace Cratis.Api.Server;
 
@@ -30,8 +32,14 @@ public static class ApiServiceCollectionExtensions
 
         services.AddSwaggerGen(options =>
         {
-            var filePath = Path.Combine(AppContext.BaseDirectory, typeof(Startup).Assembly.GetName().Name + ".xml");
-            options.IncludeXmlComments(filePath);
+            options.IncludeXmlComments(() =>
+            {
+                var type = typeof(ApiServiceCollectionExtensions);
+                var resourceName = $"{type.Assembly.GetName().Name}.XmlDocs.xml";
+                var stream = type.Assembly.GetManifestResourceStream(resourceName);
+                var reader = XmlReader.Create(stream!);
+                return new XPathDocument(reader);
+            });
         });
         return services;
     }
