@@ -32,6 +32,8 @@ public interface IUnitOfWork : IDisposable
     /// </summary>
     bool IsSuccess { get; }
 
+    void Enlist(IUnitOfWorkEnlistee enlistee);
+
     /// <summary>
     /// Add an event that has occurred to the <see cref="IUnitOfWork"/>.
     /// </summary>
