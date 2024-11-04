@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
     <!-- Since we have 2 .csproj files basically doing the same thing, we keep common properties and items in -->
-    <Import Project="Common.props" />
+    <Import Project="$(MSBuildThisFileDirectory)/Common.props" />
 
     <PropertyGroup>
         <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">false</DisableProxyGenerator>
