@@ -1,31 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
+    <!-- Since we have 2 .csproj files basically doing the same thing, we keep common properties and items in -->
+    <Import Project="$(MSBuildThisFileDirectory)/Common.props" />
+
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
-        <AssemblyName>Cratis.Chronicle.Api</AssemblyName>
-        <RootNamespace>Cratis.Chronicle.Api</RootNamespace>
-        <ResourceNamespace>$(RootNamespace)</ResourceNamespace>
-        <InvariantGlobalization>true</InvariantGlobalization>
-        <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
-        <ServerGarbageCollection>false</ServerGarbageCollection>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <NoWarn>$(NoWarn);RCS1140;CS1998</NoWarn>
         <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">false</DisableProxyGenerator>
     </PropertyGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
-        <ProjectReference Include="../Kernel/Grains.Interfaces/Grains.Interfaces.csproj" />
-        <ProjectReference Include="../Kernel/Storage/Storage.csproj" />
-        <ProjectReference Include="../Kernel/Concepts/Concepts.csproj" />
-        <ProjectReference Include="../Kernel/Contracts/Contracts.csproj" />
-    </ItemGroup>
+    <!-- We need to build ourselves, effectively, since we need the XML Docs file as something we can embed as a resource-->
+    <Target Name="GenerateXmlDocumentation" BeforeTargets="BeforeBuild">
+        <MSBuild Projects="Api.XmlDoc.csproj" Targets="Build"/>
+    </Target>
 
     <ItemGroup>
-        <PackageReference Include="Swashbuckle.AspNetCore" />
-        <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
-        <PackageReference Include="Cratis.Applications" />
-        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+        <EmbeddedResource Include="$(OutputPath)$(XmlDocsAssemblyName).xml">
+            <LogicalName>$(ResourceNamespace).XmlDocs.xml</LogicalName>
+        </EmbeddedResource>
     </ItemGroup>
 
     <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
@@ -35,11 +24,5 @@
 
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
         <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <EmbeddedResource Include="$(OutputPath)$(AssemblyName).xml">
-            <LogicalName>$(ResourceNamespace).XmlDocs.xml</LogicalName>
-        </EmbeddedResource>
     </ItemGroup>
 </Project>
