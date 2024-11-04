@@ -3,3 +3,4 @@
 
 global using Cratis.Concepts;
 global using Microsoft.AspNetCore.Mvc;
+global using Orleans;
