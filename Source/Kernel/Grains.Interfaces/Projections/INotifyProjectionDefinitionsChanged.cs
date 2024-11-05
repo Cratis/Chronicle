@@ -11,5 +11,6 @@ public interface INotifyProjectionDefinitionsChanged : IGrainObserver
     /// <summary>
     /// Called when a projection definition is changed.
     /// </summary>
-    void OnProjectionDefinitionsChanged();
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task OnProjectionDefinitionsChanged();
 }

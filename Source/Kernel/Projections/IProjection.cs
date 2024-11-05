@@ -106,14 +106,14 @@ public interface IProjection
     void OnNext(ProjectionEventContext context);
 
     /// <summary>
-    /// Checks whether or not the projection will accept a specific event type.
+    /// Checks whether the projection will accept a specific event type.
     /// </summary>
     /// <param name="eventType"><see cref="EventType"/> to check.</param>
     /// <returns>True if it does, false if not.</returns>
     bool Accepts(EventType eventType);
 
     /// <summary>
-    /// Get whether or not there is a key resolver for a specific <see cref="EventType"/>.
+    /// Get whether there is a key resolver for a specific <see cref="EventType"/>.
     /// </summary>
     /// <param name="eventType"><see cref="EventType"/> to check.</param>
     /// <returns>True if there is, false if not.</returns>

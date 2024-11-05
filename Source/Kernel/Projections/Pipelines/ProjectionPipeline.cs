@@ -85,7 +85,7 @@ public class ProjectionPipeline(
                 changeset.SetSequenceNumber();
             }
             await Sink.ApplyChanges(key, changeset);
-            await changesetStorage.Save(@event.Context.CorrelationId, changeset);
+            await changesetStorage.Save(Projection.Identifier, key, Projection.Path, @event.Context.SequenceNumber, @event.Context.CorrelationId, changeset);
         }
     }
 
@@ -128,6 +128,7 @@ public class ProjectionPipeline(
             {
                 var keyResolver = child.GetKeyResolverFor(context.Event.Metadata.Type);
                 var key = await keyResolver(eventSequenceStorage, context.Event);
+                // TODO: Either this child key or the parent key is wrong for Join-children
                 await HandleEventFor(child, context with { Key = key });
             }
             else

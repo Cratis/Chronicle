@@ -42,10 +42,10 @@ public class ProjectionObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public void OnProjectionDefinitionsChanged()
+    public async Task OnProjectionDefinitionsChanged()
     {
-        ReadStateAsync().Wait();
-        HandlePipeline().Wait();
+        await ReadStateAsync();
+        await HandlePipeline();
     }
 
     /// <inheritdoc/>

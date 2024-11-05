@@ -120,18 +120,19 @@ public static class ProjectionExtensions
         {
             observable.Subscribe(_ =>
             {
-                if (_.Key.ArrayIndexers.HasFor(childrenProperty))
+                if (!_.Key.ArrayIndexers.HasFor(childrenProperty))
                 {
-                    var items = _.Changeset.InitialState.EnsureCollection<object>(childrenProperty, _.Key.ArrayIndexers);
-                    var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
-                    if (!identifiedByProperty.IsSet ||
-                        !items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
-                    {
-                        _.Changeset.AddChild<ExpandoObject>(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, propertyMappers, _.Key.ArrayIndexers);
-                        return;
-                    }
-                    _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers);
+                    return;
                 }
+                var items = _.Changeset.InitialState.EnsureCollection<object>(childrenProperty, _.Key.ArrayIndexers);
+                var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
+                if (!identifiedByProperty.IsSet ||
+                    !items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
+                {
+                    _.Changeset.AddChild<ExpandoObject>(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, propertyMappers, _.Key.ArrayIndexers);
+                    return;
+                }
+                _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers);
             });
         }
         return observable;
