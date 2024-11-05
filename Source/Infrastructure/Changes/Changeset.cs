@@ -63,20 +63,20 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     public IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers)
     {
         var workingState = InitialState.Clone()!;
-        var changeset = new Changeset<TSource, TTarget>(comparer, Incoming, workingState, this);
-        Add(new Joined(workingState, key, onProperty, arrayIndexers, changeset.Changes));
+        var childChangeset = new Changeset<TSource, TTarget>(comparer, Incoming, workingState, this);
+        Add(new Joined(workingState, key, onProperty, arrayIndexers, childChangeset.Changes));
         CurrentState = workingState;
-        return changeset;
+        return childChangeset;
     }
 
     /// <inheritdoc/>
     public IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers)
     {
         var workingState = CurrentState.Clone()!;
-        var changeset = new Changeset<TSource, TTarget>(comparer, incoming, workingState, this);
-        Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, changeset.Changes));
+        var childChangeset = new Changeset<TSource, TTarget>(comparer, incoming, workingState, this);
+        Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, childChangeset.Changes));
         CurrentState = workingState;
-        return changeset;
+        return childChangeset;
     }
 
     /// <inheritdoc/>
@@ -201,7 +201,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         return default!;
     }
 
-    void OptimizeResolveJoinsAgainstChildrenAdded(Changeset<TSource, TTarget>? parent)
+    static void OptimizeResolveJoinsAgainstChildrenAdded(Changeset<TSource, TTarget>? parent)
     {
         if (parent is null)
         {

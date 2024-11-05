@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Changes;
 public interface IChangeset<TSource, TTarget>
 {
     /// <summary>
-    /// Gets the <see cref="Incoming"/> the <see cref="Changeset{TSource, TTarget}"/> is for.
+    /// Gets the <typeparamref name="TSource"/> the <see cref="IChangeset{TSource, TTarget}"/> is for.
     /// </summary>
     TSource Incoming { get; }
 
@@ -33,7 +33,7 @@ public interface IChangeset<TSource, TTarget>
     IEnumerable<Change> Changes { get; }
 
     /// <summary>
-    /// Gets whether or not there are changes in the changeset.
+    /// Gets whether there are changes in the changeset.
     /// </summary>
     bool HasChanges { get; }
 
