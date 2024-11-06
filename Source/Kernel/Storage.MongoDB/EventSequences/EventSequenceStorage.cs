@@ -268,7 +268,7 @@ public class EventSequenceStorage(
         var filter = Builders<Event>.Filter.And([.. filters]);
 
         var highest = await collection.Find(filter)
-                                      .SortBySequenceNumber()
+                                      .SortByAscendingSequenceNumber()
                                       .Limit(1)
                                       .SingleOrDefaultAsync()
                                       .ConfigureAwait(false);
@@ -411,7 +411,7 @@ public class EventSequenceStorage(
 
         var filter = Builders<Event>.Filter.And([.. filters]);
         var highest = await collection.Find(filter)
-                                      .SortBySequenceNumber()
+                                      .SortByAscendingSequenceNumber()
                                       .Limit(1)
                                       .SingleOrDefaultAsync()
                                       .ConfigureAwait(false);
@@ -430,17 +430,22 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<bool> HasInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId)
+    public async Task<(bool Found, AppendedEvent? Event)> TryGetLastEventBefore(EventTypeId eventTypeId, EventSourceId eventSourceId, EventSequenceNumber currentSequenceNumber)
     {
         var filter = Builders<Event>.Filter.And(
             Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
-            Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
+            Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId),
+            Builders<Event>.Filter.Lt(_ => _.SequenceNumber, currentSequenceNumber));
 
-        var collection = _collection;
-        var count = await collection.Find(filter)
-                                    .CountDocumentsAsync()
-                                    .ConfigureAwait(false);
-        return count > 0;
+        var @event = await _collection.Find(filter)
+            .SortByDescendingSequenceNumber()
+            .Limit(1)
+            .FirstOrDefaultAsync()
+            .ConfigureAwait(false);
+
+        return @event != null
+            ? (true, await converter.ToAppendedEvent(@event))
+            : (false, null);
     }
 
     /// <inheritdoc/>
@@ -540,7 +545,7 @@ public class EventSequenceStorage(
 
         var filter = Builders<Event>.Filter.And([.. filters]);
         var cursor = await collection.Find(filter)
-                                     .SortBySequenceNumber()
+                                     .SortByAscendingSequenceNumber()
                                      .ToCursorAsync(cancellationToken)
                                      .ConfigureAwait(false);
         return new EventCursor(converter, cursor);
@@ -575,7 +580,7 @@ public class EventSequenceStorage(
         var filter = Builders<Event>.Filter.And([.. filters]);
 
         var cursor = await collection.Find(filter)
-                                     .SortBySequenceNumber()
+                                     .SortByAscendingSequenceNumber()
                                      .ToCursorAsync(cancellationToken)
                                      .ConfigureAwait(false);
         return new EventCursor(converter, cursor);

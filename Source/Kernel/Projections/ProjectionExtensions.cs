@@ -66,24 +66,20 @@ public static class ProjectionExtensions
         PropertyPath onModelProperty)
     {
         var joinSubject = new Subject<ProjectionEventContext>();
-        observable.Subscribe(_ =>
+        observable.Subscribe(context =>
         {
-            var onValue = onModelProperty.GetValue(_.Changeset.CurrentState, _.Key.ArrayIndexers);
-            if (onValue is not null)
+            var onValue = onModelProperty.GetValue(context.Changeset.CurrentState, context.Key.ArrayIndexers);
+            if (onValue is not null && eventSequenceStorage.TryGetLastEventBefore(
+                    joinEventType.Id,
+                    onValue.ToString()!,
+                    context.Event.Metadata.SequenceNumber).GetAwaiter().GetResult() is (true, { } lastEvent))
             {
-                // TODO: Get last instance for the event before current event (_.Event.Metadata.SequenceNumber)
-                // Change from HasInstance + Get to TryGetLastInstance...
-                var hasInstance = eventSequenceStorage.HasInstanceFor(joinEventType.Id, onValue.ToString()!).GetAwaiter().GetResult();
-                if (hasInstance)
+                var changeset = context.Changeset.ResolvedJoin(onModelProperty, context.Key.Value, lastEvent, context.Key.ArrayIndexers);
+                joinSubject.OnNext(context with
                 {
-                    var lastEventInstance = eventSequenceStorage.GetLastInstanceFor(joinEventType.Id, onValue.ToString()!).GetAwaiter().GetResult();
-                    var changeset = _.Changeset.ResolvedJoin(onModelProperty, _.Key.Value, lastEventInstance, _.Key.ArrayIndexers);
-                    joinSubject.OnNext(_ with
-                    {
-                        Event = lastEventInstance,
-                        Changeset = changeset
-                    });
-                }
+                    Event = lastEvent,
+                    Changeset = changeset
+                });
             }
         });
         return joinSubject;
