@@ -26,6 +26,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
     protected List<object> EventsToAppend = [];
     protected List<EventAndEventSourceId> EventsWithEventSourceIdToAppend = [];
     protected Grains.Observation.IObserver Observer;
+    protected bool WaitForEachEvent;
 
     protected override void ConfigureServices(IServiceCollection services)
     {
@@ -54,6 +55,10 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
         {
             appendResult = await EventStore.EventLog.Append(@event.EventSourceId, @event.Event);
             LastEventSequenceNumber = appendResult.SequenceNumber;
+            if (WaitForEachEvent)
+            {
+                await WaitForProjectionAndSetResult(appendResult.SequenceNumber);
+            }
         }
 
         var appendedEvents = await EventStore.EventLog.GetForEventSourceIdAndEventTypes(EventSourceId, EventTypes.Select(_ => _.GetEventType()));
