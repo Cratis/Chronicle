@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Base;
+using Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Concepts;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
 using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_removing.one_child_from_one_of_two_parents.context;
@@ -23,15 +24,15 @@ public class one_child_from_one_of_two_parents(context context) : Given<context>
 
         void Establish()
         {
-            var userId = (EventSourceId)Guid.NewGuid();
+            var userId = new UserId(Guid.NewGuid());
             FirstGroupId = Guid.NewGuid();
             SecondGroupId = Guid.NewGuid();
-            EventSourceId = userId;
+            EventSourceId = userId.ToString();
             ModelId = FirstGroupId;
 
             EventsWithEventSourceIdToAppend.Add(new(FirstGroupId, new GroupCreated("SomeGroup")));
             EventsWithEventSourceIdToAppend.Add(new(SecondGroupId, new GroupCreated("SomeGroup")));
-            EventsWithEventSourceIdToAppend.Add(new(userId, new UserCreated("Someone")));
+            EventsWithEventSourceIdToAppend.Add(new(userId.ToString(), new UserCreated("Someone")));
             EventsWithEventSourceIdToAppend.Add(new(FirstGroupId, new UserAddedToGroup(userId)));
             EventsWithEventSourceIdToAppend.Add(new(SecondGroupId, new UserAddedToGroup(userId)));
             EventsWithEventSourceIdToAppend.Add(new(FirstGroupId, new UserRemovedFromGroup(userId)));

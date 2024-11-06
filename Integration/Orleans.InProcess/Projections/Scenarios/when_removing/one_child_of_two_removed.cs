@@ -20,11 +20,11 @@ public class one_child_of_two_removed(context context) : Given<context>(context)
 
         void Establish()
         {
-            var userId = (EventSourceId)Guid.NewGuid();
+            var userId = Guid.NewGuid();
             FirstGroupId = Guid.NewGuid();
             SecondGroupId = Guid.NewGuid();
             EventSourceId = userId;
-            ModelId = userId;
+            ModelId = userId.ToString();
 
             EventsWithEventSourceIdToAppend.Add(new(FirstGroupId, new GroupCreated("SomeGroup")));
             EventsWithEventSourceIdToAppend.Add(new(SecondGroupId, new GroupCreated("SomeOtherGroup")));
