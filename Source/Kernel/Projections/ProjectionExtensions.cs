@@ -71,6 +71,8 @@ public static class ProjectionExtensions
             var onValue = onModelProperty.GetValue(_.Changeset.CurrentState, _.Key.ArrayIndexers);
             if (onValue is not null)
             {
+                // TODO: Get last instance for the event before current event (_.Event.Metadata.SequenceNumber)
+                // Change from HasInstance + Get to TryGetLastInstance...
                 var hasInstance = eventSequenceStorage.HasInstanceFor(joinEventType.Id, onValue.ToString()!).GetAwaiter().GetResult();
                 if (hasInstance)
                 {

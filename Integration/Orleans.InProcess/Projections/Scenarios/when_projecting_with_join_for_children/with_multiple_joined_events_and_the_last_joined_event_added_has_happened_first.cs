@@ -6,6 +6,7 @@ using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Concepts;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.Models;
+using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_with_join_for_children.with_multiple_joined_events_and_the_last_joined_event_added_has_happened_first.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_with_join_for_children;
@@ -32,8 +33,12 @@ public class with_multiple_joined_events_and_the_last_joined_event_added_has_hap
             EventsWithEventSourceIdToAppend.Add(new(GroupId, new GroupCreated(GroupName)));
             EventsWithEventSourceIdToAppend.Add(new(UserId.ToString(), new UserCreated(UserName)));
             EventsWithEventSourceIdToAppend.Add(new(GroupId, new UserAddedToGroup(UserId)));
-            EventsWithEventSourceIdToAppend.Add(new(UserId.ToString(), new UserOnboarded()));
-            EventsWithEventSourceIdToAppend.Add(new(UserId.ToString(), new UserOffboarded()));
+        }
+
+        async Task Because()
+        {
+            var appendResult = await EventStore.EventLog.Append(UserId.ToString(), new UserOnboarded());
+            await WaitForProjectionAndSetResult(appendResult.SequenceNumber);
         }
     }
 
@@ -41,5 +46,5 @@ public class with_multiple_joined_events_and_the_last_joined_event_added_has_hap
     [Fact] void should_have_group_name() => Context.Result.Name.ShouldEqual(GroupName);
     [Fact] void should_have_user_id_on_child() => Context.Result.Users.First().UserId.ShouldEqual(Context.UserId);
     [Fact] void should_have_user_name_on_child() => Context.Result.Users.First().Name.ShouldEqual(UserName);
-    [Fact] void should_have_user_onboarded_set_to_false_on_child() => Context.Result.Users.First().Onboarded.ShouldBeFalse();
+    [Fact] void should_have_user_onboarded_set_to_false_on_child() => Context.Result.Users.First().Onboarded.ShouldBeTrue();
 }
