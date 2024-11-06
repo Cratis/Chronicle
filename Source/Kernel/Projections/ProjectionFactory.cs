@@ -325,9 +325,9 @@ public class ProjectionFactory(
         // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
         var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
         // TODO: Why different call for the Join-definitions
-        eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
+        eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
         eventsForProjection.AddRange(projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)));
-        eventsForProjection.AddRange(projectionDefinition.RemovedWithJoin.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
+        eventsForProjection.AddRange(projectionDefinition.RemovedWithJoin.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
 
         if (projectionDefinition.FromDerivatives is not null)
         {
@@ -356,7 +356,14 @@ public class ProjectionFactory(
         projection.SetEventTypesWithKeyResolvers(distinctEventTypes, distinctOwnEventTypes);
     }
 
-    EventTypeWithKeyResolver GetEventTypeWithKeyResolver(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent = false, PropertyExpression? parentKey = null)
+    EventTypeWithKeyResolver GetEventTypeWithKeyResolverForJoin(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty)
+    {
+        var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
+        keyResolver = KeyResolvers.ForJoin(projection, keyResolver, actualIdentifiedByProperty);
+        return new EventTypeWithKeyResolver(eventType, keyResolver);
+    }
+
+    EventTypeWithKeyResolver GetEventTypeWithKeyResolver(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent, PropertyExpression? parentKey)
     {
         var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
         if (hasParent)

@@ -131,7 +131,7 @@ public class ChangesetConverter(
         }
 
         var childrenProperty = childAdded.ChildrenProperty.GetChildrenProperty();
-        var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
+        var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Segments.First().Value.Equals(childAdded.ChildrenProperty)));
         var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
         arrayFiltersForDocument.AddRange(arrayFilters);
 

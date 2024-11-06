@@ -39,5 +39,5 @@ public class and_event_joined_happens_after(context context) : Given<context>(co
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_have_group_name() => Context.Result.Name.ShouldEqual(GroupName);
     [Fact] void should_have_user_id_on_child() => Context.Result.Users.First().UserId.ShouldEqual(Context.UserId);
-    [Fact] void should_have_group_name_on_child() => Context.Result.Users.First().Name.ShouldEqual(UserName);
+    [Fact] void should_have_user_name_on_child() => Context.Result.Users.First().Name.ShouldEqual(UserName);
 }
