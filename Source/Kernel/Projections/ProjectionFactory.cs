@@ -52,6 +52,64 @@ public class ProjectionFactory(
             false);
     }
 
+    static void SetParentOnAllChildProjections(Projection projection, IProjection[] childProjections)
+    {
+        foreach (var child in childProjections)
+        {
+            child.SetParent(projection);
+        }
+    }
+
+    static void SetupRemovedWith(ProjectionDefinition projectionDefinition, PropertyPath childrenAccessorProperty, bool isChild, PropertyPath actualIdentifiedByProperty, Projection projection)
+    {
+        foreach (var (eventType, _) in projectionDefinition.RemovedWith)
+        {
+            var observable = projection.Event
+                    .WhereEventTypeEquals(eventType);
+            if (isChild)
+            {
+                observable.RemoveChild(
+                    childrenAccessorProperty,
+                    actualIdentifiedByProperty);
+            }
+            else
+            {
+                observable.Remove();
+            }
+        }
+    }
+
+    static void SetupRemovedWithJoin(ProjectionDefinition projectionDefinition, PropertyPath childrenAccessorProperty, PropertyPath actualIdentifiedByProperty, Projection projection)
+    {
+        foreach (var (eventType, _) in projectionDefinition.RemovedWithJoin)
+        {
+            projection.Event
+                   .WhereEventTypeEquals(eventType)
+                   .RemoveChildFromAll(
+                       childrenAccessorProperty,
+                       actualIdentifiedByProperty);
+        }
+    }
+
+    static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema modelSchema, Model model) =>
+        projectionDefinition.InitialModelState.Count == 0 ?
+            CreateInitialState(model) :
+            expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
+
+    static ExpandoObject CreateInitialState(Model model)
+    {
+        // If there is no initial state, we create one with empty collections for all arrays.
+        // This is to ensure that we can add to them without having to check for null.
+        // And that any sinks don't fail when trying to access them.
+        var initialState = new ExpandoObject();
+        foreach (var collection in model.Schema.GetFlattenedProperties().Where(_ => _.IsArray))
+        {
+            ((IDictionary<string, object?>)initialState)[collection.Name] = new List<object>();
+        }
+
+        return initialState;
+    }
+
     async Task<IProjection> CreateProjectionFrom(
         IEventSequenceStorage eventSequenceStorage,
         ProjectionDefinition projectionDefinition,
@@ -190,56 +248,6 @@ public class ProjectionFactory(
         return projection;
     }
 
-    void SetupRemovedWith(ProjectionDefinition projectionDefinition, PropertyPath childrenAccessorProperty, bool isChild, PropertyPath actualIdentifiedByProperty, Projection projection)
-    {
-        foreach (var (eventType, _) in projectionDefinition.RemovedWith)
-        {
-            var observable = projection.Event
-                    .WhereEventTypeEquals(eventType);
-            if (isChild)
-            {
-                observable.RemoveChild(
-                    childrenAccessorProperty,
-                    actualIdentifiedByProperty);
-            }
-            else
-            {
-                observable.Remove();
-            }
-        }
-    }
-
-    void SetupRemovedWithJoin(ProjectionDefinition projectionDefinition, PropertyPath childrenAccessorProperty, PropertyPath actualIdentifiedByProperty, Projection projection)
-    {
-        foreach (var (eventType, _) in projectionDefinition.RemovedWithJoin)
-        {
-            projection.Event
-                   .WhereEventTypeEquals(eventType)
-                   .RemoveChildFromAll(
-                       childrenAccessorProperty,
-                       actualIdentifiedByProperty);
-        }
-    }
-
-    ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema modelSchema, Model model) =>
-        projectionDefinition.InitialModelState.Count == 0 ?
-            CreateInitialState(model) :
-            expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
-
-    ExpandoObject CreateInitialState(Model model)
-    {
-        // If there is no initial state, we create one with empty collections for all arrays.
-        // This is to ensure that we can add to them without having to check for null.
-        // And that any sinks don't fail when trying to access them.
-        var initialState = new ExpandoObject();
-        foreach (var collection in model.Schema.GetFlattenedProperties().Where(_ => _.IsArray))
-        {
-            ((IDictionary<string, object?>)initialState)[collection.Name] = new List<object>();
-        }
-
-        return initialState;
-    }
-
     IObservable<ProjectionEventContext> SetupFromDefinition(
         Projection projection,
         FromDefinition fromDefinition,
@@ -316,6 +324,7 @@ public class ProjectionFactory(
     {
         // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
         var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
+        // TODO: Why different call for the Join-definitions
         eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
         eventsForProjection.AddRange(projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)));
         eventsForProjection.AddRange(projectionDefinition.RemovedWithJoin.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
@@ -340,16 +349,11 @@ public class ProjectionFactory(
             var childTypes = child.EventTypesWithKeyResolver.Where(_ => !eventsForProjection.Exists(e => e.EventType == _.EventType));
             eventsForProjection.AddRange(childTypes);
         }
+
+        // TODO: This has an implication in that only one key resolver can exist for each event type, meaning that an event type
+        // can only be used once for a projection, including child projections.
         var distinctEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).ToArray();
         projection.SetEventTypesWithKeyResolvers(distinctEventTypes, distinctOwnEventTypes);
-    }
-
-    void SetParentOnAllChildProjections(Projection projection, IProjection[] childProjections)
-    {
-        foreach (var child in childProjections)
-        {
-            child.SetParent(projection);
-        }
     }
 
     EventTypeWithKeyResolver GetEventTypeWithKeyResolver(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent = false, PropertyExpression? parentKey = null)

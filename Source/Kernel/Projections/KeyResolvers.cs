@@ -67,36 +67,38 @@ public static class KeyResolvers
     {
         return async (IEventSequenceStorage eventSequenceStorage, AppendedEvent @event) =>
         {
+            var parentKey = await parentKeyResolver(eventSequenceStorage, @event);
+            if (!projection.HasParent)
+            {
+                return parentKey with { ArrayIndexers = ArrayIndexers.NoIndexers };
+            }
             var arrayIndexers = new List<ArrayIndexer>();
 
-            var parentKey = await parentKeyResolver(eventSequenceStorage, @event);
-            if (projection.HasParent)
+            var key = await keyResolver(eventSequenceStorage, @event);
+            arrayIndexers.Add(new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, key.Value));
+            var parentProjection = projection.Parent!;
+            var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
+            if (parentEventTypeIds.Length == 0)
             {
-                var key = await keyResolver(eventSequenceStorage, @event);
-                arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, key.Value));
-                var parentProjection = projection.Parent!;
-                var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
-                if (parentEventTypeIds.Length > 0)
-                {
-                    AppendedEvent parentEvent;
-                    if (parentEventTypeIds.Any(_ => _ == @event.Metadata.Type.Id))
-                    {
-                        parentEvent = @event;
-                    }
-                    else
-                    {
-                        parentEvent = await eventSequenceStorage.GetLastInstanceOfAny(parentKey.Value.ToString()!, parentEventTypeIds);
-                    }
-
-                    var eventType = parentProjection.EventTypes.First(_ => _.Id == parentEvent.Metadata.Type.Id);
-                    var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
-                    var resolvedParentKey = await keyResolverForEventType(eventSequenceStorage, parentEvent);
-                    parentKey = resolvedParentKey;
-                    arrayIndexers.AddRange(resolvedParentKey.ArrayIndexers.All);
-                }
+                return parentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
+            }
+            AppendedEvent parentEvent;
+            if (parentEventTypeIds.Any(id => id == @event.Metadata.Type.Id))
+            {
+                parentEvent = @event;
+            }
+            else
+            {
+                parentEvent = await eventSequenceStorage.GetLastInstanceOfAny(parentKey.Value.ToString()!, parentEventTypeIds);
             }
 
-            return new(parentKey.Value, new ArrayIndexers(arrayIndexers));
+            var eventType = parentProjection.EventTypes.First(eventType => eventType.Id == parentEvent.Metadata.Type.Id);
+            var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
+            var resolvedParentKey = await keyResolverForEventType(eventSequenceStorage, parentEvent);
+            parentKey = resolvedParentKey;
+            arrayIndexers.AddRange(resolvedParentKey.ArrayIndexers.All);
+
+            return parentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
         };
     }
 }
