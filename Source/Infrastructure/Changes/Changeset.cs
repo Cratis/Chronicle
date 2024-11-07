@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Properties;
 using Cratis.Collections;
@@ -22,12 +23,21 @@ namespace Cratis.Chronicle.Changes;
 public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incoming, TTarget initialState, Changeset<TSource, TTarget>? parent = null) : IChangeset<TSource, TTarget>
 {
     readonly List<Change> _changes = [];
+    TTarget _initialState = initialState;
 
     /// <inheritdoc/>
     public TSource Incoming { get; } = incoming;
 
     /// <inheritdoc/>
-    public TTarget InitialState { get; set; } = initialState;
+    public TTarget InitialState
+    {
+        get => _initialState;
+        set
+        {
+            _initialState = value;
+            CurrentState = value;
+        }
+    }
 
     /// <inheritdoc/>
     public TTarget CurrentState { get; private set; } = initialState;
@@ -62,7 +72,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     /// <inheritdoc/>
     public IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers)
     {
-        var workingState = InitialState.Clone()!;
+        var workingState = CurrentState.Clone()!;
         var childChangeset = new Changeset<TSource, TTarget>(comparer, Incoming, workingState, this);
         Add(new Joined(workingState, key, onProperty, arrayIndexers, childChangeset.Changes));
         CurrentState = workingState;

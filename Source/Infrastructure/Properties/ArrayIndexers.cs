@@ -32,6 +32,11 @@ public class ArrayIndexers
     }
 
     /// <summary>
+    /// Gets the count of <see cref="ArrayIndexer"/>.
+    /// </summary>
+    public int Count => _arrayIndexers.Count;
+
+    /// <summary>
     /// Gets all <see cref="ArrayIndexer"/>.
     /// </summary>
     /// <returns>Collection of <see cref="ArrayIndexer"/>.</returns>
