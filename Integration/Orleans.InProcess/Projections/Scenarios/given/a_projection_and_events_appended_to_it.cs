@@ -77,4 +77,11 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
         var result = await _globalFixture.ReadModels.Database.GetCollection<TModel>().FindAsync(filter);
         Result = result.FirstOrDefault();
     }
+
+    protected async Task<TModel> GetModel(EventSourceId eventSourceId)
+    {
+        var filter = Builders<TModel>.Filter.Eq(new StringFieldDefinition<TModel, string>("_id"), eventSourceId);
+        var result = await _globalFixture.ReadModels.Database.GetCollection<TModel>().FindAsync(filter);
+        return result.FirstOrDefault();
+    }
 }
