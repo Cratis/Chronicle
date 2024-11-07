@@ -55,6 +55,13 @@ public static class KeyResolvers
         };
     }
 
+    /// <summary>
+    /// Create a <see cref="KeyResolver"/> that provides a key value for a join relationship.
+    /// </summary>
+    /// <param name="projection"><see cref="IProjection"/> the join is for.</param>
+    /// <param name="keyResolver"><see cref="KeyResolver"/> for resolving the key from the event.</param>
+    /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> for the identified by property in the join relationship.</param>
+    /// <returns><see cref="KeyResolver"/> that will be used to resolve.</returns>
     public static KeyResolver ForJoin(IProjection projection, KeyResolver keyResolver, PropertyPath identifiedByProperty)
     {
         return async (IEventSequenceStorage eventSequenceStorage, AppendedEvent @event) =>
