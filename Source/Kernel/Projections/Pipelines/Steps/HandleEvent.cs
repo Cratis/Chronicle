@@ -47,7 +47,6 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ILogger<Han
             context.Changeset.AddPropertiesFrom(projection.InitialModelState);
         }
 
-        projection.OnNext(context);
         return context;
     }
 }

@@ -128,13 +128,13 @@ public static class ProjectionExtensions
                 if (!context.IsJoin && (!identifiedByProperty.IsSet ||
                                         !items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier)))
                 {
-                    // TODO: On Join it seems to come down here, while it should never get to AddChild but on SetProperties instead. 
+                    // TODO: On Join it seems to come down here, while it should never get to AddChild but on SetProperties instead.
                     context.Changeset.AddChild<ExpandoObject>(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, propertyMappers, context.Key.ArrayIndexers);
                     return;
                 }
                 // TODO: When joined event occurs when trying to create these changes for the changeset it seems to want to not make changes for the properties it changes but rather the entire object.
                 // For intance on OnBoarded the change is => PropertyChanged [users] => {"id": <the-id>, "onboarded": true}
-                // 
+                //
                 context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers);
             });
         }
