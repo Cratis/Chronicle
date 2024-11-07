@@ -60,16 +60,6 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         var workingState = CurrentState.Clone()!;
         SetProperties(workingState, propertyMappers, arrayIndexers);
 
-        // TODO:
-        // If we have array indexers going in, we want to find and compare a specific object in the collection
-        // and only add a PropertiesChanged if there are differences. The differences will need the ArrayIndexers
-        // and property paths should include the fully qualified path, as that is what the contract is for changesets.
-        // If we don't have any array indexers, but the changes are happening to an object in a collection, we need
-        // ArrayIndexers that specify the placement in the collection.
-        // Right now we're not looking at that and the side-effects of this is unknown. We need specs to prove
-        // following scenarios:
-        // - Using AddChild() without using .IdentifiedBy() and .UsingKey() should always just add a child, not try to match it.
-        // - Using AddChild() with .IdentifiedBy() and .UsingKey() should add a child if it doesn't exist, and update it if it does.
         if (!comparer.Compare(CurrentState, workingState, out var differences) && differences.Any())
         {
             differences.ForEach(_ => _.ArrayIndexers = arrayIndexers);
