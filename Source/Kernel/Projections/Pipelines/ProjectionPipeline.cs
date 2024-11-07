@@ -53,11 +53,6 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task Handle(AppendedEvent @event)
     {
-        if (@event.Metadata.Type.Id == "UserOnboarded")
-        {
-            Console.WriteLine("UserOnboarded event");
-        }
-
         logger.HandlingEvent(@event.Metadata.SequenceNumber);
         var keyResolver = Projection.GetKeyResolverFor(@event.Metadata.Type);
         var key = await keyResolver(eventSequenceStorage, @event);

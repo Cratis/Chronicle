@@ -55,6 +55,24 @@ public static class KeyResolvers
         };
     }
 
+    public static KeyResolver ForJoin(IProjection projection, KeyResolver keyResolver, PropertyPath identifiedByProperty)
+    {
+        return async (IEventSequenceStorage eventSequenceStorage, AppendedEvent @event) =>
+        {
+            var key = await keyResolver(eventSequenceStorage, @event);
+            if (!projection.HasParent)
+            {
+                return key with { ArrayIndexers = ArrayIndexers.NoIndexers };
+            }
+
+            var arrayIndexers = new List<ArrayIndexer>
+            {
+                new(projection.ChildrenPropertyPath, identifiedByProperty, key.Value)
+            };
+            return key with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
+        };
+    }
+
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a key value hierarchically upwards in Child->Parent relationships.
     /// </summary>
