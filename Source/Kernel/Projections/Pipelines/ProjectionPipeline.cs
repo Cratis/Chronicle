@@ -16,6 +16,21 @@ using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Projections.Pipelines;
 
+public interface ICanPerformProjectionPipelineStep
+{
+    ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context);
+}
+
+public class ResolveKeyResolver : ICanPerformProjectionPipelineStep
+{
+    public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
+    {
+
+    }
+}
+
+
+
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionPipeline"/>.
 /// </summary>
@@ -54,9 +69,13 @@ public class ProjectionPipeline(
     public async Task Handle(AppendedEvent @event)
     {
         logger.HandlingEvent(@event.Metadata.SequenceNumber);
+
+        // ResolveKeyStep - Don't need this for joined, it only needs array indexer
         var keyResolver = Projection.GetKeyResolverFor(@event.Metadata.Type);
         var key = await keyResolver(eventSequenceStorage, @event);
         key = EnsureCorrectTypeForArrayIndexersOnKey(key);
+
+        // GetInitialValuesStep - Don't need this for joined
         logger.GettingInitialValues(@event.Metadata.SequenceNumber);
         var initialState = await Sink.FindOrDefault(key);
 
@@ -69,6 +88,8 @@ public class ProjectionPipeline(
 
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, initialState);
         var context = new ProjectionEventContext(key, @event, changeset);
+
+        // HandleEventStep - For all
         await HandleEventFor(Projection, context);
 
         if (needsInitialState && !changeset.HasJoined())
@@ -76,6 +97,7 @@ public class ProjectionPipeline(
             changeset.AddPropertiesFrom(Projection.InitialModelState);
         }
 
+        // Save Changeset - All
         if (changeset.HasChanges)
         {
             logger.SavingResult(@event.Metadata.SequenceNumber);
@@ -84,6 +106,7 @@ public class ProjectionPipeline(
             {
                 changeset.SetSequenceNumber();
             }
+
             await Sink.ApplyChanges(key, changeset);
             await changesetStorage.Save(Projection.Identifier, key, Projection.Path, @event.Context.SequenceNumber, @event.Context.CorrelationId, changeset);
         }
@@ -128,7 +151,6 @@ public class ProjectionPipeline(
             {
                 var keyResolver = child.GetKeyResolverFor(context.Event.Metadata.Type);
                 var key = await keyResolver(eventSequenceStorage, context.Event);
-                // TODO: Either this child key or the parent key is wrong for Join-children
                 await HandleEventFor(child, context with { Key = key });
             }
             else
