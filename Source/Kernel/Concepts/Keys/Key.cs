@@ -11,12 +11,12 @@ namespace Cratis.Chronicle.Concepts.Keys;
 /// </summary>
 /// <param name="Value">The actual key value.</param>
 /// <param name="ArrayIndexers">Any array indexers.</param>
-public record Key(object Value, ArrayIndexers ArrayIndexers)
+public record Key(object? Value, ArrayIndexers ArrayIndexers)
 {
     /// <summary>
     /// Gets the <see cref="Key"/> representing an unset key.
     /// </summary>
-    public static readonly Key Undefined = new(null!, ArrayIndexers.NoIndexers);
+    public static readonly Key Undefined = new(null, ArrayIndexers.NoIndexers);
 
     /// <summary>
     /// Implicitly convert from a <see cref="EventSourceId"/> to a <see cref="Key"/>.
@@ -34,8 +34,8 @@ public record Key(object Value, ArrayIndexers ArrayIndexers)
     /// Implicitly convert from a <see cref="Key"/> to a <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="key"><see cref="Key"/> to convert from.</param>
-    public static implicit operator EventSourceId(Key key) => new(key.Value.ToString()!);
+    public static implicit operator EventSourceId(Key key) => new(key.Value?.ToString() ?? EventSourceId.Unspecified);
 
     /// <inheritdoc/>
-    public override string ToString() => Value.ToString() ?? base.ToString()!;
+    public override string ToString() => Value?.ToString() ?? base.ToString() ?? string.Empty;
 }

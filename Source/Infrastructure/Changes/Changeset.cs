@@ -27,7 +27,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     public TSource Incoming { get; } = incoming;
 
     /// <inheritdoc/>
-    public TTarget InitialState { get; } = initialState;
+    public TTarget InitialState { get; set; } = initialState;
 
     /// <inheritdoc/>
     public TTarget CurrentState { get; private set; } = initialState;

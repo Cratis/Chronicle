@@ -20,7 +20,7 @@ public interface IChangeset<TSource, TTarget>
     /// <summary>
     /// Gets the initial state of before changes in changeset occurred.
     /// </summary>
-    TTarget InitialState { get; }
+    TTarget InitialState { get; set; }
 
     /// <summary>
     /// Gets the current state with all the changes in the changeset applied.

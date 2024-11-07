@@ -4,7 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Projections.Pipelines.Steps;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
@@ -45,15 +45,22 @@ public class ProjectionPipelineManager(
         }
 
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
+        var eventSequenceStorage = namespaceStorage.GetEventSequence(projection.EventSequenceId);
         var sink = namespaceStorage.Sinks.GetFor(projection.Sink.TypeId, projection.Model);
+
+        IEnumerable<ICanPerformProjectionPipelineStep> steps =
+        [
+            new ResolveKey(eventSequenceStorage, typeFormats, loggerFactory.CreateLogger<ResolveKey>()),
+            new GetInitialState(sink, loggerFactory.CreateLogger<GetInitialState>()),
+            new HandleEvent(eventSequenceStorage, loggerFactory.CreateLogger<HandleEvent>()),
+            new SaveChanges(sink, namespaceStorage.Changesets, loggerFactory.CreateLogger<SaveChanges>())
+        ];
 
         return _pipelines[key] = new ProjectionPipeline(
             projection,
-            namespaceStorage.GetEventSequence(EventSequenceId.Log),
             sink,
             objectComparer,
-            namespaceStorage.Changesets,
-            typeFormats,
+            steps,
             loggerFactory.CreateLogger<ProjectionPipeline>());
     }
 }

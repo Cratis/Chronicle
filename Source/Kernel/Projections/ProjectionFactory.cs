@@ -135,6 +135,7 @@ public class ProjectionFactory(
         var initialState = GetInitialState(expandoObjectConverter, projectionDefinition, modelSchema, model);
 
         var projection = new Projection(
+            projectionDefinition.EventSequenceId,
             projectionDefinition.Identifier,
             projectionDefinition.Sink,
             initialState,
@@ -323,11 +324,12 @@ public class ProjectionFactory(
     void ResolveEventsForProjection(Projection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
     {
         // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
-        var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
-        // TODO: Why different call for the Join-definitions
-        eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
-        eventsForProjection.AddRange(projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)));
-        eventsForProjection.AddRange(projectionDefinition.RemovedWithJoin.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
+        var fromEventTypes = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey));
+        var joinEventTypes = projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty));
+        var removedWithEventTypes = projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey));
+        var removedWithJoinEventTypes = projectionDefinition.RemovedWithJoin.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty));
+
+        List<EventTypeWithKeyResolver> eventsForProjection = [.. fromEventTypes, ..joinEventTypes, ..removedWithEventTypes, ..removedWithJoinEventTypes];
 
         if (projectionDefinition.FromDerivatives is not null)
         {

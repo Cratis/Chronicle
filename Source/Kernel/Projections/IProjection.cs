@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -15,6 +16,11 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 public interface IProjection
 {
+    /// <summary>
+    /// Gets the <see cref="EventSequenceId"/> the projection is for.
+    /// </summary>
+    EventSequenceId EventSequenceId { get; }
+
     /// <summary>
     /// Gets the unique identifier of the <see cref="IProjection"/>.
     /// </summary>

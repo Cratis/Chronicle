@@ -5,31 +5,12 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage.Changes;
-using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Projections.Pipelines.Steps;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Projections.Pipelines;
-
-public interface ICanPerformProjectionPipelineStep
-{
-    ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context);
-}
-
-public class ResolveKeyResolver : ICanPerformProjectionPipelineStep
-{
-    public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
-    {
-
-    }
-}
-
-
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionPipeline"/>.
@@ -38,19 +19,15 @@ public class ResolveKeyResolver : ICanPerformProjectionPipelineStep
 /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
 /// </remarks>
 /// <param name="projection">The <see cref="EngineProjection"/> the pipeline is for.</param>
-/// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> to use.</param>
 /// <param name="sink"><see cref="ISink"/> to use.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
-/// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
-/// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
+/// <param name="steps">Collection of <see cref="ICanPerformProjectionPipelineStep"/> to perform.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 public class ProjectionPipeline(
     EngineProjection projection,
-    IEventSequenceStorage eventSequenceStorage,
     ISink sink,
     IObjectComparer objectComparer,
-    IChangesetStorage changesetStorage,
-    ITypeFormats typeFormats,
+    IEnumerable<ICanPerformProjectionPipelineStep> steps,
     ILogger<ProjectionPipeline> logger) : IProjectionPipeline
 {
     /// <inheritdoc/>
@@ -68,95 +45,13 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task Handle(AppendedEvent @event)
     {
-        logger.HandlingEvent(@event.Metadata.SequenceNumber);
+        logger.StartingPipeline(@event.Metadata.SequenceNumber);
 
-        // ResolveKeyStep - Don't need this for joined, it only needs array indexer
-        var keyResolver = Projection.GetKeyResolverFor(@event.Metadata.Type);
-        var key = await keyResolver(eventSequenceStorage, @event);
-        key = EnsureCorrectTypeForArrayIndexersOnKey(key);
-
-        // GetInitialValuesStep - Don't need this for joined
-        logger.GettingInitialValues(@event.Metadata.SequenceNumber);
-        var initialState = await Sink.FindOrDefault(key);
-
-        var needsInitialState = false;
-        if (initialState is null)
+        var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, new ExpandoObject());
+        var context = new ProjectionEventContext(Key.Undefined, @event, changeset);
+        foreach (var step in steps)
         {
-            needsInitialState = true;
-            initialState = Projection.InitialModelState;
-        }
-
-        var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, initialState);
-        var context = new ProjectionEventContext(key, @event, changeset);
-
-        // HandleEventStep - For all
-        await HandleEventFor(Projection, context);
-
-        if (needsInitialState && !changeset.HasJoined())
-        {
-            changeset.AddPropertiesFrom(Projection.InitialModelState);
-        }
-
-        // Save Changeset - All
-        if (changeset.HasChanges)
-        {
-            logger.SavingResult(@event.Metadata.SequenceNumber);
-
-            if (!changeset.HasJoined())
-            {
-                changeset.SetSequenceNumber();
-            }
-
-            await Sink.ApplyChanges(key, changeset);
-            await changesetStorage.Save(Projection.Identifier, key, Projection.Path, @event.Context.SequenceNumber, @event.Context.CorrelationId, changeset);
-        }
-    }
-
-    Key EnsureCorrectTypeForArrayIndexersOnKey(Key key)
-    {
-        return key with
-        {
-            ArrayIndexers = new ArrayIndexers(
-                key.ArrayIndexers.All.Select(_ =>
-                {
-                    var originalType = _.Identifier.GetType();
-                    var targetType = Projection.Model.Schema.GetTargetTypeForPropertyPath(_.ArrayProperty + _.IdentifierProperty, typeFormats);
-                    if (targetType is null)
-                    {
-                        return _;
-                    }
-
-                    return _ with
-                    {
-                        Identifier = TypeConversion.Convert(targetType, _.Identifier)
-                    };
-                }))
-        };
-    }
-
-    async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
-    {
-        if (projection.Accepts(context.Event.Metadata.Type))
-        {
-            logger.Projecting(context.Event.Metadata.SequenceNumber);
-            projection.OnNext(context);
-        }
-        else
-        {
-            logger.EventNotAccepted(context.Event.Metadata.SequenceNumber, projection.Identifier, projection.Path, context.Event.Metadata.Type);
-        }
-        foreach (var child in projection.ChildProjections)
-        {
-            if (child.HasKeyResolverFor(context.Event.Metadata.Type))
-            {
-                var keyResolver = child.GetKeyResolverFor(context.Event.Metadata.Type);
-                var key = await keyResolver(eventSequenceStorage, context.Event);
-                await HandleEventFor(child, context with { Key = key });
-            }
-            else
-            {
-                await HandleEventFor(child, context);
-            }
+            context = await step.Perform(Projection, context);
         }
     }
 }
