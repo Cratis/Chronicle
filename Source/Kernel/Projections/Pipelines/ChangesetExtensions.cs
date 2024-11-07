@@ -36,8 +36,11 @@ public static class ChangesetExtensions
             .Where(_ => !existingProperties.Exists(property => property == _.Key))
             .Select(_ => new PropertyDifference(_.Key, null, _.Value)).ToArray();
 
-        var propertiesChanged = new PropertiesChanged<ExpandoObject>(changeset.CurrentState, newProperties);
-        changeset.Add(propertiesChanged);
+        if (newProperties.Length != 0)
+        {
+            var propertiesChanged = new PropertiesChanged<ExpandoObject>(changeset.CurrentState, newProperties);
+            changeset.Add(propertiesChanged);
+        }
     }
 
     /// <summary>
