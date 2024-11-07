@@ -50,7 +50,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         var workingState = CurrentState.Clone()!;
         SetProperties(workingState, propertyMappers, arrayIndexers);
 
-        if (!comparer.Compare(CurrentState, workingState, out var differences))
+        if (!comparer.Compare(CurrentState, workingState, out var differences) && differences.Any())
         {
             differences.ForEach(_ => _.ArrayIndexers = arrayIndexers);
             Add(new PropertiesChanged<TTarget>(workingState, differences));
