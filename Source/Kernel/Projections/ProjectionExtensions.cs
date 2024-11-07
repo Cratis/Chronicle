@@ -45,7 +45,8 @@ public static class ProjectionExtensions
             var changeset = _.Changeset.Join(onModelProperty, _.Key.Value, _.Key.ArrayIndexers);
             joinSubject.OnNext(_ with
             {
-                Changeset = changeset
+                Changeset = changeset,
+                IsJoin = true
             });
         });
         return joinSubject;
@@ -112,25 +113,29 @@ public static class ProjectionExtensions
     {
         if (childrenProperty.IsRoot)
         {
-            observable.Subscribe(_ => _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers));
+            observable.Subscribe(context => context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers));
         }
         else
         {
-            observable.Subscribe(_ =>
+            observable.Subscribe(context =>
             {
-                if (!_.Key.ArrayIndexers.HasFor(childrenProperty))
+                if (!context.Key.ArrayIndexers.HasFor(childrenProperty))
                 {
                     return;
                 }
-                var items = _.Changeset.InitialState.EnsureCollection<object>(childrenProperty, _.Key.ArrayIndexers);
-                var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
-                if (!identifiedByProperty.IsSet ||
-                    !items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
+                var items = context.Changeset.InitialState.EnsureCollection<object>(childrenProperty, context.Key.ArrayIndexers);
+                var childrenPropertyIndexer = context.Key.ArrayIndexers.GetFor(childrenProperty);
+                if (!context.IsJoin && (!identifiedByProperty.IsSet ||
+                                        !items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier)))
                 {
-                    _.Changeset.AddChild<ExpandoObject>(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, propertyMappers, _.Key.ArrayIndexers);
+                    // TODO: On Join it seems to come down here, while it should never get to AddChild but on SetProperties instead. 
+                    context.Changeset.AddChild<ExpandoObject>(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, propertyMappers, context.Key.ArrayIndexers);
                     return;
                 }
-                _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers);
+                // TODO: When joined event occurs when trying to create these changes for the changeset it seems to want to not make changes for the properties it changes but rather the entire object.
+                // For intance on OnBoarded the change is => PropertyChanged [users] => {"id": <the-id>, "onboarded": true}
+                // 
+                context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers);
             });
         }
         return observable;
