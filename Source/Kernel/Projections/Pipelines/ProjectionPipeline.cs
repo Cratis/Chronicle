@@ -31,16 +31,10 @@ public class ProjectionPipeline(
     ILogger<ProjectionPipeline> logger) : IProjectionPipeline
 {
     /// <inheritdoc/>
-    public EngineProjection Projection { get; } = projection;
+    public Task BeginReplay() => sink.BeginReplay();
 
     /// <inheritdoc/>
-    public ISink Sink { get; } = sink;
-
-    /// <inheritdoc/>
-    public Task BeginReplay() => Sink.BeginReplay();
-
-    /// <inheritdoc/>
-    public Task EndReplay() => Sink.EndReplay();
+    public Task EndReplay() => sink.EndReplay();
 
     /// <inheritdoc/>
     public async Task Handle(AppendedEvent @event)
@@ -51,7 +45,7 @@ public class ProjectionPipeline(
         var context = new ProjectionEventContext(Key.Undefined, @event, changeset);
         foreach (var step in steps)
         {
-            context = await step.Perform(Projection, context);
+            context = await step.Perform(projection, context);
         }
     }
 }
