@@ -1,10 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Projections.Pipelines.Steps;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
@@ -40,9 +38,11 @@ public class ProjectionPipeline(
     public async Task Handle(AppendedEvent @event)
     {
         logger.StartingPipeline(@event.Metadata.SequenceNumber);
+        var context = ProjectionEventContext.Empty(objectComparer, @event) with
+        {
+            OperationType = projection.OperationTypes[@event.Metadata.Type]
+        };
 
-        var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, new ExpandoObject());
-        var context = new ProjectionEventContext(Key.Undefined, @event, changeset);
         foreach (var step in steps)
         {
             context = await step.Perform(projection, context);

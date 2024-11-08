@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Projections;
 
 public static class ProjectionExtensions
 {
-    public static bool IsJoin(this IProjection projection, AppendedEvent appendedEvent) =>
-        projection.OperationTypes.TryGetValue(appendedEvent.Metadata.Type, out var operationType) &&
-        operationType.HasFlag(ProjectionOperationType.Join);
+    public static bool IsOperationType(this IProjection projection, AppendedEvent appendedEvent, ProjectionOperationType operationType) =>
+        projection.OperationTypes.TryGetValue(appendedEvent.Metadata.Type, out var foundOperationType) &&
+        operationType.HasFlag(foundOperationType);
 }

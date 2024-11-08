@@ -46,8 +46,7 @@ public static class ProjectionEventContextExtensions
             var changeset = _.Changeset.Join(onModelProperty, _.Key.Value, _.Key.ArrayIndexers);
             joinSubject.OnNext(_ with
             {
-                Changeset = changeset,
-                IsJoin = true
+                Changeset = changeset
             });
         });
         return joinSubject;
@@ -74,9 +73,12 @@ public static class ProjectionEventContextExtensions
             if (onValue is not null && eventSequenceStorage.TryGetLastEventBefore(
                     joinEventType.Id,
                     onValue.ToString()!,
-                    context.Event.Metadata.SequenceNumber).GetAwaiter().GetResult() is (true, { } lastEvent))
+                    context.EventSequenceNumber).GetAwaiter().GetResult() is (true, { } lastEvent))
             {
-                var changeset = context.Changeset.ResolvedJoin(onModelProperty, context.Key.Value, lastEvent,
+                var changeset = context.Changeset.ResolvedJoin(
+                    onModelProperty,
+                    context.Key.Value,
+                    lastEvent,
                     context.Key.ArrayIndexers);
                 joinSubject.OnNext(context with
                 {
@@ -127,21 +129,22 @@ public static class ProjectionEventContextExtensions
                     return;
                 }
 
-                var items = context.Changeset.InitialState.EnsureCollection<object>(childrenProperty,
-                    context.Key.ArrayIndexers);
+                var items = context.Changeset.InitialState.EnsureCollection<object>(childrenProperty, context.Key.ArrayIndexers);
                 var childrenPropertyIndexer = context.Key.ArrayIndexers.GetFor(childrenProperty);
-                if (!context.IsJoin && (!identifiedByProperty.IsSet ||
+                if (!context.OperationType.HasFlag(ProjectionOperationType.Join) && (!identifiedByProperty.IsSet ||
                                         !items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier)))
                 {
-                    // TODO: On Join it seems to come down here, while it should never get to AddChild but on SetProperties instead.
-                    context.Changeset.AddChild<ExpandoObject>(childrenProperty, identifiedByProperty,
-                        childrenPropertyIndexer.Identifier, propertyMappers, context.Key.ArrayIndexers);
+                    context.Changeset.AddChild<ExpandoObject>(
+                        childrenProperty,
+                        identifiedByProperty,
+                        childrenPropertyIndexer.Identifier,
+                        propertyMappers,
+                        context.Key.ArrayIndexers);
                     return;
                 }
 
                 // TODO: When joined event occurs when trying to create these changes for the changeset it seems to want to not make changes for the properties it changes but rather the entire object.
-                // For intance on OnBoarded the change is => PropertyChanged [users] => {"id": <the-id>, "onboarded": true}
-                //
+                // For instance on OnBoarded the change is => PropertyChanged [users] => {"id": <the-id>, "onboarded": true}
                 context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers);
             });
         }
@@ -182,13 +185,8 @@ public static class ProjectionEventContextExtensions
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> Remove(this IObservable<ProjectionEventContext> observable)
     {
-        var subject = new Subject<ProjectionEventContext>();
-        observable.Subscribe(_ =>
-        {
-            _.Changeset.Remove();
-            subject.OnNext(_ with { IsRemove = true });
-        });
-        return subject;
+        observable.Subscribe(_ => _.Changeset.Remove());
+        return observable;
     }
 
     /// <summary>
@@ -198,10 +196,11 @@ public static class ProjectionEventContextExtensions
     /// <param name="childrenProperty">The property in which children are stored on the object.</param>
     /// <param name="identifiedByProperty">The property that identifies a child.</param>
     /// <returns>The observable for continuation.</returns>
-    public static IObservable<ProjectionEventContext> RemoveChild(this IObservable<ProjectionEventContext> observable,
-        PropertyPath childrenProperty, PropertyPath identifiedByProperty)
+    public static IObservable<ProjectionEventContext> RemoveChild(
+        this IObservable<ProjectionEventContext> observable,
+        PropertyPath childrenProperty,
+        PropertyPath identifiedByProperty)
     {
-        var subject = new Subject<ProjectionEventContext>();
         observable.Subscribe(_ =>
         {
             var items = _.Changeset.InitialState.EnsureCollection<object>(childrenProperty, _.Key.ArrayIndexers);
@@ -209,13 +208,14 @@ public static class ProjectionEventContextExtensions
             if (identifiedByProperty.IsSet &&
                 items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
             {
-                _.Changeset.RemoveChild(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier,
+                _.Changeset.RemoveChild(
+                    childrenProperty,
+                    identifiedByProperty,
+                    childrenPropertyIndexer.Identifier,
                     _.Key.ArrayIndexers);
             }
-
-            subject.OnNext(_ with { IsRemove = true });
         });
-        return subject;
+        return observable;
     }
 
     /// <summary>
@@ -226,15 +226,11 @@ public static class ProjectionEventContextExtensions
     /// <param name="identifiedByProperty">The property that identifies a child.</param>
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> RemoveChildFromAll(
-        this IObservable<ProjectionEventContext> observable, PropertyPath childrenProperty,
+        this IObservable<ProjectionEventContext> observable,
+        PropertyPath childrenProperty,
         PropertyPath identifiedByProperty)
     {
-        var subject = new Subject<ProjectionEventContext>();
-        observable.Subscribe(_ =>
-        {
-            _.Changeset.RemoveChildFromAll(childrenProperty, identifiedByProperty, _.Key.Value!, _.Key.ArrayIndexers);
-            subject.OnNext(_ with { IsRemove = true });
-        });
-        return subject;
+        observable.Subscribe(_ => _.Changeset.RemoveChildFromAll(childrenProperty, identifiedByProperty, _.Key.Value!, _.Key.ArrayIndexers));
+        return observable;
     }
 }

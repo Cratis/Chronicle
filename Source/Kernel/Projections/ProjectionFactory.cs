@@ -329,8 +329,25 @@ public class ProjectionFactory(
         var removedWithEventTypes = projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey));
         var removedWithJoinEventTypes = projectionDefinition.RemovedWithJoin.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty));
 
-        List<EventTypeWithKeyResolver> eventsForProjection = [.. fromEventTypes, ..joinEventTypes, ..removedWithEventTypes, ..removedWithJoinEventTypes];
+        var operationTypes = new Dictionary<EventType, ProjectionOperationType>();
+        foreach (var eventType in fromEventTypes)
+        {
+            operationTypes.Add(eventType.EventType, ProjectionOperationType.None);
+        }
+        foreach (var eventType in joinEventTypes)
+        {
+            operationTypes.Add(eventType.EventType, ProjectionOperationType.Join);
+        }
+        foreach (var eventType in removedWithEventTypes)
+        {
+            operationTypes.Add(eventType.EventType, ProjectionOperationType.Remove);
+        }
+        foreach (var eventType in removedWithJoinEventTypes)
+        {
+            operationTypes.Add(eventType.EventType, ProjectionOperationType.Join | ProjectionOperationType.Remove);
+        }
 
+        List<EventTypeWithKeyResolver> eventsForProjection = [.. fromEventTypes, ..joinEventTypes, ..removedWithEventTypes, ..removedWithJoinEventTypes];
         if (projectionDefinition.FromDerivatives is not null)
         {
             foreach (var fromDerivativeDefinition in projectionDefinition.FromDerivatives)
@@ -355,7 +372,10 @@ public class ProjectionFactory(
         // TODO: This has an implication in that only one key resolver can exist for each event type, meaning that an event type
         // can only be used once for a projection, including child projections.
         var distinctEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).ToArray();
-        projection.SetEventTypesWithKeyResolvers(distinctEventTypes, distinctOwnEventTypes);
+        projection.SetEventTypesWithKeyResolvers(
+            distinctEventTypes,
+            distinctOwnEventTypes,
+            operationTypes);
     }
 
     EventTypeWithKeyResolver GetEventTypeWithKeyResolverForJoin(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty)

@@ -12,15 +12,16 @@ namespace Cratis.Chronicle.Projections.Pipelines.Steps;
 /// </summary>
 /// <param name="sink"><see cref="ISink" /> used for getting the projected state.</param>
 /// <param name="logger"><see cref="ILogger" />.</param>
-public class GetInitialState(ISink sink, ILogger<GetInitialState> logger) : ICanPerformProjectionPipelineStep
+public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
-        if (projection.OperationTypescontext.IsJoin || context.IsRemove)
+        if (context.Changeset.HasJoined() || context.Changeset.HasRemoved())
         {
             return context;
         }
+
         logger.GettingInitialValues(context.Event.Metadata.SequenceNumber);
         var initialState = await sink.FindOrDefault(context.Key);
 

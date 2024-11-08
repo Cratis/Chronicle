@@ -14,9 +14,31 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="Key"><see cref="Key"/> for the context.</param>
 /// <param name="Event">The <see cref="AppendedEvent"/> that occurred.</param>
 /// <param name="Changeset">The <see cref="IChangeset{Event, ExpandoObject}"/> to build on.</param>
+/// <param name="OperationType"><see cref="ProjectionOperationType"/>.</param>
 /// <param name="NeedsInitialState">Whether the projection needs initial state.</param>
 public record ProjectionEventContext(
     Key Key,
     AppendedEvent Event,
     IChangeset<AppendedEvent, ExpandoObject> Changeset,
-    bool NeedsInitialState = false);
+    ProjectionOperationType OperationType,
+    bool NeedsInitialState)
+{
+    /// <summary>
+    /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and
+    /// <see cref="AppendedEvent"/>.
+    /// </summary>
+    /// <param name="comparer">The <see cref="IObjectComparer"/>.</param>
+    /// <param name="event">The <see cref="AppendedEvent"/>.</param>
+    /// <returns>The <see cref="ProjectionEventContext"/>.</returns>
+    public static ProjectionEventContext Empty(IObjectComparer comparer, AppendedEvent @event) => new(
+        Key.Undefined,
+        @event,
+        new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, new ExpandoObject()),
+        ProjectionOperationType.None,
+        false);
+
+    public EventType EventType => Event.Metadata.Type;
+    public EventSequenceNumber EventSequenceNumber => Event.Metadata.SequenceNumber;
+    public bool IsJoin => OperationType.HasFlag(ProjectionOperationType.Join);
+    public bool IsRemove => OperationType.HasFlag(ProjectionOperationType.Remove);
+}

@@ -51,7 +51,7 @@ public class ProjectionPipelineManager(
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [
             new ResolveKey(eventSequenceStorage, typeFormats, loggerFactory.CreateLogger<ResolveKey>()),
-            new GetInitialState(sink, loggerFactory.CreateLogger<GetInitialState>()),
+            new SetInitialState(sink, loggerFactory.CreateLogger<SetInitialState>()),
             new HandleEvent(eventSequenceStorage, loggerFactory.CreateLogger<HandleEvent>()),
             new SaveChanges(sink, namespaceStorage.Changesets, loggerFactory.CreateLogger<SaveChanges>())
         ];

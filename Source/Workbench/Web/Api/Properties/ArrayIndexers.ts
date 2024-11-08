@@ -9,6 +9,9 @@ import { ArrayIndexer } from './ArrayIndexer';
 
 export class ArrayIndexers {
 
+    @field(Number)
+    count!: number;
+
     @field(ArrayIndexer, true)
     all!: ArrayIndexer[];
 }

@@ -18,23 +18,23 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ILogger<Han
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
         logger.HandlingEvent(context.Event.Metadata.SequenceNumber);
-
-        if (projection.Accepts(context.Event.Metadata.Type))
+        var eventType = context.Event.Metadata.Type;
+        if (projection.Accepts(eventType))
         {
             logger.Projecting(context.Event.Metadata.SequenceNumber);
             projection.OnNext(context);
         }
         else
         {
-            logger.EventNotAccepted(context.Event.Metadata.SequenceNumber, projection.Identifier, projection.Path, context.Event.Metadata.Type);
+            logger.EventNotAccepted(context.Event.Metadata.SequenceNumber, projection.Identifier, projection.Path, eventType);
         }
         foreach (var child in projection.ChildProjections)
         {
-            if (child.HasKeyResolverFor(context.Event.Metadata.Type))
+            if (child.HasKeyResolverFor(eventType))
             {
-                var keyResolver = child.GetKeyResolverFor(context.Event.Metadata.Type);
+                var keyResolver = child.GetKeyResolverFor(eventType);
                 var key = await keyResolver(eventSequenceStorage, context.Event);
-                await Perform(child, context with { Key = key });
+                await Perform(child, context with { Key = key, OperationType = child.OperationTypes[eventType] });
             }
             else
             {

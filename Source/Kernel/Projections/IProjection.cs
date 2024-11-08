@@ -142,7 +142,11 @@ public interface IProjection
     /// </summary>
     /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver"/>.</param>
     /// <param name="ownEventTypes">Collection of <see cref="EventType"/> that is only for this projection without not any children.</param>
-    void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver, IEnumerable<EventType> ownEventTypes);
+    /// <param name="operationTypes">Dictionary mapping <see cref="EventType"/> to <see cref="ProjectionOperationType"/>.</param>
+    void SetEventTypesWithKeyResolvers(
+        IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
+        IEnumerable<EventType> ownEventTypes,
+        IDictionary<EventType, ProjectionOperationType> operationTypes);
 
     /// <summary>
     /// Set the parent <see cref="IProjection"/>.
