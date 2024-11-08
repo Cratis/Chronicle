@@ -14,6 +14,9 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="Key"><see cref="Key"/> for the context.</param>
 /// <param name="Event">The <see cref="AppendedEvent"/> that occurred.</param>
 /// <param name="Changeset">The <see cref="IChangeset{Event, ExpandoObject}"/> to build on.</param>
-/// <param name="IsJoin">Whether the event is a joined event.</param>
 /// <param name="NeedsInitialState">Whether the projection needs initial state.</param>
-public record ProjectionEventContext(Key Key, AppendedEvent Event, IChangeset<AppendedEvent, ExpandoObject> Changeset, bool IsJoin = false, bool NeedsInitialState = false);
+public record ProjectionEventContext(
+    Key Key,
+    AppendedEvent Event,
+    IChangeset<AppendedEvent, ExpandoObject> Changeset,
+    bool NeedsInitialState = false);

@@ -72,6 +72,11 @@ public interface IProjection
     IObservable<ProjectionEventContext> Event { get; }
 
     /// <summary>
+    /// Gets the <see cref="IDictionary{TKey,TValue}"/> of <see cref="EventType"/> to <see cref="ProjectionOperationType"/> mapping. 
+    /// </summary>
+    IDictionary<EventType, ProjectionOperationType> OperationTypes { get; }
+
+    /// <summary>
     /// Gets the <see cref="EventType">event types</see> the projection can handle.
     /// </summary>
     IEnumerable<EventType> EventTypes { get; }

@@ -74,9 +74,9 @@ public static class KeyResolvers
 
             var arrayIndexers = new List<ArrayIndexer>
             {
-                new(projection.ChildrenPropertyPath, identifiedByProperty, key.Value)
+                new(projection.ChildrenPropertyPath, identifiedByProperty, key.Value!)
             };
-            return key with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
+            return new Key(null, new ArrayIndexers(arrayIndexers));
         };
     }
 

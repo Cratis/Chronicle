@@ -84,6 +84,9 @@ public class Projection : IProjection, IDisposable
     public IObservable<ProjectionEventContext> Event { get; }
 
     /// <inheritdoc/>
+    public IDictionary<EventType, ProjectionOperationType> OperationTypes { get; private set; }
+
+    /// <inheritdoc/>
     public IEnumerable<EventType> EventTypes { get; private set; } = [];
 
     /// <inheritdoc/>
@@ -129,7 +132,10 @@ public class Projection : IProjection, IDisposable
     }
 
     /// <inheritdoc/>
-    public void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver, IEnumerable<EventType> ownEventTypes)
+    public void SetEventTypesWithKeyResolvers(
+        IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
+        IEnumerable<EventType> ownEventTypes,
+        IDictionary<EventType, ProjectionOperationType> operationTypes)
     {
         EventTypesWithKeyResolver = eventTypesWithKeyResolver;
         var eventTypes = eventTypesWithKeyResolver.ToArray();
@@ -139,6 +145,7 @@ public class Projection : IProjection, IDisposable
             _ => _.KeyResolver);
 
         OwnEventTypes = ownEventTypes;
+        OperationTypes = operationTypes;
     }
 
     /// <inheritdoc/>

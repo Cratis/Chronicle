@@ -172,16 +172,32 @@ public class ChangesetConverter(
 
         var joinArrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
         ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, isReplaying).Wait();
-        if (hasJoinChanges)
+
+        if (!hasJoinChanges)
         {
-            joinTasks.Add(collection.UpdateManyAsync(
-                FilterDefinition<BsonDocument>.Empty,
-                joinUpdateBuilder,
-                new UpdateOptions
-                {
-                    IsUpsert = false,
-                    ArrayFilters = [.. joinArrayFiltersForDocument]
-                }));
+            return;
         }
+        var filter = CreateJoinedFilterDefinition(key, joined);
+        var all = collection.Find(FilterDefinition<BsonDocument>.Empty).ToList();
+        var filtered = collection.Find(filter).ToList();
+        joinTasks.Add(collection.UpdateManyAsync(
+            filter,
+            joinUpdateBuilder,
+            new UpdateOptions
+            {
+                IsUpsert = false,
+                ArrayFilters = [.. joinArrayFiltersForDocument]
+            }));
+    }
+
+    FilterDefinition<BsonDocument> CreateJoinedFilterDefinition(Key key, Joined joined)
+    {
+        if (key.Value is null)
+        {
+            return FilterDefinition<BsonDocument>.Empty;
+        }
+
+        var (property, _) = converter.ToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
+        return Builders<BsonDocument>.Filter.Eq(property, key.Value);
     }
 }

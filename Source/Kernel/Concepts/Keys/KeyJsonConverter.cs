@@ -16,6 +16,7 @@ public class KeyJsonConverter : JsonConverter<Key>
     public override Key? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var arrayIndexers = new List<ArrayIndexer>();
+        // TODO: Maybe this needs to be null?
         var value = string.Empty;
 
         while (reader.Read())
