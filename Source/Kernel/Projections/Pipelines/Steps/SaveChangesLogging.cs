@@ -13,4 +13,7 @@ internal static partial class SaveChangesLogging
 {
     [LoggerMessage(LogLevel.Trace, "Saving result for event with sequence number {SequenceNumber}")]
     internal static partial void SavingResult(this ILogger<SaveChanges> logger, ulong sequenceNumber);
+
+    [LoggerMessage(LogLevel.Trace, "No changes to save for event with sequence number {SequenceNumber}")]
+    internal static partial void NotSaving(this ILogger<SaveChanges> logger, ulong sequenceNumber);
 }

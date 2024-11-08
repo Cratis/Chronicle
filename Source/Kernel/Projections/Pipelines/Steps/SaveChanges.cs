@@ -19,25 +19,27 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
-        if (context.Changeset.HasChanges)
+        if (!context.Changeset.HasChanges)
         {
-            logger.SavingResult(context.Event.Metadata.SequenceNumber);
-
-            if (!context.Changeset.HasJoined())
-            {
-                context.Changeset.SetSequenceNumber();
-            }
-
-            // TODO: Return the number of affected records and pass this along to the changeset storage
-            await sink.ApplyChanges(context.Key, context.Changeset);
-            await changesetStorage.Save(
-                projection.Identifier,
-                context.Key,
-                projection.Path,
-                context.Event.Context.SequenceNumber,
-                context.Event.Context.CorrelationId,
-                context.Changeset);
+            logger.NotSaving(context.Event.Metadata.SequenceNumber);
+            return context;
         }
+        logger.SavingResult(context.Event.Metadata.SequenceNumber);
+
+        if (!context.Changeset.HasJoined())
+        {
+            context.Changeset.SetSequenceNumber();
+        }
+
+        // TODO: Return the number of affected records and pass this along to the changeset storage
+        await sink.ApplyChanges(context.Key, context.Changeset);
+        await changesetStorage.Save(
+            projection.Identifier,
+            context.Key,
+            projection.Path,
+            context.Event.Context.SequenceNumber,
+            context.Event.Context.CorrelationId,
+            context.Changeset);
 
         return context;
     }

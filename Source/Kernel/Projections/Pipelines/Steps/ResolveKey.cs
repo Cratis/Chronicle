@@ -34,18 +34,17 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ITypeFormats
         return key with
         {
             ArrayIndexers = new ArrayIndexers(
-                key.ArrayIndexers.All.Select(_ =>
+                key.ArrayIndexers.All.Select(arrayIndexer =>
                 {
-                    var originalType = _.Identifier.GetType();
-                    var targetType = projection.Model.Schema.GetTargetTypeForPropertyPath(_.ArrayProperty + _.IdentifierProperty, typeFormats);
+                    var targetType = projection.Model.Schema.GetTargetTypeForPropertyPath(arrayIndexer.ArrayProperty + arrayIndexer.IdentifierProperty, typeFormats);
                     if (targetType is null)
                     {
-                        return _;
+                        return arrayIndexer;
                     }
 
-                    return _ with
+                    return arrayIndexer with
                     {
-                        Identifier = TypeConversion.Convert(targetType, _.Identifier)
+                        Identifier = TypeConversion.Convert(targetType, arrayIndexer.Identifier)
                     };
                 }))
         };
