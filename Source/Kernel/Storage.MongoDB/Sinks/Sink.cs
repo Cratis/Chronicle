@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Sinks;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -59,7 +60,9 @@ public class Sink(
     /// <inheritdoc/>
     public async Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
     {
-        var filter = Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
+        var filter = changeset.HasJoined() ?
+            FilterDefinition<BsonDocument>.Empty :
+            Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
 
         if (changeset.HasBeenRemoved())
         {
