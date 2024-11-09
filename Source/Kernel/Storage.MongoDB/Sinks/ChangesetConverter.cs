@@ -178,8 +178,6 @@ public class ChangesetConverter(
             return;
         }
         var filter = CreateJoinedFilterDefinition(key, joined);
-        var all = collection.Find(FilterDefinition<BsonDocument>.Empty).ToList();
-        var filtered = collection.Find(filter).ToList();
         joinTasks.Add(collection.UpdateManyAsync(
             filter,
             joinUpdateBuilder,
