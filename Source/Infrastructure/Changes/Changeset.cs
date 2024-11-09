@@ -198,6 +198,16 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     public bool HasBeenRemoved() => Changes.Any(_ => _ is Removed);
 
     /// <inheritdoc/>
+    public bool HasJoined() =>
+        Changes.OfType<Joined>().Any() ||
+        Changes.OfType<ChildRemovedFromAll>().Any();
+
+    /// <inheritdoc/>
+    public bool HasRemoved() =>
+        Changes.OfType<Removed>().Any() ||
+        Changes.OfType<ChildRemoved>().Any();
+
+    /// <inheritdoc/>
     public TChild GetChildByKey<TChild>(object key)
     {
         foreach (var change in _changes)

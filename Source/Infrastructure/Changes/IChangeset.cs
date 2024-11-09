@@ -135,6 +135,18 @@ public interface IChangeset<TSource, TTarget>
     bool HasBeenRemoved();
 
     /// <summary>
+    /// Checks if the changeset has a <see cref="Joined"/> or <see cref="ChildRemovedFromAll"/> change.
+    /// </summary>
+    /// <returns>True if it has, false if not.</returns>
+    public bool HasJoined();
+
+    /// <summary>
+    /// Checks if the changeset has a <see cref="Removed"/> or <see cref="ChildRemoved"/> change.
+    /// </summary>
+    /// <returns>True if it has, false if not.</returns>
+    public bool HasRemoved();
+
+    /// <summary>
     /// Get a specific child from.
     /// </summary>
     /// <typeparam name="TChild">Type of child.</typeparam>
