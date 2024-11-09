@@ -40,7 +40,7 @@ public class ProjectionPipeline(
         logger.StartingPipeline(@event.Metadata.SequenceNumber);
         var context = ProjectionEventContext.Empty(objectComparer, @event) with
         {
-            OperationType = projection.OperationTypes[@event.Metadata.Type]
+            OperationType = projection.GetOperationTypeFor(@event.Metadata.Type)
         };
 
         foreach (var step in steps)

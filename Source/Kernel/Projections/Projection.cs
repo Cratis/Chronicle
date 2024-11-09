@@ -132,6 +132,26 @@ public class Projection : IProjection, IDisposable
     }
 
     /// <inheritdoc/>
+    public ProjectionOperationType GetOperationTypeFor(EventType eventType)
+    {
+        if (OperationTypes.TryGetValue(eventType, out var value))
+        {
+            return value;
+        }
+
+        foreach (var child in ChildProjections)
+        {
+            var operation = child.GetOperationTypeFor(eventType);
+            if (operation != ProjectionOperationType.None)
+            {
+                return operation;
+            }
+        }
+
+        return ProjectionOperationType.None;
+    }
+
+    /// <inheritdoc/>
     public void SetEventTypesWithKeyResolvers(
         IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
         IEnumerable<EventType> ownEventTypes,

@@ -72,7 +72,7 @@ public interface IProjection
     IObservable<ProjectionEventContext> Event { get; }
 
     /// <summary>
-    /// Gets the <see cref="IDictionary{TKey,TValue}"/> of <see cref="EventType"/> to <see cref="ProjectionOperationType"/> mapping. 
+    /// Gets the <see cref="IDictionary{TKey,TValue}"/> of <see cref="EventType"/> to <see cref="ProjectionOperationType"/> mapping.
     /// </summary>
     IDictionary<EventType, ProjectionOperationType> OperationTypes { get; }
 
@@ -136,6 +136,13 @@ public interface IProjection
     /// <param name="eventType"><see cref="EventType"/> to get for.</param>
     /// <returns>The <see cref="KeyResolver"/>.</returns>
     KeyResolver GetKeyResolverFor(EventType eventType);
+
+    /// <summary>
+    /// Gets the <see cref="ProjectionOperationType"/> for a given <see cref="EventType"/> affecting the projection.
+    /// </summary>
+    /// <param name="eventType"><see cref="EventType"/> to get for.</param>
+    /// <returns><see cref="ProjectionOperationType"/>.</returns>
+    ProjectionOperationType GetOperationTypeFor(EventType eventType);
 
     /// <summary>
     /// Set event types with key resolvers for the projection.
