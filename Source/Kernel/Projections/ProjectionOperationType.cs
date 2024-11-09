@@ -3,11 +3,29 @@
 
 namespace Cratis.Chronicle.Projections;
 
+/// <summary>
+/// Represents the type of operation an event will perform on a projection.
+/// </summary>
 [Flags]
 public enum ProjectionOperationType
 {
+    /// <summary>
+    /// No operation.
+    /// </summary>
     None = 0,
+
+    /// <summary>
+    /// Properties are set from the event.
+    /// </summary>
     From = 1,
-    Join = 2,
-    Remove = 4,
+
+    /// <summary>
+    /// Properties are joined from event.
+    /// </summary>
+    Join = 1 << 1,
+
+    /// <summary>
+    /// Entity is removed.
+    /// </summary>
+    Remove = 1 << 2
 }
