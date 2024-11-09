@@ -87,7 +87,7 @@ public class KeyJsonConverter : JsonConverter<Key>
             }
         }
 
-        return new Key(value!, new ArrayIndexers(arrayIndexers));
+        return new Key(value, new ArrayIndexers(arrayIndexers));
     }
 
     /// <inheritdoc/>

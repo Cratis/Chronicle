@@ -187,7 +187,7 @@ public class ImmediateProjection(
         return (projectedEventsCount, state);
     }
 
-    static async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
+    async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
     {
         if (projection.Accepts(context.Event.Metadata.Type))
         {
@@ -200,7 +200,7 @@ public class ImmediateProjection(
         }
     }
 
-    static ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state, HashSet<PropertyPath> affectedProperties)
+    ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state, HashSet<PropertyPath> affectedProperties)
     {
         foreach (var change in changes)
         {

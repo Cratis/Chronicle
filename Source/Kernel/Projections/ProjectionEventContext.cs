@@ -24,20 +24,6 @@ public record ProjectionEventContext(
     bool NeedsInitialState)
 {
     /// <summary>
-    /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and
-    /// <see cref="AppendedEvent"/>.
-    /// </summary>
-    /// <param name="comparer">The <see cref="IObjectComparer"/>.</param>
-    /// <param name="event">The <see cref="AppendedEvent"/>.</param>
-    /// <returns>The <see cref="ProjectionEventContext"/>.</returns>
-    public static ProjectionEventContext Empty(IObjectComparer comparer, AppendedEvent @event) => new(
-        Key.Undefined,
-        @event,
-        new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, new ExpandoObject()),
-        ProjectionOperationType.None,
-        false);
-
-    /// <summary>
     /// Gets the <see cref="EventType"/> of the <see cref="Event"/>.
     /// </summary>
     public EventType EventType => Event.Metadata.Type;
@@ -56,4 +42,18 @@ public record ProjectionEventContext(
     /// Whether the operation type is a remove.
     /// </summary>
     public bool IsRemove => OperationType.HasFlag(ProjectionOperationType.Remove);
+
+    /// <summary>
+    /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and
+    /// <see cref="AppendedEvent"/>.
+    /// </summary>
+    /// <param name="comparer">The <see cref="IObjectComparer"/>.</param>
+    /// <param name="event">The <see cref="AppendedEvent"/>.</param>
+    /// <returns>The <see cref="ProjectionEventContext"/>.</returns>
+    public static ProjectionEventContext Empty(IObjectComparer comparer, AppendedEvent @event) => new(
+        Key.Undefined,
+        @event,
+        new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, new ExpandoObject()),
+        ProjectionOperationType.None,
+        false);
 }

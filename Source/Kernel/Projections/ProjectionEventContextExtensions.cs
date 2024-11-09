@@ -131,7 +131,7 @@ public static class ProjectionEventContextExtensions
 
                 var items = context.Changeset.InitialState.EnsureCollection<object>(childrenProperty, context.Key.ArrayIndexers);
                 var childrenPropertyIndexer = context.Key.ArrayIndexers.GetFor(childrenProperty);
-                if (!context.OperationType.HasFlag(ProjectionOperationType.Join) && (!identifiedByProperty.IsSet ||
+                if (!context.IsJoin && (!identifiedByProperty.IsSet ||
                                         !items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier)))
                 {
                     context.Changeset.AddChild<ExpandoObject>(
@@ -143,8 +143,11 @@ public static class ProjectionEventContextExtensions
                     return;
                 }
 
-                // TODO: When joined event occurs when trying to create these changes for the changeset it seems to want to not make changes for the properties it changes but rather the entire object.
-                // For instance on OnBoarded the change is => PropertyChanged [users] => {"id": <the-id>, "onboarded": true}
+                if (context.Event.Metadata.Type.Id == "UserOnboarded")
+                {
+                    Console.WriteLine("UserOnboarded");
+                }
+
                 context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers);
             });
         }

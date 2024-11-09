@@ -76,7 +76,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         _expandoObjectConverter = expandoObjectConverter;
         _jsonSerializerOptions = jsonSerializerOptions;
         _loggerFactory = loggerFactory;
-        Changesets = new ChangesetStorage(eventStoreNamespaceDatabase, null);
+        Changesets = new ChangesetStorage(eventStoreNamespaceDatabase);
         Identities = new IdentityStorage(eventStoreNamespaceDatabase, loggerFactory.CreateLogger<IdentityStorage>());
         Jobs = new JobStorage(eventStoreNamespaceDatabase);
         JobSteps = new JobStepStorage(eventStoreNamespaceDatabase);

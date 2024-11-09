@@ -465,26 +465,6 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<AppendedEvent> GetLastInstanceFor(
-        EventTypeId eventTypeId,
-        EventSourceId eventSourceId)
-    {
-        logger.GettingLastInstanceFor(eventSequenceId, eventTypeId, eventSourceId);
-
-        var filter = Builders<Event>.Filter.And(
-            Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
-            Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
-
-        var collection = _collection;
-        var @event = await collection.Find(filter)
-                                     .SortByDescendingSequenceNumber()
-                                     .Limit(1)
-                                     .SingleOrDefaultAsync()
-                                     .ConfigureAwait(false) ?? throw new MissingEvent(eventSequenceId, eventTypeId, eventSourceId);
-        return await converter.ToAppendedEvent(@event);
-    }
-
-    /// <inheritdoc/>
     public async Task<AppendedEvent> GetLastInstanceOfAny(
         EventSourceId eventSourceId,
         IEnumerable<EventTypeId> eventTypes)

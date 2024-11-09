@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Sinks;
-using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Sinks;
 using MongoDB.Bson;
 using MongoDB.Driver;

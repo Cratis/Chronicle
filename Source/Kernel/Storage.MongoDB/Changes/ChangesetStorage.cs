@@ -6,7 +6,6 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Storage.Changes;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -16,14 +15,17 @@ namespace Cratis.Chronicle.Storage.MongoDB.Changes;
 /// <summary>
 /// Represents a <see cref="IChangesetStorage"/> for storing changesets in MongoDB.
 /// </summary>
+/// <param name="eventStoreDatabase"><see cref="IEventStoreNamespaceDatabase"/> for the changesets.</param>
+///
 public class ChangesetStorage(
-    IEventStoreNamespaceDatabase eventStoreDatabase,
-    IJsonProjectionChangesetSerializer jsonSerializer) : IChangesetStorage
+    IEventStoreNamespaceDatabase eventStoreDatabase) : IChangesetStorage
 {
-    IMongoCollection<BsonDocument> Collection => eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.ProjectionChangesets);
+#pragma warning disable IDE0051,RCS1213 // Remove unused private members
+    IMongoCollection<BsonDocument> Collection => eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Changesets);
+#pragma warning restore IDE0051,RCS1213 // Remove unused private members
 
     /// <inheritdoc/>
-    public async Task Save(
+    public Task Save(
         ProjectionId projectionIdentifier,
         Key projectionObjectKey,
         ProjectionPath projectionPath,
@@ -31,11 +33,6 @@ public class ChangesetStorage(
         CorrelationId correlationId,
         IChangeset<AppendedEvent, ExpandoObject> changeset)
     {
-        // TODO: Implement
-        return;
-        var json = jsonSerializer.Serialize(changeset);
-        var document = BsonDocument.Parse(json.ToJsonString());
-
-        await Collection.InsertOneAsync(document);
+        return Task.CompletedTask;
     }
 }

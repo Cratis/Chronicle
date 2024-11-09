@@ -84,7 +84,7 @@ public class Projection : IProjection, IDisposable
     public IObservable<ProjectionEventContext> Event { get; }
 
     /// <inheritdoc/>
-    public IDictionary<EventType, ProjectionOperationType> OperationTypes { get; private set; }
+    public IDictionary<EventType, ProjectionOperationType> OperationTypes { get; private set; } = new Dictionary<EventType, ProjectionOperationType>();
 
     /// <inheritdoc/>
     public IEnumerable<EventType> EventTypes { get; private set; } = [];
