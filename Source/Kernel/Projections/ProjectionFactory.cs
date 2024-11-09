@@ -324,30 +324,18 @@ public class ProjectionFactory(
     void ResolveEventsForProjection(Projection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
     {
         // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
-        var fromEventTypes = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey));
-        var joinEventTypes = projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty));
-        var removedWithEventTypes = projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey));
-        var removedWithJoinEventTypes = projectionDefinition.RemovedWithJoin.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty));
+        var fromEventTypes = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToArray();
+        var joinEventTypes = projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)).ToArray();
+        var removedWithEventTypes = projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToArray();
+        var removedWithJoinEventTypes = projectionDefinition.RemovedWithJoin.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)).ToArray();
 
-        var operationTypes = new Dictionary<EventType, ProjectionOperationType>();
-        foreach (var eventType in fromEventTypes)
-        {
-            operationTypes.Add(eventType.EventType, ProjectionOperationType.None);
-        }
-        foreach (var eventType in joinEventTypes)
-        {
-            operationTypes.Add(eventType.EventType, ProjectionOperationType.Join);
-        }
-        foreach (var eventType in removedWithEventTypes)
-        {
-            operationTypes.Add(eventType.EventType, ProjectionOperationType.Remove);
-        }
-        foreach (var eventType in removedWithJoinEventTypes)
-        {
-            operationTypes.Add(eventType.EventType, ProjectionOperationType.Join | ProjectionOperationType.Remove);
-        }
+        var operationTypes = fromEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.From)
+            .Concat(joinEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.Join))
+            .Concat(removedWithEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.Remove))
+            .Concat(removedWithJoinEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.Join | ProjectionOperationType.Remove))
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-        List<EventTypeWithKeyResolver> eventsForProjection = [.. fromEventTypes, ..joinEventTypes, ..removedWithEventTypes, ..removedWithJoinEventTypes];
+        List<EventTypeWithKeyResolver> eventsForProjection = [.. fromEventTypes, .. joinEventTypes, .. removedWithEventTypes, .. removedWithJoinEventTypes];
         if (projectionDefinition.FromDerivatives is not null)
         {
             foreach (var fromDerivativeDefinition in projectionDefinition.FromDerivatives)
