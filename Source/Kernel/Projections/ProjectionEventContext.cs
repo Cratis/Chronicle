@@ -37,8 +37,23 @@ public record ProjectionEventContext(
         ProjectionOperationType.None,
         false);
 
+    /// <summary>
+    /// Gets the <see cref="EventType"/> of the <see cref="Event"/>.
+    /// </summary>
     public EventType EventType => Event.Metadata.Type;
+
+    /// <summary>
+    /// Gets the <see cref="EventSequenceNumber"/> of the <see cref="Event"/>.
+    /// </summary>
     public EventSequenceNumber EventSequenceNumber => Event.Metadata.SequenceNumber;
+
+    /// <summary>
+    /// Whether the operation type is a join.
+    /// </summary>
     public bool IsJoin => OperationType.HasFlag(ProjectionOperationType.Join);
+
+    /// <summary>
+    /// Whether the operation type is a remove.
+    /// </summary>
     public bool IsRemove => OperationType.HasFlag(ProjectionOperationType.Remove);
 }
