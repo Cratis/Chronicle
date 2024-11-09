@@ -42,22 +42,4 @@ public static class ChangesetExtensions
             changeset.Add(propertiesChanged);
         }
     }
-
-    /// <summary>
-    /// Checks if the changeset has a <see cref="Joined"/> or <see cref="ChildRemovedFromAll"/> change.
-    /// </summary>
-    /// <param name="changeset">Changeset to check.</param>
-    /// <returns>True if it has, false if not.</returns>
-    public static bool HasJoined(this IChangeset<AppendedEvent, ExpandoObject> changeset) =>
-        changeset.Changes.OfType<Joined>().Any() ||
-        changeset.Changes.OfType<ChildRemovedFromAll>().Any();
-
-    /// <summary>
-    /// Checks if the changeset has a <see cref="Removed"/> or <see cref="ChildRemoved"/> change.
-    /// </summary>
-    /// <param name="changeset">Changeset to check.</param>
-    /// <returns>True if it has, false if not.</returns>
-    public static bool HasRemoved(this IChangeset<AppendedEvent, ExpandoObject> changeset) =>
-        changeset.Changes.OfType<Removed>().Any() ||
-        changeset.Changes.OfType<ChildRemoved>().Any();
 }
