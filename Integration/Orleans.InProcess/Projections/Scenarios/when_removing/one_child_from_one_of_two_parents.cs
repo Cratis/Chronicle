@@ -24,9 +24,9 @@ public class one_child_from_one_of_two_parents(context context) : Given<context>
 
         void Establish()
         {
-            var userId = new UserId(Guid.NewGuid());
-            FirstGroupId = Guid.NewGuid();
-            SecondGroupId = Guid.NewGuid();
+            var userId = new UserId(Guid.Parse("89927e1f-f872-4cc1-aa76-70d44aed22d4"));
+            FirstGroupId = Guid.Parse("4b92abb1-ba70-44e7-8c46-6b20885b9648");
+            SecondGroupId = Guid.Parse("3628222e-5539-4053-b3c6-10b84178a9e7");
             EventSourceId = userId.ToString();
             ModelId = FirstGroupId;
 
@@ -47,7 +47,7 @@ public class one_child_from_one_of_two_parents(context context) : Given<context>
     }
 
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
-    [Fact] void should_only_have_no_children_on_first_group() => Context.Result.Users.ShouldBeEmpty();
+    [Fact] void should_have_no_children_on_first_group() => Context.Result.Users.ShouldBeEmpty();
     [Fact] void should_only_have_one_child_on_second_group() => Context.Groups.First(_ => _.Id.Value == Context.SecondGroupId.Value).Users.Count().ShouldEqual(1);
     [Fact] void should_have_two_groups() => Context.Groups.Length.ShouldEqual(2);
     [Fact] void should_only_have_correct_two_groups() => Context.ResultingGroupIds.ShouldContainOnly([Context.FirstGroupId, Context.SecondGroupId]);
