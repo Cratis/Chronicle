@@ -190,7 +190,7 @@ public class ChangesetConverter(
 
     FilterDefinition<BsonDocument> CreateJoinedFilterDefinition(Key key, Joined joined)
     {
-        if (key.Value is null)
+        if (!key.ArrayIndexers.IsEmpty)
         {
             return FilterDefinition<BsonDocument>.Empty;
         }
