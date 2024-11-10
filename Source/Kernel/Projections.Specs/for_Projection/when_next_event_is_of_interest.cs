@@ -29,7 +29,8 @@ public class when_next_event_is_of_interest : given.a_projection
             [
                     new EventTypeWithKeyResolver(event_b, KeyResolvers.FromEventSourceId)
             ],
-            [event_b]);
+            [event_b],
+            new Dictionary<EventType, ProjectionOperationType>());
 
         dynamic state = initial_state = new();
         state.Integer = 42;
@@ -79,8 +80,8 @@ public class when_next_event_is_of_interest : given.a_projection
 
     void Because()
     {
-        projection.OnNext(new(new(first_event.Context.EventSourceId, ArrayIndexers.NoIndexers), first_event, first_changeset));
-        projection.OnNext(new(new(second_event.Context.EventSourceId, ArrayIndexers.NoIndexers), second_event, second_changeset));
+        projection.OnNext(new(new(first_event.Context.EventSourceId, ArrayIndexers.NoIndexers), first_event, first_changeset, ProjectionOperationType.From, false));
+        projection.OnNext(new(new(second_event.Context.EventSourceId, ArrayIndexers.NoIndexers), second_event, second_changeset, ProjectionOperationType.From, false));
     }
 
     [Fact] void should_only_observe_one_event() => observed_events.Count.ShouldEqual(1);

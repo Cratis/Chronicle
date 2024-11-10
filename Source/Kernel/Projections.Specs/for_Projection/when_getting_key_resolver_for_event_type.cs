@@ -18,7 +18,8 @@ public class when_getting_key_resolver_for_event_type : given.a_projection
             [
                     new EventTypeWithKeyResolver(event_type, expected)
             ],
-            [event_type]);
+            [event_type],
+            new Dictionary<EventType, ProjectionOperationType>());
     }
 
     void Because() => result = projection.GetKeyResolverFor(event_type);
