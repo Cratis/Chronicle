@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Concepts.Projections;
 
 /// <summary>
 /// Represents the path within a projection hierarchy.
-/// /// </summary>
+/// </summary>
 /// <param name="Path">The path string.</param>
 public record ProjectionPath(string Path) : ConceptAs<string>(Path)
 {
