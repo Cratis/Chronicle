@@ -17,7 +17,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
-        if (context.IsJoin || context.IsRemove)
+        if (context.IsJoin)
         {
             return context;
         }
