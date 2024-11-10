@@ -26,29 +26,31 @@ public class when_setting_properties_that_cause_changes : Specification
 
         property_mappers =
         [
-                (_, target, __) => ((dynamic)target).Integer = 44,
-                (_, target, __) => ((dynamic)target).String = "Forty Four",
-                (_, target, __) => ((dynamic)target).Nested.Integer = 45,
-                (_, target, __) => ((dynamic)target).Nested.String = "Forty Five",
+                (_, target, __) =>
+                    {
+                        ((dynamic)target).Integer = 44;
+                        return new PropertyDifference("integer", 42, 44);
+                    },
+                (_, target, __) =>
+                    {
+                        ((dynamic)target).String = "Forty Four";
+                        return new PropertyDifference("string", "Forty Two", "Forty Four");
+                    },
+                (_, target, __) =>
+                    {
+                        ((dynamic)target).Nested.Integer = 45;
+                        return new PropertyDifference("nested.integer", 43, 45);
+                    },
+                (_, target, __) =>
+                    {
+                        ((dynamic)target).Nested.String = "Forty Five";
+                        return new PropertyDifference("nested.string", "Forty Three", "Forty Five");
+                    }
         ];
 
         source = new ExpandoObject();
 
         objects_comparer = new();
-        objects_comparer
-            .Setup(_ => _.Compare(initial_state, IsAny<ExpandoObject>(), out Ref<IEnumerable<PropertyDifference>>.IsAny))
-            .Returns((object? _, object? __, out IEnumerable<PropertyDifference> differences) =>
-            {
-                differences =
-                [
-                        new PropertyDifference("integer", 42, 44),
-                        new PropertyDifference("string", "Forty Two", "Forty Four"),
-                        new PropertyDifference("nested.integer", 43, 45),
-                        new PropertyDifference("nested.string", "Forty Three", "Forty Five")
-                ];
-
-                return false;
-            });
         changeset = new(objects_comparer.Object, source, initial_state);
     }
 
