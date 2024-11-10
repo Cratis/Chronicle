@@ -58,13 +58,17 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     public void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
     {
         var workingState = CurrentState.Clone()!;
-        SetProperties(workingState, propertyMappers, arrayIndexers);
-
-        if (!comparer.Compare(CurrentState, workingState, out var differences) && differences.Any())
+        var differences = SetProperties(workingState, propertyMappers, arrayIndexers);
+        if (differences.Any())
         {
-            differences.ForEach(_ => _.ArrayIndexers = arrayIndexers);
             Add(new PropertiesChanged<TTarget>(workingState, differences));
         }
+
+        // if (!comparer.Compare(CurrentState, workingState, out var differences) && differences.Any())
+        // {
+        //     differences.ForEach(_ => _.ArrayIndexers = arrayIndexers);
+        //     Add(new PropertiesChanged<TTarget>(workingState, differences));
+        // }
 
         CurrentState = workingState;
     }
@@ -258,11 +262,19 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         resolvesToRemove.ForEach(_ => changes.Remove(_));
     }
 
-    void SetProperties(TTarget state, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
+    IEnumerable<PropertyDifference> SetProperties(TTarget state, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
     {
+        var differences = new List<PropertyDifference>();
+
         foreach (var propertyMapper in propertyMappers)
         {
-            propertyMapper(Incoming, state, arrayIndexers);
+            var difference = propertyMapper(Incoming, state, arrayIndexers);
+            if (difference.HasChanges())
+            {
+                differences.Add(difference);
+            }
         }
+
+        return differences;
     }
 }

@@ -143,11 +143,6 @@ public static class ProjectionEventContextExtensions
                     return;
                 }
 
-                if (context.Event.Metadata.Type.Id == "UserOnboarded")
-                {
-                    Console.WriteLine("UserOnboarded");
-                }
-
                 context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers);
             });
         }

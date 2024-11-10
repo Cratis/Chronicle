@@ -28,7 +28,10 @@ public static class PropertyMappers
         return (AppendedEvent @event, ExpandoObject target, ArrayIndexers arrayIndexers) =>
         {
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            actualTarget![targetProperty.LastSegment.Value] = eventValueProvider(@event);
+            var property = targetProperty.LastSegment.Value;
+            var originalValue = actualTarget.TryGetValue(property, out var value) ? value : null;
+            var newValue = actualTarget![property] = eventValueProvider(@event);
+            return new(targetProperty, originalValue, newValue, arrayIndexers);
         };
     }
 
@@ -50,8 +53,10 @@ public static class PropertyMappers
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
             var value = (double)Convert.ChangeType(valueAsObject, typeof(double));
+            var originalValue = value;
             value += (double)Convert.ChangeType(eventValueProvider(@event), typeof(double));
             actualTarget[lastSegment.Value] = value;
+            return new(targetProperty, originalValue, value, arrayIndexers);
         };
     }
 
@@ -73,8 +78,10 @@ public static class PropertyMappers
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
             var value = (double)Convert.ChangeType(valueAsObject, typeof(double));
+            var originalValue = value;
             value -= (double)Convert.ChangeType(eventValueProvider(@event), typeof(double));
             actualTarget[lastSegment.Value] = value;
+            return new(targetProperty, originalValue, value, arrayIndexers);
         };
     }
 
@@ -99,6 +106,7 @@ public static class PropertyMappers
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
             var value = (int)Convert.ChangeType(valueAsObject, typeof(int));
+            var originalValue = value;
             value++;
             if (targetType?.Equals(typeof(int)) == false)
             {
@@ -108,6 +116,7 @@ public static class PropertyMappers
             {
                 actualTarget[lastSegment.Value] = value;
             }
+            return new(targetProperty, originalValue, value, arrayIndexers);
         };
     }
 }
