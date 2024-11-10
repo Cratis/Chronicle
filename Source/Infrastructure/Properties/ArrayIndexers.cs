@@ -37,6 +37,11 @@ public class ArrayIndexers
     public int Count => _arrayIndexers.Count;
 
     /// <summary>
+    /// Gets a value indicating whether or not it is empty.
+    /// </summary>
+    public bool IsEmpty => _arrayIndexers.Count == 0;
+
+    /// <summary>
     /// Gets all <see cref="ArrayIndexer"/>.
     /// </summary>
     /// <returns>Collection of <see cref="ArrayIndexer"/>.</returns>
