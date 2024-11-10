@@ -14,6 +14,10 @@ public class GroupProjectionWithMultipleJoins : IProjectionFor<Group>
             .IdentifiedBy(e => e.UserId)
             .From<UserAddedToGroup>(b => b
                 .UsingKey(e => e.UserId))
+            .Join<UserOnboarded>(j =>
+                j.Set(m => m.Onboarded).ToValue(true))
+            .Join<UserOffboarded>(j =>
+                j.Set(m => m.Onboarded).ToValue(false))
             .Join<UserCreated>(j => j
                 .Set(m => m.Name).To(e => e.Name))
             .Join<SystemUserCreated>(j => j

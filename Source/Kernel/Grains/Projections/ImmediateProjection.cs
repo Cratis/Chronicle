@@ -160,17 +160,9 @@ public class ImmediateProjection(
 
     ExpandoObject GetInitialState()
     {
-        if (_initialState is not null)
-        {
-            return _initialState;
-        }
-
-        if (State.InitialModelState is not null)
-        {
-            return expandoObjectConverter.ToExpandoObject(State.InitialModelState, _projection!.Model.Schema);
-        }
-
-        return new ExpandoObject();
+        return _initialState ?? (State.InitialModelState is not null
+            ? expandoObjectConverter.ToExpandoObject(State.InitialModelState, _projection!.Model.Schema)
+            : new ExpandoObject());
     }
 
     async Task<(int ProjectedEventsCount, ExpandoObject State)> HandleEvents(HashSet<PropertyPath> affectedProperties, ExpandoObject initialState, AppendedEvent[] events)
@@ -183,7 +175,7 @@ public class ImmediateProjection(
             var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
             var keyResolver = _projection!.GetKeyResolverFor(@event.Metadata.Type);
             var key = await keyResolver(_eventSequenceStorage!, @event);
-            var context = new ProjectionEventContext(key, @event, changeset);
+            var context = new ProjectionEventContext(key, @event, changeset, _projection.OperationTypes[@event.Metadata.Type], false);
 
             await HandleEventFor(_projection!, context);
 

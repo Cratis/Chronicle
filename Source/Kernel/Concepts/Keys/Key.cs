@@ -34,8 +34,8 @@ public record Key(object Value, ArrayIndexers ArrayIndexers)
     /// Implicitly convert from a <see cref="Key"/> to a <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="key"><see cref="Key"/> to convert from.</param>
-    public static implicit operator EventSourceId(Key key) => new(key.Value.ToString()!);
+    public static implicit operator EventSourceId(Key key) => new(key.Value?.ToString() ?? EventSourceId.Unspecified);
 
     /// <inheritdoc/>
-    public override string ToString() => Value.ToString() ?? base.ToString()!;
+    public override string ToString() => Value?.ToString() ?? base.ToString() ?? string.Empty;
 }

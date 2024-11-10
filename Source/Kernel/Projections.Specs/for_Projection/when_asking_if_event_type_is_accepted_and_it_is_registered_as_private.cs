@@ -16,7 +16,8 @@ public class when_asking_if_event_type_is_accepted_and_it_is_registered_as_priva
             [
                 new EventTypeWithKeyResolver(event_type, KeyResolvers.FromEventSourceId)
             ],
-            [event_type]);
+            [event_type],
+            new Dictionary<EventType, ProjectionOperationType>());
     }
 
     void Because() => result = projection.Accepts(new EventType(event_type.Id, event_type.Generation));

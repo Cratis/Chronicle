@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 
-namespace Cratis.Chronicle.Storage.Sinks;
+namespace Cratis.Chronicle.Storage.Changes;
 
 /// <summary>
 /// Extension methods for <see cref="IChangeset{TSource, TTarget}"/>.

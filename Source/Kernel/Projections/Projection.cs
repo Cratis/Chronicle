@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -23,6 +24,7 @@ public class Projection : IProjection, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="Projection"/> class.
     /// </summary>
+    /// <param name="eventSequenceId">The unique identifier of the event sequence.</param>
     /// <param name="identifier">The unique identifier of the projection.</param>
     /// <param name="sink">The <see cref="SinkDefinition">sink</see> to store the results of the projection.</param>
     /// <param name="initialModelState">The initial state to use for new model instances.</param>
@@ -32,6 +34,7 @@ public class Projection : IProjection, IDisposable
     /// <param name="rewindable">Whether or not the projection is rewindable.</param>
     /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
     public Projection(
+        EventSequenceId eventSequenceId,
         ProjectionId identifier,
         SinkDefinition sink,
         ExpandoObject initialModelState,
@@ -41,6 +44,7 @@ public class Projection : IProjection, IDisposable
         bool rewindable,
         IEnumerable<IProjection> childProjections)
     {
+        EventSequenceId = eventSequenceId;
         Identifier = identifier;
         Sink = sink;
         InitialModelState = initialModelState;
@@ -51,6 +55,9 @@ public class Projection : IProjection, IDisposable
         ChildrenPropertyPath = childrenPropertyPath;
         ChildProjections = childProjections;
     }
+
+    /// <inheritdoc/>
+    public EventSequenceId EventSequenceId { get; }
 
     /// <inheritdoc/>
     public ProjectionId Identifier { get; }
@@ -75,6 +82,9 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public IObservable<ProjectionEventContext> Event { get; }
+
+    /// <inheritdoc/>
+    public IDictionary<EventType, ProjectionOperationType> OperationTypes { get; private set; } = new Dictionary<EventType, ProjectionOperationType>();
 
     /// <inheritdoc/>
     public IEnumerable<EventType> EventTypes { get; private set; } = [];
@@ -122,16 +132,40 @@ public class Projection : IProjection, IDisposable
     }
 
     /// <inheritdoc/>
-    public void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver, IEnumerable<EventType> ownEventTypes)
+    public ProjectionOperationType GetOperationTypeFor(EventType eventType)
+    {
+        if (OperationTypes.TryGetValue(eventType, out var value))
+        {
+            return value;
+        }
+
+        foreach (var child in ChildProjections)
+        {
+            var operation = child.GetOperationTypeFor(eventType);
+            if (operation != ProjectionOperationType.None)
+            {
+                return operation;
+            }
+        }
+
+        return ProjectionOperationType.None;
+    }
+
+    /// <inheritdoc/>
+    public void SetEventTypesWithKeyResolvers(
+        IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
+        IEnumerable<EventType> ownEventTypes,
+        IDictionary<EventType, ProjectionOperationType> operationTypes)
     {
         EventTypesWithKeyResolver = eventTypesWithKeyResolver;
         var eventTypes = eventTypesWithKeyResolver.ToArray();
-        EventTypes = eventTypes.Select(_ => new EventType(_.EventType.Id, _.EventType.Generation)).ToArray();
+        EventTypes = eventTypes.Select(_ => _.EventType).ToArray();
         _eventTypesToKeyResolver = eventTypes.ToDictionary(
             _ => new EventType(_.EventType.Id, _.EventType.Generation),
             _ => _.KeyResolver);
 
         OwnEventTypes = ownEventTypes;
+        OperationTypes = operationTypes;
     }
 
     /// <inheritdoc/>

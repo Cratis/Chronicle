@@ -13,14 +13,14 @@ namespace Cratis.Chronicle.Changes;
 public interface IChangeset<TSource, TTarget>
 {
     /// <summary>
-    /// Gets the <see cref="Incoming"/> the <see cref="Changeset{TSource, TTarget}"/> is for.
+    /// Gets the <typeparamref name="TSource"/> the <see cref="IChangeset{TSource, TTarget}"/> is for.
     /// </summary>
     TSource Incoming { get; }
 
     /// <summary>
     /// Gets the initial state of before changes in changeset occurred.
     /// </summary>
-    TTarget InitialState { get; }
+    TTarget InitialState { get; set; }
 
     /// <summary>
     /// Gets the current state with all the changes in the changeset applied.
@@ -33,7 +33,7 @@ public interface IChangeset<TSource, TTarget>
     IEnumerable<Change> Changes { get; }
 
     /// <summary>
-    /// Gets whether or not there are changes in the changeset.
+    /// Gets whether there are changes in the changeset.
     /// </summary>
     bool HasChanges { get; }
 
@@ -133,6 +133,18 @@ public interface IChangeset<TSource, TTarget>
     /// </summary>
     /// <returns>True if there has, false if not.</returns>
     bool HasBeenRemoved();
+
+    /// <summary>
+    /// Checks if the changeset has a <see cref="Joined"/> or <see cref="ChildRemovedFromAll"/> change.
+    /// </summary>
+    /// <returns>True if it has, false if not.</returns>
+    public bool HasJoined();
+
+    /// <summary>
+    /// Checks if the changeset has a <see cref="Removed"/> or <see cref="ChildRemoved"/> change.
+    /// </summary>
+    /// <returns>True if it has, false if not.</returns>
+    public bool HasRemoved();
 
     /// <summary>
     /// Get a specific child from.

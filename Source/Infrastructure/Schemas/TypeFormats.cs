@@ -45,7 +45,7 @@ public class TypeFormats : ITypeFormats
         return _typesFormatInfo.First(_ => _.Value == format).Key;
     }
 
-    string StripNullable(string? format)
+    static string StripNullable(string? format)
     {
         if (format?.EndsWith("?") ?? false)
         {

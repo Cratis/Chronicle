@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Changes;
 
 namespace Cratis.Chronicle.Properties;
 
@@ -13,4 +14,5 @@ namespace Cratis.Chronicle.Properties;
 /// <param name="source">Source object.</param>
 /// <param name="target"><see cref="ExpandoObject"/> target to write to.</param>
 /// <param name="arrayIndexers"><see cref="ArrayIndexers"/> for accessing nested objects with arrays.</param>
-public delegate void PropertyMapper<TSource, TTarget>(TSource source, TTarget target, ArrayIndexers arrayIndexers);
+/// <returns>The <see cref="PropertyDifference"/> after applying the property mapper.</returns>
+public delegate PropertyDifference PropertyMapper<TSource, TTarget>(TSource source, TTarget target, ArrayIndexers arrayIndexers);

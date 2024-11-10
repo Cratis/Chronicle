@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Sinks;
 using NJsonSchema;
@@ -15,6 +16,7 @@ public class a_projection : Specification
     void Establish()
     {
         projection = new Projection(
+            EventSequenceId.Log,
             "0b7325dd-7a25-4681-9ab7-c387a6073547",
             SinkDefinition.None,
             new ExpandoObject(),

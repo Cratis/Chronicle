@@ -4,6 +4,8 @@
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections;
 
 namespace Cratis.Chronicle.Storage.Changes;
 
@@ -15,8 +17,18 @@ public interface IChangesetStorage
     /// <summary>
     /// Save changesets associated with a specific <see cref="CorrelationId"/>.
     /// </summary>
-    /// <param name="correlationId"><see cref="CorrelationId"/> to save for.</param>
-    /// <param name="associatedChangeset">All the associated <see cref="IChangeset{Event, ExpandoObject}">changesets</see>.</param>
+    /// <param name="projectionIdentifier">The <see cref="ProjectionId"/>.</param>
+    /// <param name="projectionObjectKey">The <see cref="Key"/>.</param>
+    /// <param name="projectionPath">The <see cref="ProjectionPath"/>.</param>
+    /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/>.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> to save for.</param>
+    /// <param name="changeset">All the associated <see cref="IChangeset{Event, ExpandoObject}">changesets</see>.</param>
     /// <returns>Async task.</returns>
-    Task Save(CorrelationId correlationId, IChangeset<AppendedEvent, ExpandoObject> associatedChangeset);
+    Task Save(
+        ProjectionId projectionIdentifier,
+        Key projectionObjectKey,
+        ProjectionPath projectionPath,
+        EventSequenceNumber sequenceNumber,
+        CorrelationId correlationId,
+        IChangeset<AppendedEvent, ExpandoObject> changeset);
 }

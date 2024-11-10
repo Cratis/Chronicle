@@ -141,12 +141,13 @@ public interface IEventSequenceStorage
     Task<bool> HasEventsFor(EventSourceId eventSourceId);
 
     /// <summary>
-    /// Check if there is an instance of a specific event type for an event source.
+    /// Try to get the last event of a specific event type for an event source before the current <see cref="EventSequenceNumber"/>.
     /// </summary>
     /// <param name="eventTypeId"><see cref="EventTypeId"/> to check for.</param>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to check for.</param>
-    /// <returns>True if it has, false if not.</returns>
-    Task<bool> HasInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId);
+    /// <param name="currentSequenceNumber">The current<see cref="EventSequenceNumber"/> to get the last event applied before this, if any.</param>
+    /// <returns>True and appended event if it has an event of same type before current sequence number, false and null if not.</returns>
+    Task<(bool Found, AppendedEvent? Event)> TryGetLastEventBefore(EventTypeId eventTypeId, EventSourceId eventSourceId, EventSequenceNumber currentSequenceNumber);
 
     /// <summary>
     /// Gets the event at a specific sequence number.
@@ -154,14 +155,6 @@ public interface IEventSequenceStorage
     /// <param name="sequenceNumber">The sequence number the event is at.</param>
     /// <returns>The <see cref="AppendedEvent"/> found.</returns>
     Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber);
-
-    /// <summary>
-    /// Get the last instance of a specific event type for an event source.
-    /// </summary>
-    /// <param name="eventTypeId"><see cref="EventTypeId"/> to get for.</param>
-    /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
-    /// <returns>The <see cref="AppendedEvent"/> found.</returns>
-    Task<AppendedEvent> GetLastInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId);
 
     /// <summary>
     /// Get the last instance of any of the specified event types for a specific event source.

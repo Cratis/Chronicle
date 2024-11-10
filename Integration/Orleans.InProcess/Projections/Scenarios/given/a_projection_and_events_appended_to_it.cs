@@ -25,6 +25,8 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
     public override IEnumerable<Type> Projections => [typeof(TProjection)];
     protected List<object> EventsToAppend = [];
     protected List<EventAndEventSourceId> EventsWithEventSourceIdToAppend = [];
+    protected Grains.Observation.IObserver Observer;
+    protected bool WaitForEachEvent;
 
     protected override void ConfigureServices(IServiceCollection services)
     {
@@ -39,8 +41,8 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
 
     async Task Because()
     {
-        var observer = GetObserverForProjection<TProjection>();
-        await observer.WaitTillActive();
+        Observer = GetObserverForProjection<TProjection>();
+        await Observer.WaitTillActive();
 
         AppendResult appendResult = null;
         foreach (var @event in EventsToAppend)
@@ -53,6 +55,10 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
         {
             appendResult = await EventStore.EventLog.Append(@event.EventSourceId, @event.Event);
             LastEventSequenceNumber = appendResult.SequenceNumber;
+            if (WaitForEachEvent)
+            {
+                await WaitForProjectionAndSetResult(appendResult.SequenceNumber);
+            }
         }
 
         var appendedEvents = await EventStore.EventLog.GetForEventSourceIdAndEventTypes(EventSourceId, EventTypes.Select(_ => _.GetEventType()));
@@ -60,10 +66,22 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
 
         if (appendResult is not null)
         {
-            await observer.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
-            var filter = Builders<TModel>.Filter.Eq(new StringFieldDefinition<TModel, string>("_id"), ModelId);
-            var result = await _globalFixture.ReadModels.Database.GetCollection<TModel>().FindAsync(filter);
-            Result = result.FirstOrDefault();
+            await WaitForProjectionAndSetResult(appendResult.SequenceNumber);
         }
+    }
+
+    protected async Task WaitForProjectionAndSetResult(EventSequenceNumber eventSequenceNumber)
+    {
+        await Observer.WaitTillReachesEventSequenceNumber(eventSequenceNumber);
+        var filter = Builders<TModel>.Filter.Eq(new StringFieldDefinition<TModel, string>("_id"), ModelId);
+        var result = await _globalFixture.ReadModels.Database.GetCollection<TModel>().FindAsync(filter);
+        Result = result.FirstOrDefault();
+    }
+
+    protected async Task<TModel> GetModel(EventSourceId eventSourceId)
+    {
+        var filter = Builders<TModel>.Filter.Eq(new StringFieldDefinition<TModel, string>("_id"), eventSourceId);
+        var result = await _globalFixture.ReadModels.Database.GetCollection<TModel>().FindAsync(filter);
+        return result.FirstOrDefault();
     }
 }

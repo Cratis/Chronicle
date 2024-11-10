@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Extension methods for building up a projection.
 /// </summary>
-public static class ProjectionExtensions
+public static class ProjectionEventContextExtensions
 {
     /// <summary>
     /// Filter an observable for a specific <see cref="EventType"/>.
@@ -24,7 +24,8 @@ public static class ProjectionExtensions
     /// <param name="observable"><see cref="IObservable{T}"/> to filter.</param>
     /// <param name="eventType"><see cref="EventType"/> to filter for.</param>
     /// <returns>Filtered <see cref="IObservable{T}"/>.</returns>
-    public static IObservable<ProjectionEventContext> WhereEventTypeEquals(this IObservable<ProjectionEventContext> observable, EventType eventType)
+    public static IObservable<ProjectionEventContext> WhereEventTypeEquals(
+        this IObservable<ProjectionEventContext> observable, EventType eventType)
     {
         return observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id);
     }
@@ -66,22 +67,24 @@ public static class ProjectionExtensions
         PropertyPath onModelProperty)
     {
         var joinSubject = new Subject<ProjectionEventContext>();
-        observable.Subscribe(_ =>
+        observable.Subscribe(context =>
         {
-            var onValue = onModelProperty.GetValue(_.Changeset.CurrentState, _.Key.ArrayIndexers);
-            if (onValue is not null)
+            var onValue = onModelProperty.GetValue(context.Changeset.CurrentState, context.Key.ArrayIndexers);
+            if (onValue is not null && eventSequenceStorage.TryGetLastEventBefore(
+                    joinEventType.Id,
+                    onValue.ToString()!,
+                    context.EventSequenceNumber).GetAwaiter().GetResult() is (true, { } lastEvent))
             {
-                var hasInstance = eventSequenceStorage.HasInstanceFor(joinEventType.Id, onValue.ToString()!).GetAwaiter().GetResult();
-                if (hasInstance)
+                var changeset = context.Changeset.ResolvedJoin(
+                    onModelProperty,
+                    context.Key.Value,
+                    lastEvent,
+                    context.Key.ArrayIndexers);
+                joinSubject.OnNext(context with
                 {
-                    var lastEventInstance = eventSequenceStorage.GetLastInstanceFor(joinEventType.Id, onValue.ToString()!).GetAwaiter().GetResult();
-                    var changeset = _.Changeset.ResolvedJoin(onModelProperty, _.Key.Value, lastEventInstance, _.Key.ArrayIndexers);
-                    joinSubject.OnNext(_ with
-                    {
-                        Event = lastEventInstance,
-                        Changeset = changeset
-                    });
-                }
+                    Event = lastEvent,
+                    Changeset = changeset
+                });
             }
         });
         return joinSubject;
@@ -114,26 +117,36 @@ public static class ProjectionExtensions
     {
         if (childrenProperty.IsRoot)
         {
-            observable.Subscribe(_ => _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers));
+            observable.Subscribe(context =>
+                context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers));
         }
         else
         {
-            observable.Subscribe(_ =>
+            observable.Subscribe(context =>
             {
-                if (_.Key.ArrayIndexers.HasFor(childrenProperty))
+                if (!context.Key.ArrayIndexers.HasFor(childrenProperty))
                 {
-                    var items = _.Changeset.InitialState.EnsureCollection<object>(childrenProperty, _.Key.ArrayIndexers);
-                    var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
-                    if (!identifiedByProperty.IsSet ||
-                        !items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
-                    {
-                        _.Changeset.AddChild<ExpandoObject>(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, propertyMappers, _.Key.ArrayIndexers);
-                        return;
-                    }
-                    _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers);
+                    return;
                 }
+
+                var items = context.Changeset.InitialState.EnsureCollection<object>(childrenProperty, context.Key.ArrayIndexers);
+                var childrenPropertyIndexer = context.Key.ArrayIndexers.GetFor(childrenProperty);
+                if (!context.IsJoin && (!identifiedByProperty.IsSet ||
+                                        !items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier)))
+                {
+                    context.Changeset.AddChild<ExpandoObject>(
+                        childrenProperty,
+                        identifiedByProperty,
+                        childrenPropertyIndexer.Identifier,
+                        propertyMappers,
+                        context.Key.ArrayIndexers);
+                    return;
+                }
+
+                context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers);
             });
         }
+
         return observable;
     }
 
@@ -181,7 +194,10 @@ public static class ProjectionExtensions
     /// <param name="childrenProperty">The property in which children are stored on the object.</param>
     /// <param name="identifiedByProperty">The property that identifies a child.</param>
     /// <returns>The observable for continuation.</returns>
-    public static IObservable<ProjectionEventContext> RemoveChild(this IObservable<ProjectionEventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty)
+    public static IObservable<ProjectionEventContext> RemoveChild(
+        this IObservable<ProjectionEventContext> observable,
+        PropertyPath childrenProperty,
+        PropertyPath identifiedByProperty)
     {
         observable.Subscribe(_ =>
         {
@@ -190,7 +206,11 @@ public static class ProjectionExtensions
             if (identifiedByProperty.IsSet &&
                 items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
             {
-                _.Changeset.RemoveChild(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, _.Key.ArrayIndexers);
+                _.Changeset.RemoveChild(
+                    childrenProperty,
+                    identifiedByProperty,
+                    childrenPropertyIndexer.Identifier,
+                    _.Key.ArrayIndexers);
             }
         });
         return observable;
@@ -203,9 +223,12 @@ public static class ProjectionExtensions
     /// <param name="childrenProperty">The property in which children are stored on the object.</param>
     /// <param name="identifiedByProperty">The property that identifies a child.</param>
     /// <returns>The observable for continuation.</returns>
-    public static IObservable<ProjectionEventContext> RemoveChildFromAll(this IObservable<ProjectionEventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty)
+    public static IObservable<ProjectionEventContext> RemoveChildFromAll(
+        this IObservable<ProjectionEventContext> observable,
+        PropertyPath childrenProperty,
+        PropertyPath identifiedByProperty)
     {
-        observable.Subscribe(_ => _.Changeset.RemoveChildFromAll(childrenProperty, identifiedByProperty, _.Key.Value, _.Key.ArrayIndexers));
+        observable.Subscribe(_ => _.Changeset.RemoveChildFromAll(childrenProperty, identifiedByProperty, _.Key.Value!, _.Key.ArrayIndexers));
         return observable;
     }
 }

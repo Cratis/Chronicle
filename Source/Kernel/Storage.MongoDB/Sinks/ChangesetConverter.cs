@@ -135,14 +135,9 @@ public class ChangesetConverter(
         var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
         arrayFiltersForDocument.AddRange(arrayFilters);
 
-        if (updateBuilder is not null)
-        {
-            updateBuilder = updateBuilder.Push(property, bsonValue);
-        }
-        else
-        {
-            updateBuilder = updateDefinitionBuilder.Push(property, bsonValue);
-        }
+        updateBuilder = updateBuilder is not null
+            ? updateBuilder.Push(property, bsonValue)
+            : updateDefinitionBuilder.Push(property, bsonValue);
     }
 
     void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, List<BsonDocumentArrayFilterDefinition<BsonDocument>> arrayFiltersForDocument, ChildRemoved childRemoved)
@@ -164,40 +159,43 @@ public class ChangesetConverter(
         var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
         arrayFiltersForDocument.AddRange(arrayFilters);
 
-        if (updateBuilder is not null)
-        {
-            updateBuilder = updateBuilder.Pull(property, bsonValue);
-        }
-        else
-        {
-            updateBuilder = updateDefinitionBuilder.Pull(property, bsonValue);
-        }
+        updateBuilder = updateBuilder is not null
+            ? updateBuilder.Pull(property, bsonValue)
+            : updateDefinitionBuilder.Pull(property, bsonValue);
     }
 
     void BuildJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, bool isReplaying, List<Task> joinTasks, Joined joined)
     {
-        var (property, _) = converter.ToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
-
         UpdateDefinition<BsonDocument>? joinUpdateBuilder = default;
         var hasJoinChanges = false;
-
-        var filter = Builders<BsonDocument>.Filter.Eq(property, joined.Key);
-
         var collection = collections.GetCollection();
 
         var joinArrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
         ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, isReplaying).Wait();
 
-        if (hasJoinChanges)
+        if (!hasJoinChanges)
         {
-            joinTasks.Add(collection.UpdateOneAsync(
-                filter,
-                joinUpdateBuilder,
-                new UpdateOptions
-                {
-                    IsUpsert = false,
-                    ArrayFilters = [.. joinArrayFiltersForDocument]
-                }));
+            return;
         }
+        var filter = CreateJoinedFilterDefinition(key, joined);
+        joinTasks.Add(collection.UpdateManyAsync(
+            filter,
+            joinUpdateBuilder,
+            new UpdateOptions
+            {
+                IsUpsert = false,
+                ArrayFilters = [.. joinArrayFiltersForDocument]
+            }));
+    }
+
+    FilterDefinition<BsonDocument> CreateJoinedFilterDefinition(Key key, Joined joined)
+    {
+        if (!key.ArrayIndexers.IsEmpty)
+        {
+            return FilterDefinition<BsonDocument>.Empty;
+        }
+
+        var (property, _) = converter.ToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
+        return Builders<BsonDocument>.Filter.Eq(property, key.Value);
     }
 }

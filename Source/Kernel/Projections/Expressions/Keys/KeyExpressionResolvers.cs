@@ -32,7 +32,7 @@ public class KeyExpressionResolvers(IEventValueProviderExpressionResolvers event
         return resolver!.Resolve(projection, expression, identifiedByProperty);
     }
 
-    void ThrowIfUnsupportedKeyExpression(string expression, IKeyExpressionResolver? resolver)
+    static void ThrowIfUnsupportedKeyExpression(string expression, IKeyExpressionResolver? resolver)
     {
         if (resolver == default)
         {

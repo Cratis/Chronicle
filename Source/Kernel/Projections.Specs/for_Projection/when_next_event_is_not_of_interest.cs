@@ -23,7 +23,8 @@ public class when_next_event_is_not_of_interest : given.a_projection
             [
                     new(eventType, KeyResolvers.FromEventSourceId)
             ],
-            [eventType]);
+            [eventType],
+            new Dictionary<EventType, ProjectionOperationType>());
 
         @event = new(
             new(0,
@@ -49,7 +50,7 @@ public class when_next_event_is_not_of_interest : given.a_projection
         projection.Event.Subscribe(_ => observed = true);
     }
 
-    void Because() => projection.OnNext(new(new(@event.Context.EventSourceId, ArrayIndexers.NoIndexers), @event, changeset));
+    void Because() => projection.OnNext(new(new(@event.Context.EventSourceId, ArrayIndexers.NoIndexers), @event, changeset, ProjectionOperationType.From, false));
 
     [Fact] void should_not_be_observed() => observed.ShouldBeFalse();
 }

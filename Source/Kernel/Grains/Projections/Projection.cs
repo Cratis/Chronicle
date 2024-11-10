@@ -56,7 +56,7 @@ public class Projection(
                 await _observer!.Unsubscribe();
                 _subscribed = false;
             }
-            _definitionObservers.Notify(_ => _.OnProjectionDefinitionsChanged());
+            await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged());
             var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
             await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
         }

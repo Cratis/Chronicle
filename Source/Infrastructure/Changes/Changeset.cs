@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Properties;
 using Cratis.Collections;
@@ -22,12 +23,21 @@ namespace Cratis.Chronicle.Changes;
 public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incoming, TTarget initialState, Changeset<TSource, TTarget>? parent = null) : IChangeset<TSource, TTarget>
 {
     readonly List<Change> _changes = [];
+    TTarget _initialState = initialState;
 
     /// <inheritdoc/>
     public TSource Incoming { get; } = incoming;
 
     /// <inheritdoc/>
-    public TTarget InitialState { get; } = initialState;
+    public TTarget InitialState
+    {
+        get => _initialState;
+        set
+        {
+            _initialState = value;
+            CurrentState = value;
+        }
+    }
 
     /// <inheritdoc/>
     public TTarget CurrentState { get; private set; } = initialState;
@@ -48,11 +58,9 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     public void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
     {
         var workingState = CurrentState.Clone()!;
-        SetProperties(workingState, propertyMappers, arrayIndexers);
-
-        if (!comparer.Compare(CurrentState, workingState, out var differences))
+        var differences = SetProperties(workingState, propertyMappers, arrayIndexers);
+        if (differences.Any())
         {
-            differences.ForEach(_ => _.ArrayIndexers = arrayIndexers);
             Add(new PropertiesChanged<TTarget>(workingState, differences));
         }
 
@@ -62,21 +70,21 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     /// <inheritdoc/>
     public IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers)
     {
-        var workingState = InitialState.Clone()!;
-        var changeset = new Changeset<TSource, TTarget>(comparer, Incoming, workingState, this);
-        Add(new Joined(workingState, key, onProperty, arrayIndexers, changeset.Changes));
+        var workingState = CurrentState.Clone()!;
+        var childChangeset = new Changeset<TSource, TTarget>(comparer, Incoming, workingState, this);
+        Add(new Joined(workingState, key, onProperty, arrayIndexers, childChangeset.Changes));
         CurrentState = workingState;
-        return changeset;
+        return childChangeset;
     }
 
     /// <inheritdoc/>
     public IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers)
     {
         var workingState = CurrentState.Clone()!;
-        var changeset = new Changeset<TSource, TTarget>(comparer, incoming, workingState, this);
-        Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, changeset.Changes));
+        var childChangeset = new Changeset<TSource, TTarget>(comparer, incoming, workingState, this);
+        Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, childChangeset.Changes));
         CurrentState = workingState;
-        return changeset;
+        return childChangeset;
     }
 
     /// <inheritdoc/>
@@ -188,6 +196,16 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     public bool HasBeenRemoved() => Changes.Any(_ => _ is Removed);
 
     /// <inheritdoc/>
+    public bool HasJoined() =>
+        Changes.OfType<Joined>().Any() ||
+        Changes.OfType<ChildRemovedFromAll>().Any();
+
+    /// <inheritdoc/>
+    public bool HasRemoved() =>
+        Changes.OfType<Removed>().Any() ||
+        Changes.OfType<ChildRemoved>().Any();
+
+    /// <inheritdoc/>
     public TChild GetChildByKey<TChild>(object key)
     {
         foreach (var change in _changes)
@@ -201,7 +219,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         return default!;
     }
 
-    void OptimizeResolveJoinsAgainstChildrenAdded(Changeset<TSource, TTarget>? parent)
+    static void OptimizeResolveJoinsAgainstChildrenAdded(Changeset<TSource, TTarget>? parent)
     {
         if (parent is null)
         {
@@ -238,11 +256,19 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         resolvesToRemove.ForEach(_ => changes.Remove(_));
     }
 
-    void SetProperties(TTarget state, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
+    IEnumerable<PropertyDifference> SetProperties(TTarget state, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
     {
+        var differences = new List<PropertyDifference>();
+
         foreach (var propertyMapper in propertyMappers)
         {
-            propertyMapper(Incoming, state, arrayIndexers);
+            var difference = propertyMapper(Incoming, state, arrayIndexers);
+            if (difference.HasChanges())
+            {
+                differences.Add(difference);
+            }
         }
+
+        return differences;
     }
 }

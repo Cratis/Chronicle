@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -15,6 +16,11 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 public interface IProjection
 {
+    /// <summary>
+    /// Gets the <see cref="EventSequenceId"/> the projection is for.
+    /// </summary>
+    EventSequenceId EventSequenceId { get; }
+
     /// <summary>
     /// Gets the unique identifier of the <see cref="IProjection"/>.
     /// </summary>
@@ -66,6 +72,11 @@ public interface IProjection
     IObservable<ProjectionEventContext> Event { get; }
 
     /// <summary>
+    /// Gets the <see cref="IDictionary{TKey,TValue}"/> of <see cref="EventType"/> to <see cref="ProjectionOperationType"/> mapping.
+    /// </summary>
+    IDictionary<EventType, ProjectionOperationType> OperationTypes { get; }
+
+    /// <summary>
     /// Gets the <see cref="EventType">event types</see> the projection can handle.
     /// </summary>
     IEnumerable<EventType> EventTypes { get; }
@@ -106,14 +117,14 @@ public interface IProjection
     void OnNext(ProjectionEventContext context);
 
     /// <summary>
-    /// Checks whether or not the projection will accept a specific event type.
+    /// Checks whether the projection will accept a specific event type.
     /// </summary>
     /// <param name="eventType"><see cref="EventType"/> to check.</param>
     /// <returns>True if it does, false if not.</returns>
     bool Accepts(EventType eventType);
 
     /// <summary>
-    /// Get whether or not there is a key resolver for a specific <see cref="EventType"/>.
+    /// Get whether there is a key resolver for a specific <see cref="EventType"/>.
     /// </summary>
     /// <param name="eventType"><see cref="EventType"/> to check.</param>
     /// <returns>True if there is, false if not.</returns>
@@ -127,11 +138,22 @@ public interface IProjection
     KeyResolver GetKeyResolverFor(EventType eventType);
 
     /// <summary>
+    /// Gets the <see cref="ProjectionOperationType"/> for a given <see cref="EventType"/> affecting the projection.
+    /// </summary>
+    /// <param name="eventType"><see cref="EventType"/> to get for.</param>
+    /// <returns><see cref="ProjectionOperationType"/>.</returns>
+    ProjectionOperationType GetOperationTypeFor(EventType eventType);
+
+    /// <summary>
     /// Set event types with key resolvers for the projection.
     /// </summary>
     /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver"/>.</param>
     /// <param name="ownEventTypes">Collection of <see cref="EventType"/> that is only for this projection without not any children.</param>
-    void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver, IEnumerable<EventType> ownEventTypes);
+    /// <param name="operationTypes">Dictionary mapping <see cref="EventType"/> to <see cref="ProjectionOperationType"/>.</param>
+    void SetEventTypesWithKeyResolvers(
+        IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
+        IEnumerable<EventType> ownEventTypes,
+        IDictionary<EventType, ProjectionOperationType> operationTypes);
 
     /// <summary>
     /// Set the parent <see cref="IProjection"/>.

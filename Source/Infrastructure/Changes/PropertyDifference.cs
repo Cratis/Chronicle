@@ -36,4 +36,10 @@ public class PropertyDifference(PropertyPath propertyPath, object? original, obj
     /// Gets the array indexers for the property.
     /// </summary>
     public ArrayIndexers ArrayIndexers { get; set; } = arrayIndexers ?? ArrayIndexers.NoIndexers;
+
+    /// <summary>
+    /// Check if there are any changes.
+    /// </summary>
+    /// <returns>True if there is, false if not.</returns>
+    public bool HasChanges() => !Equals(Original, Changed);
 }

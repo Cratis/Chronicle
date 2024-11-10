@@ -59,7 +59,9 @@ public class Sink(
     /// <inheritdoc/>
     public async Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
     {
-        var filter = Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
+        var filter = changeset.HasJoined() ?
+            FilterDefinition<BsonDocument>.Empty :
+            Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
 
         if (changeset.HasBeenRemoved())
         {
@@ -107,12 +109,13 @@ public class Sink(
     {
         var childrenProperty = (string)childRemoved.ChildrenProperty.GetChildrenProperty();
         var identifiedByProperty = (string)childRemoved.IdentifiedByProperty;
-
-        var fieldName = $"{childrenProperty}.{identifiedByProperty}";
         var propertyValue = key.Value.ToBsonValue();
 
-        var filter = Builders<BsonDocument>.Filter.Eq(fieldName, propertyValue);
-        var update = Builders<BsonDocument>.Update.Pull(childrenProperty, new BsonDocument(identifiedByProperty, propertyValue));
-        await collections.GetCollection().UpdateManyAsync(filter, update);
+        var collection = collections.GetCollection();
+
+        var filter = Builders<BsonDocument>.Filter.Empty;
+        var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, propertyValue);
+        var update = Builders<BsonDocument>.Update.PullFilter(childrenProperty, childFilter);
+        await collection.UpdateManyAsync(filter, update);
     }
 }

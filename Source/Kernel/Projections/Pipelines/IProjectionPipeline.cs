@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Projections.Pipelines;
 
@@ -11,16 +10,6 @@ namespace Cratis.Chronicle.Projections.Pipelines;
 /// </summary>
 public interface IProjectionPipeline
 {
-    /// <summary>
-    /// Gets the <see cref="IProjection"/> the pipeline is for.
-    /// </summary>
-    IProjection Projection { get; }
-
-    /// <summary>
-    /// Gets the <see cref="ISink">sink</see> to use for output.
-    /// </summary>
-    ISink Sink { get; }
-
     /// <summary>
     /// Notifies about the beginning of a replay.
     /// </summary>
