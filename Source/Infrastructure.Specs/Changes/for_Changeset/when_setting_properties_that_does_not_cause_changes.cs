@@ -26,16 +26,31 @@ public class when_setting_properties_that_does_not_cause_changes : Specification
 
         property_mappers =
         [
-                (_, target, __) => ((dynamic)target).Integer = 42,
-                (_, target, __) => ((dynamic)target).String = "Forty Two",
-                (_, target, __) => ((dynamic)target).Nested.Integer = 43,
-                (_, target, __) => ((dynamic)target).Nested.String = "Forty Three",
+                (_, target, __) =>
+                    {
+                        ((dynamic)target).Integer = 44;
+                        return new PropertyDifference("integer", 44, 44);
+                    },
+                (_, target, __) =>
+                    {
+                        ((dynamic)target).String = "Forty Four";
+                        return new PropertyDifference("string", "Forty Four", "Forty Four");
+                    },
+                (_, target, __) =>
+                    {
+                        ((dynamic)target).Nested.Integer = 45;
+                        return new PropertyDifference("nested.integer", 45, 45);
+                    },
+                (_, target, __) =>
+                    {
+                        ((dynamic)target).Nested.String = "Forty Five";
+                        return new PropertyDifference("nested.string", "Forty Five", "Forty Five");
+                    }
         ];
 
         source = new ExpandoObject();
 
         objects_comparer = new();
-        objects_comparer.Setup(_ => _.Compare(initial_state, IsAny<ExpandoObject>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
         changeset = new(objects_comparer.Object, source, initial_state);
     }
 
