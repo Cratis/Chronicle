@@ -45,4 +45,5 @@ public class with_event_that_changes_multiple_properties(context context) : Give
     [Fact] void should_have_user_name_on_child() => Context.Result.Users.First().Name.ShouldEqual(UserName);
     [Fact] void should_have_user_profile_name_on_child() => Context.Result.Users.First().ProfileName.ShouldEqual(ProfileName);
     [Fact] void should_have_user_onboarded_on_child() => Context.Result.Users.First().Onboarded.ShouldBeTrue();
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

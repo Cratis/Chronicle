@@ -42,7 +42,5 @@ public class and_event_changes_multiple_properties(context context) : Given<cont
     [Fact] void should_have_profile_name() => Context.Result.ProfileName.ShouldEqual(ProfileName);
     [Fact] void should_have_group_id() => Context.Result.GroupId.ShouldEqual(Context.GroupId);
     [Fact] void should_have_group_name() => Context.Result.GroupName.ShouldEqual(GroupName);
-#pragma warning disable xUnit1004
-    [Fact(Skip = "Checking the last handled event sequence number does not take into account the UserDetailsChanged event")] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
-#pragma warning restore xUnit1004
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

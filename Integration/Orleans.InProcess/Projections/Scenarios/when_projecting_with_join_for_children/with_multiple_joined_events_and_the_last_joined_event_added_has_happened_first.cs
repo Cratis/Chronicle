@@ -42,4 +42,5 @@ public class with_multiple_joined_events_and_the_last_joined_event_added_has_hap
     [Fact] void should_have_user_id_on_child() => Context.Result.Users.First().UserId.ShouldEqual(Context.UserId);
     [Fact] void should_have_user_name_on_child() => Context.Result.Users.First().Name.ShouldEqual(UserName);
     [Fact] void should_have_user_onboarded_on_child() => Context.Result.Users.First().Onboarded.ShouldBeTrue();
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

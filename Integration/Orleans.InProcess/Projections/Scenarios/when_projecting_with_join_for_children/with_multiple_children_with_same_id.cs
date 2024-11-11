@@ -58,4 +58,5 @@ public class with_multiple_children_with_same_id(context context) : Given<contex
     [Fact] void should_have_user_name_on_child_on_model_2() => Context.Model2.Users.First().Name.ShouldEqual(UserName);
     [Fact] void should_have_user_onboarded_on_child_on_model_1() => Context.Model1.Users.First().Onboarded.ShouldBeTrue();
     [Fact] void should_have_user_onboarded_on_child_on_model_2() => Context.Model2.Users.First().Onboarded.ShouldBeTrue();
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }
