@@ -31,14 +31,27 @@ public class ChangesetConverter(
     IExpandoObjectConverter expandoObjectConverter) : IChangesetConverter
 {
     /// <inheritdoc/>
-    public async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isReplaying)
+    public async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(
+        Key key,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        EventSequenceNumber eventSequenceNumber,
+        bool isReplaying)
     {
         var hasChanges = false;
         var updateDefinitionBuilder = Builders<BsonDocument>.Update;
         UpdateDefinition<BsonDocument>? updateBuilder = default;
 
         var arrayFiltersForDocument = new ArrayFilters();
-        await ApplyActualChanges(key, changeset.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, isReplaying);
+        await ApplyActualChanges(
+            key,
+            changeset.Changes,
+            updateDefinitionBuilder,
+            ref updateBuilder,
+            ref hasChanges,
+            arrayFiltersForDocument,
+            eventSequenceNumber,
+            isReplaying);
+
         var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
 
         return new(updateBuilder!, distinctArrayFilters, hasChanges);
@@ -51,6 +64,7 @@ public class ChangesetConverter(
         ref UpdateDefinition<BsonDocument>? updateBuilder,
         ref bool hasChanges,
         ArrayFilters arrayFiltersForDocument,
+        EventSequenceNumber eventSequenceNumber,
         bool isReplaying)
     {
         var joinTasks = new List<Task>();
@@ -60,29 +74,25 @@ public class ChangesetConverter(
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    hasChanges |= BuildPropertiesChanged(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, propertiesChanged);
+                    hasChanges |= BuildPropertiesChanged(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, propertiesChanged, eventSequenceNumber);
                     break;
 
                 case ChildAdded childAdded:
-                    BuildChildAdded(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, childAdded);
+                    BuildChildAdded(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, childAdded, eventSequenceNumber);
                     hasChanges = true;
                     break;
 
                 case ChildRemoved childRemoved:
-                    BuildChildRemoved(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, childRemoved);
+                    BuildChildRemoved(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, childRemoved, eventSequenceNumber);
                     hasChanges = true;
                     break;
 
                 case Joined joined:
-                    {
-                        BuildJoined(key, updateDefinitionBuilder, isReplaying, joinTasks, joined);
-                    }
+                    PerformJoined(key, updateDefinitionBuilder, isReplaying, joinTasks, joined, eventSequenceNumber);
                     break;
 
                 case ResolvedJoin resolvedJoined:
-                    {
-                        ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, isReplaying);
-                    }
+                    ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber, isReplaying);
                     break;
             }
         }
@@ -90,7 +100,21 @@ public class ChangesetConverter(
         return Task.WhenAll(joinTasks);
     }
 
-    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, PropertiesChanged<ExpandoObject> propertiesChanged)
+    void BuildLastHandledEventSequenceNumber(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, EventSequenceNumber eventSequenceNumber)
+    {
+        var value = converter.ToBsonValue(eventSequenceNumber);
+
+        if (updateBuilder != default)
+        {
+            updateBuilder = updateBuilder.Set(WellKnownProperties.LasHandledEventSequenceNumber, value);
+        }
+        else
+        {
+            updateBuilder = updateDefinitionBuilder.Set(WellKnownProperties.LasHandledEventSequenceNumber, value);
+        }
+    }
+
+    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, PropertiesChanged<ExpandoObject> propertiesChanged, EventSequenceNumber eventSequenceNumber)
     {
         var allArrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
 
@@ -112,10 +136,16 @@ public class ChangesetConverter(
         }
 
         arrayFiltersForDocument.AddRange(allArrayFilters);
-        return propertiesChanged.Differences.Any();
+        var hasChanges = propertiesChanged.Differences.Any();
+        if (hasChanges)
+        {
+            BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
+        }
+
+        return hasChanges;
     }
 
-    void BuildChildAdded(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildAdded childAdded)
+    void BuildChildAdded(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildAdded childAdded, EventSequenceNumber eventSequenceNumber)
     {
         BsonValue bsonValue;
 
@@ -137,9 +167,11 @@ public class ChangesetConverter(
         updateBuilder = updateBuilder is not null
             ? updateBuilder.Push(property, bsonValue)
             : updateDefinitionBuilder.Push(property, bsonValue);
+
+        BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
     }
 
-    void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildRemoved childRemoved)
+    void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildRemoved childRemoved, EventSequenceNumber eventSequenceNumber)
     {
         BsonValue bsonValue;
 
@@ -161,16 +193,19 @@ public class ChangesetConverter(
         updateBuilder = updateBuilder is not null
             ? updateBuilder.Pull(property, bsonValue)
             : updateDefinitionBuilder.Pull(property, bsonValue);
+
+        BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
     }
 
-    void BuildJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, bool isReplaying, List<Task> joinTasks, Joined joined)
+    void PerformJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, bool isReplaying, List<Task> joinTasks, Joined joined, EventSequenceNumber eventSequenceNumber)
     {
         UpdateDefinition<BsonDocument>? joinUpdateBuilder = default;
         var hasJoinChanges = false;
         var collection = collections.GetCollection();
 
         var joinArrayFiltersForDocument = new ArrayFilters();
-        ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, isReplaying).Wait();
+        ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber, isReplaying).Wait();
+        BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
 
         if (!hasJoinChanges)
         {

@@ -26,13 +26,8 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
         }
         logger.SavingResult(context.Event.Metadata.SequenceNumber);
 
-        if (!context.Changeset.HasJoined())
-        {
-            context.Changeset.SetSequenceNumber();
-        }
-
         // TODO: Return the number of affected records and pass this along to the changeset storage
-        await sink.ApplyChanges(context.Key, context.Changeset);
+        await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Metadata.SequenceNumber);
         await changesetStorage.Save(
             projection.Identifier,
             context.Key,

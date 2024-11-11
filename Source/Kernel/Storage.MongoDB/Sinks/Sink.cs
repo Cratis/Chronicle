@@ -57,7 +57,10 @@ public class Sink(
     }
 
     /// <inheritdoc/>
-    public async Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
+    public async Task ApplyChanges(
+        Key key,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        EventSequenceNumber eventSequenceNumber)
     {
         var filter = changeset.HasJoined() ?
             FilterDefinition<BsonDocument>.Empty :
@@ -75,7 +78,7 @@ public class Sink(
             await RemoveChildFromAll(key, childRemoved);
         }
 
-        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, _isReplaying);
+        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber, _isReplaying);
         if (!converted.hasChanges) return;
 
         await Collection.UpdateOneAsync(

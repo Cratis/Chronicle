@@ -19,7 +19,12 @@ public interface IChangesetConverter
     /// </summary>
     /// <param name="key"><see cref="Key"/> to use.</param>
     /// <param name="changeset"><see cref="Changeset{T1, T2}"/> to convert from.</param>
+    /// <param name="eventSequenceNumber"><see cref="EventSequenceNumber"/> to use as last handled event sequence number.</param>
     /// <param name="isReplaying">Whether or not it is for a replay or not.</param>
     /// <returns>A <see cref="UpdateDefinitionAndArrayFilters"/> instance.</returns>
-    Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isReplaying);
+    Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(
+        Key key,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        EventSequenceNumber eventSequenceNumber,
+        bool isReplaying);
 }

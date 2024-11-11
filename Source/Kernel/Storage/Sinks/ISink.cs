@@ -36,8 +36,9 @@ public interface ISink
     /// </summary>
     /// <param name="key">Key of the model to upsert.</param>
     /// <param name="changeset">All changes in the form of a <see cref="Changeset{Event, ExpandoObject}"/>.</param>
+    /// <param name="eventSequenceNumber">The sequence number of the event that caused the changes.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset);
+    Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber);
 
     /// <summary>
     /// Enter replay state.

@@ -66,7 +66,7 @@ public class InMemorySink(
     }
 
     /// <inheritdoc/>
-    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
+    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
     {
         var state = changeset.InitialState.Clone();
         var collection = Collection;

@@ -5,7 +5,6 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Models;
-using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers;
@@ -51,8 +50,7 @@ public class ReducerPipeline(
 
         if (changeset.HasChanges)
         {
-            changeset.SetSequenceNumber();
-            await Sink.ApplyChanges(context.Key, changeset);
+            await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Metadata.SequenceNumber);
         }
     }
 }
