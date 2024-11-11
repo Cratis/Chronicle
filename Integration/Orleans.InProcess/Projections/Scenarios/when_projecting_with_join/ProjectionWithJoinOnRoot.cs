@@ -14,5 +14,11 @@ public class ProjectionWithJoinOnRoot : IProjectionFor<User>
             .Set(m => m.GroupId).ToEventSourceId())
         .Join<GroupCreated>(j => j
             .On(g => g.GroupId)
-            .Set(m => m.GroupName).To(e => e.Name));
+            .Set(m => m.GroupName).To(e => e.Name))
+        .Join<UserDetailsChanged>(j =>
+        {
+            j.On(g => g.GroupId);
+            j.Set(m => m.Name).To(e => e.Name);
+            j.Set(m => m.ProfileName).To(e => e.ProfileName);
+        });
 }

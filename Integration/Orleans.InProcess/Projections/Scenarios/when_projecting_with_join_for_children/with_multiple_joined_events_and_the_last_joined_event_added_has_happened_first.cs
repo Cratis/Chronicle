@@ -21,7 +21,7 @@ public class with_multiple_joined_events_and_the_last_joined_event_added_has_hap
     {
         public UserId UserId;
         public EventSourceId GroupId;
-        public override IEnumerable<Type> EventTypes => [typeof(UserCreated), typeof(SystemUserCreated), typeof(GroupCreated), typeof(UserAddedToGroup), typeof(UserOnboarded), typeof(UserOffboarded)];
+        public override IEnumerable<Type> EventTypes => [typeof(UserCreated), typeof(SystemUserCreated), typeof(GroupCreated), typeof(UserAddedToGroup), typeof(UserOnboarded), typeof(UserOffboarded), typeof(UserDetailsChanged)];
 
         void Establish()
         {

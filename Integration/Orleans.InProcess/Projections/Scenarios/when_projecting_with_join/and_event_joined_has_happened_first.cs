@@ -20,7 +20,7 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
     {
         public UserId UserId;
         public EventSourceId GroupId;
-        public override IEnumerable<Type> EventTypes => [typeof(UserCreated), typeof(GroupCreated), typeof(UserAddedToGroup)];
+        public override IEnumerable<Type> EventTypes => [typeof(UserCreated), typeof(GroupCreated), typeof(UserAddedToGroup), typeof(UserDetailsChanged)];
 
         void Establish()
         {

@@ -9,5 +9,6 @@ public class UserOnGroup()
 {
     public UserId UserId { get; set; } = Guid.Empty;
     public string Name { get; set; } = string.Empty;
+    public string ProfileName { get; set; } = string.Empty;
     public bool Onboarded { get; set; }
 }
