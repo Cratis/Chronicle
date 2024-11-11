@@ -22,7 +22,7 @@ public class with_event_that_changes_multiple_properties(context context) : Give
     {
         public UserId UserId;
         public EventSourceId GroupId;
-        public override IEnumerable<Type> EventTypes => [typeof(UserCreated), typeof(SystemUserCreated), typeof(GroupCreated), typeof(UserAddedToGroup), typeof(UserOnboarded), typeof(UserOffboarded), typeof(UserDetailsChanged), typeof(UserDetailsChanged)];
+        public override IEnumerable<Type> EventTypes => [typeof(UserCreated), typeof(SystemUserCreated), typeof(GroupCreated), typeof(UserAddedToGroup), typeof(UserOnboarded), typeof(UserOffboarded), typeof(UserDetailsChanged)];
 
         void Establish()
         {
@@ -44,6 +44,6 @@ public class with_event_that_changes_multiple_properties(context context) : Give
     [Fact] void should_have_group_name() => Context.Result.Name.ShouldEqual(GroupName);
     [Fact] void should_have_user_id_on_child() => Context.Result.Users.First().UserId.ShouldEqual(Context.UserId);
     [Fact] void should_have_user_name_on_child() => Context.Result.Users.First().Name.ShouldEqual(UserName);
-    [Fact] void should_have_user_profile_name_on_child() => Context.Result.Users.First().ProfileName.ShouldEqual(UserName);
+    [Fact] void should_have_user_profile_name_on_child() => Context.Result.Users.First().ProfileName.ShouldEqual(ProfileName);
     [Fact] void should_have_user_onboarded_on_child() => Context.Result.Users.First().Onboarded.ShouldBeTrue();
 }

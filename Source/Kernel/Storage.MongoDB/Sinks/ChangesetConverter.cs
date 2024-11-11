@@ -11,7 +11,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
@@ -38,7 +37,7 @@ public class ChangesetConverter(
         var updateDefinitionBuilder = Builders<BsonDocument>.Update;
         UpdateDefinition<BsonDocument>? updateBuilder = default;
 
-        var arrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
+        var arrayFiltersForDocument = new ArrayFilters();
         await ApplyActualChanges(key, changeset.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, isReplaying);
         var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
 
@@ -51,7 +50,7 @@ public class ChangesetConverter(
         UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder,
         ref UpdateDefinition<BsonDocument>? updateBuilder,
         ref bool hasChanges,
-        List<BsonDocumentArrayFilterDefinition<BsonDocument>> arrayFiltersForDocument,
+        ArrayFilters arrayFiltersForDocument,
         bool isReplaying)
     {
         var joinTasks = new List<Task>();
@@ -91,7 +90,7 @@ public class ChangesetConverter(
         return Task.WhenAll(joinTasks);
     }
 
-    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, List<BsonDocumentArrayFilterDefinition<BsonDocument>> arrayFiltersForDocument, PropertiesChanged<ExpandoObject> propertiesChanged)
+    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, PropertiesChanged<ExpandoObject> propertiesChanged)
     {
         var allArrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
 
@@ -116,7 +115,7 @@ public class ChangesetConverter(
         return propertiesChanged.Differences.Any();
     }
 
-    void BuildChildAdded(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, List<BsonDocumentArrayFilterDefinition<BsonDocument>> arrayFiltersForDocument, ChildAdded childAdded)
+    void BuildChildAdded(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildAdded childAdded)
     {
         BsonValue bsonValue;
 
@@ -140,7 +139,7 @@ public class ChangesetConverter(
             : updateDefinitionBuilder.Push(property, bsonValue);
     }
 
-    void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, List<BsonDocumentArrayFilterDefinition<BsonDocument>> arrayFiltersForDocument, ChildRemoved childRemoved)
+    void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildRemoved childRemoved)
     {
         BsonValue bsonValue;
 
@@ -170,7 +169,7 @@ public class ChangesetConverter(
         var hasJoinChanges = false;
         var collection = collections.GetCollection();
 
-        var joinArrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
+        var joinArrayFiltersForDocument = new ArrayFilters();
         ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, isReplaying).Wait();
 
         if (!hasJoinChanges)

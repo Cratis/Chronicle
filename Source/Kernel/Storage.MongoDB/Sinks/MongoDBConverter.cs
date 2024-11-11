@@ -32,7 +32,7 @@ public class MongoDBConverter(
     /// <inheritdoc/>
     public MongoDBProperty ToMongoDBProperty(PropertyPath propertyPath, ArrayIndexers arrayIndexers)
     {
-        var arrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
+        var arrayFilters = new ArrayFilters();
         var propertyBuilder = new StringBuilder();
         var currentPropertyPath = new PropertyPath(string.Empty);
 
@@ -75,7 +75,7 @@ public class MongoDBConverter(
 
         var property = propertyBuilder.ToString();
         property = GetNameForPropertyInBsonDocument(property);
-        return new(property, [.. arrayFilters]);
+        return new(property, arrayFilters);
     }
 
     /// <inheritdoc/>
@@ -86,12 +86,7 @@ public class MongoDBConverter(
                 ToBsonValue(key.Value, "id");
 
         // If the schema does not have the Id property, we assume it is the event source identifier, which is of type string.
-        if (bsonValue == BsonNull.Value)
-        {
-            return new BsonString(key.Value.ToString());
-        }
-
-        return bsonValue;
+        return bsonValue == BsonNull.Value ? new BsonString(key.Value.ToString()) : bsonValue;
     }
 
     /// <inheritdoc/>
@@ -132,12 +127,7 @@ public class MongoDBConverter(
     public BsonValue ToBsonValue(object? input, PropertyPath property)
     {
         var schemaProperty = model.Schema.GetSchemaPropertyForPropertyPath(property);
-        if (schemaProperty is not null)
-        {
-            return ToBsonValue(input, schemaProperty);
-        }
-
-        return ToBsonValue(input!);
+        return schemaProperty is not null ? ToBsonValue(input, schemaProperty) : ToBsonValue(input!);
     }
 
     /// <inheritdoc/>
@@ -180,20 +170,8 @@ public class MongoDBConverter(
         }
 
         var value = input.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
-        if (value == BsonNull.Value)
-        {
-            return BsonNull.Value;
-        }
-
-        return value;
+        return value == BsonNull.Value ? BsonNull.Value : value;
     }
 
-    string GetNameForPropertyInBsonDocument(string name)
-    {
-        if (name == "id")
-        {
-            return "_id";
-        }
-        return name;
-    }
+    static string GetNameForPropertyInBsonDocument(string name) => name == "id" ? "_id" : name;
 }
