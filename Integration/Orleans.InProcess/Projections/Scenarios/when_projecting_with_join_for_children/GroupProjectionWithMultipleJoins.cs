@@ -20,6 +20,11 @@ public class GroupProjectionWithMultipleJoins : IProjectionFor<Group>
                 j.Set(m => m.Onboarded).ToValue(false))
             .Join<UserCreated>(j => j
                 .Set(m => m.Name).To(e => e.Name))
+            .Join<UserDetailsChanged>(j =>
+            {
+                j.Set(m => m.Name).To(e => e.Name);
+                j.Set(m => m.ProfileName).To(e => e.ProfileName);
+            })
             .Join<SystemUserCreated>(j => j
                 .Set(m => m.Name).To(e => e.Name)));
 }

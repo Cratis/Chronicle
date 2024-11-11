@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Observers.when_appending_event;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_appending_event;
 
 [EventType]
 public record SomeEvent(int Number);

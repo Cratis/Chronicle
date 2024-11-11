@@ -22,7 +22,7 @@ public class with_multiple_children_with_same_id(context context) : Given<contex
         public UserId UserId;
         public EventSourceId FirstGroupId;
         public EventSourceId SecondGroupId;
-        public override IEnumerable<Type> EventTypes => [typeof(UserCreated), typeof(SystemUserCreated), typeof(GroupCreated), typeof(UserAddedToGroup), typeof(UserOnboarded), typeof(UserOffboarded)];
+        public override IEnumerable<Type> EventTypes => [typeof(UserCreated), typeof(SystemUserCreated), typeof(GroupCreated), typeof(UserAddedToGroup), typeof(UserOnboarded), typeof(UserOffboarded), typeof(UserDetailsChanged)];
         public Group FirstGroup;
         public Group SecondGroup;
 

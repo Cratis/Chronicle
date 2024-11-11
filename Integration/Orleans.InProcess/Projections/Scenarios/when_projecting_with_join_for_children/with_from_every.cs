@@ -44,4 +44,5 @@ public class with_from_every(context context) : Given<context>(context)
     }
 
     [Fact] void should_not_create_instance_for_identity_of_joined_type() => Context.Model.ShouldBeNull();
+    [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

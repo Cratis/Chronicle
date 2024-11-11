@@ -21,7 +21,7 @@ public class NullSink : ISink
     public SinkTypeName Name => "Null sink";
 
     /// <inheritdoc/>
-    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset) => Task.CompletedTask;
+    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task BeginReplay() => Task.CompletedTask;
