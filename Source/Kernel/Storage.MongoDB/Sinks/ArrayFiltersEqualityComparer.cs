@@ -6,6 +6,9 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
+/// <summary>
+/// Represents the equality comparer for <see cref="BsonDocumentArrayFilterDefinition{TDocument}"/>.
+/// </summary>
 public class ArrayFiltersEqualityComparer : EqualityComparer<BsonDocumentArrayFilterDefinition<BsonDocument>>
 {
     /// <inheritdoc/>
