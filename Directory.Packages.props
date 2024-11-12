@@ -24,14 +24,14 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.10" />
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="8.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="8.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Mono.Cecil" Version="0.11.6" />
     <PackageVersion Include="NJsonSchema" Version="11.0.2" />
-    <PackageVersion Include="OpenTelemetry" Version="1.9.0" />
+    <PackageVersion Include="OpenTelemetry" Version="1.10.0" />
     <PackageVersion Include="Polly.Core" Version="8.4.2" />
     <PackageVersion Include="protobuf-net.BuildTools" Version="3.2.33">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -67,7 +67,7 @@
     <PackageVersion Include="OrleansTestKit" Version="8.2.2" />
     <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
     <!-- Open Telemetry -->
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.10.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.9.0" />
