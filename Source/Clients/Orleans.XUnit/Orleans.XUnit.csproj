@@ -2,7 +2,6 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Orleans.XUnit</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Orleans.XUnit</RootNamespace>
-        <TargetFramework>net8.0</TargetFramework>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
 

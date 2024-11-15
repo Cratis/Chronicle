@@ -3,7 +3,7 @@
         <AssemblyName>Orleans.Specs</AssemblyName>
         <RootNamespace>Orleans</RootNamespace>
         <IsTestProject>true</IsTestProject>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <NoWarn>$(NoWarn);SA1600;IDE0051;RCS1213;IDE0060;SA0001;ORLEANS0010</NoWarn>
     </PropertyGroup>
 
