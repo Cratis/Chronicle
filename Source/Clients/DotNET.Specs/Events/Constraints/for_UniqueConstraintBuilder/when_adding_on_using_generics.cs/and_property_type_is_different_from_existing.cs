@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Strings;
-using NJsonSchema.Generation;
-using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_adding_on_using_generics;
 

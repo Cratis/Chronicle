@@ -4,12 +4,10 @@
 using System.Collections.Immutable;
 using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
-using Orleans.Runtime;
 using IEventSequence = Cratis.Chronicle.Grains.EventSequences.IEventSequence;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_Routing.given;

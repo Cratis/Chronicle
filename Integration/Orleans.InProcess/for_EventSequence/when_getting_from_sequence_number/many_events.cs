@@ -4,7 +4,6 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Base;
-using MongoDB.Driver;
 using Xunit.Abstractions;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_getting_from_sequence_number.many_events.context;
 

@@ -306,7 +306,7 @@ public class ProjectionFactory(
         }
     }
 
-    PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(IProjection projection, PropertyPath propertyPath, string expression)
+    PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(Projection projection, PropertyPath propertyPath, string expression)
     {
         var schemaProperty = projection.Model.Schema.GetSchemaPropertyForPropertyPath(propertyPath);
         if (propertyPath.LastSegment is ThisAccessor)

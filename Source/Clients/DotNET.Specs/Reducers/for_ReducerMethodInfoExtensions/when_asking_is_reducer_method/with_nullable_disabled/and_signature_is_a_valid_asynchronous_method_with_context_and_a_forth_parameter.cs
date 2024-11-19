@@ -3,7 +3,6 @@
 
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Reducers;
 
 #nullable disable
 

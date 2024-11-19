@@ -35,7 +35,7 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
         using var rawDocument = new RawBsonDocument(rawBsonDocument);
         var bsonDocument = rawDocument.ToBsonDocument<BsonDocument>();
         var constraintTypeString = bsonDocument.GetValue(ConstraintTypeElementName).AsString;
-        var constraintType = (ConstraintType)Enum.Parse(typeof(ConstraintType), constraintTypeString);
+        var constraintType = Enum.Parse<ConstraintType>(constraintTypeString);
 
         var type = constraintType switch
         {

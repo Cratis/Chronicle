@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
-using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
 

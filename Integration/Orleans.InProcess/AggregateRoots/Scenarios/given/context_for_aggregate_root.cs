@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Domain;
-using Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Domain.Interfaces;
 using Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Events;
 using Cratis.Chronicle.Orleans.Aggregates;
 using Cratis.Chronicle.Transactions;

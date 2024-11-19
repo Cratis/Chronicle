@@ -4,8 +4,6 @@
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Namotion.Reflection;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 

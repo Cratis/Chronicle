@@ -11,8 +11,6 @@ using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
-using Orleans.Runtime;
-using Orleans.Streams;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_Observing.given;
 
