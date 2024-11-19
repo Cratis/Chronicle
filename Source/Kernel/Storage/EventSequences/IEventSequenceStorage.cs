@@ -157,7 +157,7 @@ public interface IEventSequenceStorage
     Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber);
 
     /// <summary>
-    /// Get the last instance of any of the specified event types for a specific event source.
+    /// Get the last instance of the specified event types for a specific event source.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
     /// <param name="eventTypes">Any in the collection of <see cref="EventTypeId"/> to get for.</param>

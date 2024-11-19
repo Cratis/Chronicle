@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -30,6 +31,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving expressions for accessing values on events.</param>
 /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
+/// <param name="keyResolvers"><see cref="IKeyResolvers"/> for resolving <see cref="Key"/>.</param>
 /// <param name="storage"><see cref="IEventStoreNamespaceStorage"/> for accessing underlying storage for the specific namespace.</param>
 [Singleton]
 public class ProjectionFactory(
@@ -37,6 +39,7 @@ public class ProjectionFactory(
     IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers,
     IKeyExpressionResolvers keyExpressionResolvers,
     IExpandoObjectConverter expandoObjectConverter,
+    IKeyResolvers keyResolvers,
     IStorage storage) : IProjectionFactory
 {
     /// <inheritdoc/>
@@ -279,30 +282,25 @@ public class ProjectionFactory(
     {
         // Notes: The purpose of this method is to hook up on every From definition that matches the eventType of the Join definition
         // and the join definition matching the property its joining on to then add actions for resolving a join post a projection of
-        // the from.
-        IEnumerable<KeyValuePair<EventType, JoinDefinition>> joinExpressions;
-        if (hasParent)
-        {
-            joinExpressions = projectionDefinition.Join.Where(join => join.Value.On == actualIdentifiedByProperty);
-        }
-        else
-        {
-            joinExpressions = projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key));
-        }
+        // the "from".
+        var joinExpressions = hasParent
+            ? projectionDefinition.Join.Where(join => join.Value.On == actualIdentifiedByProperty).ToArray()
+            : projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key)).ToArray();
 
-        if (joinExpressions.Any())
+        if (!joinExpressions.Any())
         {
-            foreach (var (joinEventType, joinDefinition) in joinExpressions)
-            {
-                var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
-                fromObservable
-                    .ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On)
-                    .Project(
-                        childrenAccessorProperty,
-                        actualIdentifiedByProperty,
-                        joinPropertyMappers)
-                    .Optimize();
-            }
+            return;
+        }
+        foreach (var (joinEventType, joinDefinition) in joinExpressions)
+        {
+            var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
+            fromObservable
+                .ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On)
+                .Project(
+                    childrenAccessorProperty,
+                    actualIdentifiedByProperty,
+                    joinPropertyMappers)
+                .Optimize();
         }
     }
 
@@ -346,7 +344,7 @@ public class ProjectionFactory(
 
         if (projectionDefinition.FromEventProperty is not null)
         {
-            eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.FromEventProperty.Event, KeyResolvers.FromEventSourceId));
+            eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.FromEventProperty.Event, keyResolvers.FromEventSourceId));
         }
 
         var distinctOwnEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).Select(_ => _.EventType).ToArray();
@@ -369,18 +367,19 @@ public class ProjectionFactory(
     EventTypeWithKeyResolver GetEventTypeWithKeyResolverForJoin(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty)
     {
         var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
-        keyResolver = KeyResolvers.ForJoin(projection, keyResolver, actualIdentifiedByProperty);
+        keyResolver = keyResolvers.ForJoin(projection, keyResolver, actualIdentifiedByProperty);
         return new EventTypeWithKeyResolver(eventType, keyResolver);
     }
 
     EventTypeWithKeyResolver GetEventTypeWithKeyResolver(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent, PropertyExpression? parentKey)
     {
         var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
-        if (hasParent)
+        if (!hasParent)
         {
-            var parentKeyResolver = GetKeyResolverFor(projection, parentKey, actualIdentifiedByProperty);
-            keyResolver = KeyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty);
+            return new EventTypeWithKeyResolver(eventType, keyResolver);
         }
+        var parentKeyResolver = GetKeyResolverFor(projection, parentKey, actualIdentifiedByProperty);
+        keyResolver = keyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty);
 
         return new EventTypeWithKeyResolver(eventType, keyResolver);
     }
@@ -392,6 +391,6 @@ public class ProjectionFactory(
             return keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty);
         }
 
-        return KeyResolvers.FromEventSourceId;
+        return keyResolvers.FromEventSourceId;
     }
 }
