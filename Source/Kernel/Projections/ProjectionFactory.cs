@@ -287,10 +287,11 @@ public class ProjectionFactory(
             ? projectionDefinition.Join.Where(join => join.Value.On == actualIdentifiedByProperty).ToArray()
             : projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key)).ToArray();
 
-        if (!joinExpressions.Any())
+        if (joinExpressions.Length == 0)
         {
             return;
         }
+
         foreach (var (joinEventType, joinDefinition) in joinExpressions)
         {
             var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();

@@ -19,7 +19,6 @@ internal static partial class EventSequenceLogMessages
     [LoggerMessage(LogLevel.Debug, "Duplicate  '{EventName}-{EventType}' for EventSourceId {EventSourceId} with sequence number {SequenceNumber} to event sequence '{EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
     internal static partial void DuplicateEvent(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType, string eventName, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber);
 
-
     [LoggerMessage(LogLevel.Debug, "Compensating event @ {SequenceNumber} in event sequence {EventSequenceId} - event type '{EventType}' for event store '{EventStore}' on namespace {Namespace}")]
     internal static partial void Compensating(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventType eventType, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber);
 

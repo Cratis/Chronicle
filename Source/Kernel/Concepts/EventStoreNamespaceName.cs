@@ -31,4 +31,3 @@ public record EventStoreNamespaceName(string Value) : ConceptAs<string>(Value)
     /// <param name="eventStore"><see cref="EventStoreNamespaceName"/> to convert from.</param>
     public static implicit operator string(EventStoreNamespaceName eventStore) => eventStore.Value;
 }
-
