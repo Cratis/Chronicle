@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// Represents the result of appending an event to the <see cref="IEventSequenceStorage"/>.
 /// </summary>
 [GenerateOneOf]
-public partial class AppendEventResult : OneOfBase<AppendedEvent, AppendedEventError>
+public partial class AppendEventResult : OneOfBase<AppendedEvent, AppendEventError>
 {
     /// <summary>
     /// Whether the event was successfully appended.

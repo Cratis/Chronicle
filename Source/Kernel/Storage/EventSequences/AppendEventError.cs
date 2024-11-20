@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// <summary>
 /// The different append event result error types.
 /// </summary>
-public enum AppendedEventError
+public enum AppendEventError
 {
     /// <summary>
     /// The <see cref="EventSequenceNumber"/> was duplicated.

@@ -150,7 +150,7 @@ public class EventSequenceStorage(
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            return AppendedEventError.DuplicateEventSequenceNumber;
+            return AppendEventError.DuplicateEventSequenceNumber;
         }
     }
 

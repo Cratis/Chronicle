@@ -9,7 +9,7 @@ public class when_result_is_duplicate_event_sequence_number : Specification
 {
     static AppendEventResult result;
 
-    void Because() => result = AppendedEventError.DuplicateEventSequenceNumber;
+    void Because() => result = AppendEventError.DuplicateEventSequenceNumber;
 
     [Fact] void should_not_be_successful() => result.IsSuccess.ShouldBeFalse();
 }
