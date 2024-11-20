@@ -19,9 +19,9 @@ public class multiple_validators_and_one_has_violation : given.a_constraint_vali
         _secondValidator.Validate(Arg.Any<ConstraintValidationContext>()).Returns(ConstraintValidationResult.Failed([_violation]));
     }
 
-    async Task Because() => _result = await context.Validate();
+    async Task Because() => _result = await _context.Validate();
 
-    [Fact] void should_call_the_first_validator() => _firstValidator.Received(1).Validate(context);
-    [Fact] void should_call_the_second_validator() => _secondValidator.Received(1).Validate(context);
+    [Fact] void should_call_the_first_validator() => _firstValidator.Received(1).Validate(_context);
+    [Fact] void should_call_the_second_validator() => _secondValidator.Received(1).Validate(_context);
     [Fact] void should_have_one_violation() => _result.Violations.ShouldContainOnly(_violation);
 }

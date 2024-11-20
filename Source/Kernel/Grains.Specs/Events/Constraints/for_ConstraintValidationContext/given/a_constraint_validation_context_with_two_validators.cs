@@ -10,7 +10,7 @@ public class a_constraint_validation_context_with_two_validators : Specification
 {
     protected IConstraintValidator _firstValidator;
     protected IConstraintValidator _secondValidator;
-    protected ConstraintValidationContext context;
+    protected ConstraintValidationContext _context;
     protected EventSourceId _eventSourceId;
     protected EventType _eventType;
     protected ExpandoObject _content;
@@ -24,6 +24,6 @@ public class a_constraint_validation_context_with_two_validators : Specification
         _eventType = new("SomeEvent", 1);
         _content = new();
 
-        context = new([_firstValidator, _secondValidator], _eventSourceId, _eventType, _content);
+        _context = new([_firstValidator, _secondValidator], _eventSourceId, _eventType, _content);
     }
 }
