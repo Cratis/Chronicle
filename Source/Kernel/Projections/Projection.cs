@@ -31,7 +31,7 @@ public class Projection : IProjection, IDisposable
     /// <param name="path">The qualified path of the projection.</param>
     /// <param name="childrenPropertyPath">The fully qualified path of the array that holds the children, if this is a child projection.</param>
     /// <param name="model">The target <see cref="Model"/>.</param>
-    /// <param name="rewindable">Whether or not the projection is rewindable.</param>
+    /// <param name="rewindable">Whether the projection is rewindable.</param>
     /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
     public Projection(
         EventSequenceId eventSequenceId,
