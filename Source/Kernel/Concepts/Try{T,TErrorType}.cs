@@ -23,6 +23,10 @@ public class Try<T, TErrorType> : OneOfBase<T, ErrorType<TErrorType>>
     /// </summary>
     public bool IsSuccess => IsT0;
 
+    public static implicit operator Try<T, TErrorType>(T value) => Try<T, TErrorType>.Success(value);
+    public static implicit operator Try<T, TErrorType>(Exception error) => Try<T, TErrorType>.Failed(error);
+    public static implicit operator Try<T, TErrorType>(TErrorType errorType) => Try<T, TErrorType>.Failed(errorType);
+
     /// <summary>
     /// Creates a failed <see cref="Try{T, TErrorType}"/>.
     /// </summary>

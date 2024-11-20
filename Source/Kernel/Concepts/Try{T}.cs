@@ -21,6 +21,9 @@ public class Try<T> : OneOfBase<T, Exception>
     /// </summary>
     public bool IsSuccess => IsT0;
 
+    public static implicit operator Try<T>(T value) => Success(value);
+    public static implicit operator Try<T>(Exception error) => Failed(error);
+
     /// <summary>
     /// Creates a failed <see cref="Try{T}"/>.
     /// </summary>
