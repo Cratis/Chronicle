@@ -83,14 +83,12 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// Create a <see cref="KeyResolver"/> that provides a key value hierarchically upwards in Child->Parent relationships.
     /// </summary>
     /// <param name="projection"><see cref="IProjection"/> to start at.</param>
-    /// <param name="keyResolver">see cref=KeyResolver"/> to use for resolving the key for the incoming event.</param>
+    /// <param name="keyResolver"><see cref="KeyResolver"/> to use for resolving the key for the incoming event.</param>
     /// <param name="parentKeyResolver">The property that represents the parent key.</param>
     /// <param name="identifiedByProperty">The property that identifies the key on the child object.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public KeyResolver FromParentHierarchy(IProjection projection, KeyResolver keyResolver, KeyResolver parentKeyResolver, PropertyPath identifiedByProperty) =>
-        CreateKeyResolver(
-            nameof(FromParentHierarchy),
-            async (eventSequenceStorage, @event) =>
+        CreateKeyResolver(nameof(FromParentHierarchy), async (eventSequenceStorage, @event) =>
             {
                 var parentKey = await parentKeyResolver(eventSequenceStorage, @event);
                 if (!projection.HasParent)
