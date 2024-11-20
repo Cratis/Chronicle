@@ -21,10 +21,35 @@ public class Constraints(IClusterClient clusterClient) : Grain<ConstraintsState>
     public async Task Register(IEnumerable<IConstraintDefinition> definitions)
     {
         var existing = State.Constraints.Where(existing => definitions.Any(d => d.Name == existing.Name)).ToArray();
-        existing.ForEach(c => State.Constraints.Remove(c));
-        definitions.ForEach(State.Constraints.Add);
-        await WriteStateAsync();
-        await ConstraintsChanged();
+        var newDefinitions = definitions.Where(d => existing.All(existing => d.Name != existing.Name)).ToArray();
+        var changed = existing.Join(definitions, e => e.Name, d => d.Name, (e, d) => new { Existing = e, New = d })
+                      .Where(pair => !pair.Existing.Equals(pair.New))
+                      .Select(pair => pair.New)
+                      .ToArray();
+
+        var hasChanges = newDefinitions.Length > 0 || changed.Length > 0;
+
+        if (newDefinitions.Length > 0)
+        {
+            newDefinitions.ForEach(State.Constraints.Add);
+        }
+
+        if (changed.Length > 0)
+        {
+            var updatedConstraints = State.Constraints
+                .Where(existing => !changed.Any(c => c.Name == existing.Name))
+                .Concat(changed)
+                .ToList();
+
+            State.Constraints.Clear();
+            updatedConstraints.ForEach(State.Constraints.Add);
+        }
+
+        if (hasChanges)
+        {
+            await WriteStateAsync();
+            await ConstraintsChanged();
+        }
     }
 
     async Task ConstraintsChanged()
