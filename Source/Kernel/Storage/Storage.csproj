@@ -10,7 +10,5 @@
         </ProjectReference>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="OneOf" />
-        <PackageReference Include="OneOf.SourceGenerator" />
     </ItemGroup>
 </Project>
