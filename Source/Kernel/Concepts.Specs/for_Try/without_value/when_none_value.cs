@@ -8,10 +8,10 @@ namespace Cratis.Chronicle.Concepts.for_Try.without_value;
 
 public class when_none_value : Specification
 {
-    static Try result;
+    static SafeTry result;
 
 
-    void Because() => result = Try.Success();
+    void Because() => result = SafeTry.Success();
 
     [Fact] void should_be_success() => result.IsSuccess.ShouldBeTrue();
     [Fact] void should_not_get_error() => result.TryGetError(out _).ShouldBeFalse();

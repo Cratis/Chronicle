@@ -11,10 +11,10 @@ namespace Cratis.Chronicle.Storage;
 /// </summary>
 /// <typeparam name="T">The result type.</typeparam>
 /// <typeparam name="TErrorType">The error type.</typeparam>
-public class Try<T, TErrorType> : OneOfBase<T, ErrorType<TErrorType>>
+public class SafeTry<T, TErrorType> : OneOfBase<T, ErrorType<TErrorType>>
     where TErrorType : Enum
 {
-    Try(OneOf<T, ErrorType<TErrorType>> input) : base(input)
+    SafeTry(OneOf<T, ErrorType<TErrorType>> input) : base(input)
     {
     }
 
@@ -23,30 +23,34 @@ public class Try<T, TErrorType> : OneOfBase<T, ErrorType<TErrorType>>
     /// </summary>
     public bool IsSuccess => IsT0;
 
-    public static implicit operator Try<T, TErrorType>(T value) => Try<T, TErrorType>.Success(value);
-    public static implicit operator Try<T, TErrorType>(Exception error) => Try<T, TErrorType>.Failed(error);
-    public static implicit operator Try<T, TErrorType>(TErrorType errorType) => Try<T, TErrorType>.Failed(errorType);
+    public static implicit operator SafeTry<T, TErrorType>(T value) => SafeTry<T, TErrorType>.Success(value);
+    public static implicit operator SafeTry<T, TErrorType>(Exception error) => SafeTry<T, TErrorType>.Failed(error);
+    public static implicit operator SafeTry<T, TErrorType>(TErrorType errorType) => SafeTry<T, TErrorType>.Failed(errorType);
+    public static explicit operator T(SafeTry<T, TErrorType> obj) => obj.AsT0;
+    public static explicit operator ErrorType<TErrorType>(SafeTry<T, TErrorType> obj) => obj.AsT1;
+    public static explicit operator TErrorType(SafeTry<T, TErrorType> obj) => obj.AsT1.AsT0;
+    public static explicit operator Exception(SafeTry<T, TErrorType> obj) => obj.AsT1.AsT1;
 
     /// <summary>
     /// Creates a failed <see cref="Try{T, TErrorType}"/>.
     /// </summary>
     /// <param name="error">The error.</param>
     /// <returns>The created <see cref="Try{T, TErrorType}"/>.</returns>
-    public static Try<T, TErrorType> Failed(Exception error) => new(OneOf<T, ErrorType<TErrorType>>.FromT1(error));
+    public static SafeTry<T, TErrorType> Failed(Exception error) => new(OneOf<T, ErrorType<TErrorType>>.FromT1(error));
 
     /// <summary>
     /// Creates a failed <see cref="Try{T, TErrorType}"/>.
     /// </summary>
     /// <param name="error">The error type.</param>
     /// <returns>The created <see cref="Try{T, TErrorType}"/>.</returns>
-    public static Try<T, TErrorType> Failed(TErrorType error) => new(OneOf<T, ErrorType<TErrorType>>.FromT1(error));
+    public static SafeTry<T, TErrorType> Failed(TErrorType error) => new(OneOf<T, ErrorType<TErrorType>>.FromT1(error));
 
     /// <summary>
     /// Creates a successful <see cref="Try{T, TErrorType}"/>.
     /// </summary>
     /// <param name="value">The value.</param>
     /// <returns>The created <see cref="Try{T, TErrorType}"/>.</returns>
-    public static Try<T, TErrorType> Success(T value) => new(OneOf<T, ErrorType<TErrorType>>.FromT0(value));
+    public static SafeTry<T, TErrorType> Success(T value) => new(OneOf<T, ErrorType<TErrorType>>.FromT0(value));
 
     /// <summary>
     /// Try to get the result <typeparamref name="T"/>.

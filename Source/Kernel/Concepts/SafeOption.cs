@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage;
 /// </summary>
 /// <typeparam name="T">The type of the value.</typeparam>
 [GenerateOneOf]
-public partial class SafeOption<T> : OneOfBase<T, Try>
+public partial class SafeOption<T> : OneOfBase<T, SafeTry>
 {
     /// <summary>
     /// Gets whether value is present.
@@ -22,14 +22,14 @@ public partial class SafeOption<T> : OneOfBase<T, Try>
     /// Creates a none <see cref="SafeOption{T}"/>.
     /// </summary>
     /// <returns>The created <see cref="SafeOption{T}" />.</returns>
-    public static SafeOption<T> None() => Try.Success();
+    public static SafeOption<T> None() => SafeTry.Success();
 
     /// <summary>
     /// Creates a none <see cref="SafeOption{T}"/>.
     /// </summary>
     /// <param name="error">The error.</param>
     /// <returns>The created <see cref="SafeOption{T}" />.</returns>
-    public static SafeOption<T> Error(Exception error) => Try.Failed(error);
+    public static SafeOption<T> Error(Exception error) => SafeTry.Failed(error);
 
     /// <summary>
     /// Try to get the value.

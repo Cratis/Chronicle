@@ -10,9 +10,10 @@ namespace Cratis.Chronicle.Storage;
 /// Represents the result of trying to get a single value that can have an optional <see cref="Exception"/> error.
 /// </summary>
 /// <typeparam name="T">The result type.</typeparam>
-public class Try<T> : OneOfBase<T, Exception>
+/// <typeparam name="TError">The error type.</typeparam>
+public class Try<T, TError> : OneOfBase<T, TError>
 {
-    Try(OneOf<T, Exception> input) : base(input)
+    Try(OneOf<T, TError> input) : base(input)
     {
     }
 
@@ -21,22 +22,24 @@ public class Try<T> : OneOfBase<T, Exception>
     /// </summary>
     public bool IsSuccess => IsT0;
 
-    public static implicit operator Try<T>(T value) => Success(value);
-    public static implicit operator Try<T>(Exception error) => Failed(error);
+    public static implicit operator Try<T, TError>(T value) => Success(value);
+    public static implicit operator Try<T, TError>(TError error) => Failed(error);
+    public static explicit operator T(Try<T, TError> obj) => obj.AsT0;
+    public static explicit operator TError(Try<T, TError> obj) => obj.AsT1;
 
     /// <summary>
     /// Creates a failed <see cref="Try{T}"/>.
     /// </summary>
     /// <param name="error">The optional error.</param>
     /// <returns>The created <see cref="Try{T}"/>.</returns>
-    public static Try<T> Failed(Exception error) => new(OneOf<T, Exception>.FromT1(error));
+    public static Try<T, TError> Failed(TError error) => new(OneOf<T, TError>.FromT1(error));
 
     /// <summary>
     /// Creates a successful <see cref="Try{T}"/>.
     /// </summary>
     /// <param name="value">The value.</param>
     /// <returns>The created <see cref="Try{T}"/>.</returns>
-    public static Try<T> Success(T value) => new(OneOf<T, Exception>.FromT0(value));
+    public static Try<T, TError> Success(T value) => new(OneOf<T, TError>.FromT0(value));
 
     /// <summary>
     /// Try to get the result <typeparamref name="T"/>.
@@ -50,5 +53,5 @@ public class Try<T> : OneOfBase<T, Exception>
     /// </summary>
     /// <param name="error">The optional error.</param>
     /// <returns>A boolean indicating whether the error was present.</returns>
-    public bool TryGetError(out Exception? error) => TryPickT1(out error, out _);
+    public bool TryGetError(out TError error) => TryPickT1(out error, out _);
 }

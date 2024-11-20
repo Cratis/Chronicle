@@ -3,18 +3,18 @@
 
 using Cratis.Chronicle.Storage;
 
-namespace Cratis.Chronicle.Concepts.for_Try.with_value;
+namespace Cratis.Chronicle.Concepts.for_Try.with_safe_value;
 
 public class when_value : Specification
 {
-    static Try<int> result;
+    static SafeTry<int> result;
     static int value;
 
     void Establish() => value = 42;
 
-    void Because() => result = Try<int>.Success(value);
+    void Because() => result = SafeTry<int>.Success(value);
 
     [Fact] void should_be_success() => result.IsSuccess.ShouldBeTrue();
     [Fact] void should_have_result() => result.TryGetResult(out _).ShouldBeTrue();
-    [Fact] void should_have_the_value() => result.Match<object>(_ => _, error => error).ShouldEqual(value);
+    [Fact] void should_have_the_value() => result.Match<object>(_ => _, errorType => errorType).ShouldEqual(value);
 }

@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Storage;
 
-namespace Cratis.Chronicle.Concepts.for_Try.with_error_type;
+namespace Cratis.Chronicle.Concepts.for_Try.with_error_type_and_value;
 
 public class when_error_type : Specification
 {
@@ -16,5 +16,5 @@ public class when_error_type : Specification
 
     [Fact] void should_not_be_success() => result.IsSuccess.ShouldBeFalse();
     [Fact] void should_not_have_result() => result.TryGetResult(out _).ShouldBeFalse();
-    [Fact] void should_have_the_error() => result.Match(_ => _, errorType => errorType.Value).ShouldEqual(errorType);
+    [Fact] void should_have_the_error() => result.Match<object>(_ => _, errorType => errorType).ShouldEqual(errorType);
 }

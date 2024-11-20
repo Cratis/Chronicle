@@ -5,18 +5,18 @@ using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Storage;
 
-namespace Cratis.Chronicle.Concepts.for_Try.without_value;
+namespace Cratis.Chronicle.Concepts.for_Try.with_safe_error_type;
 
 public class when_error : Specification
 {
-    static SafeTry result;
+    static SafeTry<int, TheErrorType> result;
     static Exception error;
 
     void Establish() => error = new Exception();
 
-    void Because() => result = SafeTry.Failed(error);
+    void Because() => result = SafeTry<int, TheErrorType>.Failed(error);
 
     [Fact] void should_not_be_success() => result.IsSuccess.ShouldBeFalse();
-    [Fact] void should_try_get_error() => result.TryGetError(out _).ShouldBeTrue();
-    [Fact] void should_have_the_error() => result.Match<object>(_ => _, errorType => error).ShouldEqual(error);
+    [Fact] void should_not_have_result() => result.TryGetResult(out _).ShouldBeFalse();
+    [Fact] void should_have_the_error() => result.Match(_ => _, errorType => errorType.Value).ShouldEqual(error);
 }

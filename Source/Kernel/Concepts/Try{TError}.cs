@@ -10,9 +10,11 @@ namespace Cratis.Chronicle.Storage;
 /// <summary>
 /// Represents the result of trying to get a single value that can have an optional <see cref="Exception"/> error.
 /// </summary>
-public class Try : OneOfBase<None, Exception>
+/// <typeparam name="TError">The type of the error tyoe.</typeparam>
+public class Try<TError> : OneOfBase<None, TError>
+    where TError : Enum
 {
-    Try(OneOf<None, Exception> input) : base(input)
+    Try(OneOf<None, TError> input) : base(input)
     {
     }
 
@@ -21,29 +23,27 @@ public class Try : OneOfBase<None, Exception>
     /// </summary>
     public bool IsSuccess => IsT0;
 
-    public static implicit operator Try(Exception error) => Failed(error);
+    public static implicit operator Try<TError>(TError error) => Failed(error);
+
+    public static explicit operator TError(Try<TError> obj) => obj.AsT1;
 
     /// <summary>
-    /// Creates a failed <see cref="Try"/>.
+    /// Creates a failed <see cref="Try{T}"/>.
     /// </summary>
     /// <param name="error">The error.</param>
-    /// <returns>The created <see cref="Try"/>.</returns>
-    public static Try Failed(Exception error) => new(OneOf<None, Exception>.FromT1(error));
+    /// <returns>The created <see cref="Try{T}"/>.</returns>
+    public static Try<TError> Failed(TError error) => new(OneOf<None, TError>.FromT1(error));
 
     /// <summary>
-    /// Creates a successful <see cref="Try"/>.
+    /// Creates a successful <see cref="Try{T}"/>.
     /// </summary>
-    /// <returns>The created <see cref="Try"/>.</returns>
-    public static Try Success() => new(OneOf<None, Exception>.FromT0(default));
+    /// <returns>The created <see cref="Try{T}"/>.</returns>
+    public static Try<TError> Success() => new(OneOf<None, TError>.FromT0(default));
 
     /// <summary>
     /// Try to get the error.
     /// </summary>
     /// <param name="error">The optional error.</param>
     /// <returns>A boolean indicating whether the error was present.</returns>
-    public bool TryGetError([NotNullWhen(true)]out Exception? error)
-    {
-        TryPickT1(out error, out _);
-        return error is not null;
-    }
+    public bool TryGetError([NotNullWhen(true)] out TError? error) => TryPickT1(out error, out _);
 }
