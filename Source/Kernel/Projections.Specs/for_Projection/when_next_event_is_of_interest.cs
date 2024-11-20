@@ -27,7 +27,7 @@ public class when_next_event_is_of_interest : given.a_projection
     {
         projection.SetEventTypesWithKeyResolvers(
             [
-                    new EventTypeWithKeyResolver(event_b, KeyResolvers.FromEventSourceId)
+                    new EventTypeWithKeyResolver(event_b, keyResolvers.FromEventSourceId)
             ],
             [event_b],
             new Dictionary<EventType, ProjectionOperationType>());

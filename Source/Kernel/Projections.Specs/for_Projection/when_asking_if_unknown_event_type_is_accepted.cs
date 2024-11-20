@@ -14,7 +14,7 @@ public class when_asking_if_unknown_event_type_is_accepted : given.a_projection
     {
         projection.SetEventTypesWithKeyResolvers(
             [
-                    new EventTypeWithKeyResolver(event_type, KeyResolvers.FromEventSourceId)
+                    new EventTypeWithKeyResolver(event_type, keyResolvers.FromEventSourceId)
             ],
             [event_type],
             new Dictionary<EventType, ProjectionOperationType>());

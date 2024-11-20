@@ -3,7 +3,7 @@
 
 using OneOf;
 
-namespace Cratis.Chronicle.Storage;
+namespace Cratis.Chronicle.Concepts;
 
 /// <summary>
 /// Represents a oneof between <typeparamref name="TEnum"/> and <see cref="Exception"/>.

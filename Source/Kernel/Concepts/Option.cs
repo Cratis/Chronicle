@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using OneOf;
 using OneOf.Types;
 
-namespace Cratis.Chronicle.Storage;
+namespace Cratis.Chronicle.Concepts;
 
 /// <summary>
 /// Represents an optional value.

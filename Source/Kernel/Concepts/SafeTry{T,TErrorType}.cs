@@ -4,7 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using OneOf;
 
-namespace Cratis.Chronicle.Storage;
+namespace Cratis.Chronicle.Concepts;
 
 /// <summary>
 /// Represents the result of trying to get a single value that can have an optional <see cref="Exception"/> error.

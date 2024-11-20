@@ -152,10 +152,6 @@ public class EventSequenceStorage(
         {
             return AppendEventError.DuplicateEventSequenceNumber;
         }
-        catch (Exception ex)
-        {
-            return ex;
-        }
     }
 
     /// <inheritdoc/>

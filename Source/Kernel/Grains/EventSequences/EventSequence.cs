@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -167,7 +168,7 @@ public class EventSequence(
                 return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
             }
 
-            AppendEventResult? appendResult = null;
+            Try<AppendedEvent, AppendEventError>? appendResult = null;
 
             do
             {
@@ -327,7 +328,7 @@ public class EventSequence(
         await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
     }
 
-    async Task HandleFailedAppendResult(AppendEventResult? appendResult, EventType eventType, EventSourceId eventSourceId, string eventName)
+    async Task HandleFailedAppendResult(Try<AppendedEvent, AppendEventError>? appendResult, EventType eventType, EventSourceId eventSourceId, string eventName)
     {
         if (appendResult is null)
         {
@@ -337,10 +338,10 @@ public class EventSequence(
         await appendResult.Match(
             evt => Task.CompletedTask,
             errorType => errorType switch
-                {
-                    AppendEventError.DuplicateEventSequenceNumber => HandleAppendedDuplicateEvent(eventType, eventSourceId, eventName),
-                    _ => Task.FromException(new UnknownAppendEventErrorType(errorType))
-                });
+            {
+                AppendEventError.DuplicateEventSequenceNumber => HandleAppendedDuplicateEvent(eventType, eventSourceId, eventName),
+                _ => Task.FromException(new UnknownAppendEventErrorType(errorType))
+            });
     }
 
     async Task HandleAppendedDuplicateEvent(EventType eventType, EventSourceId eventSourceId, string eventName)

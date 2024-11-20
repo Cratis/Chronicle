@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
+using Microsoft.Extensions.Logging.Abstractions;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Expressions.Keys.for_CompositeKeyExpressionResolver.given;
@@ -22,6 +23,6 @@ public class a_resolver : Specification
         projection.SetupGet(_ => _.Identifier).Returns((ProjectionId)Guid.NewGuid().ToString());
         projection.SetupGet(_ => _.Model).Returns(model);
         event_value_provider_resolvers = new();
-        resolver = new CompositeKeyExpressionResolver(event_value_provider_resolvers.Object);
+        resolver = new CompositeKeyExpressionResolver(event_value_provider_resolvers.Object, new KeyResolvers(NullLogger<KeyResolvers>.Instance));
     }
 }

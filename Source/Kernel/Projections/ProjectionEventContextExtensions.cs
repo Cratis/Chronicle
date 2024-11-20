@@ -73,7 +73,7 @@ public static class ProjectionEventContextExtensions
             if (onValue is not null && eventSequenceStorage.TryGetLastEventBefore(
                     joinEventType.Id,
                     onValue.ToString()!,
-                    context.EventSequenceNumber).GetAwaiter().GetResult() is (true, { } lastEvent))
+                    context.EventSequenceNumber).GetAwaiter().GetResult().TryGetValue(out var lastEvent))
             {
                 var changeset = context.Changeset.ResolvedJoin(
                     onModelProperty,

@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;

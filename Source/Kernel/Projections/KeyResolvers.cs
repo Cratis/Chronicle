@@ -114,7 +114,8 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                 }
                 else
                 {
-                    parentEvent = await eventSequenceStorage.GetLastInstanceOfAny(parentKey.Value.ToString()!, parentEventTypeIds);
+                    var optionalEvent = await eventSequenceStorage.TryGetLastInstanceOfAny(parentKey.Value.ToString()!, parentEventTypeIds);
+                    parentEvent = optionalEvent.AsT0;
                 }
 
                 var eventType =
