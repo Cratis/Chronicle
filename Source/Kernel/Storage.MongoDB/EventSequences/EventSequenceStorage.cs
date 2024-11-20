@@ -95,7 +95,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<AppendedEvent> Append(
+    public async Task<AppendEventResult> Append(
         EventSequenceNumber sequenceNumber,
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -113,11 +113,6 @@ public class EventSequenceStorage(
             var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
             var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
             var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
-            logger.Appending(
-                sequenceNumber,
-                eventSequenceId,
-                eventStore,
-                @namespace);
             var @event = new Event(
                 sequenceNumber,
                 correlationId,
@@ -155,23 +150,7 @@ public class EventSequenceStorage(
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            logger.DuplicateEventSequenceNumber(
-                sequenceNumber,
-                eventSequenceId,
-                eventStore,
-                @namespace);
-
-            throw new DuplicateEventSequenceNumber(sequenceNumber, eventSequenceId);
-        }
-        catch (Exception ex)
-        {
-            logger.AppendFailure(
-                sequenceNumber,
-                eventSequenceId,
-                eventStore,
-                @namespace,
-                ex);
-            throw;
+            return AppendedEventError.DuplicateEventSequenceNumber;
         }
     }
 

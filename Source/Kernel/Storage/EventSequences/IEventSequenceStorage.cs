@@ -50,7 +50,7 @@ public interface IEventSequenceStorage
     /// <param name="occurred">The date and time the event occurred.</param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<AppendedEvent> Append(EventSequenceNumber sequenceNumber, EventSourceType eventSourceType, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
+    Task<AppendEventResult> Append(EventSequenceNumber sequenceNumber, EventSourceType eventSourceType, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
 
     /// <summary>
     /// Compensate a single event to the event store.
