@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -14,8 +15,9 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
+/// <param name="logger">The logger.</param>
 [Singleton]
-public class ProjectionDefinitionComparer(IStorage storage, IObjectComparer objectComparer) : IProjectionDefinitionComparer
+public class ProjectionDefinitionComparer(IStorage storage, IObjectComparer objectComparer, ILogger<ProjectionDefinitionComparer> logger) : IProjectionDefinitionComparer
 {
     /// <inheritdoc/>
     public async Task<ProjectionDefinitionCompareResult> Compare(
@@ -25,19 +27,19 @@ public class ProjectionDefinitionComparer(IStorage storage, IObjectComparer obje
     {
         if (!await storage.GetEventStore(projectionKey.EventStore).Projections.Has(projectionKey.ProjectionId))
         {
+            logger.ProjectionIsNew(projectionKey.ProjectionId);
             return ProjectionDefinitionCompareResult.New;
         }
+
+        logger.ComparingDefinitions(projectionKey.ProjectionId);
 
         // Note: Ignore the model and initial model state as they are not relevant for comparison and also have potential for recursive comparison
         // that can potentially lead to a stack overflow.
         first = first with { Model = null!, InitialModelState = null! };
         second = second with { Model = null!, InitialModelState = null! };
 
-        if (!objectComparer.Compare(first, second, out _))
-        {
-            return ProjectionDefinitionCompareResult.Different;
-        }
-
-        return ProjectionDefinitionCompareResult.Same;
+        return objectComparer.Compare(first, second, out _)
+            ? ProjectionDefinitionCompareResult.Same
+            : ProjectionDefinitionCompareResult.Different;
     }
 }

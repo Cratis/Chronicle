@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
+using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
 namespace Cratis.Chronicle.Grains.Projections;
@@ -23,11 +24,13 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <param name="projectionManager"><see cref="IProjectionManager"/> for getting projections.</param>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineManager"/> for creating projection pipelines.</param>
+/// <param name="logger">The logger.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class ProjectionObserverSubscriber(
     IProjectionManager projectionManager,
     IProjectionFactory projectionFactory,
-    IProjectionPipelineManager projectionPipelineFactory) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
+    IProjectionPipelineManager projectionPipelineFactory,
+    ILogger<ProjectionObserverSubscriber> logger) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
     ObserverSubscriberKey _key = new(ObserverId.Unspecified, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Unspecified, EventSourceId.Unspecified, string.Empty);
     IProjectionPipeline? _pipeline;
@@ -53,22 +56,26 @@ public class ProjectionObserverSubscriber(
     {
         if (_pipeline is null)
         {
+            logger.PipelineDisconnected(_key);
             return ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable);
         }
 
         AppendedEvent? lastSuccessfullyObservedEvent = default;
-
         try
         {
             foreach (var @event in events)
             {
                 await _pipeline.Handle(@event);
                 lastSuccessfullyObservedEvent = @event;
+                logger.SuccessfullyHandledEvent(@event.Metadata.SequenceNumber, _key);
             }
-            return ObserverSubscriberResult.Ok(events.Last().Metadata.SequenceNumber);
+
+            logger.SuccessfullyHandledAllEvents(_key);
+            return ObserverSubscriberResult.Ok(lastSuccessfullyObservedEvent!.Metadata.SequenceNumber);
         }
         catch (Exception ex)
         {
+            logger.ErrorHandling(ex, _key, lastSuccessfullyObservedEvent?.Metadata.SequenceNumber ?? EventSequenceNumber.Unavailable);
             return new(
                 ObserverSubscriberState.Failed,
                 lastSuccessfullyObservedEvent?.Metadata.SequenceNumber ?? EventSequenceNumber.Unavailable,
