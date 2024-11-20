@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Grains.Events.Constraints.for_ConstraintValidation.when_establishing.given;
+namespace Cratis.Chronicle.Grains.Events.Constraints.for_ConstraintValidation.given;
 
 public class constraint_validation_with_two_validators : Specification
 {
