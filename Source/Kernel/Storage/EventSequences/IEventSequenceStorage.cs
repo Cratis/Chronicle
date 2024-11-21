@@ -51,7 +51,7 @@ public interface IEventSequenceStorage
     /// <param name="occurred">The date and time the event occurred.</param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<Try<AppendedEvent, AppendEventError>> Append(EventSequenceNumber sequenceNumber, EventSourceType eventSourceType, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
+    Task<Result<AppendedEvent, AppendEventError>> Append(EventSequenceNumber sequenceNumber, EventSourceType eventSourceType, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
 
     /// <summary>
     /// Compensate a single event to the event store.
@@ -147,8 +147,8 @@ public interface IEventSequenceStorage
     /// <param name="eventTypeId"><see cref="EventTypeId"/> to check for.</param>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to check for.</param>
     /// <param name="currentSequenceNumber">The current<see cref="EventSequenceNumber"/> to get the last event applied before this, if any.</param>
-    /// <returns><see cref="SafeOption{T}"/> of <see cref="AppendedEvent"/>.</returns>
-    Task<Option<AppendedEvent>> TryGetLastEventBefore(EventTypeId eventTypeId, EventSourceId eventSourceId, EventSequenceNumber currentSequenceNumber);
+    /// <returns><see cref="Option{T}"/> of <see cref="AppendedEvent"/>.</returns>
+    Task<Catch<Option<AppendedEvent>>> TryGetLastEventBefore(EventTypeId eventTypeId, EventSourceId eventSourceId, EventSequenceNumber currentSequenceNumber);
 
     /// <summary>
     /// Gets the event at a specific sequence number.

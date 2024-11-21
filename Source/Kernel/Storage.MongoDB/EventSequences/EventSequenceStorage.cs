@@ -95,7 +95,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<Try<AppendedEvent, AppendEventError>> Append(
+    public async Task<Result<AppendedEvent, AppendEventError>> Append(
         EventSequenceNumber sequenceNumber,
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -132,7 +132,7 @@ public class EventSequenceStorage(
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
-            return Try<AppendedEvent, AppendEventError>.Success(new AppendedEvent(
+            return Result<AppendedEvent, AppendEventError>.Success(new AppendedEvent(
                 new(sequenceNumber, eventType),
                 new(
                     eventSourceType,
@@ -409,22 +409,29 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<Option<AppendedEvent>> TryGetLastEventBefore(EventTypeId eventTypeId, EventSourceId eventSourceId, EventSequenceNumber currentSequenceNumber)
+    public async Task<Catch<Option<AppendedEvent>>> TryGetLastEventBefore(EventTypeId eventTypeId, EventSourceId eventSourceId, EventSequenceNumber currentSequenceNumber)
     {
-        var filter = Builders<Event>.Filter.And(
-            Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
-            Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId),
-            Builders<Event>.Filter.Lt(_ => _.SequenceNumber, currentSequenceNumber));
+        try
+        {
+            var filter = Builders<Event>.Filter.And(
+                Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
+                Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId),
+                Builders<Event>.Filter.Lt(_ => _.SequenceNumber, currentSequenceNumber));
 
-        var @event = await _collection.Find(filter)
-            .SortByDescendingSequenceNumber()
-            .Limit(1)
-            .FirstOrDefaultAsync()
-            .ConfigureAwait(false);
+            var @event = await _collection.Find(filter)
+                .SortByDescendingSequenceNumber()
+                .Limit(1)
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false);
 
-        return @event != null
-            ? await converter.ToAppendedEvent(@event)
-            : Option<AppendedEvent>.None();
+            return @event != null
+                ? await converter.ToAppendedEvent(@event)
+                : Option<AppendedEvent>.None();
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     /// <inheritdoc/>

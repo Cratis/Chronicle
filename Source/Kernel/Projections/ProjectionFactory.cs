@@ -17,6 +17,7 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections;
@@ -33,6 +34,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
 /// <param name="keyResolvers"><see cref="IKeyResolvers"/> for resolving <see cref="Key"/>.</param>
 /// <param name="storage"><see cref="IEventStoreNamespaceStorage"/> for accessing underlying storage for the specific namespace.</param>
+/// <param name="logger">The logger.</param>
 [Singleton]
 public class ProjectionFactory(
     IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
@@ -40,7 +42,8 @@ public class ProjectionFactory(
     IKeyExpressionResolvers keyExpressionResolvers,
     IExpandoObjectConverter expandoObjectConverter,
     IKeyResolvers keyResolvers,
-    IStorage storage) : IProjectionFactory
+    IStorage storage,
+    ILogger<ProjectionFactory> logger) : IProjectionFactory
 {
     /// <inheritdoc/>
     public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition)
@@ -296,7 +299,7 @@ public class ProjectionFactory(
         {
             var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
             fromObservable
-                .ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On)
+                .ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On, logger)
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,

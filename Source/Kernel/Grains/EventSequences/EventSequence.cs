@@ -168,7 +168,7 @@ public class EventSequence(
                 return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
             }
 
-            Try<AppendedEvent, AppendEventError>? appendResult = null;
+            Result<AppendedEvent, AppendEventError>? appendResult = null;
 
             do
             {
@@ -328,7 +328,7 @@ public class EventSequence(
         await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
     }
 
-    async Task HandleFailedAppendResult(Try<AppendedEvent, AppendEventError>? appendResult, EventType eventType, EventSourceId eventSourceId, string eventName)
+    async Task HandleFailedAppendResult(Result<AppendedEvent, AppendEventError>? appendResult, EventType eventType, EventSourceId eventSourceId, string eventName)
     {
         if (appendResult is null)
         {
