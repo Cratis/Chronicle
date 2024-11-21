@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// <summary>
 /// Defines the definition of a constraint.
 /// </summary>
-public interface IConstraintDefinition
+public interface IConstraintDefinition : IEquatable<IConstraintDefinition>
 {
     /// <summary>
     /// Gets the name of the constraint.
