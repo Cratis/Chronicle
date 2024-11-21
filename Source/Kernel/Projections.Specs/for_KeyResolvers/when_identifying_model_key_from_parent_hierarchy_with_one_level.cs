@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.for_KeyResolvers;
 
@@ -19,12 +21,14 @@ public class when_identifying_model_key_from_parent_hierarchy_with_one_level : S
     Mock<IProjection> root_projection;
     Mock<IProjection> child_projection;
     Mock<IEventSequenceStorage> storage;
+    KeyResolvers keyResolvers;
 
     static EventType root_event_type = new("5f4f4368-6989-4d9d-a84e-7393e0b41cfd", 1);
     const string parent_key = "61fcc353-3478-4cf9-a783-da508013b36f";
 
     void Establish()
     {
+        keyResolvers = new KeyResolvers(NullLogger<KeyResolvers>.Instance);
         root_event = new(
             new(1, root_event_type),
             new(
@@ -73,14 +77,14 @@ public class when_identifying_model_key_from_parent_hierarchy_with_one_level : S
         child_projection.SetupGet(_ => _.ChildrenPropertyPath).Returns("children");
         storage = new();
 
-        storage.Setup(_ => _.GetLastInstanceOfAny(parent_key, new[] { root_event_type.Id })).Returns(Task.FromResult(root_event));
+        storage.Setup(_ => _.TryGetLastInstanceOfAny(parent_key, new[] { root_event_type.Id })).Returns(Task.FromResult<Option<AppendedEvent>>(root_event));
         root_projection.Setup(_ => _.GetKeyResolverFor(root_event_type)).Returns((_, __) => Task.FromResult(new Key(parent_key, ArrayIndexers.NoIndexers)));
     }
 
-    async Task Because() => result = await KeyResolvers.FromParentHierarchy(
+    async Task Because() => result = await keyResolvers.FromParentHierarchy(
         child_projection.Object,
-        KeyResolvers.FromEventSourceId,
-        KeyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
+        keyResolvers.FromEventSourceId,
+        keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
         "childId")(storage.Object, @event);
 
     [Fact] void should_return_expected_key() => result.Value.ShouldEqual(parent_key);

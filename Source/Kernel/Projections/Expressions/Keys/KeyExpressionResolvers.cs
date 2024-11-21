@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
 
@@ -13,12 +14,13 @@ namespace Cratis.Chronicle.Projections.Expressions.Keys;
 /// Initializes a new instance of the <see cref="KeyExpressionResolvers"/> class.
 /// </remarks>
 /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event value expressions.</param>
-public class KeyExpressionResolvers(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers) : IKeyExpressionResolvers
+/// <param name="keyResolvers"><see cref="IKeyResolvers" /> for resolving the <see cref="Key"/>.</param>
+public class KeyExpressionResolvers(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers, IKeyResolvers keyResolvers) : IKeyExpressionResolvers
 {
     readonly IKeyExpressionResolver[] _resolvers =
         [
-            new CompositeKeyExpressionResolver(eventValueProviderExpressionResolvers),
-            new EventValueKeyExpressionResolver(eventValueProviderExpressionResolvers)
+            new CompositeKeyExpressionResolver(eventValueProviderExpressionResolvers, keyResolvers),
+            new EventValueKeyExpressionResolver(eventValueProviderExpressionResolvers, keyResolvers)
         ];
 
     /// <inheritdoc/>

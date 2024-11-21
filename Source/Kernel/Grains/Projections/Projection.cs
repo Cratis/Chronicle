@@ -44,6 +44,7 @@ public class Projection(
     public async Task SetDefinitionAndSubscribe(ProjectionDefinition definition)
     {
         var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
+        logger.SettingDefinition(key.ProjectionId);
         var compareResult = await projectionDefinitionComparer.Compare(key, State, definition);
 
         State = definition;
@@ -51,6 +52,7 @@ public class Projection(
 
         if (compareResult == ProjectionDefinitionCompareResult.Different)
         {
+            logger.ProjectionHasChanged(key.ProjectionId);
             if (_subscribed)
             {
                 await _observer!.Unsubscribe();
@@ -63,6 +65,7 @@ public class Projection(
 
         if (!_subscribed && definition.IsActive)
         {
+            logger.Registering(key.ProjectionId);
             _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, key.Namespace, key.EventSequenceId));
             var projection = await projectionFactory.Create(key.EventStore, key.Namespace, definition);
             projectionManager.Register(key.EventStore, key.Namespace, projection);
