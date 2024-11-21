@@ -3,14 +3,14 @@
 
 using OneOf.Types;
 
-namespace Cratis.Chronicle.Concepts.for_Try.without_value;
+namespace Cratis.Chronicle.Concepts.for_Catch.without_value;
 
 public class when_none_value : Specification
 {
-    static SafeTry result;
+    static Catch result;
 
 
-    void Because() => result = SafeTry.Success();
+    void Because() => result = Catch.Success();
 
     [Fact] void should_be_success() => result.IsSuccess.ShouldBeTrue();
     [Fact] void should_not_get_error() => result.TryGetError(out _).ShouldBeFalse();

@@ -8,34 +8,34 @@ using OneOf.Types;
 namespace Cratis.Chronicle.Concepts;
 
 /// <summary>
-/// Represents the result of trying to get a single value that can have an optional <see cref="Exception"/> error.
+/// Represents the result of trying an execution that potentially produce an <see cref="Exception"/>.
 /// </summary>
-public class SafeTry : OneOfBase<None, Exception>
+public class Catch : OneOfBase<None, Exception>
 {
-    SafeTry(OneOf<None, Exception> input) : base(input)
+    Catch(OneOf<None, Exception> input) : base(input)
     {
     }
 
     /// <summary>
-    /// Gets whether the try was successful, meaning it has a result.
+    /// Gets whether the execution was successful.
     /// </summary>
     public bool IsSuccess => IsT0;
 
-    public static implicit operator SafeTry(Exception error) => Failed(error);
-    public static explicit operator Exception(SafeTry obj) => obj.AsT1;
+    public static implicit operator Catch(Exception error) => Failed(error);
+    public static explicit operator Exception(Catch obj) => obj.AsT1;
 
     /// <summary>
-    /// Creates a failed <see cref="SafeTry"/>.
+    /// Creates a failed <see cref="Catch"/>.
     /// </summary>
     /// <param name="error">The error.</param>
-    /// <returns>The created <see cref="SafeTry"/>.</returns>
-    public static SafeTry Failed(Exception error) => new(OneOf<None, Exception>.FromT1(error));
+    /// <returns>The created <see cref="Catch"/>.</returns>
+    public static Catch Failed(Exception error) => new(OneOf<None, Exception>.FromT1(error));
 
     /// <summary>
-    /// Creates a successful <see cref="SafeTry"/>.
+    /// Creates a successful <see cref="Catch"/>.
     /// </summary>
-    /// <returns>The created <see cref="SafeTry"/>.</returns>
-    public static SafeTry Success() => new(OneOf<None, Exception>.FromT0(default));
+    /// <returns>The created <see cref="Catch"/>.</returns>
+    public static Catch Success() => new(OneOf<None, Exception>.FromT0(default));
 
     /// <summary>
     /// Try to get the error.

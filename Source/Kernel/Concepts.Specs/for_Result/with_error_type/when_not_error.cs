@@ -3,14 +3,14 @@
 
 using OneOf.Types;
 
-namespace Cratis.Chronicle.Concepts.for_Try.with_value;
+namespace Cratis.Chronicle.Concepts.for_Result.with_value;
 
 public class when_not_error : Specification
 {
-    static Try<TheErrorType> result;
+    static Result<TheErrorType> result;
 
 
-    void Because() => result = Try<TheErrorType>.Success();
+    void Because() => result = Result<TheErrorType>.Success();
 
     [Fact] void should_be_success() => result.IsSuccess.ShouldBeTrue();
     [Fact] void should_not_have_error() => result.TryGetError(out _).ShouldBeFalse();

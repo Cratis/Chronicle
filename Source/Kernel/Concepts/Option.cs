@@ -10,9 +10,9 @@ namespace Cratis.Chronicle.Concepts;
 /// <summary>
 /// Represents an optional value.
 /// </summary>
-/// <typeparam name="T">The type of the value.</typeparam>
+/// <typeparam name="TValue">The type of the value.</typeparam>
 [GenerateOneOf]
-public partial class Option<T> : OneOfBase<T, None>
+public partial class Option<TValue> : OneOfBase<TValue, None>
 {
     /// <summary>
     /// Gets whether value is present.
@@ -23,12 +23,12 @@ public partial class Option<T> : OneOfBase<T, None>
     /// Creates a none <see cref="Option{T}"/>.
     /// </summary>
     /// <returns>The created <see cref="Option{T}"/>.</returns>
-    public static Option<T> None() => default(None);
+    public static Option<TValue> None() => default(None);
 
     /// <summary>
     /// Try to get the value.
     /// </summary>
     /// <param name="value">The value.</param>
-    /// <returns>A boolean indicating whether the value is present.</returns>
-    public bool TryGetValue([NotNullWhen(true)]out T value) => TryPickT0(out value, out _);
+    /// /// /// /// <returns>A boolean indicating whether the value is present.</returns>
+    public bool TryGetValue([NotNullWhen(true)]out TValue value) => TryPickT0(out value, out _);
 }
