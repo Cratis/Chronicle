@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -149,21 +150,12 @@ public class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
-        bool updateSequenceNumber;
         var eventName = "[N/A]";
 
         try
         {
             var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
             eventName = eventSchema.Schema.GetDisplayName();
-            logger.Appending(
-                _eventSequenceKey.EventStore,
-                _eventSequenceKey.Namespace,
-                _eventSequenceId,
-                eventType,
-                eventName,
-                eventSourceId,
-                State.SequenceNumber);
 
             var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
             var compliantEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
@@ -176,82 +168,62 @@ public class EventSequence(
                 return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
             }
 
-            var appending = true;
-            while (appending)
+            Result<AppendedEvent, AppendEventError>? appendResult = null;
+
+            do
             {
-                try
-                {
-                    var occurred = DateTimeOffset.UtcNow;
+                await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventName);
+                var occurred = DateTimeOffset.UtcNow;
+                logger.Appending(
+                    _eventSequenceKey.EventStore,
+                    _eventSequenceKey.Namespace,
+                    _eventSequenceId,
+                    eventType,
+                    eventName,
+                    eventSourceId,
+                    State.SequenceNumber);
 
-                    _metrics?.AppendedEvent(eventSourceId, eventName);
-                    var appendedEvent = await EventSequenceStorage.Append(
-                        State.SequenceNumber,
-                        eventSourceType,
-                        eventSourceId,
-                        eventStreamType,
-                        eventStreamId,
-                        eventType,
-                        correlationId,
-                        causation,
-                        await IdentityStorage.GetFor(causedBy),
-                        occurred,
-                        compliantEventAsExpandoObject);
-
-                    var appendedEvents = new[] { appendedEvent }.ToList();
-                    await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
-
-                    State.TailSequenceNumberPerEventType[eventType.Id] = State.SequenceNumber;
-
-                    appending = false;
-                }
-                catch (DuplicateEventSequenceNumber)
-                {
-                    _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
-                    State.SequenceNumber++;
-                    await WriteStateAsync();
-                }
+                appendResult = await EventSequenceStorage.Append(
+                    State.SequenceNumber,
+                    eventSourceType,
+                    eventSourceId,
+                    eventStreamType,
+                    eventStreamId,
+                    eventType,
+                    correlationId,
+                    causation,
+                    await IdentityStorage.GetFor(causedBy),
+                    occurred,
+                    compliantEventAsExpandoObject);
             }
+            while(!appendResult.IsSuccess);
 
+            _metrics?.AppendedEvent(eventSourceId, eventName);
+            var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
+            await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
+            State.TailSequenceNumberPerEventType[eventType.Id] = State.SequenceNumber;
             await constraintContext.Update(State.SequenceNumber);
-            updateSequenceNumber = true;
-        }
-        catch (UnableToAppendToEventSequence ex)
-        {
-            _metrics?.FailedAppending(eventSourceId, eventName);
-            logger.FailedAppending(
-                _eventSequenceKey.EventStore,
-                _eventSequenceKey.Namespace,
-                eventType,
-                ex.EventSequenceId,
-                ex.EventSourceType,
-                ex.EventSourceId,
-                ex.SequenceNumber,
-                ex);
 
-            return AppendResult.Failed(correlationId, [ex.Message]);
+            var appendedSequenceNumber = State.SequenceNumber;
+            State.SequenceNumber = State.SequenceNumber.Next();
+            await WriteStateAsync();
+            return AppendResult.Success(correlationId, appendedSequenceNumber);
         }
         catch (Exception ex)
         {
+            _metrics?.FailedAppending(eventSourceId, eventName);
             logger.ErrorAppending(
                 _eventSequenceKey.EventStore,
                 _eventSequenceKey.Namespace,
-                _eventSequenceId,
+                eventType,
+                eventStreamId.Value,
+                eventSourceType,
                 eventSourceId,
                 State.SequenceNumber,
                 ex);
 
             return AppendResult.Failed(correlationId, [ex.Message]);
         }
-
-        if (updateSequenceNumber)
-        {
-            var appendedSequenceNumber = State.SequenceNumber;
-            State.SequenceNumber++;
-            await WriteStateAsync();
-            return AppendResult.Success(correlationId, appendedSequenceNumber);
-        }
-
-        return AppendResult.Failed(correlationId, ["Unable to append event for unknown reason"]);
     }
 
     /// <inheritdoc/>
@@ -354,6 +326,37 @@ public class EventSequence(
             await IdentityStorage.GetFor(causedBy),
             DateTimeOffset.UtcNow);
         await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
+    }
+
+    async Task HandleFailedAppendResult(Result<AppendedEvent, AppendEventError>? appendResult, EventType eventType, EventSourceId eventSourceId, string eventName)
+    {
+        if (appendResult is null)
+        {
+            return;
+        }
+
+        await appendResult.Match(
+            evt => Task.CompletedTask,
+            errorType => errorType switch
+            {
+                AppendEventError.DuplicateEventSequenceNumber => HandleAppendedDuplicateEvent(eventType, eventSourceId, eventName),
+                _ => Task.FromException(new UnknownAppendEventErrorType(errorType))
+            });
+    }
+
+    async Task HandleAppendedDuplicateEvent(EventType eventType, EventSourceId eventSourceId, string eventName)
+    {
+        logger.DuplicateEvent(
+            _eventSequenceKey.EventStore,
+            _eventSequenceKey.Namespace,
+            _eventSequenceId,
+            eventType,
+            eventName,
+            eventSourceId,
+            State.SequenceNumber);
+        _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
+        State.SequenceNumber = (await EventSequenceStorage.GetTailSequenceNumber() ).Next();
+        await WriteStateAsync();
     }
 
     async Task OnConstraintsChanged(ConstraintsChanged payload)

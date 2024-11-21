@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -15,7 +16,8 @@ namespace Cratis.Chronicle.Projections.Expressions.Keys;
 /// Initializes a new instance of the <see cref="EventValueKeyExpressionResolver"/> class.
 /// </remarks>
 /// <param name="resolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event values.</param>
-public class EventValueKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers) : IKeyExpressionResolver
+/// <param name="keyResolvers"><see cref="IKeyResolvers" /> for resolving the <see cref="Key"/>.</param>
+public class EventValueKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers, IKeyResolvers keyResolvers) : IKeyExpressionResolver
 {
     /// <inheritdoc/>
     public bool CanResolve(string expression) => resolvers.CanResolve(expression);
@@ -28,6 +30,6 @@ public class EventValueKeyExpressionResolver(IEventValueProviderExpressionResolv
         {
             Type = JsonObjectType.String
         };
-        return KeyResolvers.FromEventValueProvider(resolvers.Resolve(schemaProperty, expression));
+        return keyResolvers.FromEventValueProvider(resolvers.Resolve(schemaProperty, expression));
     }
 }

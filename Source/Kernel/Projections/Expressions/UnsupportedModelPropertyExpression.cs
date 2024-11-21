@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Projections.Expressions;
 /// Initializes a new instance of the <see cref="UnsupportedModelPropertyExpression"/> class.
 /// </remarks>
 /// <param name="expression">The unsupported expression.</param>
-public class UnsupportedModelPropertyExpression(string expression) : Exception($"Unknown model property expression '{expression}'")
-{
-}
+public class UnsupportedModelPropertyExpression(string expression) : Exception($"Unknown model property expression '{expression}'");
