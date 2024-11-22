@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Grains.Jobs;
 public record JobStepResult(JobStepStatus Status, IEnumerable<string> Messages, string ExceptionStackTrace, object? Result = null)
 {
     /// <summary>
-    /// Gets whether or not the job step was successful.
+    /// Gets whether the job step was successful.
     /// </summary>
     public bool IsSuccess => Status == JobStepStatus.Succeeded;
 

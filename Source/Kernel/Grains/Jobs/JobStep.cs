@@ -96,6 +96,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         {
             return Task.CompletedTask;
         }
+
         return Task.CompletedTask;
     }
 
@@ -159,7 +160,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         }
         catch (Exception ex)
         {
-            result = new JobStepResult(JobStepStatus.Failed, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
+            result = new(JobStepStatus.Failed, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
         }
 
         _result = result;

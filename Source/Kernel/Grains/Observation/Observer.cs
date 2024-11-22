@@ -236,10 +236,7 @@ public class Observer(
 
         _metrics?.PartitionFailed(partition);
 
-        logger.PartitionFailed(
-            partition,
-            sequenceNumber);
-
+        logger.PartitionFailed(partition, sequenceNumber);
         var failure = Failures.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         if (failure.Attempts.Count() < 10)
         {
@@ -261,27 +258,14 @@ public class Observer(
     }
 
     /// <inheritdoc/>
-    public async Task TryRecoverFailedPartition(Key partition)
+    public async Task TryStartRecoverJobForFailedPartition(Key partition)
     {
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        if (!Failures.TryGet(partition, out var failure))
+        {
+            return;
+        }
 
-        logger.TryingToRecoverFailedPartition(partition);
-
-        var failure = Failures.Get(partition);
-        if (failure is null) return;
-        var lastAttempt = failure.LastAttempt;
-        if (lastAttempt is null) return;
-
-        await RemoveReminder(partition.ToString());
-
-        await _jobsManager.Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(
-            JobId.New(),
-            new(
-                _observerKey,
-                _subscription,
-                partition,
-                lastAttempt.SequenceNumber,
-                State.EventTypes));
+        await StartRecoverJobForFailedPartition(failure);
     }
 
     /// <inheritdoc/>
@@ -289,7 +273,7 @@ public class Observer(
     {
         foreach (var partition in Failures.Partitions)
         {
-            await TryRecoverFailedPartition(partition.Partition);
+            await StartRecoverJobForFailedPartition(partition);
         }
     }
 
@@ -403,11 +387,10 @@ public class Observer(
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
         await RemoveReminder(reminderName);
-
         var partition = failures.State.Partitions.FirstOrDefault(_ => _.Partition.ToString() == reminderName);
         if (partition is not null)
         {
-            await TryRecoverFailedPartition(partition.Partition);
+            await StartRecoverJobForFailedPartition(partition);
         }
     }
 
@@ -444,9 +427,24 @@ public class Observer(
         return time.TotalMilliseconds == 0 ? TimeSpan.FromMilliseconds(100) : time;
     }
 
-    async Task RemoveReminder(string reminderName)
+    async Task StartRecoverJobForFailedPartition(FailedPartition failedPartition)
     {
-        var reminder = await this.GetReminder(reminderName);
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.TryingToRecoverFailedPartition(failedPartition.Partition);
+        await RemoveReminder(failedPartition.Partition.ToString());
+        await _jobsManager.Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(
+            JobId.New(),
+            new(
+                _observerKey,
+                _subscription,
+                failedPartition.Partition,
+                failedPartition.LastAttempt.SequenceNumber,
+                State.EventTypes));
+    }
+
+    async Task RemoveReminder(Key partition)
+    {
+        var reminder = await this.GetReminder(partition.ToString());
         if (reminder is not null)
         {
             await this.UnregisterReminder(reminder);

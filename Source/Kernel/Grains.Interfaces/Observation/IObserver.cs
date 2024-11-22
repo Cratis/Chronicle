@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Grains.Observation;
 public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
 {
     /// <summary>
-    /// Ensure the observers existence.
+    /// Ensure the observer existence.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Ensure();
@@ -124,7 +124,7 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// </summary>
     /// <param name="partition">The partition that is failed.</param>
     /// <returns>Awaitable task.</returns>
-    Task TryRecoverFailedPartition(Key partition);
+    Task TryStartRecoverJobForFailedPartition(Key partition);
 
     /// <summary>
     /// Attempt to recover all failed partitions.

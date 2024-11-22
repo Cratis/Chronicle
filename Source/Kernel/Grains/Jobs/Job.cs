@@ -127,6 +127,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                     await ClearStateAsync();
                     return;
                 }
+
                 _jobStepGrains = CreateGrainsFromJobSteps(jobSteps);
                 await StatusChanged(JobStatus.PreparingSteps);
                 await WriteStateAsync();
@@ -164,7 +165,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <inheritdoc/>
     public async Task Pause()
     {
-        if (State.Status == JobStatus.Stopped || State.Status == JobStatus.CompletedSuccessfully || State.Status == JobStatus.CompletedWithFailures)
+        if (State.Status is JobStatus.Stopped or JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures)
         {
             return;
         }
