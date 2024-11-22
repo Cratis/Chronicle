@@ -41,7 +41,7 @@ public class ConnectedClients(
         logger.ClientConnected(connectionId);
 
         _clients.Where(_ => _.ConnectionId == connectionId).ToList().ForEach(_ => _clients.Remove(_));
-        _clients.Add(new ConnectedClient
+        _clients.Add(new()
         {
             ConnectionId = connectionId,
             Version = version,
@@ -54,7 +54,7 @@ public class ConnectedClients(
     }
 
     /// <inheritdoc/>
-    public Task OnClientDisconnected(ConnectionId connectionId, string reason)
+    public async Task OnClientDisconnected(ConnectionId connectionId, string reason)
     {
         logger.ClientDisconnected(connectionId, reason);
 
@@ -62,11 +62,10 @@ public class ConnectedClients(
         if (client is not null)
         {
             _clients.Remove(client);
-            _clientDisconnectedObservers.Notify(_ => _.OnClientDisconnected(client));
+            await _clientDisconnectedObservers.Notify(_ => _.OnClientDisconnected(client));
         }
-        _metrics?.SetConnectedClients(_clients.Count);
 
-        return Task.CompletedTask;
+        _metrics?.SetConnectedClients(_clients.Count);
     }
 
     /// <inheritdoc/>
