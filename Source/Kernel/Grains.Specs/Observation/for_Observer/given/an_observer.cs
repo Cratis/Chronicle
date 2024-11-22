@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Json;
@@ -28,6 +29,7 @@ public class an_observer : Specification
     protected Mock<IStreamProvider> stream_provider;
     protected Mock<IStreamProvider> sequence_stream_provider;
     protected Mock<IObserverSubscriber> subscriber;
+    protected Mock<IJobsManager> jobsManager;
     protected Mock<IObserverServiceClient> observer_service_client;
     protected FailedPartitions failed_partitions_state;
     protected ObserverId observer_id => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
@@ -38,11 +40,13 @@ public class an_observer : Specification
     protected IStorage<FailedPartitions> failed_partitions_storage;
     protected TestStorageStats failed_partitions_storage_stats => silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
 
+
     async Task Establish()
     {
         subscriber = new();
-        silo.AddProbe((_) => subscriber.Object);
-
+        jobsManager = new();
+        silo.AddProbe(_ => subscriber.Object);
+        silo.AddProbe(_ => jobsManager.Object);
         failed_partitions_state = new();
 
         observer_service_client = silo.AddServiceProbe<IObserverServiceClient>();

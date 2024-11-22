@@ -13,19 +13,7 @@ public class and_partition_is_failed : given.an_observer_with_subscription_for_s
 
     void Establish()
     {
-        failed_partitions_state.Add(new FailedPartition
-        {
-            Partition = event_source_id,
-            Attempts =
-            [
-                new FailedPartitionAttempt
-                {
-                    SequenceNumber = 42UL,
-                    Messages = ["Something went wrong"],
-                    StackTrace = "This is the stack trace"
-                }
-            ]
-        });
+        failed_partitions_state.AddFailedPartition(event_source_id, 42UL, ["Something went wrong"], "This is the stack trace");
         state_storage.State = state_storage.State with
         {
             NextEventSequenceNumber = 53UL,

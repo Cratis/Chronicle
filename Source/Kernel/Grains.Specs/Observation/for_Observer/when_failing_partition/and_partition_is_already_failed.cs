@@ -19,21 +19,7 @@ public class and_partition_is_already_failed : given.an_observer
 
     void Establish()
     {
-        failed_partition = new()
-        {
-            Partition = event_source_id,
-            Attempts =
-            [
-                new FailedPartitionAttempt
-                {
-                    Occurred = DateTimeOffset.Now.Subtract(TimeSpan.FromDays(1)),
-                    SequenceNumber = 42UL,
-                    Messages = [first_message],
-                    StackTrace = first_stack_trace
-                }
-            ]
-        };
-        failed_partitions_state.Add(failed_partition);
+        failed_partition = failed_partitions_state.AddFailedPartition(event_source_id, 42UL, [first_message], first_stack_trace);
     }
 
     async Task Because() => await observer.PartitionFailed(event_source_id, 44UL, [second_message], second_stack_trace);
