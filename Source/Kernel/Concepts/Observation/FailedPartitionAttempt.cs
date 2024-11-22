@@ -11,6 +11,11 @@ namespace Cratis.Chronicle.Concepts.Observation;
 public class FailedPartitionAttempt
 {
     /// <summary>
+    /// Gets the empty <see cref="FailedPartitionAttempt"/>.
+    /// </summary>
+    public static FailedPartitionAttempt NoAttempt => new();
+
+    /// <summary>
     /// Gets or sets when the attempt occurred.
     /// </summary>
     public DateTimeOffset Occurred { get; set; } = DateTimeOffset.UtcNow;
