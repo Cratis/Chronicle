@@ -14,16 +14,16 @@ namespace Cratis.Chronicle.Grains.Observation;
 
 internal static partial class ObserverLogMessages
 {
-    [LoggerMessage(LogLevel.Information, "Subscribing observer")]
+    [LoggerMessage(LogLevel.Debug, "Subscribing observer")]
     internal static partial void Subscribing(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Trace, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}")]
+    [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}")]
     internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
 
-    [LoggerMessage(LogLevel.Trace, "Trying to recover partition {Partition}")]
+    [LoggerMessage(LogLevel.Debug, "Trying to recover partition {Partition}")]
     internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
 
-    [LoggerMessage(LogLevel.Trace, "Giving up on trying to recover failed partition {Partition} automatically")]
+    [LoggerMessage(LogLevel.Warning, "Giving up on trying to recover failed partition {Partition} automatically")]
     internal static partial void GivingUpOnRecoveringFailedPartition(this ILogger<Observer> logger, Key partition);
 }
 
