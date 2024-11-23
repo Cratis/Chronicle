@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Tasks;
+using Cratis.Tasks;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
 
@@ -19,18 +20,21 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly IGrainFactory _grainFactory;
     readonly ConcurrentQueue<IEnumerable<AppendedEvent>> _queue = new();
     readonly AsyncManualResetEvent _queueEvent = new();
+    readonly AsyncManualResetEvent _queueEmptyEvent = new();
     readonly TaskCompletionSource _queueTaskCompletionSource = new();
+    readonly Task _queueTask;
     ConcurrentBag<AppendedEventsQueueObserverSubscription> _subscriptions = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendedEventsQueue"/> class.
     /// </summary>
+    /// <param name="taskFactory"><see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-    public AppendedEventsQueue(IGrainFactory grainFactory)
+    public AppendedEventsQueue(ITaskFactory taskFactory, IGrainFactory grainFactory)
     {
         _grainFactory = grainFactory;
 
-        _ = Task.Run(QueueHandler);
+        _queueTask = taskFactory.Run(QueueHandler);
     }
 
     /// <inheritdoc/>
@@ -64,6 +68,28 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     public void Dispose()
     {
         _queueTaskCompletionSource.SetCanceled();
+        _queueTask.Dispose();
+    }
+
+    /// <summary>
+    /// Await the queue to be depleted.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// This method will block until the queue is depleted. This is useful for testing purposes.
+    /// It is not exposed on the interface as it is not intended for production use.
+    /// </remarks>
+    public async Task AwaitQueueDepletion()
+    {
+        await Task.Run(async () =>
+        {
+            while (!_queue.IsEmpty)
+            {
+                await Task.Delay(10);
+            }
+
+            await _queueEmptyEvent.WaitAsync();
+        });
     }
 
     async Task QueueHandler()
@@ -71,6 +97,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         while (!_queueTaskCompletionSource.Task.IsCanceled)
         {
             await _queueEvent.WaitAsync();
+            _queueEmptyEvent.Reset();
             if (_queueTaskCompletionSource.Task.IsCanceled)
             {
                 return;
@@ -91,6 +118,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 }
 
                 _queueEvent.Reset();
+                _queueEmptyEvent.Set();
             }
         }
     }
