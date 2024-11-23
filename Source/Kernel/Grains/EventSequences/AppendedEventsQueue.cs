@@ -113,8 +113,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                         continue;
                     }
                     var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                    var partition = actualEvents[0].Context.EventSourceId;
-                    await observer.Handle(partition, actualEvents);
+                    foreach (var group in actualEvents.GroupBy(@event => @event.Context.EventSourceId))
+                    {
+                        var partition = group.Key;
+                        await observer.Handle(partition, group);
+                    }
                 }
 
                 _queueEvent.Reset();
