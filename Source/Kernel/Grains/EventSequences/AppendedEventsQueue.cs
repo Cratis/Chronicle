@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
@@ -40,8 +41,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
-        _queueEvent.Set();
         _queue.Enqueue(appendedEvents);
+        _queueEvent.Set();
         return Task.CompletedTask;
     }
 
@@ -83,12 +84,28 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         await Task.Run(async () =>
         {
-            while (!_queue.IsEmpty)
+            if (Debugger.IsAttached)
             {
-                await Task.Delay(10);
+                while (!_queue.IsEmpty)
+                {
+                    await Task.Delay(10);
+                }
+                await _queueEmptyEvent.WaitAsync();
             }
+            else
+            {
+                var count = 10;
+                while (!_queue.IsEmpty)
+                {
+                    await Task.Delay(10);
+                    if (--count == 0)
+                    {
+                        break;
+                    }
+                }
 
-            await _queueEmptyEvent.WaitAsync();
+                await _queueEmptyEvent.WaitAsync().WaitAsync(TimeSpan.FromMilliseconds(500));
+            }
         });
     }
 
@@ -105,24 +122,34 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
             while (_queue.TryDequeue(out var events))
             {
-                foreach (var subscription in _subscriptions)
+                try
                 {
-                    var actualEvents = events.Where(@event => subscription.EventTypeIds.Contains(@event.Metadata.Type.Id)).ToList();
-                    if (actualEvents.Count == 0)
+                    foreach (var group in events.GroupBy(@event => @event.Context.EventSourceId))
                     {
-                        continue;
-                    }
-                    var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                    foreach (var group in actualEvents.GroupBy(@event => @event.Context.EventSourceId))
-                    {
-                        var partition = group.Key;
-                        await observer.Handle(partition, group);
+                        var tasks = new List<Task>();
+                        foreach (var subscription in _subscriptions)
+                        {
+                            var actualEvents = events.Where(@event => subscription.EventTypeIds.Contains(@event.Metadata.Type.Id)).ToList();
+                            if (actualEvents.Count == 0)
+                            {
+                                continue;
+                            }
+                            var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
+                            var partition = group.Key;
+                            tasks.Add(observer.Handle(partition, group));
+                        }
+
+                        await Task.WhenAll(tasks);
                     }
                 }
-
-                _queueEvent.Reset();
-                _queueEmptyEvent.Set();
+                catch
+                {
+                    // We ignore any failures, the queue should never fail
+                }
             }
+
+            _queueEvent.Reset();
+            _queueEmptyEvent.Set();
         }
     }
 }
