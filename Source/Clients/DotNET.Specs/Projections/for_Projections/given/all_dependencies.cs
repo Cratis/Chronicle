@@ -11,26 +11,26 @@ namespace Cratis.Chronicle.Projections.for_Projections.given;
 
 public class all_dependencies : Specification
 {
-    protected Mock<IEventStore> event_store;
-    protected Mock<IEventTypes> event_types;
-    protected Mock<IClientArtifactsProvider> client_artifacts;
-    protected Mock<IRulesProjections> rules_projections;
-    protected Mock<IJsonSchemaGenerator> schema_generator;
-    protected Mock<IModelNameResolver> model_name_resolver;
-    protected Mock<IEventSerializer> event_serializer;
-    protected Mock<IServiceProvider> service_provider;
-    protected JsonSerializerOptions json_serializer_options;
+    protected IEventStore _eventStore;
+    protected IEventTypes _eventTypes;
+    protected IClientArtifactsProvider _clientArtifacts;
+    protected IRulesProjections _rulesProjections;
+    protected IJsonSchemaGenerator _schemaGenerator;
+    protected IModelNameResolver _modelNameResolver;
+    protected IEventSerializer _eventSerializer;
+    protected IServiceProvider _serviceProvider;
+    protected JsonSerializerOptions _jsonSerializerOptions;
 
     void Establish()
     {
-        event_store = new();
-        event_types = new();
-        client_artifacts = new();
-        rules_projections = new();
-        schema_generator = new();
-        model_name_resolver = new();
-        event_serializer = new();
-        service_provider = new();
-        json_serializer_options = new();
+        _eventStore = Substitute.For<IEventStore>();
+        _eventTypes = Substitute.For<IEventTypes>();
+        _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
+        _rulesProjections = Substitute.For<IRulesProjections>();
+        _schemaGenerator = Substitute.For<IJsonSchemaGenerator>();
+        _modelNameResolver = Substitute.For<IModelNameResolver>();
+        _eventSerializer = Substitute.For<IEventSerializer>();
+        _serviceProvider = Substitute.For<IServiceProvider>();
+        _jsonSerializerOptions = Substitute.For<JsonSerializerOptions>();
     }
 }
