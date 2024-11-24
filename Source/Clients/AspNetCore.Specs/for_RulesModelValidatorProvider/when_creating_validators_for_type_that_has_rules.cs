@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.AspNetCore.Rules.for_RulesModelValidatorProvider;
 public class when_creating_validators_for_type_that_has_rules : given.one_rule_for_type
 {
     ModelValidatorProviderContext _context;
-    Mock<ModelMetadata> _modelMetadata;
+    ModelMetadata _modelMetadata;
 
     IRule _firstRule;
     IRule _secondRule;
@@ -24,8 +24,8 @@ public class when_creating_validators_for_type_that_has_rules : given.one_rule_f
             typeof(FirstRule),
             typeof(SecondRule)
         ]);
-        _modelMetadata = new(ModelMetadataIdentity.ForType(typeof(Model)));
-        _context = new(_modelMetadata.Object, []);
+        _modelMetadata = Substitute.For<ModelMetadata>(ModelMetadataIdentity.ForType(typeof(Model)));
+        _context = new(_modelMetadata, []);
 
         _firstRule = new FirstRule();
         _serviceProvider.GetService(typeof(FirstRule)).Returns(_firstRule);
