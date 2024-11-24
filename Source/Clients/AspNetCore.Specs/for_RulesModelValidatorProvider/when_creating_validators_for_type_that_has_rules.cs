@@ -10,32 +10,32 @@ namespace Cratis.Chronicle.AspNetCore.Rules.for_RulesModelValidatorProvider;
 
 public class when_creating_validators_for_type_that_has_rules : given.one_rule_for_type
 {
-    ModelValidatorProviderContext context;
-    Mock<ModelMetadata> model_metadata;
+    ModelValidatorProviderContext _context;
+    Mock<ModelMetadata> _modelMetadata;
 
-    IRule first_rule;
-    IRule second_rule;
+    IRule _firstRule;
+    IRule _secondRule;
 
     void Establish()
     {
-        rules.Setup(_ => _.HasFor(typeof(Model))).Returns(true);
-        rules.Setup(_ => _.GetFor(typeof(Model))).Returns(
+        _rules.HasFor(typeof(Model)).Returns(true);
+        _rules.GetFor(typeof(Model)).Returns(
         [
             typeof(FirstRule),
             typeof(SecondRule)
         ]);
-        model_metadata = new(ModelMetadataIdentity.ForType(typeof(Model)));
-        context = new(model_metadata.Object, []);
+        _modelMetadata = new(ModelMetadataIdentity.ForType(typeof(Model)));
+        _context = new(_modelMetadata.Object, []);
 
-        first_rule = new FirstRule();
-        service_provider.Setup(_ => _.GetService(typeof(FirstRule))).Returns(first_rule);
+        _firstRule = new FirstRule();
+        _serviceProvider.GetService(typeof(FirstRule)).Returns(_firstRule);
 
-        second_rule = new SecondRule();
-        service_provider.Setup(_ => _.GetService(typeof(SecondRule))).Returns(second_rule);
+        _secondRule = new SecondRule();
+        _serviceProvider.GetService(typeof(SecondRule)).Returns(_secondRule);
     }
 
-    void Because() => provider.CreateValidators(context);
+    void Because() => _provider.CreateValidators(_context);
 
-    [Fact] void should_add_validator() => context.Results.Count.ShouldEqual(1);
-    [Fact] void should_hold_both_rules_in_validator() => ((RuleModelValidator)context.Results[0].Validator).RuleSets.ShouldContainOnly(first_rule, second_rule);
+    [Fact] void should_add_validator() => _context.Results.Count.ShouldEqual(1);
+    [Fact] void should_hold_both_rules_in_validator() => ((RuleModelValidator)_context.Results[0].Validator).RuleSets.ShouldContainOnly(_firstRule, _secondRule);
 }

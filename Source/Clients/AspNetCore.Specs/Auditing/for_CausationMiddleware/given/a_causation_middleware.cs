@@ -14,7 +14,7 @@ public class a_causation_middleware : Specification
 
     protected HttpContext _httpContext;
     protected HttpRequest _httpRequest;
-    protected IHeaderDictionary http_request_headers;
+    protected IHeaderDictionary _httpRequestHeaders;
 
     protected IDictionary<string, string> _causationProperties;
 
@@ -25,8 +25,8 @@ public class a_causation_middleware : Specification
         _httpRequest = Substitute.For<HttpRequest>();
         _httpContext.Request.Returns(_httpRequest);
 
-        http_request_headers = Substitute.For<IHeaderDictionary>();
-        _httpRequest.Headers.Returns(http_request_headers);
+        _httpRequestHeaders = Substitute.For<IHeaderDictionary>();
+        _httpRequest.Headers.Returns(_httpRequestHeaders);
 
         _causationManager
             .When(_ => _.Add(CausationMiddleware.CausationType, Arg.Any<IDictionary<string, string>>()))

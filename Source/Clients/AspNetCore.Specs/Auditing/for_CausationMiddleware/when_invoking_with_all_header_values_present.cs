@@ -10,21 +10,21 @@ public class when_invoking_with_all_header_values_present : given.a_causation_mi
 {
     void Establish()
     {
-        http_request_headers.Origin.Returns((StringValues)origin);
-        http_request_headers.Referer.Returns((StringValues)referer);
+        _httpRequestHeaders.Origin.Returns((StringValues)_origin);
+        _httpRequestHeaders.Referer.Returns((StringValues)_referer);
     }
 
     async Task Because() => await _middleware.InvokeAsync(_httpContext);
 
     [Fact] void should_add_causation() => _causationManager.Received(1).Add(CausationMiddleware.CausationType, Arg.Any<IDictionary<string, string>>());
-    [Fact] void should_add_route_property() => _causationProperties[CausationMiddleware.CausationRouteProperty].ShouldEqual(route);
-    [Fact] void should_add_method_property() => _causationProperties[CausationMiddleware.CausationMethodProperty].ShouldEqual(method);
-    [Fact] void should_add_host_property() => _causationProperties[CausationMiddleware.CausationHostProperty].ShouldEqual(host);
-    [Fact] void should_add_protocol_property() => _causationProperties[CausationMiddleware.CausationProtocolProperty].ShouldEqual(protocol);
-    [Fact] void should_add_scheme_property() => _causationProperties[CausationMiddleware.CausationSchemeProperty].ShouldEqual(scheme);
-    [Fact] void should_add_query_property() => _causationProperties[CausationMiddleware.CausationQueryProperty].ShouldEqual(query);
-    [Fact] void should_add_origin_property() => _causationProperties[CausationMiddleware.CausationOriginProperty].ShouldEqual(origin);
-    [Fact] void should_add_referer_property() => _causationProperties[CausationMiddleware.CausationRefererProperty].ShouldEqual(referer);
-    [Fact] void should_add_first_route_value_property() => _causationProperties[$"{CausationMiddleware.CausationRouteValuePrefix}:{first_route_value_key}"].ShouldEqual(first_route_value_value);
-    [Fact] void should_add_second_route_value_property() => _causationProperties[$"{CausationMiddleware.CausationRouteValuePrefix}:{second_route_value_key}"].ShouldEqual(second_route_value_value);
+    [Fact] void should_add_route_property() => _causationProperties[CausationMiddleware.CausationRouteProperty].ShouldEqual(_route);
+    [Fact] void should_add_method_property() => _causationProperties[CausationMiddleware.CausationMethodProperty].ShouldEqual(_method);
+    [Fact] void should_add_host_property() => _causationProperties[CausationMiddleware.CausationHostProperty].ShouldEqual(_host);
+    [Fact] void should_add_protocol_property() => _causationProperties[CausationMiddleware.CausationProtocolProperty].ShouldEqual(_protocol);
+    [Fact] void should_add_scheme_property() => _causationProperties[CausationMiddleware.CausationSchemeProperty].ShouldEqual(_scheme);
+    [Fact] void should_add_query_property() => _causationProperties[CausationMiddleware.CausationQueryProperty].ShouldEqual(_query);
+    [Fact] void should_add_origin_property() => _causationProperties[CausationMiddleware.CausationOriginProperty].ShouldEqual(_origin);
+    [Fact] void should_add_referer_property() => _causationProperties[CausationMiddleware.CausationRefererProperty].ShouldEqual(_referer);
+    [Fact] void should_add_first_route_value_property() => _causationProperties[$"{CausationMiddleware.CausationRouteValuePrefix}:{_firstRouteValueKey}"].ShouldEqual(_firstRouteValueValue);
+    [Fact] void should_add_second_route_value_property() => _causationProperties[$"{CausationMiddleware.CausationRouteValuePrefix}:{_secondRouteValueKey}"].ShouldEqual(_secondRouteValueValue);
 }

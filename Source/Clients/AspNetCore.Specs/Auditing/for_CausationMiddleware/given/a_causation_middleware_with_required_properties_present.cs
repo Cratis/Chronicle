@@ -8,32 +8,32 @@ namespace Cratis.Chronicle.AspNetCore.Auditing.for_CausationMiddleware.given;
 
 public class a_causation_middleware_with_required_properties_present : a_causation_middleware
 {
-    protected const string route = "/some/route";
-    protected const string method = "POST";
-    protected const string host = "somehost";
-    protected const string protocol = "HTTP/1.1";
-    protected const string scheme = "https";
-    protected const string query = "?some=query&string=here";
-    protected const string origin = "Some origin";
-    protected const string referer = "Some referer";
+    protected const string _route = "/some/route";
+    protected const string _method = "POST";
+    protected const string _host = "somehost";
+    protected const string _protocol = "HTTP/1.1";
+    protected const string _scheme = "https";
+    protected const string _query = "?some=query&string=here";
+    protected const string _origin = "Some origin";
+    protected const string _referer = "Some referer";
 
-    protected const string first_route_value_key = "first";
-    protected const string first_route_value_value = "first-value";
-    protected const string second_route_value_key = "second";
-    protected const string second_route_value_value = "second-value";
+    protected const string _firstRouteValueKey = "first";
+    protected const string _firstRouteValueValue = "first-value";
+    protected const string _secondRouteValueKey = "second";
+    protected const string _secondRouteValueValue = "second-value";
 
     void Establish()
     {
-        _httpRequest.Path.Returns((PathString)route);
-        _httpRequest.Method.Returns(method);
-        _httpRequest.Host.Returns(new HostString(host));
-        _httpRequest.Protocol.Returns(protocol);
-        _httpRequest.Scheme.Returns(scheme);
-        _httpRequest.QueryString.Returns(new QueryString(query));
+        _httpRequest.Path.Returns((PathString)_route);
+        _httpRequest.Method.Returns(_method);
+        _httpRequest.Host.Returns(new HostString(_host));
+        _httpRequest.Protocol.Returns(_protocol);
+        _httpRequest.Scheme.Returns(_scheme);
+        _httpRequest.QueryString.Returns(new QueryString(_query));
         _httpRequest.RouteValues.Returns(new RouteValueDictionary(new Dictionary<string, object>
         {
-            { first_route_value_key, first_route_value_value },
-            { second_route_value_key, second_route_value_value }
+            { _firstRouteValueKey, _firstRouteValueValue },
+            { _secondRouteValueKey, _secondRouteValueValue }
         }));
     }
 }
