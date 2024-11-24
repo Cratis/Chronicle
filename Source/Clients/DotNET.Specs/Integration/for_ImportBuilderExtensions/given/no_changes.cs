@@ -8,24 +8,24 @@ namespace Cratis.Chronicle.Integration.for_ImportBuilderExtensions.given;
 
 public class no_changes : Specification
 {
-    protected IImportBuilderFor<Model, ExternalModel> import_builder;
-    protected Subject<ImportContext<Model, ExternalModel>> subject;
-    protected IObservable<ImportContext<Model, ExternalModel>> context;
-    protected Changeset<Model, Model> changeset;
-    protected EventsToAppend events_to_append;
-    protected Model original_model;
-    protected Model modified_model;
-    protected Mock<IObjectComparer> objects_comparer;
+    protected IImportBuilderFor<Model, ExternalModel> _importBuilder;
+    protected Subject<ImportContext<Model, ExternalModel>> _subject;
+    protected IObservable<ImportContext<Model, ExternalModel>> _context;
+    protected Changeset<Model, Model> _changeset;
+    protected EventsToAppend _eventsToAppend;
+    protected Model _originalModel;
+    protected Model _modifiedModel;
+    protected IObjectComparer _objectsComparer;
 
     void Establish()
     {
-        subject = new Subject<ImportContext<Model, ExternalModel>>();
-        import_builder = new ImportBuilderFor<Model, ExternalModel>(subject);
-        modified_model = new Model(42, "Forty Two", "Two");
-        original_model = new Model(42, "Forty Two", "Two");
-        objects_comparer = new();
-        objects_comparer.Setup(_ => _.Compare(original_model, modified_model, out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
-        changeset = new(objects_comparer.Object, modified_model, original_model);
-        events_to_append = [];
+        _subject = new Subject<ImportContext<Model, ExternalModel>>();
+        _importBuilder = new ImportBuilderFor<Model, ExternalModel>(_subject);
+        _modifiedModel = new Model(42, "Forty Two", "Two");
+        _originalModel = new Model(42, "Forty Two", "Two");
+        _objectsComparer = Substitute.For<IObjectComparer>();
+        _objectsComparer.Compare(_originalModel, _modifiedModel, out Arg.Any<IEnumerable<PropertyDifference>>()).Returns(true);
+        _changeset = new(_objectsComparer, _modifiedModel, _originalModel);
+        _eventsToAppend = [];
     }
 }

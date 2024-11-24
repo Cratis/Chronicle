@@ -22,20 +22,21 @@ public class a_change_on_a_nested_property : Specification
         _subject = new Subject<ImportContext<ComplexModel, ExternalModel>>();
         _importBuilder = new ImportBuilderFor<ComplexModel, ExternalModel>(_subject);
         _objectsComparer = Substitute.For<IObjectComparer>();
+
+        _originalModel = new(42, "Forty Two", new(43, "Forty Three", "Three"));
+        _modifiedModel = new(42, "Forty Two", new(44, "Forty Three", "Four"));
+
         _objectsComparer
             .Compare(_originalModel, _modifiedModel, out Arg.Any<IEnumerable<PropertyDifference>>())
             .Returns(callInfo =>
             {
-                var differences = callInfo.Arg<IEnumerable<PropertyDifference>>();
-                differences =
-                [
-                        new PropertyDifference(new($"{nameof(ComplexModel.Child)}.{nameof(Model.SomeInteger)}"), 43, 44)
-                ];
+                callInfo[2] = new List<PropertyDifference>
+                {
+                    new(new($"{nameof(ComplexModel.Child)}.{nameof(Model.SomeInteger)}"), 43, 44)
+                };
 
                 return false;
             });
-        _originalModel = new(42, "Forty Two", new(43, "Forty Three", "Three"));
-        _modifiedModel = new(42, "Forty Two", new(44, "Forty Three", "Four"));
         _changeset = new(_objectsComparer, _modifiedModel, _originalModel);
         _changeset.Add(new PropertiesChanged<ComplexModel>(_modifiedModel,
         [
