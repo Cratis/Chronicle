@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Sinks;
+using Microsoft.Extensions.Logging.Abstractions;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.for_Projection.given;
@@ -12,6 +13,7 @@ namespace Cratis.Chronicle.Projections.for_Projection.given;
 public class a_projection : Specification
 {
     protected Projection projection;
+    protected IKeyResolvers keyResolvers;
 
     void Establish()
     {
@@ -25,5 +27,6 @@ public class a_projection : Specification
             new Model(string.Empty, new JsonSchema()),
             true,
             []);
+        keyResolvers = new KeyResolvers(NullLogger<KeyResolvers>.Instance);
     }
 }

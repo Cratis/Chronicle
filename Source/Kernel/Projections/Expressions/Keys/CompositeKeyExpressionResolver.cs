@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.RegularExpressions;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -16,7 +17,8 @@ namespace Cratis.Chronicle.Projections.Expressions.Keys;
 /// Initializes a new instance of the <see cref="CompositeKeyExpressionResolver"/> class.
 /// </remarks>
 /// <param name="resolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event values.</param>
-public partial class CompositeKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers) : IKeyExpressionResolver
+/// <param name="keyResolvers"><see cref="IKeyResolvers" /> for resolving the <see cref="Key"/>.</param>
+public partial class CompositeKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers, IKeyResolvers keyResolvers) : IKeyExpressionResolver
 {
     static readonly Regex _regularExpression = CompositeKeyRegEx();
 
@@ -57,7 +59,7 @@ public partial class CompositeKeyExpressionResolver(IEventValueProviderExpressio
             };
         }).ToDictionary(_ => _.Property, _ => _.KeyResolver);
 
-        return KeyResolvers.Composite(propertiesWithKeyValueProviders);
+        return keyResolvers.Composite(propertiesWithKeyValueProviders);
     }
 
     [GeneratedRegex("\\$composite\\((?<expressions>[\\w=$\\({\\)., ]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
