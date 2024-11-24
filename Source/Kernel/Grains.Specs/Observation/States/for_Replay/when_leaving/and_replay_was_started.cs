@@ -17,7 +17,7 @@ public class and_replay_was_started : given.a_replay_state
         };
 
         observer_service_client
-            .Setup(_ => _.EndReplayFor(IsAny<ObserverDetails>()))
+            .Setup(_ => _.EndReplayFor(Arg.Any<ObserverDetails>()))
             .Callback((ObserverDetails observer) => observer_details = observer);
 
         stored_state = await state.OnEnter(stored_state);
@@ -25,6 +25,6 @@ public class and_replay_was_started : given.a_replay_state
 
     async Task Because() => resulting_stored_state = await state.OnLeave(stored_state);
 
-    [Fact] void should_end_replay_only_one() => observer_service_client.Verify(_ => _.BeginReplayFor(IsAny<ObserverDetails>()), Once);
+    [Fact] void should_end_replay_only_one() => observer_service_client.Verify(_ => _.BeginReplayFor(Arg.Any<ObserverDetails>()), Once);
     [Fact] void should_end_replay_for_correct_observer() => observer_details.ShouldEqual(new ObserverDetails(stored_state.Id, observer_key, ObserverType.Client));
 }

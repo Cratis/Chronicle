@@ -36,7 +36,7 @@ public class when_next_event_is_of_interest : given.a_projection
         state.Integer = 42;
 
         objects_comparer = new();
-        objects_comparer.Setup(_ => _.Compare(IsAny<ExpandoObject>(), IsAny<AppendedEvent>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
+        objects_comparer.Setup(_ => _.Compare(Arg.Any<ExpandoObject>(), Arg.Any<AppendedEvent>(), out Ref<IEnumerable<PropertyDifference>>.Arg.Any)).Returns(true);
 
         first_event = new(
             new(0, event_a),

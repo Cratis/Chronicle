@@ -17,7 +17,7 @@ public class when_applying : given.a_property_handler
     {
         input = JsonValue.Create(42);
         encrypted_bytes = Encoding.UTF8.GetBytes(encrypted_string);
-        encryption.Setup(_ => _.Encrypt(IsAny<byte[]>(), key)).Returns(encrypted_bytes);
+        encryption.Setup(_ => _.Encrypt(Arg.Any<byte[]>(), key)).Returns(encrypted_bytes);
     }
 
     async Task Because() => result = await handler.Apply(string.Empty, string.Empty, identifier, input);

@@ -38,14 +38,14 @@ public class and_no_jobs_are_running : given.a_catch_up_state
             .ReturnsAsync(Enumerable.Empty<JobState>().ToImmutableList());
 
         jobs_manager
-            .Setup(_ => _.Start<ICatchUpObserver, CatchUpObserverRequest>(IsAny<JobId>(), IsAny<CatchUpObserverRequest>()))
+            .Setup(_ => _.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<JobId>(), Arg.Any<CatchUpObserverRequest>()))
             .Callback<JobId, CatchUpObserverRequest>((_, requestAtStart) => request = requestAtStart);
     }
 
     async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
 
     [Fact] void should_return_same_state() => resulting_stored_state.ShouldBeSame(stored_state);
-    [Fact] void should_start_catch_up_job() => jobs_manager.Verify(_ => _.Start<ICatchUpObserver, CatchUpObserverRequest>(IsAny<JobId>(), IsAny<CatchUpObserverRequest>()), Once);
+    [Fact] void should_start_catch_up_job() => jobs_manager.Verify(_ => _.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<JobId>(), Arg.Any<CatchUpObserverRequest>()), Once);
     [Fact] void should_start_catch_up_job_with_correct_observer_id() => request.ObserverKey.ObserverId.ShouldEqual(stored_state.Id);
     [Fact] void should_start_catch_up_job_with_correct_observer_key() => request.ObserverKey.ShouldEqual(observer_key);
     [Fact] void should_start_catch_up_job_with_correct_subscription() => request.ObserverSubscription.ShouldEqual(subscription);

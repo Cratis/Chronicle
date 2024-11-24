@@ -11,11 +11,11 @@ public class one_rule_for_type : all_dependencies
 
     void Establish()
     {
-        client_artifacts.SetupGet(_ => _.Rules).Returns([typeof(RulesForTypeForRules)]);
+        _clientArtifacts.Rules.Returns([typeof(RulesForTypeForRules)]);
 
         rules = new(
-            json_serializer_options,
-            projections.Object,
-            client_artifacts.Object);
+            _jsonSerializerOptions,
+            _projections,
+            _clientArtifacts);
     }
 }

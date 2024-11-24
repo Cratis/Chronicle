@@ -44,7 +44,7 @@ public class when_next_event_is_not_of_interest : given.a_projection
             new ExpandoObject());
 
         objects_comparer = new();
-        objects_comparer.Setup(_ => _.Compare(IsAny<ExpandoObject>(), IsAny<AppendedEvent>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
+        objects_comparer.Setup(_ => _.Compare(Arg.Any<ExpandoObject>(), Arg.Any<AppendedEvent>(), out Ref<IEnumerable<PropertyDifference>>.Arg.Any)).Returns(true);
 
         changeset = new(objects_comparer.Object, @event, new());
         projection.Event.Subscribe(_ => observed = true);

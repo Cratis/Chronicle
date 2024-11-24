@@ -56,6 +56,6 @@ public class a_routing_state : Specification
         tail_event_sequence_numbers = new TailEventSequenceNumbers(stored_state.EventSequenceId, subscription.EventTypes.ToImmutableList(), 0, 0);
 
         event_sequence.Setup(_ => _.GetTailSequenceNumber()).Returns(() => Task.FromResult(tail_event_sequence_numbers.Tail));
-        event_sequence.Setup(_ => _.GetTailSequenceNumberForEventTypes(IsAny<IEnumerable<EventType>>())).Returns(() => Task.FromResult(tail_event_sequence_numbers.TailForEventTypes));
+        event_sequence.Setup(_ => _.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>())).Returns(() => Task.FromResult(tail_event_sequence_numbers.TailForEventTypes));
     }
 }

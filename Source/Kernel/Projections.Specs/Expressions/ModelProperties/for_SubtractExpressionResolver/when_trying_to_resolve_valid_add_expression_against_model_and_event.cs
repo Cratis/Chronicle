@@ -42,7 +42,7 @@ public class when_trying_to_resolve_valid_add_expression_against_model_and_event
             content);
 
         event_value_resolvers = new();
-        event_value_resolvers.Setup(_ => _.Resolve(IsAny<JsonSchemaProperty>(), IsAny<string>())).Returns((AppendedEvent _) => 2d);
+        event_value_resolvers.Setup(_ => _.Resolve(Arg.Any<JsonSchemaProperty>(), Arg.Any<string>())).Returns((AppendedEvent _) => 2d);
         resolver = new(event_value_resolvers.Object);
     }
 

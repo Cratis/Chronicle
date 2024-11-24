@@ -46,5 +46,5 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
 
     async Task Because() => resulting_stored_state = await state.OnLeave(stored_state);
 
-    [Fact] void should_not_end_replay() => observer_service_client.Verify(_ => _.BeginReplayFor(IsAny<ObserverDetails>()), Never);
+    [Fact] void should_not_end_replay() => observer_service_client.Verify(_ => _.BeginReplayFor(Arg.Any<ObserverDetails>()), Never);
 }

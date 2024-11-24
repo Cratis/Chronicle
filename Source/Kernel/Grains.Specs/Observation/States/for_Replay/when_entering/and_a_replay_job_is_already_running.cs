@@ -38,6 +38,6 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
 
     async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
 
-    [Fact] void should_not_resume_a_job() => jobs_manager.Verify(_ => _.Resume(IsAny<JobId>()), Never);
-    [Fact] void should_not_start_a_new_job() => jobs_manager.Verify(_ => _.Start<IReplayObserver, ReplayObserverRequest>(IsAny<JobId>(), IsAny<ReplayObserverRequest>()), Never);
+    [Fact] void should_not_resume_a_job() => jobs_manager.Verify(_ => _.Resume(Arg.Any<JobId>()), Never);
+    [Fact] void should_not_start_a_new_job() => jobs_manager.Verify(_ => _.Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<JobId>(), Arg.Any<ReplayObserverRequest>()), Never);
 }

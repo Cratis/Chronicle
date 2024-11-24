@@ -10,7 +10,7 @@ public class and_subscription_is_disconnected_with_last_successful_observation_b
 {
     void Establish()
     {
-        subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable)));
+        subscriber.Setup(_ => _.OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable)));
 
         state_storage.State = state_storage.State with
         {

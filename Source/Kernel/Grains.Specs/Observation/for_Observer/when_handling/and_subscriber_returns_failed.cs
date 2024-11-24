@@ -20,7 +20,7 @@ public class and_subscriber_returns_failed : given.an_observer_with_subscription
             ExceptionStackTrace = exception_stack_trace
         };
         subscriber
-            .Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()))
+            .Setup(_ => _.OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>()))
             .Returns(Task.FromResult(failure));
     }
 

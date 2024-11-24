@@ -19,7 +19,7 @@ public class and_event_is_of_a_type_the_observer_is_not_interested_in : given.an
 
     async Task Because() => await observer.Handle("Something", [AppendedEvent.EmptyWithEventSequenceNumber(53UL)]);
 
-    [Fact] void should_not_forward_to_subscriber() => subscriber.Verify(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()), Never);
+    [Fact] void should_not_forward_to_subscriber() => subscriber.Verify(_ => _.OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>()), Never);
     [Fact] void should_set_next_sequence_number() => state_storage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)54UL);
     [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);
 }

@@ -8,39 +8,39 @@ namespace Cratis.Chronicle.Rules.for_Rules.for_RulesModelValidator.given;
 
 public class two_rule_sets : Specification
 {
-    protected Mock<IRule> first_rule_set;
-    protected Mock<IValidator> first_rule_set_as_validator;
-    protected Mock<IRule> second_rule_set;
-    protected Mock<IValidator> second_rule_set_as_validator;
-    protected Mock<IRules> rules;
-    protected RuleModelValidator validator;
-    protected ValidationResult first_rule_set_validation_result;
-    protected ValidationResult second_rule_set_validation_result;
+    protected IRule _firstRuleSet;
+    protected IValidator _firstRuleSetAsValidator;
+    protected IRule _secondRuleSet;
+    protected IValidator _secondRuleSetAsValidator;
+    protected IRules _rules;
+    protected RuleModelValidator _validator;
+    protected ValidationResult _firstRuleSetValidationResult;
+    protected ValidationResult _secondRuleSetValidationResult;
 
     void Establish()
     {
-        first_rule_set = new Mock<IRule>();
-        first_rule_set_as_validator = first_rule_set.As<IValidator>();
-        second_rule_set = new Mock<IRule>();
-        second_rule_set_as_validator = second_rule_set.As<IValidator>();
+        _firstRuleSet = Substitute.For<IRule>();
+        _firstRuleSetAsValidator = _firstRuleSet as IValidator;
+        _secondRuleSet = Substitute.For<IRule>();
+        _secondRuleSetAsValidator = _secondRuleSet as IValidator;
 
-        rules = new();
+        _rules = Substitute.For<IRules>();
 
-        validator = new([first_rule_set.Object, second_rule_set.Object], rules.Object);
+        _validator = new([_firstRuleSet, _secondRuleSet], _rules);
 
-        first_rule_set_validation_result = new ValidationResult(new[]
+        _firstRuleSetValidationResult = new ValidationResult(new[]
         {
             new ValidationFailure("FirstRuleSetFirstProp", "First RuleSet First Prop Failed"),
             new ValidationFailure("FirstRuleSetSecondProp", "First RuleSet Second Prop Failed"),
         });
 
-        second_rule_set_validation_result = new ValidationResult(new[]
+        _secondRuleSetValidationResult = new ValidationResult(new[]
         {
             new ValidationFailure("SecondRuleSetFirstProp", "Second RuleSet First Prop Failed"),
             new ValidationFailure("SecondRuleSetSecondProp", "Second RuleSet Second Prop Failed"),
         });
 
-        first_rule_set_as_validator.Setup(_ => _.Validate(IsAny<IValidationContext>())).Returns(first_rule_set_validation_result);
-        second_rule_set_as_validator.Setup(_ => _.Validate(IsAny<IValidationContext>())).Returns(second_rule_set_validation_result);
+        _firstRuleSetAsValidator.Validate(Arg.Any<IValidationContext>()).Returns(_firstRuleSetValidationResult);
+        _secondRuleSetAsValidator.Validate(Arg.Any<IValidationContext>()).Returns(_secondRuleSetValidationResult);
     }
 }

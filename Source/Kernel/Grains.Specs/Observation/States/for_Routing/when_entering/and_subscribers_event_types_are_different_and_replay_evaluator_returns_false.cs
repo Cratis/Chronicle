@@ -10,7 +10,7 @@ public class and_subscribers_event_types_are_different_and_replay_evaluator_retu
 {
     void Establish()
     {
-        replay_evaluator.Setup(_ => _.Evaluate(IsAny<ReplayEvaluationContext>())).Returns(() => Task.FromResult(false));
+        replay_evaluator.Setup(_ => _.Evaluate(Arg.Any<ReplayEvaluationContext>())).Returns(() => Task.FromResult(false));
     }
 
     async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);

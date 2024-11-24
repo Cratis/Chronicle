@@ -53,9 +53,9 @@ public class an_observing_state : Specification
             event_store_name,
             event_store_namespace,
             event_sequence_id);
-        appended_events_queues.Setup(_ => _.Subscribe(observer_key, IsAny<IEnumerable<EventType>>())).Returns(Task.FromResult(queue_subscription));
+        appended_events_queues.Setup(_ => _.Subscribe(observer_key, Arg.Any<IEnumerable<EventType>>())).Returns(Task.FromResult(queue_subscription));
         queue_subscription = new(observer_key, 0);
-        appended_events_queues.Setup(_ => _.Subscribe(IsAny<ObserverKey>(), event_types)).Returns(Task.FromResult(queue_subscription));
+        appended_events_queues.Setup(_ => _.Subscribe(Arg.Any<ObserverKey>(), event_types)).Returns(Task.FromResult(queue_subscription));
 
 
         state = new Observing(

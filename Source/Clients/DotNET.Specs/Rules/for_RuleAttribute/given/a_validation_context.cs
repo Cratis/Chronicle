@@ -7,18 +7,18 @@ namespace Cratis.Chronicle.Rules.for_Rules.for_RuleAttribute.given;
 
 public class a_validation_context : Specification
 {
-    protected Mock<IServiceProvider> service_provider;
-    protected Mock<IRules> rules;
-    protected ValidationContext validation_context;
-    protected object model_instance;
+    protected IServiceProvider _serviceProvider;
+    protected IRules _rules;
+    protected ValidationContext _validationContext;
+    protected object _modelInstance;
 
     void Establish()
     {
-        rules = new();
-        service_provider = new();
-        service_provider.Setup(_ => _.GetService(typeof(IRules))).Returns(rules.Object);
+        _rules = Substitute.For<IRules>();
+        _serviceProvider = Substitute.For<IServiceProvider>();
+        _serviceProvider.GetService(typeof(IRules)).Returns(_rules);
 
-        model_instance = new();
-        validation_context = new(model_instance, service_provider.Object, new Dictionary<object, object?>());
+        _modelInstance = new();
+        _validationContext = new(_modelInstance, _serviceProvider, new Dictionary<object, object?>());
     }
 }

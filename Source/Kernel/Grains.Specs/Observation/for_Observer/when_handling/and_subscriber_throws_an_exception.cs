@@ -13,7 +13,7 @@ public class and_subscriber_throws_an_exception : given.an_observer_with_subscri
     const string exception_stack_trace = "This is the stack trace";
 
     void Establish() =>
-        subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Throws(new ExceptionWithPreDefinedStackTrace(exception_message, exception_stack_trace));
+        subscriber.Setup(_ => _.OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())).Throws(new ExceptionWithPreDefinedStackTrace(exception_message, exception_stack_trace));
 
     async Task Because() => await observer.Handle(event_source_id, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
 

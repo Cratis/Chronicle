@@ -14,6 +14,6 @@ public class a_load_balanced_http_client_factory : Specification
         strategy = new();
         http_client_factory = new();
         factory = new(strategy.Object, http_client_factory.Object);
-        http_client_factory.Setup(_ => _.CreateClient(IsAny<string>())).Returns(Mock.Of<HttpClient>());
+        http_client_factory.Setup(_ => _.CreateClient(Arg.Any<string>())).Returns(Mock.Of<HttpClient>());
     }
 }

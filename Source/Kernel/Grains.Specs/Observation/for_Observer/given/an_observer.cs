@@ -49,7 +49,7 @@ public class an_observer : Specification
 
         var logger = silo.AddService(NullLogger<Observer>.Instance);
         var loggerFactory = silo.AddServiceProbe<ILoggerFactory>();
-        loggerFactory.Setup(_ => _.CreateLogger(IsAny<string>())).Returns(logger);
+        loggerFactory.Setup(_ => _.CreateLogger(Arg.Any<string>())).Returns(logger);
 
         state_storage = silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
         failed_partitions_storage = silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
@@ -59,7 +59,7 @@ public class an_observer : Specification
             new EventSequenceKey(observer_key.EventSequenceId, observer_key.EventStore, observer_key.Namespace));
 
         eventSequence.Setup(_ => _.GetTailSequenceNumber()).ReturnsAsync(EventSequenceNumber.Unavailable);
-        eventSequence.Setup(_ => _.GetTailSequenceNumberForEventTypes(IsAny<IEnumerable<EventType>>())).ReturnsAsync(EventSequenceNumber.Unavailable);
+        eventSequence.Setup(_ => _.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>())).ReturnsAsync(EventSequenceNumber.Unavailable);
 
         observer = await silo.CreateGrainAsync<Observer>(observer_key);
 

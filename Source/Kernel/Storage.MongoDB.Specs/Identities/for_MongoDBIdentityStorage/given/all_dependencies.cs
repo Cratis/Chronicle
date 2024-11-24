@@ -23,7 +23,7 @@ public class all_dependencies : Specification
 
 
         collection
-            .Setup(_ => _.FindAsync<MongoDBIdentity>(IsAny<FilterDefinition<MongoDBIdentity>>(), null, default))
+            .Setup(_ => _.FindAsync<MongoDBIdentity>(Arg.Any<FilterDefinition<MongoDBIdentity>>(), null, default))
             .Returns(() =>
             {
                 var cursor = new Mock<IAsyncCursor<MongoDBIdentity>>();
@@ -37,7 +37,7 @@ public class all_dependencies : Specification
             });
 
         collection
-            .Setup(_ => _.InsertOneAsync(IsAny<MongoDBIdentity>(), null, default))
+            .Setup(_ => _.InsertOneAsync(Arg.Any<MongoDBIdentity>(), null, default))
             .Callback<MongoDBIdentity, InsertOneOptions, CancellationToken>((identity, _, _) => inserted_identities.Add(identity))
             .Returns(Task.CompletedTask);
     }

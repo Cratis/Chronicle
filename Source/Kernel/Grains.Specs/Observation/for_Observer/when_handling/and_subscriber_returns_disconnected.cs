@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
 public class and_subscriber_returns_disconnected : given.an_observer_with_subscription_for_specific_event_type
 {
     void Establish() =>
-          subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Disconnected(42UL)));
+          subscriber.Setup(_ => _.OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Disconnected(42UL)));
 
     async Task Because() => await observer.Handle("Something", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
 

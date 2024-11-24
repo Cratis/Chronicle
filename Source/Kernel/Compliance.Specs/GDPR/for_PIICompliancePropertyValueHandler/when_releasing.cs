@@ -17,7 +17,7 @@ public class when_releasing : given.a_property_handler
     {
         input = JsonValue.Create(Convert.ToBase64String(Encoding.UTF8.GetBytes("42")));
         decrypted_bytes = Encoding.UTF8.GetBytes(decrypted_string);
-        encryption.Setup(_ => _.Decrypt(IsAny<byte[]>(), key)).Returns(decrypted_bytes);
+        encryption.Setup(_ => _.Decrypt(Arg.Any<byte[]>(), key)).Returns(decrypted_bytes);
     }
 
     async Task Because() => result = await handler.Release(string.Empty, string.Empty, identifier, input);
