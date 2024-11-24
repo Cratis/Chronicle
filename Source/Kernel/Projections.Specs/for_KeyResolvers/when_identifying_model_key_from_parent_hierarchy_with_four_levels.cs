@@ -1,17 +1,20 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.for_KeyResolvers;
 
 public class when_identifying_model_key_from_parent_hierarchy_with_four_levels : Specification
 {
+    KeyResolvers keyResolvers;
     AppendedEvent root_event;
     AppendedEvent first_level_event;
     AppendedEvent second_level_event;
@@ -68,10 +71,10 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
 
         if (parent is not null)
         {
-            projection.Setup(_ => _.GetKeyResolverFor(eventType)).Returns(KeyResolvers.FromParentHierarchy(
+            projection.Setup(_ => _.GetKeyResolverFor(eventType)).Returns(keyResolvers.FromParentHierarchy(
                 projection.Object,
-                KeyResolvers.FromEventSourceId,
-                KeyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
+                keyResolvers.FromEventSourceId,
+                keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
                 "childId"));
             projection.SetupGet(_ => _.HasParent).Returns(true);
             projection.SetupGet(_ => _.Parent).Returns(parent);
@@ -85,6 +88,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
 
     void Establish()
     {
+        keyResolvers = new KeyResolvers(NullLogger<KeyResolvers>.Instance);
         root_event = CreateEvent(0, root_event_type, root_key, new { });
         first_level_event = CreateEvent(1, first_level_event_type, first_level_key, new { parentId = root_key });
         second_level_event = CreateEvent(2, second_level_event_type, second_level_key, new { parentId = first_level_key });
@@ -98,17 +102,17 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
         forth_level_projection = SetupProjection(forth_level_event_type, forth_level_key, "forthLevels", third_level_projection.Object);
 
         storage = new();
-        storage.Setup(_ => _.GetLastInstanceOfAny(root_key, new[] { root_event_type.Id })).Returns(Task.FromResult(root_event));
-        storage.Setup(_ => _.GetLastInstanceOfAny(first_level_key, new[] { first_level_event_type.Id })).Returns(Task.FromResult(first_level_event));
-        storage.Setup(_ => _.GetLastInstanceOfAny(second_level_key, new[] { second_level_event_type.Id })).Returns(Task.FromResult(second_level_event));
-        storage.Setup(_ => _.GetLastInstanceOfAny(third_level_key, new[] { third_level_event_type.Id })).Returns(Task.FromResult(third_level_event));
-        storage.Setup(_ => _.GetLastInstanceOfAny(forth_level_key, new[] { forth_level_event_type.Id })).Returns(Task.FromResult(forth_level_event));
+        storage.Setup(_ => _.TryGetLastInstanceOfAny(root_key, new[] { root_event_type.Id })).Returns(Task.FromResult<Option<AppendedEvent>>(root_event));
+        storage.Setup(_ => _.TryGetLastInstanceOfAny(first_level_key, new[] { first_level_event_type.Id })).Returns(Task.FromResult<Option<AppendedEvent>>(first_level_event));
+        storage.Setup(_ => _.TryGetLastInstanceOfAny(second_level_key, new[] { second_level_event_type.Id })).Returns(Task.FromResult<Option<AppendedEvent>>(second_level_event));
+        storage.Setup(_ => _.TryGetLastInstanceOfAny(third_level_key, new[] { third_level_event_type.Id })).Returns(Task.FromResult<Option<AppendedEvent>>(third_level_event));
+        storage.Setup(_ => _.TryGetLastInstanceOfAny(forth_level_key, new[] { forth_level_event_type.Id })).Returns(Task.FromResult<Option<AppendedEvent>>(forth_level_event));
     }
 
-    async Task Because() => result = await KeyResolvers.FromParentHierarchy(
+    async Task Because() => result = await keyResolvers.FromParentHierarchy(
         forth_level_projection.Object,
-        KeyResolvers.FromEventSourceId,
-        KeyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
+        keyResolvers.FromEventSourceId,
+        keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
         "childId")(storage.Object, forth_level_event);
 
     [Fact] void should_return_expected_key() => result.Value.ShouldEqual(root_key);

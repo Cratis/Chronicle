@@ -13,7 +13,7 @@ public class when_getting_key_resolver_for_event_type : given.a_projection
 
     void Establish()
     {
-        expected = KeyResolvers.FromEventSourceId;
+        expected = keyResolvers.FromEventSourceId;
         projection.SetEventTypesWithKeyResolvers(
             [
                     new EventTypeWithKeyResolver(event_type, expected)

@@ -82,6 +82,6 @@ public interface IEventStoreNamespaceStorage
     /// Gets the storage for unique event type constraints.
     /// </summary>
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>
-    /// /// <returns>The <see cref="IUniqueEventTypesConstraintsStorage"/> instance.</returns>
+    /// <returns>The <see cref="IUniqueEventTypesConstraintsStorage"/> instance.</returns>
     IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(EventSequenceId eventSequenceId);
 }

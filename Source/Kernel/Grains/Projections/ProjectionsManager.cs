@@ -75,8 +75,5 @@ public class ProjectionsManager : Grain<ProjectionsManagerState>, IProjectionsMa
         }
     }
 
-    Task OnError(Exception exception)
-    {
-        return Task.CompletedTask;
-    }
+    Task OnError(Exception exception) => Task.CompletedTask;
 }

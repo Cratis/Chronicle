@@ -45,7 +45,16 @@ public class ProjectionPipeline(
 
         foreach (var step in steps)
         {
-            context = await step.Perform(projection, context);
+            try
+            {
+                context = await step.Perform(projection, context);
+            }
+            catch (Exception ex)
+            {
+                logger.ErrorPerformingStep(ex, step.GetType(), @event.Metadata.SequenceNumber);
+                throw;
+            }
         }
+        logger.CompletedAllSteps(@event.Metadata.SequenceNumber);
     }
 }

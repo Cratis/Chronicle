@@ -17,4 +17,7 @@ internal static partial class ProjectionLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Stopping the running og projection pipeline with identifier '{Identifier}'")]
     internal static partial void StopRunning(this ILogger<Projection> logger, ProjectionId identifier);
+
+    [LoggerMessage(LogLevel.Warning, "An error occurred in the projection observable with identifier '{Identifier}'")]
+    internal static partial void ErrorOccurredInObservable(this ILogger<Projection> logger, Exception ex, ProjectionId identifier);
 }
