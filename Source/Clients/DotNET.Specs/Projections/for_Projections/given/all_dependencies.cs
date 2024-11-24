@@ -31,6 +31,6 @@ public class all_dependencies : Specification
         _modelNameResolver = Substitute.For<IModelNameResolver>();
         _eventSerializer = Substitute.For<IEventSerializer>();
         _serviceProvider = Substitute.For<IServiceProvider>();
-        _jsonSerializerOptions = Substitute.For<JsonSerializerOptions>();
+        _jsonSerializerOptions = new();
     }
 }

@@ -8,20 +8,20 @@ namespace Cratis.Chronicle.Reducers.for_ReducerInvoker.when_invoking_with_no_ini
 
 public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReducer>
 {
-    ValidEvent @event;
-    EventContext event_context;
-    ReduceResult reduce_result;
+    ValidEvent _event;
+    EventContext _eventContext;
+    ReduceResult _reduceResult;
 
     void Establish()
     {
-        @event = new();
-        event_context = EventContext.Empty;
+        _event = new();
+        _eventContext = EventContext.Empty;
     }
 
-    async Task Because() => reduce_result = (await invoker.Invoke(service_provider.Object, [new(@event, event_context)], null))!;
+    async Task Because() => _reduceResult = (await _invoker.Invoke(_serviceProvider, [new(_event, _eventContext)], null))!;
 
-    [Fact] void should_pass_the_event() => reducer.ReceivedEvents.First().ShouldEqual(@event);
-    [Fact] void should_pass_no_read_model() => reducer.ReceivedReadModels.First().ShouldBeNull();
-    [Fact] void should_pass_the_event_context() => reducer.ReceivedEventContexts.First().ShouldEqual(event_context);
-    [Fact] void should_return_the_read_model() => reduce_result.ModelState.ShouldEqual(reducer.ReturnedReadModel);
+    [Fact] void should_pass_the_event() => _reducer.ReceivedEvents.First().ShouldEqual(_event);
+    [Fact] void should_pass_no_read_model() => _reducer.ReceivedReadModels.First().ShouldBeNull();
+    [Fact] void should_pass_the_event_context() => _reducer.ReceivedEventContexts.First().ShouldEqual(_eventContext);
+    [Fact] void should_return_the_read_model() => _reduceResult.ModelState.ShouldEqual(_reducer.ReturnedReadModel);
 }

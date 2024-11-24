@@ -9,15 +9,15 @@ namespace Cratis.Chronicle.Reducers.for_ReducerInvoker.when_invoking_bulk_with_i
 
 public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer>
 {
-    IEnumerable<EventAndContext> events_and_contexts;
-    ReadModel initial;
-    ReduceResult reduce_result;
-    ReadModel result;
+    IEnumerable<EventAndContext> _eventsAndContexts;
+    ReadModel _initial;
+    ReduceResult _reduceResult;
+    ReadModel _result;
 
     void Establish()
     {
-        initial = new(42);
-        events_and_contexts =
+        _initial = new(42);
+        _eventsAndContexts =
         [
             new(new ValidEvent(), EventContext.Empty with { SequenceNumber = 0 }),
             new(new ValidEvent(), EventContext.Empty with { SequenceNumber = 1 }),
@@ -28,11 +28,11 @@ public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer
 
     async Task Because()
     {
-        reduce_result = (await invoker.Invoke(service_provider.Object, events_and_contexts, initial))!;
-        result = reduce_result.ModelState as ReadModel;
+        _reduceResult = (await _invoker.Invoke(_serviceProvider, _eventsAndContexts, _initial))!;
+        _result = _reduceResult.ModelState as ReadModel;
     }
 
-    [Fact] void should_only_create_one_instance_of_the_reducer() => service_provider.Verify(_ => _.GetService(typeof(SyncReducer)), Once);
-    [Fact] void should_pass_the_events_and_contexts() => reducer.ReceivedEventsAndContexts.ShouldContainOnly(events_and_contexts);
-    [Fact] void should_return_a_read_model_that_has_been_iterated_on() => result.Count.ShouldEqual(events_and_contexts.Count() + initial.Count);
+    [Fact] void should_only_create_one_instance_of_the_reducer() => _serviceProvider.Received(1).GetService(typeof(SyncReducer));
+    [Fact] void should_pass_the_events_and_contexts() => _reducer.ReceivedEventsAndContexts.ShouldContainOnly(_eventsAndContexts);
+    [Fact] void should_return_a_read_model_that_has_been_iterated_on() => _result.Count.ShouldEqual(_eventsAndContexts.Count() + _initial.Count);
 }
