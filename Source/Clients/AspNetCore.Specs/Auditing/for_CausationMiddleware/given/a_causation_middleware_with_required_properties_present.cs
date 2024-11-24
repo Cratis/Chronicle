@@ -24,13 +24,13 @@ public class a_causation_middleware_with_required_properties_present : a_causati
 
     void Establish()
     {
-        http_request.SetupGet(_ => _.Path).Returns(route);
-        http_request.SetupGet(_ => _.Method).Returns(method);
-        http_request.SetupGet(_ => _.Host).Returns(new HostString(host));
-        http_request.SetupGet(_ => _.Protocol).Returns(protocol);
-        http_request.SetupGet(_ => _.Scheme).Returns(scheme);
-        http_request.SetupGet(_ => _.QueryString).Returns(new QueryString(query));
-        http_request.SetupGet(_ => _.RouteValues).Returns(new RouteValueDictionary(new Dictionary<string, object>
+        _httpRequest.Path.Returns((PathString)route);
+        _httpRequest.Method.Returns(method);
+        _httpRequest.Host.Returns(new HostString(host));
+        _httpRequest.Protocol.Returns(protocol);
+        _httpRequest.Scheme.Returns(scheme);
+        _httpRequest.QueryString.Returns(new QueryString(query));
+        _httpRequest.RouteValues.Returns(new RouteValueDictionary(new Dictionary<string, object>
         {
             { first_route_value_key, first_route_value_value },
             { second_route_value_key, second_route_value_value }
