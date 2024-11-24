@@ -8,7 +8,7 @@ using Cratis.Chronicle.Grains.Observation;
 
 namespace Cratis.Chronicle.Grains.EventSequences.for_AppendedEventsQueue.when_enqueuing;
 
-public class multiple_events_with_different_partitions_with_multiple_subscribers : given.two_subscribers
+public class multiple_events_with_different_partitions_with_multiple_subscribers_that_subscribes_to_all_event_types : given.two_subscribed_subscribers
 {
     EventType _firstEventType = new("Some event", 1);
     EventType _secondEventType = new("Some other event", 2);

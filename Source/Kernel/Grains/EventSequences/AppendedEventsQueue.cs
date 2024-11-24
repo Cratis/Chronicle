@@ -129,14 +129,14 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                         var tasks = new List<Task>();
                         foreach (var subscription in _subscriptions)
                         {
-                            var actualEvents = events.Where(@event => subscription.EventTypeIds.Contains(@event.Metadata.Type.Id)).ToList();
+                            var actualEvents = group.Where(@event => subscription.EventTypeIds.Contains(@event.Metadata.Type.Id)).ToList();
                             if (actualEvents.Count == 0)
                             {
                                 continue;
                             }
                             var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
                             var partition = group.Key;
-                            tasks.Add(observer.Handle(partition, group));
+                            tasks.Add(observer.Handle(partition, actualEvents));
                         }
 
                         await Task.WhenAll(tasks);
