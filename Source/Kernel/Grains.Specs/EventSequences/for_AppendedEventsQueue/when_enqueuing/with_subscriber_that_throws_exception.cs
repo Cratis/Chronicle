@@ -6,11 +6,9 @@ using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Grains.EventSequences.for_AppendedEventsQueue.when_enqueuing;
 
-public class with_subscriber_that_throws_exception : given.a_single_subscriber
+public class with_subscriber_that_throws_exception : given.a_single_subscriber_with_an_event_type
 {
-    EventType _eventType = new("Some event", 1);
     AppendedEvent _appendedEvent;
-
     EventSourceId _eventSourceId;
 
     void Establish()
@@ -23,8 +21,6 @@ public class with_subscriber_that_throws_exception : given.a_single_subscriber
             .When(_ => _.Handle(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>()))
             .Do(_ => throw new Exception());
     }
-
-    protected override IEnumerable<EventType> EventTypes => [_eventType];
 
     async Task Because()
     {

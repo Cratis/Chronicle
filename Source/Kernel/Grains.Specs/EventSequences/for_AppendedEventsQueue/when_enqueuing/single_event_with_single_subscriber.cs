@@ -7,9 +7,8 @@ using Cratis.Chronicle.Grains.Observation;
 
 namespace Cratis.Chronicle.Grains.EventSequences.for_AppendedEventsQueue.when_enqueuing;
 
-public class single_event_with_single_subscriber : given.a_single_subscriber
+public class single_event_with_single_subscriber : given.a_single_subscriber_with_an_event_type
 {
-    EventType _eventType = new("Some event", 1);
     AppendedEvent _appendedEvent;
 
     EventSourceId _eventSourceId;
@@ -20,8 +19,6 @@ public class single_event_with_single_subscriber : given.a_single_subscriber
         _eventSourceId = Guid.NewGuid();
         _appendedEvent = _appendedEvent with { Context = EventContext.Empty with { EventSourceId = _eventSourceId } };
     }
-
-    protected override IEnumerable<EventType> EventTypes => [_eventType];
 
     async Task Because()
     {
