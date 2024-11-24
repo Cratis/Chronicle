@@ -22,7 +22,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="8.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
