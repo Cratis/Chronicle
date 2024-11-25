@@ -29,7 +29,8 @@ public record ObserverState(
     EventSequenceNumber LastHandledEventSequenceNumber,
     EventCount Handled,
     ObserverRunningState RunningState,
-    ISet<Key> ReplayingPartitions)
+    ISet<Key> ReplayingPartitions,
+    ISet<Key> CatchingUpPartitions)
 {
     readonly EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
 
@@ -46,6 +47,7 @@ public record ObserverState(
               EventSequenceNumber.Unavailable,
               EventCount.NotSet,
               ObserverRunningState.New,
+              new HashSet<Key>(),
               new HashSet<Key>())
     {
     }
