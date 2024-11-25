@@ -38,7 +38,7 @@ public class FailedPartitions
     public IEnumerable<FailedPartition> ResolvedPartitions => _resolvedPartitions;
 
     /// <summary>
-    /// Gets whether there are any failed partitions.
+    /// Gets a value indicating whether there are any failed partitions.
     /// </summary>
     public bool HasFailedPartitions => _partitions.Count > 0;
 
@@ -53,7 +53,7 @@ public class FailedPartitions
     /// Try to get a failed partition by its partition identifier.
     /// </summary>
     /// <param name="partition">Partition to get.</param>
-    /// <param name="failedPartition">The optional failed partition</param>
+    /// <param name="failedPartition">The optional failed partition.</param>
     /// <returns>True when failed partition exists, false if not.</returns>
     public bool TryGet(Key partition, [NotNullWhen(true)]out FailedPartition? failedPartition) => _partitions.TryGetValue(partition, out failedPartition);
 
