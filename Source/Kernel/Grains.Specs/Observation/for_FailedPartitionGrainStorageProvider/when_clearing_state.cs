@@ -11,4 +11,5 @@ public class when_clearing_state : given.the_provider
     async Task Because() => error = await Catch.Exception(() => provider.ClearStateAsync("name", GrainId.Create("type", "key"), new GrainState<FailedPartition>()));
 
     [Fact] void should_not_fail() => error.ShouldBeNull();
+    [Fact] void should_not_do_anything() => storage.ReceivedCalls().ShouldBeEmpty();
 }
