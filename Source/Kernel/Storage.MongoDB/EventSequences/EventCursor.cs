@@ -36,7 +36,7 @@ public class EventCursor(
         if (_innerCursor is null) return false;
         if (_cancellationToken.IsCancellationRequested) return false;
 
-        var result = _innerCursor.MoveNext(_cancellationToken);
+        var result = await _innerCursor.MoveNextAsync(_cancellationToken);
         if (_innerCursor.Current is not null)
         {
             Current = await Task.WhenAll(_innerCursor.Current.Select(_converter.ToAppendedEvent));
