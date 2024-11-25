@@ -25,6 +25,15 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Giving up on trying to recover failed partition {Partition} automatically")]
     internal static partial void GivingUpOnRecoveringFailedPartition(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Attempting to replay partition {Partition} to event sequence number {ToEventSequenceNumber}")]
+    internal static partial void AttemptReplayPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber toEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "Finished replay for partition {Partition}")]
+    internal static partial void FinishedReplayForPartition(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} is replaying events and cannot accept new events to handle")]
+    internal static partial void PartitionReplayingCannotHandleNewEvents(this ILogger<Observer> logger, Key partition);
 }
 
 internal static class ObserverScopes
