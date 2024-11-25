@@ -99,8 +99,9 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// Notify that the partition has been replayed.
     /// </summary>
     /// <param name="partition">The partition that has been replayed.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionReplayed(Key partition);
+    Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Notify that the partition has failed.
@@ -116,8 +117,17 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// Notify that the partition has recovered.
     /// </summary>
     /// <param name="partition">The partition that has recovered.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
-    Task FailedPartitionRecovered(Key partition);
+    Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
+    /// Notify that the partition was caught.
+    /// </summary>
+    /// <param name="partition">The partition that has caught up.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Attempt to recover a failed partition.
@@ -145,5 +155,5 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// </summary>
     /// <param name="count"><see cref="EventCount"/> to increase the handled count with.</param>
     /// <returns>Awaitable task.</returns>
-    Task ReportHandledEvents(EventCount count);
+    Task ReportNewHandledEvents(EventCount count);
 }
