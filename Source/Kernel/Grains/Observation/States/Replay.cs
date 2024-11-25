@@ -83,11 +83,9 @@ public class Replay(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnLeave(ObserverState state)
     {
-        if (_replayStarted)
-        {
-            await replayStateServiceClient.EndReplayFor(new(state.Id, observerKey, state.Type));
-            _replayStarted = false;
-        }
+        if (!_replayStarted) return state;
+        await replayStateServiceClient.EndReplayFor(new(state.Id, observerKey, state.Type));
+        _replayStarted = false;
         return state;
     }
 
