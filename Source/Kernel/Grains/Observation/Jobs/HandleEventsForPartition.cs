@@ -136,7 +136,7 @@ public class HandleEventsForPartition(
             if (failed)
             {
                 await _observer!.PartitionFailed(eventSourceId, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
-                return new JobStepResult(JobStepStatus.Failed, exceptionMessages, exceptionStackTrace);
+                return new(JobStepStatus.Failed, exceptionMessages, exceptionStackTrace);
             }
         }
 
