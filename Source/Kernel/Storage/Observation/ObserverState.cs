@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Storage.Observation;
@@ -18,6 +19,7 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="LastHandledEventSequenceNumber">The <see cref="EventSequenceNumber"/> of the last event the observer handled.</param>
 /// <param name="Handled">Number of events that has been handled by the observer.</param>
 /// <param name="RunningState">The <see cref="ObserverRunningState"/> of the observer.</param>
+/// <param name="ReplayingPartitions">The partitions that are being replayed.</param>
 public record ObserverState(
     ObserverId Id,
     IEnumerable<EventType> EventTypes,
@@ -26,7 +28,8 @@ public record ObserverState(
     EventSequenceNumber NextEventSequenceNumberForEventTypes,
     EventSequenceNumber LastHandledEventSequenceNumber,
     EventCount Handled,
-    ObserverRunningState RunningState)
+    ObserverRunningState RunningState,
+    ISet<Key> ReplayingPartitions)
 {
     readonly EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
 
@@ -42,7 +45,8 @@ public record ObserverState(
               EventSequenceNumber.Unavailable,
               EventSequenceNumber.Unavailable,
               EventCount.NotSet,
-              ObserverRunningState.New)
+              ObserverRunningState.New,
+              new HashSet<Key>())
     {
     }
 

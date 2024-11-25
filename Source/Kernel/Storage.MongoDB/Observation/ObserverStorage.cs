@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage.Observation;
@@ -72,7 +73,8 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
             EventSequenceNumber.First,
             EventSequenceNumber.First,
             EventCount.NotSet,
-            ObserverRunningState.New);
+            ObserverRunningState.New,
+            new HashSet<Key>());
     }
 
     /// <inheritdoc/>
