@@ -18,6 +18,6 @@ public class when_completed : given.a_catchup_observer_and_a_request
 
     async Task Because() => await job.OnCompleted();
 
-    [Fact] void should_report_handled_events() => observer.Verify(_ => _.ReportHandledEvents(state_storage.State.HandledCount), Once);
+    [Fact] void should_report_handled_events() => observer.Verify(_ => _.ReportNewHandledEvents(state_storage.State.HandledCount), Once);
     [Fact] void should_transition_to_routing() => observer.Verify(_ => _.TransitionTo<Routing>(), Once);
 }
