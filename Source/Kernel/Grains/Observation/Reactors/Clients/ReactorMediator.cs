@@ -39,7 +39,7 @@ public class ReactorMediator : IReactorMediator
         }
         else
         {
-            taskCompletionSource.SetResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable));
+            taskCompletionSource.SetResult(ObserverSubscriberResult.Disconnected());
         }
     }
 

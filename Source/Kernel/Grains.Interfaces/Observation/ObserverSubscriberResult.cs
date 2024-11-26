@@ -44,7 +44,6 @@ public record ObserverSubscriberResult(ObserverSubscriberState State, EventSeque
     /// <summary>
     /// The result that represents a disconnected observer.
     /// </summary>
-    /// <param name="lastSuccessfulObservation">The <see cref="EventSequenceNumber"/> of the last successful observation.</param>
     /// <returns>The result object to use.</returns>
-    public static ObserverSubscriberResult Disconnected(EventSequenceNumber lastSuccessfulObservation) => new(ObserverSubscriberState.Disconnected, lastSuccessfulObservation, [], string.Empty);
+    public static ObserverSubscriberResult Disconnected() => new(ObserverSubscriberState.Disconnected, EventSequenceNumber.Unavailable, [], string.Empty);
 }

@@ -4,7 +4,6 @@
 using System.Collections.Concurrent;
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Clients;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.DependencyInjection;
 
@@ -40,7 +39,7 @@ public class ReducerMediator : IReducerMediator
         }
         else
         {
-            taskCompletionSource.SetResult(new(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable), new ExpandoObject()));
+            taskCompletionSource.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
         }
     }
 

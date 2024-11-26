@@ -53,7 +53,7 @@ public class ProjectionObserverSubscriber(
     {
         if (_pipeline is null)
         {
-            return ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable);
+            return ObserverSubscriberResult.Disconnected();
         }
 
         AppendedEvent? lastSuccessfullyObservedEvent = default;
