@@ -107,7 +107,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
         _storage.TryGetLastInstanceOfAny(_firstLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _firstLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_firstLevelEvent));
         _storage.TryGetLastInstanceOfAny(_secondLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _secondLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_secondLevelEvent));
         _storage.TryGetLastInstanceOfAny(_thirdLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _thirdLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_thirdLevelEvent));
-        _storage.TryGetLastInstanceOfAny(_forthLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() {_forthLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_forthLevelEvent));
+        _storage.TryGetLastInstanceOfAny(_forthLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _forthLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_forthLevelEvent));
     }
 
     async Task Because() => _result = await _keyResolvers.FromParentHierarchy(
