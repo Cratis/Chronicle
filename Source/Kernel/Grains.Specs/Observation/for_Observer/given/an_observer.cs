@@ -40,7 +40,6 @@ public class an_observer : Specification
     protected IStorage<FailedPartitions> failed_partitions_storage;
     protected TestStorageStats failed_partitions_storage_stats => silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
 
-
     async Task Establish()
     {
         subscriber = new();
