@@ -325,6 +325,7 @@ public class Observer(
 
         var eventsToHandle = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber).ToArray();
         var numEventsSuccessfullyHandled = EventCount.Zero;
+        var stateChanged = false;
         if (eventsToHandle.Length != 0)
         {
             using (new WriteSuspension(this))
@@ -360,16 +361,13 @@ public class Observer(
                     else if (result.State == ObserverSubscriberState.Disconnected)
                     {
                         await Unsubscribe();
-                        if (result.LastSuccessfulObservation == EventSequenceNumber.Unavailable)
-                        {
-                            return;
-                        }
+                        stateChanged = true;
                     }
 
-                    // TODO: This is weird, if the LastSuccessfulObserveation is Unavailable
-                    State = State with { NextEventSequenceNumber = result.LastSuccessfulObservation.Next() };
                     if (numEventsSuccessfullyHandled > 0)
                     {
+                        stateChanged = true;
+                        State = State with { NextEventSequenceNumber = result.LastSuccessfulObservation.Next() };
                         var previousLastHandled = State.LastHandledEventSequenceNumber;
                         var shouldSetLastHandled =
                             previousLastHandled == EventSequenceNumber.Unavailable ||
@@ -394,7 +392,10 @@ public class Observer(
                 await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
             }
 
-            await WriteStateAsync();
+            if (stateChanged)
+            {
+                await WriteStateAsync();
+            }
         }
     }
 
