@@ -90,7 +90,7 @@ public class Observer(
 #pragma warning restore CA1721 // Property names should not match get methods
 
     /// <inheritdoc/>
-    public Task SetHandledStats(EventCount handled, EventSequenceNumber lastHandledEventSequenceNumber)
+    public Task SetHandledStats(EventSequenceNumber lastHandledEventSequenceNumber)
     {
         State = State with
         {

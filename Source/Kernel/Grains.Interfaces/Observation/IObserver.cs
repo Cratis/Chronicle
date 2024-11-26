@@ -29,10 +29,9 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// <summary>
     /// Set the handled stats for the observer.
     /// </summary>
-    /// <param name="handled">Number of handled events.</param>
     /// <param name="lastHandledEventSequenceNumber">The last handled event sequence number.</param>
     /// <returns>Awaitable task.</returns>
-    Task SetHandledStats(EventCount handled, EventSequenceNumber lastHandledEventSequenceNumber);
+    Task SetHandledStats(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Get the subscription for the observer.
