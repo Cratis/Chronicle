@@ -17,7 +17,7 @@ public class and_subscriber_throws_an_exception : given.an_observer_with_subscri
 
     async Task Because() => await observer.Handle(event_source_id, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
 
-    [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);
+    [Fact] void should_not_write_state() => storage_stats.Writes.ShouldEqual(0);
     [Fact] void should_write_failed_partitions_state_once() => failed_partitions_storage_stats.Writes.ShouldEqual(1);
     [Fact] void should_add_failed_partition() => failed_partitions_state.Partitions.Count().ShouldEqual(1);
     [Fact] void should_capture_partition() => failed_partitions_state.Partitions.First().Partition.Value.ShouldEqual(event_source_id);
