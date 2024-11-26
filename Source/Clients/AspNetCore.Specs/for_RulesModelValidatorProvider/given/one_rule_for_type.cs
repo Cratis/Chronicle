@@ -7,14 +7,14 @@ namespace Cratis.Chronicle.AspNetCore.Rules.for_RulesModelValidatorProvider.give
 
 public class one_rule_for_type : Specification
 {
-    protected RulesModelValidatorProvider provider;
-    protected Mock<IRules> rules;
-    protected Mock<IServiceProvider> service_provider;
+    protected RulesModelValidatorProvider _provider;
+    protected IRules _rules;
+    protected IServiceProvider _serviceProvider;
 
     void Establish()
     {
-        rules = new();
-        service_provider = new();
-        provider = new(rules.Object, service_provider.Object);
+        _rules = Substitute.For<IRules>();
+        _serviceProvider = Substitute.For<IServiceProvider>();
+        _provider = new(_rules, _serviceProvider);
     }
 }

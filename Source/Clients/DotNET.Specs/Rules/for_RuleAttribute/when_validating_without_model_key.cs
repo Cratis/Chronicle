@@ -16,7 +16,7 @@ public class when_validating_without_model_key : given.a_validation_context
         };
     }
 
-    void Because() => rule.Validate(value_to_validate, validation_context);
+    void Because() => rule.Validate(value_to_validate, _validationContext);
 
-    [Fact] void should_project_to_rule_without_model_key() => rules.Verify(_ => _.ProjectTo(rule, null));
+    [Fact] void should_project_to_rule_without_model_key() => _rules.Received(1).ProjectTo(rule, null);
 }

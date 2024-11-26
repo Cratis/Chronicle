@@ -8,12 +8,12 @@ namespace Cratis.Chronicle.Projections.Expressions.for_ModelPropertyExpressionRe
 
 public class model_property_expression_resolvers : Specification
 {
-    protected ModelPropertyExpressionResolvers resolvers;
-    protected Mock<IEventValueProviderExpressionResolvers> event_value_resolvers;
+    protected ModelPropertyExpressionResolvers _resolvers;
+    protected IEventValueProviderExpressionResolvers _eventValueResolvers;
 
     void Establish()
     {
-        event_value_resolvers = new();
-        resolvers = new ModelPropertyExpressionResolvers(event_value_resolvers.Object, new TypeFormats());
+        _eventValueResolvers = Substitute.For<IEventValueProviderExpressionResolvers>();
+        _resolvers = new ModelPropertyExpressionResolvers(_eventValueResolvers, new TypeFormats());
     }
 }

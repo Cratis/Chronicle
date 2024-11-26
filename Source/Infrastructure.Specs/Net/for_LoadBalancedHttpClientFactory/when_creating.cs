@@ -13,10 +13,10 @@ public class when_creating : given.a_load_balanced_http_client_factory
     {
         endpoints = Enumerable.Range(0, 5).Select(_ => new Uri($"http://{Guid.NewGuid()}")).ToArray().AsEnumerable();
         next = Random.Shared.Next(0, endpoints.Count());
-        strategy.Setup(_ => _.GetNext(endpoints.Count())).Returns(next);
+        _strategy.GetNext(endpoints.Count()).Returns(next);
     }
 
-    void Because() => result = factory.Create(endpoints);
+    void Because() => result = _factory.Create(endpoints);
 
     [Fact] void should_return_client_with_correct_endpoint() => result.BaseAddress.ShouldEqual(endpoints.ToArray()[next]);
 }

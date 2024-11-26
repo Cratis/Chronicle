@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Schemas.for_ComplianceMetadataSchemaProcessor;
 
 public class when_processing_type_without_metadata : given.a_processor_and_a_context_for<TypeWithoutProperties>
 {
-    void Because() => processor.Process(context);
+    void Because() => _processor.Process(_context);
 
-    [Fact] void should_contain_compliance_info() => context.Schema.ExtensionData?.Keys.ShouldNotContain(JsonSchemaGenerator.ComplianceKey);
+    [Fact] void should_contain_compliance_info() => _context.Schema.ExtensionData?.Keys.ShouldNotContain(JsonSchemaGenerator.ComplianceKey);
 }

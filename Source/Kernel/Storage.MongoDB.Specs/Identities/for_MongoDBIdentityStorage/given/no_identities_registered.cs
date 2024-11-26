@@ -11,6 +11,6 @@ public class no_identities_registered : all_dependencies
 
     void Establish()
     {
-        store = new(database.Object, Mock.Of<ILogger<IdentityStorage>>());
+        store = new(_database, Substitute.For<ILogger<IdentityStorage>>());
     }
 }

@@ -9,16 +9,16 @@ public class when_filtering_on_model_not_exists_and_it_does_not : given.no_chang
 
     void Establish()
     {
-        context = import_builder.WhenModelDoesNotExist();
-        context.Subscribe(_ => result = _);
+        _context = _importBuilder.WhenModelDoesNotExist();
+        _context.Subscribe(_ => result = _);
     }
 
     void Because() =>
-        subject.OnNext(
+        _subject.OnNext(
             new ImportContext<Model, ExternalModel>(
                 new AdapterProjectionResult<Model>(new(0, string.Empty, string.Empty), [], 0),
-                changeset,
-                events_to_append));
+                _changeset,
+                _eventsToAppend));
 
     [Fact]
     void should_filter_through_the_context() => result.ShouldNotBeNull();

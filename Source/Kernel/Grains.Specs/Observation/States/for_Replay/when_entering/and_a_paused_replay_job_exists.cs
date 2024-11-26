@@ -12,22 +12,22 @@ namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.when_entering;
 
 public class and_a_paused_replay_job_exists : given.a_replay_state
 {
-    JobState paused_job;
-    ObserverDetails observer_details;
+    JobState _pausedJob;
+    ObserverDetails _observerDetails;
 
     void Establish()
     {
-        stored_state = stored_state with
+        _storedState = _storedState with
         {
             Type = ObserverType.Client
         };
 
-        paused_job = new JobState
+        _pausedJob = new JobState
         {
             Id = JobId.New(),
             Request = new ReplayObserverRequest(
-                            observer_key,
-                            subscription,
+                            _observerKey,
+                            _subscription,
                             [new EventType(Guid.NewGuid().ToString(), EventTypeGeneration.First)]),
             StatusChanges =
             [
@@ -44,21 +44,21 @@ public class and_a_paused_replay_job_exists : given.a_replay_state
             ]
         };
 
-        jobs_manager
-            .Setup(_ => _.GetJobsOfType<IReplayObserver, ReplayObserverRequest>())
-            .ReturnsAsync(new[]
+        _jobsManager
+            .GetJobsOfType<IReplayObserver, ReplayObserverRequest>()
+            .Returns(new[]
                 {
-                    paused_job
+                    _pausedJob
                 }.ToImmutableList());
 
-        observer_service_client
-            .Setup(_ => _.BeginReplayFor(IsAny<ObserverDetails>()))
-            .Callback((ObserverDetails observer) => observer_details = observer);
+        _observerServiceClient
+            .When(_ => _.BeginReplayFor(Arg.Any<ObserverDetails>()))
+            .Do(callInfo => _observerDetails = callInfo.Arg<ObserverDetails>());
         }
 
-    async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
+    async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
-    [Fact] void should_resume_paused_job() => jobs_manager.Verify(_ => _.Resume(paused_job.Id), Once);
-    [Fact] void should_begin_replay_only_one() => observer_service_client.Verify(_ => _.BeginReplayFor(IsAny<ObserverDetails>()), Once);
-    [Fact] void should_begin_replay_for_correct_observer() => observer_details.ShouldEqual(new ObserverDetails(stored_state.Id, observer_key, ObserverType.Client));
+    [Fact] void should_resume_paused_job() => _jobsManager.Received(1).Resume(_pausedJob.Id);
+    [Fact] void should_begin_replay_only_one() => _observerServiceClient.Received(1).BeginReplayFor(Arg.Any<ObserverDetails>());
+    [Fact] void should_begin_replay_for_correct_observer() => _observerDetails.ShouldEqual(new ObserverDetails(_storedState.Id, _observerKey, ObserverType.Client));
 }

@@ -12,18 +12,18 @@ namespace Cratis.Chronicle.Projections.for_ProjectionExtensions.given;
 
 public class an_observable_and_event_setup : Specification
 {
-    protected Subject<ProjectionEventContext> observable;
-    protected List<ProjectionEventContext> received = [];
-    protected ProjectionEventContext event_context;
-    protected AppendedEvent @event;
-    protected Mock<IChangeset<AppendedEvent, ExpandoObject>> changeset;
-    protected ExpandoObject initial_state;
+    protected Subject<ProjectionEventContext> _observable;
+    protected List<ProjectionEventContext> _received = [];
+    protected ProjectionEventContext _eventContext;
+    protected AppendedEvent _event;
+    protected IChangeset<AppendedEvent, ExpandoObject> _changeset;
+    protected ExpandoObject _initialState;
 
     void Establish()
     {
-        observable = new();
+        _observable = new();
 
-        @event = new(
+        _event = new(
             new(1,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new(
@@ -40,11 +40,11 @@ public class an_observable_and_event_setup : Specification
                 Identity.System),
             new ExpandoObject());
 
-        initial_state = new();
-        changeset = new();
-        changeset.SetupGet(_ => _.InitialState).Returns(initial_state);
-        changeset.SetupGet(_ => _.Incoming).Returns(@event);
+        _initialState = new();
+        _changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
+        _changeset.InitialState.Returns(_initialState);
+        _changeset.Incoming.Returns(_event);
 
-        event_context = new(new(@event.Context.EventSourceId, ArrayIndexers.NoIndexers), @event, changeset.Object, ProjectionOperationType.From, false);
+        _eventContext = new(new(_event.Context.EventSourceId, ArrayIndexers.NoIndexers), _event, _changeset, ProjectionOperationType.From, false);
     }
 }

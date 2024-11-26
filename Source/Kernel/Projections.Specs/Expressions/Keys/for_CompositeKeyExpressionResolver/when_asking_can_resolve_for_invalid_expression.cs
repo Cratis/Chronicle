@@ -7,7 +7,7 @@ public class when_asking_can_resolve_for_invalid_expression : given.a_resolver
 {
     bool result;
 
-    void Because() => result = resolver.CanResolve("$unsupported");
+    void Because() => result = _resolver.CanResolve("$unsupported");
 
     [Fact] void should_not_be_able_to_resolve() => result.ShouldBeFalse();
 }

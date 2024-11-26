@@ -1,16 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Microsoft.AspNetCore.Http;
+
 namespace Cratis.Chronicle.AspNetCore.Auditing.for_CausationMiddleware;
 
 public class when_invoking_cratis_route : given.a_causation_middleware
 {
     void Establish()
     {
-        http_request.SetupGet(_ => _.Path).Returns("/.cratis/something");
+        _httpRequest.Path.Returns((PathString)"/.cratis/something");
     }
 
-    async Task Because() => await middleware.InvokeAsync(http_context.Object);
+    async Task Because() => await _middleware.InvokeAsync(_httpContext);
 
-    [Fact] void should_not_add_causation() => causation_manager.Verify(_ => _.Add(CausationMiddleware.CausationType, IsAny<IDictionary<string, string>>()), Never);
+    [Fact] void should_not_add_causation() => _causationManager.DidNotReceive().Add(CausationMiddleware.CausationType, Arg.Any<IDictionary<string, string>>());
 }

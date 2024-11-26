@@ -9,15 +9,15 @@ public class a_change_on_one_property_that_becomes_null : no_changes
 {
     void Establish()
     {
-        original_model = new Model(42, "Forty Two", "Two");
-        modified_model = new Model(42, null!, null!);
+        _originalModel = new Model(42, "Forty Two", "Two");
+        _modifiedModel = new Model(42, null!, null!);
 
-        changeset.Add(new PropertiesChanged<Model>(modified_model,
+        _changeset.Add(new PropertiesChanged<Model>(_modifiedModel,
         [
                 new PropertyDifference(
                     new(nameof(Model.SomeString)),
-                    original_model.SomeString,
-                    modified_model.SomeString)
+                    _originalModel.SomeString,
+                    _modifiedModel.SomeString)
         ]));
     }
 }

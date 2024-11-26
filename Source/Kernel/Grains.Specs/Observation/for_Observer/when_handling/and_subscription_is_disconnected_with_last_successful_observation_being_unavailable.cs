@@ -9,18 +9,18 @@ public class and_subscription_is_disconnected_with_last_successful_observation_b
 {
     void Establish()
     {
-        subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable)));
+        _subscriber.OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>()).Returns(Task.FromResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable)));
 
-        state_storage.State = state_storage.State with
+        _stateStorage.State = _stateStorage.State with
         {
             NextEventSequenceNumber = 33UL,
             LastHandledEventSequenceNumber = 34UL
         };
     }
 
-    async Task Because() => await observer.Handle("Something", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL)]);
+    async Task Because() => await _observer.Handle("Something", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL)]);
 
-    [Fact] void should_not_set_next_sequence_number() => state_storage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)33UL);
-    [Fact] void should_not_set_last_handled_event_sequence_number() => state_storage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)34UL);
-    [Fact] void should_not_write_state() => storage_stats.Writes.ShouldEqual(0);
+    [Fact] void should_not_set_next_sequence_number() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)33UL);
+    [Fact] void should_not_set_last_handled_event_sequence_number() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)34UL);
+    [Fact] void should_not_write_state() => _storageStats.Writes.ShouldEqual(0);
 }

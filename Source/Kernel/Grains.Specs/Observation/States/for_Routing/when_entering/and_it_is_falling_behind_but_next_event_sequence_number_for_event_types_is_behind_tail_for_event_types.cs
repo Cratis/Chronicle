@@ -10,21 +10,21 @@ public class and_it_is_falling_behind_but_next_event_sequence_number_for_event_t
 {
     void Establish()
     {
-        stored_state = stored_state with
+        _storedState = _storedState with
         {
             NextEventSequenceNumberForEventTypes = 22
         };
 
-        tail_event_sequence_numbers = tail_event_sequence_numbers with
+        _tailEventSequenceNumbers = _tailEventSequenceNumbers with
         {
             Tail = 42,
             TailForEventTypes = 21
         };
     }
 
-    async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
+    async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
-    [Fact] void should_only_perform_one_transition() => observer.Verify(_ => _.TransitionTo<IState<ObserverState>>(), Once());
-    [Fact] void should_transition_to_catch_up() => observer.Verify(_ => _.TransitionTo<Observing>(), Once());
-    [Fact] void should_update_next_event_sequence_number_to_tail() => resulting_stored_state.NextEventSequenceNumber.Value.ShouldEqual(43UL);
+    [Fact] void should_only_perform_one_transition() => _observer.Received(1).TransitionTo<IState<ObserverState>>();
+    [Fact] void should_transition_to_catch_up() => _observer.Received(1).TransitionTo<Observing>();
+    [Fact] void should_update_next_event_sequence_number_to_tail() => _resultingStoredState.NextEventSequenceNumber.Value.ShouldEqual(43UL);
 }

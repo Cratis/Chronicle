@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Microsoft.Extensions.Logging;
@@ -10,15 +9,6 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 
 internal static partial class EventSequenceStorageLogMessages
 {
-    [LoggerMessage(LogLevel.Trace, "Appending event with '{SequenceNumber}' as sequence number for sequence '{EventSequenceId}' in event store '{EventStore}' in namespace '{Namespace}'")]
-    internal static partial void Appending(this ILogger<EventSequenceStorage> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, EventStoreName eventStore, EventStoreNamespaceName @namespace);
-
-    [LoggerMessage(LogLevel.Error, "Problem appending event with '{SequenceNumber}' as sequence number for sequence '{EventSequenceId}' in event store '{EventStore}' in namespace '{Namespace}'")]
-    internal static partial void AppendFailure(this ILogger<EventSequenceStorage> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Exception exception);
-
-    [LoggerMessage(LogLevel.Warning, "Duplicate event sequence number '{SequenceNumber}' when appending for sequence '{EventSequenceId}' in event store '{EventStore}' in namespace '{Namespace}'")]
-    internal static partial void DuplicateEventSequenceNumber(this ILogger<EventSequenceStorage> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, EventStoreName eventStore, EventStoreNamespaceName @namespace);
-
     [LoggerMessage(LogLevel.Debug, "Getting head sequence number for event sequence {EventSequenceId}")]
     internal static partial void GettingHeadSequenceNumber(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId);
 

@@ -9,19 +9,19 @@ public class when_filtering_top_level_property_and_change_is_on_nested_property 
 
     void Establish()
     {
-        context = import_builder.WithProperties(_ => _.Child);
-        context.Subscribe(_ => result = _);
+        _context = _importBuilder.WithProperties(_ => _.Child);
+        _context.Subscribe(_ => result = _);
     }
 
     void Because() =>
-        subject.OnNext(
+        _subject.OnNext(
             new ImportContext<ComplexModel, ExternalModel>(
                 new AdapterProjectionResult<ComplexModel>(
                     new(0, string.Empty, new(0, string.Empty, string.Empty)),
                     [],
                     0),
-                changeset,
-                events_to_append));
+                _changeset,
+                _eventsToAppend));
 
     [Fact]
     void should_filter_through_the_context() => result.ShouldNotBeNull();

@@ -14,9 +14,9 @@ public class an_observer_with_subscription_for_specific_event_type : an_observer
 
     void Establish()
     {
-        subscription = new ObserverSubscription(observer_id, observer_key, [event_type], typeof(IObserverSubscriber), SiloAddress.Zero, null);
-        observer.SetSubscription(subscription);
+        subscription = new ObserverSubscription(_observerId, _observerKey, [event_type], typeof(IObserverSubscriber), SiloAddress.Zero, null);
+        _observer.SetSubscription(subscription);
 
-        storage_stats.ResetCounts();
+        _storageStats.ResetCounts();
     }
 }

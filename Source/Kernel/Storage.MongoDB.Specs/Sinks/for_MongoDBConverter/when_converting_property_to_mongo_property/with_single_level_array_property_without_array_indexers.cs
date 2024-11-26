@@ -9,7 +9,7 @@ public class with_single_level_array_property_without_array_indexers : given.a_m
 {
     MongoDBProperty result;
 
-    void Because() => result = converter.ToMongoDBProperty(new PropertyPath("[ArrayProperty]"), ArrayIndexers.NoIndexers);
+    void Because() => result = _converter.ToMongoDBProperty(new PropertyPath("[ArrayProperty]"), ArrayIndexers.NoIndexers);
 
     [Fact] void should_have_the_correct_property_name() => result.Property.ShouldEqual("arrayProperty");
     [Fact] void should_not_have_any_array_filters() => result.ArrayFilters.ShouldBeEmpty();

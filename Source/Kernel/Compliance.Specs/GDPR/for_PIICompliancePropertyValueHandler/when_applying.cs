@@ -8,19 +8,19 @@ namespace Cratis.Chronicle.Compliance.GDPR.for_PIICompliancePropertyValueHandler
 
 public class when_applying : given.a_property_handler
 {
-    JsonNode input;
-    JsonNode result;
-    string encrypted_string = "Hello";
-    byte[] encrypted_bytes;
+    JsonNode _input;
+    JsonNode _result;
+    string _encryptedString = "Hello";
+    byte[] _encryptedBytes;
 
     void Establish()
     {
-        input = JsonValue.Create(42);
-        encrypted_bytes = Encoding.UTF8.GetBytes(encrypted_string);
-        encryption.Setup(_ => _.Encrypt(IsAny<byte[]>(), key)).Returns(encrypted_bytes);
+        _input = JsonValue.Create(42);
+        _encryptedBytes = Encoding.UTF8.GetBytes(_encryptedString);
+        _encryption.Encrypt(Arg.Any<byte[]>(), _key).Returns(_encryptedBytes);
     }
 
-    async Task Because() => result = await handler.Apply(string.Empty, string.Empty, identifier, input);
+    async Task Because() => _result = await _handler.Apply(string.Empty, string.Empty, _identifier, _input);
 
-    [Fact] void should_return_encrypted_string() => result.ToString().ShouldEqual(Convert.ToBase64String(encrypted_bytes));
+    [Fact] void should_return_encrypted_string() => _result.ToString().ShouldEqual(Convert.ToBase64String(_encryptedBytes));
 }

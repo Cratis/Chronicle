@@ -9,16 +9,16 @@ public class when_filtering_on_properties_and_next_value_does_not_match_the_prop
 
     void Establish()
     {
-        context = import_builder.WithProperties(_ => _.SomeInteger);
-        context.Subscribe(_ => result = _);
+        _context = _importBuilder.WithProperties(_ => _.SomeInteger);
+        _context.Subscribe(_ => result = _);
     }
 
     void Because() =>
-        subject.OnNext(
+        _subject.OnNext(
             new ImportContext<Model, ExternalModel>(
                 new AdapterProjectionResult<Model>(new(0, string.Empty, string.Empty), [], 0),
-                changeset,
-                events_to_append));
+                _changeset,
+                _eventsToAppend));
 
     [Fact]
     void should_not_filter_through_the_context() => result.ShouldBeNull();
