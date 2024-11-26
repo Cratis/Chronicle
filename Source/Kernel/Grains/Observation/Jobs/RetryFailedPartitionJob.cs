@@ -5,14 +5,13 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents a job for retrying a failed partition.
 /// </summary>
-public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState>, IRetryFailedPartitionJob
+public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, RetryFailedPartitionState>, IRetryFailedPartitionJob
 {
     /// <inheritdoc/>
     protected override bool RemoveAfterCompleted => true;
@@ -20,10 +19,10 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
-        if (State.Progress.SuccessfulSteps == 1)
+        if (AllStepsCompletedSuccessfully)
         {
             var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-            await observer.FailedPartitionRecovered(Request.Key);
+            await observer.FailedPartitionRecovered(Request.Key, this.);
         }
     }
 
@@ -53,6 +52,7 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
                     request.ObserverSubscription,
                     request.Key,
                     request.FromSequenceNumber,
+                    EventSequenceNumber.Max,
                     EventObservationState.None,
                     request.EventTypes))
         }.ToImmutableList();

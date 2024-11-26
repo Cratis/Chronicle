@@ -3,15 +3,15 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
-
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents a job for retrying a failed partition.
 /// </summary>
-public class ReplayObserverPartition : Job<ReplayObserverPartitionRequest, JobState>, IReplayObserverPartition
+public class CatchUpObserverPartition : Job<CatchUpObserverPartitionRequest, CatchUpObserverPartitionState>, ICatchUpObserverPartition
 {
     /// <inheritdoc/>
     public override async Task OnCompleted()
@@ -19,12 +19,25 @@ public class ReplayObserverPartition : Job<ReplayObserverPartitionRequest, JobSt
         if (State.Progress.SuccessfulSteps == 1)
         {
             var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
-            await observer.PartitionReplayed(Request.Key, State.);
+            await observer.ReportNewHandledEvents(State.HandledCount);
+            await observer.PartitionCaughtUp(Request.Key, State.LastHandledEventSequenceNumber);
         }
     }
 
     /// <inheritdoc/>
-    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverPartitionRequest request)
+    protected override Task OnStepCompleted(JobStepId jobStepId, JobStepResult result)
+    {
+        if (result.Result is HandleEventsForPartitionResult handleEventsForPartitionResult)
+        {
+            State.HandledCount += handleEventsForPartitionResult.HandledEvents;
+            State.LastHandledEventSequenceNumber = handleEventsForPartitionResult.LastHandledEventSequenceNumber;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverPartitionRequest request)
     {
         var steps = new[]
         {
@@ -34,7 +47,7 @@ public class ReplayObserverPartition : Job<ReplayObserverPartitionRequest, JobSt
                     request.ObserverSubscription,
                     request.Key,
                     request.FromSequenceNumber,
-                    request.ToSequenceNumber,
+                    EventSequenceNumber.Max,
                     EventObservationState.Replay,
                     request.EventTypes))
         }.ToImmutableList();

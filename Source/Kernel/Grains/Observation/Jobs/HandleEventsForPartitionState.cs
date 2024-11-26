@@ -12,12 +12,7 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 public class HandleEventsForPartitionState : JobStepState
 {
     /// <summary>
-    /// Gets or sets the next event sequence number the job step should handle.
+    /// Gets or sets the last successfully handled event sequence number.
     /// </summary>
-    public EventSequenceNumber NextEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
-
-    /// <summary>
-    /// Gets or sets the last handled event sequence number.
-    /// </summary>
-    public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
+    public EventSequenceNumber LastSuccessfullyHandledEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
 }

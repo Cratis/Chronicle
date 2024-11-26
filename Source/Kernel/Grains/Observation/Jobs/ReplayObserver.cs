@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Jobs;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
@@ -23,7 +24,6 @@ public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, Repla
     public override async Task OnCompleted()
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.ReportHandledEvents(State.HandledCount);
         await observer.TransitionTo<Routing>();
     }
 
@@ -32,7 +32,7 @@ public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, Repla
     {
         if (result.Result is HandleEventsForPartitionResult handleEventsForPartitionResult)
         {
-            State.HandledCount += handleEventsForPartitionResult.HandledEvents;
+            State.NewHandledCount += handleEventsForPartitionResult.HandledEvents;
         }
 
         return Task.CompletedTask;
@@ -65,6 +65,7 @@ public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, Repla
                     request.ObserverSubscription,
                     key,
                     EventSequenceNumber.First,
+                    EventSequenceNumber.Max,
                     EventObservationState.Replay,
                     request.EventTypes)));
         }

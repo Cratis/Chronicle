@@ -26,7 +26,7 @@ public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, Cat
     public override async Task OnCompleted()
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.ReportHandledEvents(State.HandledCount);
+        await observer.ReportNewHandledEvents(State.HandledCount);
         await observer.TransitionTo<Routing>();
     }
 
