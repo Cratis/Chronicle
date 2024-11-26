@@ -31,17 +31,17 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
     IEventSequenceStorage _storage;
     Key _result;
 
-    static EventType _rootEventType = new("5f4f4368-6989-4d9d-a84e-7393e0b41cfd", 1);
-    static EventType _firstLevelEventType = new("eef0f7c0-25eb-48dc-b824-7e27ba4593f2", 1);
-    static EventType _secondLevelEventType = new("6682281b-64e0-431b-8b90-dd49ba25ca55", 1);
-    static EventType _thirdLevelEventType = new("90ae84f7-84f0-4e3a-a38a-329d782da158", 1);
-    static EventType _forthLevelEventType = new("e72686b1-b0e4-40a8-9651-4841602638da", 1);
+    static EventType _rootEventType = new("root", 1);
+    static EventType _firstLevelEventType = new("first-level", 1);
+    static EventType _secondLevelEventType = new("second-level", 1);
+    static EventType _thirdLevelEventType = new("third-level", 1);
+    static EventType _forthLevelEventType = new("forth-level", 1);
 
-    const string _rootKey = "4e3a1e36-714c-41f7-83e3-5cc84717db16";
-    const string _firstLevelKey = "805908d8-ed72-4a70-b313-6f592632663d";
-    const string _secondLevelKey = "02311df8-fcf2-42ff-b2d0-b7fa2f576485";
-    const string _thirdLevelKey = "935e1158-cedb-4530-a9aa-d925d6d9b10d";
-    const string _forthLevelKey = "537d661f-8b12-4a1e-917b-faf639923380";
+    const string _rootKey = "root";
+    const string _firstLevelKey = "first-level";
+    const string _secondLevelKey = "second-level";
+    const string _thirdLevelKey = "third-level";
+    const string _forthLevelKey = "forth-level";
 
     AppendedEvent CreateEvent(EventSequenceNumber sequenceNumber, EventType type, EventSourceId eventSourceId, object content)
     {
@@ -103,11 +103,11 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
         _forthLevelProjection = SetupProjection(_forthLevelEventType, _forthLevelKey, "forthLevels", _thirdLevelProjection);
 
         _storage = Substitute.For<IEventSequenceStorage>();
-        _storage.TryGetLastInstanceOfAny(_rootKey, [_rootEventType.Id]).Returns(Task.FromResult<Option<AppendedEvent>>(_rootEvent));
-        _storage.TryGetLastInstanceOfAny(_firstLevelKey, [_firstLevelEventType.Id]).Returns(Task.FromResult<Option<AppendedEvent>>(_firstLevelEvent));
-        _storage.TryGetLastInstanceOfAny(_secondLevelKey, [_secondLevelEventType.Id]).Returns(Task.FromResult<Option<AppendedEvent>>(_secondLevelEvent));
-        _storage.TryGetLastInstanceOfAny(_thirdLevelKey, [_thirdLevelEventType.Id]).Returns(Task.FromResult<Option<AppendedEvent>>(_thirdLevelEvent));
-        _storage.TryGetLastInstanceOfAny(_forthLevelKey, [_forthLevelEventType.Id]).Returns(Task.FromResult<Option<AppendedEvent>>(_forthLevelEvent));
+        _storage.TryGetLastInstanceOfAny(_rootKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _rootEventType.Id }))).Returns(new Option<AppendedEvent>(_rootEvent));
+        _storage.TryGetLastInstanceOfAny(_firstLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _firstLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_firstLevelEvent));
+        _storage.TryGetLastInstanceOfAny(_secondLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _secondLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_secondLevelEvent));
+        _storage.TryGetLastInstanceOfAny(_thirdLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _thirdLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_thirdLevelEvent));
+        _storage.TryGetLastInstanceOfAny(_forthLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() {_forthLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_forthLevelEvent));
     }
 
     async Task Because() => _result = await _keyResolvers.FromParentHierarchy(
