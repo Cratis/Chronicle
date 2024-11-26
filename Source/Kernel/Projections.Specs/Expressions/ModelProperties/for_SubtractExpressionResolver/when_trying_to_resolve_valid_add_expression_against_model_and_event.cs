@@ -12,19 +12,19 @@ namespace Cratis.Chronicle.Projections.Expressions.ModelProperties.for_SubtractE
 
 public class when_trying_to_resolve_valid_add_expression_against_model_and_event : Specification
 {
-    Mock<IEventValueProviderExpressionResolvers> event_value_resolvers;
-    SubtractExpressionResolver resolver;
-    AppendedEvent @event;
-    ExpandoObject target;
+    IEventValueProviderExpressionResolvers _eventValueResolvers;
+    SubtractExpressionResolver _resolver;
+    AppendedEvent _event;
+    ExpandoObject _target;
 
     void Establish()
     {
-        target = new();
-        dynamic targetAsDynamic = target;
+        _target = new();
+        dynamic targetAsDynamic = _target;
         targetAsDynamic.targetProperty = 42d;
         var content = new ExpandoObject();
         ((dynamic)content).sourceProperty = 2d;
-        @event = new(
+        _event = new(
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new(
@@ -41,12 +41,12 @@ public class when_trying_to_resolve_valid_add_expression_against_model_and_event
                 Identity.System),
             content);
 
-        event_value_resolvers = new();
-        event_value_resolvers.Setup(_ => _.Resolve(Arg.Any<JsonSchemaProperty>(), Arg.Any<string>())).Returns((AppendedEvent _) => 2d);
-        resolver = new(event_value_resolvers.Object);
+        _eventValueResolvers = Substitute.For<IEventValueProviderExpressionResolvers>();
+        _eventValueResolvers.Resolve(Arg.Any<JsonSchemaProperty>(), Arg.Any<string>()).Returns(_ => 2d);
+        _resolver = new(_eventValueResolvers);
     }
 
-    void Because() => resolver.Resolve("targetProperty", new(), "$subtract(sourceProperty)")(@event, target, ArrayIndexers.NoIndexers);
+    void Because() => _resolver.Resolve("targetProperty", new(), "$subtract(sourceProperty)")(_event, _target, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_resolve_to_a_propertymapper_that_can_subtract_from_the_property() => ((double)((dynamic)target).targetProperty).ShouldEqual(40d);
+    [Fact] void should_resolve_to_a_propertymapper_that_can_subtract_from_the_property() => ((double)((dynamic)_target).targetProperty).ShouldEqual(40d);
 }

@@ -12,19 +12,19 @@ namespace Cratis.Chronicle.Projections.Expressions.ModelProperties.for_SetExpres
 
 public class when_trying_to_resolve_valid_set_expression_against_model_and_event : given.an_appended_event
 {
-    Mock<IEventValueProviderExpressionResolvers> event_value_resolvers;
-    SetExpressionResolver resolver;
-    ExpandoObject target;
+    IEventValueProviderExpressionResolvers _eventValueResolvers;
+    SetExpressionResolver _resolver;
+    ExpandoObject _target;
 
     void Establish()
     {
-        target = new();
-        event_value_resolvers = new();
-        event_value_resolvers.Setup(_ => _.Resolve(Arg.Any<JsonSchemaProperty>(), Arg.Any<string>())).Returns((AppendedEvent _) => my_event.Something);
-        resolver = new(event_value_resolvers.Object);
+        _target = new();
+        _eventValueResolvers = Substitute.For<IEventValueProviderExpressionResolvers>();
+        _eventValueResolvers.Resolve(Arg.Any<JsonSchemaProperty>(), Arg.Any<string>()).Returns(_ => my_event.Something);
+        _resolver = new(_eventValueResolvers);
     }
 
-    void Because() => resolver.Resolve("targetProperty", new(), nameof(my_event.Something).ToCamelCase())(@event, target, ArrayIndexers.NoIndexers);
+    void Because() => _resolver.Resolve("targetProperty", new(), nameof(my_event.Something).ToCamelCase())(@event, _target, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_resolve_to_a_propertymapper_that_can_add_to_the_property() => ((int)((dynamic)target).targetProperty).ShouldEqual(my_event.Something);
+    [Fact] void should_resolve_to_a_propertymapper_that_can_add_to_the_property() => ((int)((dynamic)_target).targetProperty).ShouldEqual(my_event.Something);
 }

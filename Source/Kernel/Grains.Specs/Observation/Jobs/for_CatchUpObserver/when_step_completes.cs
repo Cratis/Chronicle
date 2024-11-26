@@ -8,11 +8,12 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver;
 
 public class when_step_completes : given.a_catchup_observer_and_a_request
 {
-    Mock<IObserver> observer;
+    IObserver _observer;
 
     void Establish()
     {
-        observer = _silo.AddProbe<IObserver>(((CatchUpObserverRequest)_stateStorage.State.Request).ObserverKey);
+        _observer = Substitute.For<IObserver>();
+        _silo.AddProbe(_ => _observer);
         _state.HandledCount = 42;
     }
 

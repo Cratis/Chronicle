@@ -11,18 +11,18 @@ namespace Cratis.Chronicle.Projections.Expressions.Keys.for_CompositeKeyExpressi
 
 public class a_resolver : Specification
 {
-    protected CompositeKeyExpressionResolver resolver;
-    protected Mock<IEventValueProviderExpressionResolvers> event_value_provider_resolvers;
-    protected Mock<IProjection> projection;
-    protected Model model;
+    protected CompositeKeyExpressionResolver _resolver;
+    protected IEventValueProviderExpressionResolvers _eventValueProviderResolvers;
+    protected IProjection _projection;
+    protected Model _model;
 
     void Establish()
     {
-        model = new("Something", new JsonSchema());
-        projection = new();
-        projection.SetupGet(_ => _.Identifier).Returns((ProjectionId)Guid.NewGuid().ToString());
-        projection.SetupGet(_ => _.Model).Returns(model);
-        event_value_provider_resolvers = new();
-        resolver = new CompositeKeyExpressionResolver(event_value_provider_resolvers.Object, new KeyResolvers(NullLogger<KeyResolvers>.Instance));
+        _model = new("Something", new JsonSchema());
+        _projection = Substitute.For<IProjection>();
+        _projection.Identifier.Returns((ProjectionId)Guid.NewGuid().ToString());
+        _projection.Model.Returns(_model);
+        _eventValueProviderResolvers = Substitute.For<IEventValueProviderExpressionResolvers>();
+        _resolver = new CompositeKeyExpressionResolver(_eventValueProviderResolvers, new KeyResolvers(NullLogger<KeyResolvers>.Instance));
     }
 }
