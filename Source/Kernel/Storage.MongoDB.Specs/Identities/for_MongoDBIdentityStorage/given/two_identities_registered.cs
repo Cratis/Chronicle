@@ -27,7 +27,7 @@ public class two_identities_registered : all_dependencies
             UserName = "First user name"
         };
 
-        identities_from_database.Add(first_identity_from_database);
+        _identitiesFromDatabase.Add(first_identity_from_database);
 
         second_identity_from_database = new MongoDBIdentity
         {
@@ -36,8 +36,8 @@ public class two_identities_registered : all_dependencies
             Name = "Second name",
             UserName = "Second user name"
         };
-        identities_from_database.Add(second_identity_from_database);
+        _identitiesFromDatabase.Add(second_identity_from_database);
 
-        store = new(database.Object, Mock.Of<ILogger<IdentityStorage>>());
+        store = new(_database, Mock.Of<ILogger<IdentityStorage>>());
     }
 }

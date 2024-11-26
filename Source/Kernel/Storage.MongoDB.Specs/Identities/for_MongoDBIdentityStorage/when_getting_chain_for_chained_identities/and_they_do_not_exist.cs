@@ -20,11 +20,11 @@ public class and_they_do_not_exist : given.no_identities_registered
     async Task Because() => identities = await store.GetFor(top_level_identity);
 
     [Fact] void should_return_two_identities() => identities.Count().ShouldEqual(2);
-    [Fact] void should_insert_two_identities() => inserted_identities.Count.ShouldEqual(2);
-    [Fact] void should_insert_the_top_level_identity_with_the_correct_subject() => inserted_identities[0].Subject.ShouldEqual(top_level_identity.Subject);
-    [Fact] void should_insert_the_top_level_identity_with_the_correct_name() => inserted_identities[0].Name.ShouldEqual(top_level_identity.Name);
-    [Fact] void should_insert_the_top_level_identity_with_the_correct_user_name() => inserted_identities[0].UserName.ShouldEqual(top_level_identity.UserName.ToLowerInvariant());
-    [Fact] void should_insert_the_behalf_of_identity_with_the_correct_subject() => inserted_identities.ToArray()[1].Subject.ShouldEqual(behalf_of_identity.Subject);
-    [Fact] void should_insert_the_behalf_of_identity_with_the_correct_name() => inserted_identities.ToArray()[1].Name.ShouldEqual(behalf_of_identity.Name);
-    [Fact] void should_insert_the_behalf_of_identity_with_the_correct_user_name() => inserted_identities.ToArray()[1].UserName.ShouldEqual(behalf_of_identity.UserName.ToLowerInvariant());
+    [Fact] void should_insert_two_identities() => _insertedIdentities.Count.ShouldEqual(2);
+    [Fact] void should_insert_the_top_level_identity_with_the_correct_subject() => _insertedIdentities[0].Subject.ShouldEqual(top_level_identity.Subject);
+    [Fact] void should_insert_the_top_level_identity_with_the_correct_name() => _insertedIdentities[0].Name.ShouldEqual(top_level_identity.Name);
+    [Fact] void should_insert_the_top_level_identity_with_the_correct_user_name() => _insertedIdentities[0].UserName.ShouldEqual(top_level_identity.UserName.ToLowerInvariant());
+    [Fact] void should_insert_the_behalf_of_identity_with_the_correct_subject() => _insertedIdentities.ToArray()[1].Subject.ShouldEqual(behalf_of_identity.Subject);
+    [Fact] void should_insert_the_behalf_of_identity_with_the_correct_name() => _insertedIdentities.ToArray()[1].Name.ShouldEqual(behalf_of_identity.Name);
+    [Fact] void should_insert_the_behalf_of_identity_with_the_correct_user_name() => _insertedIdentities.ToArray()[1].UserName.ShouldEqual(behalf_of_identity.UserName.ToLowerInvariant());
 }

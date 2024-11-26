@@ -11,10 +11,10 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.given;
 
 public class a_mongodb_converter : Specification
 {
-    protected MongoDBConverter converter;
-    protected Mock<IExpandoObjectConverter> expando_object_converter;
-    protected Mock<ITypeFormats> type_formats;
-    protected Model model;
+    protected MongoDBConverter _converter;
+    protected IExpandoObjectConverter _expandoObjectConverter;
+    protected ITypeFormats _typeFormats;
+    protected Model _model;
 
     void Establish()
     {
@@ -27,9 +27,9 @@ public class a_mongodb_converter : Specification
             }
         });
 
-        expando_object_converter = new();
-        type_formats = new();
-        model = new Model(nameof(ReadModel), generator.Generate(typeof(ReadModel)));
-        converter = new(expando_object_converter.Object, type_formats.Object, model);
+        _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
+        _typeFormats = Substitute.For<ITypeFormats>();
+        _model = new Model(nameof(ReadModel), generator.Generate(typeof(ReadModel)));
+        _converter = new(_expandoObjectConverter, _typeFormats, _model);
     }
 }
