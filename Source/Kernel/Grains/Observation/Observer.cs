@@ -220,6 +220,7 @@ public class Observer(
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FinishedReplayForPartition(partition);
         State.ReplayingPartitions.Remove(partition);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
     }
@@ -255,6 +256,7 @@ public class Observer(
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FailingPartitionRecovered(partition);
         Failures.Remove(partition);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await failures.WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
     }
@@ -265,6 +267,7 @@ public class Observer(
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.Remove(partition);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
     }
@@ -441,6 +444,18 @@ public class Observer(
     {
         var time = TimeSpan.FromSeconds((failure.Attempts.Count() - 1) * 2);
         return time.TotalMilliseconds == 0 ? TimeSpan.FromMilliseconds(100) : time;
+    }
+
+    void HandleNewLastHandledEvent(EventSequenceNumber lastHandledEvent)
+    {
+        var newLastHandledEvent = State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ||
+                                  State.LastHandledEventSequenceNumber < lastHandledEvent ? lastHandledEvent : State.LastHandledEventSequenceNumber;
+        var nextEventSequenceNumber = State.NextEventSequenceNumber < lastHandledEvent ? lastHandledEvent.Next() : State.NextEventSequenceNumber;
+        State = State with
+        {
+            LastHandledEventSequenceNumber = newLastHandledEvent,
+            NextEventSequenceNumber = nextEventSequenceNumber
+        };
     }
 
     async Task StartRecoverJobForFailedPartition(FailedPartition failedPartition)
