@@ -20,7 +20,7 @@ public class and_they_already_exists : given.two_identities_registered
     async Task Because() => identities = await store.GetFor(top_level_identity);
 
     [Fact] void should_return_two_identities() => identities.Count().ShouldEqual(2);
-    [Fact] void should_not_insert_the_identity() => inserted_identities.Count.ShouldEqual(0);
+    [Fact] void should_not_insert_the_identity() => _insertedIdentities.Count.ShouldEqual(0);
     [Fact] void should_return_the_correct_top_level_identity() => identities.First().ShouldEqual(first_identity);
     [Fact] void should_return_the_correct_behalf_of_identity() => identities.ToArray()[1].ShouldEqual(second_identity);
 }

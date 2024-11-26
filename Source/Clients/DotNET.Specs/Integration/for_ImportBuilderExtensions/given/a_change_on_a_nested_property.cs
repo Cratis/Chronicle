@@ -8,39 +8,41 @@ namespace Cratis.Chronicle.Integration.for_ImportBuilderExtensions.given;
 
 public class a_change_on_a_nested_property : Specification
 {
-    protected IImportBuilderFor<ComplexModel, ExternalModel> import_builder;
-    protected Subject<ImportContext<ComplexModel, ExternalModel>> subject;
-    protected IObservable<ImportContext<ComplexModel, ExternalModel>> context;
-    protected Changeset<ComplexModel, ComplexModel> changeset;
-    protected EventsToAppend events_to_append;
-    protected ComplexModel original_model;
-    protected ComplexModel modified_model;
-    protected Mock<IObjectComparer> objects_comparer;
+    protected IImportBuilderFor<ComplexModel, ExternalModel> _importBuilder;
+    protected Subject<ImportContext<ComplexModel, ExternalModel>> _subject;
+    protected IObservable<ImportContext<ComplexModel, ExternalModel>> _context;
+    protected Changeset<ComplexModel, ComplexModel> _changeset;
+    protected EventsToAppend _eventsToAppend;
+    protected ComplexModel _originalModel;
+    protected ComplexModel _modifiedModel;
+    protected IObjectComparer _objectsComparer;
 
     void Establish()
     {
-        subject = new Subject<ImportContext<ComplexModel, ExternalModel>>();
-        import_builder = new ImportBuilderFor<ComplexModel, ExternalModel>(subject);
-        objects_comparer = new();
-        objects_comparer
-            .Setup(_ => _.Compare(original_model, modified_model, out Ref<IEnumerable<PropertyDifference>>.IsAny))
-            .Returns((object? _, object? __, out IEnumerable<PropertyDifference> differences) =>
+        _subject = new Subject<ImportContext<ComplexModel, ExternalModel>>();
+        _importBuilder = new ImportBuilderFor<ComplexModel, ExternalModel>(_subject);
+        _objectsComparer = Substitute.For<IObjectComparer>();
+
+        _originalModel = new(42, "Forty Two", new(43, "Forty Three", "Three"));
+        _modifiedModel = new(42, "Forty Two", new(44, "Forty Three", "Four"));
+
+        _objectsComparer
+            .Compare(_originalModel, _modifiedModel, out Arg.Any<IEnumerable<PropertyDifference>>())
+            .Returns(callInfo =>
             {
-                differences =
-                [
-                        new PropertyDifference(new($"{nameof(ComplexModel.Child)}.{nameof(Model.SomeInteger)}"), 43, 44)
-                ];
+                callInfo[2] = new List<PropertyDifference>
+                {
+                    new(new($"{nameof(ComplexModel.Child)}.{nameof(Model.SomeInteger)}"), 43, 44)
+                };
 
                 return false;
             });
-        original_model = new(42, "Forty Two", new(43, "Forty Three", "Three"));
-        modified_model = new(42, "Forty Two", new(44, "Forty Three", "Four"));
-        changeset = new(objects_comparer.Object, modified_model, original_model);
-        changeset.Add(new PropertiesChanged<ComplexModel>(modified_model,
+        _changeset = new(_objectsComparer, _modifiedModel, _originalModel);
+        _changeset.Add(new PropertiesChanged<ComplexModel>(_modifiedModel,
         [
                 new PropertyDifference(new($"{nameof(ComplexModel.Child)}.{nameof(Model.SomeInteger)}"), 43, 44)
         ]));
 
-        events_to_append = [];
+        _eventsToAppend = [];
     }
 }

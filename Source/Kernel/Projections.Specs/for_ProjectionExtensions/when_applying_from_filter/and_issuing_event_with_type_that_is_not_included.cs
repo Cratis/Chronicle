@@ -11,11 +11,11 @@ public class and_issuing_event_with_type_that_is_not_included : given.an_observa
 
     void Establish()
     {
-        filtered = observable.WhereEventTypeEquals(new EventType("745a8adb-aec5-4bf7-af29-b23d14e5c7bc", 1));
-        filtered.Subscribe(received.Add);
+        filtered = _observable.WhereEventTypeEquals(new EventType("745a8adb-aec5-4bf7-af29-b23d14e5c7bc", 1));
+        filtered.Subscribe(_received.Add);
     }
 
-    void Because() => observable.OnNext(event_context);
+    void Because() => _observable.OnNext(_eventContext);
 
-    [Fact] void should_not_get_any_events() => received.ShouldBeEmpty();
+    [Fact] void should_not_get_any_events() => _received.ShouldBeEmpty();
 }

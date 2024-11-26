@@ -5,11 +5,11 @@ namespace Cratis.Chronicle.Integration.for_Adapters.given;
 
 public class no_adapters : all_dependencies
 {
-    protected Adapters adapters;
+    protected Adapters _adapters;
 
-    void Establish() => adapters = new(
-            client_artifacts.Object,
-            service_provider.Object,
-            projection_factory.Object,
-            mapper_factory.Object);
+    void Establish() => _adapters = new(
+            _clientArtifacts,
+            _serviceProvider,
+            _projectionFactory,
+            _mapperFactory);
 }

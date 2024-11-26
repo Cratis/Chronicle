@@ -7,7 +7,7 @@ public class when_asking_can_resolve_for_unknown_expression : given.model_proper
 {
     bool result;
 
-    void Because() => result = resolvers.CanResolve(string.Empty, "$randomUnknownExpression");
+    void Because() => result = _resolvers.CanResolve(string.Empty, "$randomUnknownExpression");
 
     [Fact] void should_not_be_able_to_resolve() => result.ShouldBeFalse();
 }

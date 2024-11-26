@@ -7,17 +7,17 @@ namespace Cratis.Chronicle.Projections.Expressions.ModelProperties.for_SubtractE
 
 public class when_asking_can_resolve_for_add_expression : Specification
 {
-    Mock<IEventValueProviderExpressionResolvers> event_value_resolvers;
-    SubtractExpressionResolver resolver;
-    bool result;
+    IEventValueProviderExpressionResolvers _eventValueResolvers;
+    SubtractExpressionResolver _resolver;
+    bool _result;
 
     void Establish()
     {
-        event_value_resolvers = new();
-        resolver = new(event_value_resolvers.Object);
+        _eventValueResolvers = Substitute.For<IEventValueProviderExpressionResolvers>();
+        _resolver = new(_eventValueResolvers);
     }
 
-    void Because() => result = resolver.CanResolve(string.Empty, "$subtract(something)");
+    void Because() => _result = _resolver.CanResolve(string.Empty, "$subtract(something)");
 
-    [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
+    [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

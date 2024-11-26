@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Integration.for_Adapters;
 
 public class when_getting_projection_for_known_model_and_external_model : given.one_adapter
 {
-    IAdapterProjectionFor<Model> result;
+    IAdapterProjectionFor<Model> _result;
 
-    void Because() => result = adapters.GetProjectionFor<Model, ExternalModel>();
+    void Because() => _result = _adapters.GetProjectionFor<Model, ExternalModel>();
 
-    [Fact] void should_return_expected_projection() => result.ShouldEqual(adapter_projection.Object);
+    [Fact] void should_return_expected_projection() => _result.ShouldEqual(_adapterProjection);
 }

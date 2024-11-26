@@ -17,10 +17,10 @@ public class when_releasing : given.a_property_handler
     {
         input = JsonValue.Create(Convert.ToBase64String(Encoding.UTF8.GetBytes("42")));
         decrypted_bytes = Encoding.UTF8.GetBytes(decrypted_string);
-        encryption.Setup(_ => _.Decrypt(IsAny<byte[]>(), key)).Returns(decrypted_bytes);
+        _encryption.Decrypt(Arg.Any<byte[]>(), _key).Returns(decrypted_bytes);
     }
 
-    async Task Because() => result = await handler.Release(string.Empty, string.Empty, identifier, input);
+    async Task Because() => result = await _handler.Release(string.Empty, string.Empty, _identifier, input);
 
     [Fact] void should_return_encrypted_string() => result.ToString().ShouldEqual(decrypted_string);
 }

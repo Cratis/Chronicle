@@ -10,27 +10,27 @@ namespace Cratis.Chronicle.Rules.for_Rules.for_RulesModelValidator;
 public class when_validating_two_rule_sets_with_model_record_having_specific_key : given.two_rule_sets
 {
     const string key = "a2b5bd3b-bb16-428f-b9cb-2c27b337ceb7";
-    ModelValidationContext context;
-    Mock<ModelMetadata> model_metadata;
-    Mock<IModelMetadataProvider> model_metadata_provider;
-    ModelWithKey model;
-    IEnumerable<ModelValidationResult> result;
+    ModelValidationContext _context;
+    ModelMetadata _modelMetadata;
+    IModelMetadataProvider _modelMetadataProvider;
+    ModelWithKey _model;
+    IEnumerable<ModelValidationResult> _result;
 
     void Establish()
     {
-        model_metadata_provider = new();
-        model_metadata = new(ModelMetadataIdentity.ForType(typeof(ModelWithKey)));
-        model = new ModelWithKey(key);
-        context = new(
+        _modelMetadataProvider = Substitute.For<IModelMetadataProvider>();
+        _modelMetadata = Substitute.For<ModelMetadata>(ModelMetadataIdentity.ForType(typeof(ModelWithKey)));
+        _model = new ModelWithKey(key);
+        _context = new(
             new(),
-            model_metadata.Object,
-            model_metadata_provider.Object,
+            _modelMetadata,
+            _modelMetadataProvider,
             new object(),
-            model);
+            _model);
     }
 
-    void Because() => result = validator.Validate(context);
+    void Because() => _result = _validator.Validate(_context);
 
-    [Fact] void should_project_to_first_rule_set_without_model_key() => rules.Verify(_ => _.ProjectTo(first_rule_set.Object, key), Once);
-    [Fact] void should_project_to_second_rule_set_without_model_key() => rules.Verify(_ => _.ProjectTo(second_rule_set.Object, key), Once);
+    [Fact] void should_project_to_first_rule_set_without_model_key() => _rules.Received(1).ProjectTo(_firstRuleSet, key);
+    [Fact] void should_project_to_second_rule_set_without_model_key() => _rules.Received(1).ProjectTo(_secondRuleSet, key);
 }

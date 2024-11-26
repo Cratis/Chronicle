@@ -14,7 +14,7 @@ public class when_asking_if_event_type_is_accepted_and_it_is_registered_as_priva
     {
         projection.SetEventTypesWithKeyResolvers(
             [
-                new EventTypeWithKeyResolver(event_type, KeyResolvers.FromEventSourceId)
+                new EventTypeWithKeyResolver(event_type, keyResolvers.FromEventSourceId)
             ],
             [event_type],
             new Dictionary<EventType, ProjectionOperationType>());

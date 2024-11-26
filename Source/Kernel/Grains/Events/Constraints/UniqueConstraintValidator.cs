@@ -26,7 +26,7 @@ public class UniqueConstraintValidator(
     /// <inheritdoc/>
     public async Task<ConstraintValidationResult> Validate(ConstraintValidationContext context)
     {
-        var (property, value) = GetPropertyAndValue(definition, context);
+        var (property, value) = GetPropertyAndValue(context);
         if (value is null)
         {
             return ConstraintValidationResult.Success;
@@ -51,14 +51,14 @@ public class UniqueConstraintValidator(
     /// <inheritdoc/>
     public async Task Update(ConstraintValidationContext context, EventSequenceNumber eventSequenceNumber)
     {
-        var (_, value) = GetPropertyAndValue(definition, context);
+        var (_, value) = GetPropertyAndValue(context);
         if (value is not null)
         {
             await storage.Save(context.EventSourceId, definition.Name, eventSequenceNumber, value);
         }
     }
 
-    (string Property, string? Value) GetPropertyAndValue(UniqueConstraintDefinition definition, ConstraintValidationContext context)
+    (string Property, string? Value) GetPropertyAndValue(ConstraintValidationContext context)
     {
         var property = definition.EventDefinitions.Single(_ => _.EventType == context.EventType).Property;
         var contentAsDictionary = (context.Content as IDictionary<string, object>)!;

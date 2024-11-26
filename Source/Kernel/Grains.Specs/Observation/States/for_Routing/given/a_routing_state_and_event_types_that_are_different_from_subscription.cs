@@ -9,14 +9,14 @@ public class a_routing_state_and_event_types_that_are_different_from_subscriptio
 {
     void Establish()
     {
-        stored_state = stored_state with
+        _storedState = _storedState with
         {
             EventTypes =
             [
                 new EventType("31252720-dcbb-47ae-927d-26070f7ef8ae", EventTypeGeneration.First)
             ]
         };
-        subscription = subscription with
+        _subscription = _subscription with
         {
             EventTypes =
             [
@@ -24,7 +24,7 @@ public class a_routing_state_and_event_types_that_are_different_from_subscriptio
             ]
         };
 
-        tail_event_sequence_numbers = tail_event_sequence_numbers with
+        _tailEventSequenceNumbers = _tailEventSequenceNumbers with
         {
             Tail = EventSequenceNumber.Unavailable,
             TailForEventTypes = EventSequenceNumber.Unavailable

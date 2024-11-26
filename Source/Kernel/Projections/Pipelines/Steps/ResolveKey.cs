@@ -29,9 +29,8 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ITypeFormats
         return context with { Key = key };
     }
 
-    Key EnsureCorrectTypeForArrayIndexersOnKey(EngineProjection projection, Key key)
-    {
-        return key with
+    Key EnsureCorrectTypeForArrayIndexersOnKey(EngineProjection projection, Key key) =>
+        key with
         {
             ArrayIndexers = new ArrayIndexers(
                 key.ArrayIndexers.All.Select(arrayIndexer =>
@@ -48,5 +47,4 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ITypeFormats
                     };
                 }))
         };
-    }
 }

@@ -8,23 +8,23 @@ namespace Cratis.Chronicle.Changes.for_Changeset;
 
 public class when_setting_properties_that_does_not_cause_changes : Specification
 {
-    Changeset<ExpandoObject, ExpandoObject> changeset;
-    ExpandoObject initial_state;
-    ExpandoObject source;
-    IEnumerable<PropertyMapper<ExpandoObject, ExpandoObject>> property_mappers;
-    Mock<IObjectComparer> objects_comparer;
+    Changeset<ExpandoObject, ExpandoObject> _changeset;
+    ExpandoObject _initialState;
+    ExpandoObject _source;
+    IEnumerable<PropertyMapper<ExpandoObject, ExpandoObject>> _propertyMappers;
+    IObjectComparer _objectsComparer;
 
     void Establish()
     {
-        initial_state = new();
+        _initialState = new();
 
-        ((dynamic)initial_state).Integer = 42;
-        ((dynamic)initial_state).String = "Forty Two";
-        dynamic nested = ((dynamic)initial_state).Nested = new ExpandoObject();
+        ((dynamic)_initialState).Integer = 42;
+        ((dynamic)_initialState).String = "Forty Two";
+        dynamic nested = ((dynamic)_initialState).Nested = new ExpandoObject();
         nested.Integer = 43;
         nested.String = "Forty Three";
 
-        property_mappers =
+        _propertyMappers =
         [
                 (_, target, __) =>
                     {
@@ -48,13 +48,13 @@ public class when_setting_properties_that_does_not_cause_changes : Specification
                     }
         ];
 
-        source = new ExpandoObject();
+        _source = new ExpandoObject();
 
-        objects_comparer = new();
-        changeset = new(objects_comparer.Object, source, initial_state);
+        _objectsComparer = Substitute.For<IObjectComparer>();
+        _changeset = new(_objectsComparer, _source, _initialState);
     }
 
-    void Because() => changeset.SetProperties(property_mappers, ArrayIndexers.NoIndexers);
+    void Because() => _changeset.SetProperties(_propertyMappers, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_not_have_any_changes() => changeset.Changes.Count().ShouldEqual(0);
+    [Fact] void should_not_have_any_changes() => _changeset.Changes.Count().ShouldEqual(0);
 }

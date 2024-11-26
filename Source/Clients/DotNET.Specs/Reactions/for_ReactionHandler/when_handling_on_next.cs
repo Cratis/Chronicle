@@ -24,18 +24,18 @@ public class when_handling_on_next : given.a_reactor_handler
         metadata = new(0, new(Guid.NewGuid().ToString(), 1));
         context = EventContext.Empty;
 
-        causation_manager
-            .Setup(_ => _.Add(ReactorHandler.CausationType, IsAny<IDictionary<string, string>>()))
-            .Callback((CausationType _, IDictionary<string, string> properties) => causation_properties = properties);
+        _causationManager
+            .When(_ => _.Add(ReactorHandler.CausationType, Arg.Any<IDictionary<string, string>>()))
+            .Do(callInfo => causation_properties = callInfo.Arg<IDictionary<string, string>>());
     }
 
-    async Task Because() => await handler.OnNext(metadata, context, event_content, service_provider.Object);
+    async Task Because() => await handler.OnNext(metadata, context, event_content, _serviceProvider);
 
-    [Fact] void should_add_causation() => causation_manager.Verify(_ => _.Add(ReactorHandler.CausationType, IsAny<IDictionary<string, string>>()), Once);
-    [Fact] void should_add_causation_with_observer_id() => causation_properties[ReactorHandler.CausationReactorIdProperty].ShouldEqual(Reactor_id.ToString());
+    [Fact] void should_add_causation() => _causationManager.Received(1).Add(ReactorHandler.CausationType, Arg.Any<IDictionary<string, string>>());
+    [Fact] void should_add_causation_with_observer_id() => causation_properties[ReactorHandler.CausationReactorIdProperty].ShouldEqual(_reactorId.ToString());
     [Fact] void should_add_causation_with_event_type_id() => causation_properties[ReactorHandler.CausationEventTypeIdProperty].ShouldEqual(metadata.Type.Id.Value);
     [Fact] void should_add_causation_with_event_type_generation() => causation_properties[ReactorHandler.CausationEventTypeGenerationProperty].ShouldEqual(metadata.Type.Generation.ToString());
-    [Fact] void should_add_causation_with_event_sequence_id() => causation_properties[ReactorHandler.CausationEventSequenceIdProperty].ShouldEqual(event_sequence_id.ToString());
+    [Fact] void should_add_causation_with_event_sequence_id() => causation_properties[ReactorHandler.CausationEventSequenceIdProperty].ShouldEqual(_eventSequenceId.ToString());
     [Fact] void should_add_causation_with_event_sequence_number() => causation_properties[ReactorHandler.CausationEventSequenceNumberProperty].ShouldEqual(metadata.SequenceNumber.Value.ToString());
-    [Fact] void should_invoke_observer_invoker() => Reactor_invoker.Verify(_ => _.Invoke(service_provider.Object, event_content, context), Once);
+    [Fact] void should_invoke_observer_invoker() => _reactorInvoker.Received(1).Invoke(_serviceProvider, event_content, context);
 }

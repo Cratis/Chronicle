@@ -8,25 +8,25 @@ namespace Cratis.Chronicle.Integration.for_ImportOperations.given;
 
 public class no_changes : all_dependencies_for<SomeEvent>
 {
-    protected Model initial;
-    protected ExternalModel incoming;
-    protected ImportOperations<Model, ExternalModel> operations;
+    protected Model _initial;
+    protected ExternalModel _incoming;
+    protected ImportOperations<Model, ExternalModel> _operations;
 
     void Establish()
     {
-        initial = new(42, "Forty Two", "Two");
-        incoming = new(42, "Forty Two");
+        _initial = new(42, "Forty Two", "Two");
+        _incoming = new(42, "Forty Two");
 
-        projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(new AdapterProjectionResult<Model>(initial, [], 0)));
-        mapper.Setup(_ => _.Map<Model>(incoming)).Returns(initial);
-        objects_comparer.Setup(_ => _.Compare(initial, IsAny<Model>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
+        _projection.GetById(key).Returns(Task.FromResult(new AdapterProjectionResult<Model>(_initial, [], 0)));
+        _mapper.Map<Model>(_incoming).Returns(_initial);
+        _objectsComparer.Compare(_initial, Arg.Any<Model>(), out Arg.Any<IEnumerable<PropertyDifference>>()).Returns(true);
 
-        operations = new(
-            adapter.Object,
-            projection.Object,
-            mapper.Object,
-            objects_comparer.Object,
-            event_log.Object,
-            causation_manager.Object);
+        _operations = new(
+            _adapter,
+            _projection,
+            _mapper,
+            _objectsComparer,
+            _eventLog,
+            causation_manager);
     }
 }

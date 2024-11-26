@@ -5,12 +5,12 @@ namespace Cratis.Chronicle.Storage.Compliance.for_CacheEncryptionKeyStore.given;
 
 public class a_cache_encryption_key_store : Specification
 {
-    protected CacheEncryptionKeyStorage store;
-    protected Mock<IEncryptionKeyStorage> actual_store;
+    protected CacheEncryptionKeyStorage _store;
+    protected IEncryptionKeyStorage _actualStore;
 
     void Establish()
     {
-        actual_store = new();
-        store = new(actual_store.Object);
+        _actualStore = Substitute.For<IEncryptionKeyStorage>();
+        _store = new(_actualStore);
     }
 }

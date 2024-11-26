@@ -8,13 +8,13 @@ namespace Cratis.Chronicle.Reducers.for_ReducerInvoker.when_invoking_bulk_with_n
 
 public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReducer>
 {
-    IEnumerable<EventAndContext> events_and_contexts;
-    ReduceResult reduce_result;
-    ReadModel result;
+    IEnumerable<EventAndContext> _eventsAndContexts;
+    ReduceResult _reduceResult;
+    ReadModel _result;
 
     void Establish()
     {
-        events_and_contexts =
+        _eventsAndContexts =
         [
             new(new ValidEvent(), EventContext.Empty with { SequenceNumber = 0 }),
             new(new ValidEvent(), EventContext.Empty with { SequenceNumber = 1 }),
@@ -25,11 +25,11 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
 
     async Task Because()
     {
-        reduce_result = (await invoker.Invoke(service_provider.Object, events_and_contexts, null))!;
-        result = reduce_result.ModelState as ReadModel;
+        _reduceResult = (await _invoker.Invoke(_serviceProvider, _eventsAndContexts, null))!;
+        _result = _reduceResult.ModelState as ReadModel;
     }
 
-    [Fact] void should_only_create_one_instance_of_the_reducer() => service_provider.Verify(_ => _.GetService(typeof(AsyncReducer)), Once);
-    [Fact] void should_pass_the_events_and_contexts() => reducer.ReceivedEventsAndContexts.ShouldEqual(events_and_contexts);
-    [Fact] void should_return_a_read_model_that_has_been_iterated_on() => result.Count.ShouldEqual(events_and_contexts.Count());
+    [Fact] void should_only_create_one_instance_of_the_reducer() => _serviceProvider.Received(1).GetService(typeof(AsyncReducer));
+    [Fact] void should_pass_the_events_and_contexts() => _reducer.ReceivedEventsAndContexts.ShouldEqual(_eventsAndContexts);
+    [Fact] void should_return_a_read_model_that_has_been_iterated_on() => _result.Count.ShouldEqual(_eventsAndContexts.Count());
 }

@@ -5,7 +5,4 @@ global using Cratis.Concepts;
 global using Cratis.Execution;
 global using Cratis.Specifications;
 global using Cratis.Types;
-global using Moq;
 global using Xunit;
-global using static Moq.It;
-global using static Moq.Times;

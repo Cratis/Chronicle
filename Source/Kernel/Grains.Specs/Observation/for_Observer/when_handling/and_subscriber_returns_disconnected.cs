@@ -11,21 +11,21 @@ public class and_subscriber_returns_disconnected : given.an_observer_with_subscr
 {
     void Establish()
     {
-        subscriber
-            .Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()))
+        _subscriber
+            .OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
             .Returns(Task.FromResult(ObserverSubscriberResult.Disconnected()));
-        state_storage.State = state_storage.State with
+        _stateStorage.State = _stateStorage.State with
         {
             NextEventSequenceNumber = 42UL,
             LastHandledEventSequenceNumber = 41UL
         };
     }
 
-    async Task Because() => await observer.Handle("Something", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
+    async Task Because() => await _observer.Handle("Something", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
 
-    [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);
-    [Fact] void should_set_running_state_to_disconnected() => state_storage.State.RunningState.ShouldEqual(ObserverRunningState.Disconnected);
-    [Fact] void should_not_change_next_sequence_number() => state_storage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
-    [Fact] void should_not_change_last_handled_event_sequence_number() => state_storage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)41UL);
-    [Fact] async Task should_set_subscription_to_unsubscribed() => (await observer.GetSubscription()).ShouldEqual(ObserverSubscription.Unsubscribed);
+    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
+    [Fact] void should_set_running_state_to_disconnected() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Disconnected);
+    [Fact] void should_not_change_next_sequence_number() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
+    [Fact] void should_not_change_last_handled_event_sequence_number() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)41UL);
+    [Fact] async Task should_set_subscription_to_unsubscribed() => (await _observer.GetSubscription()).ShouldEqual(ObserverSubscription.Unsubscribed);
 }

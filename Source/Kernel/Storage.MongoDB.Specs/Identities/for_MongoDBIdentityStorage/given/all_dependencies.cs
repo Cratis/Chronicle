@@ -7,38 +7,37 @@ namespace Cratis.Chronicle.Storage.MongoDB.Identities.for_MongoDBIdentityStorage
 
 public class all_dependencies : Specification
 {
-    protected Mock<IEventStoreNamespaceDatabase> database;
-    protected Mock<IMongoCollection<MongoDBIdentity>> collection;
-    protected List<MongoDBIdentity> identities_from_database;
-    protected List<MongoDBIdentity> inserted_identities;
+    protected IEventStoreNamespaceDatabase _database;
+    protected IMongoCollection<MongoDBIdentity> _collection;
+    protected List<MongoDBIdentity> _identitiesFromDatabase;
+    protected List<MongoDBIdentity> _insertedIdentities;
 
     void Establish()
     {
-        database = new();
-        collection = new();
-        database.Setup(_ => _.GetCollection<MongoDBIdentity>(WellKnownCollectionNames.Identities)).Returns(collection.Object);
+        _database = Substitute.For<IEventStoreNamespaceDatabase>();
+        _collection = Substitute.For<IMongoCollection<MongoDBIdentity>>();
+        _database.GetCollection<MongoDBIdentity>(WellKnownCollectionNames.Identities).Returns(_collection);
 
-        identities_from_database = [];
-        inserted_identities = [];
+        _identitiesFromDatabase = [];
+        _insertedIdentities = [];
 
-
-        collection
-            .Setup(_ => _.FindAsync<MongoDBIdentity>(IsAny<FilterDefinition<MongoDBIdentity>>(), null, default))
-            .Returns(() =>
+        _collection
+            .FindAsync<MongoDBIdentity>(Arg.Any<FilterDefinition<MongoDBIdentity>>(), null, default)
+            .Returns(_ =>
             {
-                var cursor = new Mock<IAsyncCursor<MongoDBIdentity>>();
-                cursor.SetupSequence(_ => _.MoveNextAsync(default))
-                        .ReturnsAsync(true)
-                        .ReturnsAsync(false);
-                cursor.SetupGet(_ => _.Current)
-                      .Returns(() => [.. identities_from_database]);
+                var cursor = Substitute.For<IAsyncCursor<MongoDBIdentity>>();
+                cursor
+                    .MoveNextAsync(default)
+                    .Returns(true, false);
 
-                return Task.FromResult(cursor.Object);
+                cursor.Current
+                      .Returns(_ => [.. _identitiesFromDatabase]);
+
+                return Task.FromResult(cursor);
             });
 
-        collection
-            .Setup(_ => _.InsertOneAsync(IsAny<MongoDBIdentity>(), null, default))
-            .Callback<MongoDBIdentity, InsertOneOptions, CancellationToken>((identity, _, _) => inserted_identities.Add(identity))
-            .Returns(Task.CompletedTask);
+        _collection
+            .When(_ => _.InsertOneAsync(Arg.Any<MongoDBIdentity>(), null, default))
+            .Do(callInfo => _insertedIdentities.Add(callInfo.Arg<MongoDBIdentity>()));
     }
 }

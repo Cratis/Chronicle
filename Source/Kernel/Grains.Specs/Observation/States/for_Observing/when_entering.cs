@@ -10,9 +10,9 @@ namespace Cratis.Chronicle.Grains.Observation.States.for_Observing;
 
 public class when_entering : given.an_observing_state
 {
-    void Establish() => stored_state = stored_state with { NextEventSequenceNumber = 42UL };
+    void Establish() => _storedState = _storedState with { NextEventSequenceNumber = 42UL };
 
-    async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
+    async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
-    [Fact] void should_subscribe_to_stream() => appended_events_queues.Verify(_ => _.Subscribe(observer_key, event_types), Once());
+    [Fact] void should_subscribe_to_stream() => _appendedEventsQueues.Received(1).Subscribe(_observerKey, _eventTypes);
 }

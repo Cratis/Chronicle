@@ -14,38 +14,38 @@ namespace Cratis.Chronicle.Grains.Observation.States.for_CatchUp.given;
 
 public class a_catch_up_state : Specification
 {
-    protected Mock<IObserver> observer;
-    protected ObserverKey observer_key;
-    protected Mock<IJobsManager> jobs_manager;
-    protected ObserverSubscription subscription;
-    protected ObserverState stored_state;
-    protected ObserverState resulting_stored_state;
-    protected CatchUp state;
-    protected ObserverId observer_id;
+    protected IObserver _observer;
+    protected ObserverKey _observerKey;
+    protected IJobsManager _jobsManager;
+    protected ObserverSubscription _subscription;
+    protected ObserverState _storedState;
+    protected ObserverState _resultingStoredState;
+    protected CatchUp _state;
+    protected ObserverId _observerId;
 
     void Establish()
     {
-        observer = new();
-        observer_id = Guid.NewGuid().ToString();
-        observer_key = new(observer_id, Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
-        jobs_manager = new();
-        state = new CatchUp(observer_key, jobs_manager.Object, Mock.Of<ILogger<CatchUp>>());
-        state.SetStateMachine(observer.Object);
+        _observer = Substitute.For<IObserver>();
+        _observerId = Guid.NewGuid().ToString();
+        _observerKey = new(_observerId, Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+        _jobsManager = Substitute.For<IJobsManager>();
+        _state = new CatchUp(_observerKey, _jobsManager, Substitute.For<ILogger<CatchUp>>());
+        _state.SetStateMachine(_observer);
 
-        stored_state = new ObserverState
+        _storedState = new ObserverState
         {
-            Id = observer_id,
+            Id = _observerId,
             RunningState = ObserverRunningState.CatchingUp,
         };
 
-        subscription = new ObserverSubscription(
-            stored_state.Id,
-            new(stored_state.Id, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
+        _subscription = new ObserverSubscription(
+            _storedState.Id,
+            new(_storedState.Id, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
             [],
             typeof(object),
             SiloAddress.Zero,
             string.Empty);
 
-        observer.Setup(_ => _.GetSubscription()).Returns(() => Task.FromResult(subscription));
+        _observer.GetSubscription().Returns(_ => _subscription);
     }
 }

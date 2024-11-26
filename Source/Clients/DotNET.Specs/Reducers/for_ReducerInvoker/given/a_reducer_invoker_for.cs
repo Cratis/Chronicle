@@ -8,21 +8,21 @@ namespace Cratis.Chronicle.Reducers.for_ReducerInvoker.given;
 public class a_reducer_invoker_for<TReducer> : Specification
     where TReducer : class, new()
 {
-    protected ReducerInvoker invoker;
-    protected Mock<IServiceProvider> service_provider;
-    protected IEventTypes event_types;
-    protected TReducer reducer;
-    protected EventType event_type;
+    protected ReducerInvoker _invoker;
+    protected IServiceProvider _serviceProvider;
+    protected IEventTypes _eventTypes;
+    protected TReducer _reducer;
+    protected EventType _eventType;
 
     void Establish()
     {
-        reducer = new();
-        service_provider = new();
-        service_provider.Setup(_ => _.GetService(typeof(TReducer))).Returns(reducer);
-        event_types = new EventTypesForSpecifications(GetEventTypes());
-        event_type = new("d22efe41-41c6-408e-b5d2-c0d54757cbf8", 1);
-        invoker = new ReducerInvoker(
-            event_types,
+        _reducer = new();
+        _serviceProvider = Substitute.For<IServiceProvider>();
+        _serviceProvider.GetService(typeof(TReducer)).Returns(_reducer);
+        _eventTypes = new EventTypesForSpecifications(GetEventTypes());
+        _eventType = new("d22efe41-41c6-408e-b5d2-c0d54757cbf8", 1);
+        _invoker = new ReducerInvoker(
+            _eventTypes,
             typeof(TReducer),
             typeof(ReadModel));
     }

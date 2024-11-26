@@ -25,48 +25,50 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer.given;
 
 public class an_observer : Specification
 {
-    protected Observer observer;
-    protected Mock<IStreamProvider> stream_provider;
-    protected Mock<IStreamProvider> sequence_stream_provider;
-    protected Mock<IObserverSubscriber> subscriber;
-    protected Mock<IJobsManager> jobsManager;
-    protected Mock<IObserverServiceClient> observer_service_client;
-    protected FailedPartitions failed_partitions_state;
-    protected ObserverId observer_id => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
-    protected ObserverKey observer_key => new(observer_id, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
-    protected TestKitSilo silo = new();
-    protected IStorage<ObserverState> state_storage;
-    protected TestStorageStats storage_stats => silo.StorageStats<Observer, ObserverState>()!;
-    protected IStorage<FailedPartitions> failed_partitions_storage;
-    protected TestStorageStats failed_partitions_storage_stats => silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
+    protected Observer _observer;
+    protected IStreamProvider _streamProvider;
+    protected IStreamProvider _sequenceStreamProvider;
+    protected IObserverSubscriber _subscriber;
+    protected IJobsManager _jobsManager;
+    protected IObserverServiceClient _observerServiceClient;
+    protected FailedPartitions _failedPartitionsState;
+    protected ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
+    protected ObserverKey _observerKey => new(_observerId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
+    protected TestKitSilo _silo = new();
+    protected IStorage<ObserverState> _stateStorage;
+    protected TestStorageStats _storageStats => _silo.StorageStats<Observer, ObserverState>()!;
+    protected IStorage<FailedPartitions> _failedPartitionsStorage;
+    protected TestStorageStats _failedPartitionsStorageStats => _silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
 
     async Task Establish()
     {
-        subscriber = new();
-        jobsManager = new();
-        silo.AddProbe(_ => subscriber.Object);
-        silo.AddProbe(_ => jobsManager.Object);
-        failed_partitions_state = new();
+        _subscriber = Substitute.For<IObserverSubscriber>();
+        _silo.AddProbe((_) => _subscriber);
+        _silo.AddProbe(_ => _jobsManager);
 
-        observer_service_client = silo.AddServiceProbe<IObserverServiceClient>();
+        _failedPartitionsState = Substitute.For<FailedPartitions>();
 
-        var logger = silo.AddService(NullLogger<Observer>.Instance);
-        var loggerFactory = silo.AddServiceProbe<ILoggerFactory>();
-        loggerFactory.Setup(_ => _.CreateLogger(IsAny<string>())).Returns(logger);
+        _observerServiceClient = Substitute.For<IObserverServiceClient>();
+        _silo.AddService(_observerServiceClient);
 
-        state_storage = silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
-        failed_partitions_storage = silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
-        failed_partitions_storage.State = failed_partitions_state;
+        var logger = _silo.AddService(NullLogger<Observer>.Instance);
+        var loggerFactory = Substitute.For<ILoggerFactory>();
+        _silo.AddService(loggerFactory);
+        loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
 
-        var eventSequence = silo.AddProbe<IEventSequence>(
-            new EventSequenceKey(observer_key.EventSequenceId, observer_key.EventStore, observer_key.Namespace));
+        _stateStorage = _silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
+        _failedPartitionsStorage = _silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
+        _failedPartitionsStorage.State = _failedPartitionsState;
 
-        eventSequence.Setup(_ => _.GetTailSequenceNumber()).ReturnsAsync(EventSequenceNumber.Unavailable);
-        eventSequence.Setup(_ => _.GetTailSequenceNumberForEventTypes(IsAny<IEnumerable<EventType>>())).ReturnsAsync(EventSequenceNumber.Unavailable);
+        var eventSequence = Substitute.For<IEventSequence>();
+        _silo.AddProbe((key) => eventSequence);
 
-        observer = await silo.CreateGrainAsync<Observer>(observer_key);
+        eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
+        eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
 
-        storage_stats.ResetCounts();
-        failed_partitions_storage_stats.ResetCounts();
+        _observer = await _silo.CreateGrainAsync<Observer>(_observerKey);
+
+        _storageStats.ResetCounts();
+        _failedPartitionsStorageStats.ResetCounts();
     }
 }

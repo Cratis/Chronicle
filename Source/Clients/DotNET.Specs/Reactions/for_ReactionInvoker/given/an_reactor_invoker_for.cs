@@ -8,22 +8,22 @@ namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.given;
 
 public class an_reactor_invoker_for<TReactor> : Specification
 {
-    protected Mock<IServiceProvider> service_provider;
-    protected IEventTypes event_types;
-    protected Mock<IReactorMiddlewares> middlewares;
-    protected ReactorInvoker invoker;
+    protected IServiceProvider _serviceProvider;
+    protected IEventTypes _eventTypes;
+    protected IReactorMiddlewares _middlewares;
+    protected ReactorInvoker _invoker;
 
     void Establish()
     {
-        service_provider = new();
-        event_types = new EventTypesForSpecifications(GetEventTypes());
-        middlewares = new();
+        _serviceProvider = Substitute.For<IServiceProvider>();
+        _eventTypes = new EventTypesForSpecifications(GetEventTypes());
+        _middlewares = Substitute.For<IReactorMiddlewares>();
 
-        invoker = new ReactorInvoker(
-            event_types,
-            middlewares.Object,
+        _invoker = new ReactorInvoker(
+            _eventTypes,
+            _middlewares,
             typeof(TReactor),
-            Mock.Of<ILogger<ReactorInvoker>>());
+            Substitute.For<ILogger<ReactorInvoker>>());
     }
 
     protected virtual IEnumerable<Type> GetEventTypes() => [];

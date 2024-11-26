@@ -14,7 +14,7 @@ public class and_subscriber_returns_failed_without_a_last_successful_observation
     void Establish()
     {
         event_sequence_number_to_handle = 42UL;
-        state_storage.State = state_storage.State with
+        _stateStorage.State = _stateStorage.State with
         {
             NextEventSequenceNumber = event_sequence_number_to_handle,
             LastHandledEventSequenceNumber = 41UL
@@ -24,20 +24,20 @@ public class and_subscriber_returns_failed_without_a_last_successful_observation
             ExceptionMessages = [exception_message],
             ExceptionStackTrace = exception_stack_trace
         };
-        subscriber
-            .Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()))
-            .Returns(Task.FromResult(failure));
+        _subscriber
+            .OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
+            .Returns(failure);
     }
 
-    async Task Because() => await observer.Handle(event_source_id, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, event_sequence_number_to_handle)]);
+    async Task Because() => await _observer.Handle(event_source_id, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, event_sequence_number_to_handle)]);
 
-    [Fact] void should_not_write_state() => storage_stats.Writes.ShouldEqual(0);
-    [Fact] void should_have_same_next_event_sequence_number_state() => state_storage.State.NextEventSequenceNumber.ShouldEqual(event_sequence_number_to_handle);
-    [Fact] void should_have_same_last_handled_event_sequence_number_state() => state_storage.State.LastHandledEventSequenceNumber.Value.ShouldEqual(41UL);
-    [Fact] void should_write_failed_partitions_state_once() => failed_partitions_storage_stats.Writes.ShouldEqual(1);
-    [Fact] void should_add_failed_partition() => failed_partitions_state.Partitions.Count().ShouldEqual(1);
-    [Fact] void should_capture_partition() => failed_partitions_state.Partitions.First().Partition.Value.ShouldEqual(event_source_id);
-    [Fact] void should_capture_exception_message() => failed_partitions_state.Partitions.First().Attempts.First().Messages.First().ShouldEqual(exception_message);
-    [Fact] void should_capture_exception_stack_Trace() => failed_partitions_state.Partitions.First().Attempts.First().StackTrace.ShouldEqual(exception_stack_trace);
-    [Fact] void should_capture_event_sequence_number() => failed_partitions_state.Partitions.First().Attempts.First().SequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
+    [Fact] void should_not_write_state() => _storageStats.Writes.ShouldEqual(0);
+    [Fact] void should_have_same_next_event_sequence_number_state() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual(event_sequence_number_to_handle);
+    [Fact] void should_have_same_last_handled_event_sequence_number_state() => _stateStorage.State.LastHandledEventSequenceNumber.Value.ShouldEqual(41UL);
+    [Fact] void should_write_failed_partitions_state_once() => _failedPartitionsStorageStats.Writes.ShouldEqual(1);
+    [Fact] void should_add_failed_partition() => _failedPartitionsState.Partitions.Count().ShouldEqual(1);
+    [Fact] void should_capture_partition() => _failedPartitionsState.Partitions.First().Partition.Value.ShouldEqual(event_source_id);
+    [Fact] void should_capture_exception_message() => _failedPartitionsState.Partitions.First().Attempts.First().Messages.First().ShouldEqual(exception_message);
+    [Fact] void should_capture_exception_stack_Trace() => _failedPartitionsState.Partitions.First().Attempts.First().StackTrace.ShouldEqual(exception_stack_trace);
+    [Fact] void should_capture_event_sequence_number() => _failedPartitionsState.Partitions.First().Attempts.First().SequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
 }
