@@ -10,11 +10,11 @@ public class and_there_is : Specification
 
     void Establish()
     {
-        var provider = new Mock<ICanProvideComplianceMetadataForType>();
-        provider.Setup(_ => _.CanProvide(typeof(object))).Returns(true);
+        var provider = Substitute.For<ICanProvideComplianceMetadataForType>();
+        provider.CanProvide(typeof(object)).Returns(true);
 
         resolver = new(
-            new KnownInstancesOf<ICanProvideComplianceMetadataForType>([provider.Object]),
+            new KnownInstancesOf<ICanProvideComplianceMetadataForType>([provider]),
             new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([])
         );
     }
