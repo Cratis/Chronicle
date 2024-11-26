@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Tasks;
 using Cratis.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
 
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
     readonly IGrainFactory _grainFactory;
+    readonly ILogger<AppendedEventsQueue> _logger;
     readonly ConcurrentQueue<IEnumerable<AppendedEvent>> _queue = new();
     readonly AsyncManualResetEvent _queueEvent = new();
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
@@ -31,10 +33,14 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// </summary>
     /// <param name="taskFactory"><see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-    public AppendedEventsQueue(ITaskFactory taskFactory, IGrainFactory grainFactory)
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    public AppendedEventsQueue(
+        ITaskFactory taskFactory,
+        IGrainFactory grainFactory,
+        ILogger<AppendedEventsQueue> logger)
     {
         _grainFactory = grainFactory;
-
+        _logger = logger;
         _queueTask = taskFactory.Run(QueueHandler);
     }
 
@@ -142,9 +148,10 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                         await Task.WhenAll(tasks);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
                     // We ignore any failures, the queue should never fail
+                    _logger.NotifyingObserversFailed(ex);
                 }
             }
 
