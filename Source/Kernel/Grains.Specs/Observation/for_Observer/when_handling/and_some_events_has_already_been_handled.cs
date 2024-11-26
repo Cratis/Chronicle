@@ -27,9 +27,9 @@ public class and_some_events_has_already_been_handled : given.an_observer_with_s
 
     async Task Because() => await observer.Handle("Something", events);
 
-    [Fact] void should_forward_only_one_to_subscriber() => subscriber.Verify(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()), Once());
+    [Fact] void should_forward_only_once_to_subscriber() => subscriber.Verify(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()), Once());
     [Fact] void should_forward_last_event_to_subscriber() => subscriber.Verify(_ => _.OnNext(new[] { events.Last() }, IsAny<ObserverSubscriberContext>()), Once());
-    [Fact] void should_not_set_next_sequence_number() => state_storage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)44UL);
-    [Fact] void should_not_set_last_handled_event_sequence_number() => state_storage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
+    [Fact] void should_set_correct_next_sequence_number() => state_storage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)44UL);
+    [Fact] void should_set_correct_last_handled_event_sequence_number() => state_storage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
     [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);
 }
