@@ -14,37 +14,37 @@ public class and_there_are_two_providers_out_of_three_that_can_provide : Specifi
         public static PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance);
     }
 
-    ComplianceMetadataResolver resolver;
+    ComplianceMetadataResolver _resolver;
 
-    ComplianceMetadata first_provider_metadata;
-    ComplianceMetadata third_provider_metadata;
+    ComplianceMetadata _firstProviderMetadata;
+    ComplianceMetadata _thirdProviderMetadata;
     IEnumerable<ComplianceMetadata> result;
-    Mock<ICanProvideComplianceMetadataForProperty> second_provider;
+    ICanProvideComplianceMetadataForProperty _secondProvider;
 
     void Establish()
     {
-        first_provider_metadata = new("134b380b-b298-4eda-bb81-5674ef326a32", "Details from first");
-        var firstProvider = new Mock<ICanProvideComplianceMetadataForProperty>();
-        firstProvider.Setup(_ => _.CanProvide(MyClass.SomethingProperty)).Returns(true);
-        firstProvider.Setup(_ => _.Provide(MyClass.SomethingProperty)).Returns(first_provider_metadata);
+        _firstProviderMetadata = new("134b380b-b298-4eda-bb81-5674ef326a32", "Details from first");
+        var firstProvider = Substitute.For<ICanProvideComplianceMetadataForProperty>();
+        firstProvider.CanProvide(MyClass.SomethingProperty).Returns(true);
+        firstProvider.Provide(MyClass.SomethingProperty).Returns(_firstProviderMetadata);
 
-        second_provider = new Mock<ICanProvideComplianceMetadataForProperty>();
-        second_provider.Setup(_ => _.CanProvide(MyClass.SomethingProperty)).Returns(false);
+        _secondProvider = Substitute.For<ICanProvideComplianceMetadataForProperty>();
+        _secondProvider.CanProvide(MyClass.SomethingProperty).Returns(false);
 
-        third_provider_metadata = new("a933b65c-7166-43e1-8089-8d6c84d286aa", "Details from third");
-        var thirdProvider = new Mock<ICanProvideComplianceMetadataForProperty>();
-        thirdProvider.Setup(_ => _.CanProvide(MyClass.SomethingProperty)).Returns(true);
-        thirdProvider.Setup(_ => _.Provide(MyClass.SomethingProperty)).Returns(first_provider_metadata);
+        _thirdProviderMetadata = new("a933b65c-7166-43e1-8089-8d6c84d286aa", "Details from third");
+        var thirdProvider = Substitute.For<ICanProvideComplianceMetadataForProperty>();
+        thirdProvider.CanProvide(MyClass.SomethingProperty).Returns(true);
+        thirdProvider.Provide(MyClass.SomethingProperty).Returns(_firstProviderMetadata);
 
-        resolver = new(
+        _resolver = new(
             new KnownInstancesOf<ICanProvideComplianceMetadataForType>([]),
-            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([firstProvider.Object, second_provider.Object, thirdProvider.Object])
+            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([firstProvider, _secondProvider, thirdProvider])
         );
     }
 
-    void Because() => result = resolver.GetMetadataFor(MyClass.SomethingProperty);
+    void Because() => result = _resolver.GetMetadataFor(MyClass.SomethingProperty);
 
-    [Fact] void should_return_metadata_for_first_provider() => result.ToArray()[0].ShouldEqual(first_provider_metadata);
-    [Fact] void should_not_ask_for_metadata_from_second_provider() => second_provider.Verify(_ => _.Provide(Arg.Any<PropertyInfo>()), Never);
-    [Fact] void should_return_metadata_for_third_provider() => result.ToArray()[1].ShouldEqual(first_provider_metadata);
+    [Fact] void should_return_metadata_for_first_provider() => result.ToArray()[0].ShouldEqual(_firstProviderMetadata);
+    [Fact] void should_not_ask_for_metadata_from_second_provider() => _secondProvider.DidNotReceive().Provide(Arg.Any<PropertyInfo>());
+    [Fact] void should_return_metadata_for_third_provider() => result.ToArray()[1].ShouldEqual(_firstProviderMetadata);
 }

@@ -8,23 +8,23 @@ namespace Cratis.Chronicle.Changes.for_Changeset;
 
 public class when_setting_properties_that_cause_changes : Specification
 {
-    Changeset<ExpandoObject, ExpandoObject> changeset;
-    ExpandoObject initial_state;
-    ExpandoObject source;
-    IEnumerable<PropertyMapper<ExpandoObject, ExpandoObject>> property_mappers;
-    Mock<IObjectComparer> objects_comparer;
+    Changeset<ExpandoObject, ExpandoObject> _changeset;
+    ExpandoObject _initialState;
+    ExpandoObject _source;
+    IEnumerable<PropertyMapper<ExpandoObject, ExpandoObject>> _propertyMappers;
+    IObjectComparer _objectsComparer;
 
     void Establish()
     {
-        initial_state = new();
+        _initialState = new();
 
-        ((dynamic)initial_state).Integer = 42;
-        ((dynamic)initial_state).String = "Forty Two";
-        dynamic nested = ((dynamic)initial_state).Nested = new ExpandoObject();
+        ((dynamic)_initialState).Integer = 42;
+        ((dynamic)_initialState).String = "Forty Two";
+        dynamic nested = ((dynamic)_initialState).Nested = new ExpandoObject();
         nested.Integer = 43;
         nested.String = "Forty Three";
 
-        property_mappers =
+        _propertyMappers =
         [
                 (_, target, __) =>
                     {
@@ -48,21 +48,21 @@ public class when_setting_properties_that_cause_changes : Specification
                     }
         ];
 
-        source = new ExpandoObject();
+        _source = new ExpandoObject();
 
-        objects_comparer = new();
-        changeset = new(objects_comparer.Object, source, initial_state);
+        _objectsComparer = Substitute.For<IObjectComparer>();
+        _changeset = new(_objectsComparer, _source, _initialState);
     }
 
-    void Because() => changeset.SetProperties(property_mappers, ArrayIndexers.NoIndexers);
+    void Because() => _changeset.SetProperties(_propertyMappers, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_add_one_change_of_correct_type() => changeset.Changes.First().ShouldBeOfExactType<PropertiesChanged<ExpandoObject>>();
-    [Fact] void should_add_a_property_diff_for_top_level_integer() => ((PropertiesChanged<ExpandoObject>)changeset.Changes.First()).Differences.ToArray()[0].PropertyPath.Path.ShouldEqual("integer");
-    [Fact] void should_add_a_property_diff_for_top_level_integers_value() => ((PropertiesChanged<ExpandoObject>)changeset.Changes.First()).Differences.ToArray()[0].Changed.ShouldEqual(44);
-    [Fact] void should_add_a_property_diff_for_top_level_string() => ((PropertiesChanged<ExpandoObject>)changeset.Changes.First()).Differences.ToArray()[1].PropertyPath.Path.ShouldEqual("string");
-    [Fact] void should_add_a_property_diff_for_top_level_strings_value() => ((PropertiesChanged<ExpandoObject>)changeset.Changes.First()).Differences.ToArray()[1].Changed.ShouldEqual("Forty Four");
-    [Fact] void should_add_a_property_diff_for_nested_integer() => ((PropertiesChanged<ExpandoObject>)changeset.Changes.First()).Differences.ToArray()[2].PropertyPath.Path.ShouldEqual("nested.integer");
-    [Fact] void should_add_a_property_diff_for_nested_integers_value() => ((PropertiesChanged<ExpandoObject>)changeset.Changes.First()).Differences.ToArray()[2].Changed.ShouldEqual(45);
-    [Fact] void should_add_a_property_diff_for_nested_string() => ((PropertiesChanged<ExpandoObject>)changeset.Changes.First()).Differences.ToArray()[3].PropertyPath.Path.ShouldEqual("nested.string");
-    [Fact] void should_add_a_property_diff_for_nested_strings_value() => ((PropertiesChanged<ExpandoObject>)changeset.Changes.First()).Differences.ToArray()[3].Changed.ShouldEqual("Forty Five");
+    [Fact] void should_add_one_change_of_correct_type() => _changeset.Changes.First().ShouldBeOfExactType<PropertiesChanged<ExpandoObject>>();
+    [Fact] void should_add_a_property_diff_for_top_level_integer() => ((PropertiesChanged<ExpandoObject>)_changeset.Changes.First()).Differences.ToArray()[0].PropertyPath.Path.ShouldEqual("integer");
+    [Fact] void should_add_a_property_diff_for_top_level_integers_value() => ((PropertiesChanged<ExpandoObject>)_changeset.Changes.First()).Differences.ToArray()[0].Changed.ShouldEqual(44);
+    [Fact] void should_add_a_property_diff_for_top_level_string() => ((PropertiesChanged<ExpandoObject>)_changeset.Changes.First()).Differences.ToArray()[1].PropertyPath.Path.ShouldEqual("string");
+    [Fact] void should_add_a_property_diff_for_top_level_strings_value() => ((PropertiesChanged<ExpandoObject>)_changeset.Changes.First()).Differences.ToArray()[1].Changed.ShouldEqual("Forty Four");
+    [Fact] void should_add_a_property_diff_for_nested_integer() => ((PropertiesChanged<ExpandoObject>)_changeset.Changes.First()).Differences.ToArray()[2].PropertyPath.Path.ShouldEqual("nested.integer");
+    [Fact] void should_add_a_property_diff_for_nested_integers_value() => ((PropertiesChanged<ExpandoObject>)_changeset.Changes.First()).Differences.ToArray()[2].Changed.ShouldEqual(45);
+    [Fact] void should_add_a_property_diff_for_nested_string() => ((PropertiesChanged<ExpandoObject>)_changeset.Changes.First()).Differences.ToArray()[3].PropertyPath.Path.ShouldEqual("nested.string");
+    [Fact] void should_add_a_property_diff_for_nested_strings_value() => ((PropertiesChanged<ExpandoObject>)_changeset.Changes.First()).Differences.ToArray()[3].Changed.ShouldEqual("Forty Five");
 }

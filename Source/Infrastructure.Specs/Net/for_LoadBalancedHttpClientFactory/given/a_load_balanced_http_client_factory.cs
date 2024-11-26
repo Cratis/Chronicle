@@ -5,15 +5,15 @@ namespace Cratis.Chronicle.Net.for_LoadBalancedHttpClientFactory.given;
 
 public class a_load_balanced_http_client_factory : Specification
 {
-    protected LoadBalancedHttpClientFactory factory;
-    protected Mock<IHttpClientFactory> http_client_factory;
-    protected Mock<ILoadBalancerStrategy> strategy;
+    protected LoadBalancedHttpClientFactory _factory;
+    protected IHttpClientFactory _httpClientFactory;
+    protected ILoadBalancerStrategy _strategy;
 
     void Establish()
     {
-        strategy = new();
-        http_client_factory = new();
-        factory = new(strategy.Object, http_client_factory.Object);
-        http_client_factory.Setup(_ => _.CreateClient(Arg.Any<string>())).Returns(Mock.Of<HttpClient>());
+        _strategy = Substitute.For<ILoadBalancerStrategy>();
+        _httpClientFactory = Substitute.For<IHttpClientFactory>();
+        _factory = new(_strategy, _httpClientFactory);
+        _httpClientFactory.CreateClient(Arg.Any<string>()).Returns(Mock.Of<HttpClient>());
     }
 }
