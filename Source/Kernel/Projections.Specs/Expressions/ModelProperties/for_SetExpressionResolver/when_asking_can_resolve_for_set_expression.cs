@@ -7,19 +7,19 @@ namespace Cratis.Chronicle.Projections.Expressions.ModelProperties.for_SetExpres
 
 public class when_asking_can_resolve_for_set_expression : Specification
 {
-    Mock<IEventValueProviderExpressionResolvers> event_value_resolvers;
-    SetExpressionResolver resolver;
-    bool result;
+    IEventValueProviderExpressionResolvers _eventValueResolvers;
+    SetExpressionResolver _resolver;
+    bool _result;
 
     void Establish()
     {
-        event_value_resolvers = new();
-        event_value_resolvers.Setup(_ => _.CanResolve("something")).Returns(true);
-        resolver = new(event_value_resolvers.Object);
+        _eventValueResolvers = Substitute.For<IEventValueProviderExpressionResolvers>();
+        _eventValueResolvers.CanResolve("something").Returns(true);
+        _resolver = new(_eventValueResolvers);
     }
 
-    void Because() => result = resolver.CanResolve(string.Empty, "something");
+    void Because() => _result = _resolver.CanResolve(string.Empty, "something");
 
-    [Fact] void should_ask_event_value_resolvers() => event_value_resolvers.Verify(_ => _.CanResolve("something"), Once);
-    [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
+    [Fact] void should_ask_event_value_resolvers() => _eventValueResolvers.Received(1).CanResolve("something");
+    [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

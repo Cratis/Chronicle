@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -14,33 +15,33 @@ namespace Cratis.Chronicle.Projections.for_KeyResolvers;
 
 public class when_identifying_model_key_from_parent_hierarchy_with_four_levels : Specification
 {
-    KeyResolvers keyResolvers;
-    AppendedEvent root_event;
-    AppendedEvent first_level_event;
-    AppendedEvent second_level_event;
-    AppendedEvent third_level_event;
-    AppendedEvent forth_level_event;
+    KeyResolvers _keyResolvers;
+    AppendedEvent _rootEvent;
+    AppendedEvent _firstLevelEvent;
+    AppendedEvent _secondLevelEvent;
+    AppendedEvent _thirdLevelEvent;
+    AppendedEvent _forthLevelEvent;
 
-    Mock<IProjection> root_projection;
-    Mock<IProjection> first_level_projection;
-    Mock<IProjection> second_level_projection;
-    Mock<IProjection> third_level_projection;
-    Mock<IProjection> forth_level_projection;
+    IProjection _rootProjection;
+    IProjection _firstLevelProjection;
+    IProjection _secondLevelProjection;
+    IProjection _thirdLevelProjection;
+    IProjection _forthLevelProjection;
 
-    Mock<IEventSequenceStorage> storage;
-    Key result;
+    IEventSequenceStorage _storage;
+    Key _result;
 
-    static EventType root_event_type = new("5f4f4368-6989-4d9d-a84e-7393e0b41cfd", 1);
-    static EventType first_level_event_type = new("eef0f7c0-25eb-48dc-b824-7e27ba4593f2", 1);
-    static EventType second_level_event_type = new("6682281b-64e0-431b-8b90-dd49ba25ca55", 1);
-    static EventType third_level_event_type = new("90ae84f7-84f0-4e3a-a38a-329d782da158", 1);
-    static EventType forth_level_event_type = new("e72686b1-b0e4-40a8-9651-4841602638da", 1);
+    static EventType _rootEventType = new("5f4f4368-6989-4d9d-a84e-7393e0b41cfd", 1);
+    static EventType _firstLevelEventType = new("eef0f7c0-25eb-48dc-b824-7e27ba4593f2", 1);
+    static EventType _secondLevelEventType = new("6682281b-64e0-431b-8b90-dd49ba25ca55", 1);
+    static EventType _thirdLevelEventType = new("90ae84f7-84f0-4e3a-a38a-329d782da158", 1);
+    static EventType _forthLevelEventType = new("e72686b1-b0e4-40a8-9651-4841602638da", 1);
 
-    const string root_key = "4e3a1e36-714c-41f7-83e3-5cc84717db16";
-    const string first_level_key = "805908d8-ed72-4a70-b313-6f592632663d";
-    const string second_level_key = "02311df8-fcf2-42ff-b2d0-b7fa2f576485";
-    const string third_level_key = "935e1158-cedb-4530-a9aa-d925d6d9b10d";
-    const string forth_level_key = "537d661f-8b12-4a1e-917b-faf639923380";
+    const string _rootKey = "4e3a1e36-714c-41f7-83e3-5cc84717db16";
+    const string _firstLevelKey = "805908d8-ed72-4a70-b313-6f592632663d";
+    const string _secondLevelKey = "02311df8-fcf2-42ff-b2d0-b7fa2f576485";
+    const string _thirdLevelKey = "935e1158-cedb-4530-a9aa-d925d6d9b10d";
+    const string _forthLevelKey = "537d661f-8b12-4a1e-917b-faf639923380";
 
     AppendedEvent CreateEvent(EventSequenceNumber sequenceNumber, EventType type, EventSourceId eventSourceId, object content)
     {
@@ -61,63 +62,63 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
             content.AsExpandoObject());
     }
 
-    Mock<IProjection> SetupProjection(EventType eventType, string key, string childrenProperty = "no-levels", IProjection? parent = null)
+    IProjection SetupProjection(EventType eventType, string key, string childrenProperty = "no-levels", IProjection? parent = null)
     {
-        var projection = new Mock<IProjection>();
-        projection.SetupGet(_ => _.EventTypes).Returns([eventType]);
-        projection.SetupGet(_ => _.OwnEventTypes).Returns([eventType]);
-        projection.SetupGet(_ => _.Path).Returns(childrenProperty);
-        projection.SetupGet(_ => _.ChildrenPropertyPath).Returns(childrenProperty);
+        var projection = Substitute.For<IProjection>();
+        projection.EventTypes.Returns([eventType]);
+        projection.OwnEventTypes.Returns([eventType]);
+        projection.Path.Returns((ProjectionPath)childrenProperty);
+        projection.ChildrenPropertyPath.Returns((PropertyPath)childrenProperty);
 
         if (parent is not null)
         {
-            projection.Setup(_ => _.GetKeyResolverFor(eventType)).Returns(keyResolvers.FromParentHierarchy(
-                projection.Object,
-                keyResolvers.FromEventSourceId,
-                keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
+            projection.GetKeyResolverFor(eventType).Returns(_keyResolvers.FromParentHierarchy(
+                projection,
+                _keyResolvers.FromEventSourceId,
+                _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
                 "childId"));
-            projection.SetupGet(_ => _.HasParent).Returns(true);
-            projection.SetupGet(_ => _.Parent).Returns(parent);
+            projection.HasParent.Returns(true);
+            projection.Parent.Returns(parent);
         }
         else
         {
-            projection.Setup(_ => _.GetKeyResolverFor(eventType)).Returns((_, __) => Task.FromResult(new Key(key, ArrayIndexers.NoIndexers)));
+            projection.GetKeyResolverFor(eventType).Returns((_, __) => Task.FromResult(new Key(key, ArrayIndexers.NoIndexers)));
         }
         return projection;
     }
 
     void Establish()
     {
-        keyResolvers = new KeyResolvers(NullLogger<KeyResolvers>.Instance);
-        root_event = CreateEvent(0, root_event_type, root_key, new { });
-        first_level_event = CreateEvent(1, first_level_event_type, first_level_key, new { parentId = root_key });
-        second_level_event = CreateEvent(2, second_level_event_type, second_level_key, new { parentId = first_level_key });
-        third_level_event = CreateEvent(3, third_level_event_type, third_level_key, new { parentId = second_level_key });
-        forth_level_event = CreateEvent(4, forth_level_event_type, forth_level_key, new { parentId = third_level_key });
+        _keyResolvers = new KeyResolvers(NullLogger<KeyResolvers>.Instance);
+        _rootEvent = CreateEvent(0, _rootEventType, _rootKey, new { });
+        _firstLevelEvent = CreateEvent(1, _firstLevelEventType, _firstLevelKey, new { parentId = _rootKey });
+        _secondLevelEvent = CreateEvent(2, _secondLevelEventType, _secondLevelKey, new { parentId = _firstLevelKey });
+        _thirdLevelEvent = CreateEvent(3, _thirdLevelEventType, _thirdLevelKey, new { parentId = _secondLevelKey });
+        _forthLevelEvent = CreateEvent(4, _forthLevelEventType, _forthLevelKey, new { parentId = _thirdLevelKey });
 
-        root_projection = SetupProjection(root_event_type, root_key);
-        first_level_projection = SetupProjection(first_level_event_type, first_level_key, "firstLevels", root_projection.Object);
-        second_level_projection = SetupProjection(second_level_event_type, second_level_key, "secondLevels", first_level_projection.Object);
-        third_level_projection = SetupProjection(third_level_event_type, third_level_key, "thirdLevels", second_level_projection.Object);
-        forth_level_projection = SetupProjection(forth_level_event_type, forth_level_key, "forthLevels", third_level_projection.Object);
+        _rootProjection = SetupProjection(_rootEventType, _rootKey);
+        _firstLevelProjection = SetupProjection(_firstLevelEventType, _firstLevelKey, "firstLevels", _rootProjection);
+        _secondLevelProjection = SetupProjection(_secondLevelEventType, _secondLevelKey, "secondLevels", _firstLevelProjection);
+        _thirdLevelProjection = SetupProjection(_thirdLevelEventType, _thirdLevelKey, "thirdLevels", _secondLevelProjection);
+        _forthLevelProjection = SetupProjection(_forthLevelEventType, _forthLevelKey, "forthLevels", _thirdLevelProjection);
 
-        storage = new();
-        storage.Setup(_ => _.TryGetLastInstanceOfAny(root_key, new[] { root_event_type.Id })).Returns(Task.FromResult<Option<AppendedEvent>>(root_event));
-        storage.Setup(_ => _.TryGetLastInstanceOfAny(first_level_key, new[] { first_level_event_type.Id })).Returns(Task.FromResult<Option<AppendedEvent>>(first_level_event));
-        storage.Setup(_ => _.TryGetLastInstanceOfAny(second_level_key, new[] { second_level_event_type.Id })).Returns(Task.FromResult<Option<AppendedEvent>>(second_level_event));
-        storage.Setup(_ => _.TryGetLastInstanceOfAny(third_level_key, new[] { third_level_event_type.Id })).Returns(Task.FromResult<Option<AppendedEvent>>(third_level_event));
-        storage.Setup(_ => _.TryGetLastInstanceOfAny(forth_level_key, new[] { forth_level_event_type.Id })).Returns(Task.FromResult<Option<AppendedEvent>>(forth_level_event));
+        _storage = Substitute.For<IEventSequenceStorage>();
+        _storage.TryGetLastInstanceOfAny(_rootKey, [_rootEventType.Id]).Returns(Task.FromResult<Option<AppendedEvent>>(_rootEvent));
+        _storage.TryGetLastInstanceOfAny(_firstLevelKey, [_firstLevelEventType.Id]).Returns(Task.FromResult<Option<AppendedEvent>>(_firstLevelEvent));
+        _storage.TryGetLastInstanceOfAny(_secondLevelKey, [_secondLevelEventType.Id]).Returns(Task.FromResult<Option<AppendedEvent>>(_secondLevelEvent));
+        _storage.TryGetLastInstanceOfAny(_thirdLevelKey, [_thirdLevelEventType.Id]).Returns(Task.FromResult<Option<AppendedEvent>>(_thirdLevelEvent));
+        _storage.TryGetLastInstanceOfAny(_forthLevelKey, [_forthLevelEventType.Id]).Returns(Task.FromResult<Option<AppendedEvent>>(_forthLevelEvent));
     }
 
-    async Task Because() => result = await keyResolvers.FromParentHierarchy(
-        forth_level_projection.Object,
-        keyResolvers.FromEventSourceId,
-        keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
-        "childId")(storage.Object, forth_level_event);
+    async Task Because() => _result = await _keyResolvers.FromParentHierarchy(
+        _forthLevelProjection,
+        _keyResolvers.FromEventSourceId,
+        _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
+        "childId")(_storage, _forthLevelEvent);
 
-    [Fact] void should_return_expected_key() => result.Value.ShouldEqual(root_key);
-    [Fact] void should_hold_array_indexer_for_first_level_with_correct_identifier() => result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "firstLevels").Identifier.ToString().ShouldEqual(first_level_key);
-    [Fact] void should_hold_array_indexer_for_second_level_with_correct_identifier() => result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "secondLevels").Identifier.ToString().ShouldEqual(second_level_key);
-    [Fact] void should_hold_array_indexer_for_third_level_with_correct_identifier() => result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "thirdLevels").Identifier.ToString().ShouldEqual(third_level_key);
-    [Fact] void should_hold_array_indexer_for_forth_level_with_correct_identifier() => result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "forthLevels").Identifier.ToString().ShouldEqual(forth_level_key);
+    [Fact] void should_return_expected_key() => _result.Value.ShouldEqual(_rootKey);
+    [Fact] void should_hold_array_indexer_for_first_level_with_correct_identifier() => _result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "firstLevels").Identifier.ToString().ShouldEqual(_firstLevelKey);
+    [Fact] void should_hold_array_indexer_for_second_level_with_correct_identifier() => _result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "secondLevels").Identifier.ToString().ShouldEqual(_secondLevelKey);
+    [Fact] void should_hold_array_indexer_for_third_level_with_correct_identifier() => _result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "thirdLevels").Identifier.ToString().ShouldEqual(_thirdLevelKey);
+    [Fact] void should_hold_array_indexer_for_forth_level_with_correct_identifier() => _result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "forthLevels").Identifier.ToString().ShouldEqual(_forthLevelKey);
 }
