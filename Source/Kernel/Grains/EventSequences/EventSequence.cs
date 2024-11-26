@@ -199,15 +199,16 @@ public class EventSequence(
             }
             while(!appendResult.IsSuccess);
 
+            var appendedSequenceNumber = State.SequenceNumber;
+            State.SequenceNumber = State.SequenceNumber.Next();
+            await WriteStateAsync();
+
             _metrics?.AppendedEvent(eventSourceId, eventName);
             var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
             await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
             State.TailSequenceNumberPerEventType[eventType.Id] = State.SequenceNumber;
             await constraintContext.Update(State.SequenceNumber);
 
-            var appendedSequenceNumber = State.SequenceNumber;
-            State.SequenceNumber = State.SequenceNumber.Next();
-            await WriteStateAsync();
             return AppendResult.Success(correlationId, appendedSequenceNumber);
         }
         catch (Exception ex)
