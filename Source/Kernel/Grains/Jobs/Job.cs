@@ -55,7 +55,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     protected JobKey JobKey { get; private set; } = JobKey.NotSet;
 
     /// <summary>
-    /// Gets whether or not to clean up data after the job has completed.
+    /// Gets whether to clean up data after the job has completed.
     /// </summary>
     protected virtual bool RemoveAfterCompleted => false;
 
@@ -73,6 +73,11 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// Gets the underlying <see cref="IStorage"/>.
     /// </summary>
     protected IEventStoreNamespaceStorage Storage { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether all steps have been completed successfully.
+    /// </summary>
+    protected bool AllStepsCompletedSuccessfully => State.Progress.SuccessfulSteps == State.Progress.TotalSteps;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
