@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Grains.Observation;
 public record ObserverSubscriberResult(ObserverSubscriberState State, EventSequenceNumber LastSuccessfulObservation, IEnumerable<string> ExceptionMessages, string ExceptionStackTrace)
 {
     /// <summary>
-    /// Gets the value indicating whether the <see cref="ObserverSubscriberResult"/> indicates that any event was successfully handled.
+    /// Gets a value indicating whether the <see cref="ObserverSubscriberResult"/> indicates that any event was successfully handled.
     /// </summary>
     public bool HandledAnyEvents => LastSuccessfulObservation != EventSequenceNumber.Unavailable;
 
