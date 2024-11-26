@@ -19,9 +19,9 @@ public class two_rule_sets : Specification
 
     void Establish()
     {
-        _firstRuleSet = Substitute.For<IRule>();
+        _firstRuleSet = Substitute.For<IRule, IValidator>();
         _firstRuleSetAsValidator = _firstRuleSet as IValidator;
-        _secondRuleSet = Substitute.For<IRule>();
+        _secondRuleSet = Substitute.For<IRule, IValidator>();
         _secondRuleSetAsValidator = _secondRuleSet as IValidator;
 
         _rules = Substitute.For<IRules>();
