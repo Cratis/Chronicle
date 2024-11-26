@@ -11,11 +11,11 @@ namespace Cratis.Chronicle.Grains.Observation.States.for_CatchUp.when_entering;
 
 public class and_no_jobs_are_running : given.a_catch_up_state
 {
-    CatchUpObserverRequest request;
+    CatchUpObserverRequest _request;
 
     void Establish()
     {
-        stored_state = stored_state with
+        _storedState = _storedState with
         {
             NextEventSequenceNumber = 42,
             EventTypes =
@@ -24,7 +24,7 @@ public class and_no_jobs_are_running : given.a_catch_up_state
                 new EventType("e433be87-2d05-49b1-b093-f0cec977429b", EventTypeGeneration.First)
             ]
         };
-        subscription = subscription with
+        _subscription = _subscription with
         {
             EventTypes =
             [
@@ -33,22 +33,22 @@ public class and_no_jobs_are_running : given.a_catch_up_state
             ]
         };
 
-        jobs_manager
-            .Setup(_ => _.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>())
-            .ReturnsAsync(Enumerable.Empty<JobState>().ToImmutableList());
+        _jobsManager
+            .GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>()
+            .Returns(Enumerable.Empty<JobState>().ToImmutableList());
 
-        jobs_manager
-            .Setup(_ => _.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<JobId>(), Arg.Any<CatchUpObserverRequest>()))
-            .Callback<JobId, CatchUpObserverRequest>((_, requestAtStart) => request = requestAtStart);
+        _jobsManager
+            .When(_ => _.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<JobId>(), Arg.Any<CatchUpObserverRequest>()))
+            .Do(callInfo => _request = callInfo.Arg<CatchUpObserverRequest>());
     }
 
-    async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
+    async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
-    [Fact] void should_return_same_state() => resulting_stored_state.ShouldBeSame(stored_state);
-    [Fact] void should_start_catch_up_job() => jobs_manager.Verify(_ => _.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<JobId>(), Arg.Any<CatchUpObserverRequest>()), Once);
-    [Fact] void should_start_catch_up_job_with_correct_observer_id() => request.ObserverKey.ObserverId.ShouldEqual(stored_state.Id);
-    [Fact] void should_start_catch_up_job_with_correct_observer_key() => request.ObserverKey.ShouldEqual(observer_key);
-    [Fact] void should_start_catch_up_job_with_correct_subscription() => request.ObserverSubscription.ShouldEqual(subscription);
-    [Fact] void should_start_catch_up_job_with_correct_event_sequence_number() => request.FromEventSequenceNumber.ShouldEqual(stored_state.NextEventSequenceNumber);
-    [Fact] void should_start_catch_up_job_with_correct_event_types() => request.EventTypes.ShouldEqual(stored_state.EventTypes);
+    [Fact] void should_return_same_state() => _resultingStoredState.ShouldBeSame(_storedState);
+    [Fact] void should_start_catch_up_job() => _jobsManager.Received(1).Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<JobId>(), Arg.Any<CatchUpObserverRequest>());
+    [Fact] void should_start_catch_up_job_with_correct_observer_id() => _request.ObserverKey.ObserverId.ShouldEqual(_storedState.Id);
+    [Fact] void should_start_catch_up_job_with_correct_observer_key() => _request.ObserverKey.ShouldEqual(_observerKey);
+    [Fact] void should_start_catch_up_job_with_correct_subscription() => _request.ObserverSubscription.ShouldEqual(_subscription);
+    [Fact] void should_start_catch_up_job_with_correct_event_sequence_number() => _request.FromEventSequenceNumber.ShouldEqual(_storedState.NextEventSequenceNumber);
+    [Fact] void should_start_catch_up_job_with_correct_event_types() => _request.EventTypes.ShouldEqual(_storedState.EventTypes);
 }

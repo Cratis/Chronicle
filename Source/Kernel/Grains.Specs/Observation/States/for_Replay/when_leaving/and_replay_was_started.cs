@@ -11,20 +11,20 @@ public class and_replay_was_started : given.a_replay_state
 
     async Task Establish()
     {
-        stored_state = stored_state with
+        _storedState = _storedState with
         {
             Type = ObserverType.Client
         };
 
-        observer_service_client
-            .Setup(_ => _.EndReplayFor(Arg.Any<ObserverDetails>()))
-            .Callback((ObserverDetails observer) => observer_details = observer);
+        _observerServiceClient
+            .When(_ => _.EndReplayFor(Arg.Any<ObserverDetails>()))
+            .Do(callInfo => observer_details = callInfo.Arg<ObserverDetails>());
 
-        stored_state = await state.OnEnter(stored_state);
+        _storedState = await _state.OnEnter(_storedState);
     }
 
-    async Task Because() => resulting_stored_state = await state.OnLeave(stored_state);
+    async Task Because() => _resultingStoredState = await _state.OnLeave(_storedState);
 
-    [Fact] void should_end_replay_only_one() => observer_service_client.Verify(_ => _.BeginReplayFor(Arg.Any<ObserverDetails>()), Once);
-    [Fact] void should_end_replay_for_correct_observer() => observer_details.ShouldEqual(new ObserverDetails(stored_state.Id, observer_key, ObserverType.Client));
+    [Fact] void should_end_replay_only_one() => _observerServiceClient.Received(1).BeginReplayFor(Arg.Any<ObserverDetails>());
+    [Fact] void should_end_replay_for_correct_observer() => observer_details.ShouldEqual(new ObserverDetails(_storedState.Id, _observerKey, ObserverType.Client));
 }

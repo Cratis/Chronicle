@@ -15,34 +15,33 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver.given;
 
 public class a_catchup_observer : Specification
 {
-    protected TestKitSilo silo = new();
-    protected Mock<IStorage> storage;
-    protected Mock<IEventStoreStorage> event_store_storage;
-    protected Mock<IEventStoreNamespaceStorage> event_store_namespace_storage;
-    protected Mock<IObserverKeyIndexes> observer_key_indexes;
-    protected CatchUpObserverWrapper job;
-    protected JobKey job_key = new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet);
-    protected JobId job_id => Guid.Parse("6341bcdb-c644-40ab-81cf-43907c510285");
-    protected IStorage<CatchUpObserverState> state_storage;
-    protected CatchUpObserverState state => state_storage.State;
+    protected TestKitSilo _silo = new();
+    protected IStorage _storage;
+    protected IEventStoreStorage _eventStoreStorage;
+    protected IEventStoreNamespaceStorage _eventStoreNamespaceStorage;
+    protected IObserverKeyIndexes _observerKeyIndexes;
+    protected CatchUpObserverWrapper _job;
+    protected JobKey _jobKey = new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet);
+    protected JobId _jobId => Guid.Parse("6341bcdb-c644-40ab-81cf-43907c510285");
+    protected IStorage<CatchUpObserverState> _stateStorage;
+    protected CatchUpObserverState _state => _stateStorage.State;
 
     async Task Establish()
     {
-        storage = new();
-        event_store_storage = new();
-        event_store_namespace_storage = new();
-        observer_key_indexes = new();
-        storage.Setup(_ => _.GetEventStore(Arg.Any<EventStoreName>())).Returns(event_store_storage.Object);
-        event_store_storage.Setup(_ => _.GetNamespace(Arg.Any<EventStoreNamespaceName>())).Returns(event_store_namespace_storage.Object);
-        event_store_namespace_storage.Setup(_ => _.ObserverKeyIndexes).Returns(observer_key_indexes.Object);
-        state_storage = silo.StorageManager.GetStorage<CatchUpObserverState>(typeof(CatchUpObserverWrapper).FullName);
+        _storage = Substitute.For<IStorage>();
+        _eventStoreStorage = Substitute.For<IEventStoreStorage>();
+        _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
+        _observerKeyIndexes = Substitute.For<IObserverKeyIndexes>();
+        _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
+        _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_eventStoreNamespaceStorage);
+        _eventStoreNamespaceStorage.ObserverKeyIndexes.Returns(_observerKeyIndexes);
+        _stateStorage = _silo.StorageManager.GetStorage<CatchUpObserverState>(typeof(CatchUpObserverWrapper).FullName);
 
-        silo.AddService(storage.Object);
-        silo.AddService(new JsonSerializerOptions());
+        _silo.AddService(_storage);
+        _silo.AddService(new JsonSerializerOptions());
 
-        var jobMock = new Mock<ICatchUpObserver>();
-
-        silo.AddProbe(_ => jobMock.Object);
-        job = await silo.CreateGrainAsync<CatchUpObserverWrapper>(job_id, job_key);
+        var jobMock = Substitute.For<IJob>();
+        _silo.AddProbe(_ => jobMock);
+        _job = await _silo.CreateGrainAsync<CatchUpObserverWrapper>(_jobId, _jobKey);
     }
 }

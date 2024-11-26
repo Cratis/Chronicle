@@ -10,15 +10,15 @@ public class and_it_is_falling_behind : given.a_routing_state
 {
     void Establish()
     {
-        tail_event_sequence_numbers = tail_event_sequence_numbers with
+        _tailEventSequenceNumbers = _tailEventSequenceNumbers with
         {
             Tail = 42,
             TailForEventTypes = 22
         };
     }
 
-    async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
+    async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
-    [Fact] void should_only_perform_one_transition() => observer.Verify(_ => _.TransitionTo<IState<ObserverState>>(), Once());
-    [Fact] void should_transition_to_catch_up() => observer.Verify(_ => _.TransitionTo<CatchUp>(), Once());
+    [Fact] void should_only_perform_one_transition() => _observer.Received(1).TransitionTo<IState<ObserverState>>();
+    [Fact] void should_transition_to_catch_up() => _observer.Received(1).TransitionTo<CatchUp>();
 }

@@ -10,11 +10,11 @@ public class and_subscribers_event_types_are_different_and_replay_evaluator_retu
 {
     void Establish()
     {
-        replay_evaluator.Setup(_ => _.Evaluate(Arg.Any<ReplayEvaluationContext>())).Returns(() => Task.FromResult(true));
+        _replayEvaluator.Evaluate(Arg.Any<ReplayEvaluationContext>()).Returns(true);
     }
 
-    async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
+    async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
-    [Fact] void should_only_perform_one_transition() => observer.Verify(_ => _.TransitionTo<IState<ObserverState>>(), Once());
-    [Fact] void should_transition_to_replay() => observer.Verify(_ => _.TransitionTo<Replay>(), Once());
+    [Fact] void should_only_perform_one_transition() => _observer.Received(1).TransitionTo<IState<ObserverState>>();
+    [Fact] void should_transition_to_replay() => _observer.Received(1).TransitionTo<Replay>();
 }

@@ -14,21 +14,21 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
 {
     async Task Establish()
     {
-        stored_state = stored_state with
+        _storedState = _storedState with
         {
             Type = ObserverType.Client
         };
 
-        jobs_manager
-            .Setup(_ => _.GetJobsOfType<IReplayObserver, ReplayObserverRequest>())
-            .ReturnsAsync(new[]
+        _jobsManager
+            .GetJobsOfType<IReplayObserver, ReplayObserverRequest>()
+            .Returns(new[]
                 {
                     new JobState
                     {
                         Id = JobId.New(),
                         Request = new ReplayObserverRequest(
-                            observer_key,
-                            subscription,
+                            _observerKey,
+                            _subscription,
                             [new EventType(Guid.NewGuid().ToString(), EventTypeGeneration.First)]),
                         StatusChanges =
                         [
@@ -41,10 +41,10 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
                     }
                 }.ToImmutableList());
 
-        stored_state = await state.OnEnter(stored_state);
+        _storedState = await _state.OnEnter(_storedState);
     }
 
-    async Task Because() => resulting_stored_state = await state.OnLeave(stored_state);
+    async Task Because() => _resultingStoredState = await _state.OnLeave(_storedState);
 
-    [Fact] void should_not_end_replay() => observer_service_client.Verify(_ => _.BeginReplayFor(Arg.Any<ObserverDetails>()), Never);
+    [Fact] void should_not_end_replay() => _observerServiceClient.DidNotReceive().BeginReplayFor(Arg.Any<ObserverDetails>());
 }

@@ -13,16 +13,16 @@ public class and_a_catch_up_is_already_running : given.a_catch_up_state
 {
     void Establish()
     {
-        jobs_manager
-            .Setup(_ => _.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>())
-            .ReturnsAsync(new[]
+        _jobsManager
+            .GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>()
+            .Returns(new[]
                 {
                     new JobState
                     {
                         Id = JobId.New(),
                         Request = new CatchUpObserverRequest(
-                            observer_key,
-                            subscription,
+                            _observerKey,
+                            _subscription,
                             42,
                             [new EventType(Guid.NewGuid().ToString(), EventTypeGeneration.First)]),
                         StatusChanges =
@@ -37,8 +37,8 @@ public class and_a_catch_up_is_already_running : given.a_catch_up_state
                 }.ToImmutableList());
     }
 
-    async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
+    async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
-    [Fact] void should_not_resume_a_job() => jobs_manager.Verify(_ => _.Resume(Arg.Any<JobId>()), Never);
-    [Fact] void should_not_start_a_new_job() => jobs_manager.Verify(_ => _.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<JobId>(), Arg.Any<CatchUpObserverRequest>()), Never);
+    [Fact] void should_not_resume_a_job() => _jobsManager.DidNotReceive().Resume(Arg.Any<JobId>());
+    [Fact] void should_not_start_a_new_job() => _jobsManager.DidNotReceive().Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<JobId>(), Arg.Any<CatchUpObserverRequest>());
 }

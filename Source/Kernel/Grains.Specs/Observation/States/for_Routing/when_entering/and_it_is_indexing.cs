@@ -9,10 +9,10 @@ namespace Cratis.Chronicle.Grains.Observation.States.for_Routing.when_entering;
 
 public class and_it_is_indexing : given.a_routing_state
 {
-    void Establish() => stored_state = stored_state with { RunningState = ObserverRunningState.Indexing };
+    void Establish() => _storedState = _storedState with { RunningState = ObserverRunningState.Indexing };
 
-    async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
+    async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
-    [Fact] void should_only_perform_one_transition() => observer.Verify(_ => _.TransitionTo<IState<ObserverState>>(), Once());
-    [Fact] void should_transition_to_indexing() => observer.Verify(_ => _.TransitionTo<Indexing>(), Once());
+    [Fact] void should_only_perform_one_transition() => _observer.Received(1).TransitionTo<IState<ObserverState>>();
+    [Fact] void should_transition_to_indexing() => _observer.Received(1).TransitionTo<Indexing>();
 }

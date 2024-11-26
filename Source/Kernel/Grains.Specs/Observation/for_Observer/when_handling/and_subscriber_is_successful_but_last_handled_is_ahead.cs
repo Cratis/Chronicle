@@ -10,13 +10,13 @@ public class and_subscriber_is_successful_but_last_handled_is_ahead : given.an_o
 {
     void Establish()
     {
-        subscriber.Setup(_ => _.OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok(42UL)));
-        state_storage.State = state_storage.State with { LastHandledEventSequenceNumber = 44UL };
+        _subscriber.OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>()).Returns(ObserverSubscriberResult.Ok(42UL));
+        _stateStorage.State = _stateStorage.State with { LastHandledEventSequenceNumber = 44UL };
     }
 
-    async Task Because() => await observer.Handle("Something", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
+    async Task Because() => await _observer.Handle("Something", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
 
-    [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);
-    [Fact] void should_set_next_sequence_number() => state_storage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
-    [Fact] void should_not_modify_last_handled_event_sequence_number() => state_storage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)44UL);
+    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
+    [Fact] void should_set_next_sequence_number() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
+    [Fact] void should_not_modify_last_handled_event_sequence_number() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)44UL);
 }
