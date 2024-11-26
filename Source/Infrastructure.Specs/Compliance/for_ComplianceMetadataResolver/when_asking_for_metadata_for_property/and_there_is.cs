@@ -14,21 +14,21 @@ public class and_there_is : Specification
         public static PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance);
     }
 
-    ComplianceMetadataResolver resolver;
-    bool result;
+    ComplianceMetadataResolver _resolver;
+    bool _result;
 
     void Establish()
     {
         var provider = Substitute.For<ICanProvideComplianceMetadataForProperty>();
         provider.CanProvide(MyClass.SomethingProperty).Returns(true);
 
-        resolver = new(
+        _resolver = new(
             new KnownInstancesOf<ICanProvideComplianceMetadataForType>([]),
             new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([provider])
         );
     }
 
-    void Because() => result = resolver.HasMetadataFor(MyClass.SomethingProperty);
+    void Because() => _result = _resolver.HasMetadataFor(MyClass.SomethingProperty);
 
-    [Fact] void should_have() => result.ShouldBeTrue();
+    [Fact] void should_have() => _result.ShouldBeTrue();
 }

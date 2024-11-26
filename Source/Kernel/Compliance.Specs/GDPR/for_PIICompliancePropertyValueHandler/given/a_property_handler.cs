@@ -8,19 +8,19 @@ namespace Cratis.Chronicle.Compliance.GDPR.for_PIICompliancePropertyValueHandler
 
 public class a_property_handler : Specification
 {
-    protected const string identifier = "39b34712-ad8e-4cde-b879-2719c995aa49";
-    protected PIICompliancePropertyValueHandler handler;
+    protected const string _identifier = "39b34712-ad8e-4cde-b879-2719c995aa49";
+    protected PIICompliancePropertyValueHandler _handler;
 
-    protected Mock<IEncryptionKeyStorage> key_store;
-    protected Mock<IEncryption> encryption;
-    protected EncryptionKey key;
+    protected IEncryptionKeyStorage _keyStore;
+    protected IEncryption _encryption;
+    protected EncryptionKey _key;
 
     void Establish()
     {
-        key = new EncryptionKey(Encoding.UTF8.GetBytes("PublicPart"), Encoding.UTF8.GetBytes("PrivatePart"));
-        key_store = new();
-        encryption = new();
-        handler = new(key_store.Object, encryption.Object);
-        key_store.Setup(_ => _.GetFor(string.Empty, string.Empty, identifier)).Returns(Task.FromResult(key));
+        _key = new EncryptionKey(Encoding.UTF8.GetBytes("PublicPart"), Encoding.UTF8.GetBytes("PrivatePart"));
+        _keyStore = Substitute.For<IEncryptionKeyStorage>();
+        _encryption = Substitute.For<IEncryption>();
+        _handler = new(_keyStore, _encryption);
+        _keyStore.GetFor(string.Empty, string.Empty, _identifier).Returns(Task.FromResult(_key));
     }
 }
