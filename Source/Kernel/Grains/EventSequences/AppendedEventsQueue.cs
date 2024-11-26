@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Tasks;
+using Cratis.Metrics;
 using Cratis.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +21,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
     readonly IGrainFactory _grainFactory;
+    readonly IMeter<AppendedEventsQueue> _meter;
     readonly ILogger<AppendedEventsQueue> _logger;
     readonly ConcurrentQueue<IEnumerable<AppendedEvent>> _queue = new();
     readonly AsyncManualResetEvent _queueEvent = new();
@@ -27,21 +29,33 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly TaskCompletionSource _queueTaskCompletionSource = new();
     readonly Task _queueTask;
     ConcurrentBag<AppendedEventsQueueObserverSubscription> _subscriptions = [];
+    IMeterScope<AppendedEventsQueue>? _metrics;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendedEventsQueue"/> class.
     /// </summary>
     /// <param name="taskFactory"><see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
+    /// <param name="meter"><see cref="IMeterScope{T}"/> for metering.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public AppendedEventsQueue(
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
+        IMeter<AppendedEventsQueue> meter,
         ILogger<AppendedEventsQueue> logger)
     {
         _grainFactory = grainFactory;
+        _meter = meter;
         _logger = logger;
         _queueTask = taskFactory.Run(QueueHandler);
+    }
+
+    /// <inheritdoc/>
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        var queueId = (int)this.GetPrimaryKeyLong(out var key);
+        _metrics = _meter.BeginScope(key, queueId);
+        return base.OnActivateAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -49,6 +63,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         _queue.Enqueue(appendedEvents);
         _queueEvent.Set();
+        _metrics?.EventsEnqueued(appendedEvents.Count());
         return Task.CompletedTask;
     }
 
@@ -76,6 +91,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         _queueTaskCompletionSource.SetCanceled();
         _queueTask.Dispose();
+        _metrics?.Dispose();
     }
 
     /// <summary>
@@ -130,16 +146,20 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             {
                 try
                 {
-                    Func<IEnumerable<AppendedEvent>, Task> handler = events.Count() == 1 ?
+                    var count = events.Count();
+                    Func<IEnumerable<AppendedEvent>, Task> handler = count == 1 ?
                         HandleSingle :
                         HandlePartitioned;
 
                     await handler(events);
+
+                    _metrics?.EventsHandled(count);
                 }
                 catch (Exception ex)
                 {
                     // We ignore any failures, the queue should never fail
                     _logger.NotifyingObserversFailed(ex);
+                    _metrics?.EventsHandlingFailures();
                 }
             }
 
