@@ -18,7 +18,6 @@ public class and_no_jobs_are_running : given.a_replay_state
         stored_state = stored_state with
         {
             Type = ObserverType.Client,
-            Handled = 41,
             NextEventSequenceNumber = 42,
             EventTypes =
             [
@@ -46,7 +45,6 @@ public class and_no_jobs_are_running : given.a_replay_state
 
     async Task Because() => resulting_stored_state = await state.OnEnter(stored_state);
 
-    [Fact] void should_reset_handled_count() => resulting_stored_state.ShouldEqual(stored_state with { Handled = EventCount.Zero });
     [Fact] void should_start_catch_up_job() => jobs_manager.Verify(_ => _.Start<IReplayObserver, ReplayObserverRequest>(IsAny<JobId>(), IsAny<ReplayObserverRequest>()), Once);
     [Fact] void should_start_catch_up_job_with_correct_observer_id() => request.ObserverKey.ObserverId.ShouldEqual(stored_state.Id);
     [Fact] void should_start_catch_up_job_with_correct_observer_key() => request.ObserverKey.ShouldEqual(observer_key);

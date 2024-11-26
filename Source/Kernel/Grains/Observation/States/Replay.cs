@@ -77,7 +77,7 @@ public class Replay(
                 observerKey,
                 subscription,
                 state.EventTypes));
-        return state with { Handled = EventCount.Zero };
+        return state;
     }
 
     /// <inheritdoc/>

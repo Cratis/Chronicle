@@ -94,7 +94,6 @@ public class Observer(
     {
         State = State with
         {
-            Handled = handled,
             LastHandledEventSequenceNumber = lastHandledEventSequenceNumber
         };
 
@@ -332,11 +331,6 @@ public class Observer(
             {
                 try
                 {
-                    if (State.Handled == EventCount.NotSet)
-                    {
-                        State = State with { Handled = EventCount.Zero };
-                    }
-
                     var key = new ObserverSubscriberKey(
                         _observerKey.ObserverId,
                         _observerKey.EventStore,
@@ -372,6 +366,8 @@ public class Observer(
                         }
                     }
 
+                    // TODO: This is weird, if the LastSuccessfulObserveation is Unavailable
+
                     State = State with { NextEventSequenceNumber = result.LastSuccessfulObservation.Next() };
                     if (numEventsSuccessfullyHandled > 0)
                     {
@@ -384,7 +380,6 @@ public class Observer(
                             LastHandledEventSequenceNumber = shouldSetLastHandled
                                 ? result.LastSuccessfulObservation
                                 : previousLastHandled,
-                            Handled = State.Handled + numEventsSuccessfullyHandled
                         };
                     }
                 }
@@ -402,13 +397,6 @@ public class Observer(
 
             await WriteStateAsync();
         }
-    }
-
-    /// <inheritdoc/>
-    public async Task ReportNewHandledEvents(EventCount count)
-    {
-        State = State with { Handled = State.Handled + count };
-        await WriteStateAsync();
     }
 
     /// <inheritdoc/>

@@ -19,7 +19,6 @@ class GetObserversSortBy {
     private _nextEventSequenceNumber: SortingActionsForQuery<ObserverInformation[]>;
     private _lastHandledEventSequenceNumber: SortingActionsForQuery<ObserverInformation[]>;
     private _runningState: SortingActionsForQuery<ObserverInformation[]>;
-    private _handled: SortingActionsForQuery<ObserverInformation[]>;
     private _failedPartitions: SortingActionsForQuery<ObserverInformation[]>;
 
     constructor(readonly query: GetObservers) {
@@ -30,7 +29,6 @@ class GetObserversSortBy {
         this._nextEventSequenceNumber = new SortingActionsForQuery<ObserverInformation[]>('nextEventSequenceNumber', query);
         this._lastHandledEventSequenceNumber = new SortingActionsForQuery<ObserverInformation[]>('lastHandledEventSequenceNumber', query);
         this._runningState = new SortingActionsForQuery<ObserverInformation[]>('runningState', query);
-        this._handled = new SortingActionsForQuery<ObserverInformation[]>('handled', query);
         this._failedPartitions = new SortingActionsForQuery<ObserverInformation[]>('failedPartitions', query);
     }
 
@@ -55,9 +53,6 @@ class GetObserversSortBy {
     get runningState(): SortingActionsForQuery<ObserverInformation[]> {
         return this._runningState;
     }
-    get handled(): SortingActionsForQuery<ObserverInformation[]> {
-        return this._handled;
-    }
     get failedPartitions(): SortingActionsForQuery<ObserverInformation[]> {
         return this._failedPartitions;
     }
@@ -71,7 +66,6 @@ class GetObserversSortByWithoutQuery {
     private _nextEventSequenceNumber: SortingActions  = new SortingActions('nextEventSequenceNumber');
     private _lastHandledEventSequenceNumber: SortingActions  = new SortingActions('lastHandledEventSequenceNumber');
     private _runningState: SortingActions  = new SortingActions('runningState');
-    private _handled: SortingActions  = new SortingActions('handled');
     private _failedPartitions: SortingActions  = new SortingActions('failedPartitions');
 
     get observerId(): SortingActions {
@@ -94,9 +88,6 @@ class GetObserversSortByWithoutQuery {
     }
     get runningState(): SortingActions {
         return this._runningState;
-    }
-    get handled(): SortingActions {
-        return this._handled;
     }
     get failedPartitions(): SortingActions {
         return this._failedPartitions;

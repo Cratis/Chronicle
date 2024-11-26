@@ -25,7 +25,6 @@ public class when_setting_handled_state : given.an_observer
     [Fact] void should_not_fail() => error.ShouldBeNull();
     [Fact] void should_have_correct_state() => state_storage.State.ShouldEqual(initialState with
     {
-        Handled = eventCount,
         LastHandledEventSequenceNumber = eventSequenceNumber
     });
     [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);

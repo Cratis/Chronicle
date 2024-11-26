@@ -71,9 +71,9 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
             observerKey.EventSequenceId,
             ObserverType.Unknown,
             EventSequenceNumber.First,
-            EventSequenceNumber.First,
-            EventCount.NotSet,
+            EventSequenceNumber.Unavailable,
             ObserverRunningState.New,
+            new HashSet<Key>(),
             new HashSet<Key>());
     }
 
@@ -86,7 +86,8 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
             state!,
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
-    ObserverInformation ToObserverInformation(ObserverState state) => new(
+
+    static ObserverInformation ToObserverInformation(ObserverState state) => new(
         state.Id,
         state.EventSequenceId,
         state.Type,
@@ -94,9 +95,8 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
         state.NextEventSequenceNumber,
         state.LastHandledEventSequenceNumber,
         state.RunningState,
-        state.Handled,
         []);
 
-    FilterDefinition<ObserverState> GetKeyFilter(ObserverId observerId) =>
+    static FilterDefinition<ObserverState> GetKeyFilter(ObserverId observerId) =>
         Builders<ObserverState>.Filter.Eq(new StringFieldDefinition<ObserverState, string>("_id"), observerId);
 }
