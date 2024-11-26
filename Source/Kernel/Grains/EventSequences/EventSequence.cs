@@ -170,6 +170,7 @@ public class EventSequence(
 
             Result<AppendedEvent, AppendEventError>? appendResult = null;
 
+            var identity = await IdentityStorage.GetFor(causedBy);
             do
             {
                 await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventName);
@@ -192,7 +193,7 @@ public class EventSequence(
                     eventType,
                     correlationId,
                     causation,
-                    await IdentityStorage.GetFor(causedBy),
+                    identity,
                     occurred,
                     compliantEventAsExpandoObject);
             }
