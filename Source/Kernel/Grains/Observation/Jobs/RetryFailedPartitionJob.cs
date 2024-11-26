@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a job for retrying a failed partition.
 /// </summary>
-public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, RetryFailedPartitionState>, IRetryFailedPartitionJob
+public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobStateWithLastHandledEvent>, IRetryFailedPartitionJob
 {
     /// <inheritdoc/>
     protected override bool RemoveAfterCompleted => true;
@@ -22,7 +22,7 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, RetryFai
         if (AllStepsCompletedSuccessfully)
         {
             var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-            await observer.FailedPartitionRecovered(Request.Key, this.);
+            await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber);
         }
     }
 
@@ -39,6 +39,13 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, RetryFai
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         return observer.IsSubscribed();
+    }
+
+    /// <inheritdoc/>
+    protected override Task OnStepCompleted(JobStepId jobStepId, JobStepResult result)
+    {
+        State.HandleResult(result);
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

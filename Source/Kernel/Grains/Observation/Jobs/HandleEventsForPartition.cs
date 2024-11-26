@@ -151,7 +151,8 @@ public class HandleEventsForPartition(
 
             if (failed)
             {
-                if (lastEventSequenceNumberAttempted == EventSequenceNumber.Unavailable && State.LastSuccessfullyHandledEventSequenceNumber != EventSequenceNumber.Unavailable)
+                if (lastEventSequenceNumberAttempted == EventSequenceNumber.Unavailable &&
+                    State.LastSuccessfullyHandledEventSequenceNumber != EventSequenceNumber.Unavailable)
                 {
                     lastEventSequenceNumberAttempted = State.LastSuccessfullyHandledEventSequenceNumber.Next();
                 }

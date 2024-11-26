@@ -5,21 +5,19 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents a job for retrying a failed partition.
 /// </summary>
-public class CatchUpObserverPartition : Job<CatchUpObserverPartitionRequest, CatchUpObserverPartitionState>, ICatchUpObserverPartition
+public class CatchUpObserverPartition : Job<CatchUpObserverPartitionRequest, JobStateWithLastHandledEvent>, ICatchUpObserverPartition
 {
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
-        if (State.Progress.SuccessfulSteps == 1)
+        if (AllStepsCompletedSuccessfully)
         {
             var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
-            await observer.ReportNewHandledEvents(State.HandledCount);
             await observer.PartitionCaughtUp(Request.Key, State.LastHandledEventSequenceNumber);
         }
     }
@@ -27,12 +25,7 @@ public class CatchUpObserverPartition : Job<CatchUpObserverPartitionRequest, Cat
     /// <inheritdoc/>
     protected override Task OnStepCompleted(JobStepId jobStepId, JobStepResult result)
     {
-        if (result.Result is HandleEventsForPartitionResult handleEventsForPartitionResult)
-        {
-            State.HandledCount += handleEventsForPartitionResult.HandledEvents;
-            State.LastHandledEventSequenceNumber = handleEventsForPartitionResult.LastHandledEventSequenceNumber;
-        }
-
+        State.HandleResult(result);
         return Task.CompletedTask;
     }
 
