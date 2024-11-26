@@ -130,23 +130,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             {
                 try
                 {
-                    foreach (var group in events.GroupBy(@event => @event.Context.EventSourceId))
-                    {
-                        var tasks = new List<Task>();
-                        foreach (var subscription in _subscriptions)
-                        {
-                            var actualEvents = group.Where(@event => subscription.EventTypeIds.Contains(@event.Metadata.Type.Id)).ToList();
-                            if (actualEvents.Count == 0)
-                            {
-                                continue;
-                            }
-                            var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                            var partition = group.Key;
-                            tasks.Add(observer.Handle(partition, actualEvents));
-                        }
+                    Func<IEnumerable<AppendedEvent>, Task> handler = events.Count() == 1 ?
+                        HandleSingle :
+                        HandlePartitioned;
 
-                        await Task.WhenAll(tasks);
-                    }
+                    await handler(events);
                 }
                 catch (Exception ex)
                 {
@@ -157,6 +145,40 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
             _queueEvent.Reset();
             _queueEmptyEvent.Set();
+        }
+    }
+
+    private async Task HandleSingle(IEnumerable<AppendedEvent> events)
+    {
+        var @event = events.First();
+        foreach (var subscription in _subscriptions)
+        {
+            if (subscription.EventTypeIds.Contains(@event.Metadata.Type.Id))
+            {
+                var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
+                await observer.Handle(@event.Context.EventSourceId, [@event]);
+            }
+        }
+    }
+
+    private async Task HandlePartitioned(IEnumerable<AppendedEvent> events)
+    {
+        foreach (var group in events.GroupBy(@event => @event.Context.EventSourceId))
+        {
+            var tasks = new List<Task>();
+            foreach (var subscription in _subscriptions)
+            {
+                var actualEvents = group.Where(@event => subscription.EventTypeIds.Contains(@event.Metadata.Type.Id)).ToList();
+                if (actualEvents.Count == 0)
+                {
+                    continue;
+                }
+                var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
+                var partition = group.Key;
+                tasks.Add(observer.Handle(partition, actualEvents));
+            }
+
+            await Task.WhenAll(tasks);
         }
     }
 }

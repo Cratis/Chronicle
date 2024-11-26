@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.EventSequences.for_AppendedEventsQueue.given;
 
@@ -29,7 +30,7 @@ public abstract class a_single_subscriber : all_dependencies
             });
         _grainFactory.GetGrain<IObserver>(_observerKey).Returns(_observer);
 
-        _queue = new AppendedEventsQueue(_taskFactory, _grainFactory);
+        _queue = new AppendedEventsQueue(_taskFactory, _grainFactory, Substitute.For<ILogger<AppendedEventsQueue>>());
         await _queue.Subscribe(_observerKey, EventTypes);
     }
 
