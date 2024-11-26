@@ -22,6 +22,7 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// </remarks>
 /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
+/// <param name="logger">The logger.</param>
 public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,

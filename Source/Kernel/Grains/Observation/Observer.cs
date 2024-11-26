@@ -367,7 +367,6 @@ public class Observer(
                     }
 
                     // TODO: This is weird, if the LastSuccessfulObserveation is Unavailable
-
                     State = State with { NextEventSequenceNumber = result.LastSuccessfulObservation.Next() };
                     if (numEventsSuccessfullyHandled > 0)
                     {

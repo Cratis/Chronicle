@@ -40,7 +40,7 @@ internal static partial class HandleEventsForPartitionLogging
 
     [LoggerMessage(LogLevel.Debug, "HandleEventsForPartition job step for partition {Partition} completed successfully. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
     internal static partial void Completed(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
-    
+
     [LoggerMessage(LogLevel.Warning, "An error occurred for HandleEventsForPartition job step for partition {Partition}")]
     internal static partial void ErrorHandling(this ILogger<HandleEventsForPartition> logger, Exception error, Key partition);
 }

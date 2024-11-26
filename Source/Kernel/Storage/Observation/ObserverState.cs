@@ -18,7 +18,8 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="NextEventSequenceNumberForEventTypes">The next <see cref="EventSequenceNumber"/> for the event types the observer is for.</param>
 /// <param name="LastHandledEventSequenceNumber">The <see cref="EventSequenceNumber"/> of the last event the observer handled.</param>
 /// <param name="RunningState">The <see cref="ObserverRunningState"/> of the observer.</param>
-/// <param name="ReplayingPartitions">The partitions that are being replayed.</param>
+/// <param name="ReplayingPartitions">The individual partitions that are being replayed.</param>
+/// <param name="CatchingUpPartitions">The individual partitions that are catching up.</param>
 public record ObserverState(
     ObserverId Id,
     IEnumerable<EventType> EventTypes,
