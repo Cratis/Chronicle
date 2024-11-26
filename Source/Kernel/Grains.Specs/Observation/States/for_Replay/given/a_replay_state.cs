@@ -38,7 +38,7 @@ public class a_replay_state : Specification
             _observerKey,
             _observerServiceClient,
             _jobsManager,
-            Mock.Of<ILogger<Replay>>());
+            Substitute.For<ILogger<Replay>>());
         _state.SetStateMachine(_observer);
 
         _storedState = new ObserverState

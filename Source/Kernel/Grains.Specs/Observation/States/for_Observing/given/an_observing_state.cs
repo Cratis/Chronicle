@@ -62,7 +62,7 @@ public class an_observing_state : Specification
             _eventStoreName,
             _eventStoreNamespace,
             _eventSequenceId,
-            Mock.Of<ILogger<Observing>>());
+            Substitute.For<ILogger<Observing>>());
         _state.SetStateMachine(_observer);
         _storedState = new ObserverState
         {

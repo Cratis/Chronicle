@@ -38,6 +38,6 @@ public class two_identities_registered : all_dependencies
         };
         _identitiesFromDatabase.Add(second_identity_from_database);
 
-        store = new(_database, Mock.Of<ILogger<IdentityStorage>>());
+        store = new(_database, Substitute.For<ILogger<IdentityStorage>>());
     }
 }

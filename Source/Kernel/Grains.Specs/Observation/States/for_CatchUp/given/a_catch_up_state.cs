@@ -29,7 +29,7 @@ public class a_catch_up_state : Specification
         _observerId = Guid.NewGuid().ToString();
         _observerKey = new(_observerId, Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
         _jobsManager = Substitute.For<IJobsManager>();
-        _state = new CatchUp(_observerKey, _jobsManager, Mock.Of<ILogger<CatchUp>>());
+        _state = new CatchUp(_observerKey, _jobsManager, Substitute.For<ILogger<CatchUp>>());
         _state.SetStateMachine(_observer);
 
         _storedState = new ObserverState

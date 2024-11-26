@@ -36,7 +36,7 @@ public class a_routing_state : Specification
             _observerKey,
             _replayEvaluator,
             _eventSequence,
-            Mock.Of<ILogger<Routing>>());
+            Substitute.For<ILogger<Routing>>());
         _state.SetStateMachine(_observer);
         _storedState = new ObserverState
         {

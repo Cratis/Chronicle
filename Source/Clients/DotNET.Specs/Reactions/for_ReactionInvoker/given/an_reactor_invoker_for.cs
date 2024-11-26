@@ -23,7 +23,7 @@ public class an_reactor_invoker_for<TReactor> : Specification
             _eventTypes,
             _middlewares,
             typeof(TReactor),
-            Mock.Of<ILogger<ReactorInvoker>>());
+            Substitute.For<ILogger<ReactorInvoker>>());
     }
 
     protected virtual IEnumerable<Type> GetEventTypes() => [];

@@ -14,6 +14,6 @@ public class a_load_balanced_http_client_factory : Specification
         _strategy = Substitute.For<ILoadBalancerStrategy>();
         _httpClientFactory = Substitute.For<IHttpClientFactory>();
         _factory = new(_strategy, _httpClientFactory);
-        _httpClientFactory.CreateClient(Arg.Any<string>()).Returns(Mock.Of<HttpClient>());
+        _httpClientFactory.CreateClient(Arg.Any<string>()).Returns(Substitute.For<HttpClient>());
     }
 }
