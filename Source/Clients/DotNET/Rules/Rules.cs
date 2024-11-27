@@ -24,7 +24,7 @@ public class Rules(
     IProjections projections,
     IClientArtifactsProvider clientArtifacts) : IRules
 {
-    readonly IDictionary<Type, IEnumerable<Type>> _rulesPerCommand = clientArtifacts.Rules
+    readonly Dictionary<Type, IEnumerable<Type>> _rulesPerCommand = clientArtifacts.Rules
             .GroupBy(_ => _.BaseType!.GetGenericArguments()[1])
             .ToDictionary(_ => _.Key, _ => _.ToArray().AsEnumerable());
 

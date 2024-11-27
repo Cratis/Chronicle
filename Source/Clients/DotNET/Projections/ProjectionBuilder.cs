@@ -54,7 +54,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     public TBuilder WithInitialValues(Func<TModel> initialValueProviderCallback)
     {
         var instance = initialValueProviderCallback();
-        _initialValues = JsonObject.Create(JsonSerializer.SerializeToDocument(instance, typeof(TModel), jsonSerializerOptions).RootElement)!;
+        _initialValues = JsonObject.Create(JsonSerializer.SerializeToDocument(instance, jsonSerializerOptions).RootElement)!;
         return (this as TBuilder)!;
     }
 

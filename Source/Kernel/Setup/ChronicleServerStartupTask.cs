@@ -17,9 +17,9 @@ public class ChronicleServerStartupTask(
     IGrainFactory grainFactory) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <inheritdoc/>
-    public void Participate(ISiloLifecycle observer)
+    public void Participate(ISiloLifecycle lifecycle)
     {
-        observer.Subscribe(
+        lifecycle.Subscribe(
             nameof(ChronicleServerStartupTask),
             ServiceLifecycleStage.Active,
             Execute);

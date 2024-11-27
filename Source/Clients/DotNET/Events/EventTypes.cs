@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Events;
 /// </summary>
 public class EventTypes : IEventTypes
 {
-    readonly IDictionary<EventType, Type> _typesByEventType = new Dictionary<EventType, Type>();
-    readonly IDictionary<EventType, JsonSchema> _schemasByEventType = new Dictionary<EventType, JsonSchema>();
+    readonly Dictionary<EventType, Type> _typesByEventType = [];
+    readonly Dictionary<EventType, JsonSchema> _schemasByEventType = [];
     readonly IEventStore _eventStore;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly IClientArtifactsProvider _clientArtifacts;
