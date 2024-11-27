@@ -8,12 +8,12 @@ public class when_replaying : given.an_observer_with_subscription
 {
     async Task Establish()
     {
-        await observer.Subscribe<NullObserverSubscriber>(ObserverType.Client, [], SiloAddress.Zero);
-        storage_stats.ResetCounts();
+        await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Client, [], SiloAddress.Zero);
+        _storageStats.ResetCounts();
     }
 
-    Task Because() => observer.Replay();
+    Task Because() => _observer.Replay();
 
-    [Fact] void should_set_running_state_to_replaying() => state_storage.State.RunningState.ShouldEqual(ObserverRunningState.Replaying);
-    [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);
+    [Fact] void should_set_running_state_to_replaying() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Replaying);
+    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
 }

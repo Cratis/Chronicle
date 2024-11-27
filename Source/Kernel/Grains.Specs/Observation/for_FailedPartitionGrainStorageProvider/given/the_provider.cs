@@ -13,19 +13,19 @@ public class the_provider : Specification
     protected IStorage storage;
     protected IEventStoreStorage eventStoreStorage;
     protected IEventStoreNamespaceStorage eventStoreNamespaceStorage;
-    protected IFailedPartitionsStorage failedPartitionsStorage;
+    protected IFailedPartitionsStorage _failedPartitionsStorage;
 
     void Establish()
     {
         storage = Substitute.For<IStorage>();
         eventStoreStorage = Substitute.For<IEventStoreStorage>();
         eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
-        failedPartitionsStorage = Substitute.For<IFailedPartitionsStorage>();
+        _failedPartitionsStorage = Substitute.For<IFailedPartitionsStorage>();
         provider = new(storage);
 
-        eventStoreNamespaceStorage.FailedPartitions.Returns(failedPartitionsStorage);
+        eventStoreNamespaceStorage.FailedPartitions.Returns(_failedPartitionsStorage);
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(eventStoreNamespaceStorage);
-        failedPartitionsStorage.GetFor(Arg.Any<ObserverId>()).Returns(Task.FromResult(new FailedPartitions()));
+        _failedPartitionsStorage.GetFor(Arg.Any<ObserverId>()).Returns(Task.FromResult(new FailedPartitions()));
     }
 }

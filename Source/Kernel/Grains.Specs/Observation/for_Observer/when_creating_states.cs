@@ -10,7 +10,7 @@ public class when_creating_states : given.an_observer
 {
     IImmutableList<IState<ObserverState>> states;
 
-    void Because() => states = observer.CreateStates();
+    void Because() => states = _observer.CreateStates();
 
     [Fact] void should_return_7_states() => states.Count.ShouldEqual(7);
     [Fact] void should_return_disconnected_state() => states.FirstOrDefault(s => s is Disconnected).ShouldNotBeNull();

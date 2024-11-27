@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer;
 public class when_getting_state : given.an_observer
 {
     ObserverState state;
-    async Task Because() => state = await observer.GetState();
+    async Task Because() => state = await _observer.GetState();
 
-    [Fact] void should_return_same_state() => state_storage.State.ShouldEqual(state);
+    [Fact] void should_return_same_state() => _stateStorage.State.ShouldEqual(state);
 }

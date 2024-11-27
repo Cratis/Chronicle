@@ -2,10 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
 
-public class and_partition_is_replaying : given.an_observer_with_subscription_for_specific_event_type
+public class and_partition_is_catching_uo : given.an_observer_with_subscription_for_specific_event_type
 {
     const string _eventSourceId = "Something";
 
@@ -16,7 +15,7 @@ public class and_partition_is_replaying : given.an_observer_with_subscription_fo
             NextEventSequenceNumber = 53UL,
             LastHandledEventSequenceNumber = 54UL
         };
-        _stateStorage.State.ReplayingPartitions.Add(_eventSourceId);
+        _stateStorage.State.CatchingUpPartitions.Add(_eventSourceId);
     }
 
     async Task Because() => await _observer.Handle(_eventSourceId, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL)]);

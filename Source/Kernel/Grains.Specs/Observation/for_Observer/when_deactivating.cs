@@ -9,12 +9,12 @@ public class when_deactivating : given.an_observer
 {
     async Task Establish()
     {
-        await observer.Subscribe<NullObserverSubscriber>(ObserverType.Client, [], SiloAddress.Zero);
-        storage_stats.ResetCounts();
+        await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Client, [], SiloAddress.Zero);
+        _storageStats.ResetCounts();
     }
 
-    async Task Because() => await observer.OnDeactivateAsync(default, default);
+    async Task Because() => await _observer.OnDeactivateAsync(default, default);
 
-    [Fact] void should_set_running_state_to_disconnected() => state_storage.State.RunningState.ShouldEqual(ObserverRunningState.Disconnected);
-    [Fact] void should_write_state_twice() => storage_stats.Writes.ShouldEqual(2);
+    [Fact] void should_set_running_state_to_disconnected() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Disconnected);
+    [Fact] void should_write_state_twice() => _storageStats.Writes.ShouldEqual(2);
 }

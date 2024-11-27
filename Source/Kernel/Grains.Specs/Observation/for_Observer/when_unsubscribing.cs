@@ -7,13 +7,13 @@ public class when_unsubscribing : given.an_observer_with_subscription
 {
     async Task Establish()
     {
-        await observer.Subscribe<NullObserverSubscriber>(ObserverType.Client, [], SiloAddress.Zero);
-        storage_stats.ResetCounts();
+        await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Client, [], SiloAddress.Zero);
+        _storageStats.ResetCounts();
     }
 
-    Task Because() => observer.Unsubscribe();
+    Task Because() => _observer.Unsubscribe();
 
-    [Fact] async Task should_be_unsubscribed() => (await observer.IsSubscribed()).ShouldBeFalse();
-    [Fact] void should_set_running_state_to_disconnected() => state_storage.State.RunningState.ShouldEqual(ObserverRunningState.Disconnected);
-    [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);
+    [Fact] async Task should_be_unsubscribed() => (await _observer.IsSubscribed()).ShouldBeFalse();
+    [Fact] void should_set_running_state_to_disconnected() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Disconnected);
+    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
 }

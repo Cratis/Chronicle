@@ -15,15 +15,15 @@ public class when_setting_handled_state : given.an_observer
     void Establish()
     {
         eventSequenceNumber = 5;
-        initialState = state_storage.State;
+        initialState = _stateStorage.State;
     }
 
-    async Task Because() => error = await Catch.Exception(() => observer.SetHandledStats(eventSequenceNumber));
+    async Task Because() => error = await Catch.Exception(() => _observer.SetHandledStats(eventSequenceNumber));
 
     [Fact] void should_not_fail() => error.ShouldBeNull();
-    [Fact] void should_have_correct_state() => state_storage.State.ShouldEqual(initialState with
+    [Fact] void should_have_correct_state() => _stateStorage.State.ShouldEqual(initialState with
     {
         LastHandledEventSequenceNumber = eventSequenceNumber
     });
-    [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);
+    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
 }

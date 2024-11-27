@@ -8,7 +8,7 @@ public class when_getting_event_types : given.an_observer
 {
     public IEnumerable<EventType> eventTypes;
 
-    async Task Because() => eventTypes = await observer.GetEventTypes();
+    async Task Because() => eventTypes = await _observer.GetEventTypes();
 
-    [Fact] void should_contain_the_correct_event_types() => eventTypes.ShouldContainOnly(state_storage.State.EventTypes);
+    [Fact] void should_contain_the_correct_event_types() => eventTypes.ShouldContainOnly(_stateStorage.State.EventTypes);
 }

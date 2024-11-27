@@ -20,29 +20,29 @@ public class and_there_are_failing_partitions : given.an_observer
         firstFailedPartition = failedPartitions.AddFailedPartition("some-event-source");
         secondFailedPartition = failedPartitions.AddFailedPartition("some-event-source2");
         type = ObserverType.Client;
-        failed_partitions_storage.State = failedPartitions;
+        _failedPartitionsStorage.State = failedPartitions;
     }
 
-    async Task Because() => error = await Catch.Exception(() => observer.Subscribe<NullObserverSubscriber>(type, [], SiloAddress.Zero));
+    async Task Because() => error = await Catch.Exception(() => _observer.Subscribe<NullObserverSubscriber>(type, [], SiloAddress.Zero));
 
     [Fact] void should_not_fail() => error.ShouldBeNull();
-    [Fact] void should_write_state_at_least_once() => storage_stats.Writes.ShouldBeGreaterThanOrEqual(1);
-    [Fact] void should_store_type_to_state() => state_storage.State.Type.ShouldEqual(type);
+    [Fact] void should_write_state_at_least_once() => _storageStats.Writes.ShouldBeGreaterThanOrEqual(1);
+    [Fact] void should_store_type_to_state() => _stateStorage.State.Type.ShouldEqual(type);
     [Fact] async Task should_get_the_subscription()
     {
-        var subscription = await observer.GetSubscription();
+        var subscription = await _observer.GetSubscription();
         subscription.EventTypes.ShouldBeEmpty();
         subscription.SiloAddress.ShouldEqual(SiloAddress.Zero);
         subscription.SubscriberType.ShouldEqual(typeof(NullObserverSubscriber));
     }
 
-    [Fact] void should_be_in_running_state() => state_storage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
-    [Fact] void should_start_retry_failed_partition_jobs_for_first_partition() => jobsManager.Verify(
-        _ => _.Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(IsAny<JobId>(), Is<RetryFailedPartitionRequest>(_ => _.Key == firstFailedPartition.Partition &&
-                                                                                                                                 _.FromSequenceNumber == firstFailedPartition.LastAttempt.SequenceNumber)),
-        Once);
-    [Fact] void should_start_retry_failed_partition_jobs_for_second_partition() => jobsManager.Verify(
-        _ => _.Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(IsAny<JobId>(), Is<RetryFailedPartitionRequest>(_ => _.Key == secondFailedPartition.Partition &&
-                                                                                                                                 _.FromSequenceNumber == secondFailedPartition.LastAttempt.SequenceNumber)),
-        Once);
+    [Fact] void should_be_in_running_state() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
+    [Fact] void should_start_retry_failed_partition_jobs_for_first_partition() => _jobsManager
+        .Received(1)
+        .Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(Arg.Any<JobId>(), Arg.Is<RetryFailedPartitionRequest>(_ => _.Key == firstFailedPartition.Partition &&
+                                                                                                                                 _.FromSequenceNumber == firstFailedPartition.LastAttempt.SequenceNumber));
+    [Fact] void should_start_retry_failed_partition_jobs_for_second_partition() => _jobsManager
+        .Received(1)
+        .Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(Arg.Any<JobId>(), Arg.Is<RetryFailedPartitionRequest>(_ => _.Key == secondFailedPartition.Partition &&
+                                                                                                                                       _.FromSequenceNumber == secondFailedPartition.LastAttempt.SequenceNumber));
 }

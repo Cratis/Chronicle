@@ -7,8 +7,8 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer;
 public class when_ensuring : given.an_observer
 {
     static Exception error;
-    async Task Because() => error = await Catch.Exception(observer.Ensure);
+    async Task Because() => error = await Catch.Exception(_observer.Ensure);
 
     [Fact] void should_not_fail() => error.ShouldBeNull();
-    [Fact] void should_not_write_state() => storage_stats.Writes.ShouldEqual(0);
+    [Fact] void should_not_write_state() => _storageStats.Writes.ShouldEqual(0);
 }

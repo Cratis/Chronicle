@@ -18,11 +18,11 @@ public class when_replaying_partition_to_specific_event_sequnce_number : given.a
         toSequenceNumber = 12;
     }
 
-    Task Because() => observer.ReplayPartitionTo(partition, toSequenceNumber);
+    Task Because() => _observer.ReplayPartitionTo(partition, toSequenceNumber);
 
-    [Fact] void should_add_partition_to_replaying_partitions() => state_storage.State.ReplayingPartitions.ShouldContain(partition);
-    [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);
-    [Fact] void should_start_replay_observer_partition_job() => jobsManager.Verify(_ => _.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(
-        IsAny<JobId>(),
-        Is<ReplayObserverPartitionRequest>(_ => _.FromSequenceNumber == EventSequenceNumber.First && _.ToSequenceNumber == toSequenceNumber)));
+    [Fact] void should_add_partition_to_replaying_partitions() => _stateStorage.State.ReplayingPartitions.ShouldContain(partition);
+    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
+    [Fact] void should_start_replay_observer_partition_job() => _jobsManager.Received(1).Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(
+        Arg.Any<JobId>(),
+        Arg.Is<ReplayObserverPartitionRequest>(_ => _.FromSequenceNumber == EventSequenceNumber.First && _.ToSequenceNumber == toSequenceNumber));
 }
