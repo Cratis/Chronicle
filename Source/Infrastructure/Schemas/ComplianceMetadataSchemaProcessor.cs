@@ -44,12 +44,13 @@ public class ComplianceMetadataSchemaProcessor(IComplianceMetadataResolver metad
     {
         EnsureExtensionData(schema);
 
-        if (!schema.ExtensionData!.ContainsKey(JsonSchemaGenerator.ComplianceKey))
+        if (!schema.ExtensionData!.TryGetValue(JsonSchemaGenerator.ComplianceKey, out var value))
         {
-            schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] = new List<ComplianceSchemaMetadata>();
+            value = new List<ComplianceSchemaMetadata>();
+            schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] = value;
         }
 
-        return (schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] as List<ComplianceSchemaMetadata>)!;
+        return (value as List<ComplianceSchemaMetadata>)!;
     }
 
     void EnsureExtensionData(JsonSchema schema)

@@ -59,7 +59,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     {
         var workingState = CurrentState.Clone()!;
         var differences = SetProperties(workingState, propertyMappers, arrayIndexers);
-        if (differences.Any())
+        if (differences.Count != 0)
         {
             Add(new PropertiesChanged<TTarget>(workingState, differences));
         }
@@ -256,7 +256,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         resolvesToRemove.ForEach(_ => changes.Remove(_));
     }
 
-    IEnumerable<PropertyDifference> SetProperties(TTarget state, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
+    List<PropertyDifference> SetProperties(TTarget state, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
     {
         var differences = new List<PropertyDifference>();
 

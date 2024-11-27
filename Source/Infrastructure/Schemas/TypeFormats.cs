@@ -47,7 +47,7 @@ public class TypeFormats : ITypeFormats
 
     static string StripNullable(string? format)
     {
-        if (format?.EndsWith("?") ?? false)
+        if (format?.EndsWith('?') ?? false)
         {
             format = format[..^1];
         }
