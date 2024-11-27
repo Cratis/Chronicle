@@ -1,11 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Chronicle.Schemas;
-using Microsoft.VisualBasic;
-using NJsonSchema.Generation;
-
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_adding_on_using_event_type_directly;
 
 public class and_event_type_has_already_been_added : given.a_unique_constraint_builder_with_owner

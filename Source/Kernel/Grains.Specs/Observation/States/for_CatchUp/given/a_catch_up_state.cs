@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_CatchUp.given;
 

@@ -4,7 +4,6 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Properties;
 using Cratis.Strings;
 
 namespace Cratis.Chronicle.Rules.for_Rules.when_projecting_to_rule;

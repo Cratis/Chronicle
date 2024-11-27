@@ -6,7 +6,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Storage.MongoDB;
 using MongoDB.Bson;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending.existing_sequence_number.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;

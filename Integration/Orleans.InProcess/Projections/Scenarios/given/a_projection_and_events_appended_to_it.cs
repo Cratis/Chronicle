@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Integration.Base;
-using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.ProjectionTypes;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.given;

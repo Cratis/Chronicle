@@ -21,7 +21,6 @@ await eventStore.RegisterAll();
 // order.DoStuff();
 // order.DoOtherStuff();
 // await order.Commit();
-
 async Task AddItemToCart()
 {
     await eventStore.EventLog.Append(

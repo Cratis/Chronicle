@@ -11,7 +11,6 @@ using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.given;
 

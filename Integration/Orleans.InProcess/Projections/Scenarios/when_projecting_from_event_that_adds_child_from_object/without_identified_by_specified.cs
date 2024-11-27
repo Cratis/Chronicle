@@ -4,8 +4,6 @@
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Models;
-using Cratis.Chronicle.Storage.MongoDB;
-using HandlebarsDotNet;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_from_event_that_adds_child_from_object.without_identified_by_specified.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_from_event_that_adds_child_from_object;
