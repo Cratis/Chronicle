@@ -164,7 +164,7 @@ public class Reducers(
             .Subscribe(_ => { }, messages.Dispose);
     }
 
-    async Task ObserverMethod(ISubject<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation)
+    async Task ObserverMethod(BehaviorSubject<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation)
     {
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();

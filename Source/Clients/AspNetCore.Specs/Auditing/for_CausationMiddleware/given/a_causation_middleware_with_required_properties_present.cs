@@ -30,7 +30,7 @@ public class a_causation_middleware_with_required_properties_present : a_causati
         _httpRequest.Protocol.Returns(_protocol);
         _httpRequest.Scheme.Returns(_scheme);
         _httpRequest.QueryString.Returns(new QueryString(_query));
-        _httpRequest.RouteValues.Returns(new RouteValueDictionary(new Dictionary<string, object>
+        _httpRequest.RouteValues.Returns(new RouteValueDictionary(new Dictionary<string, object?>
         {
             { _firstRouteValueKey, _firstRouteValueValue },
             { _secondRouteValueKey, _secondRouteValueValue }

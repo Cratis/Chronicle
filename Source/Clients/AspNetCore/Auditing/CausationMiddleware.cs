@@ -81,7 +81,7 @@ public class CausationMiddleware(ICausationManager causationManager, RequestDele
                 {
                     { CausationRouteProperty, context.Request.Path },
                     { CausationMethodProperty, context.Request.Method },
-                    { CausationHostProperty, context.Request.Host.Value },
+                    { CausationHostProperty, context.Request.Host.Value ?? string.Empty },
                     { CausationProtocolProperty, context.Request.Protocol },
                     { CausationSchemeProperty, context.Request.Scheme },
                     { CausationQueryProperty, context.Request.QueryString.ToString() },

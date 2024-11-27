@@ -19,7 +19,12 @@ namespace Cratis.Chronicle.Reactors;
 /// </summary>
 public class Reactors : IReactors
 {
+    #if NET9_0
+    static readonly Lock _registerLock = new();
+    #endif
+    #if NET8_0
     static readonly object _registerLock = new();
+    #endif
     readonly IEventStore _eventStore;
     readonly IEventTypes _eventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
@@ -163,7 +168,7 @@ public class Reactors : IReactors
             .Subscribe(_ => { }, messages.Dispose);
     }
 
-    async Task ObserverMethod(ISubject<ReactorMessage> messages, ReactorHandler handler, EventsToObserve events)
+    async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, ReactorHandler handler, EventsToObserve events)
     {
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();
