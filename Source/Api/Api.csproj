@@ -3,7 +3,7 @@
     <Import Project="$(MSBuildThisFileDirectory)/Common.props" />
 
     <PropertyGroup>
-        <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">false</DisableProxyGenerator>
+        <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">true</DisableProxyGenerator>
     </PropertyGroup>
 
     <!-- We need to build ourselves, effectively, since we need the XML Docs file as something we can embed as a resource-->

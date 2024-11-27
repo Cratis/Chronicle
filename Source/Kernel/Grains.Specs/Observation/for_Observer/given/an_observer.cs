@@ -37,7 +37,8 @@ public class an_observer : Specification
     async Task Establish()
     {
         _subscriber = Substitute.For<IObserverSubscriber>();
-        _silo.AddProbe((_) => _subscriber);
+        _jobsManager = Substitute.For<IJobsManager>();
+        _silo.AddProbe(_ => _subscriber);
         _silo.AddProbe(_ => _jobsManager);
 
         _failedPartitionsState = Substitute.For<FailedPartitions>();
