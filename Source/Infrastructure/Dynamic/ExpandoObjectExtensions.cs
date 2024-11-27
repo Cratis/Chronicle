@@ -107,7 +107,7 @@ public static class ExpandoObjectExtensions
         foreach (var (key, value) in rightAsDictionary)
         {
             var rightValue = value;
-            if (resultAsDictionary.ContainsKey(key) && resultAsDictionary[key] is ExpandoObject leftValueExpandoObject &&
+            if (resultAsDictionary.TryGetValue(key, out var leftValue) && leftValue is ExpandoObject leftValueExpandoObject &&
                 value is ExpandoObject valueAsExpandoObject)
             {
                 rightValue = leftValueExpandoObject.MergeWith(valueAsExpandoObject);
@@ -223,17 +223,18 @@ public static class ExpandoObjectExtensions
     public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, ArrayIndexers arrayIndexers)
     {
         var inner = target.EnsurePath(childrenProperty, arrayIndexers) as IDictionary<string, object>;
-        if (!inner.ContainsKey(childrenProperty.LastSegment.Value) || inner[childrenProperty.LastSegment.Value] is null)
+        if (!inner.TryGetValue(childrenProperty.LastSegment.Value, out var value) || value is null)
         {
-            inner[childrenProperty.LastSegment.Value] = new List<TChild>();
+            value = new List<TChild>();
+            inner[childrenProperty.LastSegment.Value] = value;
         }
 
-        if (!(inner[childrenProperty.LastSegment.Value] is IEnumerable))
+        if (!(value is IEnumerable enumerable))
         {
             throw new ChildrenPropertyIsNotEnumerable(childrenProperty);
         }
 
-        var items = (inner[childrenProperty.LastSegment.Value] as IEnumerable)!.Cast<TChild>();
+        var items = enumerable.Cast<TChild>();
         if (items is not IList<TChild>)
         {
             items = new List<TChild>(items!);
