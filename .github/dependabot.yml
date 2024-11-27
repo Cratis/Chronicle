@@ -5,8 +5,10 @@ updates:
   schedule:
     interval: daily
   open-pull-requests-limit: 25
+  labels: []
 - package-ecosystem: npm
   directory: "/"
   schedule:
     interval: daily
   open-pull-requests-limit: 25
+  labels: []
