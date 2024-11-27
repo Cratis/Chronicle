@@ -11,22 +11,22 @@ namespace Cratis.Chronicle.Projections.for_Projection;
 
 public class when_next_event_is_not_of_interest : given.a_projection
 {
-    bool observed;
-    AppendedEvent @event;
-    Changeset<AppendedEvent, ExpandoObject> changeset;
-    Mock<IObjectComparer> objects_comparer;
+    bool _observed;
+    AppendedEvent _event;
+    Changeset<AppendedEvent, ExpandoObject> _changeset;
+    IObjectComparer _objectsComparer;
 
     void Establish()
     {
         var eventType = new EventType("cb1f33dd-8725-4bd2-a1a1-f372d352a7c6", 1);
         projection.SetEventTypesWithKeyResolvers(
             [
-                    new(eventType, KeyResolvers.FromEventSourceId)
+                    new(eventType, keyResolvers.FromEventSourceId)
             ],
             [eventType],
             new Dictionary<EventType, ProjectionOperationType>());
 
-        @event = new(
+        _event = new(
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new(
@@ -43,14 +43,14 @@ public class when_next_event_is_not_of_interest : given.a_projection
                 Identity.System),
             new ExpandoObject());
 
-        objects_comparer = new();
-        objects_comparer.Setup(_ => _.Compare(IsAny<ExpandoObject>(), IsAny<AppendedEvent>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
+        _objectsComparer = Substitute.For<IObjectComparer>();
+        _objectsComparer.Compare(Arg.Any<ExpandoObject>(), Arg.Any<AppendedEvent>(), out Arg.Any<IEnumerable<PropertyDifference>>()).Returns(true);
 
-        changeset = new(objects_comparer.Object, @event, new());
-        projection.Event.Subscribe(_ => observed = true);
+        _changeset = new(_objectsComparer, _event, new());
+        projection.Event.Subscribe(_ => _observed = true);
     }
 
-    void Because() => projection.OnNext(new(new(@event.Context.EventSourceId, ArrayIndexers.NoIndexers), @event, changeset, ProjectionOperationType.From, false));
+    void Because() => projection.OnNext(new(new(_event.Context.EventSourceId, ArrayIndexers.NoIndexers), _event, _changeset, ProjectionOperationType.From, false));
 
-    [Fact] void should_not_be_observed() => observed.ShouldBeFalse();
+    [Fact] void should_not_be_observed() => _observed.ShouldBeFalse();
 }

@@ -11,9 +11,9 @@ public class when_projecting_to_root_property : given.an_observable_and_event_se
 {
     IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> property_mappers = [];
 
-    void Establish() => observable.Project(string.Empty, "Id", property_mappers);
+    void Establish() => _observable.Project(string.Empty, "Id", property_mappers);
 
-    void Because() => observable.OnNext(event_context);
+    void Because() => _observable.OnNext(_eventContext);
 
-    [Fact] void should_set_properties_on_changeset() => changeset.Verify(_ => _.SetProperties(property_mappers, event_context.Key.ArrayIndexers), Once);
+    [Fact] void should_set_properties_on_changeset() => _changeset.Received(1).SetProperties(property_mappers, _eventContext.Key.ArrayIndexers);
 }

@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
@@ -50,7 +51,7 @@ public interface IEventSequenceStorage
     /// <param name="occurred">The date and time the event occurred.</param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<AppendedEvent> Append(EventSequenceNumber sequenceNumber, EventSourceType eventSourceType, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
+    Task<Result<AppendedEvent, AppendEventError>> Append(EventSequenceNumber sequenceNumber, EventSourceType eventSourceType, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
 
     /// <summary>
     /// Compensate a single event to the event store.
@@ -146,8 +147,8 @@ public interface IEventSequenceStorage
     /// <param name="eventTypeId"><see cref="EventTypeId"/> to check for.</param>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to check for.</param>
     /// <param name="currentSequenceNumber">The current<see cref="EventSequenceNumber"/> to get the last event applied before this, if any.</param>
-    /// <returns>True and appended event if it has an event of same type before current sequence number, false and null if not.</returns>
-    Task<(bool Found, AppendedEvent? Event)> TryGetLastEventBefore(EventTypeId eventTypeId, EventSourceId eventSourceId, EventSequenceNumber currentSequenceNumber);
+    /// <returns><see cref="Option{T}"/> of <see cref="AppendedEvent"/>.</returns>
+    Task<Catch<Option<AppendedEvent>>> TryGetLastEventBefore(EventTypeId eventTypeId, EventSourceId eventSourceId, EventSequenceNumber currentSequenceNumber);
 
     /// <summary>
     /// Gets the event at a specific sequence number.
@@ -157,12 +158,12 @@ public interface IEventSequenceStorage
     Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber);
 
     /// <summary>
-    /// Get the last instance of any of the specified event types for a specific event source.
+    /// Get the last instance of the specified event types for a specific event source.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
     /// <param name="eventTypes">Any in the collection of <see cref="EventTypeId"/> to get for.</param>
     /// <returns>The <see cref="AppendedEvent"/> found.</returns>
-    Task<AppendedEvent> GetLastInstanceOfAny(EventSourceId eventSourceId, IEnumerable<EventTypeId> eventTypes);
+    Task<Option<AppendedEvent>> TryGetLastInstanceOfAny(EventSourceId eventSourceId, IEnumerable<EventTypeId> eventTypes);
 
     /// <summary>
     /// Get events using a specific sequence number as starting point within the event sequence.

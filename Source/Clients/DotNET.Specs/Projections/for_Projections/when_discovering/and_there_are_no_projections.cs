@@ -13,19 +13,19 @@ public class and_there_are_no_projections : given.all_dependencies
 
     void Establish()
     {
-        client_artifacts.Setup(_ => _.Projections).Returns([]);
+        _clientArtifacts.Projections.Returns([]);
         projections = new Projections(
-            event_store.Object,
-            event_types.Object,
-            client_artifacts.Object,
-            rules_projections.Object,
-            schema_generator.Object,
-            model_name_resolver.Object,
-            event_serializer.Object,
-            service_provider.Object,
-            json_serializer_options);
+            _eventStore,
+            _eventTypes,
+            _clientArtifacts,
+            _rulesProjections,
+            _schemaGenerator,
+            _modelNameResolver,
+            _eventSerializer,
+            _serviceProvider,
+            _jsonSerializerOptions);
 
-        rules_projections.Setup(_ => _.Discover()).Returns(ImmutableList<ProjectionDefinition>.Empty);
+        _rulesProjections.Discover().Returns(ImmutableList<ProjectionDefinition>.Empty);
     }
 
     async Task Because()

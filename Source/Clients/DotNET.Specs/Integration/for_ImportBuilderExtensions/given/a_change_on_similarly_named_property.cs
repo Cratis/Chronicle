@@ -9,15 +9,15 @@ public class a_change_on_similarly_named_property : no_changes
 {
     void Establish()
     {
-        original_model = new Model(42, "Forty Two", "Two");
-        modified_model = new Model(42, "Forty Two", "Three");
+        _originalModel = new Model(42, "Forty Two", "Two");
+        _modifiedModel = new Model(42, "Forty Two", "Three");
 
-        changeset.Add(new PropertiesChanged<Model>(modified_model,
+        _changeset.Add(new PropertiesChanged<Model>(_modifiedModel,
         [
             new PropertyDifference(
                 new(nameof(Model.SomeString2)),
-                original_model.SomeString2,
-                modified_model.SomeString2)
+                _originalModel.SomeString2,
+                _modifiedModel.SomeString2)
         ]));
     }
 }

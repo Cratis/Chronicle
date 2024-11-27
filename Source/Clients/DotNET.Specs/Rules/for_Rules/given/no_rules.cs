@@ -8,7 +8,7 @@ public class no_rules : all_dependencies
     protected Rules rules;
 
     void Establish() => rules = new(
-        json_serializer_options,
-        projections.Object,
-        client_artifacts.Object);
+        _jsonSerializerOptions,
+        _projections,
+        _clientArtifacts);
 }

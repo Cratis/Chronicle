@@ -18,7 +18,7 @@ public class with_single_level_array_property_with_array_indexers : given.a_mong
         array_indexers = new ArrayIndexers([new ArrayIndexer("[ArrayProperty]", "Identifier", key)]);
     }
 
-    void Because() => result = converter.ToMongoDBProperty(new PropertyPath("[ArrayProperty]"), array_indexers);
+    void Because() => result = _converter.ToMongoDBProperty(new PropertyPath("[ArrayProperty]"), array_indexers);
 
     [Fact] void should_have_the_correct_property_name() => result.Property.ShouldEqual("arrayProperty.$[arrayProperty]");
     [Fact] void should_have_array_filter_for_property() => result.ArrayFilters.First().Document["arrayProperty.identifier"].ShouldEqual(new BsonBinaryData(key, GuidRepresentation.Standard));

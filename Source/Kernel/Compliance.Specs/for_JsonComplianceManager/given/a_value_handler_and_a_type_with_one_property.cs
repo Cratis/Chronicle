@@ -7,20 +7,20 @@ namespace Cratis.Chronicle.Compliance.for_JsonComplianceManager.given;
 
 public class a_value_handler_and_a_type_with_one_property : a_type_with_one_property
 {
-    protected Mock<IJsonCompliancePropertyValueHandler> value_handler;
-    protected JsonComplianceManager manager;
+    protected IJsonCompliancePropertyValueHandler _valueHandler;
+    protected JsonComplianceManager _manager;
 
-    protected readonly Guid metadata_type = Guid.NewGuid();
+    protected readonly ComplianceMetadataType _metadataType = Guid.NewGuid();
 
     void Establish()
     {
         schema.Properties.First()!.Value.ExtensionData = new Dictionary<string, object?>()
         {
-            { JsonSchemaGenerator.ComplianceKey, new[] { new ComplianceSchemaMetadata(metadata_type, string.Empty) } }
+            { JsonSchemaGenerator.ComplianceKey, new[] { new ComplianceSchemaMetadata(_metadataType, string.Empty) } }
         };
 
-        value_handler = new();
-        value_handler.SetupGet(_ => _.Type).Returns(metadata_type);
-        manager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(value_handler.Object));
+        _valueHandler = Substitute.For<IJsonCompliancePropertyValueHandler>();
+        _valueHandler.Type.Returns(_metadataType);
+        _manager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(_valueHandler));
     }
 }

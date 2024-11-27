@@ -8,15 +8,15 @@ namespace Cratis.Chronicle.Rules.for_Rules.given;
 
 public class all_dependencies : Specification
 {
-    protected Mock<IClientArtifactsProvider> client_artifacts;
-    protected Mock<IProjections> projections;
-    protected JsonSerializerOptions json_serializer_options;
+    protected IClientArtifactsProvider _clientArtifacts;
+    protected IProjections _projections;
+    protected JsonSerializerOptions _jsonSerializerOptions;
 
     void Establish()
     {
-        client_artifacts = new();
-        projections = new();
-        json_serializer_options = new JsonSerializerOptions
+        _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
+        _projections = Substitute.For<IProjections>();
+        _jsonSerializerOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };

@@ -17,7 +17,7 @@ public class and_value_is_expando_object : given.a_mongodb_converter
         ((dynamic)value).SomeProperty = "Some value";
     }
 
-    void Because() => result = converter.ToBsonValue(value);
+    void Because() => result = _converter.ToBsonValue(value);
 
     [Fact] void should_return_a_bson_document() => result.ShouldNotBeNull();
     [Fact] void should_have_the_correct_value() => result.AsBsonDocument["SomeProperty"].AsString.ShouldEqual("Some value");

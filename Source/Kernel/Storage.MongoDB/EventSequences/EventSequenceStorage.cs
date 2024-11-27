@@ -95,7 +95,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<AppendedEvent> Append(
+    public async Task<Result<AppendedEvent, AppendEventError>> Append(
         EventSequenceNumber sequenceNumber,
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -113,11 +113,6 @@ public class EventSequenceStorage(
             var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
             var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
             var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
-            logger.Appending(
-                sequenceNumber,
-                eventSequenceId,
-                eventStore,
-                @namespace);
             var @event = new Event(
                 sequenceNumber,
                 correlationId,
@@ -137,7 +132,7 @@ public class EventSequenceStorage(
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
-            return new AppendedEvent(
+            return Result<AppendedEvent, AppendEventError>.Success(new AppendedEvent(
                 new(sequenceNumber, eventType),
                 new(
                     eventSourceType,
@@ -151,27 +146,11 @@ public class EventSequenceStorage(
                     correlationId,
                     causation,
                     await identityStorage.GetFor(causedByChain)),
-                content);
+                content));
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            logger.DuplicateEventSequenceNumber(
-                sequenceNumber,
-                eventSequenceId,
-                eventStore,
-                @namespace);
-
-            throw new DuplicateEventSequenceNumber(sequenceNumber, eventSequenceId);
-        }
-        catch (Exception ex)
-        {
-            logger.AppendFailure(
-                sequenceNumber,
-                eventSequenceId,
-                eventStore,
-                @namespace,
-                ex);
-            throw;
+            return AppendEventError.DuplicateEventSequenceNumber;
         }
     }
 
@@ -430,22 +409,29 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<(bool Found, AppendedEvent? Event)> TryGetLastEventBefore(EventTypeId eventTypeId, EventSourceId eventSourceId, EventSequenceNumber currentSequenceNumber)
+    public async Task<Catch<Option<AppendedEvent>>> TryGetLastEventBefore(EventTypeId eventTypeId, EventSourceId eventSourceId, EventSequenceNumber currentSequenceNumber)
     {
-        var filter = Builders<Event>.Filter.And(
-            Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
-            Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId),
-            Builders<Event>.Filter.Lt(_ => _.SequenceNumber, currentSequenceNumber));
+        try
+        {
+            var filter = Builders<Event>.Filter.And(
+                Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
+                Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId),
+                Builders<Event>.Filter.Lt(_ => _.SequenceNumber, currentSequenceNumber));
 
-        var @event = await _collection.Find(filter)
-            .SortByDescendingSequenceNumber()
-            .Limit(1)
-            .FirstOrDefaultAsync()
-            .ConfigureAwait(false);
+            var @event = await _collection.Find(filter)
+                .SortByDescendingSequenceNumber()
+                .Limit(1)
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false);
 
-        return @event != null
-            ? (true, await converter.ToAppendedEvent(@event))
-            : (false, null);
+            return @event != null
+                ? await converter.ToAppendedEvent(@event)
+                : Option<AppendedEvent>.None();
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     /// <inheritdoc/>
@@ -465,25 +451,25 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<AppendedEvent> GetLastInstanceOfAny(
+    public async Task<Option<AppendedEvent>> TryGetLastInstanceOfAny(
         EventSourceId eventSourceId,
         IEnumerable<EventTypeId> eventTypes)
     {
         logger.GettingLastInstanceOfAny(eventSequenceId, eventSourceId, eventTypes);
-
         var anyEventTypes = Builders<Event>.Filter.In(e => e.Type, eventTypes);
-
         var filter = Builders<Event>.Filter.And(
             anyEventTypes,
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
         var collection = _collection;
         var @event = await collection.Find(filter)
-                                     .SortByDescendingSequenceNumber()
-                                     .Limit(1)
-                                     .SingleAsync()
-                                     .ConfigureAwait(false);
-        return await converter.ToAppendedEvent(@event);
+                                    .SortByDescendingSequenceNumber()
+                                    .Limit(1)
+                                    .SingleOrDefaultAsync()
+                                    .ConfigureAwait(false);
+        return @event is null
+            ? Option<AppendedEvent>.None()
+            : await converter.ToAppendedEvent(@event);
     }
 
     /// <inheritdoc/>

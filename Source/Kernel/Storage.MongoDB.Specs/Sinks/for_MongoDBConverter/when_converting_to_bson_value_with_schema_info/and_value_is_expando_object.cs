@@ -19,17 +19,17 @@ public class and_value_is_expando_object : given.a_mongodb_converter
     {
         value = new ExpandoObject();
         ((dynamic)value).SomeProperty = "Some value";
-        schema_property = model.Schema.GetSchemaPropertyForPropertyPath(nameof(given.ReadModel.SomeProperty));
+        schema_property = _model.Schema.GetSchemaPropertyForPropertyPath(nameof(given.ReadModel.SomeProperty));
 
         bson_document = new()
         {
             { "someProperty", "Some value" }
         };
-        expando_object_converter.Setup(_ => _.ToBsonDocument(value, schema_property)).Returns(bson_document);
+        _expandoObjectConverter.ToBsonDocument(value, schema_property).Returns(bson_document);
     }
 
-    void Because() => result = converter.ToBsonValue(value, schema_property);
+    void Because() => result = _converter.ToBsonValue(value, schema_property);
 
-    [Fact] void should_convert_using_expando_object_converter() => expando_object_converter.Verify(_ => _.ToBsonDocument(value, schema_property), Once);
+    [Fact] void should_convert_using_expando_object_converter() => _expandoObjectConverter.Received(1).ToBsonDocument(value, schema_property);
     [Fact] void should_return_the_converted_object() => result.ShouldEqual(bson_document);
 }

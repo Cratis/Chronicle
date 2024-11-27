@@ -7,19 +7,19 @@ namespace Cratis.Chronicle.Integration.for_AdapterMapperFactory;
 
 public class when_creating_for_adapter : Specification
 {
-    Mock<IAdapterFor<Model, ExternalModel>> adapter;
+    IAdapterFor<Model, ExternalModel> _adapter;
 
-    AdapterMapperFactory factory;
-    IMapper result;
+    AdapterMapperFactory _factory;
+    IMapper _result;
 
     void Establish()
     {
-        factory = new();
-        adapter = new();
+        _factory = new();
+        _adapter = Substitute.For<IAdapterFor<Model, ExternalModel>>();
     }
 
-    void Because() => result = factory.CreateFor(adapter.Object);
+    void Because() => _result = _factory.CreateFor(_adapter);
 
-    [Fact] void should_define_model() => adapter.Verify(_ => _.DefineImportMapping(IsAny<IMappingExpression<ExternalModel, Model>>()), Once);
-    [Fact] void should_return_mapper() => result.ShouldNotBeNull();
+    [Fact] void should_define_model() => _adapter.Received(1).DefineImportMapping(Arg.Any<IMappingExpression<ExternalModel, Model>>());
+    [Fact] void should_return_mapper() => _result.ShouldNotBeNull();
 }

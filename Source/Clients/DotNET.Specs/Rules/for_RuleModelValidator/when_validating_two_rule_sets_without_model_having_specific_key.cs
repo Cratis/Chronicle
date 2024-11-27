@@ -9,31 +9,31 @@ namespace Cratis.Chronicle.Rules.for_Rules.for_RulesModelValidator;
 
 public class when_validating_two_rule_sets_without_model_having_specific_key : given.two_rule_sets
 {
-    ModelValidationContext context;
-    Mock<ModelMetadata> model_metadata;
-    Mock<IModelMetadataProvider> model_metadata_provider;
-    Model model;
-    IEnumerable<ModelValidationResult> result;
+    ModelValidationContext _context;
+    ModelMetadata _modelMetadata;
+    IModelMetadataProvider _modelMetadataProvider;
+    Model _model;
+    IEnumerable<ModelValidationResult> _result;
 
     void Establish()
     {
-        model_metadata_provider = new();
-        model_metadata = new(ModelMetadataIdentity.ForType(typeof(Model)));
-        model = new Model();
-        context = new(
+        _modelMetadataProvider = Substitute.For<IModelMetadataProvider>();
+        _modelMetadata = Substitute.For<ModelMetadata>(ModelMetadataIdentity.ForType(typeof(Model)));
+        _model = new Model();
+        _context = new(
             new(),
-            model_metadata.Object,
-            model_metadata_provider.Object,
+            _modelMetadata,
+            _modelMetadataProvider,
             new object(),
-            model);
+            _model);
     }
 
-    void Because() => result = validator.Validate(context);
+    void Because() => _result = _validator.Validate(_context);
 
-    [Fact] void should_project_to_first_rule_set_without_model_key() => rules.Verify(_ => _.ProjectTo(first_rule_set.Object, null), Once);
-    [Fact] void should_project_to_second_rule_set_without_model_key() => rules.Verify(_ => _.ProjectTo(second_rule_set.Object, null), Once);
-    [Fact] void should_add_first_rule_first_failure() => result.ToArray()[0].MemberName.ShouldEqual(first_rule_set_validation_result.Errors.ToArray()[0].PropertyName);
-    [Fact] void should_add_first_rule_second_failure() => result.ToArray()[1].MemberName.ShouldEqual(first_rule_set_validation_result.Errors.ToArray()[1].PropertyName);
-    [Fact] void should_add_second_rule_first_failure() => result.ToArray()[2].MemberName.ShouldEqual(second_rule_set_validation_result.Errors.ToArray()[0].PropertyName);
-    [Fact] void should_add_second_rule_second_failure() => result.ToArray()[3].MemberName.ShouldEqual(second_rule_set_validation_result.Errors.ToArray()[1].PropertyName);
+    [Fact] void should_project_to_first_rule_set_without_model_key() => _rules.Received(1).ProjectTo(_firstRuleSet, null);
+    [Fact] void should_project_to_second_rule_set_without_model_key() => _rules.Received(1).ProjectTo(_secondRuleSet, null);
+    [Fact] void should_add_first_rule_first_failure() => _result.ToArray()[0].MemberName.ShouldEqual(_firstRuleSetValidationResult.Errors.ToArray()[0].PropertyName);
+    [Fact] void should_add_first_rule_second_failure() => _result.ToArray()[1].MemberName.ShouldEqual(_firstRuleSetValidationResult.Errors.ToArray()[1].PropertyName);
+    [Fact] void should_add_second_rule_first_failure() => _result.ToArray()[2].MemberName.ShouldEqual(_secondRuleSetValidationResult.Errors.ToArray()[0].PropertyName);
+    [Fact] void should_add_second_rule_second_failure() => _result.ToArray()[3].MemberName.ShouldEqual(_secondRuleSetValidationResult.Errors.ToArray()[1].PropertyName);
 }

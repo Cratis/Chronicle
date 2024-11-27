@@ -5,16 +5,16 @@ namespace Cratis.Chronicle.Integration.for_Adapters.given;
 
 public class all_dependencies : Specification
 {
-    protected Mock<IClientArtifactsProvider> client_artifacts;
-    protected Mock<IServiceProvider> service_provider;
-    protected Mock<IAdapterProjectionFactory> projection_factory;
-    protected Mock<IAdapterMapperFactory> mapper_factory;
+    protected IClientArtifactsProvider _clientArtifacts;
+    protected IServiceProvider _serviceProvider;
+    protected IAdapterProjectionFactory _projectionFactory;
+    protected IAdapterMapperFactory _mapperFactory;
 
     void Establish()
     {
-        client_artifacts = new();
-        service_provider = new();
-        projection_factory = new();
-        mapper_factory = new();
+        _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
+        _serviceProvider = Substitute.For<IServiceProvider>();
+        _projectionFactory = Substitute.For<IAdapterProjectionFactory>();
+        _mapperFactory = Substitute.For<IAdapterMapperFactory>();
     }
 }

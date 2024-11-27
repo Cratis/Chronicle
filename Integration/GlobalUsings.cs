@@ -4,5 +4,5 @@
 global using Cratis.Concepts;
 global using Cratis.Execution;
 global using Cratis.Specifications;
+global using Cratis.Types;
 global using Xunit;
-#pragma warning enable

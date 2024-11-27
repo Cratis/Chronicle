@@ -8,16 +8,17 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver;
 
 public class when_completed : given.a_catchup_observer_and_a_request
 {
-    Mock<IObserver> observer;
+    IObserver _observer;
 
     void Establish()
     {
-        observer = silo.AddProbe<IObserver>(((CatchUpObserverRequest)state_storage.State.Request).ObserverKey);
-        state_storage.State.HandledCount = 42;
+        _observer = Substitute.For<IObserver>();
+        _silo.AddProbe(_ => _observer);
+        _stateStorage.State.HandledCount = 42;
     }
 
-    async Task Because() => await job.OnCompleted();
+    async Task Because() => await _job.OnCompleted();
 
-    [Fact] void should_report_handled_events() => observer.Verify(_ => _.ReportHandledEvents(state_storage.State.HandledCount), Once);
-    [Fact] void should_transition_to_routing() => observer.Verify(_ => _.TransitionTo<Routing>(), Once);
+    [Fact] void should_report_handled_events() => _observer.Received(1).ReportHandledEvents(_stateStorage.State.HandledCount);
+    [Fact] void should_transition_to_routing() => _observer.Received(1).TransitionTo<Routing>();
 }

@@ -5,21 +5,21 @@ namespace Cratis.Chronicle.Compliance.for_ComplianceMetadataResolver.when_asking
 
 public class and_there_is : Specification
 {
-    ComplianceMetadataResolver resolver;
-    bool result;
+    ComplianceMetadataResolver _resolver;
+    bool _result;
 
     void Establish()
     {
-        var provider = new Mock<ICanProvideComplianceMetadataForType>();
-        provider.Setup(_ => _.CanProvide(typeof(object))).Returns(true);
+        var provider = Substitute.For<ICanProvideComplianceMetadataForType>();
+        provider.CanProvide(typeof(object)).Returns(true);
 
-        resolver = new(
-            new KnownInstancesOf<ICanProvideComplianceMetadataForType>([provider.Object]),
+        _resolver = new(
+            new KnownInstancesOf<ICanProvideComplianceMetadataForType>([provider]),
             new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([])
         );
     }
 
-    void Because() => result = resolver.HasMetadataFor(typeof(object));
+    void Because() => _result = _resolver.HasMetadataFor(typeof(object));
 
-    [Fact] void should_have() => result.ShouldBeTrue();
+    [Fact] void should_have() => _result.ShouldBeTrue();
 }
