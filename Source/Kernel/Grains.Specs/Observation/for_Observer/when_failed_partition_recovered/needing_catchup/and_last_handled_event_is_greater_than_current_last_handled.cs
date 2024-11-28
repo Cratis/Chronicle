@@ -19,6 +19,7 @@ public class and_last_handled_event_is_greater_than_current_last_handled : given
     [Fact] void should_write_state_twice() => _storageStats.Writes.ShouldEqual(2);
     [Fact] void should_write_failed_partitions_state_once() => _failedPartitionsStorageStats.Writes.ShouldEqual(1);
     [Fact] void should_remove_partition_from_failed_partitions() => _failedPartitionsStorage.State.Partitions.Select(_ => _.Partition).ShouldNotContain(_partition);
+    [Fact] void should_contain_partition_in_catching_up_partition() => _stateStorage.State.CatchingUpPartitions.ShouldContain(_partition);
     [Fact] void should_update_last_handled_event_sequence_number() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual(_newSequenceNumber);
     [Fact] void should_not_update_next_event_sequence_number() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual(_nextEventSequenceNumber);
     [Fact] void should_start_catchup_job() => CheckStartedCatchupJob(_newSequenceNumber);
