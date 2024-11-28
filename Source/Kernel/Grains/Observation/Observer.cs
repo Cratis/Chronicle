@@ -233,11 +233,9 @@ public class Observer(
         string exceptionStackTrace)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-
         _metrics?.PartitionFailed(partition);
-
         logger.PartitionFailed(partition, sequenceNumber);
-        var failure = Failures.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
+        var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         if (failure.Attempts.Count() < 10)
         {
             await this.RegisterOrUpdateReminder(partition.ToString(), GetNextRetryDelay(failure), TimeSpan.FromHours(48));
@@ -255,9 +253,10 @@ public class Observer(
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FailingPartitionRecovered(partition);
-        Failures.Remove(partition);
-        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        failures.State.Remove(partition);
         await failures.WriteStateAsync();
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
     }
 
@@ -506,7 +505,7 @@ public class Observer(
 
     async Task<bool> NeedsCatchup(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
-        var nextSequenceNumber = await _eventSequence.GetNextSequenceNumberGreaterOrEqualThan(lastHandledEventSequenceNumber, State.EventTypes, partition);
+        var nextSequenceNumber = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(lastHandledEventSequenceNumber, State.EventTypes, partition);
         return nextSequenceNumber != lastHandledEventSequenceNumber;
     }
 

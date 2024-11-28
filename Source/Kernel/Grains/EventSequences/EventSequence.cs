@@ -117,7 +117,7 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public async Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(
+    public async Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualTo(
         EventSequenceNumber sequenceNumber,
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null)
