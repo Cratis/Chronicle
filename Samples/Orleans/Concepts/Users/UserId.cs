@@ -1,5 +1,3 @@
-using Cratis.Chronicle.Events;
-
 namespace Concepts.Users;
 
 public record UserId(Guid Value) : ConceptAs<Guid>(Value)

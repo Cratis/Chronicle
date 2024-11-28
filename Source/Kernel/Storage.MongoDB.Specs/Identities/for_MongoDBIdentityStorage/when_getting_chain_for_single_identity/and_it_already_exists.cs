@@ -15,6 +15,6 @@ public class and_it_already_exists : given.two_identities_registered
     async Task Because() => identities = await store.GetFor(identity);
 
     [Fact] void should_return_only_one_identity() => identities.Count().ShouldEqual(1);
-    [Fact] void should_not_insert_the_identity() => inserted_identities.Count.ShouldEqual(0);
+    [Fact] void should_not_insert_the_identity() => _insertedIdentities.Count.ShouldEqual(0);
     [Fact] void should_return_the_correct_identity() => identities.First().ShouldEqual(first_identity);
 }

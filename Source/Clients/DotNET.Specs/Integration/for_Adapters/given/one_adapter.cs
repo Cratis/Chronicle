@@ -7,29 +7,28 @@ namespace Cratis.Chronicle.Integration.for_Adapters.given;
 
 public class one_adapter : all_dependencies
 {
-    protected Adapters adapters;
-    protected Mock<IAdapterFor<Model, ExternalModel>> adapter;
-
-    protected Mock<IAdapterProjectionFor<Model>> adapter_projection;
-    protected Mock<IMapper> mapper;
+    protected Adapters _adapters;
+    protected IAdapterFor<Model, ExternalModel> _adapter;
+    protected IAdapterProjectionFor<Model> _adapterProjection;
+    protected IMapper _mapper;
 
     void Establish()
     {
-        adapter = new Mock<IAdapterFor<Model, ExternalModel>>();
-        var adapterType = adapter.Object.GetType();
-        client_artifacts.SetupGet(_ => _.Adapters).Returns([adapterType]);
-        service_provider.Setup(_ => _.GetService(adapterType)).Returns(adapter.Object);
+        _adapter = Substitute.For<IAdapterFor<Model, ExternalModel>>();
+        var adapterType = _adapter.GetType();
+        _clientArtifacts.Adapters.Returns([adapterType]);
+        _serviceProvider.GetService(adapterType).Returns(_adapter);
 
-        mapper = new();
-        mapper_factory.Setup(_ => _.CreateFor(adapter.Object)).Returns(mapper.Object);
+        _mapper = Substitute.For<IMapper>();
+        _mapperFactory.CreateFor(_adapter).Returns(_mapper);
 
-        adapter_projection = new();
-        projection_factory.Setup(_ => _.CreateFor(adapter.Object)).Returns(Task.FromResult(adapter_projection.Object));
+        _adapterProjection = Substitute.For<IAdapterProjectionFor<Model>>();
+        _projectionFactory.CreateFor(_adapter).Returns(Task.FromResult(_adapterProjection));
 
-        adapters = new(
-            client_artifacts.Object,
-            service_provider.Object,
-            projection_factory.Object,
-            mapper_factory.Object);
+        _adapters = new(
+            _clientArtifacts,
+            _serviceProvider,
+            _projectionFactory,
+            _mapperFactory);
     }
 }

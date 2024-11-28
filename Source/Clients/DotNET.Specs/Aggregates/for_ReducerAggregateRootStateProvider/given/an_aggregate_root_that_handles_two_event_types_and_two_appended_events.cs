@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Reducers;
 
 namespace Cratis.Chronicle.Aggregates.for_ReducerAggregateRootStateProvider.given;
 

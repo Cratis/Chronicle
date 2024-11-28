@@ -7,16 +7,17 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs.for_CatchUpObserver.when_aski
 
 public class and_it_is_subscribed : given.a_catchup_observer_and_a_request
 {
-    Mock<IObserver> observer;
-    bool result;
+    IObserver _observer;
+    bool _result;
 
     void Establish()
     {
-        observer = silo.AddProbe<IObserver>(((CatchUpObserverRequest)state_storage.State.Request).ObserverKey);
-        observer.Setup(_ => _.IsSubscribed()).ReturnsAsync(true);
+        _observer = Substitute.For<IObserver>();
+        _silo.AddProbe(_ => _observer);
+        _observer.IsSubscribed().Returns(true);
     }
 
-    async Task Because() => result = await job.WrappedCanResume();
+    async Task Because() => _result = await _job.WrappedCanResume();
 
-    [Fact] void should_be_able_to_resume() => result.ShouldBeTrue();
+    [Fact] void should_be_able_to_resume() => _result.ShouldBeTrue();
 }

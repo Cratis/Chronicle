@@ -2,34 +2,47 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
 
 public class and_some_events_has_already_been_handled : given.an_observer_with_subscription_for_specific_event_type
 {
-    readonly IEnumerable<AppendedEvent> events =
+    readonly IEnumerable<AppendedEvent> _events =
     [
         AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL),
         AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL),
     ];
 
+    List<AppendedEvent> _handledEvents;
+
     void Establish()
     {
-        state_storage.State = state_storage.State with
+        _stateStorage.State = _stateStorage.State with
         {
             NextEventSequenceNumber = 43UL,
             LastHandledEventSequenceNumber = 42UL
         };
 
-        subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok(43UL)));
+        _subscriber
+            .OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
+            .Returns(ObserverSubscriberResult.Ok(43UL));
+
+        _handledEvents = [];
+        _subscriber
+            .OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
+            .Returns(callInfo =>
+            {
+                var events = callInfo.Arg<IEnumerable<AppendedEvent>>();
+                _handledEvents.AddRange(events);
+                return ObserverSubscriberResult.Ok(events.Last().Metadata.SequenceNumber);
+            });
     }
 
-    async Task Because() => await observer.Handle("Something", events);
+    async Task Because() => await _observer.Handle("Something", _events);
 
-    [Fact] void should_forward_only_one_to_subscriber() => subscriber.Verify(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()), Once());
-    [Fact] void should_forward_last_event_to_subscriber() => subscriber.Verify(_ => _.OnNext(new[] { events.Last() }, IsAny<ObserverSubscriberContext>()), Once());
-    [Fact] void should_not_set_next_sequence_number() => state_storage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)44UL);
-    [Fact] void should_not_set_last_handled_event_sequence_number() => state_storage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
-    [Fact] void should_write_state_once() => storage_stats.Writes.ShouldEqual(1);
+    [Fact] void should_forward_only_one_to_subscriber() => _subscriber.Received(1).OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
+    [Fact] void should_forward_last_event_to_subscriber() => _handledEvents.ShouldContainOnly(_events.Last());
+    [Fact] void should_not_set_next_sequence_number() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)44UL);
+    [Fact] void should_not_set_last_handled_event_sequence_number() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
+    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
 }

@@ -23,7 +23,7 @@ public class when_validating_with_simple_is_valid_with_failure : given.a_validat
     {
         try
         {
-            rule.Validate(value_to_validate, validation_context);
+            rule.Validate(value_to_validate, _validationContext);
         }
         catch (ValidationException ex)
         {

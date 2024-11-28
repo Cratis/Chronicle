@@ -9,14 +9,14 @@ public class when_leaving : given.a_routing_state
 {
     async void Establish()
     {
-        stored_state = stored_state with
+        _storedState = _storedState with
         {
             EventTypes =
             [
                 new EventType("31252720-dcbb-47ae-927d-26070f7ef8ae", EventTypeGeneration.First)
             ]
         };
-        subscription = subscription with
+        _subscription = _subscription with
         {
             EventTypes =
             [
@@ -24,18 +24,18 @@ public class when_leaving : given.a_routing_state
             ]
         };
 
-        tail_event_sequence_numbers = tail_event_sequence_numbers with
+        _tailEventSequenceNumbers = _tailEventSequenceNumbers with
         {
             Tail = 42L,
             TailForEventTypes = 21L
         };
 
-        stored_state = await state.OnEnter(stored_state);
+        _storedState = await _state.OnEnter(_storedState);
     }
 
-    async Task Because() => resulting_stored_state = await state.OnLeave(stored_state);
+    async Task Because() => _resultingStoredState = await _state.OnLeave(_storedState);
 
-    [Fact] void should_set_next_event_sequence_number_to_next_after_tail() => resulting_stored_state.NextEventSequenceNumber.ShouldEqual(tail_event_sequence_numbers.Tail.Next());
-    [Fact] void should_set_next_event_sequence_number_for_event_types_to_next_after_tail_for_event_types() => resulting_stored_state.NextEventSequenceNumberForEventTypes.ShouldEqual(tail_event_sequence_numbers.TailForEventTypes.Next());
-    [Fact] void should_set_event_types_to_subscribers_event_types() => resulting_stored_state.EventTypes.ShouldEqual(subscription.EventTypes);
+    [Fact] void should_set_next_event_sequence_number_to_next_after_tail() => _resultingStoredState.NextEventSequenceNumber.ShouldEqual(_tailEventSequenceNumbers.Tail.Next());
+    [Fact] void should_set_next_event_sequence_number_for_event_types_to_next_after_tail_for_event_types() => _resultingStoredState.NextEventSequenceNumberForEventTypes.ShouldEqual(_tailEventSequenceNumbers.TailForEventTypes.Next());
+    [Fact] void should_set_event_types_to_subscribers_event_types() => _resultingStoredState.EventTypes.ShouldEqual(_subscription.EventTypes);
 }

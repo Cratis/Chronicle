@@ -8,30 +8,30 @@ namespace Cratis.Chronicle.AspNetCore.Auditing.for_CausationMiddleware.given;
 
 public class a_causation_middleware : Specification
 {
-    protected Mock<ICausationManager> causation_manager;
+    protected ICausationManager _causationManager;
 
-    protected CausationMiddleware middleware;
+    protected CausationMiddleware _middleware;
 
-    protected Mock<HttpContext> http_context;
-    protected Mock<HttpRequest> http_request;
-    protected Mock<IHeaderDictionary> http_request_headers;
+    protected HttpContext _httpContext;
+    protected HttpRequest _httpRequest;
+    protected IHeaderDictionary _httpRequestHeaders;
 
-    protected IDictionary<string, string> causation_properties;
+    protected IDictionary<string, string> _causationProperties;
 
     void Establish()
     {
-        causation_manager = new();
-        http_context = new();
-        http_request = new();
-        http_context.Setup(_ => _.Request).Returns(http_request.Object);
+        _causationManager = Substitute.For<ICausationManager>();
+        _httpContext = Substitute.For<HttpContext>();
+        _httpRequest = Substitute.For<HttpRequest>();
+        _httpContext.Request.Returns(_httpRequest);
 
-        http_request_headers = new();
-        http_request.SetupGet(_ => _.Headers).Returns(http_request_headers.Object);
+        _httpRequestHeaders = Substitute.For<IHeaderDictionary>();
+        _httpRequest.Headers.Returns(_httpRequestHeaders);
 
-        causation_manager
-            .Setup(_ => _.Add(CausationMiddleware.CausationType, IsAny<IDictionary<string, string>>()))
-            .Callback((CausationType _, IDictionary<string, string> properties) => causation_properties = properties);
+        _causationManager
+            .When(_ => _.Add(CausationMiddleware.CausationType, Arg.Any<IDictionary<string, string>>()))
+            .Do(callInfo => _causationProperties = callInfo.Arg<IDictionary<string, string>>());
 
-        middleware = new(causation_manager.Object, _ => Task.CompletedTask);
+        _middleware = new(_causationManager, _ => Task.CompletedTask);
     }
 }

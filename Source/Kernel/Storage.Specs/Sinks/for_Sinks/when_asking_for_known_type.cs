@@ -8,24 +8,24 @@ namespace Cratis.Chronicle.Storage.Sinks.for_Sinks;
 
 public class when_asking_for_known_type : Specification
 {
-    static SinkTypeId type = "df371e5d-b244-48d0-aaad-f298a127dd92";
-    Sinks stores;
-    Mock<ISinkFactory> factory;
-    Mock<ISink> store;
-    bool result;
-    Model model;
+    static SinkTypeId _type = "df371e5d-b244-48d0-aaad-f298a127dd92";
+    Sinks _stores;
+    ISinkFactory _factory;
+    ISink _store;
+    bool _result;
+    Model _model;
 
     void Establish()
     {
-        model = new("Something", null!);
-        store = new();
-        factory = new();
-        factory.SetupGet(_ => _.TypeId).Returns(type);
-        factory.Setup(_ => _.CreateFor(string.Empty, string.Empty, model)).Returns(store.Object);
-        stores = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>([factory.Object]));
+        _model = new("Something", null!);
+        _store = Substitute.For<ISink>();
+        _factory = Substitute.For<ISinkFactory>();
+        _factory.TypeId.Returns(_type);
+        _factory.CreateFor(string.Empty, string.Empty, _model).Returns(_store);
+        _stores = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>([_factory]));
     }
 
-    void Because() => result = stores.HasType(type);
+    void Because() => _result = _stores.HasType(_type);
 
-    [Fact] void should_have_type() => result.ShouldBeTrue();
+    [Fact] void should_have_type() => _result.ShouldBeTrue();
 }

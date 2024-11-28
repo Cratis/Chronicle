@@ -11,54 +11,53 @@ using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.given;
 
 public class a_replay_state : Specification
 {
-    protected Mock<IObserver> observer;
-    protected ObserverKey observer_key;
-    protected Mock<IObserverServiceClient> observer_service_client;
-    protected Mock<IJobsManager> jobs_manager;
-    protected ObserverSubscription subscription;
-    protected ObserverState stored_state;
-    protected ObserverState resulting_stored_state;
-    protected Replay state;
-    protected ObserverId observer_id;
+    protected IObserver _observer;
+    protected ObserverKey _observerKey;
+    protected IObserverServiceClient _observerServiceClient;
+    protected IJobsManager _jobsManager;
+    protected ObserverSubscription _subscription;
+    protected ObserverState _storedState;
+    protected ObserverState _resultingStoredState;
+    protected Replay _state;
+    protected ObserverId _observerId;
 
     void Establish()
     {
-        observer = new();
-        observer_id = Guid.NewGuid().ToString();
-        observer_key = new(observer_id, Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
-        observer_service_client = new();
-        jobs_manager = new();
-        state = new Replay(
-            observer_key,
-            observer_service_client.Object,
-            jobs_manager.Object,
-            Mock.Of<ILogger<Replay>>());
-        state.SetStateMachine(observer.Object);
+        _observer = Substitute.For<IObserver>();
+        _observerId = Guid.NewGuid().ToString();
+        _observerKey = new(_observerId, Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+        _observerServiceClient = Substitute.For<IObserverServiceClient>();
+        _jobsManager = Substitute.For<IJobsManager>();
+        _state = new Replay(
+            _observerKey,
+            _observerServiceClient,
+            _jobsManager,
+            Substitute.For<ILogger<Replay>>());
+        _state.SetStateMachine(_observer);
 
-        stored_state = new ObserverState
+        _storedState = new ObserverState
         {
-            Id = observer_id,
+            Id = _observerId,
             RunningState = ObserverRunningState.CatchingUp,
         };
 
-        subscription = new ObserverSubscription(
-            stored_state.Id,
-            new(stored_state.Id, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
+        _subscription = new ObserverSubscription(
+            _storedState.Id,
+            new(_storedState.Id, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
             [],
             typeof(object),
             SiloAddress.Zero,
             string.Empty);
 
-        observer.Setup(_ => _.GetSubscription()).Returns(() => Task.FromResult(subscription));
+        _observer.GetSubscription().Returns(_ => Task.FromResult(_subscription));
 
-        jobs_manager
-            .Setup(_ => _.GetJobsOfType<IReplayObserver, ReplayObserverRequest>())
-            .ReturnsAsync(Enumerable.Empty<JobState>().ToImmutableList());
+        _jobsManager
+            .GetJobsOfType<IReplayObserver, ReplayObserverRequest>()
+            .Returns(Enumerable.Empty<JobState>().ToImmutableList());
     }
 }

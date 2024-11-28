@@ -4,8 +4,6 @@
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Namotion.Reflection;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
@@ -14,14 +12,14 @@ namespace Cratis.Chronicle.Schemas.for_ComplianceMetadataSchemaProcessor.given;
 public class a_processor_and_a_context_for<T> : Specification
     where T : new()
 {
-    protected Mock<IComplianceMetadataResolver> resolver;
-    protected ComplianceMetadataSchemaProcessor processor;
-    protected SchemaProcessorContext context;
+    protected IComplianceMetadataResolver _resolver;
+    protected ComplianceMetadataSchemaProcessor _processor;
+    protected SchemaProcessorContext _context;
 
     void Establish()
     {
-        resolver = new();
-        processor = new(resolver.Object);
+        _resolver = Substitute.For<IComplianceMetadataResolver>();
+        _processor = new(_resolver);
         var settings = new SystemTextJsonSchemaGeneratorSettings
         {
             SerializerOptions = new JsonSerializerOptions
@@ -34,7 +32,7 @@ public class a_processor_and_a_context_for<T> : Specification
         var schema = generator.Generate(typeof(T));
 
         var instance = new T();
-        context = new(
+        _context = new(
             typeof(T).ToContextualType(),
             schema,
             new JsonSchemaResolver(instance, settings),

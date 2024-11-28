@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Projections.Expressions.Keys.for_CompositeKeyExpressi
 
 public class when_resolving_expression_with_wrong_key_value_format : given.a_resolver
 {
-    Exception result;
+    Exception _result;
 
-    void Because() => result = Catch.Exception(() => resolver.Resolve(projection.Object, "$composite(nothing)", string.Empty));
+    void Because() => _result = Catch.Exception(() => _resolver.Resolve(_projection, "$composite(nothing)", string.Empty));
 
-    [Fact] void should_throw_missing_composite_expression() => result.ShouldBeOfExactType<InvalidCompositeKeyPropertyMappingExpression>();
+    [Fact] void should_throw_missing_composite_expression() => _result.ShouldBeOfExactType<InvalidCompositeKeyPropertyMappingExpression>();
 }

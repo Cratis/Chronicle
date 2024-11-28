@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Properties;
 /// <remarks>
 /// <see cref="PropertyPath"/> is an immutable type. Every operation performed on it will return a new instance.
 /// </remarks>
-public class PropertyPath
+public partial class PropertyPath
 {
     /// <summary>
     /// Represents the not set value.
@@ -80,7 +80,7 @@ public class PropertyPath
     /// </summary>
     public bool IsSet => Path?.Equals(NotSetValue) == false;
 
-    static Regex ArrayIndexRegex => _arrayIndexRegex ??= new("\\[(?<property>[\\w-_]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+    static Regex ArrayIndexRegex => _arrayIndexRegex ??= ArrayIndexRegexGenerator();
 
     /// <summary>
     /// Implicitly convert from <see cref="PropertyPath"/> to <see cref="string"/>.
@@ -262,7 +262,7 @@ public class PropertyPath
         if (target is ExpandoObject targetAsExpandoObject)
         {
             var innerInstance = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
-            return innerInstance!.ContainsKey(LastSegment.Value) ? innerInstance[LastSegment.Value] : null;
+            return innerInstance!.TryGetValue(LastSegment.Value, out var value) ? value : null;
         }
 
         var inner = target.EnsurePath(this, arrayIndexers);
@@ -338,7 +338,10 @@ public class PropertyPath
     /// <inheritdoc/>
     public override int GetHashCode() => Path.GetHashCode();
 
-    IPropertyPathSegment ResolvePropertyPathSegment(string segment)
+    [GeneratedRegex("\\[(?<property>[\\w-_]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    internal static partial Regex ArrayIndexRegexGenerator();
+
+    static IPropertyPathSegment ResolvePropertyPathSegment(string segment)
     {
         var match = ArrayIndexRegex!.Match(segment);
         if (match.Success)

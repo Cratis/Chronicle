@@ -9,20 +9,20 @@ public class changes_on_two_properties : no_changes
 {
     void Establish()
     {
-        modified_model = new Model(43, "Forty Three", "Three");
-        original_model = new Model(42, "Forty Two", "Two");
+        _modifiedModel = new Model(43, "Forty Three", "Three");
+        _originalModel = new Model(42, "Forty Two", "Two");
 
-        changeset.Add(new PropertiesChanged<Model>(modified_model,
+        _changeset.Add(new PropertiesChanged<Model>(_modifiedModel,
         [
                 new PropertyDifference(
                     new(nameof(Model.SomeInteger)),
-                    original_model,
-                    modified_model),
+                    _originalModel,
+                    _modifiedModel),
 
                 new PropertyDifference(
                     new(nameof(Model.SomeString)),
-                    original_model,
-                    modified_model)
+                    _originalModel,
+                    _modifiedModel)
         ]));
     }
 }

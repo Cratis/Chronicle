@@ -9,11 +9,11 @@ public class and_issuing_event_with_type_that_is_included : given.an_observable_
 
     void Establish()
     {
-        filtered = observable.WhereEventTypeEquals(event_context.Event.Metadata.Type);
-        filtered.Subscribe(received.Add);
+        filtered = _observable.WhereEventTypeEquals(_eventContext.Event.Metadata.Type);
+        filtered.Subscribe(_received.Add);
     }
 
-    void Because() => observable.OnNext(event_context);
+    void Because() => _observable.OnNext(_eventContext);
 
-    [Fact] void should_receive_event() => received.ShouldContainOnly(event_context);
+    [Fact] void should_receive_event() => _received.ShouldContainOnly(_eventContext);
 }

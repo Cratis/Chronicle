@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Models;
-using Cratis.Chronicle.Projections;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.ProjectionTypes;
 

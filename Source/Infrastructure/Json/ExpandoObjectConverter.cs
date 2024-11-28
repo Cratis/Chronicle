@@ -153,7 +153,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return ConvertJsonValueFromUnknownFormat(jsonNode, schemaProperty);
     }
 
-    IDictionary<object, object> ToDictionary(JsonObject childObject)
+    Dictionary<object, object> ToDictionary(JsonObject childObject)
     {
         var dictionary = new Dictionary<object, object>();
         foreach (var (key, value) in childObject)
@@ -329,7 +329,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return input.ToJsonValue();
     }
 
-    JsonNode? ConvertToJsonNodeFromUnknownFormat(object? value, JsonSchema schemaProperty)
+    JsonValue? ConvertToJsonNodeFromUnknownFormat(object? value, JsonSchema schemaProperty)
     {
         if (value is null)
         {

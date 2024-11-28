@@ -198,7 +198,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public Task Redact(EventSourceId eventSourceId, RedactionReason? reason = null, params Type[] eventTypes) => throw new NotImplementedException();
 
-    void ThrowIfUnknownEventType(IEventTypes eventTypes, Type eventClrType)
+    static void ThrowIfUnknownEventType(IEventTypes eventTypes, Type eventClrType)
     {
         if (!eventTypes.HasFor(eventClrType))
         {
@@ -226,6 +226,5 @@ public class EventSequence(
 
     AppendResult ResolveViolationMessages(AppendResult result) => result with { ConstraintViolations = ResolveViolationMessages(result.ConstraintViolations) };
     AppendManyResult ResolveViolationMessages(AppendManyResult result) => result with { ConstraintViolations = ResolveViolationMessages(result.ConstraintViolations) };
-    IImmutableList<ConstraintViolation> ResolveViolationMessages(IEnumerable<ConstraintViolation> violations) =>
-        violations.Select(constraints.ResolveMessageFor).ToImmutableList();
+    ImmutableList<ConstraintViolation> ResolveViolationMessages(IEnumerable<ConstraintViolation> violations) => violations.Select(constraints.ResolveMessageFor).ToImmutableList();
 }

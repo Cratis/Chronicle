@@ -35,7 +35,7 @@ public class NullLogger : ILogger
     {
     }
 
-    class NullScope : IDisposable
+    sealed class NullScope : IDisposable
     {
         public static readonly NullScope Instance = new();
 

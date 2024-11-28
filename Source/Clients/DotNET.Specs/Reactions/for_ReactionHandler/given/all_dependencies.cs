@@ -2,25 +2,24 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Reactors.for_ReactorHandler.given;
 
 public class all_dependencies : Specification
 {
-    protected ReactorId Reactor_id;
-    protected EventSequenceId event_sequence_id;
-    protected Mock<IReactorInvoker> Reactor_invoker;
-    protected Mock<ICausationManager> causation_manager;
-    protected Mock<IServiceProvider> service_provider;
+    protected ReactorId _reactorId;
+    protected EventSequenceId _eventSequenceId;
+    protected IReactorInvoker _reactorInvoker;
+    protected ICausationManager _causationManager;
+    protected IServiceProvider _serviceProvider;
 
     void Establish()
     {
-        Reactor_id = Guid.NewGuid().ToString();
-        event_sequence_id = Guid.NewGuid().ToString();
-        Reactor_invoker = new();
-        causation_manager = new();
-        service_provider = new();
+        _reactorId = Guid.NewGuid().ToString();
+        _eventSequenceId = Guid.NewGuid().ToString();
+        _reactorInvoker = Substitute.For<IReactorInvoker>();
+        _causationManager = Substitute.For<ICausationManager>();
+        _serviceProvider = Substitute.For<IServiceProvider>();
     }
 }

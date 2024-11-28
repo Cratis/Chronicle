@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
         <AssemblyName>Cratis.Chronicle.Workbench.Embedded</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Workbench.Embedded</RootNamespace>
         <ResourceNamespace>$(RootNamespace).Files</ResourceNamespace>

@@ -114,6 +114,7 @@ csharp_using_directive_placement = outside_namespace:error
 csharp_style_prefer_range_operator = false:none
 
 # CSharp formatting rules:
+dotnet_diagnostic.CA1515.severity = none
 # dont want these bombing the build logs, will still show up in the IDE
 dotnet_diagnostic.IDE0055.severity = none
 # prefere brace indentation when creating objects etc
@@ -133,6 +134,7 @@ dotnet_diagnostic.CA1305.severity = none
 dotnet_diagnostic.CA1707.severity = none
 dotnet_diagnostic.CA1813.severity = none
 dotnet_diagnostic.CA1852.severity = none
+dotnet_diagnostic.CA1859.severity = none
 dotnet_diagnostic.CA1861.severity = none
 dotnet_diagnostic.CA2000.severity = none
 dotnet_diagnostic.CA2201.severity = none

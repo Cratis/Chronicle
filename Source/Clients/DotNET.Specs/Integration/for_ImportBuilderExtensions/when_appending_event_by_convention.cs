@@ -1,29 +1,27 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Properties;
-
 namespace Cratis.Chronicle.Integration.for_ImportBuilderExtensions;
 
 public class when_appending_event_by_convention : given.changes_on_two_properties
 {
-    void Establish() => subject.AppendEvent<Model, ExternalModel, SomeEvent>();
+    void Establish() => _subject.AppendEvent<Model, ExternalModel, SomeEvent>();
 
     void Because() =>
-        subject.OnNext(
+        _subject.OnNext(
             new ImportContext<Model, ExternalModel>(
                 new AdapterProjectionResult<Model>(new(0, string.Empty, string.Empty), [], 0),
-                changeset,
-                events_to_append));
+                _changeset,
+                _eventsToAppend));
 
     [Fact]
-    void should_append_correct_event_type() => events_to_append.First().ShouldBeOfExactType<SomeEvent>();
+    void should_append_correct_event_type() => _eventsToAppend.First().ShouldBeOfExactType<SomeEvent>();
 
     [Fact]
     void should_automatically_map_string_property() =>
-        ((SomeEvent)events_to_append.First()).SomeString.ShouldEqual(modified_model.SomeString);
+        ((SomeEvent)_eventsToAppend.First()).SomeString.ShouldEqual(_modifiedModel.SomeString);
 
     [Fact]
     void should_automatically_map_integer_property() =>
-        ((SomeEvent)events_to_append.First()).SomeInteger.ShouldEqual(modified_model.SomeInteger);
+        ((SomeEvent)_eventsToAppend.First()).SomeInteger.ShouldEqual(_modifiedModel.SomeInteger);
 }

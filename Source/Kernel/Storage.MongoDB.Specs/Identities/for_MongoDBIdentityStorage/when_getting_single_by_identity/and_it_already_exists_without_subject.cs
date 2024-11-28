@@ -15,6 +15,6 @@ public class and_it_already_exists_without_subject : given.two_identities_withou
     async Task Because() => identityId = await store.GetSingleFor(identity);
 
     [Fact] void should_return_an_id() => identityId.ShouldNotBeNull();
-    [Fact] void should_not_insert_the_identity() => inserted_identities.Count.ShouldEqual(0);
+    [Fact] void should_not_insert_the_identity() => _insertedIdentities.Count.ShouldEqual(0);
     [Fact] void should_return_the_correct_identity() => identityId.ShouldEqual(first_identity);
 }

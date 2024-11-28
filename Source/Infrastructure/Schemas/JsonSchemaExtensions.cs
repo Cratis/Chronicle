@@ -284,7 +284,7 @@ public static class JsonSchemaExtensions
     /// </summary>
     /// <param name="schemaProperty"><see cref="JsonSchemaProperty"/> to check.</param>
     /// <returns>True if it is, false if not.</returns>
-    public static bool IsNullable(this JsonSchemaProperty schemaProperty) => schemaProperty.Format?.EndsWith("?") ?? false;
+    public static bool IsNullable(this JsonSchemaProperty schemaProperty) => schemaProperty.Format?.EndsWith('?') ?? false;
 
     static void CollectPropertiesFrom(JsonSchema schema, List<JsonSchemaProperty> properties)
     {
