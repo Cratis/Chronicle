@@ -37,17 +37,18 @@ public class GlobalFixture : IAsyncDisposable
             .Build();
 
         var retryCount = 0;
-        Exception failure = null;
+        Exception? failure;
         do
         {
             try
             {
+                failure = null;
                 MongoDBContainer.StartAsync().GetAwaiter().GetResult();
             }
             catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException)
             {
                 failure = e;
-                Task.Delay(1000).GetAwaiter().GetResult();
+                Task.Delay(2000).GetAwaiter().GetResult();
             }
         }
         while (failure is not null && ++retryCount < 10);
