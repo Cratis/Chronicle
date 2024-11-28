@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Docker.DotNet;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
@@ -32,9 +33,25 @@ public class GlobalFixture : IAsyncDisposable
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(Network)
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(27017))
             .Build();
 
-        MongoDBContainer.StartAsync().GetAwaiter().GetResult();
+        var retryCount = 0;
+        Exception? failure;
+        do
+        {
+            try
+            {
+                failure = null;
+                MongoDBContainer.StartAsync().GetAwaiter().GetResult();
+            }
+            catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException)
+            {
+                failure = e;
+                Task.Delay(2000).GetAwaiter().GetResult();
+            }
+        }
+        while (failure is not null && ++retryCount < 10);
 
         EventStore = new MongoDBDatabase(MongoDBContainer, Constants.EventStoreDatabaseName);
         EventStoreForNamespace = new MongoDBDatabase(MongoDBContainer, Constants.EventStoreNamespaceDatabaseName);
