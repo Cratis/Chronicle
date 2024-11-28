@@ -3,7 +3,6 @@
 
 
 
-using Cratis.Chronicle.Concepts.Recommendations;
 using Cratis.Chronicle.Grains.Recommendations.for_Recommendation.given;
 
 namespace Cratis.Chronicle.Grains.Recommendations.for_Recommendation;
