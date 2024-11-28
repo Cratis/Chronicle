@@ -4,10 +4,9 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Grains.Observation.for_Observer.given;
+namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_failed_partition_recovered.given;
 
-namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_partition_replayed.not_needing_catchup.given;
-
-public class the_observer : an_observer
+public class all_dependencies : an_observer
 {
     protected static Key _partition;
     protected static EventSequenceNumber _lastHandledEventSequenceNumber;
@@ -21,12 +20,10 @@ public class the_observer : an_observer
         _stateStorage.State = _stateStorage.State with
         {
             LastHandledEventSequenceNumber = _lastHandledEventSequenceNumber,
-            NextEventSequenceNumber = _nextEventSequenceNumber,
-            ReplayingPartitions = new HashSet<Key>([_partition])
+            NextEventSequenceNumber = _nextEventSequenceNumber
         };
+        _failedPartitionsStorage.State.AddFailedPartition(_partition, 12UL);
     }
 
-    protected void UseLastHandledEventSequenceNumber(EventSequenceNumber sequenceNumber) => _eventSequence
-        .GetNextSequenceNumberGreaterOrEqualThan(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
-        .Returns(sequenceNumber);
+    protected void CheckStartedCatchupJob(EventSequenceNumber lastHandled) => CheckStartedCatchupJob(lastHandled, _partition);
 }

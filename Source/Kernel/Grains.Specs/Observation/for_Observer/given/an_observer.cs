@@ -4,8 +4,11 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -67,4 +70,25 @@ public class an_observer : Specification
         _storageStats.ResetCounts();
         _failedPartitionsStorageStats.ResetCounts();
     }
+
+    protected void CheckStartedCatchupJob(EventSequenceNumber lastHandled, Key _partition) => _jobsManager.Received(1)
+        .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
+            Arg.Any<JobId>(), Arg.Is<CatchUpObserverPartitionRequest>(_ =>
+                _.ObserverId == _observerId &&
+                _.ObserverKey == _observerKey &&
+                _.Key == _partition &&
+                _.FromSequenceNumber == lastHandled.Next() &&
+                _.EventTypes.SequenceEqual(_stateStorage.State.EventTypes)));
+
+    protected void CheckDidNotStartCatchupJob() => _jobsManager.DidNotReceive()
+        .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
+            Arg.Any<JobId>(), Arg.Any<CatchUpObserverPartitionRequest>());
+
+    protected void EventSequenceHasNextEvent(EventSequenceNumber sequenceNumber) => _eventSequence
+        .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber, Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
+        .Returns(sequenceNumber.Next());
+
+    protected void EventSequenceDoesNotHaveNextEvent(EventSequenceNumber sequenceNumber) => _eventSequence
+        .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber, Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
+        .Returns(sequenceNumber);
 }

@@ -2,18 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Grains.Observation.Jobs;
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_partition_replayed.needing_catchup;
 
-public class and_last_handled_event_is_greater_than_current_last_handled_and_next_event_sequence_number : given.the_observer
+public class and_last_handled_event_is_greater_than_current_last_handled_and_next_event_sequence_number : given.all_dependencies
 {
     static EventSequenceNumber _newSequenceNumber;
 
     void Establish()
     {
         _newSequenceNumber = _nextEventSequenceNumber.Next();
-        UseLastHandledEventSequenceNumber(_newSequenceNumber);
+        EventSequenceHasNextEvent(_newSequenceNumber);
     }
 
     async Task Because() => await _observer.PartitionReplayed(_partition, _newSequenceNumber);
