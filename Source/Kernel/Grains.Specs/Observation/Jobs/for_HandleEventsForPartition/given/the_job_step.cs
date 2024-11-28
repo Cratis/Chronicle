@@ -20,7 +20,7 @@ public class the_job_step : Specification
     {
         _observer = Substitute.For<IObserver>();
         _silo.AddProbe(_ => _observer);
-        
+
         _jobStepId = JobStepId.New();
         var logger = _silo.AddService(NullLogger<Observer>.Instance);
         var loggerFactory = Substitute.For<ILoggerFactory>();
