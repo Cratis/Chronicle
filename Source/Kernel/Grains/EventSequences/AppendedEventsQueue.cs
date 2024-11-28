@@ -176,7 +176,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             if (subscription.EventTypeIds.Contains(@event.Metadata.Type.Id))
             {
                 var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                await observer.Handle(@event.Context.EventSourceId, [@event]);
+                var eventToHandle = new List<AppendedEvent> { @event };
+                await observer.Handle(@event.Context.EventSourceId, eventToHandle);
             }
         }
     }
