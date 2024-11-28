@@ -5,7 +5,6 @@ using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Events.Constraints;
-using Cratis.Chronicle.Storage.Namespaces;
 
 namespace Cratis.Chronicle.Grains.Events.Constraints.for_ConstraintValidationFactory;
 

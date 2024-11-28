@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics.Tracing;
-
 namespace Cratis.Chronicle.Grains.Events.Constraints.for_ConstraintValidationContext.when_validating;
 
 public class multiple_validators_that_have_no_violations : given.a_constraint_validation_context_with_two_validators
