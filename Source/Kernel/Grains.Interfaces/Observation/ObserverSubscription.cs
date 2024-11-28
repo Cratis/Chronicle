@@ -29,7 +29,7 @@ public record ObserverSubscription(
     public static readonly ObserverSubscription Unsubscribed = new(ObserverId.Unspecified, ObserverKey.NotSet, [], typeof(NullObserverSubscriber), SiloAddress.Zero, null);
 
     /// <summary>
-    /// Check whether or not the subscription is subscribed.
+    /// Check whether the subscription is subscribed.
     /// </summary>
     public bool IsSubscribed => !ObserverId.Equals(ObserverId.Unspecified) && !Equals(Unsubscribed);
 }
