@@ -261,7 +261,7 @@ jobs:
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
-          file: ./Docker/Workbench/Web/Dockerfile
+          file: ./Docker/Workbench/Dockerfile
           push: true
           tags: |
             cratis/chronicle:${{ needs.release.outputs.version }}-workbench
