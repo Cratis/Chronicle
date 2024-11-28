@@ -6,7 +6,6 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 using MongoDB.Driver;
-using Xunit.Abstractions;
 
 namespace Cratis.Chronicle.Integration.Base;
 
