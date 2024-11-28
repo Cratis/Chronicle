@@ -170,6 +170,7 @@ public class EventSequence(
 
             Result<AppendedEvent, AppendEventError>? appendResult = null;
 
+            var identity = await IdentityStorage.GetFor(causedBy);
             do
             {
                 await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventName);
@@ -192,11 +193,15 @@ public class EventSequence(
                     eventType,
                     correlationId,
                     causation,
-                    await IdentityStorage.GetFor(causedBy),
+                    identity,
                     occurred,
                     compliantEventAsExpandoObject);
             }
             while(!appendResult.IsSuccess);
+
+            var appendedSequenceNumber = State.SequenceNumber;
+            State.SequenceNumber = State.SequenceNumber.Next();
+            await WriteStateAsync();
 
             _metrics?.AppendedEvent(eventSourceId, eventName);
             var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
@@ -204,9 +209,6 @@ public class EventSequence(
             State.TailSequenceNumberPerEventType[eventType.Id] = State.SequenceNumber;
             await constraintContext.Update(State.SequenceNumber);
 
-            var appendedSequenceNumber = State.SequenceNumber;
-            State.SequenceNumber = State.SequenceNumber.Next();
-            await WriteStateAsync();
             return AppendResult.Success(correlationId, appendedSequenceNumber);
         }
         catch (Exception ex)
