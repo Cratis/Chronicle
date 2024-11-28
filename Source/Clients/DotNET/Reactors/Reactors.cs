@@ -184,7 +184,6 @@ public class Reactors : IReactors
                 var context = @event.Context.ToClient();
                 var metadata = @event.Metadata.ToClient();
 
-                BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
                 var eventType = _eventTypes.GetClrTypeFor(metadata.Type.Id);
                 var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
 

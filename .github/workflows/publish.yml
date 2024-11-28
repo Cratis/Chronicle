@@ -58,7 +58,7 @@ jobs:
 
       - name: Build x64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
-        run: dotnet publish -c Release -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/x64
+        run: dotnet publish -c Release -f net9.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/x64
 
   dotnet-arm64:
     runs-on: ubuntu-latest
@@ -80,7 +80,7 @@ jobs:
 
       - name: Build arm64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
-        run: dotnet publish -c Release -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/arm64
+        run: dotnet publish -c Release -f net9.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/arm64
 
   workbench:
     runs-on: ubuntu-latest
@@ -261,7 +261,7 @@ jobs:
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
-          file: ./Docker/Workbench/Web/Dockerfile
+          file: ./Docker/Workbench/Dockerfile
           push: true
           tags: |
             cratis/chronicle:${{ needs.release.outputs.version }}-workbench

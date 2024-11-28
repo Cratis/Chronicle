@@ -16,18 +16,12 @@ public sealed class AsyncManualResetEvent
     /// Waits asynchronously for the reset.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-    public Task WaitAsync()
-    {
-        return _tcs.Task;
-    }
+    public Task WaitAsync() => _tcs.Task;
 
     /// <summary>
     /// Sets the reset event.
     /// </summary>
-    public void Set()
-    {
-        _tcs.TrySetResult(true);
-    }
+    public void Set() => _tcs.TrySetResult(true);
 
     /// <summary>
     /// Resets the event.
