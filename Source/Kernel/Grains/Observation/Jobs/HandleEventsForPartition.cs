@@ -32,7 +32,8 @@ public class HandleEventsForPartition(
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
     IEventSequenceStorage? _eventSequenceStorage;
-    IObserver? _observer;
+    IObserver _observer = null!;
+    EventSourceId _eventSourceId = EventSourceId.Unspecified;
     IObserverSubscriber? _subscriber;
 
     /// <inheritdoc/>
@@ -40,26 +41,24 @@ public class HandleEventsForPartition(
     {
         using var scope = logger.BeginObserverScope(request.ObserverKey, State.Id.JobId, State.Id.JobStepId);
         logger.Preparing(request.Partition, request.StartEventSequenceNumber, request.EndEventSequenceNumber);
-
-        var eventSourceId = (EventSourceId)(request.Partition.Value.ToString() ?? string.Empty);
         _observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
+        _eventSourceId = request.Partition.Value?.ToString() ?? EventSourceId.Unspecified;
 
-        if (!request.ObserverSubscription.IsSubscribed)
+        if (request.ObserverSubscription.IsSubscribed)
         {
-            logger.PreparingStoppedUnsubscribed(request.Partition);
+            var key = new ObserverSubscriberKey(
+                request.ObserverKey.ObserverId,
+                request.ObserverKey.EventStore,
+                request.ObserverKey.Namespace,
+                request.ObserverKey.EventSequenceId,
+                _eventSourceId,
+                request.ObserverSubscription.SiloAddress.ToParsableString());
+
+            _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, key) as IObserverSubscriber)!;
             return Task.CompletedTask;
         }
 
-        var key = new ObserverSubscriberKey(
-            request.ObserverKey.ObserverId,
-            request.ObserverKey.EventStore,
-            request.ObserverKey.Namespace,
-            request.ObserverKey.EventSequenceId,
-            eventSourceId,
-            request.ObserverSubscription.SiloAddress.ToParsableString());
-
-        _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, key) as IObserverSubscriber)!;
-
+        logger.PreparingStoppedUnsubscribed(request.Partition);
         return Task.CompletedTask;
     }
 
@@ -67,19 +66,19 @@ public class HandleEventsForPartition(
     protected override async Task<JobStepResult> PerformStep(HandleEventsForPartitionArguments request, CancellationToken cancellationToken)
     {
         using var scope = logger.BeginObserverScope(request.ObserverKey, State.Id.JobId, State.Id.JobStepId);
-        if (_subscriber == null || !request.ObserverSubscription.IsSubscribed)
+        if (_subscriber is null || !request.ObserverSubscription.IsSubscribed)
         {
             logger.PerformingStoppedUnsubscribed(request.Partition);
             return JobStepResult.Failed(SubscriberDisconnected);
         }
 
-        var eventSourceId = (EventSourceId)(request.Partition.Value.ToString() ?? string.Empty);
         var eventSequenceStorage = GetEventSequenceStorage(request.ObserverKey.EventStore, request.ObserverKey.Namespace, request.ObserverKey.EventSequenceId);
         using var events = await eventSequenceStorage.GetRange(
             request.StartEventSequenceNumber,
             request.EndEventSequenceNumber,
-            eventSourceId,
-            eventTypes: request.EventTypes);
+            _eventSourceId,
+            request.EventTypes,
+            cancellationToken);
 
         var subscriberContext = new ObserverSubscriberContext(request.ObserverSubscription.Arguments);
 
@@ -158,12 +157,20 @@ public class HandleEventsForPartition(
                     lastEventSequenceNumberAttempted = State.LastSuccessfullyHandledEventSequenceNumber.Next();
                 }
 
-                await _observer!.PartitionFailed(eventSourceId, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace);
+                await _observer!.PartitionFailed(_eventSourceId, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace);
                 return new(JobStepStatus.Failed, exceptionMessages, exceptionStackTrace);
             }
         }
 
-        logger.Completed(request.Partition, State.LastSuccessfullyHandledEventSequenceNumber);
+        if (State.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
+        {
+            logger.HandledNoneEvents(request.Partition);
+        }
+        else
+        {
+            logger.HandledAllEvents(request.Partition, State.LastSuccessfullyHandledEventSequenceNumber);
+        }
+
         return JobStepResult.Succeeded(new HandleEventsForPartitionResult(State.LastSuccessfullyHandledEventSequenceNumber));
     }
 

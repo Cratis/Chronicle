@@ -38,8 +38,11 @@ internal static partial class HandleEventsForPartitionLogging
     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} failed handling events due to disconnection. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
     internal static partial void EventHandlerDisconnected(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
-    [LoggerMessage(LogLevel.Debug, "HandleEventsForPartition job step for partition {Partition} completed successfully. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
-    internal static partial void Completed(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+    [LoggerMessage(LogLevel.Debug, "HandleEventsForPartition job step for partition {Partition} completed successfully all events. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
+    internal static partial void HandledAllEvents(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} completed handling none events")]
+    internal static partial void HandledNoneEvents(this ILogger<HandleEventsForPartition> logger, Key partition);
 
     [LoggerMessage(LogLevel.Warning, "An error occurred for HandleEventsForPartition job step for partition {Partition}")]
     internal static partial void ErrorHandling(this ILogger<HandleEventsForPartition> logger, Exception error, Key partition);
