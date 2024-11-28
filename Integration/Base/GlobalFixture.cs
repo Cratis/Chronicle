@@ -33,6 +33,7 @@ public class GlobalFixture : IAsyncDisposable
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(Network)
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(27017))
             .Build();
 
         var retryCount = 0;
@@ -48,8 +49,8 @@ public class GlobalFixture : IAsyncDisposable
                 failure = e;
                 Task.Delay(1000).GetAwaiter().GetResult();
             }
-         }
-         while (failure is not null && ++retryCount < 10);
+        }
+        while (failure is not null && ++retryCount < 10);
 
         EventStore = new MongoDBDatabase(MongoDBContainer, Constants.EventStoreDatabaseName);
         EventStoreForNamespace = new MongoDBDatabase(MongoDBContainer, Constants.EventStoreNamespaceDatabaseName);
