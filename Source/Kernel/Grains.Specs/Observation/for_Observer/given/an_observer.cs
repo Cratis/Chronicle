@@ -33,13 +33,17 @@ public class an_observer : Specification
     protected TestStorageStats _storageStats => _silo.StorageStats<Observer, ObserverState>()!;
     protected IStorage<FailedPartitions> _failedPartitionsStorage;
     protected TestStorageStats _failedPartitionsStorageStats => _silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
+    protected IEventSequence _eventSequence;
 
     async Task Establish()
     {
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
+        _eventSequence = Substitute.For<IEventSequence>();
+
         _silo.AddProbe(_ => _subscriber);
         _silo.AddProbe(_ => _jobsManager);
+        _silo.AddProbe(_ => _eventSequence);
 
         _failedPartitionsState = Substitute.For<FailedPartitions>();
 
@@ -55,11 +59,8 @@ public class an_observer : Specification
         _failedPartitionsStorage = _silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
         _failedPartitionsStorage.State = _failedPartitionsState;
 
-        var eventSequence = Substitute.For<IEventSequence>();
-        _silo.AddProbe((key) => eventSequence);
-
-        eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
-        eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
+        _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
+        _eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
 
         _observer = await _silo.CreateGrainAsync<Observer>(_observerKey);
 
