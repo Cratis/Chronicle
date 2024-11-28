@@ -86,11 +86,11 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         Rules = assembliesProvider.DefinedTypes.Where(_ => _.BaseType?.IsGenericType == true && _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
         Adapters = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAdapterFor<,>)) && !_.IsGenericType).ToArray();
         Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
-        Reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReactor)) && !_.IsGenericType).ToArray();
-        ReactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReactorMiddleware))).ToArray();
+        Reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
+        ReactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();
         Reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
-        AdditionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(ICanProvideAdditionalEventInformation))).ToArray();
-        var aggregateRoots = AggregateRoots = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAggregateRoot))).ToArray();
+        AdditionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanProvideAdditionalEventInformation>()).ToArray();
+        var aggregateRoots = AggregateRoots = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IAggregateRoot>()).ToArray();
         AggregateRootStateTypes = aggregateRoots
                                             .SelectMany(_ => _.AllBaseAndImplementingTypes())
                                             .Where(_ => _.IsDerivedFromOpenGeneric(typeof(AggregateRoot<>)))

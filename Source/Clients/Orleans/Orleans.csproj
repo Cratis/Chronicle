@@ -2,7 +2,6 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Orleans</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Orleans</RootNamespace>
-        <TargetFramework>net8.0</TargetFramework>
         <NoWarn>$(NoWarn);ORLEANS0010</NoWarn>
     </PropertyGroup>
 

@@ -4,8 +4,6 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Concepts;
-using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_properties;
-using Cratis.Chronicle.Projections;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
 

@@ -1,11 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Grains.EventSequences;
-using Orleans.Streams;
-
 namespace Cratis.Chronicle.Grains.Observation.States.for_Observing;
 
 public class when_entering : given.an_observing_state

@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Reducers;
 
 namespace Cratis.Chronicle.Aggregates.for_ProjectionAggregateRootStateProvider;
 

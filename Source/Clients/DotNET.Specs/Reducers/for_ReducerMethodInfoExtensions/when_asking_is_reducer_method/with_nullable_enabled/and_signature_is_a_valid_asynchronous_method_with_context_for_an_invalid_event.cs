@@ -4,7 +4,6 @@
 #nullable enable
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Reducers;
 
 namespace Cratis.Chronicle.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method.with_nullable_enabled;
 

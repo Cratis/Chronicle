@@ -143,8 +143,8 @@ public static class ObjectExtensions
 
             foreach (var (key, value) in leftKeyValuePairs)
             {
-                if (!rightKeyValuePairs.ContainsKey(key)) return false;
-                if (!IsEqualTo(value, rightKeyValuePairs[key])) return false;
+                if (!rightKeyValuePairs.TryGetValue(key, out var rightValuePairValue)) return false;
+                if (!IsEqualTo(value, rightValuePairValue)) return false;
             }
 
             return true;

@@ -6,7 +6,7 @@ using Shared.Carts;
 
 namespace Shared.Orders;
 
-public class OrderStateReducer // : IReducerFor<OrderState>
+public class OrderStateReducer
 {
     public Task<OrderState> ItemAdded(ItemAddedToCart @event, OrderState? initial, EventContext context)
     {

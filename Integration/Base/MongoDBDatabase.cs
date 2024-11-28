@@ -16,7 +16,7 @@ public class MongoDBDatabase : IDisposable
     readonly Subject<ChangeStreamDocument<BsonDocument>> _changes = new();
 
     /// <summary>
-    /// Initializes a new instance of <see cref="MongoDBDatabase"/>
+    /// Initializes a new instance of <see cref="MongoDBDatabase"/>.
     /// </summary>
     /// <param name="mongoDBContainer"><see cref="IContainer"/> for the MongoDB server.</param>
     /// <param name="database">Database to work with.</param>

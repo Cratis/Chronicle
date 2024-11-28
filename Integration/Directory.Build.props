@@ -1,12 +1,12 @@
 <Project>
     <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
         <IsTestProject>true</IsTestProject>
         <Nullable>disable</Nullable>
 
         <IsPackable>false</IsPackable>
         <ImplicitUsings>true</ImplicitUsings>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);SA1600;CA1034;CS8981;SA1201;ORLEANS0010</NoWarn>
     </PropertyGroup>
 

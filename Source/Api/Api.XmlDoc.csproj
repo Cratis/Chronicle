@@ -3,5 +3,6 @@
     <PropertyGroup>
         <AssemblyName>$(XmlDocsAssemblyName)</AssemblyName>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <_SkipUpgradeNetAnalyzersNuGetWarning>true</_SkipUpgradeNetAnalyzersNuGetWarning>
     </PropertyGroup>
 </Project>

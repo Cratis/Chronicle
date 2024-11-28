@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Integration.Base;
-using MongoDB.Driver;
 using Xunit.Abstractions;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending.many_events.context;
 

@@ -2,7 +2,6 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
         <AssemblyName>Cratis.Chronicle.Api</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Api</RootNamespace>
         <ResourceNamespace>$(RootNamespace)</ResourceNamespace>

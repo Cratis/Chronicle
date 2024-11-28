@@ -65,8 +65,14 @@ public class ObjectComparer : IObjectComparer
 
         foreach (var key in keys.Distinct())
         {
-            var leftValue = left!.ContainsKey(key) ? left[key] : null;
-            var rightValue = right!.ContainsKey(key) ? right[key] : null;
+            if (!left!.TryGetValue(key, out var leftValue))
+            {
+                leftValue = null;
+            }
+            if (!right!.TryGetValue(key, out var rightValue))
+            {
+                rightValue = null;
+            }
 
             var type = leftValue?.GetType() ?? rightValue?.GetType();
             if (type is null)
@@ -89,8 +95,14 @@ public class ObjectComparer : IObjectComparer
 
         foreach (var key in keys.Distinct())
         {
-            var leftValue = leftDictionary!.ContainsKey(key) ? leftDictionary[key] : null;
-            var rightValue = rightDictionary!.ContainsKey(key) ? rightDictionary[key] : null;
+            if (!leftDictionary!.TryGetValue(key, out var leftValue))
+            {
+                leftValue = null;
+            }
+            if (!rightDictionary!.TryGetValue(key, out var rightValue))
+            {
+                rightValue = null;
+            }
 
             var type = leftValue?.GetType() ?? rightValue?.GetType();
             if (type is null)
