@@ -41,7 +41,7 @@ public class CatchUpObserverPartition : Job<CatchUpObserverPartitionRequest, Job
                     request.Key,
                     request.FromSequenceNumber,
                     EventSequenceNumber.Max,
-                    EventObservationState.Replay,
+                    EventObservationState.None,
                     request.EventTypes))
         }.ToImmutableList();
 
