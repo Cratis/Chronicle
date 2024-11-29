@@ -12,12 +12,13 @@ namespace Cratis.Chronicle.Concepts;
 /// <typeparam name="TResult">The result type.</typeparam>
 public class Catch<TResult> : OneOfBase<TResult, Exception>
 {
-    Catch(OneOf<TResult, Exception> input) : base(input)
+    Catch(OneOf<TResult, Exception> input)
+        : base(input)
     {
     }
 
     /// <summary>
-    /// Gets whether the execution was successful, meaning it has a result.
+    /// Gets a value indicating whether the execution was successful, meaning it has a result.
     /// </summary>
     public bool IsSuccess => IsT0;
 
@@ -27,14 +28,14 @@ public class Catch<TResult> : OneOfBase<TResult, Exception>
     public static explicit operator TResult(Catch<TResult> obj) => obj.AsT0;
 
     /// <summary>
-    /// Creates a failed <see cref="Result{T}"/>.
+    /// Creates a failed <see cref="Catch{T}"/>.
     /// </summary>
     /// <param name="error">The optional error.</param>
     /// <returns>The created <see cref="Result{T}"/>.</returns>
     public static Catch<TResult> Failed(Exception error) => new(OneOf<TResult, Exception>.FromT1(error));
 
     /// <summary>
-    /// Creates a successful <see cref="Result{T}"/>.
+    /// Creates a successful <see cref="Catch{T}"/>.
     /// </summary>
     /// <param name="value">The value.</param>
     /// <returns>The created <see cref="Result{T}"/>.</returns>

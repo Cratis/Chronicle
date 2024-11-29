@@ -12,12 +12,13 @@ namespace Cratis.Chronicle.Concepts;
 /// </summary>
 public class Catch : OneOfBase<None, Exception>
 {
-    Catch(OneOf<None, Exception> input) : base(input)
+    Catch(OneOf<None, Exception> input)
+        : base(input)
     {
     }
 
     /// <summary>
-    /// Gets whether the execution was successful.
+    /// Gets a value indicating whether the execution was successful.
     /// </summary>
     public bool IsSuccess => IsT0;
 
@@ -36,6 +37,49 @@ public class Catch : OneOfBase<None, Exception>
     /// </summary>
     /// <returns>The created <see cref="Catch"/>.</returns>
     public static Catch Success() => new(OneOf<None, Exception>.FromT0(default));
+
+    /// <summary>
+    /// Creates a successful <see cref="Catch{TResult}"/>.
+    /// </summary>
+    /// <typeparam name="TResult">The type of the result.</typeparam>
+    /// <param name="result">The result.</param>
+    /// <returns>The created <see cref="Catch"/>.</returns>
+    public static Catch<TResult> Success<TResult>(TResult result) => Catch<TResult>.Success(result);
+
+    /// <summary>
+    /// Creates a failed <see cref="Catch{TResult}"/>.
+    /// </summary>
+    /// <typeparam name="TResult">The type of the result.</typeparam>
+    /// <param name="error">The optional error.</param>
+    /// <returns>The created <see cref="Result{T}"/>.</returns>
+    public static Catch<TResult> Failed<TResult>(Exception error) => Catch<TResult>.Failed(error);
+
+    /// <summary>
+    /// Creates a failed <see cref="Catch{T, TErrorType}"/>.
+    /// </summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <typeparam name="TError">The error type.</typeparam>
+    /// <param name="error">The error.</param>
+    /// <returns>The created <see cref="Result{T, TErrorType}"/>.</returns>
+    public static Catch<TResult, TError> Failed<TResult, TError>(Exception error) => Catch<TResult, TError>.Failed(error);
+
+    /// <summary>
+    /// Creates a failed <see cref="Catch{T, TErrorType}"/>.
+    /// </summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <typeparam name="TError">The error type.</typeparam>
+    /// <param name="error">The error.</param>
+    /// <returns>The created <see cref="Result{T, TErrorType}"/>.</returns>
+    public static Catch<TResult, TError> Failed<TResult, TError>(TError error) => Catch<TResult, TError>.Failed(error);
+
+    /// <summary>
+    /// Creates a successful <see cref="Catch{T, TErrorType}"/>.
+    /// </summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <typeparam name="TError">The error type.</typeparam>
+    /// <param name="value">The value.</param>
+    /// <returns>The created <see cref="Result{T, TErrorType}"/>.</returns>
+    public static Catch<TResult, TError> Success<TResult, TError>(TResult value) => Catch<TResult, TError>.Success(value);
 
     /// <summary>
     /// Try to get the error.
