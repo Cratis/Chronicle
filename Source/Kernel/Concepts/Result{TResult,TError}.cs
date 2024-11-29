@@ -13,12 +13,13 @@ namespace Cratis.Chronicle.Concepts;
 /// <typeparam name="TError">The error type.</typeparam>
 public class Result<TResult, TError> : OneOfBase<TResult, TError>
 {
-    Result(OneOf<TResult, TError> input) : base(input)
+    Result(OneOf<TResult, TError> input)
+        : base(input)
     {
     }
 
     /// <summary>
-    /// Gets whether the execution was successful, meaning it has a result.
+    /// Gets a value indicating whether the execution was successful, meaning it has a result.
     /// </summary>
     public bool IsSuccess => IsT0;
 
