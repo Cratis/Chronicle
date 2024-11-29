@@ -161,18 +161,33 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         using var scope = _logger?.BeginJobScope(JobId, JobKey);
         _logger?.Resuming();
 
-        var steps = await Storage.JobSteps.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused);
-        foreach (var step in steps)
+        var stepsResult = await Storage.JobSteps.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused);
+        await stepsResult.Match(
+            HandleResumeSteps,
+            _ =>
+            {
+                // TODO: We probably want to do something else here at some time.
+                stepsResult.RethrowError();
+                return Task.CompletedTask;
+            });
+        return;
+
+        async Task HandleResumeSteps(IEnumerable<JobStepState> steps)
         {
-            var jobStep = (GrainFactory.GetGrain((Type)step.Type, step.Id.JobStepId, keyExtension: new JobStepKey(JobId, JobKey.EventStore, JobKey.Namespace)) as IJobStep)!;
-            await jobStep.Resume(this.GetGrainId());
+            var tasks = steps
+                .Select(step => (GrainFactory.GetGrain(
+                    (Type)step.Type,
+                    step.Id.JobStepId,
+                    keyExtension: new JobStepKey(JobId, JobKey.EventStore, JobKey.Namespace)) as IJobStep)!)
+                .Select(jobStep => jobStep.Resume(this.GetGrainId()));
+            await Task.WhenAll(tasks);
         }
     }
 
     /// <inheritdoc/>
     public async Task Pause()
     {
-        if (State.Status is JobStatus.Stopped or JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures)
+        if (IsInStoppedOrCompletedState())
         {
             return;
         }
@@ -180,8 +195,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         using var scope = _logger?.BeginJobScope(JobId, JobKey);
         _logger?.Pausing();
 
-        _observers?.Notify(_ => _.OnJobPaused());
+        await _observers!.Notify(o => o.OnJobPaused());
 
+        // TODO: This cannot be right?
         await OnCompleted();
 
         await StatusChanged(JobStatus.Paused);
@@ -193,7 +209,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// <inheritdoc/>
     public async Task Stop()
     {
-        if (State.Status == JobStatus.Stopped || State.Status == JobStatus.CompletedSuccessfully || State.Status == JobStatus.CompletedWithFailures)
+        if (IsInStoppedOrCompletedState())
         {
             return;
         }
@@ -201,9 +217,10 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         using var scope = _logger?.BeginJobScope(JobId, JobKey);
         _logger?.Stopping();
 
-        _observers?.Notify(_ => _.OnJobStopped());
+        await _observers!.Notify(o => o.OnJobStopped());
 
         var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
+        // TODO: Fix
         await stepStorage.RemoveAllForJob(JobId);
 
         if (State.Status > JobStatus.None && State.Status < JobStatus.CompletedSuccessfully)
@@ -281,6 +298,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             ExceptionMessages = exception?.GetAllMessages() ?? []
         });
 
+        // TODO: Why doesn't this just call WriteState itself?
         return Task.CompletedTask;
     }
 
@@ -300,6 +318,13 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         _observers?.Unsubscribe(observer);
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Gets a value indicating whether the job is in a stopped or completed state.
+    /// </summary>
+    /// <returns>True if it is stopped or completed, false if not.</returns>
+    protected bool IsInStoppedOrCompletedState() =>
+        State.Status is JobStatus.Stopped or JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures;
 
     /// <summary>
     /// Called when a step has completed.
@@ -352,6 +377,20 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     /// </summary>
     /// <returns>The <see cref="JobDetails"/>.</returns>
     protected virtual JobDetails GetJobDetails() => JobDetails.NotSet;
+
+
+    static async Task InvokeJobStepMethod(JobStepGrainAndRequest jobStep, MethodInfo method, params object[] parameters)
+    {
+        var requestType = jobStep.Request.GetType();
+        var jobStepType = typeof(IJobStep<,>).MakeGenericType(requestType, jobStep.ResultType);
+        var jobStepReference = jobStep.Grain.AsReference(jobStepType);
+
+        var task = method.GetGenericMethodDefinition()
+            .MakeGenericMethod(requestType, jobStep.ResultType)
+            .Invoke(null, [jobStepReference, .. parameters]) as Task;
+
+        await task!;
+    }
 
     Dictionary<JobStepId, JobStepGrainAndRequest> CreateGrainsFromJobSteps(IImmutableList<JobStepDetails> jobSteps) =>
         jobSteps.ToDictionary(
@@ -424,19 +463,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         }
     }
 
-    async Task InvokeJobStepMethod(JobStepGrainAndRequest jobStep, MethodInfo method, params object[] parameters)
-    {
-        var requestType = jobStep.Request.GetType();
-        var jobStepType = typeof(IJobStep<,>).MakeGenericType(requestType, jobStep.ResultType);
-        var jobStepReference = jobStep.Grain.AsReference(jobStepType);
-
-        var task = method.GetGenericMethodDefinition()
-            .MakeGenericMethod(requestType, jobStep.ResultType)
-            .Invoke(null, [jobStepReference, .. parameters]) as Task;
-
-        await task!;
-    }
-
     Task SubscribeJobEventsForAllJobSteps()
     {
         _subscriptionTimer = this.RegisterGrainTimer(
@@ -454,35 +480,37 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
     async Task<bool> HandleCompletion()
     {
-        var cleared = false;
-
-        if (State.Progress.IsCompleted)
+        if (!State.Progress.IsCompleted)
         {
-            var id = this.GetPrimaryKey(out var keyExtension);
-            var key = (JobKey)keyExtension!;
-            await OnCompleted();
-
-            if (State.Progress.FailedSteps > 0)
-            {
-                await StatusChanged(JobStatus.CompletedWithFailures);
-            }
-            else
-            {
-                await StatusChanged(JobStatus.CompletedSuccessfully);
-            }
-
-            await GrainFactory
-                    .GetGrain<IJobsManager>(0, new JobsManagerKey(key.EventStore, key.Namespace))
-                    .OnCompleted(id, State.Status);
-
-            if (RemoveAfterCompleted)
-            {
-                await ClearStateAsync();
-                cleared = true;
-            }
-
-            DeactivateOnIdle();
+            return false;
         }
+
+        var cleared = false;
+        var id = this.GetPrimaryKey(out var keyExtension);
+        var key = (JobKey)keyExtension!;
+        await OnCompleted();
+
+        if (State.Progress.FailedSteps > 0)
+        {
+            await StatusChanged(JobStatus.CompletedWithFailures);
+        }
+        else
+        {
+            await StatusChanged(JobStatus.CompletedSuccessfully);
+        }
+        await WriteStateAsync();
+
+        await GrainFactory
+            .GetGrain<IJobsManager>(0, new JobsManagerKey(key.EventStore, key.Namespace))
+            .OnCompleted(id, State.Status);
+
+        if (RemoveAfterCompleted)
+        {
+            await ClearStateAsync();
+            cleared = true;
+        }
+
+        DeactivateOnIdle();
 
         return cleared;
     }
