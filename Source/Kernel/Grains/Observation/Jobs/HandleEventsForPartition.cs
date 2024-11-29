@@ -42,7 +42,7 @@ public class HandleEventsForPartition(
         using var scope = logger.BeginObserverScope(request.ObserverKey, State.Id.JobId, State.Id.JobStepId);
         logger.Preparing(request.Partition, request.StartEventSequenceNumber, request.EndEventSequenceNumber);
         _observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
-        _eventSourceId = request.Partition.Value?.ToString() ?? EventSourceId.Unspecified;
+        _eventSourceId = request.Partition.ToString() ?? EventSourceId.Unspecified;
 
         if (request.ObserverSubscription.IsSubscribed)
         {
