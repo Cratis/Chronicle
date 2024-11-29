@@ -15,19 +15,19 @@ internal static partial class JobsManagerLogMessages
     [LoggerMessage(LogLevel.Information, "Rehydrating jobs system")]
     internal static partial void Rehydrating(this ILogger<JobsManager> logger);
 
-    [LoggerMessage(LogLevel.Information, "Starting job {JobId}")]
+    [LoggerMessage(LogLevel.Debug, "Starting job {JobId}")]
     internal static partial void StartingJob(this ILogger<JobsManager> logger, JobId jobId);
 
-    [LoggerMessage(LogLevel.Information, "Resuming job {JobId}")]
+    [LoggerMessage(LogLevel.Debug, "Resuming job {JobId}")]
     internal static partial void ResumingJob(this ILogger<JobsManager> logger, JobId jobId);
 
-    [LoggerMessage(LogLevel.Information, "Stopping job {JobId}")]
+    [LoggerMessage(LogLevel.Debug, "Stopping job {JobId}")]
     internal static partial void StoppingJob(this ILogger<JobsManager> logger, JobId jobId);
 
-    [LoggerMessage(LogLevel.Information, "Deleting job {JobId}")]
+    [LoggerMessage(LogLevel.Debug, "Deleting job {JobId}")]
     internal static partial void DeletingJob(this ILogger<JobsManager> logger, JobId jobId);
 
-    [LoggerMessage(LogLevel.Information, "Job {JobId} completed with status {Status}")]
+    [LoggerMessage(LogLevel.Debug, "Job {JobId} completed with status {Status}")]
     internal static partial void JobCompleted(this ILogger<JobsManager> logger, JobId jobId, JobStatus status);
 }
 

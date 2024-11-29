@@ -55,7 +55,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     protected JobKey JobKey { get; private set; } = JobKey.NotSet;
 
     /// <summary>
-    /// Gets whether to clean up data after the job has completed.
+    /// Gets a value indicating whether to clean up data after the job has completed.
     /// </summary>
     protected virtual bool RemoveAfterCompleted => false;
 
@@ -91,13 +91,15 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         _jsonSerializerOptions = ServiceProvider.GetService<JsonSerializerOptions>() ?? new JsonSerializerOptions();
 
         JobId = this.GetPrimaryKey(out var keyExtension);
-        JobKey = (JobKey)keyExtension;
+        JobKey = keyExtension;
 
         ThisJob = GrainFactory.GetReference<IJob<TRequest>>(this);
 
         State.Name = GetType().Name;
         State.Type = this.GetGrainType();
-        Storage = ServiceProvider.GetRequiredService<IStorage>().GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace);
+        Storage = ServiceProvider.GetRequiredService<IStorage>()
+            .GetEventStore(JobKey.EventStore)
+            .GetNamespace(JobKey.Namespace);
 
         return Task.CompletedTask;
     }
@@ -358,6 +360,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                 (GrainFactory.GetGrain(_.Type, _.Id, keyExtension: _.Key) as IJobStep)!,
                 _.Request,
                 _.ResultType));
+
     void PrepareAllSteps(TRequest request, TaskCompletionSource<IImmutableList<JobStepDetails>> tcs) => _ = Task.Run(async () =>
     {
         var steps = await PrepareSteps(request);
