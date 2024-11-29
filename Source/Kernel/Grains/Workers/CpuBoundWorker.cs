@@ -46,7 +46,7 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     public Task<TResult?> GetResult() => Task.FromResult(_result);
 
     /// <summary>
-    /// The method that actually performs the long running work.
+    /// The method that actually performs the long-running work.
     /// </summary>
     /// <param name="request">The request/parameters used for the execution of the method.</param>
     /// <returns>The result of the work.</returns>
@@ -59,7 +59,7 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     protected virtual Task OnStopped() => Task.CompletedTask;
 
     /// <summary>
-    /// Start long running work with the provided parameter.
+    /// Start long-running work with the provided parameter.
     /// </summary>
     /// <param name="request">The parameter containing all necessary information to start the workload.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
@@ -94,15 +94,18 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
             {
                 try
                 {
-                    if (cancellationToken.IsCancellationRequested)
+                    if (HandledCancellation())
                     {
-                        _logger?.TaskHasBeenCancelled();
                         return;
                     }
 
                     _logger?.BeginningWorkForTask();
                     _result = await PerformWork(request);
                     _exception = default;
+                    if (HandledCancellation())
+                    {
+                        return;
+                    }
                     _status = CpuBoundWorkerStatus.Completed;
                     _logger?.TaskHasCompleted();
                 }
@@ -112,6 +115,18 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
                     _result = default;
                     _exception = e;
                     _status = CpuBoundWorkerStatus.Failed;
+                }
+
+                bool HandledCancellation()
+                {
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        return false;
+                    }
+
+                    _logger?.TaskHasBeenCancelled();
+                    _status = CpuBoundWorkerStatus.Stopped;
+                    return true;
                 }
             },
             cancellationToken,
