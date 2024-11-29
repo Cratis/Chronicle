@@ -133,10 +133,16 @@ public abstract class JobStep<TRequest, TResult, TState>(
     public virtual Task Prepare(TRequest request) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public void OnJobStopped() => _cancellationTokenSource.Cancel();
+    public async Task OnJobStopped()
+    {
+        await _cancellationTokenSource.CancelAsync();
+    }
 
     /// <inheritdoc/>
-    public void OnJobPaused() => _cancellationTokenSource.Cancel();
+    public async Task OnJobPaused()
+    {
+        await _cancellationTokenSource.CancelAsync();
+    }
 
     /// <summary>
     /// The method that gets called when the step should do its work.
