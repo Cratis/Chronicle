@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Orleans.TestKit;
+using Catch = Cratis.Chronicle.Concepts.Catch;
 namespace Cratis.Chronicle.Grains.Jobs.for_JobsManager.given;
 
 public class the_manager : Specification
@@ -39,7 +40,7 @@ public class the_manager : Specification
         _namespaceStorage.Jobs.Returns(_jobStorage);
         _namespaceStorage.JobSteps.Returns(_jobStepStorage);
 
-        _jobStorage.GetJobs(Arg.Any<JobStatus[]>()).Returns(_ => [.. _storedJobs]);
+        _jobStorage.GetJobs(Arg.Any<JobStatus[]>()).Returns(_ => Catch.Success<IImmutableList<JobState>>([.. _storedJobs]));
         _jobStorage.GetJob(Arg.Any<JobId>()).Returns(callInfo => _storedJobs.Single(job => job.Id == callInfo.Arg<JobId>()));
         _jobStorage.Remove(Arg.Any<JobId>()).Returns(Task.CompletedTask);
 
