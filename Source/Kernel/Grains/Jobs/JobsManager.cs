@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
 using Microsoft.Extensions.Logging;
+using OneOf.Types;
 
 namespace Cratis.Chronicle.Grains.Jobs;
 
@@ -109,17 +110,8 @@ public class JobsManager(
     {
         using var scope = logger.BeginJobsManagerScope(_key);
 
-        logger.StoppingJob(jobId);
-
-        var jobStateResult = await _jobStorage!.GetJob(jobId);
-        await jobStateResult.Match(StopJob, error => HandleError(jobId, error), error => HandleUnknownFailure(jobId, error));
-        return;
-
-        Task StopJob(JobState jobState)
-        {
-            var job = GetJobGrain(jobState);
-            return job.Stop();
-        }
+        var stopJobResult = await TryStopJob(jobId);
+        await stopJobResult.Match(_ => Task.CompletedTask, error => HandleError(jobId, error), error => HandleUnknownFailure(jobId, error));
     }
 
     /// <inheritdoc/>
@@ -129,7 +121,24 @@ public class JobsManager(
 
         logger.DeletingJob(jobId);
 
-        await Stop(jobId);
+        var stopJobResult = await TryStopJob(jobId);
+        var stoppedJob = await stopJobResult.Match(
+            _ => Task.FromResult(true),
+            async error =>
+            {
+                await HandleError(jobId, error);
+                return false;
+            },
+            async error =>
+            {
+                await HandleUnknownFailure(jobId, error);
+                return false;
+            });
+        if (!stoppedJob)
+        {
+            logger.FailedToStopJob(jobId);
+            return;
+        }
         await HandleCatch(_jobStepStorage!.RemoveAllForJob(jobId), jobId);
         await HandleCatch(_jobStorage!.Remove(jobId), jobId);
     }
@@ -168,6 +177,34 @@ public class JobsManager(
         jobState.Type,
         jobState.Id,
         new JobKey(_key.EventStore, _key.Namespace)) as IJob)!;
+
+    async Task<Catch<None, JobError>> TryStopJob(JobId jobId)
+    {
+        logger.StoppingJob(jobId);
+
+        var jobStateResult = await _jobStorage!.GetJob(jobId);
+        return await jobStateResult.Match<Task<Catch<None, JobError>>>(
+            async jobState =>
+            {
+                try
+                {
+                    await StopJob(jobState);
+                    return Catch.Success<None, JobError>(default);
+                }
+                catch (Exception ex)
+                {
+                    return ex;
+                }
+            },
+            error => Task.FromResult<Catch<None, JobError>>(error),
+            error => Task.FromResult<Catch<None, JobError>>(error));
+
+        Task StopJob(JobState jobState)
+        {
+            var job = GetJobGrain(jobState);
+            return job.Stop();
+        }
+    }
 
     async Task HandleCatch(Task<Catch> doCatch, JobId jobId)
     {

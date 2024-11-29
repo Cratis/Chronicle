@@ -40,11 +40,12 @@ public class the_manager : Specification
         _namespaceStorage.Jobs.Returns(_jobStorage);
         _namespaceStorage.JobSteps.Returns(_jobStepStorage);
 
-        _jobStorage.GetJobs(Arg.Any<JobStatus[]>()).Returns(_ => Catch.Success<IImmutableList<JobState>>([.. _storedJobs]));
-        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(callInfo => _storedJobs.Single(job => job.Id == callInfo.Arg<JobId>()));
-        _jobStorage.Remove(Arg.Any<JobId>()).Returns(Task.CompletedTask);
+        _jobStorage.GetJobs(Arg.Any<JobStatus[]>()).Returns(_ => Task.FromResult(Catch.Success<IImmutableList<JobState>>([.. _storedJobs])));
+        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(callInfo => Task.FromResult(
+            _storedJobs.SingleOrDefault(job => job.Id == callInfo.Arg<JobId>()) ?? Catch.Failed<JobState, JobError>(JobError.NotFound)));
+        _jobStorage.Remove(Arg.Any<JobId>()).Returns(Task.FromResult(Catch.Success()));
 
-        _jobStepStorage.RemoveAllForJob(Arg.Any<JobId>()).Returns(Task.CompletedTask);
+        _jobStepStorage.RemoveAllForJob(Arg.Any<JobId>()).Returns(Task.FromResult(Catch.Success()));
         _silo.AddService(_storage);
         _silo.AddService(NullLogger<JobsManager>.Instance);
         var loggerFactory = Substitute.For<ILoggerFactory>();
