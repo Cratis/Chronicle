@@ -14,20 +14,19 @@ namespace Cratis.Chronicle.Grains.Jobs.for_JobsManager.given;
 
 public class the_manager : Specification
 {
-    protected static TestKitSilo _silo;
-    protected static JobsManager _manager;
-    protected static JobsManagerKey _managerKey;
-    protected static IStorage _storage;
-    protected static IEventStoreStorage _eventStoreStorage;
-    protected static IEventStoreNamespaceStorage _namespaceStorage;
-    protected static IJobStorage _jobStorage;
-    protected static IJobStepStorage _jobStepStorage;
+    protected TestKitSilo _silo = new();
+    protected JobsManager _manager;
+    protected JobsManagerKey _managerKey;
+    protected IStorage _storage;
+    protected IEventStoreStorage _eventStoreStorage;
+    protected IEventStoreNamespaceStorage _namespaceStorage;
+    protected IJobStorage _jobStorage;
+    protected IJobStepStorage _jobStepStorage;
 
-    protected static List<JobState> _storedJobs;
+    protected List<JobState> _storedJobs;
 
     async Task Establish()
     {
-        _silo = new();
         _storedJobs = [];
         _storage = Substitute.For<IStorage>();
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
