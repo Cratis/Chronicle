@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.ExceptionServices;
 using OneOf;
 using OneOf.Types;
 
@@ -90,5 +91,16 @@ public class Catch : OneOfBase<None, Exception>
     {
         TryPickT1(out error, out _);
         return error is not null;
+    }
+
+    /// <summary>
+    /// Rethrows the <see cref="Exception"/> error if any, preserving the correct stack trace.
+    /// </summary>
+    public void RethrowError()
+    {
+        if (TryGetError(out var error))
+        {
+            ExceptionDispatchInfo.Capture(error).Throw();
+        }
     }
 }

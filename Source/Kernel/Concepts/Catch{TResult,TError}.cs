@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.ExceptionServices;
 using OneOf;
 
 namespace Cratis.Chronicle.Concepts;
@@ -58,4 +59,22 @@ public class Catch<TResult, TError> : OneOfBase<TResult, TError, Exception>
     /// <param name="result">The result.</param>
     /// <returns>A boolean indicating whether the result was present.</returns>
     public bool TryGetResult([NotNullWhen(true)] out TResult result) => TryPickT0(out result, out _);
+
+    /// <summary>
+    /// Try to get the error.
+    /// </summary>
+    /// <param name="error">The optional error.</param>
+    /// <returns>A boolean indicating whether the error was present.</returns>
+    public bool TryGetError([NotNullWhen(true)]out Exception? error) => TryPickT2(out error, out _);
+
+    /// <summary>
+    /// Rethrows the <see cref="Exception"/> error if any, preserving the correct stack trace.
+    /// </summary>
+    public void RethrowError()
+    {
+        if (TryGetError(out var error))
+        {
+            ExceptionDispatchInfo.Capture(error).Throw();
+        }
+    }
 }
