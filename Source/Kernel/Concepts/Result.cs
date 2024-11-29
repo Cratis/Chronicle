@@ -6,8 +6,31 @@ namespace Cratis.Chronicle.Concepts;
 /// <summary>
 /// Convenience methods for creating Result instances.
 /// </summary>
-public static class Result
+public class Result
 {
+    /// <summary>
+    /// Gets a value indicating whether the execution was successful.
+    /// </summary>
+    public bool IsSuccess { get; init; }
+
+    /// <summary>
+    /// Creates a failed <see cref="Result"/>.
+    /// </summary>
+    /// <returns>The created <see cref="Result"/>.</returns>
+    public static Result Failed() => new()
+    {
+        IsSuccess = false
+    };
+
+    /// <summary>
+    /// Creates a successful <see cref="Result"/>.
+    /// </summary>
+    /// <returns>The created <see cref="Result"/>.</returns>
+    public static Result Success() => new()
+    {
+        IsSuccess = true
+    };
+
     /// <summary>
     /// Creates a failed <see cref="Result{T}"/>.
     /// </summary>
