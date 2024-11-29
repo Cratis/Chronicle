@@ -23,12 +23,7 @@ public class FailedPartitions
         get => _partitions.Values;
         set
         {
-            _partitions.Clear();
-            foreach (var failedPartition in value)
-            {
-                var key = failedPartition.Partition;
-                _partitions.Add(key, failedPartition);
-            }
+            _partitions = failedPartitions.ToDictionary(_ => _.Partition, _ => _);
         }
     }
 
