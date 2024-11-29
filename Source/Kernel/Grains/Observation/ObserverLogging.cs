@@ -46,6 +46,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Partition {Partition} is catching up events and cannot accept new events to handle")]
     internal static partial void PartitionCatchingUpCannotHandleNewEvents(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Warning, "While evaluating whether to Partition {Partition} needs catchup an the last handled event was unavailable. This could indicate that the event sequence is in a broken state")]
+    internal static partial void LastHandledEventForPartitionUnavailable(this ILogger<Observer> logger, Key partition);
 }
 
 internal static class ObserverScopes
