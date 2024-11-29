@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
@@ -45,13 +46,25 @@ public class JobsManager(
         using var scope = logger.BeginJobsManagerScope(_key);
 
         logger.Rehydrating();
+        var getRunningJobs = await _jobStorage!.GetJobs(JobStatus.Running, JobStatus.Preparing, JobStatus.PreparingSteps);
+        await getRunningJobs.Match(RehydrateJobs, HandleUnknownFailure);
+        return;
 
-        var runningJobs = await _jobStorage!.GetJobs(JobStatus.Running, JobStatus.Preparing, JobStatus.PreparingSteps);
-        foreach (var runningJob in runningJobs)
+        Task RehydrateJobs(IEnumerable<JobState> runningJobs)
         {
-            var grainType = (Type)runningJob.Type;
-            var job = GrainFactory.GetGrain(grainType, runningJob.Id, new JobKey(_key.EventStore, _key.Namespace)) as IJob;
-            await job!.Resume();
+            var tasks = runningJobs.Select(_ => (_.Id, GetJobGrain(_))).Select(async idAndJob =>
+            {
+                var (id, job) = idAndJob;
+                try
+                {
+                    await job.Resume();
+                }
+                catch (Exception ex)
+                {
+                    logger.ErrorResumingJob(ex, id);
+                }
+            });
+            return Task.WhenAll(tasks);
         }
     }
 
@@ -80,9 +93,15 @@ public class JobsManager(
 
         logger.ResumingJob(jobId);
 
-        var jobState = await _jobStorage!.GetJob(jobId);
-        var job = (GrainFactory.GetGrain(jobState.Type, jobId, new JobKey(_key.EventStore, _key.Namespace)) as IJob)!;
-        await job.Resume();
+        var jobStateResult = await _jobStorage!.GetJob(jobId);
+        await jobStateResult.Match(ResumeJob, error => HandleError(jobId, error), error => HandleUnknownFailure(jobId, error));
+        return;
+
+        Task ResumeJob(JobState jobState)
+        {
+            var job = GetJobGrain(jobState);
+            return job.Resume();
+        }
     }
 
     /// <inheritdoc/>
@@ -92,9 +111,15 @@ public class JobsManager(
 
         logger.StoppingJob(jobId);
 
-        var jobState = await _jobStorage!.GetJob(jobId);
-        var job = (GrainFactory.GetGrain(jobState.Type, jobId, new JobKey(_key.EventStore, _key.Namespace)) as IJob)!;
-        await job.Stop();
+        var jobStateResult = await _jobStorage!.GetJob(jobId);
+        await jobStateResult.Match(StopJob, error => HandleError(jobId, error), error => HandleUnknownFailure(jobId, error));
+        return;
+
+        Task StopJob(JobState jobState)
+        {
+            var job = GetJobGrain(jobState);
+            return job.Stop();
+        }
     }
 
     /// <inheritdoc/>
@@ -105,8 +130,8 @@ public class JobsManager(
         logger.DeletingJob(jobId);
 
         await Stop(jobId);
-        await _jobStepStorage!.RemoveAllForJob(jobId);
-        await _jobStorage!.Remove(jobId);
+        await HandleCatch(_jobStepStorage!.RemoveAllForJob(jobId), jobId);
+        await HandleCatch(_jobStorage!.Remove(jobId), jobId);
     }
 
     /// <inheritdoc/>
@@ -122,6 +147,63 @@ public class JobsManager(
     /// <inheritdoc/>
     public async Task<IImmutableList<JobState>> GetJobsOfType<TJob, TRequest>()
         where TJob : IJob<TRequest>
-        where TRequest : class =>
-        await _namespaceStorage!.Jobs.GetJobs<TJob, JobState>();
+        where TRequest : class
+    {
+        var getJobs = await _namespaceStorage!.Jobs.GetJobs<TJob, JobState>();
+        return await getJobs.Match(
+            Task.FromResult,
+            error =>
+            {
+                logger.UnableToGetJobs(typeof(TJob), error);
+                return Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty);
+            },
+            async error =>
+            {
+                await HandleUnknownFailure(error);
+                return [];
+            });
+    }
+
+    IJob GetJobGrain(JobState jobState) => (GrainFactory.GetGrain(
+        jobState.Type,
+        jobState.Id,
+        new JobKey(_key.EventStore, _key.Namespace)) as IJob)!;
+
+    async Task HandleCatch(Task<Catch> doCatch, JobId jobId)
+    {
+        var result = await doCatch;
+        await result.Match(
+            _ => Task.CompletedTask,
+            error => HandleUnknownFailure(jobId, error));
+    }
+
+    Task HandleError(JobId jobId, JobError jobError)
+    {
+        switch (jobError)
+        {
+            case JobError.NotFound:
+                logger.JobCouldNotBeFound(jobId);
+                break;
+            default:
+                logger.JobErrorOccurred(jobId, jobError);
+                break;
+        }
+        return Task.CompletedTask;
+    }
+
+    Task HandleUnknownFailure(JobId jobId, Exception ex)
+    {
+        logger.UnknownError(ex, jobId);
+
+        // TODO: I'm not sure yet whether to throw or not.
+        return Task.FromException(ex);
+    }
+
+    Task HandleUnknownFailure(Exception ex)
+    {
+        logger.UnknownError(ex);
+
+        // TODO: I'm not sure yet whether to throw or not.
+        return Task.FromException(ex);
+    }
 }

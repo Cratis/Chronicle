@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Jobs;
@@ -21,6 +22,9 @@ internal static partial class JobsManagerLogMessages
     [LoggerMessage(LogLevel.Debug, "Resuming job {JobId}")]
     internal static partial void ResumingJob(this ILogger<JobsManager> logger, JobId jobId);
 
+    [LoggerMessage(LogLevel.Warning, "Error while resuming job {JobId}")]
+    internal static partial void ErrorResumingJob(this ILogger<JobsManager> logger, Exception ex, JobId jobId);
+
     [LoggerMessage(LogLevel.Debug, "Stopping job {JobId}")]
     internal static partial void StoppingJob(this ILogger<JobsManager> logger, JobId jobId);
 
@@ -29,6 +33,21 @@ internal static partial class JobsManagerLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Job {JobId} completed with status {Status}")]
     internal static partial void JobCompleted(this ILogger<JobsManager> logger, JobId jobId, JobStatus status);
+
+    [LoggerMessage(LogLevel.Warning, "An unknown error occurred in Job {JobId}")]
+    internal static partial void UnknownError(this ILogger<JobsManager> logger, Exception exception, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "An unknown error occurred")]
+    internal static partial void UnknownError(this ILogger<JobsManager> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Job {JobId} could not be found")]
+    internal static partial void JobCouldNotBeFound(this ILogger<JobsManager> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Job {JobId} encountered error : {Error}")]
+    internal static partial void JobErrorOccurred(this ILogger<JobsManager> logger, JobId jobId, JobError error);
+
+    [LoggerMessage(LogLevel.Warning, "Unable to get jobs of type {JobType}. Encountered error : {Error}")]
+    internal static partial void UnableToGetJobs(this ILogger<JobsManager> logger, Type jobType, JobError error);
 }
 
 internal static class JobsManagerScopes
