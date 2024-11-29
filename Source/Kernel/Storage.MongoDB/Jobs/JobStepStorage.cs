@@ -32,6 +32,7 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
         {
             await Collection.DeleteManyAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
             await FailedCollection.DeleteManyAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
+            return Catch.Success();
         }
         catch (Exception ex)
         {
@@ -45,6 +46,7 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
         try
         {
             await Collection.DeleteManyAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
+            return Catch.Success();
         }
         catch (Exception ex)
         {
@@ -59,6 +61,7 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
         {
             await Collection.DeleteOneAsync(GetIdFilter<JobStepState>(jobId, jobStepId)).ConfigureAwait(false);
             await FailedCollection.DeleteOneAsync(GetIdFilter<JobStepState>(jobId, jobStepId)).ConfigureAwait(false);
+            return Catch.Success();
         }
         catch (Exception ex)
         {
