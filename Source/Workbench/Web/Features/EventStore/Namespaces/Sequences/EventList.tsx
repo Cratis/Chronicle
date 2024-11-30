@@ -9,7 +9,7 @@ import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 
 export interface EventListProps {
-    events: any[];
+    events: object[];
 }
 
 const occurred = (event: AppendedEventWithJsonAsContent) => {

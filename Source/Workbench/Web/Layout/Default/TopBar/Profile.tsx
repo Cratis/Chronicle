@@ -9,7 +9,8 @@ import { Button } from 'primereact/button';
 import { useDarkMode } from 'usehooks-ts';
 import strings from 'Strings';
 
-const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onClick: () => void }) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onClick?: () => void }) => {
     return (
         <li className={css.profileItem} onClick={onClick}>
             <span className='mr-4'>{icon}</span>
@@ -27,21 +28,20 @@ export const Profile = () => {
             <div className={'flex justify-end gap-3 '}>
 
                 <Button
-                    icon={<icons.FaUser/>}
+                    icon={<icons.FaUser />}
                     rounded
                     severity="info"
                     className="p-2"
                     onClick={(e) => overlayPanelRef.current?.toggle(e)}
-                    aria-label="User"/>
+                    aria-label="User" />
 
 
                 <OverlayPanel ref={overlayPanelRef} className={css.overlayPanel}>
                     <ul className={css.profileItems}>
-                        <ProfileItem icon={<icons.FaUser/>} label={strings.layout.topBar.profile.myAccount} onClick={() => {
-                        }}/>
+                        <ProfileItem icon={<icons.FaUser />} label={strings.layout.topBar.profile.myAccount} />
                         {isDarkMode ?
-                            <ProfileItem icon={<icons.FaSun/>} label={strings.layout.topBar.profile.lightMode} onClick={toggleDarkMode}/> :
-                            <ProfileItem icon={<icons.FaMoon/>} label={strings.layout.topBar.profile.darkMode} onClick={toggleDarkMode}/>}
+                            <ProfileItem icon={<icons.FaSun />} label={strings.layout.topBar.profile.lightMode} onClick={toggleDarkMode} /> :
+                            <ProfileItem icon={<icons.FaMoon />} label={strings.layout.topBar.profile.darkMode} onClick={toggleDarkMode} />}
                     </ul>
                 </OverlayPanel>
             </div>

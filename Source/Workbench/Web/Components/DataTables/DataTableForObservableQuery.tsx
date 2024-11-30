@@ -7,6 +7,8 @@ import { IObservableQueryFor, Paging } from '@cratis/applications/queries';
 import { useObservableQueryWithPaging } from '@cratis/applications.react/queries';
 import { ReactNode, useState } from 'react';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 /**
  * Props for the DataTableForQuery component
  */
@@ -64,9 +66,9 @@ const paging = new Paging(0, 20);
  * @param props Props for the component
  * @returns Function to render the DataTableForQuery component
  */
-export const DataTableForObservableQuery = <TQuery extends IObservableQueryFor<TDataType, TArguments>, TDataType, TArguments extends {}>(props: DataTableForObservableQueryProps<TQuery, TDataType, TArguments>) => {
+export const DataTableForObservableQuery = <TQuery extends IObservableQueryFor<TDataType, TArguments>, TDataType, TArguments extends object>(props: DataTableForObservableQueryProps<TQuery, TDataType, TArguments>) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(props.defaultFilters ?? {});
-    const [result, _, setPage] = useObservableQueryWithPaging(props.query, paging, props.queryArguments);
+    const [result, , setPage] = useObservableQueryWithPaging(props.query, paging, props.queryArguments);
 
     return (
         <DataTable

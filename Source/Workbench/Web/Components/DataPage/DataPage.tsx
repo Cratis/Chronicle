@@ -13,11 +13,13 @@ import { DataTableForQuery } from '../DataTables/DataTableForQuery';
 import { Allotment } from 'allotment';
 import { Constructor } from '@cratis/fundamentals';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export interface MenuItemProps extends PrimeMenuItem {
     disableOnUnselected?: boolean;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const MenuItem = (_: MenuItemProps) => {
     return null;
 };
@@ -153,7 +155,7 @@ export interface DataPageProps<TQuery extends IQueryFor<TDataType> | IObservable
  * @param props Props for the DataPage component
  * @returns Function to render the DataPage component
  */
-const DataPage = <TQuery extends IQueryFor<TDataType> | IObservableQueryFor<TDataType, TArguments>, TDataType, TArguments extends {}>(props: DataPageProps<TQuery, TDataType, TArguments>) => {
+const DataPage = <TQuery extends IQueryFor<TDataType> | IObservableQueryFor<TDataType, TArguments>, TDataType, TArguments extends object>(props: DataPageProps<TQuery, TDataType, TArguments>) => {
     const [selectedItem, setSelectedItem] = React.useState(undefined);
 
     const selectionChanged = (e: DataTableSelectionSingleChangeEvent<any>) => {

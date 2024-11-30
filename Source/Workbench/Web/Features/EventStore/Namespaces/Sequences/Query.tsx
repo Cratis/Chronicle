@@ -31,8 +31,7 @@ export const Query = withViewModel<QueryViewModel, QueryProps>(QueryViewModel, (
         {
             id: 'run',
             label: 'Run',
-            icon: 'pi pi-play',
-            command: () => { },
+            icon: 'pi pi-play'
         },
         {
             id: 'timeRange',

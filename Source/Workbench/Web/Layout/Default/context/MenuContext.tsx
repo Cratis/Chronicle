@@ -4,13 +4,13 @@
 import { useState, createContext, Dispatch, SetStateAction, ReactNode, useEffect } from 'react';
 
 export interface MenuContextProps {
-    paramsFallback: {};
+    paramsFallback: object;
     setParamsFallback: Dispatch<SetStateAction<string>>;
 }
 
 export interface MenuProviderProps {
     children: ReactNode;
-    params?: {};
+    params?: object;
 }
 
 export const MenuContext = createContext({} as MenuContextProps);

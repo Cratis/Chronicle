@@ -27,7 +27,6 @@ const defaultLayoutContext: ILayoutContext = {
 };
 export const LayoutContext = createContext<ILayoutContext>(defaultLayoutContext);
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useLayoutContext = () => useContext(LayoutContext);
 export const LayoutProvider = (props: { children: ReactNode }) => {
     const [storedLayoutConfig, setStoredLayoutConfig] = useLocalStorage('layoutConfig', JSON.stringify(defaultLayoutContext.layoutConfig));

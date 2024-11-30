@@ -6,9 +6,6 @@ export class QueryViewModel {
     private _query!: QueryDefinition;
     private _hasChanges: boolean = false;
 
-    constructor() {
-    }
-
     get query(): QueryDefinition {
         return this._query;
     }

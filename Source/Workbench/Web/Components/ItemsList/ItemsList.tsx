@@ -12,20 +12,20 @@ export interface IItemsListProps<TItem> {
     onItemClicked?: ItemClicked<TItem>;
 }
 
-export const ItemsList = <TItem extends {}>(props: IItemsListProps<TItem>) => {
+export const ItemsList = <TItem extends object>(props: IItemsListProps<TItem>) => {
 
     const getKey = (item: TItem): string => {
         if (props.idProperty) {
-            return (item[props.idProperty] as any).toString();
+            return (item[props.idProperty] as object).toString();
         }
-        return (item as any).toString();
+        return (item as object).toString();
     };
 
     const getName = (item: TItem):string => {
         if (props.nameProperty) {
-            return (item[props.nameProperty] as any).toString();
+            return (item[props.nameProperty] as object).toString();
         }
-        return (item as any).toString();
+        return (item as object).toString();
     };
 
     return (
