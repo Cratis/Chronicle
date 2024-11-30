@@ -87,6 +87,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         await _cancellationTokenSource.CancelAsync();
         await Job.Unsubscribe(this.AsReference<IJobObserver>());
         StatusChanged(JobStepStatus.Paused);
+        await state.WriteStateAsync();
     }
 
     /// <inheritdoc/>
@@ -96,6 +97,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         {
             return Task.CompletedTask;
         }
+
         return Task.CompletedTask;
     }
 
@@ -159,7 +161,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         }
         catch (Exception ex)
         {
-            result = new JobStepResult(JobStepStatus.Failed, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
+            result = new(JobStepStatus.Failed, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
         }
 
         _result = result;
@@ -177,6 +179,12 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
         return result;
     }
+
+    /// <summary>
+    /// Saves the current grain state.
+    /// </summary>
+    /// <returns>A task representing the asynchronous action.</returns>
+    protected Task WriteStateAsync() => state.WriteStateAsync();
 
     void StatusChanged(JobStepStatus status, IEnumerable<string>? exceptionMessages = null!, string? exceptionStackTrace = null!)
     {

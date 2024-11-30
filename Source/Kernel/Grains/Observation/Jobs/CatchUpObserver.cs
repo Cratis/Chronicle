@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// Initializes a new instance of the <see cref="ReplayObserver"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, CatchUpObserverState>, ICatchUpObserver
+public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
 {
     /// <inheritdoc/>
     protected override bool RemoveAfterCompleted => true;
@@ -26,18 +26,13 @@ public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, Cat
     public override async Task OnCompleted()
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.ReportHandledEvents(State.HandledCount);
         await observer.TransitionTo<Routing>();
     }
 
     /// <inheritdoc/>
     protected override Task OnStepCompleted(JobStepId jobStepId, JobStepResult result)
     {
-        if (result.Result is HandleEventsForPartitionResult handleEventsForPartitionResult)
-        {
-            State.HandledCount += handleEventsForPartitionResult.HandledEvents;
-        }
-
+        State.HandleResult(result);
         return Task.CompletedTask;
     }
 
@@ -69,6 +64,7 @@ public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, Cat
                     request.ObserverSubscription,
                     key,
                     request.FromEventSequenceNumber,
+                    EventSequenceNumber.Max,
                     EventObservationState.None,
                     request.EventTypes)));
         }

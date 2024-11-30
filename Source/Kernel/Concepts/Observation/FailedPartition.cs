@@ -37,14 +37,14 @@ public class FailedPartition
     }
 
     /// <summary>
-    /// Gets or sets whether or not the failure is resolved.
+    /// Gets or sets whether the failure is resolved.
     /// </summary>
     public bool IsResolved { get; set; }
 
     /// <summary>
     /// Gets the last attempt for the failed partition.
     /// </summary>
-    public FailedPartitionAttempt? LastAttempt => Attempts.LastOrDefault();
+    public FailedPartitionAttempt LastAttempt { get; private set; } = FailedPartitionAttempt.NoAttempt;
 
     /// <summary>
     /// Add an attempt to the failed partition.
@@ -53,5 +53,6 @@ public class FailedPartition
     public void AddAttempt(FailedPartitionAttempt attempt)
     {
         Attempts = Attempts.Append(attempt);
+        LastAttempt = attempt;
     }
 }

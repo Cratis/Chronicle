@@ -17,24 +17,19 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// Initializes a new instance of the <see cref="ReplayObserver"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, ReplayObserverState>, IReplayObserver
+public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
 {
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.ReportHandledEvents(State.HandledCount);
         await observer.TransitionTo<Routing>();
     }
 
     /// <inheritdoc/>
     protected override Task OnStepCompleted(JobStepId jobStepId, JobStepResult result)
     {
-        if (result.Result is HandleEventsForPartitionResult handleEventsForPartitionResult)
-        {
-            State.HandledCount += handleEventsForPartitionResult.HandledEvents;
-        }
-
+        State.HandleResult(result);
         return Task.CompletedTask;
     }
 
@@ -65,6 +60,7 @@ public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, Repla
                     request.ObserverSubscription,
                     key,
                     EventSequenceNumber.First,
+                    EventSequenceNumber.Max,
                     EventObservationState.Replay,
                     request.EventTypes)));
         }

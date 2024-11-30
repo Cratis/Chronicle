@@ -90,11 +90,10 @@ public class Observer(
 #pragma warning restore CA1721 // Property names should not match get methods
 
     /// <inheritdoc/>
-    public Task SetHandledStats(EventCount handled, EventSequenceNumber lastHandledEventSequenceNumber)
+    public Task SetHandledStats(EventSequenceNumber lastHandledEventSequenceNumber)
     {
         State = State with
         {
-            Handled = handled,
             LastHandledEventSequenceNumber = lastHandledEventSequenceNumber
         };
 
@@ -193,23 +192,13 @@ public class Observer(
     }
 
     /// <inheritdoc/>
-    public async Task ReplayPartition(Key partition)
-    {
-        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(
-            JobId.New(),
-            new(
-                _observerId,
-                _observerKey,
-                _subscription,
-                partition,
-                EventSequenceNumber.First,
-                EventSequenceNumber.Max,
-                State.EventTypes));
-    }
+    public Task ReplayPartition(Key partition) => ReplayPartitionTo(partition, EventSequenceNumber.Max);
 
     /// <inheritdoc/>
     public async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber)
     {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.AttemptReplayPartition(partition, sequenceNumber);
         await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(
             JobId.New(),
             new(
@@ -220,10 +209,21 @@ public class Observer(
                 EventSequenceNumber.First,
                 sequenceNumber,
                 State.EventTypes));
+
+        State.ReplayingPartitions.Add(partition);
+        await WriteStateAsync();
     }
 
     /// <inheritdoc/>
-    public Task PartitionReplayed(Key partition) => throw new NotImplementedException();
+    public async Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.FinishedReplayForPartition(partition);
+        State.ReplayingPartitions.Remove(partition);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        await WriteStateAsync();
+        await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
+    }
 
     /// <inheritdoc/>
     public async Task PartitionFailed(
@@ -233,14 +233,9 @@ public class Observer(
         string exceptionStackTrace)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-
         _metrics?.PartitionFailed(partition);
-
-        logger.PartitionFailed(
-            partition,
-            sequenceNumber);
-
-        var failure = Failures.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
+        logger.PartitionFailed(partition, sequenceNumber);
+        var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         if (failure.Attempts.Count() < 10)
         {
             await this.RegisterOrUpdateReminder(partition.ToString(), GetNextRetryDelay(failure), TimeSpan.FromHours(48));
@@ -254,34 +249,37 @@ public class Observer(
     }
 
     /// <inheritdoc/>
-    public Task FailedPartitionRecovered(Key partition)
+    public async Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
-        Failures.Remove(partition);
-        return failures.WriteStateAsync();
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.FailingPartitionRecovered(partition);
+        failures.State.Remove(partition);
+        await failures.WriteStateAsync();
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        await WriteStateAsync();
+        await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>
-    public async Task TryRecoverFailedPartition(Key partition)
+    public async Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
+        State.CatchingUpPartitions.Remove(partition);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        await WriteStateAsync();
+        await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
+    }
 
-        logger.TryingToRecoverFailedPartition(partition);
+    /// <inheritdoc/>
+    public async Task TryStartRecoverJobForFailedPartition(Key partition)
+    {
+        if (!Failures.TryGet(partition, out var failure))
+        {
+            return;
+        }
 
-        var failure = Failures.Get(partition);
-        if (failure is null) return;
-        var lastAttempt = failure.LastAttempt;
-        if (lastAttempt is null) return;
-
-        await RemoveReminder(partition.ToString());
-
-        await _jobsManager.Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(
-            JobId.New(),
-            new(
-                _observerKey,
-                _subscription,
-                partition,
-                lastAttempt.SequenceNumber,
-                State.EventTypes));
+        await StartRecoverJobForFailedPartition(failure);
     }
 
     /// <inheritdoc/>
@@ -289,15 +287,29 @@ public class Observer(
     {
         foreach (var partition in Failures.Partitions)
         {
-            await TryRecoverFailedPartition(partition.Partition);
+            await StartRecoverJobForFailedPartition(partition);
         }
     }
 
     /// <inheritdoc/>
     public async Task Handle(Key partition, IEnumerable<AppendedEvent> events)
     {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+
         if (!_subscription.IsSubscribed || Failures.IsFailed(partition))
         {
+            return;
+        }
+
+        if (State.ReplayingPartitions.Contains(partition))
+        {
+            logger.PartitionReplayingCannotHandleNewEvents(partition);
+            return;
+        }
+
+        if (State.CatchingUpPartitions.Contains(partition))
+        {
+            logger.PartitionCatchingUpCannotHandleNewEvents(partition);
             return;
         }
 
@@ -315,16 +327,13 @@ public class Observer(
 
         var eventsToHandle = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber).ToArray();
         var numEventsSuccessfullyHandled = EventCount.Zero;
+        var stateChanged = false;
         if (eventsToHandle.Length != 0)
         {
             using (new WriteSuspension(this))
             {
                 try
                 {
-                    if (State.Handled == EventCount.NotSet)
-                    {
-                        State = State with { Handled = EventCount.Zero };
-                    }
                     var key = new ObserverSubscriberKey(
                         _observerKey.ObserverId,
                         _observerKey.EventStore,
@@ -354,15 +363,13 @@ public class Observer(
                     else if (result.State == ObserverSubscriberState.Disconnected)
                     {
                         await Unsubscribe();
-                        if (result.LastSuccessfulObservation == EventSequenceNumber.Unavailable)
-                        {
-                            return;
-                        }
+                        stateChanged = true;
                     }
 
-                    State = State with { NextEventSequenceNumber = result.LastSuccessfulObservation.Next() };
                     if (numEventsSuccessfullyHandled > 0)
                     {
+                        stateChanged = true;
+                        State = State with { NextEventSequenceNumber = result.LastSuccessfulObservation.Next() };
                         var previousLastHandled = State.LastHandledEventSequenceNumber;
                         var shouldSetLastHandled =
                             previousLastHandled == EventSequenceNumber.Unavailable ||
@@ -372,7 +379,6 @@ public class Observer(
                             LastHandledEventSequenceNumber = shouldSetLastHandled
                                 ? result.LastSuccessfulObservation
                                 : previousLastHandled,
-                            Handled = State.Handled + numEventsSuccessfullyHandled
                         };
                     }
                 }
@@ -388,26 +394,21 @@ public class Observer(
                 await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
             }
 
-            await WriteStateAsync();
+            if (stateChanged)
+            {
+                await WriteStateAsync();
+            }
         }
-    }
-
-    /// <inheritdoc/>
-    public async Task ReportHandledEvents(EventCount count)
-    {
-        State = State with { Handled = State.Handled + count };
-        await WriteStateAsync();
     }
 
     /// <inheritdoc/>
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
         await RemoveReminder(reminderName);
-
         var partition = failures.State.Partitions.FirstOrDefault(_ => _.Partition.ToString() == reminderName);
         if (partition is not null)
         {
-            await TryRecoverFailedPartition(partition.Partition);
+            await StartRecoverJobForFailedPartition(partition);
         }
     }
 
@@ -444,13 +445,68 @@ public class Observer(
         return time.TotalMilliseconds == 0 ? TimeSpan.FromMilliseconds(100) : time;
     }
 
-    async Task RemoveReminder(string reminderName)
+    void HandleNewLastHandledEvent(EventSequenceNumber lastHandledEvent)
     {
-        var reminder = await this.GetReminder(reminderName);
+        var newLastHandledEvent = State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ||
+                                  State.LastHandledEventSequenceNumber < lastHandledEvent ? lastHandledEvent : State.LastHandledEventSequenceNumber;
+        var nextEventSequenceNumber = State.NextEventSequenceNumber < lastHandledEvent ? lastHandledEvent.Next() : State.NextEventSequenceNumber;
+        State = State with
+        {
+            LastHandledEventSequenceNumber = newLastHandledEvent,
+            NextEventSequenceNumber = nextEventSequenceNumber
+        };
+    }
+
+    async Task StartRecoverJobForFailedPartition(FailedPartition failedPartition)
+    {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.TryingToRecoverFailedPartition(failedPartition.Partition);
+        await RemoveReminder(failedPartition.Partition.ToString());
+        await _jobsManager.Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(
+            JobId.New(),
+            new(
+                _observerKey,
+                _subscription,
+                failedPartition.Partition,
+                failedPartition.LastAttempt.SequenceNumber,
+                State.EventTypes));
+    }
+
+    async Task RemoveReminder(Key partition)
+    {
+        var reminder = await this.GetReminder(partition.ToString());
         if (reminder is not null)
         {
             await this.UnregisterReminder(reminder);
         }
+    }
+
+    async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        if (!await NeedsCatchup(partition, lastHandledEventSequenceNumber))
+        {
+            return;
+        }
+
+        var nextEventSequenceNumber = lastHandledEventSequenceNumber.Next();
+        logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
+        State.CatchingUpPartitions.Add(partition);
+        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
+            JobId.New(),
+            new(
+                _observerId,
+                _observerKey,
+                _subscription,
+                partition,
+                nextEventSequenceNumber,
+                State.EventTypes));
+        await WriteStateAsync();
+    }
+
+    async Task<bool> NeedsCatchup(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        var nextSequenceNumber = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(lastHandledEventSequenceNumber, State.EventTypes, partition);
+        return nextSequenceNumber != lastHandledEventSequenceNumber;
     }
 
     class WriteSuspension : IDisposable

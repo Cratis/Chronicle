@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Jobs;
@@ -77,17 +76,15 @@ public class Replay(
                 observerKey,
                 subscription,
                 state.EventTypes));
-        return state with { Handled = EventCount.Zero };
+        return state;
     }
 
     /// <inheritdoc/>
     public override async Task<ObserverState> OnLeave(ObserverState state)
     {
-        if (_replayStarted)
-        {
-            await replayStateServiceClient.EndReplayFor(new(state.Id, observerKey, state.Type));
-            _replayStarted = false;
-        }
+        if (!_replayStarted) return state;
+        await replayStateServiceClient.EndReplayFor(new(state.Id, observerKey, state.Type));
+        _replayStarted = false;
         return state;
     }
 

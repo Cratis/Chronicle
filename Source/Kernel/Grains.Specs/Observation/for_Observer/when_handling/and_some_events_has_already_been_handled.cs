@@ -13,10 +13,13 @@ public class and_some_events_has_already_been_handled : given.an_observer_with_s
         AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL),
     ];
 
+    static IEnumerable<AppendedEvent> _eventToBeHandled;
+
     List<AppendedEvent> _handledEvents;
 
     void Establish()
     {
+        _eventToBeHandled = [_events.Last()];
         _stateStorage.State = _stateStorage.State with
         {
             NextEventSequenceNumber = 43UL,
@@ -41,8 +44,9 @@ public class and_some_events_has_already_been_handled : given.an_observer_with_s
     async Task Because() => await _observer.Handle("Something", _events);
 
     [Fact] void should_forward_only_one_to_subscriber() => _subscriber.Received(1).OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
-    [Fact] void should_forward_last_event_to_subscriber() => _handledEvents.ShouldContainOnly(_events.Last());
-    [Fact] void should_not_set_next_sequence_number() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)44UL);
-    [Fact] void should_not_set_last_handled_event_sequence_number() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
+    [Fact] void should_forward_last_event_to_subscriber() => _subscriber.Received(1).OnNext(Arg.Is<IEnumerable<AppendedEvent>>(_ => _.SequenceEqual(_eventToBeHandled)), Arg.Any<ObserverSubscriberContext>());
+    [Fact] void should_handle_last_event() => _handledEvents.SequenceEqual(_eventToBeHandled).ShouldBeTrue();
+    [Fact] void should_set_correct_next_sequence_number() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)44UL);
+    [Fact] void should_set_correct_last_handled_event_sequence_number() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
     [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
 }

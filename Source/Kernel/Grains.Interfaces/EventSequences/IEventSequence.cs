@@ -55,7 +55,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <p>If no event is found, it will return <see cref="EventSequenceNumber.Unavailable"/>.</p>
     /// </returns>
     [AlwaysInterleave]
-    Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
+    Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualTo(EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
 
     /// <summary>
     /// Append a single event to the event store.

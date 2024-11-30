@@ -12,11 +12,12 @@ public class ConnectedClientsMetrics : IConnectedClientsMetrics
 {
 #pragma warning disable IDE0052
     readonly ObservableGauge<int> _connectedClients;
+#pragma warning restore IDE0052
 
     int _connectedClientsCount;
 
     /// <summary>
-    /// Initializes a new instance of <see cref="ConnectedClientsMetrics"/>.
+    /// Initializes a new instance of the <see cref="ConnectedClientsMetrics"/>.
     /// </summary>
     /// <param name="meter">Meter for the Kernel.</param>
     public ConnectedClientsMetrics(Meter meter)

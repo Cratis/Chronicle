@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
 
@@ -12,19 +11,7 @@ public class and_partition_is_failed : given.an_observer_with_subscription_for_s
 
     void Establish()
     {
-        _failedPartitionsState.Add(new FailedPartition
-        {
-            Partition = _eventSourceId,
-            Attempts =
-            [
-                new FailedPartitionAttempt
-                {
-                    SequenceNumber = 42UL,
-                    Messages = ["Something went wrong"],
-                    StackTrace = "This is the stack trace"
-                }
-            ]
-        });
+        _failedPartitionsState.AddFailedPartition(_eventSourceId, 42UL, ["Something went wrong"], "This is the stack trace");
         _stateStorage.State = _stateStorage.State with
         {
             NextEventSequenceNumber = 53UL,

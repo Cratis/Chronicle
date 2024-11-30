@@ -12,5 +12,5 @@ public class NullObserverSubscriber : IObserverSubscriber
 {
     /// <inheritdoc/>
     public Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context) =>
-        Task.FromResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable));
+        Task.FromResult(ObserverSubscriberResult.Disconnected());
 }

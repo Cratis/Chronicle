@@ -15,6 +15,8 @@ public class ArrayIndexers
 
     readonly IDictionary<PropertyPath, ArrayIndexer> _arrayIndexers = new Dictionary<PropertyPath, ArrayIndexer>();
 
+    int? _computedHashCode;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ArrayIndexers"/> class.
     /// </summary>
@@ -37,7 +39,7 @@ public class ArrayIndexers
     public int Count => _arrayIndexers.Count;
 
     /// <summary>
-    /// Gets a value indicating whether or not it is empty.
+    /// Gets a value indicating whether it is empty.
     /// </summary>
     public bool IsEmpty => _arrayIndexers.Count == 0;
 
@@ -81,7 +83,15 @@ public class ArrayIndexers
     }
 
     /// <inheritdoc/>
-    public override int GetHashCode() => base.GetHashCode();
+    public override int GetHashCode()
+    {
+        // From https://stackoverflow.com/a/8094931
+        unchecked
+        {
+            _computedHashCode ??= All.Aggregate(19, (current, item) => (current * 31) + item.GetHashCode());
+            return _computedHashCode.Value;
+        }
+    }
 
     void ThrowIfMissingArrayIndexerForPropertyPath(PropertyPath propertyPath)
     {

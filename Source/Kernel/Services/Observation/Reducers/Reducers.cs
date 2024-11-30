@@ -135,13 +135,13 @@ public class Reducers(
             catch (OperationCanceledException)
             {
                 reducerMediator.Disconnected(observerId, connectionId);
-                reducerResultTcs?.SetResult(new(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable), new ExpandoObject()));
+                reducerResultTcs?.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
                 observer.OnCompleted();
             }
             catch (Exception ex)
             {
                 reducerMediator.Disconnected(observerId, connectionId);
-                reducerResultTcs?.SetResult(new(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable), new ExpandoObject()));
+                reducerResultTcs?.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
                 observer.OnError(ex);
             }
         });

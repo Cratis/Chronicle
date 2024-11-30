@@ -46,7 +46,7 @@ public class ObserverCommands(IGrainFactory grainFactory) : ControllerBase
         [FromRoute] ObserverId observerId,
         [FromRoute] string partition)
     {
-        await grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, EventSequenceId.Log)).TryRecoverFailedPartition(partition);
+        await grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, EventSequenceId.Log)).TryStartRecoverJobForFailedPartition(partition);
     }
 
     /// <summary>

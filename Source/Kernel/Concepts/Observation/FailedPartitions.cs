@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 
@@ -12,46 +13,44 @@ namespace Cratis.Chronicle.Concepts.Observation;
 public class FailedPartitions
 {
     readonly List<FailedPartition> _resolvedPartitions = [];
-    List<FailedPartition> _partitions = [];
+    Dictionary<Key, FailedPartition> _partitions = [];
 
     /// <summary>
     /// Gets or sets the failed partitions for the observer.
     /// </summary>
     public IEnumerable<FailedPartition> Partitions
     {
-        get => _partitions;
-        set => _partitions = new(value);
+        get => _partitions.Values;
+        set
+        {
+            _partitions = value.ToDictionary(_ => _.Partition, _ => _);
+        }
     }
 
     /// <summary>
-    /// Gets or sets the resolved partitions for the observer.
+    /// Gets the resolved partitions for the observer.
     /// </summary>
     public IEnumerable<FailedPartition> ResolvedPartitions => _resolvedPartitions;
 
     /// <summary>
-    /// Gets whether or not there are any failed partitions.
+    /// Gets a value indicating whether there are any failed partitions.
     /// </summary>
     public bool HasFailedPartitions => _partitions.Count > 0;
 
     /// <summary>
-    /// Add a failed partition.
-    /// </summary>
-    /// <param name="failedPartition"><see cref="FailedPartition"/> to add.</param>
-    public void Add(FailedPartition failedPartition) => _partitions.Add(failedPartition);
-
-    /// <summary>
-    /// Check whether or not a partition is failed.
+    /// Check whether a partition is failed.
     /// </summary>
     /// <param name="partition">Partition to check.</param>
     /// <returns>True if failed, false if not.</returns>
-    public bool IsFailed(Key partition) => _partitions.Exists(_ => _.Partition.Equals(partition));
+    public bool IsFailed(Key partition) => _partitions.ContainsKey(partition);
 
     /// <summary>
-    /// Gets a failed partition by its partition identifier.
+    /// Try to get a failed partition by its partition identifier.
     /// </summary>
     /// <param name="partition">Partition to get.</param>
-    /// <returns>The failed partition.</returns>
-    public FailedPartition? Get(Key partition) => _partitions.Find(_ => _.Partition == partition);
+    /// <param name="failedPartition">The optional failed partition.</param>
+    /// <returns>True when failed partition exists, false if not.</returns>
+    public bool TryGet(Key partition, [NotNullWhen(true)]out FailedPartition? failedPartition) => _partitions.TryGetValue(partition, out failedPartition);
 
     /// <summary>
     /// Register an attempt for a partition.
@@ -67,19 +66,13 @@ public class FailedPartitions
         IEnumerable<string> messages,
         string stackTrace)
     {
-        FailedPartition failure;
-        if (IsFailed(partition))
+        if (!TryGet(partition, out var failure))
         {
-            failure = Get(partition)!;
-        }
-        else
-        {
-            failure = new FailedPartition
+            failure = new()
             {
                 Id = FailedPartitionId.New(),
                 Partition = partition
             };
-
             Add(failure);
         }
 
@@ -100,11 +93,11 @@ public class FailedPartitions
     /// <param name="partition"><see cref="Key"/> to remove.</param>
     public void Remove(Key partition)
     {
-        var failedPartition = Get(partition);
-        if (failedPartition != null)
-        {
-            _resolvedPartitions.Add(failedPartition);
-        }
-        _partitions.RemoveAll(_ => _.Partition == partition);
+        if (!TryGet(partition, out var failedPartition)) return;
+
+        _resolvedPartitions.Add(failedPartition);
+        _partitions.Remove(partition);
     }
+
+    void Add(FailedPartition failedPartition) => _partitions.Add(failedPartition.Partition, failedPartition);
 }

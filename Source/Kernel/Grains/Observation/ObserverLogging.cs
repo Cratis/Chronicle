@@ -14,17 +14,38 @@ namespace Cratis.Chronicle.Grains.Observation;
 
 internal static partial class ObserverLogMessages
 {
-    [LoggerMessage(LogLevel.Information, "Subscribing observer")]
+    [LoggerMessage(LogLevel.Debug, "Subscribing observer")]
     internal static partial void Subscribing(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Trace, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}")]
+    [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}")]
     internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
 
-    [LoggerMessage(LogLevel.Trace, "Trying to recover partition {Partition}")]
+    [LoggerMessage(LogLevel.Debug, "Trying to recover partition {Partition}")]
     internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
 
-    [LoggerMessage(LogLevel.Trace, "Giving up on trying to recover failed partition {Partition} automatically")]
+    [LoggerMessage(LogLevel.Warning, "Giving up on trying to recover failed partition {Partition} automatically")]
     internal static partial void GivingUpOnRecoveringFailedPartition(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Attempting to replay partition {Partition} to event sequence number {ToEventSequenceNumber}")]
+    internal static partial void AttemptReplayPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber toEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "Finished replay for partition {Partition}")]
+    internal static partial void FinishedReplayForPartition(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Failing partition {Partition} has successfully recovered")]
+    internal static partial void FailingPartitionRecovered(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} successfully caught up to event sequence number {EventSequenceNumber}")]
+    internal static partial void PartitionCaughtUp(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "Resuming catchup for partition {Partition} starting from event sequence number {EventSequenceNumber}")]
+    internal static partial void StartingCatchUpForPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} is replaying events and cannot accept new events to handle")]
+    internal static partial void PartitionReplayingCannotHandleNewEvents(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} is catching up events and cannot accept new events to handle")]
+    internal static partial void PartitionCatchingUpCannotHandleNewEvents(this ILogger<Observer> logger, Key partition);
 }
 
 internal static class ObserverScopes

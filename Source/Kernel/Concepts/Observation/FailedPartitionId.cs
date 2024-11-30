@@ -9,6 +9,8 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// <param name="value">The inner value.</param>
 public record FailedPartitionId(Guid value) : ConceptAs<Guid>(value)
 {
+    public static implicit operator FailedPartitionId(Guid value) => new(value);
+
     /// <summary>
     /// Creates a new instance of the <see cref="FailedPartitionId"/> class with a new unique value.
     /// </summary>

@@ -6,6 +6,6 @@ using Cratis.Chronicle.Grains.Jobs;
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
-/// Defines the job for retrying a failed partition for an observer.
+/// Defines the job for replaying a partition for an observer.
 /// </summary>
 public interface IReplayObserverPartition : IJob<ReplayObserverPartitionRequest>;

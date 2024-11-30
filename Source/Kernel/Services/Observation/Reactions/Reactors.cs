@@ -109,13 +109,13 @@ public class Reactors(
             catch (OperationCanceledException)
             {
                 reactorMediator.Disconnected(observerId, connectionId);
-                observationResultTcs?.SetResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable));
+                observationResultTcs?.SetResult(ObserverSubscriberResult.Disconnected());
                 observer.OnCompleted();
             }
             catch (Exception ex)
             {
                 reactorMediator.Disconnected(observerId, connectionId);
-                observationResultTcs?.SetResult(ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable));
+                observationResultTcs?.SetResult(ObserverSubscriberResult.Disconnected());
                 observer.OnError(ex);
             }
         });

@@ -108,7 +108,7 @@ public interface IJob : IGrainWithGuidCompoundKey
 }
 
 /// <summary>
-/// Represents a job that typically runs as long running with <see cref="IJobStep{TRequest, TResult}"/>.
+/// Represents a job that typically runs as long-running with <see cref="IJobStep{TRequest, TResult}"/>.
 /// </summary>
 /// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
 public interface IJob<TRequest> : IJob

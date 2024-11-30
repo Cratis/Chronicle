@@ -8,5 +8,5 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// <summary>
 /// Represents the result of handling events for a partition.
 /// </summary>
-/// <param name="HandledEvents">Number of events handled.</param>
-public record HandleEventsForPartitionResult(EventCount HandledEvents);
+/// <param name="LastHandledEventSequenceNumber">The sequence number of the last successfully handled event.</param>
+public record HandleEventsForPartitionResult(EventSequenceNumber LastHandledEventSequenceNumber);

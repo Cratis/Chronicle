@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// <param name="ObserverSubscription">The <see cref="ObserverSubscription"/> for the observer.</param>
 /// <param name="Partition">The partition in the form a <see cref="Key"/>.</param>
 /// <param name="StartEventSequenceNumber">The event sequence number the job step should start from.</param>
+/// <param name="EndEventSequenceNumber">The event sequence number the job step should go to.</param>
 /// <param name="EventObservationState">The event observation state to set for the events.</param>
 /// <param name="EventTypes">The event types that are to replay.</param>
 public record HandleEventsForPartitionArguments(
@@ -21,5 +22,6 @@ public record HandleEventsForPartitionArguments(
     ObserverSubscription ObserverSubscription,
     Key Partition,
     EventSequenceNumber StartEventSequenceNumber,
+    EventSequenceNumber EndEventSequenceNumber,
     EventObservationState EventObservationState,
     IEnumerable<EventType> EventTypes);

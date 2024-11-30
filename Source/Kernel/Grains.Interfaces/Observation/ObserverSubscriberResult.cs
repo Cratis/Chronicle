@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Grains.Observation;
 public record ObserverSubscriberResult(ObserverSubscriberState State, EventSequenceNumber LastSuccessfulObservation, IEnumerable<string> ExceptionMessages, string ExceptionStackTrace)
 {
     /// <summary>
-    /// Gets the value indicating whether the <see cref="ObserverSubscriberResult"/> indicates that any event was successfully handled.
+    /// Gets a value indicating whether the <see cref="ObserverSubscriberResult"/> indicates that any event was successfully handled.
     /// </summary>
     public bool HandledAnyEvents => LastSuccessfulObservation != EventSequenceNumber.Unavailable;
 
@@ -44,7 +44,6 @@ public record ObserverSubscriberResult(ObserverSubscriberState State, EventSeque
     /// <summary>
     /// The result that represents a disconnected observer.
     /// </summary>
-    /// <param name="lastSuccessfulObservation">The <see cref="EventSequenceNumber"/> of the last successful observation.</param>
     /// <returns>The result object to use.</returns>
-    public static ObserverSubscriberResult Disconnected(EventSequenceNumber lastSuccessfulObservation) => new(ObserverSubscriberState.Disconnected, lastSuccessfulObservation, [], string.Empty);
+    public static ObserverSubscriberResult Disconnected() => new(ObserverSubscriberState.Disconnected, EventSequenceNumber.Unavailable, [], string.Empty);
 }

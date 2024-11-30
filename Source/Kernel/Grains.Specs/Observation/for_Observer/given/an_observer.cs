@@ -4,7 +4,11 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,6 +26,7 @@ public class an_observer : Specification
     protected IStreamProvider _streamProvider;
     protected IStreamProvider _sequenceStreamProvider;
     protected IObserverSubscriber _subscriber;
+    protected IJobsManager _jobsManager;
     protected IObserverServiceClient _observerServiceClient;
     protected FailedPartitions _failedPartitionsState;
     protected ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
@@ -31,11 +36,17 @@ public class an_observer : Specification
     protected TestStorageStats _storageStats => _silo.StorageStats<Observer, ObserverState>()!;
     protected IStorage<FailedPartitions> _failedPartitionsStorage;
     protected TestStorageStats _failedPartitionsStorageStats => _silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
+    protected IEventSequence _eventSequence;
 
     async Task Establish()
     {
         _subscriber = Substitute.For<IObserverSubscriber>();
-        _silo.AddProbe((_) => _subscriber);
+        _jobsManager = Substitute.For<IJobsManager>();
+        _eventSequence = Substitute.For<IEventSequence>();
+
+        _silo.AddProbe(_ => _subscriber);
+        _silo.AddProbe(_ => _jobsManager);
+        _silo.AddProbe(_ => _eventSequence);
 
         _failedPartitionsState = Substitute.For<FailedPartitions>();
 
@@ -51,15 +62,33 @@ public class an_observer : Specification
         _failedPartitionsStorage = _silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
         _failedPartitionsStorage.State = _failedPartitionsState;
 
-        var eventSequence = Substitute.For<IEventSequence>();
-        _silo.AddProbe((key) => eventSequence);
-
-        eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
-        eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
+        _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
+        _eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
 
         _observer = await _silo.CreateGrainAsync<Observer>(_observerKey);
 
         _storageStats.ResetCounts();
         _failedPartitionsStorageStats.ResetCounts();
     }
+
+    protected void CheckStartedCatchupJob(EventSequenceNumber lastHandled, Key _partition) => _jobsManager.Received(1)
+        .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
+            Arg.Any<JobId>(), Arg.Is<CatchUpObserverPartitionRequest>(_ =>
+                _.ObserverId == _observerId &&
+                _.ObserverKey == _observerKey &&
+                _.Key == _partition &&
+                _.FromSequenceNumber == lastHandled.Next() &&
+                _.EventTypes.SequenceEqual(_stateStorage.State.EventTypes)));
+
+    protected void CheckDidNotStartCatchupJob() => _jobsManager.DidNotReceive()
+        .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
+            Arg.Any<JobId>(), Arg.Any<CatchUpObserverPartitionRequest>());
+
+    protected void EventSequenceHasNextEvent(EventSequenceNumber sequenceNumber) => _eventSequence
+        .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber, Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
+        .Returns(sequenceNumber.Next());
+
+    protected void EventSequenceDoesNotHaveNextEvent(EventSequenceNumber sequenceNumber) => _eventSequence
+        .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber, Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
+        .Returns(sequenceNumber);
 }

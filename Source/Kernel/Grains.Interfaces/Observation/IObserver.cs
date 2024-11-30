@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Grains.Observation;
 public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
 {
     /// <summary>
-    /// Ensure the observers existence.
+    /// Ensure the observer existence.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Ensure();
@@ -29,10 +29,9 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// <summary>
     /// Set the handled stats for the observer.
     /// </summary>
-    /// <param name="handled">Number of handled events.</param>
     /// <param name="lastHandledEventSequenceNumber">The last handled event sequence number.</param>
     /// <returns>Awaitable task.</returns>
-    Task SetHandledStats(EventCount handled, EventSequenceNumber lastHandledEventSequenceNumber);
+    Task SetHandledStats(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Get the subscription for the observer.
@@ -99,8 +98,9 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// Notify that the partition has been replayed.
     /// </summary>
     /// <param name="partition">The partition that has been replayed.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionReplayed(Key partition);
+    Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Notify that the partition has failed.
@@ -116,15 +116,24 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// Notify that the partition has recovered.
     /// </summary>
     /// <param name="partition">The partition that has recovered.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
-    Task FailedPartitionRecovered(Key partition);
+    Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
+    /// Notify that the partition was caught.
+    /// </summary>
+    /// <param name="partition">The partition that has caught up.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Attempt to recover a failed partition.
     /// </summary>
     /// <param name="partition">The partition that is failed.</param>
     /// <returns>Awaitable task.</returns>
-    Task TryRecoverFailedPartition(Key partition);
+    Task TryStartRecoverJobForFailedPartition(Key partition);
 
     /// <summary>
     /// Attempt to recover all failed partitions.
@@ -139,11 +148,4 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// <param name="events">Collection of <see cref="AppendedEvent"/>.</param>
     /// <returns>Awaitable task.</returns>
     Task Handle(Key partition, IEnumerable<AppendedEvent> events);
-
-    /// <summary>
-    /// Report a count of events that has been handled.
-    /// </summary>
-    /// <param name="count"><see cref="EventCount"/> to increase the handled count with.</param>
-    /// <returns>Awaitable task.</returns>
-    Task ReportHandledEvents(EventCount count);
 }
