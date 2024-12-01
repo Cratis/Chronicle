@@ -5,7 +5,7 @@ import { useState, createContext, Dispatch, SetStateAction, ReactNode, useEffect
 
 export interface MenuContextProps {
     paramsFallback: object;
-    setParamsFallback: Dispatch<SetStateAction<string>>;
+    setParamsFallback: Dispatch<SetStateAction<object>>;
 }
 
 export interface MenuProviderProps {
@@ -22,7 +22,7 @@ export const MenuProvider = ({ children, params }: MenuProviderProps) => {
         setParamsFallback(params ?? {});
     }, [params]);
 
-    const value = {
+    const value: MenuContextProps = {
         paramsFallback,
         setParamsFallback
     };
