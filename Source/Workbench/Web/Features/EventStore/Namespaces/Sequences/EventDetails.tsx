@@ -7,6 +7,7 @@ import { TreeTable } from 'primereact/treetable';
 import { AppendedEventWithJsonAsContent } from 'Api/EventSequences';
 import { IDetailsComponentProps } from 'Components';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const addContent = (node: TreeNode, current: any, currentLevel: string) => {
     for (const key in current) {
         if (current.hasOwnProperty(key)) {

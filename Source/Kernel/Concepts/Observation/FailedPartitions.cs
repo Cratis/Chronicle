@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Concepts.Observation;
 public class FailedPartitions
 {
     readonly List<FailedPartition> _resolvedPartitions = [];
-    readonly Dictionary<Key, FailedPartition> _partitions = [];
+    Dictionary<Key, FailedPartition> _partitions = [];
 
     /// <summary>
     /// Gets or sets the failed partitions for the observer.
@@ -23,7 +23,7 @@ public class FailedPartitions
         get => _partitions.Values;
         set
         {
-            _partitions = failedPartitions.ToDictionary(_ => _.Partition, _ => _);
+            _partitions = value.ToDictionary(_ => _.Partition, _ => _);
         }
     }
 

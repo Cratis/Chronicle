@@ -3,7 +3,7 @@
 
 import { Column } from 'primereact/column';
 import strings from 'Strings';
-import { AllEventTypesArguments, AllEventTypesWithSchemas, EventTypeWithSchemas } from 'Api/EventTypes';
+import { AllEventTypesArguments, AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { FilterMatchMode } from 'primereact/api';
@@ -19,7 +19,7 @@ const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
 };
 
-const renderTombstone = (_: EventTypeWithSchemas) => {
+const renderTombstone = () => {
     return 'no';
 };
 

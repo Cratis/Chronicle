@@ -11,21 +11,24 @@ import { AllNamespaces, Namespace } from 'Api/Namespaces';
 import observers from './Observers.json';
 import namespaces from './Namespaces.json';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 function registerFakeQuery<TDataType>(queryType: Constructor, itemConstructor: Constructor, data: any) {
     const query = new queryType() as any;
 
     const response = {
-        "data": data,
-        "isSuccess": true,
-        "isAuthorized": true,
-        "isValid": true,
-        "hasExceptions": false,
-        "validationResults": [],
-        "exceptionMessages": [],
-        "exceptionStackTrace": ""
+        data: data,
+        isSuccess: true,
+        isAuthorized: true,
+        isValid: true,
+        paging: { page: 0, size: data.length, totalItems: data.length, totalPages: 1, pageSize: data.length },
+        hasExceptions: false,
+        validationResults: [],
+        exceptionMessages: [],
+        exceptionStackTrace: ''
     };
 
-    query.subscribe = (callback: OnNextResult<QueryResult<TDataType>>, _: any | undefined) => {
+    query.subscribe = (callback: OnNextResult<QueryResult<TDataType>>) => {
         const result = new QueryResult<TDataType>(response, itemConstructor, true);
         callback(result);
         return new ObservableQuerySubscription(new NullObservableQueryConnection());

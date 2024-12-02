@@ -5,6 +5,8 @@ import { NodeTemplate } from './NodeTemplate';
 import { IBookmarkNode } from '../TestData';
 import { Tree } from 'primereact/tree';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export interface IBookmarkTreeProps {
     nodes: IBookmarkNode[];
     exitEditMode: () => void;

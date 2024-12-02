@@ -7,6 +7,8 @@ import * as echarts from 'echarts';
 
 type EChartsOption = echarts.EChartsOption;
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 function getChartOption(dates: any, counts: any): EChartsOption {
     return {
         tooltip: {

@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+import { QueryResult } from '@cratis/applications/queries';
 import React from 'react';
 
-export const useMockData = (eventLogId: any) => {
-    const [data, setData] = React.useState<any>({ data: [] });
+export const useMockData = (eventLogId: string) => {
+    const [data, setData] = React.useState<QueryResult<object[]>>(QueryResult.empty([]));
 
     React.useEffect(() => {
         const mockData = [];
@@ -16,7 +18,11 @@ export const useMockData = (eventLogId: any) => {
                 count: Math.floor(Math.random() * 100)
             });
         }
-        setData({ data: mockData });
+        const result = {... QueryResult.noSuccess};
+        result.isSuccess = true;
+        result.data = mockData;
+        const queryResult = new QueryResult<object[]>(result, Object, true);
+        setData(queryResult);
     }, [eventLogId]);
 
     return data;
