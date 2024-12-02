@@ -9,6 +9,7 @@ import header from 'eslint-plugin-header';
 import noNull from 'eslint-plugin-no-null';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import reactlint from 'eslint-plugin-react';
 
 header.rules.header.meta.schema = false;
 
@@ -46,6 +47,7 @@ const getRules = configArray => {
 const rules = {
     ...getRules(eslint.configs.recommended),
     ...getRules(tseslint.configs.recommended),
+    ...getRules(reactlint.configs.recommended),
     ...{
         'no-irregular-whitespace': 0,
         semi: [2, 'always'],

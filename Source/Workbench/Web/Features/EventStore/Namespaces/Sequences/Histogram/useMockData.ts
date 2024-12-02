@@ -21,7 +21,7 @@ export const useMockData = (eventLogId: string) => {
         const result = {... QueryResult.noSuccess};
         result.isSuccess = true;
         result.data = mockData;
-        var queryResult = new QueryResult<object[]>(result, Object, true);
+        const queryResult = new QueryResult<object[]>(result, Object, true);
         setData(queryResult);
     }, [eventLogId]);
 

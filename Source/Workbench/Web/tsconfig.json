@@ -64,7 +64,9 @@
         "Features",
         "given.ts"
     ],
-    "exclude": [],
+    "exclude": [
+        "vite.config.ts"
+    ],
     "references": [
         {
             "path": "./tsconfig.node.json"

@@ -1,13 +1,10 @@
 /// <reference types="vitest/config" />
-
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
 import { defineConfig } from 'vite';
 import react from "@vitejs/plugin-react";
 import path from 'path';
 import { EmitMetadataPlugin } from '@cratis/applications.vite';
-
 export default defineConfig({
     optimizeDeps: {
         exclude: ['tslib'],
@@ -25,8 +22,7 @@ export default defineConfig({
         minify: false,
         cssCodeSplit: false,
         rollupOptions: {
-            external: [
-            ],
+            external: [],
         },
     },
     test: {
@@ -55,11 +51,11 @@ export default defineConfig({
         },
         exclude: ['**/dist/**', '**/node_modules/**', 'node_modules/**', '**/wwwroot/**', 'wwwroot/**', '**/given/**'],
         include: ['**/for_*/when_*/**/*.ts', '**/for_*/**/when_*.ts'],
-        setupFiles: `${__dirname}/vitest.setup.ts`
+        setupFiles: "".concat(__dirname, "/vitest.setup.ts")
     },
     plugins: [
         react(),
-        EmitMetadataPlugin() as any
+        EmitMetadataPlugin()
     ],
     server: {
         port: 9000,

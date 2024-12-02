@@ -20,6 +20,7 @@ export class a_view_model {
 
         };
         this.replay = sinon.createStubInstance(Replay);
+        this.replay.execute = sinon.stub().returns({ onException: sinon.stub() });
         this.dialogs = sinon.createStubInstance(Dialogs);
 
         this.params = { eventStore: 'eventStore', namespace: 'namespace' };

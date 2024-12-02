@@ -96,6 +96,7 @@
         "propertymapper",
         "Proto",
         "protobuf",
+        "reactlint",
         "Referer",
         "Remindable",
         "Retryable",
