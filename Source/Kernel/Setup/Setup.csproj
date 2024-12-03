@@ -7,6 +7,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
+        <PackageReference Include="Microsoft.Extensions.Resilience" />
     </ItemGroup>
 
     <ItemGroup>
