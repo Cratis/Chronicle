@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
 using Polly;
+using Polly.Registry;
 
 namespace Orleans.Hosting;
 
@@ -36,21 +37,27 @@ public static class StorageProviderExtensions
 
         builder.ConfigureServices(services =>
         {
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Namespaces, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Namespaces.NamespacesStateStorageProvider>());
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.EventSequences, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.EventSequences.EventSequencesStorageProvider>());
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Observers, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Observation.ObserverGrainStorageProvider>());
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.FailedPartitions, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Observation.FailedPartitionGrainStorageProvider>());
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Jobs, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Jobs.JobGrainStorageProvider>());
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.JobSteps, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Jobs.JobStepGrainStorageProvider>());
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Recommendations, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Recommendations.RecommendationGrainStorageProvider>());
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Projections, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Projections.ProjectionDefinitionStorageProvider>());
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.ProjectionsManager, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Projections.ProjectionsManagerStorageProvider>());
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Reactors, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Observation.Reactors.Clients.ReactorDefinitionStorageProvider>());
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Reducers, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Observation.Reducers.Clients.ReducerDefinitionStorageProvider>());
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.ReducersManager, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Observation.Reducers.Clients.ReducersManagerStorageProvider>());
-            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.Constraints, (serviceProvider, _) => serviceProvider.GetRequiredService<Cratis.Chronicle.Grains.Events.Constraints.ConstraintsStorageProvider>());
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.Namespaces, CreateResilientStorageFor<Cratis.Chronicle.Grains.Namespaces.NamespacesStateStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.EventSequences, CreateResilientStorageFor<Cratis.Chronicle.Grains.EventSequences.EventSequencesStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.Observers, CreateResilientStorageFor<Cratis.Chronicle.Grains.Observation.ObserverGrainStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.FailedPartitions, CreateResilientStorageFor<Cratis.Chronicle.Grains.Observation.FailedPartitionGrainStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.Jobs, CreateResilientStorageFor<Cratis.Chronicle.Grains.Jobs.JobGrainStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.JobSteps, CreateResilientStorageFor<Cratis.Chronicle.Grains.Jobs.JobStepGrainStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.Recommendations, CreateResilientStorageFor<Cratis.Chronicle.Grains.Recommendations.RecommendationGrainStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.Projections, CreateResilientStorageFor<Cratis.Chronicle.Grains.Projections.ProjectionDefinitionStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.ProjectionsManager, CreateResilientStorageFor<Cratis.Chronicle.Grains.Projections.ProjectionsManagerStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.Reactors, CreateResilientStorageFor<Cratis.Chronicle.Grains.Observation.Reactors.Clients.ReactorDefinitionStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.Reducers, CreateResilientStorageFor<Cratis.Chronicle.Grains.Observation.Reducers.Clients.ReducerDefinitionStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.ReducersManager, CreateResilientStorageFor<Cratis.Chronicle.Grains.Observation.Reducers.Clients.ReducersManagerStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.Constraints, CreateResilientStorageFor<Cratis.Chronicle.Grains.Events.Constraints.ConstraintsStorageProvider>);
         });
 
         return builder;
     }
+
+#pragma warning disable CA1859
+    static IGrainStorage CreateResilientStorageFor<TStorage>(IServiceProvider serviceProvider, object context)
+#pragma warning restore CA1859
+        where TStorage : class, IGrainStorage
+        => new ResilientGrainStorage(serviceProvider.GetRequiredService<TStorage>(), serviceProvider.GetRequiredService<ResiliencePipelineProvider<string>>());
 }
