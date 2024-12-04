@@ -1,21 +1,23 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using OneOf.Types;
 
 namespace Cratis.Chronicle.Grains.Workers;
 
 /// <summary>
-/// This class should be used as the base class for extending for the creation of long running, cpu bound, synchronous work.
+/// This class should be used as the base class for extending for the creation of long-running, cpu bound, synchronous work.
 /// <para>
 /// It relies on a configured <see cref="LimitedConcurrencyLevelTaskScheduler"/> that limits concurrent work to some level
 /// below the CPU being "fully engaged with work", as to leave enough resources for the Orleans async messaging to get through.
 /// </para>
 /// </summary>
-/// <typeparam name="TRequest">The request type (arguments/parameters) for a long running piece of work.</typeparam>
-/// <typeparam name="TResult">The result/response for a long running piece of work.</typeparam>
+/// <typeparam name="TRequest">The request type (arguments/parameters) for a long-running piece of work.</typeparam>
+/// <typeparam name="TResult">The result/response for a long-running piece of work.</typeparam>
 /// <remarks>
 /// Based on the work done here: https://github.com/OrleansContrib/Orleans.SyncWork.
 /// </remarks>
@@ -24,9 +26,9 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     ILogger<ICpuBoundWorker>? _logger;
     TaskScheduler? _taskScheduler;
     CpuBoundWorkerStatus _status = CpuBoundWorkerStatus.NotStarted;
-    Exception? _exception;
+    Result<None, Exception> _exception = default(None);
     Task? _task;
-    TResult? _result;
+    Result<TResult, CpuBoundWorkerGetResultError> _result = CpuBoundWorkerGetResultError.NotStarted;
     TaskScheduler TaskScheduler => _taskScheduler ??= ServiceProvider.GetService<LimitedConcurrencyLevelTaskScheduler>() ?? TaskScheduler.Default;
 
     /// <inheritdoc/>
@@ -40,17 +42,17 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     public Task<CpuBoundWorkerStatus> GetWorkStatus() => Task.FromResult(_status);
 
     /// <inheritdoc />
-    public Task<Exception?> GetException() => Task.FromResult(_exception);
+    public Task<Result<None, Exception>> GetException() => Task.FromResult(_exception);
 
     /// <inheritdoc />
-    public Task<TResult?> GetResult() => Task.FromResult(_result);
+    public Task<Result<TResult, CpuBoundWorkerGetResultError>> GetResult() => Task.FromResult(_result);
 
     /// <summary>
     /// The method that actually performs the long-running work.
     /// </summary>
     /// <param name="request">The request/parameters used for the execution of the method.</param>
     /// <returns>The result of the work.</returns>
-    protected abstract Task<TResult> PerformWork(TRequest request);
+    protected abstract Task<Catch<TResult, PerformWorkError>> PerformWork(TRequest request);
 
     /// <summary>
     /// Method that gets called when the work has succeeded.
@@ -80,9 +82,9 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     }
 
     /// <summary>
-    /// The task creation that fires off the long running work to the <see cref="LimitedConcurrencyLevelTaskScheduler"/>.
+    /// The task creation that fires off the long-running work to the <see cref="LimitedConcurrencyLevelTaskScheduler"/>.
     /// </summary>
-    /// <param name="request">The request to use for the invoke of the long running work.</param>
+    /// <param name="request">The request to use for the invocation of the long-running work.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns>a <see cref="Task"/> representing the fact that the work has been dispatched.</returns>
 #pragma warning disable CA1859 // Use concrete types when possible for improved performance
@@ -94,16 +96,25 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
             {
                 try
                 {
-                    if (HandledCancellation())
+                    if (!cancellationToken.IsCancellationRequested)
                     {
+                        HandleCancellation();
                         return;
                     }
 
                     _logger?.BeginningWorkForTask();
-                    _result = await PerformWork(request);
-                    _exception = default;
-                    if (HandledCancellation())
+                    var performWorkResult = await PerformWork(request);
+                    _result = performWorkResult.Match(
+                        result => result,
+                        performWorkError => performWorkError switch
+                        {
+                            PerformWorkError.Cancelled => CpuBoundWorkerGetResultError.WorkCancelled,
+                            _ => CpuBoundWorkerGetResultError.ErrorOccurred
+                        },
+                        HandleException);
+                    if (_result.TryGetError(out var error) && error == CpuBoundWorkerGetResultError.WorkCancelled)
                     {
+                        HandleCancellation();
                         return;
                     }
                     _status = CpuBoundWorkerStatus.Completed;
@@ -111,22 +122,22 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
                 }
                 catch (Exception e)
                 {
-                    _logger?.TaskHasFailed(e);
-                    _result = default;
-                    _exception = e;
-                    _status = CpuBoundWorkerStatus.Failed;
+                    _result = HandleException(e);
                 }
 
-                bool HandledCancellation()
+                void HandleCancellation()
                 {
-                    if (!cancellationToken.IsCancellationRequested)
-                    {
-                        return false;
-                    }
-
                     _logger?.TaskHasBeenCancelled();
                     _status = CpuBoundWorkerStatus.Stopped;
-                    return true;
+                    _result = CpuBoundWorkerGetResultError.WorkCancelled;
+                }
+
+                Result<TResult, CpuBoundWorkerGetResultError> HandleException(Exception e)
+                {
+                    _logger?.TaskHasFailed(e);
+                    _exception = e;
+                    _status = CpuBoundWorkerStatus.Failed;
+                    return CpuBoundWorkerGetResultError.ErrorOccurred;
                 }
             },
             cancellationToken,

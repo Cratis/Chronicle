@@ -21,6 +21,9 @@ internal static partial class CpuBoundWorkerLogMessages
     [LoggerMessage(LogLevel.Warning, "Task has failed")]
     internal static partial void TaskHasFailed(this ILogger<ICpuBoundWorker> logger, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "Task has failed")]
+    internal static partial void TaskHasFailed(this ILogger<ICpuBoundWorker> logger);
+
     [LoggerMessage(LogLevel.Debug, "Task has already been initialized")]
     internal static partial void TaskHasAlreadyBeenInitialized(this ILogger<ICpuBoundWorker> logger);
 
