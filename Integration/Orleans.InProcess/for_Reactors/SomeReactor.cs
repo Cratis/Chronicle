@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
 
-namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_appending_event;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors;
 
 [DependencyInjection.IgnoreConvention]
 public class SomeReactor(TaskCompletionSource tsc) : IReactor
