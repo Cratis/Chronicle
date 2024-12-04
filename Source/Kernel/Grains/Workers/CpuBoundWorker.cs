@@ -21,9 +21,9 @@ namespace Cratis.Chronicle.Grains.Workers;
 /// <remarks>
 /// Based on the work done here: https://github.com/OrleansContrib/Orleans.SyncWork.
 /// </remarks>
-public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker<TRequest, TResult>
+public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
 {
-    ILogger<ICpuBoundWorker>? _logger;
+    ILogger<ICpuBoundWorker> _logger = null!;
     TaskScheduler? _taskScheduler;
     CpuBoundWorkerStatus _status = CpuBoundWorkerStatus.NotStarted;
     Result<None, Exception> _exception = default(None);
@@ -44,8 +44,11 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     /// <inheritdoc />
     public Task<Result<None, Exception>> GetException() => Task.FromResult(_exception);
 
-    /// <inheritdoc />
-    public Task<Result<TResult, CpuBoundWorkerGetResultError>> GetResult() => Task.FromResult(_result);
+    /// <summary>
+    /// Gets the result.
+    /// </summary>
+    /// <returns>The result.</returns>
+    protected Task<Result<TResult, CpuBoundWorkerGetResultError>> GetResult() => Task.FromResult(_result);
 
     /// <summary>
     /// The method that actually performs the long-running work.
