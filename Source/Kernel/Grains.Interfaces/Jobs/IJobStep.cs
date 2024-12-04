@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Workers;
 using Orleans.Concurrency;
@@ -13,32 +14,47 @@ namespace Cratis.Chronicle.Grains.Jobs;
 public interface IJobStep : IGrainWithGuidCompoundKey
 {
     /// <summary>
+    /// Start the job step.
+    /// </summary>
+    /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>
+    /// <param name="request">Request to start it with.</param>
+    /// <returns>Awaitable task.</returns>
+    Task<Result<JobStepPrepareStartError>> Start(GrainId jobId, object request);
+
+    /// <summary>
+    /// Prepare the job step.
+    /// </summary>
+    /// <param name="request">Request to prepare it with.</param>
+    /// <returns>Awaitable task.</returns>
+    Task<Result<JobStepPrepareStartError>> Prepare(object request);
+
+    /// <summary>
     /// Pause the job step.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
-    Task Pause();
+    Task<Result<JobStepError>> Pause();
 
     /// <summary>
     /// Resume a job step.
     /// </summary>
     /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>
     /// <returns>Awaitable task.</returns>
-    Task Resume(GrainId jobId);
+    Task<Result<JobStepResumeSuccess, JobStepError>> Resume(GrainId jobId);
 
     /// <summary>
     /// Stop the job step.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
-    Task Stop();
+    Task<Result<JobStepError>> Stop();
 
     /// <summary>
     /// Report a status change.
     /// </summary>
     /// <param name="status">The <see cref="JobStepStatus"/> to change to.</param>
     /// <returns>Awaitable task.</returns>
-    Task ReportStatusChange(JobStepStatus status);
+    Task<Result<JobStepError>> ReportStatusChange(JobStepStatus status);
 
     /// <summary>
     /// Report the step has failed.
@@ -46,7 +62,7 @@ public interface IJobStep : IGrainWithGuidCompoundKey
     /// <param name="exceptionMessages">Collection of exception messages.</param>
     /// <param name="exceptionStackTrace">Exception stack trace.</param>
     /// <returns>Awaitable task.</returns>
-    Task ReportFailure(IList<string> exceptionMessages, string exceptionStackTrace);
+    Task<Result<JobStepError>> ReportFailure(IList<string> exceptionMessages, string exceptionStackTrace);
 }
 
 /// <summary>
@@ -54,7 +70,7 @@ public interface IJobStep : IGrainWithGuidCompoundKey
 /// </summary>
 /// <typeparam name="TRequest">Type of the request for the job step.</typeparam>
 /// <typeparam name="TResult">Type of the result for the job step.</typeparam>
-public interface IJobStep<TRequest, TResult> : ICpuBoundWorker<TRequest, JobStepResult>, IJobStep
+public interface IJobStep<TRequest, TResult> : ICpuBoundWorker<TRequest, TResult>, IJobStep
 {
     /// <summary>
     /// Start the job step.
@@ -62,12 +78,12 @@ public interface IJobStep<TRequest, TResult> : ICpuBoundWorker<TRequest, JobStep
     /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>
     /// <param name="request">Request to start it with.</param>
     /// <returns>Awaitable task.</returns>
-    Task Start(GrainId jobId, TRequest request);
+    Task<Result<JobStepPrepareStartError>> Start(GrainId jobId, TRequest request);
 
     /// <summary>
     /// Prepare the job step.
     /// </summary>
     /// <param name="request">Request to prepare it with.</param>
     /// <returns>Awaitable task.</returns>
-    Task Prepare(TRequest request);
+    Task<Result<JobStepPrepareStartError>> Prepare(TRequest request);
 }
