@@ -96,7 +96,12 @@ public class GlobalFixture : IAsyncDisposable
 
     public async Task RemoveAllDatabases()
     {
-        var mongoClient = new MongoClient($"mongodb://{MongoDBContainer.Hostname}:{MongoDBContainer.GetMappedPublicPort(27017)}");
+        var urlBuilder = new MongoUrlBuilder($"mongodb://{MongoDBContainer.Hostname}:{MongoDBContainer.GetMappedPublicPort(27017)}")
+        {
+            DirectConnection = true
+        };
+        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
+        var mongoClient = new MongoClient(settings);
         var namesCursor = await mongoClient.ListDatabaseNamesAsync();
         var names = await namesCursor.ToListAsync();
         foreach (var name in names)

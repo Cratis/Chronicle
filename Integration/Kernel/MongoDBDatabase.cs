@@ -14,7 +14,12 @@ public class MongoDBDatabase
 
     public MongoDBDatabase(IContainer mongoDBContainer, string database)
     {
-        var mongoClient = new MongoClient($"mongodb://{mongoDBContainer.Hostname}:{mongoDBContainer.GetMappedPublicPort(27017)}");
+        var urlBuilder = new MongoUrlBuilder($"mongodb://{MongoDBContainer.Hostname}:{MongoDBContainer.GetMappedPublicPort(27017)}")
+        {
+            DirectConnection = true
+        };
+        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
+        var mongoClient = new MongoClient(settings);
         Database = mongoClient.GetDatabase(database);
         var changeDatabase = mongoClient.GetDatabase($"{database}-changes");
 
