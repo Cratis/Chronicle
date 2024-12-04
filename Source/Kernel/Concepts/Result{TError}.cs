@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Concepts;
 /// <typeparam name="TError">The type of the error.</typeparam>
 public class Result<TError> : OneOfBase<None, TError>
 {
-    Result(OneOf<None, TError> input)
+    protected Result(OneOf<None, TError> input)
         : base(input)
     {
     }

@@ -9,6 +9,12 @@ namespace Cratis.Chronicle.Concepts;
 public class Result
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="Result"/> class.
+    /// </summary>
+    /// <param name="success">Whether the result was successful.</param>
+    protected Result(bool success) => IsSuccess = success;
+
+    /// <summary>
     /// Gets a value indicating whether the execution was successful.
     /// </summary>
     public bool IsSuccess { get; init; }
@@ -17,19 +23,13 @@ public class Result
     /// Creates a failed <see cref="Result"/>.
     /// </summary>
     /// <returns>The created <see cref="Result"/>.</returns>
-    public static Result Failed() => new()
-    {
-        IsSuccess = false
-    };
+    public static Result Failed() => new(false);
 
     /// <summary>
     /// Creates a successful <see cref="Result"/>.
     /// </summary>
     /// <returns>The created <see cref="Result"/>.</returns>
-    public static Result Success() => new()
-    {
-        IsSuccess = true
-    };
+    public static Result Success() => new(true);
 
     /// <summary>
     /// Creates a failed <see cref="Result{T}"/>.
