@@ -12,13 +12,13 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 
 internal static partial class AppendedEventsQueueMetrics
 {
-    [Counter<int>("cratis-appended-events-queue-events-enqueued", "Number of events enqueued")]
+    [Counter<int>("chronicle-appended-events-queue-events-enqueued", "Number of events enqueued")]
     internal static partial void EventsEnqueued(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents);
 
-    [Counter<int>("cratis-appended-events-queue-events-handled", "Number of events processed")]
+    [Counter<int>("chronicle-appended-events-queue-events-handled", "Number of events processed")]
     internal static partial void EventsHandled(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents);
 
-    [Counter<int>("cratis-appended-events-queue-events-handling-failures", "Number of events that has handling failures")]
+    [Counter<int>("chronicle-appended-events-queue-events-handling-failures", "Number of events that has handling failures")]
     internal static partial void EventsHandlingFailures(this IMeterScope<AppendedEventsQueue> meter);
 }
 
