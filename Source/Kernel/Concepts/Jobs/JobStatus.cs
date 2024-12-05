@@ -14,17 +14,12 @@ public enum JobStatus
     None = 0,
 
     /// <summary>
-    /// The job has been started and is running.
+    /// The job has been started and is preparing steps.
     /// </summary>
-    Preparing = 1,
+    PreparingSteps = 1,
 
     /// <summary>
-    /// The job has been started and is running.
-    /// </summary>
-    PreparingSteps = 2,
-
-    /// <summary>
-    /// The job has been started and is running.
+    /// The job has been started and is currently preparing and starting all job steps.
     /// </summary>
     PreparingStepsForRunning = 3,
 
