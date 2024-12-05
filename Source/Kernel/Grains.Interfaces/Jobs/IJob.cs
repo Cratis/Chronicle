@@ -1,9 +1,34 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
+using OneOf;
 
 namespace Cratis.Chronicle.Grains.Jobs;
+
+/// <summary>
+/// The type of error that can occur when performing an operation on a <see cref="IJob"/>.
+/// </summary>
+public enum JobError
+{
+    JobIsStoppedOrCompleted = 0,
+    UnknownError = 1,
+    StorageError = 2,
+    PersistStateError = 3
+}
+
+public enum ResumeJobSuccess
+{
+    Success = 0,
+    JobCannotBeResumed = 1,
+    JobAlreadyRunning = 2,
+}
+
+public record FailedResumingJobSteps(IEnumerable<JobStepId> FailedJobSteps);
+
+[GenerateOneOf]
+public partial class ResumeJobError : OneOfBase<JobError, FailedResumingJobSteps>;
 
 /// <summary>
 /// Represents a job that typically runs as long-running with <see cref="IJobStep{TRequest, TResult}"/>.
@@ -14,7 +39,7 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// Pause a running job.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task Pause();
+    Task<Result<JobError>> Pause();
 
     /// <summary>
     /// Resume a job, either its paused, stopped or didn't get to finish before the host stopped.
@@ -23,13 +48,13 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// <remarks>
     /// This method won't do anything if the job is already running.
     /// </remarks>
-    Task Resume();
+    Task<Result<ResumeJobSuccess, ResumeJobError>> Resume();
 
     /// <summary>
     /// Stop a running job.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task Stop();
+    Task<Result<JobError>> Stop();
 
     /// <summary>
     /// Report a successful completion of a job step.
@@ -37,29 +62,29 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was completed.</param>
     /// <param name="result">The <see cref="JobStepResult"/> for the succeeded step.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnStepSucceeded(JobStepId stepId, JobStepResult result);
+    Task<Result<JobError>> OnStepSucceeded(JobStepId stepId, JobStepResult result);
 
     /// <summary>
     /// Report that a job step has been stopped.
     /// </summary>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was stopped.</param>
-    /// <param name="result">The <see cref="JobStepResult"/> for the stopped step.</param>
+    /// <param name="jobStepResult">The <see cref="JobStepResult"/> for the stopped step.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnStepStopped(JobStepId stepId, JobStepResult result);
+    Task<Result<JobError>> OnStepStopped(JobStepId stepId, JobStepResult jobStepResult);
 
     /// <summary>
     /// Report failure of a job step.
     /// </summary>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that failed.</param>
-    /// <param name="result">The <see cref="JobStepResult"/> for the failed step.</param>
+    /// <param name="jobStepResult">The <see cref="JobStepResult"/> for the failed step.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnStepFailed(JobStepId stepId, JobStepResult result);
+    Task<Result<JobError>> OnStepFailed(JobStepId stepId, JobStepResult jobStepResult);
 
     /// <summary>
     /// Called when the job has completed.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task OnCompleted();
+    Task<Result<JobError>> OnCompleted();
 
     /// <summary>
     /// Adds a status change to the job.
@@ -72,7 +97,7 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// Due to the intricacy of how jobs run from different task contexts outside of Orleans, this is needed to be able to
     /// update state.
     /// </remarks>
-    Task StatusChanged(JobStatus status, Exception? exception = null);
+    Task<Result<JobError>> WriteStatusChanged(JobStatus status, Exception? exception = null);
 
     /// <summary>
     /// Set the total number of steps for the job.
@@ -84,13 +109,7 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// Due to the intricacy of how jobs run from different task contexts outside of Orleans, this is needed to be able to
     /// update state.
     /// </remarks>
-    Task SetTotalSteps(int totalSteps);
-
-    /// <summary>
-    /// Write state to storage.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    Task WriteState();
+    Task<Result<JobError>> SetTotalSteps(int totalSteps);
 
     /// <summary>
     /// Subscribe to job events.
@@ -111,7 +130,7 @@ public interface IJob : IGrainWithGuidCompoundKey
 /// Represents a job that typically runs as long-running with <see cref="IJobStep{TRequest, TResult}"/>.
 /// </summary>
 /// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
-public interface IJob<TRequest> : IJob
+public interface IJob<in TRequest> : IJob
     where TRequest : class
 {
     /// <summary>
@@ -119,5 +138,5 @@ public interface IJob<TRequest> : IJob
     /// </summary>
     /// <param name="request">The request object for the job.</param>
     /// <returns>Awaitable task.</returns>
-    Task Start(TRequest request);
+    Task<Result<JobError>> Start(TRequest request);
 }

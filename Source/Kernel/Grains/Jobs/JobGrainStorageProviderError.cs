@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.Jobs;
 namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
@@ -15,7 +14,7 @@ public class JobGrainStorageProviderError : Exception
     /// <param name="jobStateType">The type of the job state.</param>
     /// <param name="error">The <see cref="JobError"/>.</param>
     /// <param name="methodName">The method.</param>
-    public JobGrainStorageProviderError(Type jobStateType, JobError error, string methodName)
+    public JobGrainStorageProviderError(Type jobStateType, Storage.Jobs.JobError error, string methodName)
         : base($"Error while performing {methodName} with job state type {jobStateType} : {Enum.GetName(error)}")
     {
     }

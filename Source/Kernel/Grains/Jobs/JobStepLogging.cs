@@ -28,7 +28,7 @@ internal static partial class JobStepLogMessages
     [LoggerMessage(LogLevel.Debug, "Stopping job step")]
     internal static partial void Stopping(this ILogger<IJobStep> logger);
 
-    [LoggerMessage(LogLevel.Debug, "Changing status to {Status}")]
+    [LoggerMessage(LogLevel.Debug, "Job step changing status to {Status}")]
     internal static partial void ChangingStatus(this ILogger<IJobStep> logger, JobStepStatus status);
 
     [LoggerMessage(LogLevel.Warning, "Job step handling unexpected error from performing job step")]
