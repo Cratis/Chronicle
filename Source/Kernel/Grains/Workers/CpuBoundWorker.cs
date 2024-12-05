@@ -21,14 +21,14 @@ namespace Cratis.Chronicle.Grains.Workers;
 /// <remarks>
 /// Based on the work done here: https://github.com/OrleansContrib/Orleans.SyncWork.
 /// </remarks>
-public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
+public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker<TRequest, TResult>
 {
     ILogger<ICpuBoundWorker> _logger = null!;
     TaskScheduler? _taskScheduler;
     CpuBoundWorkerStatus _status = CpuBoundWorkerStatus.NotStarted;
     Result<None, Exception> _exception = default(None);
     Task? _task;
-    Result<TResult, CpuBoundWorkerGetResultError> _result = CpuBoundWorkerGetResultError.NotStarted;
+    Result<PerformWorkResult<TResult>, CpuBoundWorkerGetResultError> _result = CpuBoundWorkerGetResultError.NotStarted;
     TaskScheduler TaskScheduler => _taskScheduler ??= ServiceProvider.GetService<LimitedConcurrencyLevelTaskScheduler>() ?? TaskScheduler.Default;
 
     /// <inheritdoc/>
@@ -44,18 +44,15 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     /// <inheritdoc />
     public Task<Result<None, Exception>> GetException() => Task.FromResult(_exception);
 
-    /// <summary>
-    /// Gets the result.
-    /// </summary>
-    /// <returns>The result.</returns>
-    protected Task<Result<TResult, CpuBoundWorkerGetResultError>> GetResult() => Task.FromResult(_result);
+    /// <inheritdoc/>
+    public Task<Result<PerformWorkResult<TResult>, CpuBoundWorkerGetResultError>> GetResult() => Task.FromResult(_result);
 
     /// <summary>
     /// The method that actually performs the long-running work.
     /// </summary>
     /// <param name="request">The request/parameters used for the execution of the method.</param>
     /// <returns>The result of the work.</returns>
-    protected abstract Task<Catch<TResult, PerformWorkError>> PerformWork(TRequest request);
+    protected abstract Task<PerformWorkResult<TResult>> PerformWork(TRequest request);
 
     /// <summary>
     /// Method that gets called when the work has succeeded.
@@ -97,50 +94,66 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
         return Task.Factory.StartNew(
             async () =>
             {
+                _result = CpuBoundWorkerGetResultError.NotFinished;
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    HandleCancellation();
+                    return;
+                }
+                _logger.BeginningWorkForTask();
+                PerformWorkResult<TResult> performWorkResult;
                 try
                 {
-                    if (!cancellationToken.IsCancellationRequested)
-                    {
-                        HandleCancellation();
-                        return;
-                    }
-
-                    _logger?.BeginningWorkForTask();
-                    var performWorkResult = await PerformWork(request);
-                    _result = performWorkResult.Match(
-                        result => result,
-                        performWorkError => performWorkError switch
-                        {
-                            PerformWorkError.Cancelled => CpuBoundWorkerGetResultError.WorkCancelled,
-                            _ => CpuBoundWorkerGetResultError.ErrorOccurred
-                        },
-                        HandleException);
-                    if (_result.TryGetError(out var error) && error == CpuBoundWorkerGetResultError.WorkCancelled)
-                    {
-                        HandleCancellation();
-                        return;
-                    }
-                    _status = CpuBoundWorkerStatus.Completed;
-                    _logger?.TaskHasCompleted();
+                    performWorkResult = await PerformWork(request);
                 }
                 catch (Exception e)
                 {
-                    _result = HandleException(e);
+                    HandleException(e);
+                    return;
                 }
+
+                _result = performWorkResult;
+                if (performWorkResult.Error == PerformWorkError.Cancelled)
+                {
+                    HandleCancellation();
+                    return;
+                }
+                if (performWorkResult.HasException)
+                {
+                    HandleException(performWorkResult.Exception!);
+                    return;
+                }
+                if (!performWorkResult.IsSuccess)
+                {
+                    HandleError(performWorkResult.Error);
+                    return;
+                }
+
+                _status = CpuBoundWorkerStatus.Completed;
+                _logger.TaskHasCompleted();
 
                 void HandleCancellation()
                 {
-                    _logger?.TaskHasBeenCancelled();
+                    _logger.TaskHasBeenCancelled();
                     _status = CpuBoundWorkerStatus.Stopped;
                     _result = CpuBoundWorkerGetResultError.WorkCancelled;
                 }
 
-                Result<TResult, CpuBoundWorkerGetResultError> HandleException(Exception e)
+                void HandleException(Exception e)
                 {
                     _logger?.TaskHasFailed(e);
                     _exception = e;
                     _status = CpuBoundWorkerStatus.Failed;
-                    return CpuBoundWorkerGetResultError.ErrorOccurred;
+                    _result = new PerformWorkResult<TResult>
+                    {
+                        Error = PerformWorkError.WorkerError,
+                        Exception = e
+                    };
+                }
+                void HandleError(PerformWorkError e)
+                {
+                    _logger?.TaskHasFailed(e);
+                    _status = CpuBoundWorkerStatus.Failed;
                 }
             },
             cancellationToken,

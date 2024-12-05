@@ -9,12 +9,22 @@ namespace Cratis.Chronicle.Grains.Workers;
 public enum PerformWorkError
 {
     /// <summary>
-    /// Unknown error occurred.
+    /// None error occurred.
     /// </summary>
-    Unknown = 0,
+    None = 0,
 
     /// <summary>
     /// The work was cancelled.
     /// </summary>
-    Cancelled = 1
+    Cancelled = 1,
+
+    /// <summary>
+    /// An error occurred in the worker itself.
+    /// </summary>
+    WorkerError = 2,
+
+    /// <summary>
+    /// An error occurred while performing the actual work.
+    /// </summary>
+    PerformingWorkError = 3,
 }

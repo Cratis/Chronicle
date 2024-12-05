@@ -14,12 +14,12 @@ public enum CpuBoundWorkerGetResultError
     NotStarted = 0,
 
     /// <summary>
-    /// Work was cancelled.
+    /// Work has not finished.
     /// </summary>
-    WorkCancelled = 1,
+    NotFinished = 1,
 
     /// <summary>
-    /// Error occurred while performing work.
+    /// Work has been cancelled.
     /// </summary>
-    ErrorOccurred = 2
+    WorkCancelled = 2,
 }

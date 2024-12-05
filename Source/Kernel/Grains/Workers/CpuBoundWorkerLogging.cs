@@ -15,11 +15,14 @@ internal static partial class CpuBoundWorkerLogMessages
     [LoggerMessage(LogLevel.Debug, "Beginning work for task")]
     internal static partial void BeginningWorkForTask(this ILogger<ICpuBoundWorker> logger);
 
-    [LoggerMessage(LogLevel.Trace, "Task has completed")]
+    [LoggerMessage(LogLevel.Debug, "Task has completed")]
     internal static partial void TaskHasCompleted(this ILogger<ICpuBoundWorker> logger);
 
     [LoggerMessage(LogLevel.Warning, "Task has failed")]
     internal static partial void TaskHasFailed(this ILogger<ICpuBoundWorker> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Task has failed. {Error}")]
+    internal static partial void TaskHasFailed(this ILogger<ICpuBoundWorker> logger, PerformWorkError error);
 
     [LoggerMessage(LogLevel.Warning, "Task has failed")]
     internal static partial void TaskHasFailed(this ILogger<ICpuBoundWorker> logger);
