@@ -44,11 +44,11 @@ internal static partial class JobsManagerLogMessages
     internal static partial void JobCouldNotBeFound(this ILogger<JobsManager> logger, JobId jobId);
 
     [LoggerMessage(LogLevel.Warning, "Job {JobId} encountered error : {Error}")]
-    internal static partial void JobErrorOccurred(this ILogger<JobsManager> logger, JobId jobId, JobError error);
+    internal static partial void JobErrorOccurred(this ILogger<JobsManager> logger, JobId jobId, Storage.Jobs.JobError error);
 
     [LoggerMessage(LogLevel.Warning, "Unable to get jobs of type {JobType}. Encountered error : {Error}")]
-    internal static partial void UnableToGetJobs(this ILogger<JobsManager> logger, Type jobType, JobError error);
-    
+    internal static partial void UnableToGetJobs(this ILogger<JobsManager> logger, Type jobType, Storage.Jobs.JobError error);
+
     [LoggerMessage(LogLevel.Warning, "Failed to stop Job {JobId}")]
     internal static partial void FailedToStopJob(this ILogger<JobsManager> logger, JobId jobId);
 }

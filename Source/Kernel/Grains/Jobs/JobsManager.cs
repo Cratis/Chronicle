@@ -47,7 +47,7 @@ public class JobsManager(
         using var scope = logger.BeginJobsManagerScope(_key);
 
         logger.Rehydrating();
-        var getRunningJobs = await _jobStorage!.GetJobs(JobStatus.Running, JobStatus.Preparing, JobStatus.PreparingSteps);
+        var getRunningJobs = await _jobStorage!.GetJobs(JobStatus.Running, JobStatus.PreparingSteps, JobStatus.PreparingStepsForRunning);
         await getRunningJobs.Match(RehydrateJobs, HandleUnknownFailure);
         return;
 
@@ -144,16 +144,6 @@ public class JobsManager(
     }
 
     /// <inheritdoc/>
-    public Task OnCompleted(JobId jobId, JobStatus status)
-    {
-        using var scope = logger.BeginJobsManagerScope(_key);
-
-        logger.JobCompleted(jobId, status);
-
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
     public async Task<IImmutableList<JobState>> GetJobsOfType<TJob, TRequest>()
         where TJob : IJob<TRequest>
         where TRequest : class
@@ -178,26 +168,26 @@ public class JobsManager(
         jobState.Id,
         new JobKey(_key.EventStore, _key.Namespace)) as IJob)!;
 
-    async Task<Catch<None, JobError>> TryStopJob(JobId jobId)
+    async Task<Catch<None, Storage.Jobs.JobError>> TryStopJob(JobId jobId)
     {
         logger.StoppingJob(jobId);
 
         var jobStateResult = await _jobStorage!.GetJob(jobId);
-        return await jobStateResult.Match<Task<Catch<None, JobError>>>(
+        return await jobStateResult.Match<Task<Catch<None, Storage.Jobs.JobError>>>(
             async jobState =>
             {
                 try
                 {
                     await StopJob(jobState);
-                    return Catch.Success<None, JobError>(default);
+                    return Catch.Success<None, Storage.Jobs.JobError>(default);
                 }
                 catch (Exception ex)
                 {
                     return ex;
                 }
             },
-            error => Task.FromResult<Catch<None, JobError>>(error),
-            error => Task.FromResult<Catch<None, JobError>>(error));
+            error => Task.FromResult<Catch<None, Storage.Jobs.JobError>>(error),
+            error => Task.FromResult<Catch<None, Storage.Jobs.JobError>>(error));
 
         Task StopJob(JobState jobState)
         {
@@ -214,11 +204,11 @@ public class JobsManager(
             error => HandleUnknownFailure(jobId, error));
     }
 
-    Task HandleError(JobId jobId, JobError jobError)
+    Task HandleError(JobId jobId, Storage.Jobs.JobError jobError)
     {
         switch (jobError)
         {
-            case JobError.NotFound:
+            case Storage.Jobs.JobError.NotFound:
                 logger.JobCouldNotBeFound(jobId);
                 break;
             default:
