@@ -101,11 +101,12 @@ public abstract class JobStep<TRequest, TResult, TState>(
             Job = GrainFactory.GetGrain(jobId).AsReference<IJob>();
             ThisJobStep = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJobStep<TRequest, TResult>>();
 
-            StatusChanged(JobStepStatus.Running);
-            state.State.Request = request!;
-            await WriteStateOrThrow();
             await Start(request, _cancellationTokenSource.Token);
-            return Result<JobStepPrepareStartError>.Success();
+            state.State.Request = request!;
+            var writeStateResult = await WriteStatusChange(JobStepStatus.Running);
+            return writeStateResult.Match<Result<JobStepPrepareStartError>>(
+                _ => Result<JobStepPrepareStartError>.Success(),
+                _ => JobStepPrepareStartError.FailedPersistingState);
         }
         catch (Exception ex)
         {
@@ -122,9 +123,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         {
             await _cancellationTokenSource.CancelAsync();
             await Job.Unsubscribe(this.AsReference<IJobObserver>());
-            StatusChanged(JobStepStatus.Paused);
-            await WriteStateOrThrow();
-            return Result<JobStepError>.Success();
+            return await WriteStatusChange(JobStepStatus.Paused);
         }
         catch (Exception ex)
         {
@@ -158,9 +157,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         {
             await _cancellationTokenSource.CancelAsync();
             await Job.Unsubscribe(this.AsReference<IJobObserver>());
-            StatusChanged(JobStepStatus.Stopped);
-            await WriteStateOrThrow();
-            return Result<JobStepError>.Success();
+            return await WriteStatusChange(JobStepStatus.Stopped);
         }
         catch (Exception ex)
         {
@@ -173,17 +170,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
     public async Task<Result<JobStepError>> ReportStatusChange(JobStepStatus status)
     {
         using var scope = logger.BeginJobStepScope(State);
-        try
-        {
-            StatusChanged(status);
-            await WriteStateOrThrow();
-            return Result<JobStepError>.Success();
-        }
-        catch (Exception ex)
-        {
-            logger.FailedUnexpectedly(ex);
-            return JobStepError.Unknown;
-        }
+        return await WriteStatusChange(status);
     }
 
     /// <inheritdoc/>
@@ -192,10 +179,14 @@ public abstract class JobStep<TRequest, TResult, TState>(
         using var scope = logger.BeginJobStepScope(State);
         try
         {
-            StatusChanged(JobStepStatus.Failed, errorMessages, exceptionStackTrace);
-            await WriteStateOrThrow();
-            await Job.OnStepFailed(JobStepId, JobStepResult.Failed(new(errorMessages, exceptionStackTrace)));
-            return Result<JobStepError>.Success();
+            var onStepFailedResult = await Job.OnStepFailed(JobStepId, JobStepResult.Failed(new(errorMessages, exceptionStackTrace)));
+            return await onStepFailedResult.Match<Task<Result<JobStepError>>>(
+                _ => WriteStatusChange(JobStepStatus.Failed, errorMessages, exceptionStackTrace),
+                error =>
+                {
+                    logger.FailedReportJobStepFailure(error);
+                    return Task.FromResult(Result.Failed(JobStepError.FailedToReportToJob));
+                });
         }
         catch (Exception ex)
         {
@@ -233,55 +224,59 @@ public abstract class JobStep<TRequest, TResult, TState>(
     protected abstract Task<Catch<JobStepResult, PerformWorkError>> PerformStep(TRequest request, CancellationToken cancellationToken);
 
     /// <inheritdoc/>
-    protected override async Task<Catch<JobStepResult, PerformWorkError>> PerformWork(TRequest request)
+    protected override async Task<PerformWorkResult<JobStepResult>> PerformWork(TRequest request)
     {
         using var scope = logger.BeginJobStepScope(State);
-        try
+        if (_cancellationTokenSource.IsCancellationRequested)
         {
-            await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
-            if (_cancellationTokenSource.IsCancellationRequested)
+            return new()
             {
-                return PerformWorkError.Cancelled;
-            }
+                Error = PerformWorkError.Cancelled
+            };
+        }
+        await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
+        var performStepResult = await PerformStep(request, _cancellationTokenSource.Token);
+        var result = await performStepResult.Match(HandleSuccessfulPerform, HandleError, HandleException);
+        DeactivateOnIdle();
+        return result;
 
-            var result = await PerformStep(request, _cancellationTokenSource.Token);
-            return await result.Match(HandleSuccessfulPerform, HandleError, HandleException);
-        }
-        catch (Exception ex)
+        async Task<PerformWorkResult<JobStepResult>> HandleSuccessfulPerform(JobStepResult jobStepResult)
         {
-            return await HandleException(ex);
-        }
-        finally
-        {
-            DeactivateOnIdle();
-        }
-
-        async Task<Catch<JobStepResult, PerformWorkError>> HandleSuccessfulPerform(JobStepResult result)
-        {
-            // TODO: Handle this appropriately when Job returns monads.
-            try
+            var performWorkResult = new PerformWorkResult<JobStepResult>
             {
-                if (!result.TryGetError(out var error))
+                Result = jobStepResult
+            };
+            if (!jobStepResult.TryGetError(out var error))
+            {
+                if ((await Job.OnStepSucceeded(JobStepId, jobStepResult)).TryGetError(out var errorReportingSuccess))
                 {
-                    await Job.OnStepSucceeded(JobStepId, result);
-                    await ThisJobStep.ReportStatusChange(JobStepStatus.Succeeded);
-                }
-                else
-                {
-                    var reportErrorResult = await ReportError(error.ErrorMessages.ToList(), error.ExceptionStackTrace ?? string.Empty);
-                    if (!reportErrorResult.IsSuccess)
+                    logger.FailedReportJobStepSuccess(errorReportingSuccess);
+                    performWorkResult = performWorkResult with
                     {
-                        return reportErrorResult.AsT1;
-                    }
+                        Error = PerformWorkError.WorkerError
+                    };
+                }
+
+                if ((await ThisJobStep.ReportStatusChange(JobStepStatus.Succeeded)).TryGetError(out var errorChangingStatus))
+                {
+                    logger.PerformingWorkFailedPersistState(errorChangingStatus);
+                    performWorkResult = performWorkResult with
+                    {
+                        Error = PerformWorkError.WorkerError
+                    };
                 }
             }
-            catch (Exception ex)
+            else if ((await ReportError(error.ErrorMessages.ToList(), error.ExceptionStackTrace ?? string.Empty)).TryGetError(out var errorReportingFailure))
             {
-                return ex;
+                performWorkResult = performWorkResult with
+                {
+                    Error = errorReportingFailure
+                };
             }
+            return performWorkResult;
         }
 
-        async Task<Catch<JobStepResult, PerformWorkError>> HandleError(PerformWorkError error)
+        async Task<PerformWorkResult<JobStepResult>> HandleError(PerformWorkError error)
         {
             IList<string> messages = error switch
             {
@@ -289,33 +284,31 @@ public abstract class JobStep<TRequest, TResult, TState>(
                 _ => ["An unknown error occurred"]
             };
             var reportErrorResult = await ReportError(messages, string.Empty);
-            return reportErrorResult.Match<Catch<JobStepResult, PerformWorkError>>(_ => error, ex => ex);
+            return new()
+            {
+                Error = reportErrorResult.Match(_ => error, e => e)
+            };
         }
 
-        async Task<Catch<JobStepResult, PerformWorkError>> HandleException(Exception ex)
+        async Task<PerformWorkResult<JobStepResult>> HandleException(Exception ex)
         {
+            var performWorkResult = new PerformWorkResult<JobStepResult>
+            {
+                Exception = ex,
+                Error = PerformWorkError.PerformingWorkError
+            };
             logger.HandleUnexpectedPerformJobStepFailure(ex);
-            var reportErrorResult = await ReportError(ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
-            return reportErrorResult.Match(
-                _ => ex,
-                error => error);
+
+            // Deliberately don't handle error response from this call as it will be logged anyway and.
+            await ReportError(ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
+            return performWorkResult;
         }
 
-        async Task<Catch> ReportError(IEnumerable<string> errorMessages, string exceptionStackTrace)
+        async Task<Result<PerformWorkError>> ReportError(IEnumerable<string> errorMessages, string exceptionStackTrace)
         {
-            try
-            {
-                logger.ReportFailure();
-                var reportFailureResult = await ThisJobStep.ReportFailure(errorMessages.ToList(), exceptionStackTrace);
-                return await reportFailureResult.Match(
-                    _ => Task.FromResult(Catch.Success()),
-                    _ => Task.FromResult(Catch.Success())); // Here we can later choose what to do.
-            }
-            catch (Exception ex)
-            {
-                logger.FailedToReportFailure(ex);
-                return ex;
-            }
+            logger.ReportFailurePerformingWork();
+            var reportFailureResult = await ThisJobStep.ReportFailure(errorMessages.ToList(), exceptionStackTrace);
+            return reportFailureResult.Match(_ => Result<PerformWorkError>.Success(), _ => PerformWorkError.WorkerError);
         }
     }
 
@@ -337,19 +330,33 @@ public abstract class JobStep<TRequest, TResult, TState>(
         }
     }
 
-    /// <summary>
-    /// Saves the current grain state or throws the error if writing state failed.
-    /// </summary>
-    /// <returns>A task representing the asynchronous action.</returns>
-    protected async Task WriteStateOrThrow()
+    JobStepError HandleFailedToWriteStatusChange(Exception ex, JobStepStatus status)
     {
-        var writeResult = await WriteStateAsync();
-        writeResult.RethrowError();
+        logger.FailedToWriteState(ex, status);
+        return JobStepError.FailedToPersistState;
+    }
+
+    async Task<Result<JobStepError>> WriteStatusChange(JobStepStatus status, IEnumerable<string>? exceptionMessages = null!, string? exceptionStackTrace = null!)
+    {
+        try
+        {
+            logger.ChangingStatus(status);
+            StatusChanged(status, exceptionMessages, exceptionStackTrace);
+            var writeResult = await WriteStateAsync();
+            return writeResult.Match(
+                _ => Result<JobStepError>.Success(),
+                ex => HandleFailedToWriteStatusChange(ex, status));
+        }
+        catch (Exception ex)
+        {
+            logger.FailedUnexpectedly(ex);
+            return JobStepError.Unknown;
+        }
     }
 
     void StatusChanged(JobStepStatus status, IEnumerable<string>? exceptionMessages = null!, string? exceptionStackTrace = null!)
     {
-        state.State.StatusChanges.Add(new JobStepStatusChanged
+        state.State.StatusChanges.Add(new()
         {
             Status = status,
             Occurred = DateTimeOffset.UtcNow,

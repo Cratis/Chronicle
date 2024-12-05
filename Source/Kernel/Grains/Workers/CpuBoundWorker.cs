@@ -28,7 +28,7 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     CpuBoundWorkerStatus _status = CpuBoundWorkerStatus.NotStarted;
     Result<None, Exception> _exception = default(None);
     Task? _task;
-    Result<PerformWorkResult<TResult>, CpuBoundWorkerGetResultError> _result = CpuBoundWorkerGetResultError.NotStarted;
+    Result<PerformWorkResult<TResult>, WorkerGetResultError> _result = WorkerGetResultError.NotStarted;
     TaskScheduler TaskScheduler => _taskScheduler ??= ServiceProvider.GetService<LimitedConcurrencyLevelTaskScheduler>() ?? TaskScheduler.Default;
 
     /// <inheritdoc/>
@@ -45,7 +45,7 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     public Task<Result<None, Exception>> GetException() => Task.FromResult(_exception);
 
     /// <inheritdoc/>
-    public Task<Result<PerformWorkResult<TResult>, CpuBoundWorkerGetResultError>> GetResult() => Task.FromResult(_result);
+    public Task<Result<PerformWorkResult<TResult>, WorkerGetResultError>> GetResult() => Task.FromResult(_result);
 
     /// <summary>
     /// The method that actually performs the long-running work.
@@ -94,7 +94,7 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
         return Task.Factory.StartNew(
             async () =>
             {
-                _result = CpuBoundWorkerGetResultError.NotFinished;
+                _result = WorkerGetResultError.NotFinished;
                 if (!cancellationToken.IsCancellationRequested)
                 {
                     HandleCancellation();
@@ -136,7 +136,7 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
                 {
                     _logger.TaskHasBeenCancelled();
                     _status = CpuBoundWorkerStatus.Stopped;
-                    _result = CpuBoundWorkerGetResultError.WorkCancelled;
+                    _result = WorkerGetResultError.WorkCancelled;
                 }
 
                 void HandleException(Exception e)

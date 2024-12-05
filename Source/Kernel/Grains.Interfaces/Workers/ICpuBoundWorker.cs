@@ -40,5 +40,5 @@ public interface ICpuBoundWorker<in TRequest, TResult> : ICpuBoundWorker
     /// The result of the long-running work.
     /// </summary>
     /// <returns>Possible the result of the work done through the SyncWorker. Can be null.</returns>
-    Task<Result<PerformWorkResult<TResult>, CpuBoundWorkerGetResultError>> GetResult();
+    Task<Result<PerformWorkResult<TResult>, WorkerGetResultError>> GetResult();
 }

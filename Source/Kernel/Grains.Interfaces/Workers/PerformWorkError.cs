@@ -24,7 +24,7 @@ public enum PerformWorkError
     WorkerError = 2,
 
     /// <summary>
-    /// An error occurred while performing the actual work.
+    /// An unexpected error occurred while performing the actual work.
     /// </summary>
     PerformingWorkError = 3,
 }

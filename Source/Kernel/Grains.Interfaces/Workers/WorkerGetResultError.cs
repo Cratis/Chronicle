@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Grains.Workers;
 /// <summary>
 /// The reason for not getting <see cref="ICpuBoundWorker{TRequest,TResult}"/> result.
 /// </summary>
-public enum CpuBoundWorkerGetResultError
+public enum WorkerGetResultError
 {
     /// <summary>
     /// Work has not started.

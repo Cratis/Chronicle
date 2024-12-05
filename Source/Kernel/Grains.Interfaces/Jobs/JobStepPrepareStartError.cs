@@ -21,5 +21,10 @@ public enum JobStepPrepareStartError
     /// <summary>
     /// The request type was wrong.
     /// </summary>
-    WrongRequestType = 2
+    WrongRequestType = 2,
+
+    /// <summary>
+    /// Failed to persist internal state.
+    /// </summary>
+    FailedPersistingState = 3
 }

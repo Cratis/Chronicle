@@ -70,7 +70,7 @@ public interface IJobStep : IGrainWithGuidCompoundKey
 /// </summary>
 /// <typeparam name="TRequest">Type of the request for the job step.</typeparam>
 /// <typeparam name="TResult">Type of the result for the job step.</typeparam>
-public interface IJobStep<TRequest, TResult> : ICpuBoundWorker<TRequest, TResult>, IJobStep
+public interface IJobStep<in TRequest, TResult> : ICpuBoundWorker<TRequest, JobStepResult>, IJobStep
 {
     /// <summary>
     /// Start the job step.

@@ -11,5 +11,15 @@ public enum JobStepError
     /// <summary>
     /// Unknown error occurred.
     /// </summary>
-    Unknown = 0
+    Unknown = 0,
+
+    /// <summary>
+    /// Failed to persist state.
+    /// </summary>
+    FailedToPersistState = 1,
+
+    /// <summary>
+    /// Failed to report change in job step to job.
+    /// </summary>
+    FailedToReportToJob = 2
 }

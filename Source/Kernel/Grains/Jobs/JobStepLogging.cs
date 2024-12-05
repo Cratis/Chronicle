@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 
@@ -27,20 +28,35 @@ internal static partial class JobStepLogMessages
     [LoggerMessage(LogLevel.Debug, "Stopping job step")]
     internal static partial void Stopping(this ILogger<IJobStep> logger);
 
+    [LoggerMessage(LogLevel.Debug, "Changing status to {Status}")]
+    internal static partial void ChangingStatus(this ILogger<IJobStep> logger, JobStepStatus status);
+
     [LoggerMessage(LogLevel.Warning, "Job step handling unexpected error from performing job step")]
     internal static partial void HandleUnexpectedPerformJobStepFailure(this ILogger<IJobStep> logger, Exception exception);
 
     [LoggerMessage(LogLevel.Warning, "Job step failed with an unexpected error")]
     internal static partial void FailedUnexpectedly(this ILogger<IJobStep> logger, Exception exception);
 
-    [LoggerMessage(LogLevel.Debug, "Job step reporting failure")]
-    internal static partial void ReportFailure(this ILogger<IJobStep> logger);
+    [LoggerMessage(LogLevel.Debug, "Job step reporting failure performing work")]
+    internal static partial void ReportFailurePerformingWork(this ILogger<IJobStep> logger);
 
     [LoggerMessage(LogLevel.Warning, "Job step failed to report failure. This might cause unexpected behaviour")]
     internal static partial void FailedToReportFailure(this ILogger<IJobStep> logger, Exception exception);
 
     [LoggerMessage(LogLevel.Warning, "Job step failed to write persisted state")]
     internal static partial void FailedToWriteState(this ILogger<IJobStep> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Job step failed to write persisted state to change status to {JobStepStatus}")]
+    internal static partial void FailedToWriteState(this ILogger<IJobStep> logger, Exception exception, JobStepStatus jobStepStatus);
+
+    [LoggerMessage(LogLevel.Warning, "Job step failed to report succeeded job step to job. {JobError}")]
+    internal static partial void FailedReportJobStepSuccess(this ILogger<IJobStep> logger, JobError jobError);
+
+    [LoggerMessage(LogLevel.Warning, "Job step failed to report failed job step to job. {JobError}")]
+    internal static partial void FailedReportJobStepFailure(this ILogger<IJobStep> logger, JobError jobError);
+
+    [LoggerMessage(LogLevel.Warning, "Job step while after performing work failed while persisting state. {JobStepError}")]
+    internal static partial void PerformingWorkFailedPersistState(this ILogger<IJobStep> logger, JobStepError jobStepError);
 }
 
 internal static class JobStepScopes
