@@ -4,6 +4,9 @@
 using Cratis.Chronicle.Concepts;
 namespace Cratis.Chronicle.Grains.Jobs;
 
+/// <summary>
+/// Represents the result of performing a job step.
+/// </summary>
 public class JobStepResult : Result<object?, PerformJobStepError>
 {
     JobStepResult(Result<object?, PerformJobStepError> input)
@@ -11,6 +14,24 @@ public class JobStepResult : Result<object?, PerformJobStepError>
     {
     }
 
+    /// <summary>
+    /// Creates a succeeded <see cref="JobStepResult"/>.
+    /// </summary>
+    /// <param name="input">The optional result object.</param>
+    /// <returns>The <see cref="JobStepResult"/>.</returns>
     public static JobStepResult Succeeded(object? input = default) => new(Result.Success<object?, PerformJobStepError>(input));
-    public static JobStepResult Failed(PerformJobStepError input) => new(input);
+
+    /// <summary>
+    /// Creates a failed <see cref="JobStepResult"/>.
+    /// </summary>
+    /// <param name="messages">The error messages.</param>
+    /// <returns>The <see cref="JobStepResult"/>.</returns>
+    public static JobStepResult Failed(params string[] messages) => new(new PerformJobStepError(messages, string.Empty));
+
+    /// <summary>
+    /// Creates a failed <see cref="JobStepResult"/>.
+    /// </summary>
+    /// <param name="ex">The <see cref="Exception"/>.</param>
+    /// <returns>The <see cref="JobStepResult"/>.</returns>
+    public static JobStepResult Failed(Exception ex) => new(new PerformJobStepError(ex.GetAllMessages(), ex.StackTrace));
 }
