@@ -49,6 +49,11 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// </summary>
     protected TState State => state.State;
 
+    /// <summary>
+    /// Represents that the performing of job step was cancelled.
+    /// </summary>
+    protected class CancelledPerformStep : OneOf.Types.YesOrNo.Yes;
+
     /// <inheritdoc/>
     public void Dispose() => _cancellationTokenSource.Dispose();
 
@@ -221,7 +226,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <param name="request">The request object for the step.</param>
     /// <param name="cancellationToken">Cancellation token that can cancel the step work.</param>
     /// <returns>True if successful, false if not.</returns>
-    protected abstract Task<Catch<JobStepResult, PerformWorkError>> PerformStep(TRequest request, CancellationToken cancellationToken);
+    protected abstract Task<Catch<JobStepResult, CancelledPerformStep>> PerformStep(TRequest request, CancellationToken cancellationToken);
 
     /// <inheritdoc/>
     protected override async Task<PerformWorkResult<JobStepResult>> PerformWork(TRequest request)
@@ -236,7 +241,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         }
         await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
         var performStepResult = await PerformStep(request, _cancellationTokenSource.Token);
-        var result = await performStepResult.Match(HandleSuccessfulPerform, HandleError, HandleException);
+        var result = await performStepResult.Match(HandleSuccessfulPerform, HandleCancellation, HandleException);
         DeactivateOnIdle();
         return result;
 
@@ -276,17 +281,19 @@ public abstract class JobStep<TRequest, TResult, TState>(
             return performWorkResult;
         }
 
-        async Task<PerformWorkResult<JobStepResult>> HandleError(PerformWorkError error)
+        async Task<PerformWorkResult<JobStepResult>> HandleCancellation(CancelledPerformStep cancelled)
         {
-            IList<string> messages = error switch
-            {
-                PerformWorkError.Cancelled => ["Job step task was cancelled"],
-                _ => ["An unknown error occurred"]
-            };
+            IList<string> messages = ["Job step task was cancelled"];
             var reportErrorResult = await ReportError(messages, string.Empty);
             return new()
             {
-                Error = reportErrorResult.Match(_ => error, e => e)
+                Error = reportErrorResult.Match(_ => PerformWorkError.Cancelled, reportError =>
+                {
+#pragma warning disable CA1848 This will rarely happen.
+                    logger.LogWarning("Failed to report that that the performing of job step was cancelled. Error: {ReportError}", reportError);
+#pragma warning restore CA1848
+                    return reportError;
+                })
             };
         }
 
