@@ -2,23 +2,41 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
+using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents a job for retrying a failed partition.
 /// </summary>
-public class CatchUpObserverPartition : Job<CatchUpObserverPartitionRequest, JobStateWithLastHandledEvent>, ICatchUpObserverPartition
+/// <param name="logger">The logger.</param>
+public class CatchUpObserverPartition(ILogger<CatchUpObserverPartition> logger) : Job<CatchUpObserverPartitionRequest, JobStateWithLastHandledEvent>, ICatchUpObserverPartition
 {
     /// <inheritdoc/>
-    public override async Task OnCompleted()
+    public override async Task<Result<JobError>> OnCompleted()
     {
-        if (AllStepsCompletedSuccessfully)
+        using var scope = logger.BeginJobScope(JobId, JobKey);
+        try
         {
-            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
-            await observer.PartitionCaughtUp(Request.Key, State.LastHandledEventSequenceNumber);
+            if (AllStepsCompletedSuccessfully)
+            {
+                var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
+                await observer.PartitionCaughtUp(Request.Key, State.LastHandledEventSequenceNumber);
+            }
+            else
+            {
+                logger.AllStepsNotCompletedSuccessfully();
+            }
+
+            return Result.Success<JobError>();
+        }
+        catch (Exception ex)
+        {
+            logger.FailedOnCompleted(ex, nameof(CatchUpObserverPartition));
+            return JobError.UnknownError;
         }
     }
 

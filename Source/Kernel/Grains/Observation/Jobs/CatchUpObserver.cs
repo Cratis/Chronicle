@@ -2,11 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
@@ -17,16 +19,27 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// Initializes a new instance of the <see cref="ReplayObserver"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
+/// <param name="logger">The logger.</param>
+public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
 {
     /// <inheritdoc/>
     protected override bool RemoveAfterCompleted => true;
 
     /// <inheritdoc/>
-    public override async Task OnCompleted()
+    public override async Task<Result<JobError>> OnCompleted()
     {
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.TransitionTo<Routing>();
+        using var scope = logger.BeginJobScope(JobId, JobKey);
+        try
+        {
+            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+            await observer.TransitionTo<Routing>();
+            return Result.Success<JobError>();
+        }
+        catch (Exception ex)
+        {
+            logger.FailedOnCompleted(ex, nameof(CatchUpObserver));
+            return JobError.UnknownError;
+        }
     }
 
     /// <inheritdoc/>
