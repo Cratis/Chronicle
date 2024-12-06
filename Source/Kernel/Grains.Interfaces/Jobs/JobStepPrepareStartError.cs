@@ -26,5 +26,15 @@ public enum JobStepPrepareStartError
     /// <summary>
     /// Failed to persist internal state.
     /// </summary>
-    FailedPersistingState = 3
+    FailedPersistingState = 3,
+
+    /// <summary>
+    /// Could not prepare job step.
+    /// </summary>
+    CouldNotPrepare = 4,
+
+    /// <summary>
+    /// Failed while preparing job step.
+    /// </summary>
+    UnexpectedErrorPreparing = 5
 }
