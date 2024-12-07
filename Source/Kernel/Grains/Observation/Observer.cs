@@ -262,6 +262,15 @@ public class Observer(
     }
 
     /// <inheritdoc/>
+    public async Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        await WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -448,6 +457,12 @@ public class Observer(
 
     void HandleNewLastHandledEvent(EventSequenceNumber lastHandledEvent)
     {
+        if (!lastHandledEvent.IsActualValue)
+        {
+            logger.LastHandledEventIsNotActualValue();
+            return;
+        }
+
         var newLastHandledEvent = State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ||
                                   State.LastHandledEventSequenceNumber < lastHandledEvent ? lastHandledEvent : State.LastHandledEventSequenceNumber;
         var nextEventSequenceNumber = State.NextEventSequenceNumber < lastHandledEvent ? lastHandledEvent.Next() : State.NextEventSequenceNumber;
@@ -484,6 +499,16 @@ public class Observer(
 
     async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
+        if (failures.State.IsFailed(partition))
+        {
+            logger.PartitionToCatchUpIsFailing(partition);
+            return;
+        }
+        if (!lastHandledEventSequenceNumber.IsActualValue)
+        {
+            logger.LastHandledEventIsNotActualValue();
+            return;
+        }
         var needCatchupResult = await NeedsCatchup(partition, lastHandledEventSequenceNumber);
         await needCatchupResult.Match(
             needCatchup => needCatchup
