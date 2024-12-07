@@ -4,13 +4,14 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Jobs;
 using Microsoft.Extensions.Logging;
+using OneOf.Types;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
@@ -27,7 +28,7 @@ public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
     IStorage storage,
-    ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state), IHandleEventsForPartition
+    ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
@@ -37,141 +38,160 @@ public class HandleEventsForPartition(
     IObserverSubscriber? _subscriber;
 
     /// <inheritdoc/>
-    public override Task Prepare(HandleEventsForPartitionArguments request)
+    public override Task<Concepts.Result<JobStepPrepareStartError>> Prepare(HandleEventsForPartitionArguments request)
     {
         using var scope = logger.BeginObserverScope(request.ObserverKey, State.Id.JobId, State.Id.JobStepId);
-        logger.Preparing(request.Partition, request.StartEventSequenceNumber, request.EndEventSequenceNumber);
-        _observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
-        _eventSourceId = request.Partition.ToString() ?? EventSourceId.Unspecified;
-
-        if (request.ObserverSubscription.IsSubscribed)
+        try
         {
-            var key = new ObserverSubscriberKey(
-                request.ObserverKey.ObserverId,
-                request.ObserverKey.EventStore,
-                request.ObserverKey.Namespace,
-                request.ObserverKey.EventSequenceId,
-                _eventSourceId,
-                request.ObserverSubscription.SiloAddress.ToParsableString());
+            logger.Preparing(request.Partition, request.StartEventSequenceNumber, request.EndEventSequenceNumber);
+            _observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
+            _eventSourceId = request.Partition.ToString() ?? EventSourceId.Unspecified;
 
-            _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, key) as IObserverSubscriber)!;
-            return Task.CompletedTask;
+            if (request.ObserverSubscription.IsSubscribed)
+            {
+                var key = new ObserverSubscriberKey(
+                    request.ObserverKey.ObserverId,
+                    request.ObserverKey.EventStore,
+                    request.ObserverKey.Namespace,
+                    request.ObserverKey.EventSequenceId,
+                    _eventSourceId,
+                    request.ObserverSubscription.SiloAddress.ToParsableString());
+
+                _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, key) as IObserverSubscriber)!;
+                logger.SuccessfullyPrepared(request.Partition);
+                return Task.FromResult(Result.Success<JobStepPrepareStartError>());
+            }
+
+            logger.PreparingStoppedUnsubscribed(request.Partition);
+            return Task.FromResult(Result.Failed(JobStepPrepareStartError.CouldNotPrepare));
         }
-
-        logger.PreparingStoppedUnsubscribed(request.Partition);
-        return Task.CompletedTask;
+        catch (Exception e)
+        {
+            logger.FailedPreparing(e, nameof(HandleEventsForPartition));
+            return Task.FromResult(Result.Failed(JobStepPrepareStartError.UnexpectedErrorPreparing));
+        }
     }
 
     /// <inheritdoc/>
-    protected override async Task<JobStepResult> PerformStep(HandleEventsForPartitionArguments request, CancellationToken cancellationToken)
+    protected override async Task<Catch<JobStepResult>> PerformStep(HandleEventsForPartitionArguments request, CancellationToken cancellationToken)
     {
         using var scope = logger.BeginObserverScope(request.ObserverKey, State.Id.JobId, State.Id.JobStepId);
-        if (_subscriber is null || !request.ObserverSubscription.IsSubscribed)
+        try
         {
-            logger.PerformingStoppedUnsubscribed(request.Partition);
-            return JobStepResult.Failed(SubscriberDisconnected);
-        }
-
-        var eventSequenceStorage = GetEventSequenceStorage(request.ObserverKey.EventStore, request.ObserverKey.Namespace, request.ObserverKey.EventSequenceId);
-        using var events = await eventSequenceStorage.GetRange(
-            request.StartEventSequenceNumber,
-            request.EndEventSequenceNumber,
-            _eventSourceId,
-            request.EventTypes,
-            cancellationToken);
-
-        var subscriberContext = new ObserverSubscriberContext(request.ObserverSubscription.Arguments);
-
-        var failed = false;
-        var exceptionMessages = Enumerable.Empty<string>();
-        var exceptionStackTrace = string.Empty;
-
-        var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
-        while (await events.MoveNext())
-        {
-            var handledCount = EventCount.Zero;
+            if (_subscriber is null || !request.ObserverSubscription.IsSubscribed)
+            {
+                logger.PerformingStoppedUnsubscribed(request.Partition);
+                return JobStepResult.Failed(SubscriberDisconnected, "This should have been ensured in the Prepare operation");
+            }
             if (cancellationToken.IsCancellationRequested)
             {
-                break;
+                logger.CancelledBeforeHandlingAnyEvents(request.Partition);
+                return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
             }
+            var eventSequenceStorage = GetEventSequenceStorage(request.ObserverKey.EventStore, request.ObserverKey.Namespace, request.ObserverKey.EventSequenceId);
+            using var events = await eventSequenceStorage.GetRange(
+                request.StartEventSequenceNumber,
+                request.EndEventSequenceNumber,
+                _eventSourceId,
+                request.EventTypes,
+                cancellationToken);
 
-            try
+            var subscriberContext = new ObserverSubscriberContext(request.ObserverSubscription.Arguments);
+
+            var failed = false;
+            var exceptionMessages = Enumerable.Empty<string>().ToArray();
+            var exceptionStackTrace = string.Empty;
+
+            var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
+            while (await events.MoveNext())
             {
-                var eventsToHandle = SetObservationStateIfSpecified(request, events);
-                if (eventsToHandle.Length == 0)
+                if (cancellationToken.IsCancellationRequested)
                 {
-                    logger.NoMoreEventsToHandle(request.Partition, request.StartEventSequenceNumber, request.EndEventSequenceNumber);
-                    break;
+                    LogCancelled(lastEventSequenceNumberAttempted, request.Partition);
+                    return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult()));
                 }
+                var handledCount = EventCount.Zero;
 
-                lastEventSequenceNumberAttempted = eventsToHandle[0].Metadata.SequenceNumber;
-                var result = await _subscriber!.OnNext(eventsToHandle, subscriberContext);
-                if (result.LastSuccessfulObservation != EventSequenceNumber.Unavailable)
+                var handleEventsResult = await TryHandleEvents(request, events, subscriberContext);
+                if (handleEventsResult.TryGetException(out var handleEventsException))
                 {
-                    handledCount = events.Current.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation);
-                }
-
-                switch (result.State)
-                {
-                    case ObserverSubscriberState.Ok:
-                        logger.SuccessfullyHandledEvents(request.Partition, handledCount, result.LastSuccessfulObservation);
-                        lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
-                        State.LastSuccessfullyHandledEventSequenceNumber = result.LastSuccessfulObservation;
-                        await WriteStateAsync();
-                        break;
-                    case ObserverSubscriberState.Failed:
-                        failed = true;
-                        exceptionMessages = result.ExceptionMessages;
-                        exceptionStackTrace = result.ExceptionStackTrace;
-                        lastEventSequenceNumberAttempted = result.HandledAnyEvents
-                            ? eventsToHandle.First(e => e.Metadata.SequenceNumber > result.LastSuccessfulObservation).Metadata.SequenceNumber
-                            : lastEventSequenceNumberAttempted;
-                        if (result.HandledAnyEvents)
-                        {
-                            State.LastSuccessfullyHandledEventSequenceNumber = result.LastSuccessfulObservation;
-                            await WriteStateAsync();
-                        }
-
-                        logger.FailedHandlingEvents(request.Partition, handledCount, lastEventSequenceNumberAttempted, State.LastSuccessfullyHandledEventSequenceNumber);
-                        break;
-                    case ObserverSubscriberState.Disconnected:
-                        failed = true;
-                        exceptionMessages = [SubscriberDisconnected];
-                        logger.EventHandlerDisconnected(request.Partition, State.LastSuccessfullyHandledEventSequenceNumber);
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                failed = true;
-                exceptionMessages = ex.GetAllMessages().ToArray();
-                exceptionStackTrace = ex.StackTrace ?? string.Empty;
-                logger.ErrorHandling(ex, request.Partition);
-            }
-
-            if (failed)
-            {
-                if (lastEventSequenceNumberAttempted == EventSequenceNumber.Unavailable &&
-                    State.LastSuccessfullyHandledEventSequenceNumber != EventSequenceNumber.Unavailable)
-                {
+                    failed = true;
+                    exceptionMessages = handleEventsException.GetAllMessages().ToArray();
+                    exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
                     lastEventSequenceNumberAttempted = State.LastSuccessfullyHandledEventSequenceNumber.Next();
                 }
+                else
+                {
+                    var (eventObserverResult, handledEvents) = handleEventsResult.AsT0;
+                    if (eventObserverResult.LastSuccessfulObservation.IsActualValue)
+                    {
+                        handledCount = events.Current.Count(_ => _.Metadata.SequenceNumber <= eventObserverResult.LastSuccessfulObservation);
+                    }
+                    switch (eventObserverResult.State)
+                    {
+                        case ObserverSubscriberState.Ok:
+                            logger.SuccessfullyHandledEvents(request.Partition, handledCount, eventObserverResult.LastSuccessfulObservation);
+                            lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
+                            await PersistNewSuccessfullyHandledEventOrThrow(eventObserverResult.LastSuccessfulObservation);
+                            break;
+                        case ObserverSubscriberState.Failed:
+                            failed = true;
+                            exceptionMessages = eventObserverResult.ExceptionMessages.ToArray();
+                            exceptionStackTrace = eventObserverResult.ExceptionStackTrace;
+                            lastEventSequenceNumberAttempted = eventObserverResult.HandledAnyEvents
+                                ? handledEvents.First(e => e.Metadata.SequenceNumber > eventObserverResult.LastSuccessfulObservation).Metadata.SequenceNumber
+                                : handledEvents[0].Metadata.SequenceNumber;
+                            if (eventObserverResult.HandledAnyEvents)
+                            {
+                                await PersistNewSuccessfullyHandledEventOrThrow(eventObserverResult.LastSuccessfulObservation);
+                            }
 
-                await _observer!.PartitionFailed(_eventSourceId, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace);
-                return new(JobStepStatus.Failed, exceptionMessages, exceptionStackTrace);
+                            logger.FailedHandlingEvents(request.Partition, handledCount, lastEventSequenceNumberAttempted, State.LastSuccessfullyHandledEventSequenceNumber);
+                            break;
+                        case ObserverSubscriberState.Disconnected:
+                            failed = true;
+                            exceptionMessages = [SubscriberDisconnected];
+                            lastEventSequenceNumberAttempted = State.LastSuccessfullyHandledEventSequenceNumber.Next();
+                            logger.EventHandlerDisconnected(request.Partition, State.LastSuccessfullyHandledEventSequenceNumber);
+                            break;
+                    }
+                }
+
+                if (failed)
+                {
+                    var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : request.StartEventSequenceNumber;
+                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace);
+                    return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(), exceptionMessages, exceptionStackTrace));
+                }
             }
-        }
 
-        if (State.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
-        {
-            logger.HandledNoneEvents(request.Partition);
-        }
-        else
-        {
-            logger.HandledAllEvents(request.Partition, State.LastSuccessfullyHandledEventSequenceNumber);
-        }
+            if (State.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
+            {
+                logger.HandledNoneEvents(request.Partition);
+            }
+            else
+            {
+                logger.HandledAllEvents(request.Partition, State.LastSuccessfullyHandledEventSequenceNumber);
+            }
 
-        return JobStepResult.Succeeded(new HandleEventsForPartitionResult(State.LastSuccessfullyHandledEventSequenceNumber));
+            return JobStepResult.Succeeded(CreateResult());
+        }
+        catch (TaskCanceledException)
+        {
+            LogCancelled(State.LastSuccessfullyHandledEventSequenceNumber, request.Partition);
+            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult()));
+        }
+        catch (Exception e)
+        {
+            logger.FailedPerforming(e, nameof(HandleEventsForPartition));
+            if (!State.LastSuccessfullyHandledEventSequenceNumber.IsActualValue)
+            {
+                return e;
+            }
+
+            logger.FailedWithPartialSuccess(e, State.LastSuccessfullyHandledEventSequenceNumber);
+            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(), e));
+        }
     }
 
     static AppendedEvent[] SetObservationStateIfSpecified(HandleEventsForPartitionArguments request, IEventCursor events)
@@ -190,6 +210,54 @@ public class HandleEventsForPartition(
 
         return events.Current.ToArray();
     }
+
+    async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
+        HandleEventsForPartitionArguments request,
+        IEventCursor events,
+        ObserverSubscriberContext subscriberContext)
+    {
+        try
+        {
+            var eventsToHandle = SetObservationStateIfSpecified(request, events);
+            if (eventsToHandle.Length != 0)
+            {
+                var result = await _subscriber!.OnNext(eventsToHandle, subscriberContext);
+                return (result, eventsToHandle);
+            }
+
+            logger.NoMoreEventsToHandle(request.Partition, request.StartEventSequenceNumber, request.EndEventSequenceNumber);
+            return default(None);
+        }
+        catch (Exception ex)
+        {
+            logger.ErrorHandling(ex, request.Partition);
+            return ex;
+        }
+    }
+    async Task PersistNewSuccessfullyHandledEventOrThrow(EventSequenceNumber eventSequenceNumber)
+    {
+        State.LastSuccessfullyHandledEventSequenceNumber = eventSequenceNumber;
+        var persistResult = await WriteStateAsync();
+        if (persistResult.TryGetException(out var error))
+        {
+            logger.FailedToPersistSuccessfullyHandledEvent(error, eventSequenceNumber);
+            persistResult.RethrowError();
+        }
+    }
+
+    void LogCancelled(EventSequenceNumber lastHandledSequenceNumber, Key partition)
+    {
+        if (!lastHandledSequenceNumber.IsActualValue)
+        {
+            logger.CancelledBeforeHandlingAnyEvents(partition);
+        }
+        else
+        {
+            logger.CancelledAfterHandlingEvents(partition, lastHandledSequenceNumber);
+        }
+    }
+
+    HandleEventsForPartitionResult CreateResult() => new(State.LastSuccessfullyHandledEventSequenceNumber);
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);

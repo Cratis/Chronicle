@@ -55,5 +55,5 @@ public class Result<TResult, TError> : OneOfBase<TResult, TError>
     /// </summary>
     /// <param name="error">The optional error.</param>
     /// <returns>A boolean indicating whether the error was present.</returns>
-    public bool TryGetError(out TError error) => TryPickT1(out error, out _);
+    public bool TryGetError([NotNullWhen(true)]out TError error) => TryPickT1(out error, out _);
 }

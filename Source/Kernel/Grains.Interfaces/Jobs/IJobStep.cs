@@ -59,10 +59,9 @@ public interface IJobStep : IGrainWithGuidCompoundKey
     /// <summary>
     /// Report the step has failed.
     /// </summary>
-    /// <param name="exceptionMessages">Collection of exception messages.</param>
-    /// <param name="exceptionStackTrace">Exception stack trace.</param>
+    /// <param name="error">The <see cref="PerformJobStepError"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobStepError>> ReportFailure(IList<string> exceptionMessages, string exceptionStackTrace);
+    Task<Result<JobStepError>> ReportFailure(PerformJobStepError error);
 }
 
 /// <summary>

@@ -54,14 +54,14 @@ public class Catch<TResult> : OneOfBase<TResult, Exception>
     /// </summary>
     /// <param name="error">The optional error.</param>
     /// <returns>A boolean indicating whether the error was present.</returns>
-    public bool TryGetError([NotNullWhen(true)]out Exception? error) => TryPickT1(out error, out _);
+    public bool TryGetException([NotNullWhen(true)]out Exception? error) => TryPickT1(out error, out _);
 
     /// <summary>
     /// Rethrows the <see cref="Exception"/> error if any, preserving the correct stack trace.
     /// </summary>
     public void RethrowError()
     {
-        if (TryGetError(out var error))
+        if (TryGetException(out var error))
         {
             ExceptionDispatchInfo.Capture(error).Throw();
         }
