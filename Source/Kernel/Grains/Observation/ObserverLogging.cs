@@ -35,6 +35,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Failing partition {Partition} has successfully recovered")]
     internal static partial void FailingPartitionRecovered(this ILogger<Observer> logger, Key partition);
 
+    [LoggerMessage(LogLevel.Debug, "Failing partition {Partition} has partially recovered. Last successfully handled event was {LastEventSequenceNumber}")]
+    internal static partial void FailingPartitionPartiallyRecovered(this ILogger<Observer> logger, Key partition, EventSequenceNumber lastEventSequenceNumber);
+
     [LoggerMessage(LogLevel.Debug, "Partition {Partition} successfully caught up to event sequence number {EventSequenceNumber}")]
     internal static partial void PartitionCaughtUp(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
 
@@ -47,8 +50,14 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Partition {Partition} is catching up events and cannot accept new events to handle")]
     internal static partial void PartitionCatchingUpCannotHandleNewEvents(this ILogger<Observer> logger, Key partition);
 
-    [LoggerMessage(LogLevel.Warning, "While evaluating whether to Partition {Partition} needs catchup an the last handled event was unavailable. This could indicate that the event sequence is in a broken state")]
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} is not starting catch up job because it is a failing partition")]
+    internal static partial void PartitionToCatchUpIsFailing(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Warning, "While evaluating whether Partition {Partition} needs catchup the last handled event was unavailable. This could indicate that the event sequence is in a broken state")]
     internal static partial void LastHandledEventForPartitionUnavailable(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Last handled event reported is not an actual value")]
+    internal static partial void LastHandledEventIsNotActualValue(this ILogger<Observer> logger);
 }
 
 internal static class ObserverScopes
