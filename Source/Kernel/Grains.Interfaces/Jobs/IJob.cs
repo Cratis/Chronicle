@@ -3,32 +3,8 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
-using OneOf;
 
 namespace Cratis.Chronicle.Grains.Jobs;
-
-/// <summary>
-/// The type of error that can occur when performing an operation on a <see cref="IJob"/>.
-/// </summary>
-public enum JobError
-{
-    JobIsStoppedOrCompleted = 0,
-    UnknownError = 1,
-    StorageError = 2,
-    PersistStateError = 3
-}
-
-public enum ResumeJobSuccess
-{
-    Success = 0,
-    JobCannotBeResumed = 1,
-    JobAlreadyRunning = 2,
-}
-
-public record FailedResumingJobSteps(IEnumerable<JobStepId> FailedJobSteps);
-
-[GenerateOneOf]
-public partial class ResumeJobError : OneOfBase<JobError, FailedResumingJobSteps>;
 
 /// <summary>
 /// Represents a job that typically runs as long-running with <see cref="IJobStep{TRequest, TResult}"/>.
@@ -84,7 +60,7 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// Called when the job has completed.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobError>> OnCompleted();
+    Task OnCompleted();
 
     /// <summary>
     /// Adds a status change to the job.
