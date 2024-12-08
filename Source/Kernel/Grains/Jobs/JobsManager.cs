@@ -124,4 +124,7 @@ public class JobsManager(
         where TJob : IJob<TRequest>
         where TRequest : class =>
         await _namespaceStorage!.Jobs.GetJobs<TJob, JobState>();
+
+    /// <inheritdoc/>
+    public Task<IImmutableList<JobState>> GetAllJobs() => _jobStorage!.GetJobs();
 }

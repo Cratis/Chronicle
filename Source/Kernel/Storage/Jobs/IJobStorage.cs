@@ -25,7 +25,7 @@ public interface IJobStorage
     /// <param name="statuses">Optional params of <see cref="JobStatus"/> to filter on.</param>
     /// <returns>A collection of job state objects.</returns>
     /// <remarks>
-    /// If no job statuses are specified, all jobs of the given type will be returned.
+    /// If no job statuses are specified, all jobs will be returned.
     /// </remarks>
     Task<IImmutableList<JobState>> GetJobs(params JobStatus[] statuses);
 
@@ -35,7 +35,7 @@ public interface IJobStorage
     /// <param name="statuses">Optional params of <see cref="JobStatus"/> to filter on.</param>
     /// <returns>An observable of collection of job state objects.</returns>
     /// <remarks>
-    /// If no job statuses are specified, all jobs of the given type will be returned.
+    /// If no job statuses are specified, all jobs will be observed.
     /// </remarks>
     ISubject<IEnumerable<JobState>> ObserveJobs(params JobStatus[] statuses);
 
