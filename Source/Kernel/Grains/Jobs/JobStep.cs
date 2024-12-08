@@ -133,19 +133,20 @@ public abstract class JobStep<TRequest, TResult, TState>(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<JobStepResumeSuccess, JobStepError>> Resume(GrainId grainId)
+    public Task<Result<JobStepResumeSuccess, JobStepError>> Resume(GrainId grainId)
     {
         using var scope = logger.BeginJobStepScope(State);
         try
         {
-            return _running
+            var successType = _running
                 ? JobStepResumeSuccess.AlreadyRunning
                 : JobStepResumeSuccess.Success;
+            return Task.FromResult(Result<JobStepResumeSuccess, JobStepError>.Success(successType));
         }
         catch (Exception ex)
         {
             logger.FailedUnexpectedly(ex);
-            return JobStepError.Unknown;
+            return Task.FromResult(Result<JobStepResumeSuccess, JobStepError>.Failed(JobStepError.Unknown));
         }
     }
 
@@ -275,7 +276,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
                 if ((await ReportError(error)).TryGetError(out var errorReportingFailure))
                 {
-#pragma warning disable CA1848 This will rarely happen.
+#pragma warning disable CA1848 // This will rarely happen.
                     logger.LogWarning("Failed to report that that the performing of job step was cancelled. Error: {ReportError}", errorReportingFailure);
 #pragma warning restore CA1848
                     performWorkResult = performWorkResult with

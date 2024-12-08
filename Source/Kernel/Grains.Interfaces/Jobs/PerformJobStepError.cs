@@ -16,6 +16,11 @@ public record PerformJobStepError(object? PartialResult, IEnumerable<string>? Er
     static readonly IEnumerable<string> _cancelledErrorMessage = ["Job step task was cancelled"];
 
     /// <summary>
+    /// Gets whether there is a partial result.
+    /// </summary>
+    public bool HasPartialResult => PartialResult is not null;
+
+    /// <summary>
     /// Creates <see cref="PerformJobStepError"/> for a completely failed job step.
     /// </summary>
     /// <param name="errorMessages">The error messages.</param>
@@ -65,11 +70,6 @@ public record PerformJobStepError(object? PartialResult, IEnumerable<string>? Er
     /// <returns>The <see cref="PerformJobStepError"/>.</returns>
     public static PerformJobStepError CancelledWithNoResult() =>
         new(default, _cancelledErrorMessage, default, true);
-
-    /// <summary>
-    /// Gets whether there is a partial result.
-    /// </summary>
-    public bool HasPartialResult => PartialResult is not null;
 
     /// <summary>
     /// Try to get the partial result.

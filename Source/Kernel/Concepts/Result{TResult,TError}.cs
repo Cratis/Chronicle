@@ -13,6 +13,10 @@ namespace Cratis.Chronicle.Concepts;
 /// <typeparam name="TError">The error type.</typeparam>
 public class Result<TResult, TError> : OneOfBase<TResult, TError>
 {
+    /// <summary>
+    /// Initializes an instance of the <see cref="Result{TResult, TError}"/> class.
+    /// </summary>
+    /// <param name="input">The input.</param>
     protected Result(OneOf<TResult, TError> input)
         : base(input)
     {

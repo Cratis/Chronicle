@@ -6,7 +6,9 @@ namespace Cratis.Chronicle.Storage.Jobs;
 /// <summary>
 /// The types of errors related to job steps.
 /// </summary>
+#pragma warning disable CA1008 // No none
 public enum JobStepError
+#pragma warning restore CA1008
 {
     /// <summary>
     /// The job was not found.

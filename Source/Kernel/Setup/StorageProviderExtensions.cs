@@ -56,7 +56,7 @@ public static class StorageProviderExtensions
     }
 
 #pragma warning disable CA1859
-    static IGrainStorage CreateResilientStorageFor<TStorage>(IServiceProvider serviceProvider, object context)
+    static IGrainStorage CreateResilientStorageFor<TStorage>(IServiceProvider serviceProvider, object? context)
 #pragma warning restore CA1859
         where TStorage : class, IGrainStorage
         => new ResilientGrainStorage(serviceProvider.GetRequiredService<TStorage>(), serviceProvider.GetRequiredService<ResiliencePipelineProvider<string>>());

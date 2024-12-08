@@ -34,5 +34,4 @@ public class JobStepResult : Result<object?, PerformJobStepError>
     /// <param name="messages">The error messages.</param>
     /// <returns>The <see cref="JobStepResult"/>.</returns>
     public static JobStepResult Failed(params string[] messages) => new(PerformJobStepError.Failed(messages, string.Empty));
-
 }

@@ -31,7 +31,7 @@ public class JobStorage(IEventStoreNamespaceDatabase database) : IJobStorage
         {
             var cursor = await Collection.FindAsync(GetIdFilter<JobState>(jobId)).ConfigureAwait(false);
             var job = await cursor.SingleOrDefaultAsync();
-#pragma warning disable RCS1084 This is more clear
+#pragma warning disable RCS1084 // This is more clear
             return job is not null ? job : JobError.NotFound;
 #pragma warning restore RCS1084
         }

@@ -8,7 +8,18 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// </summary>
 public enum ResumeJobSuccess
 {
+    /// <summary>
+    /// Successful resume.
+    /// </summary>
     Success = 0,
+
+    /// <summary>
+    /// Job cannot be resumed.
+    /// </summary>
     JobCannotBeResumed = 1,
+
+    /// <summary>
+    /// Job cannot be resumed because it is already running.
+    /// </summary>
     JobAlreadyRunning = 2,
 }
