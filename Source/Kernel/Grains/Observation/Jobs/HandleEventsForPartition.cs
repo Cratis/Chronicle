@@ -234,6 +234,7 @@ public class HandleEventsForPartition(
             return ex;
         }
     }
+
     async Task PersistNewSuccessfullyHandledEventOrThrow(EventSequenceNumber eventSequenceNumber)
     {
         State.LastSuccessfullyHandledEventSequenceNumber = eventSequenceNumber;
