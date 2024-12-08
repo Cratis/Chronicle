@@ -22,26 +22,27 @@ public class and_a_paused_replay_job_exists : given.a_replay_state
             Type = ObserverType.Client
         };
 
-        _pausedJob = new JobState
+        _pausedJob = new()
         {
             Id = JobId.New(),
             Request = new ReplayObserverRequest(
                             _observerKey,
                             _subscription,
-                            [new EventType(Guid.NewGuid().ToString(), EventTypeGeneration.First)]),
+                            [new(Guid.NewGuid().ToString(), EventTypeGeneration.First)]),
             StatusChanges =
             [
-                new JobStatusChanged
+                new()
                 {
                     Status = JobStatus.Running,
                     Occurred = DateTimeOffset.UtcNow
                 },
-                new JobStatusChanged
+                new()
                 {
                     Status = JobStatus.Paused,
                     Occurred = DateTimeOffset.UtcNow
                 }
-            ]
+            ],
+            Status = JobStatus.Paused
         };
 
         _jobsManager
@@ -60,5 +61,5 @@ public class and_a_paused_replay_job_exists : given.a_replay_state
 
     [Fact] void should_resume_paused_job() => _jobsManager.Received(1).Resume(_pausedJob.Id);
     [Fact] void should_begin_replay_only_one() => _observerServiceClient.Received(1).BeginReplayFor(Arg.Any<ObserverDetails>());
-    [Fact] void should_begin_replay_for_correct_observer() => _observerDetails.ShouldEqual(new ObserverDetails(_storedState.Id, _observerKey, ObserverType.Client));
+    [Fact] void should_begin_replay_for_correct_observer() => _observerDetails.ShouldEqual(new(_storedState.Id, _observerKey, ObserverType.Client));
 }
