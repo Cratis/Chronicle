@@ -13,7 +13,7 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Condition=" '$(TargetFramework)' == 'net9.0' "/>
-      <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Condition=" '$(TargetFramework)' == 'net8.0' " VersionOverride="8.0.11"/>
+      <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Condition=" '$(TargetFramework)' == 'net8.0' " VersionOverride="9.0.0"/>
       <PackageReference Include="Cratis.Applications.MongoDB" />
       <PackageReference Include="Polly.Core" />
     </ItemGroup>
