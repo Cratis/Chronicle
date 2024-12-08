@@ -50,7 +50,7 @@ public class JobGrainStorageProvider(IStorage storage) : IGrainStorage
             var readStateResult = await jobStorage.Read<T>(jobId);
             await readStateResult.Match(
                 state => HandleSuccessfulRead(state, key, grainState, jobStorage, jobId),
-                error => Task.FromException(new JobGrainStorageProviderError(type, error, nameof(ReadStateAsync))),
+                _ => Task.CompletedTask,
                 error => Task.FromException(new JobGrainStorageProviderError(type, error, nameof(ReadStateAsync))));
         }
     }
