@@ -43,5 +43,5 @@ public class and_it_fails_first_time_but_not_second_time(context context) : Give
 
     [Fact] void should_fail_one_partition() => Context.FailedPartitionsBeforeRetry.Count().ShouldEqual(1);
     [Fact] void should_start_replaying_job() => Context.Jobs.First().Type.ShouldContain("RetryFailedPartitionJob");
-    [Fact] void should_recover_all_partitions() => Context.FailedPartitionsAfterRetry.ShouldBeEmpty();
+    [Fact] void should_recover_failed_partition() => Context.FailedPartitionsAfterRetry.ShouldBeEmpty();
 }
