@@ -293,13 +293,13 @@ public class EventSequenceStorage(
         var sort = PipelineStageDefinitionBuilder.Sort<BsonDocument>(/*lang=json*/ "{ '_id' : -1 }");
         var limit = PipelineStageDefinitionBuilder.Limit<BsonDocument>(1);
         var tailProjection = PipelineStageDefinitionBuilder.Project<BsonDocument>(/*lang=json*/ $"{{ '{nameof(TailEventSequenceNumbers.Tail)}': '$_id'}}");
-        var tailPipeline = PipelineDefinition<BsonDocument, BsonDocument>.Create(new[] { sort, limit, tailProjection });
+        var tailPipeline = PipelineDefinition<BsonDocument, BsonDocument>.Create([sort, limit, tailProjection]);
         var tailFacet = AggregateFacet.Create("tail", tailPipeline);
 
         var filter = Builders<BsonDocument>.Filter.In(nameof(Event.Type).ToCamelCase(), eventTypes.Select(_ => _.Id));
         var tailForEventTypesMatch = PipelineStageDefinitionBuilder.Match(filter);
         var tailForEventTypesProjection = PipelineStageDefinitionBuilder.Project<BsonDocument>(/*lang=json*/ $"{{ '{nameof(TailEventSequenceNumbers.TailForEventTypes)}': '$_id'}}");
-        var tailForEventTypesPipeline = PipelineDefinition<BsonDocument, BsonDocument>.Create(new[] { tailForEventTypesMatch, sort, limit, tailForEventTypesProjection });
+        var tailForEventTypesPipeline = PipelineDefinition<BsonDocument, BsonDocument>.Create([tailForEventTypesMatch, sort, limit, tailForEventTypesProjection]);
         var tailForEventTypesFacet = AggregateFacet.Create("tailForEventTypes", tailForEventTypesPipeline);
 
         var sequenceNumbers = collection
