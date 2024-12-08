@@ -35,7 +35,8 @@ public class and_a_paused_catch_up_job_exists : given.a_catch_up_state
                     Status = JobStatus.Paused,
                     Occurred = DateTimeOffset.UtcNow
                 }
-            ]
+            ],
+            Status = JobStatus.Paused
         };
 
         _jobsManager

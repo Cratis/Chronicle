@@ -4,7 +4,6 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Dynamic;
-using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Types;

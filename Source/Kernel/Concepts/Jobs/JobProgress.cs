@@ -24,7 +24,7 @@ public class JobProgress
     public int FailedSteps { get; set; }
 
     /// <summary>
-    /// Gets whether or not the job is completed.
+    /// Gets whether the job is completed.
     /// </summary>
     public bool IsCompleted => SuccessfulSteps + FailedSteps == TotalSteps;
 

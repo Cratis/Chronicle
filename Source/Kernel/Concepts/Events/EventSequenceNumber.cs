@@ -97,6 +97,9 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     /// <summary>
     /// Get the next <see cref="EventSequenceNumber"/>.
     /// </summary>
+    /// <remarks>
+    /// If the value is <see cref="Unavailable"/> or <see cref="Max"/> it will not be incremented.
+    /// </remarks>
     /// <returns>The next <see cref="EventSequenceNumber"/>.</returns>
     public EventSequenceNumber Next() => IsActualValue ? this + 1 : this;
 }
