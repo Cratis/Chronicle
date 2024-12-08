@@ -8,7 +8,6 @@ public class when_getting_jobs_of_type : given.the_manager
 {
     void Establish()
     {
-        var x = _jobStorage.GetJobs<INullJobWithSomeRequest, JobState>();
         _jobStorage
             .GetJobs<INullJobWithSomeRequest, JobState>()
             .Returns(Catch.Success<IImmutableList<JobState>, Storage.Jobs.JobError>([]));
