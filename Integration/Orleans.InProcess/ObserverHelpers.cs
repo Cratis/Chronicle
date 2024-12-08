@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation;
+using FailedPartition = Cratis.Chronicle.Contracts.Observation.FailedPartition;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
@@ -60,5 +61,31 @@ public static class ObserverHelpers
             }
             await Task.Delay(20, cts.Token);
         }
+    }
+
+    /// <summary>
+    /// Wait for there to be failed partitions for the observer, with an optional timeout.
+    /// </summary>
+    /// <param name="eventStore"><see cref="IEventStore"/> service.</param>
+    /// <param name="observerId">The <see cref="ObserverId"/> to wait for.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>Collection of <see cref="FailedPartition"/>.</returns>
+    public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions(this IEventStore eventStore, ObserverId observerId, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpan.FromSeconds(5);
+        var failedPartitions = Enumerable.Empty<FailedPartition>();
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (!failedPartitions.Any() && !cts.IsCancellationRequested)
+        {
+            failedPartitions = await eventStore.Connection.Services.Observers.GetFailedPartitionsForObserver(new()
+            {
+                EventStoreName = eventStore.Name.Value,
+                Namespace = Concepts.EventStoreNamespaceName.Default,
+                ObserverId = observerId
+            });
+            await Task.Delay(20, cts.Token);
+        }
+
+        return failedPartitions;
     }
 }
