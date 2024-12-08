@@ -19,7 +19,7 @@ public class when_rehydrating : given.the_manager
 
     Task Because() => _manager.Rehydrate();
 
-    [Fact] void should_get_jobs_that_are_running_preparing_or_preparing_steps() => _jobStorage.Received(1).GetJobs(JobStatus.Running, JobStatus.Preparing, JobStatus.PreparingSteps);
+    [Fact] void should_get_jobs_that_are_running_preparing_or_preparing_steps() => _jobStorage.Received(1).GetJobs(JobStatus.Running, JobStatus.PreparingStepsForRunning, JobStatus.PreparingSteps);
     [Fact] void should_resume_first_job() => _firstJob.Verify(_ => _.Resume(), Times.Once);
     [Fact] void should_resume_second_job() => _secondJob.Verify(_ => _.Resume(), Times.Once);
 }

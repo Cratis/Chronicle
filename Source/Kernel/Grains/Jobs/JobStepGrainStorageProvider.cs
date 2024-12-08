@@ -110,7 +110,7 @@ public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
         .Verify(type)
         .Switch(_ => { }, error => throw new JobStepGrainStorageProviderError(type, error, operationName));
 
-    static async Task HandleCatchNone(Task<Catch<None, JobStepError>> getResult, Type type, string methodName)
+    static async Task HandleCatchNone(Task<Catch<None, Storage.Jobs.JobStepError>> getResult, Type type, string methodName)
     {
         var monad = await getResult;
         await monad.Match(
@@ -125,7 +125,7 @@ public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
         await monad.Match(_ => Task.CompletedTask, error => Task.FromException(new JobStepGrainStorageProviderError(type, error, methodName)));
     }
 
-    static async Task<T> HandleCatch<T>(Task<Catch<T, JobStepError>> getResult, Type type, string methodName)
+    static async Task<T> HandleCatch<T>(Task<Catch<T, Storage.Jobs.JobStepError>> getResult, Type type, string methodName)
     {
         var monad = await getResult;
         return await monad.Match(

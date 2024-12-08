@@ -135,7 +135,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                         if (jobSteps.Count == 0)
                         {
                             _logger.NoJobStepsToStart();
-                            var onCompletedResult = await OnCompleted();
+                            var onCompletedResult = await Complete();
                             if (onCompletedResult.TryGetError(out var onCompletedError))
                             {
                                 _logger.FailedOnCompletedWhileNoJobSteps(onCompletedError);
@@ -248,7 +248,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                 return JobError.JobIsStoppedOrCompleted;
             }
 
-
             _logger.Pausing();
 
             await _observers!.Notify(o => o.OnJobPaused());
@@ -278,6 +277,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
             _logger.Stopping();
 
+            // Set status Stopped so that it can be used in the OnCompleted if necessary
+            StatusChanged(JobStatus.Stopped);
+
             await _observers!.Notify(o => o.OnJobStopped());
             var stepStorage = ServiceProvider.GetRequiredService<IJobStepStorage>();
 
@@ -285,14 +287,10 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             return await removeAllStepsResult.Match(
                 async _ =>
                 {
-                    var onCompletedResult = await OnCompleted();
+                    var onCompletedResult = await Complete();
                     return await onCompletedResult.Match(
                         _ => WriteStatusChanged(JobStatus.Stopped),
-                        error =>
-                        {
-                            _logger.FailedOnCompleted(error);
-                            return Task.FromResult(Result.Failed(error));
-                        });
+                        error => Task.FromResult(Result.Failed(error)));
                 },
                 ex =>
                 {
@@ -308,7 +306,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     }
 
     /// <inheritdoc/>
-    public virtual Task<Result<JobError>> OnCompleted() => Task.FromResult(Result.Success<JobError>());
+    public virtual Task OnCompleted() => Task.FromResult(Result.Success<JobError>());
 
     /// <inheritdoc/>
     public async Task<Result<JobError>> OnStepSucceeded(JobStepId stepId, JobStepResult jobStepResult)
@@ -638,21 +636,13 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             }
 
             var cleared = false;
-            var onCompletedResult = await OnCompleted();
+
+            var onCompletedResult = await Complete();
             if (onCompletedResult.TryGetError(out var onCompletedError))
             {
-                _logger.FailedOnCompleted(onCompletedError);
                 return onCompletedError;
             }
-
-            if (State.Progress.FailedSteps > 0)
-            {
-                StatusChanged(JobStatus.CompletedWithFailures);
-            }
-            else
-            {
-                StatusChanged(JobStatus.CompletedSuccessfully);
-            }
+            StatusChanged(State.Progress.FailedSteps > 0 ? JobStatus.CompletedWithFailures : JobStatus.CompletedSuccessfully);
             if (RemoveAfterCompleted)
             {
                 await ClearStateAsync();
@@ -660,13 +650,30 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             }
 
             DeactivateOnIdle();
-
             return cleared ? HandleCompletionSuccess.ClearedState : HandleCompletionSuccess.NotClearedState;
         }
         catch (Exception ex)
         {
             _logger.Failed(ex);
             return JobError.UnknownError;
+        }
+    }
+
+    async Task<Result<JobError>> Complete()
+    {
+        try
+        {
+            if (!AllStepsCompletedSuccessfully)
+            {
+                _logger.AllStepsNotCompletedSuccessfully();
+            }
+            await OnCompleted();
+            return Result<JobError>.Success();
+        }
+        catch (Exception e)
+        {
+            _logger.FailedOnCompleted(e, State.Name);
+            return Result.Failed(JobError.UnknownError);
         }
     }
 }

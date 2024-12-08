@@ -42,7 +42,7 @@ public class the_manager : Specification
 
         _jobStorage.GetJobs(Arg.Any<JobStatus[]>()).Returns(_ => Task.FromResult(Catch.Success<IImmutableList<JobState>>([.. _storedJobs])));
         _jobStorage.GetJob(Arg.Any<JobId>()).Returns(callInfo => Task.FromResult(
-            _storedJobs.SingleOrDefault(job => job.Id == callInfo.Arg<JobId>()) ?? Catch.Failed<JobState, JobError>(JobError.NotFound)));
+            _storedJobs.SingleOrDefault(job => job.Id == callInfo.Arg<JobId>()) ?? Catch.Failed<JobState, Storage.Jobs.JobError>(Storage.Jobs.JobError.NotFound)));
         _jobStorage.Remove(Arg.Any<JobId>()).Returns(Task.FromResult(Catch.Success()));
 
         _jobStepStorage.RemoveAllForJob(Arg.Any<JobId>()).Returns(Task.FromResult(Catch.Success()));
