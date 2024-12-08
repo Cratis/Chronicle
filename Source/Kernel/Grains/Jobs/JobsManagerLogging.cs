@@ -48,6 +48,9 @@ internal static partial class JobsManagerLogMessages
     [LoggerMessage(LogLevel.Warning, "Unable to get jobs of type {JobType}. Encountered error : {Error}")]
     internal static partial void UnableToGetJobs(this ILogger<JobsManager> logger, Type jobType, Storage.Jobs.JobError error);
 
+    [LoggerMessage(LogLevel.Warning, "Unable to get all jobs. Encountered error")]
+    internal static partial void UnableToGetAllJobs(this ILogger<JobsManager> logger, Exception exception);
+
     [LoggerMessage(LogLevel.Warning, "Failed to stop Job {JobId}")]
     internal static partial void FailedToStopJob(this ILogger<JobsManager> logger, JobId jobId);
 }
