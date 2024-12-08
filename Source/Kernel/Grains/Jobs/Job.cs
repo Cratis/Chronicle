@@ -185,7 +185,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             _logger.Resuming();
 
             var getStepsResult = await Storage.JobSteps.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused);
-            return await getStepsResult.Match<Task<Result<ResumeJobSuccess, ResumeJobError>>>(
+            return await getStepsResult.Match(
                 HandleResumeSteps,
                 ex =>
                 {
