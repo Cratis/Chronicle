@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Storage;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Observation;
@@ -9,7 +10,8 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IObservers"/>.
 /// </summary>
-public class Observers : IObservers
+/// <param name="storage">The <see cref="IStorage"/>.</param>
+public class Observers(IStorage storage) : IObservers
 {
     /// <inheritdoc/>
     public Task RetryPartition(RetryPartitionRequest request, CallContext context = default) => throw new NotImplementedException();
@@ -25,4 +27,11 @@ public class Observers : IObservers
 
     /// <inheritdoc/>
     public IObservable<ObserverInformation> AllObservers(AllObserversRequest request, CallContext context = default) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<FailedPartition>> GetFailedPartitionsForObserver(FailedPartitionsForObserverRequest request, CallContext context = default)
+    {
+        var failedPartitions = await storage.GetEventStore(request.EventStoreName).GetNamespace(request.Namespace).FailedPartitions.GetFor(request.ObserverId);
+        return failedPartitions.Partitions.Select(_ => _.ToContract()).ToArray();
+    }
 }
