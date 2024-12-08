@@ -1,0 +1,58 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Contracts.Jobs;
+
+namespace Cratis.Chronicle.Integration.Orleans.InProcess;
+
+/// <summary>
+/// Helper methods for working with jobs for integration testing purposes.
+/// </summary>
+public static class JobsHelpers
+{
+    /// <summary>
+    /// Wait for there to be jobs in the event store, with an optional timeout.
+    /// </summary>
+    /// <param name="eventStore"><see cref="IEventStore"/> to work with.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>Collection of jobs.</returns>
+    public static async Task<IEnumerable<Job>> WaitForThereToBeJobs(this IEventStore eventStore, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpan.FromSeconds(5);
+        var jobs = Enumerable.Empty<Job>();
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (!jobs.Any() && !cts.IsCancellationRequested)
+        {
+            jobs = await eventStore.GetJobs();
+            await Task.Delay(20, cts.Token);
+        }
+
+        return jobs;
+    }
+
+
+    /// <summary>
+    /// Wait for there to be no jobs in the event store, with an optional timeout.
+    /// </summary>
+    /// <param name="eventStore"><see cref="IEventStore"/> to work with.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>Awaitable task.</returns>
+    public static async Task WaitForThereToBeNoJobs(this IEventStore eventStore, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpan.FromSeconds(5);
+        var jobs = await eventStore.GetJobs();
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (jobs.Any() && !cts.IsCancellationRequested)
+        {
+            jobs = await eventStore.GetJobs();
+            await Task.Delay(20, cts.Token);
+        }
+    }
+
+    static Task<IEnumerable<Job>> GetJobs(this IEventStore eventStore) =>
+         eventStore.Connection.Services.Jobs.GetAll(new()
+         {
+             EventStoreName = eventStore.Name.Value,
+             Namespace = Concepts.EventStoreNamespaceName.Default
+         });
+}

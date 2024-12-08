@@ -16,6 +16,7 @@ public class ReactorThatCanFail(TaskCompletionSource tcs) : IReactor
         tcs.SetResult();
         if (ShouldFail)
         {
+            ShouldFail = false;
             throw new Exception("Something went wrong");
         }
 
