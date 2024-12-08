@@ -56,8 +56,14 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
     /// </summary>
     /// <typeparam name="TJob">Type of job to get for.</typeparam>
     /// <typeparam name="TRequest">Type of request.</typeparam>
-    /// <returns>Collection of request instances.</returns>
+    /// <returns>Collection of job states.</returns>
     Task<IImmutableList<JobState>> GetJobsOfType<TJob, TRequest>()
         where TJob : IJob<TRequest>
         where TRequest : class;
+
+    /// <summary>
+    /// Get all jobs.
+    /// </summary>
+    /// <returns>Collection of job states.</returns>
+    Task<IImmutableList<JobState>> GetAllJobs();
 }

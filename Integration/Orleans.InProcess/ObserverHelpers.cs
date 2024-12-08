@@ -7,8 +7,18 @@ using Cratis.Chronicle.Grains.Observation;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
+/// <summary>
+/// Helper methods for working with observers for integration testing purposes.
+/// </summary>
 public static class ObserverHelpers
 {
+    /// <summary>
+    /// Wait for the observer to reach a specific running state.
+    /// </summary>
+    /// <param name="observer">Observer to wait for.</param>
+    /// <param name="runningState">The expected <see cref="ObserverRunningState"/> to wait for.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>Awaitable task.</returns>
     public static async Task WaitForState(this IObserver observer, ObserverRunningState runningState, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpan.FromSeconds(5);
@@ -22,9 +32,21 @@ public static class ObserverHelpers
         }
     }
 
-    public static async Task WaitTillActive(this IObserver observer, TimeSpan? timeout = default) => await observer.WaitForState(ObserverRunningState.Active, timeout);
+    /// <summary>
+    /// Wait till the observer is active, with an optional timeout.
+    /// </summary>
+    /// <param name="observer">Observer to wait for.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>Awaitable task.</returns>
+    public static async Task WaitTillActive(this IObserver observer, TimeSpan? timeout = default) => await observer.WaitForState(ObserverRunningState.Active, timeout ?? TimeSpan.FromSeconds(5));
 
-
+    /// <summary>
+    /// Wait till the observer reaches a specific event sequence number, with an optional timeout.
+    /// </summary>
+    /// <param name="observer">Observer to wait for.</param>
+    /// <param name="eventSequenceNumber">The expected <see cref="EventSequenceNumber"/> to wait for.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>Awaitable task.</returns>
     public static async Task WaitTillReachesEventSequenceNumber(this IObserver observer, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpan.FromSeconds(5);

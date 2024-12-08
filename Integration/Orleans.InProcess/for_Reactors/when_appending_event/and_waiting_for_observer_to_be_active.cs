@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
@@ -9,6 +9,7 @@ using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_appending_event.and_waiting_for_observer_to_be_active.context;
+using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunningState;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_appending_event;
 
@@ -24,7 +25,7 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
         public IObserver ReactorObserver;
         public ObserverState ReactorObserverState;
         public Exception WaitingForObserverStateError;
-        public FailedPartitions FailedPartitions;
+        public IEnumerable<FailedPartition> FailedPartitions;
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
         public override IEnumerable<Type> Reactors => [typeof(SomeReactor)];
@@ -44,12 +45,18 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
 
         async Task Because()
         {
-            await GetObserverFor<SomeReactor>().WaitTillActive(TimeSpan.FromMinutes(1));
+            await ReactorObserver.WaitTillActive();
             await EventStore.EventLog.Append(EventSourceId, Event);
             await Tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
             WaitingForObserverStateError = await Catch.Exception(async () => await ReactorObserver.WaitForState(ObserverRunningState.Active, TimeSpan.FromSeconds(5)));
             ReactorObserverState = await ReactorObserver.GetState();
-            FailedPartitions = await new FailedPartitionStorage(Services.GetRequiredService<IDatabase>().GetEventStoreDatabase(EventStore.Name.Value).GetNamespaceDatabase(Concepts.EventStoreNamespaceName.Default)).GetFor(ReactorObserverState.Id);
+
+            FailedPartitions = await EventStore.Connection.Services.Observers.GetFailedPartitionsForObserver(new()
+            {
+                EventStoreName = EventStore.Name.Value,
+                Namespace = Concepts.EventStoreNamespaceName.Default,
+                ObserverId = ReactorObserverState.Id
+            });
         }
     }
 
@@ -75,5 +82,5 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
     void should_have_correct_observer_state_next_event_sequence_number_for_event_types() => Context.ReactorObserverState.NextEventSequenceNumberForEventTypes.Value.ShouldEqual(EventSequenceNumber.Unavailable.Value);
 
     [Fact]
-    void should_not_have_failed_partitions() => Context.FailedPartitions.HasFailedPartitions.ShouldBeFalse();
+    void should_not_have_failed_partitions() => Context.FailedPartitions.ShouldBeEmpty();
 }

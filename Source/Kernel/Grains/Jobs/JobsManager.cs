@@ -163,6 +163,19 @@ public class JobsManager(
             });
     }
 
+    /// <inheritdoc/>
+    public async Task<IImmutableList<JobState>> GetAllJobs()
+    {
+        var getJobs = await _jobStorage!.GetJobs();
+        return await getJobs.Match(
+            Task.FromResult,
+            exception =>
+            {
+                logger.UnableToGetAllJobs(exception);
+                return Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty);
+            });
+    }
+
     IJob GetJobGrain(JobState jobState) => (GrainFactory.GetGrain(
         jobState.Type,
         jobState.Id,
@@ -173,7 +186,7 @@ public class JobsManager(
         logger.StoppingJob(jobId);
 
         var jobStateResult = await _jobStorage!.GetJob(jobId);
-        return await jobStateResult.Match<Task<Catch<None, Storage.Jobs.JobError>>>(
+        return await jobStateResult.Match(
             async jobState =>
             {
                 try

@@ -6,6 +6,7 @@ using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Host;
+using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
@@ -25,6 +26,7 @@ namespace Cratis.Chronicle;
 /// <param name="Reactors"><see cref="IReactors"/> instance.</param>
 /// <param name="Reducers"><see cref="IReducers"/> instance.</param>
 /// <param name="Projections"><see cref="IProjections"/> instance.</param>
+/// <param name="Jobs"><see cref="IJobs"/> instance.</param>
 /// <param name="server"><see cref="IServer"/> instance.</param>
 public record Services(
     IEventStores EventStores,
@@ -36,4 +38,5 @@ public record Services(
     IReactors Reactors,
     IReducers Reducers,
     IProjections Projections,
+    IJobs Jobs,
     IServer server) : IServices;
