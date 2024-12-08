@@ -140,7 +140,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                             {
                                 _logger.FailedOnCompletedWhileNoJobSteps(onCompletedError);
                             }
-                            StatusChanged(JobStatus.CompletedSuccessfully); // This is effectivly just a noop since state is cleared after this line
+                            StatusChanged(JobStatus.CompletedSuccessfully); // This is effectively just a noop since state is cleared after this line
                             await ClearStateAsync();
                             return;
                         }
