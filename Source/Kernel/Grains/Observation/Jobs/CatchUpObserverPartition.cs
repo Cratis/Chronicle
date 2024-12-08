@@ -16,28 +16,11 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 public class CatchUpObserverPartition(ILogger<CatchUpObserverPartition> logger) : Job<CatchUpObserverPartitionRequest, JobStateWithLastHandledEvent>, ICatchUpObserverPartition
 {
     /// <inheritdoc/>
-    public override async Task<Result<JobError>> OnCompleted()
+    public override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        try
-        {
-            if (AllStepsCompletedSuccessfully)
-            {
-                var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
-                await observer.PartitionCaughtUp(Request.Key, State.LastHandledEventSequenceNumber);
-            }
-            else
-            {
-                logger.AllStepsNotCompletedSuccessfully();
-            }
-
-            return Result.Success<JobError>();
-        }
-        catch (Exception ex)
-        {
-            logger.FailedOnCompleted(ex, nameof(CatchUpObserverPartition));
-            return JobError.UnknownError;
-        }
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
+        await observer.PartitionCaughtUp(Request.Key, State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>

@@ -26,5 +26,9 @@ public class JobStateWithLastHandledEvent : JobState
         {
             LastHandledEventSequenceNumber = handleEventsResult.LastHandledEventSequenceNumber;
         }
+        else if (result.TryGetError(out var jobStepError) && jobStepError.TryGetPartialResult<HandleEventsForPartitionResult>(out var partialResult))
+        {
+            LastHandledEventSequenceNumber = partialResult.LastHandledEventSequenceNumber;
+        }
     }
 }

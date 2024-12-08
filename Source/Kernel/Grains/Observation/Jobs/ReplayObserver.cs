@@ -23,20 +23,11 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 public class ReplayObserver(IStorage storage, ILogger<ReplayObserver> logger) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
 {
     /// <inheritdoc/>
-    public override async Task<Result<JobError>> OnCompleted()
+    public override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        try
-        {
-            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-            await observer.TransitionTo<Routing>();
-            return Result.Success<JobError>();
-        }
-        catch (Exception ex)
-        {
-            logger.FailedOnCompleted(ex, nameof(ReplayObserver));
-            return JobError.UnknownError;
-        }
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+        await observer.TransitionTo<Routing>();
     }
 
     /// <inheritdoc/>

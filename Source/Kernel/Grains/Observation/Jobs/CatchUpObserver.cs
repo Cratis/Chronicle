@@ -26,20 +26,11 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
     protected override bool RemoveAfterCompleted => true;
 
     /// <inheritdoc/>
-    public override async Task<Result<JobError>> OnCompleted()
+    public override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        try
-        {
-            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-            await observer.TransitionTo<Routing>();
-            return Result.Success<JobError>();
-        }
-        catch (Exception ex)
-        {
-            logger.FailedOnCompleted(ex, nameof(CatchUpObserver));
-            return JobError.UnknownError;
-        }
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+        await observer.TransitionTo<Routing>();
     }
 
     /// <inheritdoc/>

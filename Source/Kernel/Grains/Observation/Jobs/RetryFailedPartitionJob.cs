@@ -13,33 +13,24 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a job for retrying a failed partition.
 /// </summary>
+/// <param name="logger">The logger.</param>
 public class RetryFailedPartitionJob(ILogger<RetryFailedPartitionJob> logger) : Job<RetryFailedPartitionRequest, JobStateWithLastHandledEvent>, IRetryFailedPartitionJob
 {
     /// <inheritdoc/>
     protected override bool RemoveAfterCompleted => true;
 
     /// <inheritdoc/>
-    public override async Task<Result<JobError>> OnCompleted()
+    public override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        try
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+        if (AllStepsCompletedSuccessfully)
         {
-            if (AllStepsCompletedSuccessfully)
-            {
-                var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-                await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber);
-            }
-            else
-            {
-                logger.AllStepsNotCompletedSuccessfully();
-            }
-
-            return Result.Success<JobError>();
+            await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber);
         }
-        catch (Exception ex)
+        else if (State.LastHandledEventSequenceNumber.IsActualValue)
         {
-            logger.FailedOnCompleted(ex, nameof(RetryFailedPartitionJob));
-            return JobError.UnknownError;
+            await observer.FailedPartitionPartiallyRecovered(Request.Key, State.LastHandledEventSequenceNumber);
         }
     }
 
