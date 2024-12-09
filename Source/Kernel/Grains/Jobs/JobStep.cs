@@ -49,6 +49,16 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// </summary>
     protected TState State => state.State;
 
+    /// <summary>
+    /// Gets the <see cref="JobStepIdentifier"/>.
+    /// </summary>
+    protected JobStepIdentifier Identifier { get; private set; } = null!;
+
+    /// <summary>
+    /// Gets the <see cref="JobStepName"/>.
+    /// </summary>
+    protected JobStepName Name { get; private set; } = null!;
+
     /// <inheritdoc/>
     public void Dispose() => _cancellationTokenSource.Dispose();
 
@@ -62,16 +72,19 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
         _ = this.GetPrimaryKey(out var key);
         var jobStepKey = (JobStepKey)key;
-
         var grainType = this.GetGrainType();
-        state.State.Name = GetType().Name;
-        state.State.Id = new(jobStepKey.JobId, JobStepId);
+        Name = GetType().Name;
+        Identifier = new(jobStepKey.JobId, JobStepId);
+
+        state.State.Name = Name;
+        state.State.Id = Identifier;
         state.State.Type = grainType;
     }
 
     /// <inheritdoc/>
     public async Task<Result<JobStepPrepareStartError>> Start(GrainId jobId, object request)
     {
+        using var scope = logger.BeginJobStepScope(State);
         var task = request switch
         {
             TRequest tRequest => Start(jobId, tRequest),
@@ -83,6 +96,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <inheritdoc/>
     public async Task<Result<JobStepPrepareStartError>> Prepare(object request)
     {
+        using var scope = logger.BeginJobStepScope(State);
         var task = request switch
         {
             TRequest tRequest => Prepare(tRequest),
@@ -99,7 +113,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         {
             _running = true;
             Job = GrainFactory.GetGrain(jobId).AsReference<IJob>();
-            ThisJobStep = GrainFactory.GetGrain(GrainReference.GrainId).AsReference<IJobStep<TRequest, TResult>>();
+            ThisJobStep = GetReferenceToSelf<IJobStep<TRequest, TResult>>();
 
             await Start(request, _cancellationTokenSource.Token);
             state.State.Request = request!;
@@ -224,10 +238,19 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <returns>True if successful, false if not.</returns>
     protected abstract Task<Catch<JobStepResult>> PerformStep(TRequest request, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Gets a grain reference to self.
+    /// </summary>
+    /// <typeparam name="TGrain">The type of the grain.</typeparam>
+    /// <returns>The grain reference.</returns>
+    protected TGrain GetReferenceToSelf<TGrain>()
+        where TGrain : IJobStep<TRequest, TResult>
+        => GrainFactory.GetGrain(GrainReference.GrainId).AsReference<TGrain>();
+
     /// <inheritdoc/>
     protected override async Task<PerformWorkResult<JobStepResult>> PerformWork(TRequest request)
     {
-        using var scope = logger.BeginJobStepScope(State);
+        // Important! State cannot be accessed or persisted directly, we need do that through the grain reference...
         if (_cancellationTokenSource.IsCancellationRequested)
         {
             return new()
@@ -235,7 +258,10 @@ public abstract class JobStep<TRequest, TResult, TState>(
                 Error = PerformWorkError.Cancelled
             };
         }
-        await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
+        using var scope = logger.BeginJobStepScope(Identifier, Name, JobStepStatus.Running);
+
+        // TODO: Should we do something here if it fails?
+        _ = await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
         var performStepResult = await PerformStep(request, _cancellationTokenSource.Token);
         var result = await performStepResult.Match(HandleJobStepResult, HandleException);
         DeactivateOnIdle();

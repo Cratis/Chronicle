@@ -56,7 +56,7 @@ internal static partial class HandleEventsForPartitionLogging
     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} was cancelled and the last handled event sequence number is {LastHandledEventSequenceNumber}")]
     internal static partial void CancelledAfterHandlingEvents(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
-    [LoggerMessage(LogLevel.Critical, "HandleEventsForPartition job step failed to persist state about successfully handling event with sequence number {LastHandledEventSequenceNumber}")]
+    [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step failed to persist state about successfully handling event with sequence number {LastHandledEventSequenceNumber}")]
     internal static partial void FailedToPersistSuccessfullyHandledEvent(this ILogger<HandleEventsForPartition> logger, Exception error, EventSequenceNumber lastHandledEventSequenceNumber);
 
     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step failed, but it had successfully handled some events. Last successfully handled event was: {LastHandledEventSequenceNumber}")]

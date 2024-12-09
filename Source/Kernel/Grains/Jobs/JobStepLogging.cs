@@ -75,4 +75,12 @@ internal static class JobStepScopes
             ["JobStepName"] = state.Name,
             ["JobStepStatus"] = state.Status
         });
+    internal static IDisposable? BeginJobStepScope(this ILogger<IJobStep> logger, JobStepIdentifier jobStepIdentifier, JobStepName jobStepName, JobStepStatus jobStepStatus = JobStepStatus.Unknown) =>
+        logger.BeginScope(new Dictionary<string, object>
+        {
+            ["JobId"] = jobStepIdentifier.JobId,
+            ["JobStepId"] = jobStepIdentifier.JobStepId,
+            ["JobStepName"] = jobStepName,
+            ["JobStepStatus"] = jobStepStatus
+        });
 }
