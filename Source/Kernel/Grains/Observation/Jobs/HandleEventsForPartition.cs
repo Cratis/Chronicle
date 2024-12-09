@@ -40,6 +40,13 @@ public class HandleEventsForPartition(
     IHandleEventsForPartition _selfGrainReference = null!;
 
     /// <inheritdoc/>
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        _selfGrainReference = GetReferenceToSelf<IHandleEventsForPartition>();
+        return base.OnActivateAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task ReportNewSuccessfullyHandledEvent(EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginJobStepScope(State);
@@ -100,8 +107,7 @@ public class HandleEventsForPartition(
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         try
         {
-            _selfGrainReference = GetReferenceToSelf<IHandleEventsForPartition>();
-            lastSuccessfullyHandledEventSequenceNumber = await GetLastSuccessfullyHandledEventSequenceNumber();
+            lastSuccessfullyHandledEventSequenceNumber = await _selfGrainReference.GetLastSuccessfullyHandledEventSequenceNumber();
             if (_subscriber is null || !request.ObserverSubscription.IsSubscribed)
             {
                 logger.PerformingStoppedUnsubscribed(request.Partition);
