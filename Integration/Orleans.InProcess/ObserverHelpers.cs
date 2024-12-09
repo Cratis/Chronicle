@@ -59,6 +59,7 @@ public static class ObserverHelpers
             {
                 break;
             }
+
             await Task.Delay(20, cts.Token);
         }
     }
@@ -83,7 +84,7 @@ public static class ObserverHelpers
                 Namespace = Concepts.EventStoreNamespaceName.Default,
                 ObserverId = observerId
             });
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
 
         return failedPartitions;

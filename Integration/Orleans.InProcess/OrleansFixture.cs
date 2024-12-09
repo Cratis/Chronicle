@@ -17,6 +17,7 @@ using DotNet.Testcontainers.Networks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Orleans.Storage;
+using Orleans.TestingHost.Logging;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
@@ -34,7 +35,11 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
                 mongo.Server = "mongodb://localhost:27018";
                 mongo.Database = "orleans";
             });
-
+        builder.ConfigureLogging(_ =>
+        {
+            _.ClearProviders();
+            _.AddFile($"{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log");
+        });
         builder
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
             .ConfigureServices((ctx, services) =>
@@ -59,7 +64,6 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
 
         // For some weird reason we need this https://stackoverflow.com/questions/69974249/no-app-configured-error-while-using-webapplicationfactory-for-running-integrat
         builder.ConfigureWebHostDefaults(b => b.Configure(app => { }));
-
         return builder;
     }
 
