@@ -38,7 +38,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
         builder.ConfigureLogging(_ =>
         {
             _.ClearProviders();
-            _.AddFile($"test-logging-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log");
+            _.AddFile($"{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log");
         });
         builder
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
