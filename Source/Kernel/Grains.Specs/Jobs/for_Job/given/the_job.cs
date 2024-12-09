@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage;
@@ -12,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;
 using Orleans.Utilities;
-using Catch = Cratis.Specifications.Catch;
 namespace Cratis.Chronicle.Grains.Jobs.for_Job.given;
 
 public class the_job : Specification
