@@ -147,7 +147,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
 
                         _logger.PreparingJobSteps(jobSteps.Count);
                         _jobStepGrains = CreateGrainsFromJobSteps(jobSteps);
-                        await WriteStatusChanged(JobStatus.PreparingStepsForRunning);
+                        _ = await WriteStatusChanged(JobStatus.PreparingStepsForRunning);
                         PrepareAndStartAllJobSteps(grainId);
                     }
                     catch (Exception ex)
@@ -587,23 +587,24 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         using var scope = _logger.BeginJobScope(JobId, JobKey);
         _logger.PrepareJobStepsForRunning();
 
-        await ThisJob.WriteStatusChanged(JobStatus.PreparingStepsForRunning);
+        _ = await ThisJob.WriteStatusChanged(JobStatus.PreparingStepsForRunning);
 
         try
         {
             if ((await PrepareAndStartJobSteps(grainId)).TryGetError(out var prepareStartError))
             {
-                await ThisJob.WriteStatusChanged(JobStatus.Failed);
-                await ThisJob.Stop();
+                _ = await ThisJob.WriteStatusChanged(JobStatus.Failed);
+                _ = await ThisJob.Stop();
             }
-            await ThisJob.WriteStatusChanged(JobStatus.Running); // What to do if this fails?
+
+            _ = await ThisJob.WriteStatusChanged(JobStatus.Running); // What to do if this fails?
         }
         catch (Exception ex)
         {
             _logger.Failed(ex);
 
-            await ThisJob.WriteStatusChanged(JobStatus.Failed, ex);
-            await ThisJob.Stop();
+            _ = await ThisJob.WriteStatusChanged(JobStatus.Failed, ex);
+            _ = await ThisJob.Stop();
         }
     });
 
