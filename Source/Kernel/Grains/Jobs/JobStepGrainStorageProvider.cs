@@ -37,7 +37,13 @@ public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
         {
             var key = (JobStepKey)keyExtension!;
             var jobStepStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).JobSteps;
-            grainState.State = await HandleCatch(jobStepStorage.Read<T>(key.JobId, jobStepId), type, methodName);
+
+            var readStateResult = await jobStepStorage.Read<T>(key.JobId, jobStepId);
+
+            await readStateResult.Match(
+                result => HandleSuccessfulRead(result, grainState),
+                _ => Task.CompletedTask,
+                error => Task.FromException(new JobStepGrainStorageProviderError(type, error, nameof(ReadStateAsync))));
         }
     }
 
@@ -125,12 +131,9 @@ public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
         await monad.Match(_ => Task.CompletedTask, error => Task.FromException(new JobStepGrainStorageProviderError(type, error, methodName)));
     }
 
-    static async Task<T> HandleCatch<T>(Task<Catch<T, Storage.Jobs.JobStepError>> getResult, Type type, string methodName)
+    Task HandleSuccessfulRead<T>(T state, IGrainState<T> grainState)
     {
-        var monad = await getResult;
-        return await monad.Match(
-            Task.FromResult,
-            error => Task.FromException<T>(new JobStepGrainStorageProviderError(type, error, methodName)),
-            error => Task.FromException<T>(new JobStepGrainStorageProviderError(type, error, methodName)));
+        grainState.State = state;
+        return Task.CompletedTask;
     }
 }

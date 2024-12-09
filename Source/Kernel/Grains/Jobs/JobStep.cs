@@ -118,7 +118,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
             await Start(request, _cancellationTokenSource.Token);
             state.State.Request = request!;
             var writeStateResult = await WriteStatusChange(JobStepStatus.Running);
-            return writeStateResult.Match<Result<JobStepPrepareStartError>>(
+            return writeStateResult.Match(
                 _ => Result<JobStepPrepareStartError>.Success(),
                 _ => JobStepPrepareStartError.FailedPersistingState);
         }
@@ -195,7 +195,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         try
         {
             var onStepFailedResult = await Job.OnStepFailed(JobStepId, JobStepResult.Failed(error));
-            return await onStepFailedResult.Match<Task<Result<JobStepError>>>(
+            return await onStepFailedResult.Match(
                 _ => WriteStatusChange(JobStepStatus.Failed, error.ErrorMessages, error.ExceptionStackTrace),
                 onStepFailedError =>
                 {
