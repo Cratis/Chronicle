@@ -20,6 +20,9 @@ internal static partial class HandleEventsForPartitionLogging
     [LoggerMessage(LogLevel.Warning, "Preparing of HandleEventsForPartition job step for partition {Partition} stopped due to the observer subscriber being disconnected")]
     internal static partial void PreparingStoppedUnsubscribed(this ILogger<HandleEventsForPartition> logger, Key partition);
 
+    [LoggerMessage(LogLevel.Debug, "HandleEventsForPartition job step for partition {Partition} successfully prepared")]
+    internal static partial void SuccessfullyPrepared(this ILogger<HandleEventsForPartition> logger, Key partition);
+
     [LoggerMessage(LogLevel.Warning, "Performing HandleEventsForPartition job step for partition {Partition} stopped due to the observer subscriber being disconnected")]
     internal static partial void PerformingStoppedUnsubscribed(this ILogger<HandleEventsForPartition> logger, Key partition);
 
@@ -46,6 +49,18 @@ internal static partial class HandleEventsForPartitionLogging
 
     [LoggerMessage(LogLevel.Warning, "An error occurred for HandleEventsForPartition job step for partition {Partition}")]
     internal static partial void ErrorHandling(this ILogger<HandleEventsForPartition> logger, Exception error, Key partition);
+
+    [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} was cancelled before handling any events")]
+    internal static partial void CancelledBeforeHandlingAnyEvents(this ILogger<HandleEventsForPartition> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} was cancelled and the last handled event sequence number is {LastHandledEventSequenceNumber}")]
+    internal static partial void CancelledAfterHandlingEvents(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step failed to persist state about successfully handling event with sequence number {LastHandledEventSequenceNumber}")]
+    internal static partial void FailedToPersistSuccessfullyHandledEvent(this ILogger<HandleEventsForPartition> logger, Exception error, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step failed, but it had successfully handled some events. Last successfully handled event was: {LastHandledEventSequenceNumber}")]
+    internal static partial void FailedWithPartialSuccess(this ILogger<HandleEventsForPartition> logger, Exception error, EventSequenceNumber lastHandledEventSequenceNumber);
 }
 
 internal static class HandleEventsForPartitionScopes

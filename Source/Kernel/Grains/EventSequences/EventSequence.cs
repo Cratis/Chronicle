@@ -117,25 +117,23 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public async Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualTo(
+    public async Task<Result<EventSequenceNumber, GetSequenceNumberError>> GetNextSequenceNumberGreaterOrEqualTo(
         EventSequenceNumber sequenceNumber,
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null)
     {
-        var result = EventSequenceNumber.Unavailable;
         try
         {
             logger.GettingNextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, eventTypes ?? []);
-            result = await EventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(sequenceNumber, eventTypes, eventSourceId);
+            var result = await EventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(sequenceNumber, eventTypes, eventSourceId);
+            logger.NextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, eventTypes ?? [], result);
+            return result == EventSequenceNumber.Unavailable ? GetSequenceNumberError.NotFound : result;
         }
         catch (Exception ex)
         {
             logger.FailedGettingNextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, eventTypes ?? [], ex);
+            return GetSequenceNumberError.StorageError;
         }
-
-        logger.NextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, eventTypes ?? [], result);
-
-        return result;
     }
 
     /// <inheritdoc/>

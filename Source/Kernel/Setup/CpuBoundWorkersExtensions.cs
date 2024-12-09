@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Grains.Workers;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 #pragma warning disable SA1600
 namespace Cratis.Chronicle.Setup;

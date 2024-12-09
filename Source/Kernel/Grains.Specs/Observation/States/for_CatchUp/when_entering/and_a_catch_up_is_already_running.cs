@@ -32,7 +32,8 @@ public class and_a_catch_up_is_already_running : given.a_catch_up_state
                                 Status = JobStatus.Running,
                                 Occurred = DateTimeOffset.UtcNow
                             }
-                        ]
+                        ],
+                        Status = JobStatus.Running
                     }
                 }.ToImmutableList());
     }

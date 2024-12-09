@@ -39,6 +39,7 @@ public static class MongoDBChronicleBuilderExtensions
             BsonSerializer.TryRegisterSerializer(new JsonElementSerializer());
             BsonSerializer.TryRegisterSerializer(new UriSerializer());
             BsonSerializer.TryRegisterSerializer(new ConstraintDefinitionSerializer());
+            BsonSerializer.TryRegisterSerializer(new SiloAddressSerializer());
             _mongoDBArtifactsInitialized = true;
         }
 
