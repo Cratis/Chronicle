@@ -32,10 +32,14 @@ public class and_it_fails_first_time_but_not_second_time(context context) : Give
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = false;
             await EventStore.EventLog.Append(EventSourceId, Event);
+
+            // Wait for the first event to have been handled
             await Tcs[0].Task.WaitAsync(TimeSpan.FromSeconds(5));
 
             FailedPartitionsBeforeRetry = await EventStore.WaitForThereToBeFailedPartitions(ObserverId);
             Jobs = await EventStore.WaitForThereToBeJobs();
+
+            // Wait for the second event to have been handled
             await Tcs[1].Task.WaitAsync(TimeSpan.FromSeconds(5));
             await EventStore.WaitForThereToBeNoJobs();
 
