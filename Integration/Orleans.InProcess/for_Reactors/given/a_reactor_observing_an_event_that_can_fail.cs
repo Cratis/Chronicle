@@ -7,20 +7,21 @@ using Cratis.Chronicle.Integration.Base;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.given;
 
-public class a_reactor_observing_an_event_that_can_fail(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
+public class a_reactor_observing_an_event_that_can_fail(GlobalFixture globalFixture, int numberOfObservations) : IntegrationSpecificationContext(globalFixture)
 {
-    public TaskCompletionSource Tcs;
-    public ReactorThatCanFail Observer;
+    public TaskCompletionSource[] Tcs;
+    public ReactorThatCanFail[] Observers;
     public IObserver ReactorObserver;
     public override IEnumerable<Type> Reactors => [typeof(ReactorThatCanFail)];
     public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
     public Concepts.Observation.ObserverId ObserverId;
+    int _activationCount;
 
     protected override void ConfigureServices(IServiceCollection services)
     {
-        Tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        Observer = new ReactorThatCanFail(Tcs);
-        services.AddSingleton(Observer);
+        Tcs = Enumerable.Range(0, numberOfObservations).Select(_ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).ToArray();
+        Observers = Enumerable.Range(0, numberOfObservations).Select(index => new ReactorThatCanFail(Tcs[index])).ToArray();
+        services.AddTransient(_ => Observers[_activationCount++]);
     }
 
     async Task Establish()

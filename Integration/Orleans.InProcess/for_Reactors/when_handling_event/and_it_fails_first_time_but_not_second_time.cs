@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_handl
 [Collection(GlobalCollection.Name)]
 public class and_it_fails_first_time_but_not_second_time(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : given.a_reactor_observing_an_event_that_can_fail(globalFixture)
+    public class context(GlobalFixture globalFixture) : given.a_reactor_observing_an_event_that_can_fail(globalFixture, 2)
     {
         public IEnumerable<FailedPartition> FailedPartitionsBeforeRetry;
         public IEnumerable<FailedPartition> FailedPartitionsAfterRetry;
@@ -29,12 +29,14 @@ public class and_it_fails_first_time_but_not_second_time(context context) : Give
         async Task Because()
         {
             await ReactorObserver.WaitTillActive();
-            Observer.ShouldFail = true;
+            Observers[0].ShouldFail = true;
+            Observers[1].ShouldFail = false;
             await EventStore.EventLog.Append(EventSourceId, Event);
-            await Tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await Tcs[0].Task.WaitAsync(TimeSpan.FromSeconds(5));
 
             FailedPartitionsBeforeRetry = await EventStore.WaitForThereToBeFailedPartitions(ObserverId);
             Jobs = await EventStore.WaitForThereToBeJobs();
+            await Tcs[1].Task.WaitAsync(TimeSpan.FromSeconds(5));
             await EventStore.WaitForThereToBeNoJobs();
 
             FailedPartitionsAfterRetry = await GetFailedPartitions();
