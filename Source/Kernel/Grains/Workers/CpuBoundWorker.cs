@@ -95,7 +95,7 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
             async () =>
             {
                 _result = WorkerGetResultError.NotFinished;
-                if (!cancellationToken.IsCancellationRequested)
+                if (cancellationToken.IsCancellationRequested)
                 {
                     HandleCancellation();
                     return;
