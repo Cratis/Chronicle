@@ -3,8 +3,6 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Reactive.Linq;
-using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation;

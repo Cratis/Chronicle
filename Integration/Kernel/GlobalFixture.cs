@@ -22,7 +22,7 @@ public class GlobalFixture : IDisposable
 
 
         MongoDBContainer = new ContainerBuilder()
-            .WithImage("aksioinsurtech/mongodb")
+            .WithImage("cratis/mongodb")
             .WithPortBinding(27017)
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")

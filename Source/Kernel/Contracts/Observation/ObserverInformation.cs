@@ -16,13 +16,13 @@ public class ObserverInformation
     /// Gets or sets the unique identifier of the observer.
     /// </summary>
     [ProtoMember(1)]
-    public Guid ObserverId { get; set; }
+    public string ObserverId { get; set; }
 
     /// <summary>
     /// Gets or sets the event sequence the observer is observing.
     /// </summary>
     [ProtoMember(2)]
-    public Guid EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; }
 
     /// <summary>
     /// Gets or sets the type of observer.
@@ -43,8 +43,14 @@ public class ObserverInformation
     public ulong NextEventSequenceNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets the running state of the observer.
+    /// Gets or sets the event sequence number the observer last handled.
     /// </summary>
     [ProtoMember(6)]
+    public ulong LastHandledEventSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the running state of the observer.
+    /// </summary>
+    [ProtoMember(7)]
     public ObserverRunningState RunningState { get; set; }
 }

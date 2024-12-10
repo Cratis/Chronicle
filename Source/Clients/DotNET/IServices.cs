@@ -5,6 +5,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
@@ -61,4 +62,9 @@ public interface IServices
     /// Gets the <see cref="IProjections"/> service.
     /// </summary>
     IProjections Projections { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IJobs"/> service.
+    /// </summary>
+    IJobs Jobs { get; }
 }

@@ -54,10 +54,10 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
                 new BsonString("second"),
                 new BsonString("third")
             }.AsEnumerable())),
-            new("children", new BsonArray(new BsonDocument[]
-            {
+            new("children", new BsonArray(
+            [
                 child
-            })),
+            ])),
             new("stringDictionary", new BsonDocument(new BsonElement[]
             {
                 new("first", "firstValue"),

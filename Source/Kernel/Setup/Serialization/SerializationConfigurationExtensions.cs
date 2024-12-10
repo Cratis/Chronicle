@@ -62,11 +62,21 @@ public static class SerializationConfigurationExtensions
     {
         services.AddSerializer(builder =>
         {
-            builder.Services.AddSingleton<AppendedEventSerializer>();
-            builder.Services.AddSingleton<IGeneralizedCodec, AppendedEventSerializer>();
-            builder.Services.AddSingleton<IGeneralizedCopier, AppendedEventSerializer>();
-            builder.Services.AddSingleton<ITypeFilter, AppendedEventSerializer>();
+            builder.Services
+                .AddCompleteSerializer<AppendedEventSerializer>()
+                .AddCompleteSerializer<OneOfSerializer>();
         });
+        return services;
+    }
+
+    static IServiceCollection AddCompleteSerializer<TSerializer>(this IServiceCollection services)
+        where TSerializer : class, IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
+    {
+        services.AddSingleton<TSerializer>();
+        services.AddSingleton<IGeneralizedCodec, TSerializer>();
+        services.AddSingleton<IGeneralizedCopier, TSerializer>();
+        services.AddSingleton<ITypeFilter, TSerializer>();
+
         return services;
     }
 }

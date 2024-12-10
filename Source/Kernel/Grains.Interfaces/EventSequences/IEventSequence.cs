@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
@@ -55,7 +56,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <p>If no event is found, it will return <see cref="EventSequenceNumber.Unavailable"/>.</p>
     /// </returns>
     [AlwaysInterleave]
-    Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualTo(EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
+    Task<Result<EventSequenceNumber, GetSequenceNumberError>> GetNextSequenceNumberGreaterOrEqualTo(EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
 
     /// <summary>
     /// Append a single event to the event store.

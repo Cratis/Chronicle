@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Applications.Orleans.StateMachines;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
@@ -261,6 +262,15 @@ public class Observer(
     }
 
     /// <inheritdoc/>
+    public async Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        await WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -447,6 +457,12 @@ public class Observer(
 
     void HandleNewLastHandledEvent(EventSequenceNumber lastHandledEvent)
     {
+        if (!lastHandledEvent.IsActualValue)
+        {
+            logger.LastHandledEventIsNotActualValue();
+            return;
+        }
+
         var newLastHandledEvent = State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ||
                                   State.LastHandledEventSequenceNumber < lastHandledEvent ? lastHandledEvent : State.LastHandledEventSequenceNumber;
         var nextEventSequenceNumber = State.NextEventSequenceNumber < lastHandledEvent ? lastHandledEvent.Next() : State.NextEventSequenceNumber;
@@ -483,11 +499,36 @@ public class Observer(
 
     async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
-        if (!await NeedsCatchup(partition, lastHandledEventSequenceNumber))
+        if (failures.State.IsFailed(partition))
         {
+            logger.PartitionToCatchUpIsFailing(partition);
             return;
         }
+        if (!lastHandledEventSequenceNumber.IsActualValue)
+        {
+            logger.LastHandledEventIsNotActualValue();
+            return;
+        }
+        var needCatchupResult = await NeedsCatchup(partition, lastHandledEventSequenceNumber);
+        await needCatchupResult.Match(
+            needCatchup => needCatchup
+                ? StartCatchupJob(partition, lastHandledEventSequenceNumber)
+                : Task.CompletedTask,
+            error =>
+            {
+                switch (error)
+                {
+                    case GetSequenceNumberError.NotFound:
+                        logger.LastHandledEventForPartitionUnavailable(partition);
+                        return Task.CompletedTask;
+                    default:
+                        return PartitionFailed(partition, lastHandledEventSequenceNumber.Next(), ["Event Sequence storage error caused partition to try recover"], string.Empty);
+                }
+            });
+    }
 
+    async Task StartCatchupJob(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    {
         var nextEventSequenceNumber = lastHandledEventSequenceNumber.Next();
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);
@@ -503,10 +544,12 @@ public class Observer(
         await WriteStateAsync();
     }
 
-    async Task<bool> NeedsCatchup(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    async Task<Result<bool, GetSequenceNumberError>> NeedsCatchup(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
         var nextSequenceNumber = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(lastHandledEventSequenceNumber, State.EventTypes, partition);
-        return nextSequenceNumber != lastHandledEventSequenceNumber;
+        return nextSequenceNumber.Match<Result<bool, GetSequenceNumberError>>(
+            number => number != lastHandledEventSequenceNumber,
+            error => error);
     }
 
     class WriteSuspension : IDisposable

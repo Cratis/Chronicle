@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
+using OneOf.Types;
 using Orleans.Storage;
 
 namespace Cratis.Chronicle.Grains.Jobs;
@@ -20,7 +22,8 @@ public class JobGrainStorageProvider(IStorage storage) : IGrainStorage
     /// <inheritdoc/>
     public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        InvalidJobStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
+        var type = typeof(T);
+        ThrowIfInvalidJobStateType(type, nameof(ClearStateAsync));
 
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
@@ -28,48 +31,35 @@ public class JobGrainStorageProvider(IStorage storage) : IGrainStorage
             var jobStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Jobs;
             var jobStepStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).JobSteps;
 
-            await jobStepStorage.RemoveAllForJob(jobId);
-            await jobStorage.Remove(jobId);
+            await HandleCatch(jobStepStorage.RemoveAllForJob(jobId), type, nameof(ClearStateAsync));
+            await HandleCatch(jobStorage.Remove(jobId), type, nameof(ClearStateAsync));
         }
     }
 
     /// <inheritdoc/>
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        InvalidJobStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
+        var type = typeof(T);
+        ThrowIfInvalidJobStateType(type, nameof(ReadStateAsync));
 
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
             var key = (JobKey)keyExtension!;
 
             var jobStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Jobs;
-            var state = await jobStorage.Read<T>(jobId);
-            if (state is not null)
-            {
-                var jobState = (state as JobState)!;
-                var jobStepStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).JobSteps;
-                var successfulCount = await jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Succeeded);
-                var failedCount = await jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Failed);
-
-                var hasChanges = jobState.Progress.SuccessfulSteps != successfulCount ||
-                                 jobState.Progress.FailedSteps != failedCount;
-
-                jobState.Progress.SuccessfulSteps = successfulCount;
-                jobState.Progress.FailedSteps = failedCount;
-                grainState.State = state;
-
-                if (hasChanges)
-                {
-                    await jobStorage.Save(jobId, grainState.State);
-                }
-            }
+            var readStateResult = await jobStorage.Read<T>(jobId);
+            await readStateResult.Match(
+                state => HandleSuccessfulRead(state, key, grainState, jobStorage, jobId),
+                _ => Task.CompletedTask,
+                error => Task.FromException(new JobGrainStorageProviderError(type, error, nameof(ReadStateAsync))));
         }
     }
 
     /// <inheritdoc/>
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        InvalidJobStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(T));
+        var type = typeof(T);
+        ThrowIfInvalidJobStateType(type, nameof(WriteStateAsync));
 
         if (grainId.TryGetGuidKey(out var jobId, out var keyExtension))
         {
@@ -77,8 +67,52 @@ public class JobGrainStorageProvider(IStorage storage) : IGrainStorage
             var jobStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Jobs;
             var state = (grainState.State as JobState)!;
             state.Id = jobId;
+            await HandleCatchNone(jobStorage.Save(jobId, grainState.State), type, nameof(WriteStateAsync));
+        }
+    }
 
-            await jobStorage.Save(jobId, grainState.State);
+    static void ThrowIfInvalidJobStateType(Type type, string operationName) => JobStateType
+        .Verify(type)
+        .Switch(_ => { }, error => throw new JobGrainStorageProviderError(type, error, operationName));
+
+    static async Task HandleCatchNone(Task<Catch<None, Storage.Jobs.JobError>> getResult, Type type, string methodName)
+    {
+        var monad = await getResult;
+        await monad.Match(
+            _ => Task.CompletedTask,
+            error => Task.FromException(new JobGrainStorageProviderError(type, error, methodName)),
+            error => Task.FromException(new JobGrainStorageProviderError(type, error, methodName)));
+    }
+
+    static async Task HandleCatch(Task<Catch> getResult, Type type, string methodName)
+    {
+        var monad = await getResult;
+        await monad.Match(_ => Task.CompletedTask, error => Task.FromException(new JobGrainStorageProviderError(type, error, methodName)));
+    }
+
+    static async Task<T> HandleCatch<T>(Task<Catch<T>> getResult, Type type, string methodName)
+    {
+        var monad = await getResult;
+        return await monad.Match(Task.FromResult, error => Task.FromException<T>(new JobGrainStorageProviderError(type, error, methodName)));
+    }
+
+    async Task HandleSuccessfulRead<T>(T state, JobKey key, IGrainState<T> grainState, IJobStorage jobStorage, JobId jobId)
+    {
+        var jobState = (state as JobState)!;
+        var jobStepStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).JobSteps;
+        var successfulCount = await HandleCatch(jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Succeeded), typeof(T), nameof(ReadStateAsync));
+        var failedCount = await HandleCatch(jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Failed), typeof(T), nameof(ReadStateAsync));
+
+        var hasChanges = jobState.Progress.SuccessfulSteps != successfulCount ||
+                         jobState.Progress.FailedSteps != failedCount;
+
+        jobState.Progress.SuccessfulSteps = successfulCount;
+        jobState.Progress.FailedSteps = failedCount;
+        grainState.State = state;
+
+        if (hasChanges)
+        {
+            await HandleCatchNone(jobStorage.Save(jobId, grainState.State), typeof(T), nameof(ReadStateAsync));
         }
     }
 }

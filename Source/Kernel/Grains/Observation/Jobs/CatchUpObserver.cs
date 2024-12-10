@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
@@ -17,7 +18,8 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// Initializes a new instance of the <see cref="ReplayObserver"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
+/// <param name="logger">The logger.</param>
+public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
 {
     /// <inheritdoc/>
     protected override bool RemoveAfterCompleted => true;
@@ -25,6 +27,7 @@ public class CatchUpObserver(IStorage storage) : Job<CatchUpObserverRequest, Job
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
+        using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         await observer.TransitionTo<Routing>();
     }

@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Auditing;
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Services.Events.Constraints;
