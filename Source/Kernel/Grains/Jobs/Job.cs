@@ -315,6 +315,12 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         try
         {
             _logger.StepSuccessfullyCompleted(stepId);
+            State.Progress.SuccessfulSteps++;
+            if ((await WriteState()).TryGetException(out var writeStateError))
+            {
+                _logger.FailedUpdatingSuccessfulSteps(writeStateError, State.Progress.SuccessfulSteps);
+                return JobError.PersistStateError;
+            }
 
             if (jobStepResult.TryGetResult(out var result) && result is JsonElement jsonResult)
             {
@@ -322,21 +328,12 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             }
 
             var handleCompletedStepResult = await HandleJobStepCompleted(stepId, jobStepResult);
-            return await handleCompletedStepResult.Match(
-                async _ =>
-                {
-                    State.Progress.SuccessfulSteps++;
-                    var writeResult = await WriteState();
-                    return writeResult.Match(_ => Result.Success<JobError>(), _ =>
-                    {
-                        _logger.FailedUpdatingSuccessfulSteps(State.Progress.SuccessfulSteps);
-                        return JobError.PersistStateError;
-                    });
-                },
+            return handleCompletedStepResult.Match(
+                _ => Result.Success<JobError>(),
                 error =>
                 {
                     _logger.FailedHandlingCompletedJobStep(stepId, error);
-                    return Task.FromResult(Result.Failed(error));
+                    return Result.Failed(error);
                 });
         }
         catch (Exception ex)
@@ -356,22 +353,19 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         try
         {
             _logger.StepFailed(stepId);
-            var handleCompletedJobStepResult = await HandleJobStepCompleted(stepId, jobStepResult);
-            return await handleCompletedJobStepResult.Match(
-                async _ =>
-                {
-                    State.Progress.FailedSteps++;
-                    var writeResult = await WriteState();
-                    return writeResult.Match(_ => Result.Success<JobError>(), _ =>
-                    {
-                        _logger.FailedUpdatingSuccessfulSteps(State.Progress.SuccessfulSteps);
-                        return JobError.PersistStateError;
-                    });
-                },
+            State.Progress.FailedSteps++;
+            if ((await WriteState()).TryGetException(out var writeStateError))
+            {
+                _logger.FailedUpdatingFailedSteps(writeStateError, State.Progress.SuccessfulSteps);
+                return JobError.PersistStateError;
+            }
+            var handleCompletedStepResult = await HandleJobStepCompleted(stepId, jobStepResult);
+            return handleCompletedStepResult.Match(
+                _ => Result.Success<JobError>(),
                 error =>
                 {
                     _logger.FailedHandlingCompletedJobStep(stepId, error);
-                    return Task.FromResult(Result.Failed(error));
+                    return Result.Failed(error);
                 });
         }
         catch (Exception ex)

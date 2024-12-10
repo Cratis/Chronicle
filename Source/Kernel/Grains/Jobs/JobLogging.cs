@@ -64,10 +64,10 @@ internal static partial class JobLogMessages
     internal static partial void FailedWritingStatusChange(this ILogger<IJob> logger, JobStatus status);
 
     [LoggerMessage(LogLevel.Warning, "Job failed to persist new updated successful steps {SuccessfulStepsCount}")]
-    internal static partial void FailedUpdatingSuccessfulSteps(this ILogger<IJob> logger, int successfulStepsCount);
+    internal static partial void FailedUpdatingSuccessfulSteps(this ILogger<IJob> logger, Exception ex, int successfulStepsCount);
 
     [LoggerMessage(LogLevel.Warning, "Job failed to persist new updated failed steps {FailedStepsCount}")]
-    internal static partial void FailedUpdatingFailedSteps(this ILogger<IJob> logger, int failedStepsCount);
+    internal static partial void FailedUpdatingFailedSteps(this ILogger<IJob> logger, Exception ex, int failedStepsCount);
 
     [LoggerMessage(LogLevel.Warning, "Job failed remove state for all job steps and the job itself")]
     internal static partial void FailedToRemoveForJob(this ILogger<IJob> logger, Exception error);
