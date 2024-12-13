@@ -87,13 +87,13 @@ public static class BsonValueExtensions
                 return new BsonInt32(actualValue);
 
             case uint actualValue:
-                return new BsonInt32((int)actualValue);
+                return new BsonInt64((int)actualValue);
 
             case long actualValue:
                 return new BsonInt64(actualValue);
 
             case ulong actualValue:
-                return new BsonInt64((long)actualValue);
+                return new BsonDecimal128((long)actualValue);
 
             case float actualValue:
                 return new BsonDouble(actualValue);
