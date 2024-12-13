@@ -28,17 +28,17 @@ public class two_rule_sets : Specification
 
         _validator = new([_firstRuleSet, _secondRuleSet], _rules);
 
-        _firstRuleSetValidationResult = new ValidationResult(new[]
-        {
+        _firstRuleSetValidationResult = new ValidationResult(
+        [
             new ValidationFailure("FirstRuleSetFirstProp", "First RuleSet First Prop Failed"),
             new ValidationFailure("FirstRuleSetSecondProp", "First RuleSet Second Prop Failed"),
-        });
+        ]);
 
-        _secondRuleSetValidationResult = new ValidationResult(new[]
-        {
+        _secondRuleSetValidationResult = new ValidationResult(
+        [
             new ValidationFailure("SecondRuleSetFirstProp", "Second RuleSet First Prop Failed"),
             new ValidationFailure("SecondRuleSetSecondProp", "Second RuleSet Second Prop Failed"),
-        });
+        ]);
 
         _firstRuleSetAsValidator.Validate(Arg.Any<IValidationContext>()).Returns(_firstRuleSetValidationResult);
         _secondRuleSetAsValidator.Validate(Arg.Any<IValidationContext>()).Returns(_secondRuleSetValidationResult);
