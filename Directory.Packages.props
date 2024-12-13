@@ -69,7 +69,7 @@
         <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
         <PackageVersion Include="Grpc.Net.Client" Version="2.67.0" />
         <PackageVersion Include="mongodb.driver" Version="3.1.0" />
-        <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.1.0" />
+        <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.2.0" />
         <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="8.0.2" />
         <PackageVersion Include="automapper" Version="13.0.1" />
         <PackageVersion Include="FluentValidation" Version="11.11.0" />
@@ -94,7 +94,7 @@
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="8.0.1" />
         <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
-        <PackageVersion Include="System.Text.Json" Version="8.0.5" />
+        <PackageVersion Include="System.Text.Json" Version="9.0.0" />
         <PackageVersion Include="OpenTelemetry" Version="1.9.0" />
         <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
         <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
