@@ -22,9 +22,13 @@ public class JobStateWithLastHandledEvent : JobState
     /// <param name="result">The result.</param>
     public void HandleResult(JobStepResult result)
     {
-        if (result.Result is HandleEventsForPartitionResult handleEventsResult)
+        if (result.TryGetResult(out var jobStepResult) && jobStepResult is HandleEventsForPartitionResult handleEventsResult)
         {
             LastHandledEventSequenceNumber = handleEventsResult.LastHandledEventSequenceNumber;
+        }
+        else if (result.TryGetError(out var jobStepError) && jobStepError.TryGetPartialResult<HandleEventsForPartitionResult>(out var partialResult))
+        {
+            LastHandledEventSequenceNumber = partialResult.LastHandledEventSequenceNumber;
         }
     }
 }

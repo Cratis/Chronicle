@@ -3,11 +3,13 @@
 
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using OneOf.Types;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Jobs;
 
@@ -23,69 +25,140 @@ public class JobStorage(IEventStoreNamespaceDatabase database) : IJobStorage
     IMongoCollection<JobState> Collection => database.GetCollection<JobState>(WellKnownCollectionNames.Jobs);
 
     /// <inheritdoc/>
-    public async Task<JobState> GetJob(JobId jobId)
+    public async Task<Catch<JobState, JobError>> GetJob(JobId jobId)
     {
-        var cursor = await Collection.FindAsync(GetIdFilter<JobState>(jobId)).ConfigureAwait(false);
-        return cursor.Single();
+        try
+        {
+            var cursor = await Collection.FindAsync(GetIdFilter<JobState>(jobId)).ConfigureAwait(false);
+            var job = await cursor.SingleOrDefaultAsync();
+#pragma warning disable RCS1084 // This is more clear
+            return job is not null ? job : JobError.NotFound;
+#pragma warning restore RCS1084
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<JobState>> GetJobs(params JobStatus[] statuses)
+    public async Task<Catch<IImmutableList<JobState>>> GetJobs(params JobStatus[] statuses)
     {
-        var jobs = await GetJobsRaw(statuses).ConfigureAwait(false);
-        return jobs.ToImmutableList();
+        try
+        {
+            var jobs = await GetJobsRaw(statuses).ConfigureAwait(false);
+            return jobs.ToImmutableList();
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<JobState>> ObserveJobs(params JobStatus[] statuses)
+    public Catch<ISubject<IEnumerable<JobState>>> ObserveJobs(params JobStatus[] statuses)
     {
-        var statusFilters = statuses.Select(status =>
-            Builders<JobState>.Filter.Eq(_ => _.Status, status));
+        try
+        {
+            var statusFilters = statuses.Select(status =>
+                Builders<JobState>.Filter.Eq(_ => _.Status, status));
 
-        var filter = statuses.Length == 0 ?
-                                Builders<JobState>.Filter.Empty :
-                                Builders<JobState>.Filter.Or(statusFilters);
+            var filter = statuses.Length == 0 ?
+                Builders<JobState>.Filter.Empty :
+                Builders<JobState>.Filter.Or(statusFilters);
 
-        return Collection.Observe(filter);
+            return Catch.Success(Collection.Observe(filter));
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     /// <inheritdoc/>
-    public async Task Remove(JobId jobId) =>
-        await Collection.DeleteOneAsync(GetIdFilter<JobState>(jobId)).ConfigureAwait(false);
-
-    /// <inheritdoc/>
-    public async Task<TJobState?> Read<TJobState>(JobId jobId)
+    public async Task<Catch> Remove(JobId jobId)
     {
-        InvalidJobStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobState));
-        var cursor = await GetTypedCollection<TJobState>().FindAsync(GetIdFilter<TJobState>(jobId)).ConfigureAwait(false);
-        return cursor.FirstOrDefault();
+        try
+        {
+            await Collection.DeleteOneAsync(GetIdFilter<JobState>(jobId)).ConfigureAwait(false);
+            return Catch.Success();
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     /// <inheritdoc/>
-    public async Task Save<TJobState>(JobId jobId, TJobState state)
+    public async Task<Catch<TJobState, JobError>> Read<TJobState>(JobId jobId)
     {
-        InvalidJobStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobState));
-        await GetTypedCollection<TJobState>().ReplaceOneAsync(GetIdFilter<TJobState>(jobId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+        try
+        {
+            if (JobStateType.Verify(typeof(TJobState)).TryGetError(out var error))
+            {
+                return error;
+            }
+
+            var cursor = await GetTypedCollection<TJobState>().FindAsync(GetIdFilter<TJobState>(jobId)).ConfigureAwait(false);
+            var jobState = await cursor.FirstOrDefaultAsync();
+            return jobState is not null ? jobState : JobError.NotFound;
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<TJobState>> GetJobs<TJobType, TJobState>(params JobStatus[] statuses)
+    public async Task<Catch<None, JobError>> Save<TJobState>(JobId jobId, TJobState state)
     {
-        InvalidJobStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobState));
-        var jobType = (JobType)typeof(TJobType);
-        var jobTypeFilter = Builders<JobState>.Filter.Eq(_ => _.Type, jobType);
-        var statusFilters = statuses.Select(status => Builders<JobState>.Filter.Eq(_ => _.Status, status));
+        try
+        {
+            if (JobStateType.Verify(typeof(TJobState)).TryGetError(out var error))
+            {
+                return error;
+            }
 
-        var filter = statuses.Length == 0 ?
-                                jobTypeFilter :
-                                Builders<JobState>.Filter.And(jobTypeFilter, Builders<JobState>.Filter.Or(statusFilters));
-        var filterAsBsonDocument = filter.ToBsonDocument();
-        var cursor = await GetTypedCollection<TJobState>().FindAsync(filterAsBsonDocument).ConfigureAwait(false);
-        var jobs = await cursor.ToListAsync().ConfigureAwait(false);
-        return jobs.ToImmutableList();
+            await GetTypedCollection<TJobState>()
+                .ReplaceOneAsync(GetIdFilter<TJobState>(jobId), state, new ReplaceOptions { IsUpsert = true })
+                .ConfigureAwait(false);
+
+            return default(None);
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
-    FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid id) => Builders<TDocument>.Filter.Eq(new StringFieldDefinition<TDocument, Guid>("_id"), id);
+    /// <inheritdoc/>
+    public async Task<Catch<IImmutableList<TJobState>, JobError>> GetJobs<TJobType, TJobState>(params JobStatus[] statuses)
+    {
+        try
+        {
+            if (JobStateType.Verify(typeof(TJobState)).TryGetError(out var error))
+            {
+                return error;
+            }
+            var jobType = (JobType)typeof(TJobType);
+            var jobTypeFilter = Builders<JobState>.Filter.Eq(_ => _.Type, jobType);
+            var statusFilters = statuses.Select(status => Builders<JobState>.Filter.Eq(_ => _.Status, status));
+
+            var filter = statuses.Length == 0 ?
+                jobTypeFilter :
+                Builders<JobState>.Filter.And(jobTypeFilter, Builders<JobState>.Filter.Or(statusFilters));
+            var filterAsBsonDocument = filter.ToBsonDocument();
+            var cursor = await GetTypedCollection<TJobState>().FindAsync(filterAsBsonDocument).ConfigureAwait(false);
+            var jobs = await cursor.ToListAsync().ConfigureAwait(false);
+            return jobs.ToImmutableList();
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
+    }
+
+    static FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid id) => Builders<TDocument>.Filter.Eq(new StringFieldDefinition<TDocument, Guid>("_id"), id);
 
     IMongoCollection<TJobState> GetTypedCollection<TJobState>() => database.GetCollection<TJobState>(WellKnownCollectionNames.Jobs);
 

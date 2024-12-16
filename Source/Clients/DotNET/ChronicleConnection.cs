@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Host;
+using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
@@ -120,6 +121,7 @@ public class ChronicleConnection : IChronicleConnection
                 _channel.CreateGrpcService<IReactors>(),
                 _channel.CreateGrpcService<IReducers>(),
                 _channel.CreateGrpcService<IProjections>(),
+                _channel.CreateGrpcService<IJobs>(),
                 _channel.CreateGrpcService<IServer>());
 
             await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_options.ConnectTimeout));

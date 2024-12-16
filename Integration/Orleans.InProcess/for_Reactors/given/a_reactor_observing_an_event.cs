@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.given;
 
 public class a_reactor_observing_an_event(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
 {
-    public TaskCompletionSource Tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource Tcs;
     public SomeReactor Reactor;
     public IObserver ReactorObserver;
     public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
@@ -16,6 +16,7 @@ public class a_reactor_observing_an_event(GlobalFixture globalFixture) : Integra
 
     protected override void ConfigureServices(IServiceCollection services)
     {
+        Tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Reactor = new SomeReactor(Tcs);
         services.AddSingleton(Reactor);
     }

@@ -33,7 +33,7 @@ public class JobState
     /// <summary>
     /// Gets or sets the <see cref="JobStatus"/>.
     /// </summary>
-    public JobStatus Status => StatusChanges.Count == 0 ? JobStatus.None : StatusChanges[^1].Status;
+    public JobStatus Status { get; set; }
 
     /// <summary>
     /// Gets or sets collection of status changes that happened to the job.

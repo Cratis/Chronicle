@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
@@ -17,11 +18,13 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// Initializes a new instance of the <see cref="ReplayObserver"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class ReplayObserver(IStorage storage) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
+/// <param name="logger">The logger.</param>
+public class ReplayObserver(IStorage storage, ILogger<ReplayObserver> logger) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
 {
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
+        using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         await observer.TransitionTo<Routing>();
     }

@@ -2,11 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using OneOf.Types;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Jobs;
 
@@ -24,122 +26,204 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
     IMongoCollection<JobStepState> FailedCollection => database.GetCollection<JobStepState>(WellKnownCollectionNames.FailedJobSteps);
 
     /// <inheritdoc/>
-    public async Task RemoveAllForJob(JobId jobId)
+    public async Task<Catch> RemoveAllForJob(JobId jobId)
     {
-        await Collection.DeleteOneAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
-        await FailedCollection.DeleteOneAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc/>
-    public async Task RemoveAllNonFailedForJob(JobId jobId)
-    {
-        await Collection.DeleteOneAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc/>
-    public async Task Remove(JobId jobId, JobStepId jobStepId)
-    {
-        await Collection.DeleteOneAsync(GetIdFilter<JobStepState>(jobId, jobStepId)).ConfigureAwait(false);
-        await FailedCollection.DeleteOneAsync(GetIdFilter<JobStepState>(jobId, jobStepId)).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc/>
-    public async Task<IImmutableList<JobStepState>> GetForJob(JobId jobId, params JobStepStatus[] statuses)
-    {
-        var failedJobSteps = new List<JobStepState>();
-
-        var filter = GetJobIdFilter<JobStepState>(jobId);
-        if (statuses.Any(_ => _ == JobStepStatus.Failed) || statuses.Length == 0)
+        try
         {
-            var failedCursor = await FailedCollection.FindAsync(filter).ConfigureAwait(false);
-            failedJobSteps = failedCursor.ToList();
+            await Collection.DeleteManyAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
+            await FailedCollection.DeleteManyAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
+            return Catch.Success();
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
+    }
 
-            if (statuses.Any(_ => _ != JobStepStatus.Failed))
+    /// <inheritdoc/>
+    public async Task<Catch> RemoveAllNonFailedForJob(JobId jobId)
+    {
+        try
+        {
+            await Collection.DeleteManyAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
+            return Catch.Success();
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Catch> Remove(JobId jobId, JobStepId jobStepId)
+    {
+        try
+        {
+            await Collection.DeleteOneAsync(GetIdFilter<JobStepState>(jobId, jobStepId)).ConfigureAwait(false);
+            await FailedCollection.DeleteOneAsync(GetIdFilter<JobStepState>(jobId, jobStepId)).ConfigureAwait(false);
+            return Catch.Success();
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Catch<IImmutableList<JobStepState>>> GetForJob(JobId jobId, params JobStepStatus[] statuses)
+    {
+        try
+        {
+            var failedJobSteps = new List<JobStepState>();
+
+            var filter = GetJobIdFilter<JobStepState>(jobId);
+            if (statuses.Any(_ => _ == JobStepStatus.Failed) || statuses.Length == 0)
             {
-                return failedJobSteps.ToImmutableList();
+                var failedCursor = await FailedCollection.FindAsync(filter).ConfigureAwait(false);
+                failedJobSteps = failedCursor.ToList();
+
+                if (statuses.Any(_ => _ != JobStepStatus.Failed))
+                {
+                    return failedJobSteps.ToImmutableList();
+                }
             }
-        }
 
-        if (statuses.Length > 0)
-        {
-            filter &= Builders<JobStepState>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
-        }
-
-        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        var jobsSteps = cursor.ToList();
-        return jobsSteps.Concat(failedJobSteps).ToImmutableList();
-    }
-
-    /// <inheritdoc/>
-    public async Task<int> CountForJob(JobId jobId, params JobStepStatus[] statuses)
-    {
-        var filter = GetJobIdFilter<JobStepState>(jobId);
-        var count = 0L;
-        if (statuses.Any(_ => _ == JobStepStatus.Failed) || statuses.Length == 0)
-        {
-            count = await FailedCollection.CountDocumentsAsync(filter).ConfigureAwait(false);
-            if (statuses.Any(_ => _ != JobStepStatus.Failed))
+            if (statuses.Length > 0)
             {
-                return (int)count;
+                filter &= Builders<JobStepState>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
             }
-        }
 
-        if (statuses.Length > 0)
+            var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
+            var jobsSteps = cursor.ToList();
+            return jobsSteps.Concat(failedJobSteps).ToImmutableList();
+        }
+        catch (Exception ex)
         {
-            filter &= Builders<JobStepState>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
+            return ex;
         }
-        count += await Collection.CountDocumentsAsync(filter).ConfigureAwait(false);
-        return (int)count;
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<JobStepState>> ObserveForJob(JobId jobId)
+    public async Task<Catch<int>> CountForJob(JobId jobId, params JobStepStatus[] statuses)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var filter = GetJobIdFilter<JobStepState>(jobId);
+            var count = 0L;
+            if (statuses.Any(_ => _ == JobStepStatus.Failed) || statuses.Length == 0)
+            {
+                count = await FailedCollection.CountDocumentsAsync(filter).ConfigureAwait(false);
+                if (statuses.Any(_ => _ != JobStepStatus.Failed))
+                {
+                    return (int)count;
+                }
+            }
+
+            if (statuses.Length > 0)
+            {
+                filter &= Builders<JobStepState>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
+            }
+            count += await Collection.CountDocumentsAsync(filter).ConfigureAwait(false);
+            return (int)count;
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     /// <inheritdoc/>
-    public async Task<TJobStepState?> Read<TJobStepState>(JobId jobId, JobStepId jobStepId)
+    public Catch<IObservable<IEnumerable<JobStepState>>> ObserveForJob(JobId jobId)
     {
-        InvalidJobStepStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobStepState));
-        var filter = GetIdFilter<TJobStepState>(jobId, jobStepId);
-        var cursor = await GetTypedCollection<TJobStepState>().FindAsync(filter).ConfigureAwait(false);
-        return cursor.FirstOrDefault();
+        try
+        {
+            throw new NotImplementedException();
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     /// <inheritdoc/>
-    public async Task Save<TJobStepState>(
+    public async Task<Catch<TJobStepState, JobStepError>> Read<TJobStepState>(JobId jobId, JobStepId jobStepId)
+    {
+        try
+        {
+            if (JobStepStateType.Verify(typeof(TJobStepState)).TryGetError(out var error))
+            {
+                return error;
+            }
+
+            var filter = GetIdFilter<TJobStepState>(jobId, jobStepId);
+            var cursor = await GetTypedCollection<TJobStepState>().FindAsync(filter).ConfigureAwait(false);
+            var state = await cursor.FirstOrDefaultAsync();
+            return state is not null ? state : JobStepError.NotFound;
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Catch<None, JobStepError>> Save<TJobStepState>(
         JobId jobId,
         JobStepId jobStepId,
         TJobStepState state)
     {
-        InvalidJobStepStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobStepState));
-        var actualState = (state as JobStepState)!;
-        var collection = actualState.Status == JobStepStatus.Failed ? GetTypedFailedCollection<TJobStepState>() : GetTypedCollection<TJobStepState>();
-        await collection.ReplaceOneAsync(GetIdFilter<TJobStepState>(jobId, jobStepId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+        try
+        {
+            if (JobStepStateType.Verify(typeof(TJobStepState)).TryGetError(out var error))
+            {
+                return error;
+            }
+
+            var actualState = (state as JobStepState)!;
+            var collection = actualState.Status == JobStepStatus.Failed ? GetTypedFailedCollection<TJobStepState>() : GetTypedCollection<TJobStepState>();
+            await collection.ReplaceOneAsync(GetIdFilter<TJobStepState>(jobId, jobStepId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+            return default(None);
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     /// <inheritdoc/>
-    public async Task MoveToFailed<TJobStepState>(
+    public async Task<Catch<None, JobStepError>> MoveToFailed<TJobStepState>(
         JobId jobId,
         JobStepId jobStepId,
         TJobStepState jobStepState)
     {
-        InvalidJobStepStateType.ThrowIfTypeDoesNotDeriveFromJobState(typeof(TJobStepState));
-        await Save(jobId, jobStepId, jobStepState);
-        await GetTypedCollection<TJobStepState>().DeleteOneAsync(GetIdFilter<TJobStepState>(jobId, jobStepId)).ConfigureAwait(false);
+        try
+        {
+            if (JobStepStateType.Verify(typeof(TJobStepState)).TryGetError(out var error))
+            {
+                return error;
+            }
+
+            var saveResult = await Save(jobId, jobStepId, jobStepState);
+            if (!saveResult.IsSuccess)
+            {
+                return saveResult;
+            }
+
+            await GetTypedCollection<TJobStepState>().DeleteOneAsync(GetIdFilter<TJobStepState>(jobId, jobStepId)).ConfigureAwait(false);
+            return default(None);
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
-    IMongoCollection<TJobStepState> GetTypedCollection<TJobStepState>() => database.GetCollection<TJobStepState>(WellKnownCollectionNames.JobSteps);
-
-    IMongoCollection<TJobStepState> GetTypedFailedCollection<TJobStepState>() => database.GetCollection<TJobStepState>(WellKnownCollectionNames.FailedJobSteps);
-
-    FilterDefinition<TDocument> GetJobIdFilter<TDocument>(Guid jobId, string prefix = "") =>
+    static FilterDefinition<TDocument> GetJobIdFilter<TDocument>(Guid jobId, string prefix = "") =>
         Builders<TDocument>.Filter.Eq(
             new StringFieldDefinition<TDocument, BsonBinaryData>($"{prefix}_id.jobId"),
             new BsonBinaryData(jobId, GuidRepresentation.Standard));
 
-    FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid jobId, Guid jobStepId) =>
+    static FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid jobId, Guid jobStepId) =>
         Builders<TDocument>.Filter.Eq(
             new StringFieldDefinition<TDocument, BsonDocument>("_id"),
             new BsonDocument
@@ -152,4 +236,8 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
                     "jobStepId", new BsonBinaryData(jobStepId, GuidRepresentation.Standard)
                 }
             });
+
+    IMongoCollection<TJobStepState> GetTypedCollection<TJobStepState>() => database.GetCollection<TJobStepState>(WellKnownCollectionNames.JobSteps);
+
+    IMongoCollection<TJobStepState> GetTypedFailedCollection<TJobStepState>() => database.GetCollection<TJobStepState>(WellKnownCollectionNames.FailedJobSteps);
 }
