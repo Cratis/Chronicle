@@ -24,4 +24,4 @@ public record HandleEventsForPartitionArguments(
     EventSequenceNumber StartEventSequenceNumber,
     EventSequenceNumber EndEventSequenceNumber,
     EventObservationState EventObservationState,
-    IEnumerable<EventType> EventTypes);
+    IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverSubscription, Partition);

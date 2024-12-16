@@ -18,7 +18,7 @@ public class CatchUpObserverPartition(ILogger<CatchUpObserverPartition> logger) 
     public override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey.ObserverId, Request.ObserverKey);
         await observer.PartitionCaughtUp(Request.Key, State.LastHandledEventSequenceNumber);
     }
 

@@ -203,7 +203,6 @@ public class Observer(
         await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(
             JobId.New(),
             new(
-                _observerId,
                 _observerKey,
                 _subscription,
                 partition,
@@ -535,7 +534,6 @@ public class Observer(
         await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
             JobId.New(),
             new(
-                _observerId,
                 _observerKey,
                 _subscription,
                 partition,

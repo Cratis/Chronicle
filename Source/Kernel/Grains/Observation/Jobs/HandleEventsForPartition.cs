@@ -77,15 +77,7 @@ public class HandleEventsForPartition(
 
             if (request.ObserverSubscription.IsSubscribed)
             {
-                var key = new ObserverSubscriberKey(
-                    request.ObserverKey.ObserverId,
-                    request.ObserverKey.EventStore,
-                    request.ObserverKey.Namespace,
-                    request.ObserverKey.EventSequenceId,
-                    _eventSourceId,
-                    request.ObserverSubscription.SiloAddress.ToParsableString());
-
-                _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, key) as IObserverSubscriber)!;
+                _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, request.ToObserverSubscriberKey()) as IObserverSubscriber)!;
                 logger.SuccessfullyPrepared(request.Partition);
                 return Task.FromResult(Result.Success<JobStepPrepareStartError>());
             }
