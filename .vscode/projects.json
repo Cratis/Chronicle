@@ -2,27 +2,27 @@
     {
         "name": "Server",
         "path": "${workspaceFolder}/Source/Kernel/Server",
-        "outputPath": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net8.0/Cratis.Chronicle.Server.dll"
+        "outputPath": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net9.0/Cratis.Chronicle.Server.dll"
     },
     {
         "name": "API",
         "path": "${workspaceFolder}/Source/Api",
-        "outputPath": "${workspaceFolder}/Source/Api/bin/Debug/net8.0/Cratis.Chronicle.Api.dll"
+        "outputPath": "${workspaceFolder}/Source/Api/bin/Debug/net9.0/Cratis.Chronicle.Api.dll"
     },
     {
         "name": "AspNetCore Sample",
         "path": "${workspaceFolder}/Samples/AspNetCore",
-        "outputPath": "${workspaceFolder}/Samples/AspNetCore/bin/Debug/net8.0/AspNetCore.dll"
+        "outputPath": "${workspaceFolder}/Samples/AspNetCore/bin/Debug/net9.0/AspNetCore.dll"
     },
     {
         "name": "Basic Sample",
         "path": "${workspaceFolder}/Samples/Basic",
-        "outputPath": "${workspaceFolder}/Samples/Basic/bin/Debug/net8.0/Basic.dll"
+        "outputPath": "${workspaceFolder}/Samples/Basic/bin/Debug/net9.0/Basic.dll"
     },
     {
         "name": "Orleans Sample",
         "path": "${workspaceFolder}/Samples/Orleans",
-        "outputPath": "${workspaceFolder}/Samples/Orleans/bin/Debug/net8.0/Orleans.dll"
+        "outputPath": "${workspaceFolder}/Samples/Orleans/bin/Debug/net9.0/Orleans.dll"
     },
     {
         "name": "DotNET Client",
@@ -31,6 +31,6 @@
     {
         "name": "AssemblyFixer",
         "path": "${workspaceFolder}/Source/Clients/AssemblyFixer",
-        "outputPath": "${workspaceFolder}/Source/Clients/AssemblyFixer/bin/Debug/net8.0/AssemblyFixer.dll"
+        "outputPath": "${workspaceFolder}/Source/Clients/AssemblyFixer/bin/Debug/net9.0/AssemblyFixer.dll"
     }
 ]

@@ -5,23 +5,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Base\Base.csproj" />
-      <ProjectReference Include="..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
-      <ProjectReference Include="..\..\Source\Clients\Orleans.InProcess\Orleans.InProcess.csproj" />
-      <ProjectReference Include="..\..\Source\Kernel\Storage.MongoDB\Storage.MongoDB.csproj" />
+        <ProjectReference Include="..\Base\Base.csproj" />
+        <ProjectReference Include="..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
+        <ProjectReference Include="..\..\Source\Clients\Orleans.InProcess\Orleans.InProcess.csproj" />
+        <ProjectReference Include="..\..\Source\Kernel\Storage.MongoDB\Storage.MongoDB.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Condition=" '$(TargetFramework)' == 'net9.0' "/>
-      <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Condition=" '$(TargetFramework)' == 'net8.0' " VersionOverride="8.0.0"/>
-      <PackageReference Include="Cratis.Applications.MongoDB" />
-      <PackageReference Include="Polly.Core" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+        <PackageReference Include="Cratis.Applications.MongoDB" />
+        <PackageReference Include="Polly.Core" />
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="AggregateRoots\Domain\" />
-      <Folder Include="AggregateRoots\Scenarios\given\" />
-      <Folder Include="for_Observers\when_appending_event\" />
+        <Folder Include="AggregateRoots\Domain\" />
+        <Folder Include="AggregateRoots\Scenarios\given\" />
+        <Folder Include="for_Observers\when_appending_event\" />
     </ItemGroup>
 
 </Project>

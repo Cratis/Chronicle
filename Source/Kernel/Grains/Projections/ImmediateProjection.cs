@@ -175,7 +175,12 @@ public class ImmediateProjection(
             var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
             var keyResolver = _projection!.GetKeyResolverFor(@event.Metadata.Type);
             var key = await keyResolver(_eventSequenceStorage!, @event);
-            var context = new ProjectionEventContext(key, @event, changeset, _projection.OperationTypes[@event.Metadata.Type], false);
+            var context = new ProjectionEventContext(
+                key,
+                @event,
+                changeset,
+                _projection.GetOperationTypeFor(@event.Metadata.Type),
+                false);
 
             await HandleEventFor(_projection!, context);
 
