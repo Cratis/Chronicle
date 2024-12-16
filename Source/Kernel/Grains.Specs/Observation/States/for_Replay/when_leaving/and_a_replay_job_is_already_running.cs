@@ -37,7 +37,8 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
                                 Status = JobStatus.Running,
                                 Occurred = DateTimeOffset.UtcNow
                             }
-                        ]
+                        ],
+                        Status = JobStatus.Running
                     }
                 }.ToImmutableList());
 

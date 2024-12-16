@@ -13,6 +13,6 @@ public class when_none_value : Specification
     void Because() => result = Catch.Success();
 
     [Fact] void should_be_success() => result.IsSuccess.ShouldBeTrue();
-    [Fact] void should_not_get_error() => result.TryGetError(out _).ShouldBeFalse();
+    [Fact] void should_not_get_error() => result.TryGetException(out _).ShouldBeFalse();
     [Fact] void should_have_the_none_value() => result.Match<object>(_ => _, error => error).ShouldEqual(default(None));
 }

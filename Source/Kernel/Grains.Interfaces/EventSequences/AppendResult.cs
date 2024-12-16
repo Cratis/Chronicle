@@ -27,12 +27,12 @@ public class AppendResult
     public bool IsSuccess => !HasConstraintViolations && !HasErrors;
 
     /// <summary>
-    /// Gets whether or not there are any violations that occurred.
+    /// Gets whether there are any violations that occurred.
     /// </summary>
     public bool HasConstraintViolations => ConstraintViolations.Any();
 
     /// <summary>
-    /// Gets whether or not there are any errors that occurred.
+    /// Gets whether there are any errors that occurred.
     /// </summary>
     public bool HasErrors => Errors.Any();
 

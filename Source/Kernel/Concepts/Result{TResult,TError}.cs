@@ -13,12 +13,17 @@ namespace Cratis.Chronicle.Concepts;
 /// <typeparam name="TError">The error type.</typeparam>
 public class Result<TResult, TError> : OneOfBase<TResult, TError>
 {
-    Result(OneOf<TResult, TError> input) : base(input)
+    /// <summary>
+    /// Initializes an instance of the <see cref="Result{TResult, TError}"/> class.
+    /// </summary>
+    /// <param name="input">The input.</param>
+    protected Result(OneOf<TResult, TError> input)
+        : base(input)
     {
     }
 
     /// <summary>
-    /// Gets whether the execution was successful, meaning it has a result.
+    /// Gets a value indicating whether the execution was successful, meaning it has a result.
     /// </summary>
     public bool IsSuccess => IsT0;
 
@@ -54,5 +59,5 @@ public class Result<TResult, TError> : OneOfBase<TResult, TError>
     /// </summary>
     /// <param name="error">The optional error.</param>
     /// <returns>A boolean indicating whether the error was present.</returns>
-    public bool TryGetError(out TError error) => TryPickT1(out error, out _);
+    public bool TryGetError([NotNullWhen(true)]out TError error) => TryPickT1(out error, out _);
 }

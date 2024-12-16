@@ -1,35 +1,37 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Jobs;
-
+using Cratis.Chronicle.Concepts;
 namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
-/// Represents the result of a job step.
+/// Represents the result of performing a job step.
 /// </summary>
-/// <param name="Status">The <see cref="JobStepStatus"/> for the job step.</param>
-/// <param name="Messages">Messages associated.</param>
-/// <param name="ExceptionStackTrace">Associated exception stack trace, if any.</param>
-/// <param name="Result">Result of the job step.</param>
-public record JobStepResult(JobStepStatus Status, IEnumerable<string> Messages, string ExceptionStackTrace, object? Result = null)
+public class JobStepResult : Result<object?, PerformJobStepError>
 {
-    /// <summary>
-    /// Gets whether the job step was successful.
-    /// </summary>
-    public bool IsSuccess => Status == JobStepStatus.Succeeded;
+    JobStepResult(Result<object?, PerformJobStepError> input)
+        : base(input)
+    {
+    }
 
     /// <summary>
-    /// Create a succeeded job step with optional result object.
+    /// Creates a succeeded <see cref="JobStepResult"/>.
     /// </summary>
-    /// <param name="result">Optional result object.</param>
-    /// <returns>A new <see cref="JobStepResult"/> instance.</returns>
-    public static JobStepResult Succeeded(object? result = null) => new(JobStepStatus.Succeeded, [], string.Empty, result);
+    /// <param name="input">The optional result object.</param>
+    /// <returns>The <see cref="JobStepResult"/>.</returns>
+    public static JobStepResult Succeeded(object? input = default) => new(Result.Success<object?, PerformJobStepError>(input));
 
     /// <summary>
-    /// Creates a failed job step.
+    /// Creates a failed <see cref="JobStepResult"/>.
     /// </summary>
-    /// <param name="message">Message to associate with the failure.</param>
-    /// <returns><see cref="JobStepResult"/>.</returns>
-    public static JobStepResult Failed(string message) => new(JobStepStatus.Failed, [message], string.Empty);
+    /// <param name="input">The error messages.</param>
+    /// <returns>The <see cref="JobStepResult"/>.</returns>
+    public static new JobStepResult Failed(PerformJobStepError input) => new(input);
+
+    /// <summary>
+    /// Creates a failed <see cref="JobStepResult"/>.
+    /// </summary>
+    /// <param name="messages">The error messages.</param>
+    /// <returns>The <see cref="JobStepResult"/>.</returns>
+    public static JobStepResult Failed(params string[] messages) => new(PerformJobStepError.Failed(messages, string.Empty));
 }

@@ -28,7 +28,11 @@ public class JobQueries(IStorage storage) : ControllerBase
         [FromRoute] EventStoreNamespaceName @namespace )
     {
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
-        var jobs = namespaceStorage.Jobs.ObserveJobs();
+        var jobsResult = namespaceStorage.Jobs.ObserveJobs();
+        if (!jobsResult.TryGetResult(out var jobs))
+        {
+            jobsResult.RethrowError();
+        }
 
         return new TransformingSubject<IEnumerable<JobState>, IEnumerable<JobInformation>>(
             jobs,

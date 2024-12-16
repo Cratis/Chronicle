@@ -130,10 +130,11 @@ public static class ChronicleClientSiloBuilderExtensions
                     new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
                     new EventTypes(storage),
                     new Constraints(grainFactory),
-                    new Observers(),
+                    new Observers(storage),
                     new Server::Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>()),
                     new Server::Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IExpandoObjectConverter>()),
                     new Server::Cratis.Chronicle.Services.Projections.Projections(grainFactory),
+                    new Server::Cratis.Chronicle.Services.Jobs.Jobs(grainFactory),
                     new Server::Cratis.Chronicle.Services.Host.Server(clusterClient));
 
                 var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());

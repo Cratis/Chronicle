@@ -5,13 +5,15 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents a job for retrying a failed partition.
 /// </summary>
-public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobStateWithLastHandledEvent>, IRetryFailedPartitionJob
+/// <param name="logger">The logger.</param>
+public class RetryFailedPartitionJob(ILogger<RetryFailedPartitionJob> logger) : Job<RetryFailedPartitionRequest, JobStateWithLastHandledEvent>, IRetryFailedPartitionJob
 {
     /// <inheritdoc/>
     protected override bool RemoveAfterCompleted => true;
@@ -19,10 +21,15 @@ public class RetryFailedPartitionJob : Job<RetryFailedPartitionRequest, JobState
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
+        using var scope = logger.BeginJobScope(JobId, JobKey);
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (AllStepsCompletedSuccessfully)
         {
-            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
             await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber);
+        }
+        else if (State.LastHandledEventSequenceNumber.IsActualValue)
+        {
+            await observer.FailedPartitionPartiallyRecovered(Request.Key, State.LastHandledEventSequenceNumber);
         }
     }
 

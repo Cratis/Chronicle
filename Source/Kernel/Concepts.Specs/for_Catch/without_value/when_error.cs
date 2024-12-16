@@ -13,6 +13,6 @@ public class when_error : Specification
     void Because() => result = Catch.Failed(error);
 
     [Fact] void should_not_be_success() => result.IsSuccess.ShouldBeFalse();
-    [Fact] void should_try_get_error() => result.TryGetError(out _).ShouldBeTrue();
+    [Fact] void should_try_get_error() => result.TryGetException(out _).ShouldBeTrue();
     [Fact] void should_have_the_error() => result.Match<object>(_ => _, errorType => error).ShouldEqual(error);
 }
