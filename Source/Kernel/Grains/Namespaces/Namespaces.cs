@@ -33,7 +33,7 @@ public class Namespaces(
         if (State.Namespaces.Any(_ => _.Name == @namespace)) return;
 
         logger.AddingNamespace(@namespace);
-        State.NewNamespaces.Add(new NamespaceState(EventStoreNamespaceId.Default, @namespace, DateTimeOffset.UtcNow));
+        State.NewNamespaces.Add(new NamespaceState(@namespace, DateTimeOffset.UtcNow));
 
         var eventStoreName = (EventStoreName)this.GetPrimaryKeyString();
         var channelId = ChannelId.Create(WellKnownBroadcastChannelNames.NamespaceAdded, eventStoreName);

@@ -249,7 +249,7 @@ public class EventSequence(
                 causedBy));
         }
 
-        return new AppendManyResult
+        return new()
         {
             CorrelationId = correlationId,
             SequenceNumbers = results.Select(r => r.SequenceNumber).ToImmutableList(),

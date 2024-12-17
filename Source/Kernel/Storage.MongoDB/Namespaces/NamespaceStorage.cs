@@ -36,7 +36,6 @@ public class NamespaceStorage(
 
         var @namespace = new MongoDBNamespace
         {
-            Id = Guid.NewGuid(),
             Name = name,
             Created = created
         };
@@ -60,14 +59,14 @@ public class NamespaceStorage(
     {
         var result = await GetCollection().FindAsync(_ => true);
         var namespaces = await result.ToListAsync();
-        return namespaces.Select(_ => new NamespaceState(_.Id, _.Name, _.Created));
+        return namespaces.Select(_ => new NamespaceState(_.Name, _.Created));
     }
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<NamespaceState>> ObserveAll() =>
          new TransformingSubject<IEnumerable<MongoDBNamespace>, IEnumerable<NamespaceState>>(
             GetCollection().Observe(),
-            _ => _.Select(_ => new NamespaceState(_.Id, _.Name, _.Created)));
+            _ => _.Select(_ => new NamespaceState(_.Name, _.Created)));
 
     IMongoCollection<MongoDBNamespace> GetCollection() => database.GetCollection<MongoDBNamespace>(WellKnownCollectionNames.Namespaces);
 }
