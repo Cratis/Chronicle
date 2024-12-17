@@ -28,6 +28,17 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
     public override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
+        if (!State.HandledAllEvents)
+        {
+            if (State.LastHandledEventSequenceNumber.IsActualValue)
+            {
+                logger.NotAllEventsWereHandled(nameof(CatchUpObserver), State.LastHandledEventSequenceNumber);
+            }
+            else
+            {
+                logger.NoneEventsWereHandled(nameof(CatchUpObserver));
+            }
+        }
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         await observer.TransitionTo<Routing>();
     }
