@@ -6,7 +6,7 @@ using Cratis.Json;
 namespace Cratis.Chronicle.Json;
 
 /// <summary>
-/// Extension methods for <see cref="object"/>.s
+/// Extension methods for <see cref="object"/>.
 /// </summary>
 public static class ObjectExtensions
 {

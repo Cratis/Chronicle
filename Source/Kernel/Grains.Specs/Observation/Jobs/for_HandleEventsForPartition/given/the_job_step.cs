@@ -29,7 +29,7 @@ public class the_job_step : Specification
 
     async Task Establish()
     {
-        var observerKey = new ObserverKey("observer-id", "event-store", "event-store-namespace", EventSequenceId.Log); 
+        var observerKey = new ObserverKey("observer-id", "event-store", "event-store-namespace", EventSequenceId.Log);
         _request = new(
             new("observer-id", "event-store", "event-store-namespace", EventSequenceId.Log),
             new(observerKey.ObserverId, observerKey, [], typeof(ISomeObserverType), SiloAddress.Zero),
@@ -51,11 +51,7 @@ public class the_job_step : Specification
         var loggerFactory = Substitute.For<ILoggerFactory>();
         _silo.AddService(loggerFactory);
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
-
-
         _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForPartitionState>(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps);
-        // _silo.AddProbe(GrainId.Create());
-        
         _jobStep = await _silo.CreateGrainAsync<HandleEventsForPartition>(_jobStepId, _jobStepKey);
     }
 }

@@ -10,16 +10,12 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// <summary>
 /// Represents the result of performing a job step.
 /// </summary>
+/// <param name="result">The result.</param>
 [GenerateSerializer]
-public class JobStepResult
+public class JobStepResult(Result<object?, PerformJobStepError> result)
 {
     [Id(0)]
-    readonly Result<object?, PerformJobStepError> _result;
-
-    public JobStepResult(Result<object?, PerformJobStepError> result)
-    {
-        _result = result;
-    }
+    readonly Result<object?, PerformJobStepError> _result = result;
 
     /// <summary>
     /// Creates a succeeded <see cref="JobStepResult"/>.
@@ -33,7 +29,7 @@ public class JobStepResult
     /// </summary>
     /// <param name="input">The error messages.</param>
     /// <returns>The <see cref="JobStepResult"/>.</returns>
-    public static new JobStepResult Failed(PerformJobStepError input) => new(Result<object?, PerformJobStepError>.Failed(input));
+    public static JobStepResult Failed(PerformJobStepError input) => new(Result<object?, PerformJobStepError>.Failed(input));
 
     /// <summary>
     /// Creates a failed <see cref="JobStepResult"/>.
@@ -59,6 +55,7 @@ public class JobStepResult
             result = fullResult.DeserializeIfNecessary<TResult>()!;
             return true;
         }
+
         error = _result.AsT1;
         result = error.PartialResult?.DeserializeIfNecessary<TResult>(jsonSerializerOptions);
         return false;
