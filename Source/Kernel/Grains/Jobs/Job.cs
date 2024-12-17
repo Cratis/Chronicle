@@ -31,7 +31,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     Dictionary<JobStepId, JobStepGrainAndRequest> _jobStepGrains = [];
     ObserverManager<IJobObserver>? _observers;
     bool _isRunning;
-    JsonSerializerOptions? _jsonSerializerOptions;
     ILogger<IJob> _logger = null!;
 
     /// <summary>
@@ -93,8 +92,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         _observers = new(
             TimeSpan.FromMinutes(1),
             ServiceProvider.GetService<ILogger<ObserverManager<IJobObserver>>>() ?? new NullLogger<ObserverManager<IJobObserver>>());
-
-        _jsonSerializerOptions = ServiceProvider.GetService<JsonSerializerOptions>() ?? new JsonSerializerOptions();
 
         JobId = this.GetPrimaryKey(out var keyExtension);
         JobKey = keyExtension;
@@ -320,11 +317,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             {
                 _logger.FailedUpdatingSuccessfulSteps(writeStateError, State.Progress.SuccessfulSteps);
                 return JobError.PersistStateError;
-            }
-
-            if (jobStepResult.TryGetResult(out var result) && result is JsonElement jsonResult)
-            {
-                jobStepResult = JobStepResult.Succeeded(jsonResult.Deserialize(_jobStepGrains[stepId].ResultType, _jsonSerializerOptions));
             }
 
             var handleCompletedStepResult = await HandleJobStepCompleted(stepId, jobStepResult);
