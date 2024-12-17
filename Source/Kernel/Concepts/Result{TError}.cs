@@ -17,7 +17,7 @@ public class Result<TError> : OneOfBase<None, TError>
     /// Initializes an instance of the <see cref="Result{TResult}"/> class.
     /// </summary>
     /// <param name="input">The input.</param>
-    protected Result(OneOf<None, TError> input)
+    Result(OneOf<None, TError> input)
         : base(input)
     {
     }
