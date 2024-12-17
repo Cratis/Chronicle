@@ -3,7 +3,7 @@
 
 import { withViewModel } from '@cratis/applications.react.mvvm';
 import { NamespacesViewModel } from './NamespacesViewModel';
-import { AllNamespaces, AllNamespacesArguments, Namespace } from 'Api/Namespaces';
+import { AllNamespaces, AllNamespacesArguments } from 'Api/Namespaces';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
 import { DataPage, MenuItem } from 'Components';
@@ -12,8 +12,6 @@ import * as faIcons from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
 import { useDialogRequest } from '@cratis/applications.react.mvvm/dialogs';
 import { AddNamespace, AddNamespaceRequest, AddNamespaceResponse } from './AddNamespace';
-
-const renderId = (namespace: Namespace) => namespace.id.toString();
 
 export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
@@ -28,7 +26,7 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
                 title={strings.eventStore.general.types.title}
                 query={AllNamespaces}
                 queryArguments={queryArgs}
-                dataKey='id'
+                dataKey='name'
                 emptyMessage={strings.eventStore.general.namespaces.empty}>
 
                 <DataPage.MenuItems>
@@ -39,12 +37,6 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>
-                    <Column
-                        field='id'
-                        style={{ width: '400px' }}
-                        header={strings.eventStore.general.namespaces.columns.id}
-                        sortable
-                        body={renderId}/>
                     <Column field='name' header={strings.eventStore.general.namespaces.columns.name} sortable />
                 </DataPage.Columns>
             </DataPage>

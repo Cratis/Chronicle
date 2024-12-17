@@ -11,14 +11,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Namespaces;
 public class MongoDBNamespace
 {
     /// <summary>
-    /// Gets or sets the unique identifier.
-    /// </summary>
-    [BsonId]
-    public Guid Id { get; set; }
-
-    /// <summary>
     /// Gets or sets the name of the namespace.
     /// </summary>
+    [BsonId]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
