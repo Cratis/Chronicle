@@ -17,18 +17,24 @@ public class JobStateWithLastHandledEvent : JobState
     public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
 
     /// <summary>
+    /// Gets or sets the value indicating whether all the events were handled or not.
+    /// </summary>
+    public bool HandledAllEvents { get; set; }
+
+    /// <summary>
     /// Handles state based on <see cref="JobStepResult"/>.
     /// </summary>
     /// <param name="result">The result.</param>
     public void HandleResult(JobStepResult result)
     {
-        if (result.TryGetResult(out var jobStepResult) && jobStepResult is HandleEventsForPartitionResult handleEventsResult)
+        if (result.TryGetFullResult<HandleEventsForPartitionResult>(out var handleEventsResult, out _))
         {
             LastHandledEventSequenceNumber = handleEventsResult.LastHandledEventSequenceNumber;
+            HandledAllEvents = true;
         }
-        else if (result.TryGetError(out var jobStepError) && jobStepError.TryGetPartialResult<HandleEventsForPartitionResult>(out var partialResult))
+        else if (handleEventsResult is not null)
         {
-            LastHandledEventSequenceNumber = partialResult.LastHandledEventSequenceNumber;
+            LastHandledEventSequenceNumber = handleEventsResult.LastHandledEventSequenceNumber;
         }
     }
 }
