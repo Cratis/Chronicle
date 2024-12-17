@@ -5,12 +5,12 @@ using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Base;
-using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_handling_event.and_it_fails_first_time_but_not_second_time.context;
+using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_handling_event.and_it_fails_first_time.but_not_second_time.context;
 
-namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_handling_event;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_handling_event.and_it_fails_first_time;
 
 [Collection(GlobalCollection.Name)]
-public class and_it_fails_first_time_but_not_second_time(context context) : Given<context>(context)
+public class but_not_second_time(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : given.a_reactor_observing_an_event_that_can_fail(globalFixture, 2)
     {
