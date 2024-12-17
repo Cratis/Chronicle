@@ -20,4 +20,4 @@ public record RetryFailedPartitionRequest(
     ObserverSubscription ObserverSubscription,
     Key Key,
     EventSequenceNumber FromSequenceNumber,
-    IEnumerable<EventType> EventTypes);
+    IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverSubscription, Key);

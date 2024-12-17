@@ -19,7 +19,17 @@ public class ReplayObserverPartition(ILogger<ReplayObserverPartition> logger) : 
     public override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverId, Request.ObserverKey);
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey.ObserverId, Request.ObserverKey);
+        if (State is { HandledAllEvents: false, LastHandledEventSequenceNumber.IsActualValue: true })
+        {
+            logger.NotAllEventsWereHandled(nameof(ReplayObserverPartition), State.LastHandledEventSequenceNumber);
+        }
+
+        if (!State.LastHandledEventSequenceNumber.IsActualValue)
+        {
+            logger.NoneEventsWereHandled(nameof(ReplayObserverPartition));
+            return;
+        }
         await observer.PartitionReplayed(Request.Key, State.LastHandledEventSequenceNumber);
     }
 

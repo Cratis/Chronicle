@@ -12,7 +12,7 @@ public class Result
     /// Initializes a new instance of the <see cref="Result"/> class.
     /// </summary>
     /// <param name="success">Whether the result was successful.</param>
-    protected Result(bool success) => IsSuccess = success;
+    Result(bool success) => IsSuccess = success;
 
     /// <summary>
     /// Gets a value indicating whether the execution was successful.

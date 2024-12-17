@@ -23,14 +23,19 @@ public class RetryFailedPartitionJob(ILogger<RetryFailedPartitionJob> logger) : 
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        if (AllStepsCompletedSuccessfully)
+
+        if (State is { HandledAllEvents: false, LastHandledEventSequenceNumber.IsActualValue: true })
         {
-            await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber);
-        }
-        else if (State.LastHandledEventSequenceNumber.IsActualValue)
-        {
+            logger.NotAllEventsWereHandled(nameof(RetryFailedPartitionJob), State.LastHandledEventSequenceNumber);
             await observer.FailedPartitionPartiallyRecovered(Request.Key, State.LastHandledEventSequenceNumber);
         }
+
+        if (!State.LastHandledEventSequenceNumber.IsActualValue)
+        {
+            logger.NoneEventsWereHandled(nameof(RetryFailedPartitionJob));
+            return;
+        }
+        await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>

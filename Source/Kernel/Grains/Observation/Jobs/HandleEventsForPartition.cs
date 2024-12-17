@@ -5,7 +5,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -77,15 +76,7 @@ public class HandleEventsForPartition(
 
             if (request.ObserverSubscription.IsSubscribed)
             {
-                var key = new ObserverSubscriberKey(
-                    request.ObserverKey.ObserverId,
-                    request.ObserverKey.EventStore,
-                    request.ObserverKey.Namespace,
-                    request.ObserverKey.EventSequenceId,
-                    _eventSourceId,
-                    request.ObserverSubscription.SiloAddress.ToParsableString());
-
-                _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, key) as IObserverSubscriber)!;
+                _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, request.ToObserverSubscriberKey()) as IObserverSubscriber)!;
                 logger.SuccessfullyPrepared(request.Partition);
                 return Task.FromResult(Result.Success<JobStepPrepareStartError>());
             }
