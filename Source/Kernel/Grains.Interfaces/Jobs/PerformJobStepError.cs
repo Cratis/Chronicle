@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// <param name="ErrorMessages">The error messages.</param>
 /// <param name="ExceptionStackTrace">The optional exception stack trace.</param>
 /// <param name="Cancelled">Whether the job step was cancelled.</param>
+[GenerateSerializer]
 public record PerformJobStepError(object? PartialResult, IEnumerable<string>? ErrorMessages, string? ExceptionStackTrace, bool Cancelled)
 {
     static readonly IEnumerable<string> _cancelledErrorMessage = ["Job step task was cancelled"];
