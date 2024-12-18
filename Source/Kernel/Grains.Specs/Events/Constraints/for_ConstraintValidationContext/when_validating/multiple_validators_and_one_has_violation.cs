@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Grains.Events.Constraints.for_ConstraintValidationContext.when_validating;
 
-public class multiple_validators_and_one_has_violation : given.a_constraint_validation_context_with_two_validators
+public class multiple_validators_and_one_has_violation : given.a_constraint_validation_context_with_two_validators_that_are_index_updaters
 {
     ConstraintValidationResult _result;
     ConstraintViolation _violation;

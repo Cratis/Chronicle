@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Grains.Events.Constraints.for_ConstraintValidationContext.when_validating;
 
-public class multiple_validators_that_have_no_violations : given.a_constraint_validation_context_with_two_validators
+public class multiple_validators_that_have_no_violations : given.a_constraint_validation_context_with_two_validators_that_are_index_updaters
 {
     ConstraintValidationResult _result;
 

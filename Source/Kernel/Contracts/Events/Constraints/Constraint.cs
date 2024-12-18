@@ -33,6 +33,6 @@ public class Constraint
     /// <summary>
     /// Gets or sets the definition of the constraint.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(4)]
     public OneOf<UniqueConstraintDefinition, UniqueEventTypeConstraintDefinition> Definition { get; set; }
 }
