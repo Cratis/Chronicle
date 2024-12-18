@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grains.Events.Constraints;
 
 namespace Cratis.Chronicle.Services.Events.Constraints;
@@ -19,7 +18,7 @@ public static class ConstraintViolationConverters
     public static Contracts.Events.Constraints.ConstraintViolation ToContract(this ConstraintViolation violation) =>
         new()
         {
-            EventType = violation.EventType.ToContract(),
+            EventTypeId = violation.EventTypeId,
             SequenceNumber = violation.SequenceNumber,
             ConstraintType = (Contracts.Events.Constraints.ConstraintType)violation.ConstraintType,
             ConstraintName = violation.ConstraintName,

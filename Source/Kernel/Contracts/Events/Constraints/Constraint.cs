@@ -25,6 +25,12 @@ public class Constraint
     public ConstraintType Type { get; set; }
 
     /// <summary>
+    /// Gets or sets the event type id that removes the constraint.
+    /// </summary>
+    [ProtoMember(3)]
+    public string? RemovedWith { get; set; }
+
+    /// <summary>
     /// Gets or sets the definition of the constraint.
     /// </summary>
     [ProtoMember(3)]

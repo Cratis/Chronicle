@@ -15,7 +15,7 @@ public static class ConstraintViolationConverters
     /// <returns>Converted <see cref="Contracts.Events.Constraints.ConstraintViolation"/>.</returns>
     public static ConstraintViolation ToClient(this Contracts.Events.Constraints.ConstraintViolation violation) =>
         new(
-            violation.EventType.ToClient(),
+            violation.EventTypeId,
             violation.SequenceNumber,
             violation.ConstraintName,
             violation.Message,

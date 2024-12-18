@@ -6,7 +6,6 @@ namespace Cratis.Chronicle.Events.Constraints;
 public class when_converting_to_client : Specification
 {
     const string EventType = "Some event type";
-    const uint Generation = 0;
     const ulong SequenceNumber = 42;
     const string ConstraintName = "Some constraint name";
     const string Message = "Some message";
@@ -19,7 +18,7 @@ public class when_converting_to_client : Specification
 
     void Because() => result = new Contracts.Events.Constraints.ConstraintViolation
     {
-        EventType = new Contracts.Events.EventType { Id = EventType, Generation = Generation },
+        EventTypeId = EventType,
         SequenceNumber = SequenceNumber,
         ConstraintName = ConstraintName,
         Message = Message,
@@ -30,7 +29,7 @@ public class when_converting_to_client : Specification
         }
     }.ToClient();
 
-    [Fact] void should_convert_event_type() => result.EventType.Id.Value.ShouldEqual(EventType);
+    [Fact] void should_convert_event_type() => result.EventTypeId.Value.ShouldEqual(EventType);
     [Fact] void should_convert_sequence_number() => result.SequenceNumber.Value.ShouldEqual(SequenceNumber);
     [Fact] void should_convert_constraint_name() => result.ConstraintName.Value.ShouldEqual(ConstraintName);
     [Fact] void should_convert_message() => result.Message.Value.ShouldEqual(Message);

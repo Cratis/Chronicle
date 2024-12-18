@@ -113,7 +113,7 @@ public static class JsonSchemaExtensions
     /// <param name="schema"><see cref="JsonSchema"/> to reset for.</param>
     public static void ResetFlattenedProperties(this JsonSchema schema)
     {
-        schema.ExtensionData!.Remove(FlattenedProperties);
+        schema.ExtensionData?.Remove(FlattenedProperties);
     }
 
     /// <summary>

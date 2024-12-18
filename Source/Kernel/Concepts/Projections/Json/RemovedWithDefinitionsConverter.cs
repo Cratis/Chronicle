@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Json;
 public class RemovedWithDefinitionsConverter : DictionaryJsonConverter<EventType, RemovedWithDefinition>
 {
     /// <inheritdoc/>
-    protected override EventType GetKeyFromString(string key) => new(key, 1);
+    protected override EventType GetKeyFromString(string key) => new(key, EventTypeGeneration.First, false);
 
     /// <inheritdoc/>
     protected override string GetKeyString(EventType key) => key.Id.ToString();

@@ -15,7 +15,7 @@ public class UniqueConstraintEventDefinition
     /// Gets or sets the event type for the unique constraint.
     /// </summary>
     [ProtoMember(1)]
-    public EventType EventType { get; set; }
+    public string EventTypeId { get; set; }
 
     /// <summary>
     /// Gets or sets the property to use for the unique constraint.

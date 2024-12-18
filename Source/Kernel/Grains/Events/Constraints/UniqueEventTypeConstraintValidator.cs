@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints;
 
@@ -20,12 +19,12 @@ public class UniqueEventTypeConstraintValidator(
     public IConstraintDefinition Definition => definition;
 
     /// <inheritdoc/>
-    public bool CanValidate(ConstraintValidationContext context) => definition.EventType == context.EventType;
+    public bool CanValidate(ConstraintValidationContext context) => definition.EventTypeId == context.EventTypeId;
 
     /// <inheritdoc/>
     public async Task<ConstraintValidationResult> Validate(ConstraintValidationContext context)
     {
-        var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventType, context.EventSourceId);
+        var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventTypeId, context.EventSourceId);
         return isAllowed ?
             ConstraintValidationResult.Success :
             new()
@@ -35,11 +34,8 @@ public class UniqueEventTypeConstraintValidator(
                     this.CreateViolation(
                         context,
                         sequenceNumber,
-                        $"Event '{context.EventType}' with event source id '{context.EventSourceId}' violated a unique event type constraint on sequence number {sequenceNumber}")
+                        $"Event '{context.EventTypeId}' with event source id '{context.EventSourceId}' violated a unique event type constraint on sequence number {sequenceNumber}")
                 ]
             };
     }
-
-    /// <inheritdoc/>
-    public Task Update(ConstraintValidationContext context, EventSequenceNumber eventSequenceNumber) => Task.CompletedTask;
 }

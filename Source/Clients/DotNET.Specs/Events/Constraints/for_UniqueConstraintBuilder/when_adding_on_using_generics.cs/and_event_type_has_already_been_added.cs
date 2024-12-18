@@ -9,7 +9,7 @@ public class and_event_type_has_already_been_added : given.a_unique_constraint_b
 
     void Establish()
     {
-        _eventTypes.GetEventTypeFor(typeof(EventWithStringProperty)).Returns(_eventType);
+        _eventTypes.GetEventTypeFor(typeof(EventWithStringProperty)).Returns(new EventType(nameof(EventWithStringProperty), EventTypeGeneration.First));
         _constraintBuilder.On<EventWithStringProperty>(e => e.SomeProperty);
     }
 
