@@ -7,5 +7,11 @@ public class a_constraint_validation_context_with_two_validators_that_are_index_
 {
     protected ConstraintValidationContext _context;
 
-    void Establish() => _context = new([_firstValidator, _secondValidator], _eventSourceId, _eventType.Id, _content);
+    void Establish()
+    {
+        _firstValidator.CanValidate(Arg.Any<ConstraintValidationContext>()).Returns(true);
+        _secondValidator.CanValidate(Arg.Any<ConstraintValidationContext>()).Returns(true);
+
+        _context = new([_firstValidator, _secondValidator], _eventSourceId, _eventType.Id, _content);
+    }
 }
