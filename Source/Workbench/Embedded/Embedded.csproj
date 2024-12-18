@@ -4,12 +4,16 @@
         <RootNamespace>Cratis.Chronicle.Workbench.Embedded</RootNamespace>
         <ResourceNamespace>$(RootNamespace).Files</ResourceNamespace>
 
-        <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
 
         <FrontendSourceDir>$(MSBuildThisFileDirectory)../Web</FrontendSourceDir>
         <FrontendBuildDir>$(MSBuildThisFileDirectory)../Web/wwwroot</FrontendBuildDir>
         <FrontendSourcePattern>["**/*.tsx", "**/*.ts"]</FrontendSourcePattern>
         <FrontendHashFile>$(MSBuildThisFileDirectory)/.frontend_hash</FrontendHashFile>
+
+        <EmbedFiles Condition="Exists($(FrontendBuildDir))">true</EmbedFiles>
+        <EmbedFiles Condition="!Exists($(FrontendBuildDir))">false</EmbedFiles>
+
+        <GenerateEmbeddedFilesManifest Condition="$(EmbedFiles) == 'true'">true</GenerateEmbeddedFilesManifest>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)'=='Debug'">
@@ -43,7 +47,7 @@
     </Target>
 
     <ItemGroup>
-        <EmbeddedResource Include="$(FrontendBuildDir)/**/*">
+        <EmbeddedResource Include="$(FrontendBuildDir)/**/*" Condition="$(EmbedFiles) == 'true'">
             <LogicalName>$(ResourceNamespace)/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
         </EmbeddedResource>
     </ItemGroup>
