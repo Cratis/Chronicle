@@ -11,7 +11,7 @@ public class and_event_type_for_event_source_id_is_allowed : given.a_unique_even
 
     void Establish()
     {
-        _storage.IsAllowed(_eventType, _context.EventSourceId).Returns((true, EventSequenceNumber.First));
+        _storage.IsAllowed(_eventType.Id, _context.EventSourceId).Returns((true, EventSequenceNumber.First));
     }
 
     async Task Because() => _result = await _validator.Validate(_context);

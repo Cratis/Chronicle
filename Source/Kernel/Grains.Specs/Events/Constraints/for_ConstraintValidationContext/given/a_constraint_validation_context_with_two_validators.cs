@@ -24,6 +24,6 @@ public class a_constraint_validation_context_with_two_validators : Specification
         _eventType = new("SomeEvent", 1);
         _content = new();
 
-        _context = new([_firstValidator, _secondValidator], _eventSourceId, _eventType, _content);
+        _context = new([_firstValidator, _secondValidator], _eventSourceId, _eventType.Id, _content);
     }
 }

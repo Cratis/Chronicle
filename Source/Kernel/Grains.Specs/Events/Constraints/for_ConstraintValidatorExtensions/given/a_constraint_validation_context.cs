@@ -18,7 +18,7 @@ public class a_constraint_validation_context : Specification
     void Establish()
     {
         _eventType = new("Some Event", 1);
-        _context = new ConstraintValidationContext([], EventSourceId.New(), _eventType, new());
+        _context = new ConstraintValidationContext([], EventSourceId.New(), _eventType.Id, new());
         _sequenceNumber = 42;
         _message = "Some message";
         _details = [];

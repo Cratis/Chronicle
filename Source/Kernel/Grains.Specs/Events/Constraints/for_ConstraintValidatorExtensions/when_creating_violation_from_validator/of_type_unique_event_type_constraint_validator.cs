@@ -12,12 +12,12 @@ public class of_type_unique_event_type_constraint_validator : given.a_constraint
 
     IConstraintValidator _validator;
 
-    void Establish() => _validator = new UniqueEventTypeConstraintValidator(new UniqueEventTypeConstraintDefinition(ConstraintName, _eventType), Substitute.For<IUniqueEventTypesConstraintsStorage>());
+    void Establish() => _validator = new UniqueEventTypeConstraintValidator(new UniqueEventTypeConstraintDefinition(ConstraintName, _eventType.Id), Substitute.For<IUniqueEventTypesConstraintsStorage>());
 
     void Because() => _result = _validator.CreateViolation(_context, _sequenceNumber, _message, _details);
 
     [Fact] void should_return_a_violation() => _result.ShouldNotBeNull();
-    [Fact] void should_have_the_correct_event_type() => _result.EventType.ShouldEqual(_context.EventType);
+    [Fact] void should_have_the_correct_event_type() => _result.EventTypeId.ShouldEqual(_context.EventTypeId);
     [Fact] void should_have_the_correct_sequence_number() => _result.SequenceNumber.ShouldEqual(_sequenceNumber);
     [Fact] void should_have_the_correct_constraint_type() => _result.ConstraintType.ShouldEqual(ConstraintType.UniqueEventType);
     [Fact] void should_have_the_correct_constraint_name() => _result.ConstraintName.Value.ShouldEqual(ConstraintName);

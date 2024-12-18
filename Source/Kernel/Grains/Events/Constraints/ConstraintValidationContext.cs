@@ -13,7 +13,6 @@ namespace Cratis.Chronicle.Grains.Events.Constraints;
 public record ConstraintValidationContext
 {
     readonly IEnumerable<IUpdateConstraintIndex> _updaters;
-    readonly IEnumerable<IConstraintValidator> _validators;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConstraintValidationContext"/> class.
@@ -32,7 +31,7 @@ public record ConstraintValidationContext
         EventTypeId = eventTypeId;
         Content = content;
         _updaters = validators.OfType<IHaveUpdateConstraintIndex>().Select(v => v.GetUpdateFor(this)).ToArray();
-        _validators = validators.Where(_ => _.CanValidate(this)).ToArray();
+        Validators = validators.Where(_ => _.CanValidate(this)).ToArray();
     }
 
     /// <summary>
@@ -51,12 +50,17 @@ public record ConstraintValidationContext
     public ExpandoObject Content { get; }
 
     /// <summary>
+    /// Gets the <see cref="IConstraintValidator">validators</see> involved in the context.
+    /// </summary>
+    public IEnumerable<IConstraintValidator> Validators { get; }
+
+    /// <summary>
     /// Perform validation on a <see cref="EventToValidateForConstraints"/>.
     /// </summary>
     /// <returns><see cref="ConstraintValidationResult"/> holding the result of validation.</returns>
     public async Task<ConstraintValidationResult> Validate()
     {
-        var results = await Task.WhenAll(_validators.Select(v => v.Validate(this)));
+        var results = await Task.WhenAll(Validators.Select(v => v.Validate(this)));
         var violations = results.Where(r => !r.IsValid).SelectMany(r => r.Violations);
         return new()
         {

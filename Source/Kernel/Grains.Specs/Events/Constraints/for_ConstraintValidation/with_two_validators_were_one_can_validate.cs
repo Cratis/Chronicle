@@ -23,10 +23,10 @@ public class with_two_validators_were_one_can_validate : given.constraint_valida
         _content = new ExpandoObject();
     }
 
-    void Because() => _result = _constraintValidation.Establish(_eventSourceId, _eventType, _content);
+    void Because() => _result = _constraintValidation.Establish(_eventSourceId, _eventType.Id, _content);
 
     [Fact] void should_have_event_source_id() => _result.EventSourceId.ShouldEqual(_eventSourceId);
-    [Fact] void should_have_event_type() => _result.EventType.ShouldEqual(_eventType);
+    [Fact] void should_have_event_type() => _result.EventTypeId.ShouldEqual(_eventType.Id);
     [Fact] void should_have_content() => _result.Content.ShouldEqual(_content);
     [Fact] void should_have_both_validators() => _result.Validators.ShouldContainOnly([_secondValidator]);
 }

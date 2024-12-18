@@ -15,9 +15,9 @@ public class and_it_supports_event_type : given.a_unique_event_type_constraint_v
     EventType _eventType = new("SomeEvent", 1);
 
 
-    void Establish() => _context = new([], EventSourceId.New(), _eventType, new());
+    void Establish() => _context = new([], EventSourceId.New(), _eventType.Id, new());
 
-    protected override UniqueEventTypeConstraintDefinition Definition => new("SomeConstraint", _eventType);
+    protected override UniqueEventTypeConstraintDefinition Definition => new("SomeConstraint", _eventType.Id);
 
     void Because() => result = _validator.CanValidate(_context);
 

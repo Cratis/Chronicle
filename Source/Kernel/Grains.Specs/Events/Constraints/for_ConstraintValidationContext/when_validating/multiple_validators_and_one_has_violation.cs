@@ -15,7 +15,7 @@ public class multiple_validators_and_one_has_violation : given.a_constraint_vali
     {
         _firstValidator.Validate(Arg.Any<ConstraintValidationContext>()).Returns(new ConstraintValidationResult());
 
-        _violation = new(_eventType, 42, ConstraintType.Unknown, "The Constraint", "Something went wrong", []);
+        _violation = new(_eventType.Id, 42, ConstraintType.Unknown, "The Constraint", "Something went wrong", []);
         _secondValidator.Validate(Arg.Any<ConstraintValidationContext>()).Returns(ConstraintValidationResult.Failed([_violation]));
     }
 
