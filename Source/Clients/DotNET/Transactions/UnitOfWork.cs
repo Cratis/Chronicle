@@ -101,20 +101,6 @@ public class UnitOfWork(
     }
 
     /// <inheritdoc/>
-    public Task Reset()
-    {
-        _events.Clear();
-        _constraintViolations.Clear();
-        _appendErrors.Clear();
-        _isCommitted = false;
-        _isRolledBack = false;
-        _lastCommittedEventSequenceNumber = null;
-        _currentSequenceNumber = EventSequenceNumber.First;
-
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
     public void OnCompleted(Action<IUnitOfWork> callback) => _onCompleted = callback;
 
     /// <inheritdoc/>
