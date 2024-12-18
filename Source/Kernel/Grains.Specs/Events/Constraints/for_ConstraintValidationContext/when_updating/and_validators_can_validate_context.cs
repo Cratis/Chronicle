@@ -3,11 +3,19 @@
 
 using Cratis.Chronicle.Concepts.Events;
 
-namespace Cratis.Chronicle.Grains.Events.Constraints.for_ConstraintValidationContext;
+namespace Cratis.Chronicle.Grains.Events.Constraints.for_ConstraintValidationContext.when_updating;
 
-public class when_updating : given.a_constraint_validation_context_with_two_validators_that_are_index_updaters
+public class and_validators_can_validate_context : given.two_validators_that_are_index_updaters
 {
     static readonly EventSequenceNumber _sequenceNumber = 42;
+    ConstraintValidationContext _context;
+
+    void Establish()
+    {
+        _firstValidator.CanValidate(Arg.Any<ConstraintValidationContext>()).Returns(true);
+        _secondValidator.CanValidate(Arg.Any<ConstraintValidationContext>()).Returns(true);
+        _context = new([_firstValidator, _secondValidator], _eventSourceId, _eventType.Id, _content);
+    }
 
     async Task Because() => await _context.Update(_sequenceNumber);
 
