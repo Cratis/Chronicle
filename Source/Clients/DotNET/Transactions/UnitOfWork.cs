@@ -70,7 +70,6 @@ public class UnitOfWork(
     public async Task Commit()
     {
         ThrowIfUnitOfWorkIsCompleted();
-        _isCommitted = true;
 
         foreach (var (eventSequenceId, events) in _events)
         {
@@ -85,6 +84,7 @@ public class UnitOfWork(
             _lastCommittedEventSequenceNumber = result.SequenceNumbers.OrderBy(_ => _.Value).LastOrDefault();
         }
 
+        _isCommitted = true;
         _onCompleted(this);
     }
 
@@ -97,6 +97,20 @@ public class UnitOfWork(
         _constraintViolations.Clear();
 
         _onCompleted(this);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task Reset()
+    {
+        _events.Clear();
+        _constraintViolations.Clear();
+        _appendErrors.Clear();
+        _isCommitted = false;
+        _isRolledBack = false;
+        _lastCommittedEventSequenceNumber = null;
+        _currentSequenceNumber = EventSequenceNumber.First;
+
         return Task.CompletedTask;
     }
 
