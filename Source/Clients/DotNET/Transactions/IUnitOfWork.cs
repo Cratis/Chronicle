@@ -72,12 +72,6 @@ public interface IUnitOfWork : IDisposable
     Task Rollback();
 
     /// <summary>
-    /// Reset the <see cref="IUnitOfWork"/> to its initial state.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    Task Reset();
-
-    /// <summary>
     /// Set callback to be called when completed.
     /// </summary>
     /// <param name="callback">The callback to call.</param>
