@@ -30,8 +30,8 @@ public record ConstraintValidationContext
         EventSourceId = eventSourceId;
         EventTypeId = eventTypeId;
         Content = content;
+        _updaters = validators.OfType<IHaveUpdateConstraintIndex>().Select(v => v.GetUpdateFor(this)).ToArray();
         Validators = validators.Where(_ => _.CanValidate(this)).ToArray();
-        _updaters = Validators.OfType<IHaveUpdateConstraintIndex>().Select(v => v.GetUpdateFor(this)).ToArray();
     }
 
     /// <summary>
