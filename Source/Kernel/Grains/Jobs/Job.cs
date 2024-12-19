@@ -628,11 +628,14 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             {
                 return onCompletedError;
             }
-            StatusChanged(State.Progress.FailedSteps > 0 ? JobStatus.CompletedWithFailures : JobStatus.CompletedSuccessfully);
             if (RemoveAfterCompleted)
             {
                 await ClearStateAsync();
                 cleared = true;
+            }
+            else
+            {
+                StatusChanged(State.Progress.FailedSteps > 0 ? JobStatus.CompletedWithFailures : JobStatus.CompletedSuccessfully);
             }
 
             DeactivateOnIdle();
