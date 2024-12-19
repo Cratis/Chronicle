@@ -9,6 +9,6 @@ public class UniqueUserConstraint : IConstraint
 {
     public void Define(IConstraintBuilder builder) => builder
         .Unique(b => b
-            .On<UserOnboardingStarted>(e => e.UserName)
+            .On<UserOnboardingStarted>(e => e.UserName, e => e.Name)
             .RemovedWith<UserRemoved>());
 }

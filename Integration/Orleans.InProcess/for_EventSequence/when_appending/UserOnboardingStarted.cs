@@ -6,4 +6,4 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
 
 [EventType]
-public record UserOnboardingStarted(string UserName);
+public record UserOnboardingStarted(string UserName, string Name);
