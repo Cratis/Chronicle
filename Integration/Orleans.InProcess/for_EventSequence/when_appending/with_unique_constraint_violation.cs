@@ -13,7 +13,7 @@ public class with_unique_constraint_violation(context context) : Given<context>(
     public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueUserConstraint)];
-        public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted)];
+        public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted), typeof(UserRemoved)];
 
         public UserOnboardingStarted Event { get; private set; }
 
