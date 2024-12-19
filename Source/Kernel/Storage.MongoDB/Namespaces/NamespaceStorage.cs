@@ -23,7 +23,7 @@ public class NamespaceStorage(
     public async Task Ensure(EventStoreNamespaceName name)
     {
         var result = await GetCollection().FindAsync(Builders<MongoDBNamespace>.Filter.Eq(_ => _.Name, (string)name));
-        if (!result.Any())
+        if (!await result.AnyAsync())
         {
             await Create(name, DateTimeOffset.UtcNow);
         }

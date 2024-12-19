@@ -390,7 +390,7 @@ public class EventSequenceStorage(
 
         var filter = Builders<Event>.Filter.And([.. filters]);
         var highest = await collection.Find(filter)
-                                      .SortByAscendingSequenceNumber()
+                                      .SortByDescendingSequenceNumber()
                                       .Limit(1)
                                       .SingleOrDefaultAsync()
                                       .ConfigureAwait(false);

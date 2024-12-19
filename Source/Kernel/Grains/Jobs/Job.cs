@@ -59,9 +59,9 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     protected JobKey JobKey { get; private set; } = JobKey.NotSet;
 
     /// <summary>
-    /// Gets a value indicating whether to clean up data after the job has completed.
+    /// Gets a value indicating whether to keep the persisted data after the job has completed.
     /// </summary>
-    protected virtual bool RemoveAfterCompleted => false;
+    protected virtual bool KeepAfterCompleted => false;
 
     /// <summary>
     /// Gets the job as a Grain reference.
@@ -628,11 +628,14 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             {
                 return onCompletedError;
             }
-            StatusChanged(State.Progress.FailedSteps > 0 ? JobStatus.CompletedWithFailures : JobStatus.CompletedSuccessfully);
-            if (RemoveAfterCompleted)
+            if (!KeepAfterCompleted)
             {
                 await ClearStateAsync();
                 cleared = true;
+            }
+            else
+            {
+                StatusChanged(State.Progress.FailedSteps > 0 ? JobStatus.CompletedWithFailures : JobStatus.CompletedSuccessfully);
             }
 
             DeactivateOnIdle();
