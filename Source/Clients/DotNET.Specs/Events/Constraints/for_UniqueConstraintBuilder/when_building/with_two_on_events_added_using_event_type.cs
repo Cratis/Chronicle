@@ -16,17 +16,19 @@ public class with_two_on_events_added_using_event_type : given.a_unique_constrai
     {
         _firstEventType = new EventType(nameof(EventWithStringProperty), EventTypeGeneration.First);
         _eventTypes.GetSchemaFor(_firstEventType.Id).Returns(_generator.Generate(typeof(EventWithStringProperty)));
-        _constraintBuilder.On(_firstEventType, nameof(EventWithStringProperty.SomeProperty));
+        _constraintBuilder.On(_firstEventType, nameof(EventWithStringProperty.SomeProperty), nameof(EventWithStringProperty.SomeOtherProperty));
         _secondEventType = new EventType(nameof(AnotherEventWithStringProperty), EventTypeGeneration.First);
         _eventTypes.GetSchemaFor(_secondEventType.Id).Returns(_generator.Generate(typeof(AnotherEventWithStringProperty)));
-        _constraintBuilder.On(_secondEventType, nameof(AnotherEventWithStringProperty.SomeProperty));
+        _constraintBuilder.On(_secondEventType, nameof(AnotherEventWithStringProperty.SomeProperty), nameof(AnotherEventWithStringProperty.SomeOtherProperty));
     }
 
     void Because() => _result = _constraintBuilder.Build() as UniqueConstraintDefinition;
 
     [Fact] void should_have_two_event_types_and_properties() => _result.EventsWithProperties.Count().ShouldEqual(2);
     [Fact] void should_have_first_event_type() => _result.EventsWithProperties.First().EventTypeId.ShouldEqual(_firstEventType.Id);
-    [Fact] void should_have_first_event_property() => _result.EventsWithProperties.First().Property.ShouldEqual(nameof(EventWithStringProperty.SomeProperty).ToCamelCase());
+    [Fact] void should_have_first_event_first_property() => _result.EventsWithProperties.First().Properties.ToArray()[0].ShouldEqual(nameof(EventWithStringProperty.SomeProperty).ToCamelCase());
+    [Fact] void should_have_first_event_second_property() => _result.EventsWithProperties.First().Properties.ToArray()[1].ShouldEqual(nameof(EventWithStringProperty.SomeOtherProperty).ToCamelCase());
     [Fact] void should_have_second_event_type() => _result.EventsWithProperties.Last().EventTypeId.ShouldEqual(_secondEventType.Id);
-    [Fact] void should_have_second_event_property() => _result.EventsWithProperties.Last().Property.ShouldEqual(nameof(AnotherEventWithStringProperty.SomeProperty).ToCamelCase());
+    [Fact] void should_have_second_event_first_property() => _result.EventsWithProperties.Last().Properties.ToArray()[0].ShouldEqual(nameof(AnotherEventWithStringProperty.SomeProperty).ToCamelCase());
+    [Fact] void should_have_second_event_second_property() => _result.EventsWithProperties.Last().Properties.ToArray()[1].ShouldEqual(nameof(AnotherEventWithStringProperty.SomeOtherProperty).ToCamelCase());
 }

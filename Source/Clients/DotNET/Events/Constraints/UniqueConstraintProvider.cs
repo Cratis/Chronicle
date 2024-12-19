@@ -36,10 +36,11 @@ public class UniqueConstraintProvider(IClientArtifactsProvider clientArtifactsPr
             builder.Unique(unique =>
             {
                 unique.WithName(constraint.Key);
+                var propertyNames = constraint.Select(_ => _.Property.Name).ToArray();
 
                 foreach (var constrainedProperty in constraint)
                 {
-                    unique.On(eventTypes.GetEventTypeFor(constrainedProperty.EventType), constrainedProperty.Property.Name);
+                    unique.On(eventTypes.GetEventTypeFor(constrainedProperty.EventType), [constrainedProperty.Property.Name]);
                 }
             });
             constraints.AddRange(builder.Build());

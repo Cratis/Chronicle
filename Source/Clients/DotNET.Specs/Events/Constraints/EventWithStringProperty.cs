@@ -6,4 +6,5 @@ namespace Cratis.Chronicle.Events.Constraints;
 public record EventWithStringProperty
 {
     public string SomeProperty { get; init; } = string.Empty;
+    public string SomeOtherProperty { get; init; } = string.Empty;
 }

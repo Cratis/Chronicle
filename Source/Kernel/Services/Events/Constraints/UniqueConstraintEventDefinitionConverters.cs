@@ -16,5 +16,5 @@ public static class UniqueConstraintEventDefinitionConverters
     /// <param name="definition"><see cref="Contracts.Events.Constraints.UniqueConstraintEventDefinition"/> to convert from.</param>
     /// <returns>Converted <see cref="UniqueConstraintEventDefinition"/>.</returns>
     public static UniqueConstraintEventDefinition ToChronicle(this Contracts.Events.Constraints.UniqueConstraintEventDefinition definition) =>
-        new(definition.EventTypeId, definition.Property);
+        new(definition.EventTypeId, definition.Properties);
 }
