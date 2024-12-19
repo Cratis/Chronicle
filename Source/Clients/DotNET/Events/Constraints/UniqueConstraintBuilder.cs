@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
 using Cratis.Strings;
+using NJsonSchema;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -16,8 +17,10 @@ namespace Cratis.Chronicle.Events.Constraints;
 public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = default) : IUniqueConstraintBuilder
 {
     readonly List<UniqueConstraintEventDefinition> _eventTypesAndProperties = [];
+    readonly Dictionary<EventTypeId, JsonSchema> _eventTypeSchemas = [];
     ConstraintName? _name;
     ConstraintViolationMessageProvider? _messageProvider;
+    EventTypeId? _removedWith;
 
     /// <inheritdoc/>
     public IUniqueConstraintBuilder On<TEventType>(Expression<Func<TEventType, object>> property)
@@ -34,7 +37,8 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
         ThrowIfPropertyIsMissing(eventType, property);
         ThrowIfPropertyTypeMismatch(eventType, property);
 
-        _eventTypesAndProperties.Add(new UniqueConstraintEventDefinition(eventType, eventTypes.GetSchemaFor(eventType.Id), property));
+        _eventTypesAndProperties.Add(new UniqueConstraintEventDefinition(eventType.Id, property));
+        _eventTypeSchemas[eventType.Id] = eventTypes.GetSchemaFor(eventType.Id);
         return this;
     }
 
@@ -56,6 +60,17 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
     }
 
     /// <inheritdoc/>
+    public IUniqueConstraintBuilder RemovedWith<TEventType>() =>
+        RemovedWith(eventTypes.GetEventTypeFor(typeof(TEventType)));
+
+    /// <inheritdoc/>
+    public IUniqueConstraintBuilder RemovedWith(EventType eventType)
+    {
+        _removedWith = eventType.Id;
+        return this;
+    }
+
+    /// <inheritdoc/>
     public IConstraintDefinition Build()
     {
         ThrowIfNoEventTypesAdded();
@@ -65,7 +80,11 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
         ConstraintViolationMessageProvider defaultMessageProvider = _ => string.Empty;
         var messageProvider = _messageProvider ?? defaultMessageProvider;
 
-        return new UniqueConstraintDefinition(name, messageProvider, [.. _eventTypesAndProperties]);
+        return new UniqueConstraintDefinition(
+            name,
+            messageProvider,
+            [.. _eventTypesAndProperties],
+            _removedWith);
     }
 
     void ThrowIfNoEventTypesAdded()
@@ -88,7 +107,7 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
 
     void ThrowIfEventTypeAlreadyAdded(EventType eventType, string property)
     {
-        if (_eventTypesAndProperties.Exists(_ => _.EventType == eventType))
+        if (_eventTypesAndProperties.Exists(_ => _.EventTypeId == eventType.Id))
         {
             throw new EventTypeAlreadyAddedToUniqueConstraint(string.Empty, eventType, property);
         }
@@ -98,7 +117,8 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
     {
         var schema = eventTypes.GetSchemaFor(eventType.Id);
         var propertySchema = schema.GetFlattenedProperties().First(p => p.Name == property);
-        if (_eventTypesAndProperties.Exists(_ => _.Schema.GetFlattenedProperties().First(p => p.Name == _.Property).Type != propertySchema.Type))
+
+        if (_eventTypesAndProperties.Exists(_ => _eventTypeSchemas[_.EventTypeId].GetFlattenedProperties().First(p => p.Name == _.Property).Type != propertySchema.Type))
         {
             throw new PropertyTypeMismatchInUniqueConstraint(eventType, property);
         }

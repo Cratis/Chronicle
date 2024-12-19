@@ -24,6 +24,11 @@ public class EventSchemaMongoDB
     public uint Generation { get; init; } = EventTypeGeneration.First.Value;
 
     /// <summary>
+    /// Gets the tombstone part of the <see cref="EventType"/>>.
+    /// </summary>
+    public bool Tombstone { get; init; }
+
+    /// <summary>
     /// Gets the actual schema as JSON.
     /// </summary>
     public string Schema { get; init; } = string.Empty;

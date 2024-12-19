@@ -12,8 +12,8 @@ namespace Cratis.Chronicle.Contracts.Events.Constraints;
 public class UniqueEventTypeConstraintDefinition
 {
     /// <summary>
-    /// Gets or sets the event type for the unique constraint.
+    /// Gets or sets the event type identifier for the unique constraint.
     /// </summary>
     [ProtoMember(1)]
-    public EventType EventType { get; set; }
+    public string EventTypeId { get; set; }
 }

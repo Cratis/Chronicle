@@ -12,7 +12,7 @@ public class with_message_factory : given.a_unique_constraint_builder_with_owner
 
     void Establish()
     {
-        _violation = new ConstraintViolation(_eventType, EventSequenceNumber.First, "Some Constraint", "Error", []);
+        _violation = new ConstraintViolation(_eventTypeId, EventSequenceNumber.First, "Some Constraint", "Error", []);
         _constraintBuilder.On(_eventType, nameof(EventWithStringProperty.SomeProperty));
         _constraintBuilder.WithMessage(_ => _message);
     }

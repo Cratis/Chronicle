@@ -37,6 +37,20 @@ public interface IUniqueConstraintBuilder
     IUniqueConstraintBuilder On(EventType eventType, string property);
 
     /// <summary>
+    /// Indicate an event that will remove the unique constraint.
+    /// </summary>
+    /// <typeparam name="TEventType">The <see cref="EventType"/> that removes the constraint.</typeparam>
+    /// <returns>Builder for continuation.</returns>
+    IUniqueConstraintBuilder RemovedWith<TEventType>();
+
+    /// <summary>
+    /// Indicate an event that will remove the unique constraint.
+    /// </summary>
+    /// <param name="eventType">The <see cref="EventType"/> that would remove the constraint.</param>
+    /// <returns>The builder for continuation.</returns>
+    IUniqueConstraintBuilder RemovedWith(EventType eventType);
+
+    /// <summary>
     /// Specifies a message to use when the unique constraint is violated.
     /// </summary>
     /// <param name="message">Message to use.</param>

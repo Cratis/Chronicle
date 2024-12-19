@@ -20,6 +20,6 @@ public class and_value_is_not_allowed : given.a_unique_constraint_validator_with
 
     [Fact] void should_not_be_valid() => _result.IsValid.ShouldBeFalse();
     [Fact] void should_have_violations() => _result.Violations.ShouldNotBeEmpty();
-    [Fact] void should_have_violation_with_correct_event_type() => _result.Violations[0].EventType.ShouldEqual(_context.EventType);
+    [Fact] void should_have_violation_with_correct_event_type() => _result.Violations[0].EventTypeId.ShouldEqual(_context.EventTypeId);
     [Fact] void should_have_violation_with_correct_event_sequence_number() => _result.Violations[0].SequenceNumber.ShouldEqual(43U);
 }

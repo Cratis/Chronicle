@@ -38,7 +38,7 @@ public class when_creating_with_different_constraint_definition_types : Specific
         _eventStoreStorage.Constraints.Returns(_constraintsStorage);
         _constraintsStorage.GetDefinitions().Returns([
             new UniqueConstraintDefinition("SomeUniqueConstraint", []),
-            new UniqueEventTypeConstraintDefinition("SomeUniqueEventTypeConstraint", new("SomeEventType", 1))
+            new UniqueEventTypeConstraintDefinition("SomeUniqueEventTypeConstraint", "SomeEventType")
         ]);
 
         _factory = new ConstraintValidationFactory(_storage);

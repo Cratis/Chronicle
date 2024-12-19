@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Events.Constraints;
@@ -148,21 +147,18 @@ public class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
-        var eventName = "[N/A]";
-
         try
         {
             var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-            eventName = eventSchema.Schema.GetDisplayName();
 
             var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
             var compliantEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
 
-            var constraintContext = _constraints!.Establish(eventSourceId, eventType, compliantEventAsExpandoObject);
+            var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject);
             var constraintValidationResult = await constraintContext.Validate();
             if (!constraintValidationResult.IsValid)
             {
-                _metrics?.ConstraintViolation(eventSourceId, eventName);
+                _metrics?.ConstraintViolation(eventSourceId, eventType.Id);
                 return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
             }
 
@@ -171,14 +167,13 @@ public class EventSequence(
             var identity = await IdentityStorage.GetFor(causedBy);
             do
             {
-                await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventName);
+                await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventType.Id);
                 var occurred = DateTimeOffset.UtcNow;
                 logger.Appending(
                     _eventSequenceKey.EventStore,
                     _eventSequenceKey.Namespace,
                     _eventSequenceId,
                     eventType,
-                    eventName,
                     eventSourceId,
                     State.SequenceNumber);
 
@@ -201,7 +196,7 @@ public class EventSequence(
             State.SequenceNumber = State.SequenceNumber.Next();
             await WriteStateAsync();
 
-            _metrics?.AppendedEvent(eventSourceId, eventName);
+            _metrics?.AppendedEvent(eventSourceId, eventType.Id);
             var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
             await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
             State.TailSequenceNumberPerEventType[eventType.Id] = State.SequenceNumber;
@@ -211,7 +206,7 @@ public class EventSequence(
         }
         catch (Exception ex)
         {
-            _metrics?.FailedAppending(eventSourceId, eventName);
+            _metrics?.FailedAppending(eventSourceId, eventType.Id);
             logger.ErrorAppending(
                 _eventSequenceKey.EventStore,
                 _eventSequenceKey.Namespace,
@@ -351,7 +346,6 @@ public class EventSequence(
             _eventSequenceKey.Namespace,
             _eventSequenceId,
             eventType,
-            eventName,
             eventSourceId,
             State.SequenceNumber);
         _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);

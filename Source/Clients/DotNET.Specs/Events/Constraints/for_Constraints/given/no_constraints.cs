@@ -8,7 +8,7 @@ public class no_constraints : Specification
     protected EventStoreName _eventStoreName = "SomeEventStore";
 
     protected IEventStore _eventStore;
-    protected IInstancesOf<ICanProvideConstraints> _constraintsProviders;
+    protected IEnumerable<ICanProvideConstraints> _constraintsProviders;
     protected ICanProvideConstraints _constraintsProvider;
     protected Constraints _constraints;
 
@@ -17,7 +17,7 @@ public class no_constraints : Specification
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.Name.Returns(_eventStoreName);
         _constraintsProvider = Substitute.For<ICanProvideConstraints>();
-        _constraintsProviders = new KnownInstancesOf<ICanProvideConstraints>([_constraintsProvider]);
+        _constraintsProviders = [_constraintsProvider];
         _constraints = new Constraints(_eventStore, _constraintsProviders);
     }
 }

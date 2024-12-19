@@ -18,7 +18,6 @@ namespace Cratis.Chronicle.Projections;
 public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectionBuilderFor<TModel>>, IProjectionBuilderFor<TModel>
 {
     readonly ProjectionId _identifier;
-    readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _schemaGenerator;
     EventSequenceId _eventSequenceId = EventSequenceId.Log;
     bool _isRewindable = true;
@@ -41,7 +40,6 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
         : base(eventTypes, schemaGenerator, jsonSerializerOptions, false)
     {
         _identifier = identifier;
-        _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
         _modelName = modelNameResolver.GetNameFor(typeof(TModel));
     }
@@ -79,10 +77,6 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
     {
         var modelType = typeof(TModel);
         var modelSchema = _schemaGenerator.Generate(modelType);
-        if (_eventTypes.HasFor(modelType))
-        {
-            modelSchema.SetEventType(_eventTypes.GetEventTypeFor(modelType));
-        }
 
         return new()
         {

@@ -24,7 +24,8 @@ public static class EventSchemaExtensions
         {
             EventType = schema.Type.Id,
             Generation = schema.Type.Generation,
-            Schema = schema.Schema.ToJson()
+            Schema = schema.Schema.ToJson(),
+            Tombstone = schema.Type.Tombstone
         };
     }
 
@@ -43,7 +44,8 @@ public static class EventSchemaExtensions
         return new EventTypeSchema(
             new EventType(
                schema.EventType,
-               schema.Generation),
+               schema.Generation,
+               schema.Tombstone),
             result);
     }
 }

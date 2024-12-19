@@ -9,13 +9,13 @@ public class and_event_type_for_event_source_id_is_not_allowed : given.a_unique_
 
     void Establish()
     {
-        _storage.IsAllowed(_eventType, _context.EventSourceId).Returns((false, 43U));
+        _storage.IsAllowed(_eventType.Id, _context.EventSourceId).Returns((false, 43U));
     }
 
     async Task Because() => _result = await _validator.Validate(_context);
 
     [Fact] void should_not_be_valid() => _result.IsValid.ShouldBeFalse();
     [Fact] void should_have_violations() => _result.Violations.ShouldNotBeEmpty();
-    [Fact] void should_have_violation_with_correct_event_type() => _result.Violations[0].EventType.ShouldEqual(_context.EventType);
+    [Fact] void should_have_violation_with_correct_event_type() => _result.Violations[0].EventTypeId.ShouldEqual(_context.EventTypeId);
     [Fact] void should_have_violation_with_correct_event_sequence_number() => _result.Violations[0].SequenceNumber.ShouldEqual(43U);
 }

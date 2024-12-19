@@ -13,4 +13,7 @@ export class EventType {
 
     @field(Number)
     generation!: number;
+
+    @field(Boolean)
+    tombstone!: boolean;
 }

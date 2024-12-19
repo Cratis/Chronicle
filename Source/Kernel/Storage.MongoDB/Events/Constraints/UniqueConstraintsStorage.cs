@@ -42,6 +42,13 @@ public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNam
             new ReplaceOptions { IsUpsert = true });
     }
 
+    /// <inheritdoc/>
+    public async Task Remove(EventSourceId eventSourceId, ConstraintName name)
+    {
+        var collection = GetCollectionFor(name);
+        await collection.DeleteOneAsync(u => u.EventSourceId == eventSourceId);
+    }
+
     IMongoCollection<UniqueConstraintIndex> GetCollectionFor(ConstraintName constraintName) =>
         eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>($"{eventSequenceId}+{constraintName}+constraint");
 }
