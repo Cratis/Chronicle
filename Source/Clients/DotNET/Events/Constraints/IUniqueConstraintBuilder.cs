@@ -23,18 +23,18 @@ public interface IUniqueConstraintBuilder
     /// <summary>
     /// Constrain on a specific property on an event.
     /// </summary>
-    /// <param name="property">Expression for specifying the property on the event.</param>
+    /// <param name="properties">Expressions for specifying the properties on the event.</param>
     /// <typeparam name="TEventType">Type of event the property belongs to.</typeparam>
     /// <returns>Builder for continuation.</returns>
-    IUniqueConstraintBuilder On<TEventType>(Expression<Func<TEventType, object>> property);
+    IUniqueConstraintBuilder On<TEventType>(params Expression<Func<TEventType, object>>[] properties);
 
     /// <summary>
     /// Constrain on a specific property on an event.
     /// </summary>
     /// <param name="eventType">The <see cref="EventType"/> the property belongs to.</param>
-    /// <param name="property">Property name.</param>
+    /// <param name="properties">Property names.</param>
     /// <returns>Builder for continuation.</returns>
-    IUniqueConstraintBuilder On(EventType eventType, string property);
+    IUniqueConstraintBuilder On(EventType eventType, string[] properties);
 
     /// <summary>
     /// Indicate an event that will remove the unique constraint.

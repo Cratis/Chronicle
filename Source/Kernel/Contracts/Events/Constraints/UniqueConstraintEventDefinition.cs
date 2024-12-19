@@ -20,6 +20,6 @@ public class UniqueConstraintEventDefinition
     /// <summary>
     /// Gets or sets the property to use for the unique constraint.
     /// </summary>
-    [ProtoMember(2)]
-    public string Property { get; set; }
+    [ProtoMember(2, IsRequired = true)]
+    public IEnumerable<string> Properties { get; set; }
 }

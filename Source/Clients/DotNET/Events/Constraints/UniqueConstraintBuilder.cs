@@ -23,22 +23,23 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
     EventTypeId? _removedWith;
 
     /// <inheritdoc/>
-    public IUniqueConstraintBuilder On<TEventType>(Expression<Func<TEventType, object>> property)
+    public IUniqueConstraintBuilder On<TEventType>(params Expression<Func<TEventType, object>>[] properties)
     {
         var eventType = eventTypes.GetEventTypeFor(typeof(TEventType));
-        return On(eventType, property.GetPropertyInfo().Name);
+        var propertiesAsStrings = properties.Select(_ => _.GetPropertyInfo().Name).ToArray();
+        return On(eventType, propertiesAsStrings);
     }
 
     /// <inheritdoc/>
-    public IUniqueConstraintBuilder On(EventType eventType, string property)
+    public IUniqueConstraintBuilder On(EventType eventType, params string[] properties)
     {
-        property = property.ToCamelCase();
-        ThrowIfEventTypeAlreadyAdded(eventType, property);
-        ThrowIfPropertyIsMissing(eventType, property);
-        ThrowIfPropertyTypeMismatch(eventType, property);
+        properties = properties.Select(_ => _.ToCamelCase()).ToArray();
+        var schema = eventTypes.GetSchemaFor(eventType.Id);
+        ThrowIfEventTypeAlreadyAdded(eventType, properties);
+        ThrowIfPropertyIsMissing(eventType, schema, properties);
 
-        _eventTypesAndProperties.Add(new UniqueConstraintEventDefinition(eventType.Id, property));
-        _eventTypeSchemas[eventType.Id] = eventTypes.GetSchemaFor(eventType.Id);
+        _eventTypesAndProperties.Add(new UniqueConstraintEventDefinition(eventType.Id, properties));
+        _eventTypeSchemas[eventType.Id] = schema;
         return this;
     }
 
@@ -95,32 +96,23 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
         }
     }
 
-    void ThrowIfPropertyIsMissing(EventType eventType, string property)
+    void ThrowIfPropertyIsMissing(EventType eventType, JsonSchema schema, IEnumerable<string> properties)
     {
-        var schema = eventTypes.GetSchemaFor(eventType.Id);
-        var properties = schema.GetFlattenedProperties();
-        if (!properties.Any(_ => _.Name == property))
+        var schemaProperties = schema.GetFlattenedProperties();
+        foreach (var property in properties)
         {
-            throw new PropertyDoesNotExistOnEventType(eventType, property);
+            if (!schemaProperties.Any(_ => _.Name == property))
+            {
+                throw new PropertyDoesNotExistOnEventType(eventType, property);
+            }
         }
     }
 
-    void ThrowIfEventTypeAlreadyAdded(EventType eventType, string property)
+    void ThrowIfEventTypeAlreadyAdded(EventType eventType, IEnumerable<string> properties)
     {
         if (_eventTypesAndProperties.Exists(_ => _.EventTypeId == eventType.Id))
         {
-            throw new EventTypeAlreadyAddedToUniqueConstraint(string.Empty, eventType, property);
-        }
-    }
-
-    void ThrowIfPropertyTypeMismatch(EventType eventType, string property)
-    {
-        var schema = eventTypes.GetSchemaFor(eventType.Id);
-        var propertySchema = schema.GetFlattenedProperties().First(p => p.Name == property);
-
-        if (_eventTypesAndProperties.Exists(_ => _eventTypeSchemas[_.EventTypeId].GetFlattenedProperties().First(p => p.Name == _.Property).Type != propertySchema.Type))
-        {
-            throw new PropertyTypeMismatchInUniqueConstraint(eventType, property);
+            throw new EventTypeAlreadyAddedToUniqueConstraint(string.Empty, eventType, properties);
         }
     }
 }

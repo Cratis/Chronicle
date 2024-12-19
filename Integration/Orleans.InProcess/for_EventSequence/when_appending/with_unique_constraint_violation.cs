@@ -22,7 +22,7 @@ public class with_unique_constraint_violation(context context) : Given<context>(
 
         public void Establish()
         {
-            Event = new UserOnboardingStarted(Guid.NewGuid().ToString());
+            Event = new UserOnboardingStarted(Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
         }
 
         public async Task Because()

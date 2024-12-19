@@ -16,12 +16,21 @@ public static class UniqueConstraintDefinitionExtensions
     /// <param name="definition"><see cref="UniqueConstraintDefinition"/> to get for.</param>
     /// <param name="context">The <see cref="ConstraintValidationContext"/> to get it relative to.</param>
     /// <returns>Tuple with property and value.</returns>
-    public static (string Property, string? Value) GetPropertyAndValue(this UniqueConstraintDefinition definition, ConstraintValidationContext context)
+    public static IEnumerable<UniqueConstraintPropertyAndValue> GetPropertiesAndValues(this UniqueConstraintDefinition definition, ConstraintValidationContext context)
     {
-        var property = definition.EventDefinitions.Single(_ => _.EventTypeId == context.EventTypeId).Property;
         var contentAsDictionary = (context.Content as IDictionary<string, object>)!;
-        var value = contentAsDictionary[property]?.ToString();
-
-        return (property, value);
+        var eventDefinition = definition.EventDefinitions.Single(_ => _.EventTypeId == context.EventTypeId);
+        return eventDefinition.Properties
+                .ToDictionary(_ => _, property => contentAsDictionary[property]?.ToString())
+                .Where(kvp => kvp.Value != null)
+                .Select(kvp => new UniqueConstraintPropertyAndValue(kvp.Key, kvp.Value!));
     }
+
+    /// <summary>
+    /// Get the unique value for the properties and values.
+    /// </summary>
+    /// <param name="propertiesWithValues">The <see cref="UniqueConstraintPropertyAndValue"/> to get for.</param>
+    /// <returns>A string representing the unique value.</returns>
+    public static string GetValue(this IEnumerable<UniqueConstraintPropertyAndValue> propertiesWithValues) =>
+        string.Join('-', propertiesWithValues.Select(_ => _.Value));
 }
