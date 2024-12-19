@@ -22,9 +22,6 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
 {
     /// <inheritdoc/>
-    protected override bool RemoveAfterCompleted => true;
-
-    /// <inheritdoc/>
     public override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
