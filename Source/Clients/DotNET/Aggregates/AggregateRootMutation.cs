@@ -68,7 +68,7 @@ public class AggregateRootMutation(
         if (aggregateRootContext.UnitOfWOrk.TryGetLastCommittedEventSequenceNumber(
                 out var lastCommittedEventSequenceNumber))
         {
-            aggregateRootContext.NextSequenceNumber = lastCommittedEventSequenceNumber + 1;
+            aggregateRootContext.NextSequenceNumber = lastCommittedEventSequenceNumber.Next();
         }
 
         UncommittedEvents = ImmutableList<object>.Empty;
