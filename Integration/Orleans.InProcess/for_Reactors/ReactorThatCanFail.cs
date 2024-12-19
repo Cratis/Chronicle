@@ -10,16 +10,16 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors;
 public class ReactorThatCanFail(TaskCompletionSource tcs) : IReactor
 {
     public bool ShouldFail { get; set; }
+    public TimeSpan HandleTime { get; set; } = TimeSpan.Zero;
 
-    public Task OnSomeEvent(SomeEvent evt, EventContext ctx)
+    public async Task OnSomeEvent(SomeEvent evt, EventContext ctx)
     {
         tcs.SetResult();
+        await Task.Delay(HandleTime);
         if (ShouldFail)
         {
             ShouldFail = false;
             throw new Exception("Something went wrong");
         }
-
-        return Task.CompletedTask;
     }
 }
