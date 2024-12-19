@@ -14,5 +14,5 @@ public class and_it_is_already_rolled_back : given.a_unit_of_work
 
     async Task Because() => _exception = await Catch.Exception(_unitOfWork.Rollback);
 
-    [Fact] void should_throw_already_rolled_back() => _exception.ShouldBeOfExactType<UnitOfWorkIsAlreadyRolledBack>();
+    [Fact] void should_throw_any_exception() => _exception.ShouldBeOfExactType<UnitOfWorkIsAlreadyRolledBack>();
 }

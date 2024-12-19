@@ -70,7 +70,6 @@ public class UnitOfWork(
     public async Task Commit()
     {
         ThrowIfUnitOfWorkIsCompleted();
-        _isCommitted = true;
 
         foreach (var (eventSequenceId, events) in _events)
         {
@@ -85,6 +84,7 @@ public class UnitOfWork(
             _lastCommittedEventSequenceNumber = result.SequenceNumbers.OrderBy(_ => _.Value).LastOrDefault();
         }
 
+        _isCommitted = true;
         _onCompleted(this);
     }
 
