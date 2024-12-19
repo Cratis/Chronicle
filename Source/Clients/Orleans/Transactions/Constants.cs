@@ -12,4 +12,9 @@ public static class Constants
     /// The key for the correlation id in the <see cref="RequestContext"/>.
     /// </summary>
     public const string CorrelationIdKey = "CorrelationId";
+
+    /// <summary>
+    /// The key for the unit of work results in the <see cref="RequestContext"/>.
+    /// </summary>
+    public const string UnitOfWorkResultsKey = "UnitOfWorkResults";
 }
