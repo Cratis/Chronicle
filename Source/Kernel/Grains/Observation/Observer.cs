@@ -402,6 +402,10 @@ public class Observer(
             {
                 await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
             }
+            else
+            {
+                _metrics?.SuccessfulObservation();
+            }
 
             if (stateChanged)
             {
