@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using Cratis.Api.Server;
 using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.Workbench.Embedded;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -27,11 +27,9 @@ builder.Configuration.AddJsonFile("chronicle.json", optional: true, reloadOnChan
 var chronicleOptions = new ChronicleOptions();
 builder.Configuration.Bind(chronicleOptions);
 builder.Services.Configure<ChronicleOptions>(builder.Configuration);
-builder.Services.AddCratisChronicleApi();
 
 builder.WebHost.UseKestrel(options =>
 {
-    options.ListenAnyIP(chronicleOptions.ApiPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
     options.ListenAnyIP(chronicleOptions.Port, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
@@ -50,6 +48,7 @@ builder.Host
    })
    .UseOrleans(_ => _
        .UseLocalhostClustering() // TODO: Implement MongoDB clustering
+       .UseCratisChronicleWorkbench(options => options.Port = chronicleOptions.ApiPort)
        .AddChronicleToSilo(_ => _
            .WithMongoDB())
        .UseDashboard(options =>
@@ -73,7 +72,7 @@ builder.Host
 
 var app = builder.Build();
 app
-    .UseCratisChronicleApi()
+    .UseRouting()
     .MapGrpcServices();
 
 await app.RunAsync();
