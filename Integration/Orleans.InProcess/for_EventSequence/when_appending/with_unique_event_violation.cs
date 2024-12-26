@@ -19,7 +19,7 @@ public class with_unique_event_violation(context context) : Given<context>(conte
         public AppendResult SecondResult { get; private set; }
         UserOnboardingStarted _event;
 
-        public void Establish() => _event = new UserOnboardingStarted(Guid.NewGuid().ToString());
+        public void Establish() => _event = new UserOnboardingStarted(Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
 
         public async Task Because()
         {

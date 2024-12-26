@@ -24,7 +24,7 @@ public class with_constraint_value_added_and_then_removed(context context) : Giv
 
         public void Establish()
         {
-            _event = new UserOnboardingStarted(Guid.NewGuid().ToString());
+            _event = new UserOnboardingStarted(Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
             _removedEvent = new UserRemoved();
         }
 

@@ -27,7 +27,7 @@ public class UniqueConstraintIndexUpdater(
         }
         else
         {
-            var (_, value) = definition.GetPropertyAndValue(context);
+            var value = definition.GetPropertiesAndValues(context).GetValue();
             if (value is not null)
             {
                 await storage.Save(context.EventSourceId, definition.Name, eventSequenceNumber, value);

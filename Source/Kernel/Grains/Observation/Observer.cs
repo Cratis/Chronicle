@@ -334,7 +334,7 @@ public class Observer(
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
 
-        var eventsToHandle = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber).ToArray();
+        var eventsToHandle = events.Where(_ => _.Metadata.SequenceNumber >= tailEventSequenceNumber).ToArray();
         var numEventsSuccessfullyHandled = EventCount.Zero;
         var stateChanged = false;
         if (eventsToHandle.Length != 0)
@@ -468,7 +468,7 @@ public class Observer(
 
         var newLastHandledEvent = State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ||
                                   State.LastHandledEventSequenceNumber < lastHandledEvent ? lastHandledEvent : State.LastHandledEventSequenceNumber;
-        var nextEventSequenceNumber = State.NextEventSequenceNumber < lastHandledEvent ? lastHandledEvent.Next() : State.NextEventSequenceNumber;
+        var nextEventSequenceNumber = State.NextEventSequenceNumber <= lastHandledEvent ? lastHandledEvent.Next() : State.NextEventSequenceNumber;
         State = State with
         {
             LastHandledEventSequenceNumber = newLastHandledEvent,

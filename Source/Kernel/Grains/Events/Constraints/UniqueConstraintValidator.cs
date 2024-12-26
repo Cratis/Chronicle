@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints;
 
@@ -28,25 +29,24 @@ public class UniqueConstraintValidator(
     /// <inheritdoc/>
     public async Task<ConstraintValidationResult> Validate(ConstraintValidationContext context)
     {
-        var (property, value) = definition.GetPropertyAndValue(context);
-        if (value is null)
+        var propertiesWithValues = definition.GetPropertiesAndValues(context);
+        if (!propertiesWithValues.Any())
         {
             return ConstraintValidationResult.Success;
         }
 
+        var value = propertiesWithValues.GetValue();
         var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventSourceId, definition.Name, value);
         return isAllowed ?
             ConstraintValidationResult.Success :
             new()
             {
-                Violations =
-                [
+                Violations = propertiesWithValues.Select(pv =>
                     this.CreateViolation(
                         context,
                         sequenceNumber,
-                        $"Event '{context.EventTypeId}' with value '{value}' on member '{property}' violated a unique constraint on sequence number {sequenceNumber}",
-                        new() { { WellKnownConstraintDetailKeys.PropertyName, property }, { WellKnownConstraintDetailKeys.PropertyValue, value } })
-                ]
+                        $"Event '{context.EventTypeId}' with value '{pv.Value}' on member '{pv.Property}' violated a unique constraint on sequence number {sequenceNumber}",
+                        new() { { WellKnownConstraintDetailKeys.PropertyName, pv.Property }, { WellKnownConstraintDetailKeys.PropertyValue, value } })).ToImmutableList()
             };
     }
 }

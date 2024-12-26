@@ -23,7 +23,7 @@ public class a_unique_constraint_validator_with_valid_definition : a_unique_cons
         _context = new([], EventSourceId.New(), _eventType.Id, _content);
     }
 
-    protected override UniqueConstraintDefinition Definition => new("SomeConstraint", [new(_eventType.Id, Property)]);
+    protected override UniqueConstraintDefinition Definition => new("SomeConstraint", [new(_eventType.Id, [Property])]);
 
     protected void SetPropertyValue(object value) => (_content as IDictionary<string, object>)[Property] = value;
 }

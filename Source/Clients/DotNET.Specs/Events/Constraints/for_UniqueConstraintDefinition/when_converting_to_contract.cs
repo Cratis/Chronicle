@@ -25,8 +25,8 @@ public class when_converting_to_contract : Specification
             _constraintName,
             _ => "",
             [
-                new(_firstEventType.Id, "First Property"),
-                new(_secondEventType.Id, "Second Property")
+                new(_firstEventType.Id, ["First event, first Property", "First event, second Property"]),
+                new(_secondEventType.Id, ["Second event, first Property", "Second event, second Property"])
             ],
             _removedWithEventType);
     }
@@ -41,7 +41,9 @@ public class when_converting_to_contract : Specification
     [Fact] void should_have_correct_type() => _contract.Type.ShouldEqual(ConstraintType.Unique);
     [Fact] void should_have_correct_removed_with() => _contract.RemovedWith.ShouldEqual(_removedWithEventType);
     [Fact] void should_have_first_event_type() => _definitionContract.EventDefinitions[0].EventTypeId.ShouldEqual(_firstEventType.Id.Value);
-    [Fact] void should_have_first_event_property() => _definitionContract.EventDefinitions[0].Property.ShouldEqual(_definition.EventsWithProperties.First().Property);
+    [Fact] void should_have_first_event_first_property() => _definitionContract.EventDefinitions[0].Properties.ToArray()[0].ShouldEqual(_definition.EventsWithProperties.First().Properties.ToArray()[0]);
+    [Fact] void should_have_first_event_second_property() => _definitionContract.EventDefinitions[0].Properties.ToArray()[1].ShouldEqual(_definition.EventsWithProperties.First().Properties.ToArray()[1]);
     [Fact] void should_have_second_event_type() => _definitionContract.EventDefinitions[1].EventTypeId.ShouldEqual(_secondEventType.Id.Value);
-    [Fact] void should_have_second_event_property() => _definitionContract.EventDefinitions[1].Property.ShouldEqual(_definition.EventsWithProperties.Last().Property);
+    [Fact] void should_have_second_event_first_property() => _definitionContract.EventDefinitions[1].Properties.ToArray()[0].ShouldEqual(_definition.EventsWithProperties.Last().Properties.ToArray()[0]);
+    [Fact] void should_have_second_event_second_property() => _definitionContract.EventDefinitions[1].Properties.ToArray()[1].ShouldEqual(_definition.EventsWithProperties.Last().Properties.ToArray()[1]);
 }

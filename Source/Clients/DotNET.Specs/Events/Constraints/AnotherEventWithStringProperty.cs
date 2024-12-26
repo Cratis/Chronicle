@@ -6,4 +6,5 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_a
 public record AnotherEventWithStringProperty
 {
     public string SomeProperty { get; init; } = string.Empty;
+    public string SomeOtherProperty { get; init; } = string.Empty;
 }
