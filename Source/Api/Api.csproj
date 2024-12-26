@@ -8,7 +8,7 @@
 
     <!-- We need to build ourselves, effectively, since we need the XML Docs file as something we can embed as a resource-->
     <Target Name="GenerateXmlDocumentation" BeforeTargets="BeforeBuild">
-        <MSBuild Projects="Api.XmlDoc.csproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(TargetFramework)"/>
+        <MSBuild Projects="Api.XmlDoc.csproj" Targets="Build" />
     </Target>
 
     <ItemGroup>
