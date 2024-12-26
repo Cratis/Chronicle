@@ -30,7 +30,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Workbench/Embedded/Embedded.csproj" />
+        <ProjectReference Include="../../Api/Api.csproj" />
         <ProjectReference Include="../Compliance/Compliance.csproj" />
         <ProjectReference Include="../Projections/Projections.csproj" />
         <ProjectReference Include="../Grains/Grains.csproj" />
