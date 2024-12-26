@@ -25,6 +25,8 @@
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
 
+        <RuntimeIdentifiers>linux-arm64;linux-x64</RuntimeIdentifiers>
+
         <NuGetAuditMode>all</NuGetAuditMode>
     </PropertyGroup>
 
