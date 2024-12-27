@@ -1,0 +1,24 @@
+name: Trigger documentation build
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "Documentation/**"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Documentation Build
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PAT_DOCUMENTATION }}
+          repository: cratis/documentation
+          event-type: build-docs
+
