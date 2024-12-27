@@ -324,3 +324,11 @@ jobs:
             cratis/chronicle:latest-development
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
+
+      - name: Trigger Documentation Build
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PAT_DOCUMENTATION }}
+          repository: cratis/documentation
+          event-type: build-docs
+
