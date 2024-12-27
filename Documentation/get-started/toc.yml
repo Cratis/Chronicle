@@ -1,4 +1,4 @@
-- name: Introduction
-  href: index.md
+- name: Quickstart
+  href: quickstart/toc.yml
 - name: Basic
   href: basic.md
