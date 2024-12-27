@@ -22,8 +22,7 @@ docker run -d -p 27017:27017 -p 8080:8080 -p 35000:35000 cratis/chronicle:latest
 If you prefer to have a Docker Compose file, we recommend the following setup with Aspire to give
 you open telemetry data:
 
-{{snippet:QuickStart-Console-DockerCompose}}
-
+{{snippet:Quickstart-Console-DockerCompose}}
 
 ## Client
 
