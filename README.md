@@ -7,7 +7,7 @@
 [![Docker](https://img.shields.io/docker/v/cratis/chronicle?label=Chronicle&logo=docker&sort=semver)](https://hub.docker.com/r/cratis/chronicle)
 [![C# Build](https://github.com/cratis/Chronicle/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/Cratis/Chronicle/actions/workflows/dotnet-build.yml)
 [![Publish](https://github.com/cratis/Chronicle/actions/workflows/publish.yml/badge.svg)](https://github.com/Cratis/Chronicle/actions/workflows/publish.yml)
-[![Documentation Site](https://github.com/cratis/Chronicle/actions/workflows/pages.yml/badge.svg)](https://github.com/Cratis/Chronicle/actions/workflows/pages.yml)
+[![Documentation site](https://github.com/Cratis/Documentation/actions/workflows/pages.yml/badge.svg)](https://github.com/Cratis/Documentation/actions/workflows/pages.yml)
 
 <div align="center">
     <img src="full-logo.png">
