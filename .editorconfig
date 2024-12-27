@@ -22,10 +22,10 @@ dotnet_style_qualification_for_property = false:warning
 dotnet_style_qualification_for_method = false:warning
 dotnet_style_qualification_for_event = false:warning
 
-# dont prefer ifs over ternary operators
+# dotnet prefer ifs over ternary operators
 dotnet_style_prefer_conditional_expression_over_return = true:none
 dotnet_style_prefer_conditional_expression_over_assignment = true:none
-# dont need to declare private
+# dotnet need to declare private
 dotnet_style_require_accessibility_modifiers = never:error
 
 # consts are pascal case
