@@ -44,7 +44,7 @@ should be.
 
 With the type defined you simply add the `[EventType]` attribute for the new type.
 The reason you do this is for the discovery system to be able to pick up all the event types
-automatically.
+automatically. Read more about the concept of event types [here](../../concepts/event-type.md).
 
 Below defines a set of events we want to use for our library sample.
 
