@@ -8,6 +8,7 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.given;
 
+
 public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     where TProjection : class, IProjectionFor<TModel>, new()
 {
@@ -69,12 +70,12 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
         }
     }
 
+    protected virtual Task<TModel> GetModelResult() => GetModel(ModelId);
+
     protected async Task WaitForProjectionAndSetResult(EventSequenceNumber eventSequenceNumber)
     {
         await Observer.WaitTillReachesEventSequenceNumber(eventSequenceNumber);
-        var filter = Builders<TModel>.Filter.Eq(new StringFieldDefinition<TModel, string>("_id"), ModelId);
-        var result = await _globalFixture.ReadModels.Database.GetCollection<TModel>().FindAsync(filter);
-        Result = result.FirstOrDefault();
+        Result = await GetModelResult();
     }
 
     protected async Task<TModel> GetModel(EventSourceId eventSourceId)
