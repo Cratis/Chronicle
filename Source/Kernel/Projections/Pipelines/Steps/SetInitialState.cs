@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
@@ -30,9 +32,18 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
         {
             needsInitialState = true;
             initialState = projection.InitialModelState;
+            SetKeyForInitialState(initialState, context.Key);
         }
         context.Changeset.InitialState = initialState;
 
         return context with { NeedsInitialState = needsInitialState };
+    }
+
+    void SetKeyForInitialState(ExpandoObject initialState, Key key)
+    {
+        // TODO: We should improve how we work with Keys and not just "magic strings" like id or _id (MongoDB):
+        // https://github.com/Cratis/Chronicle/issues/1387
+        // https://github.com/Cratis/Chronicle/issues/1630
+        ((IDictionary<string, object?>)initialState)["id"] = key.Value;
     }
 }

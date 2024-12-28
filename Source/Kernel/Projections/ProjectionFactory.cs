@@ -290,6 +290,9 @@ public class ProjectionFactory(
             ? projectionDefinition.Join.Where(join => join.Value.On == actualIdentifiedByProperty).ToArray()
             : projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key)).ToArray();
 
+        // Include join expressions that join on the id property
+        joinExpressions = [.. joinExpressions, .. projectionDefinition.Join.Where(join => join.Value.On == "id")];
+
         if (joinExpressions.Length == 0)
         {
             return;
