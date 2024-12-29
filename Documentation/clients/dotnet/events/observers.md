@@ -1,4 +1,4 @@
-# Observers
+# Reactors
 
 Observers are classes that holds methods that react to certain events.
 By adding an attribute in front of the handler class, it will automatically be discovered at startup and
