@@ -90,7 +90,7 @@ public class ReducerObserverSubscriber(
                 await reducerSubscriberResultTCS.Task.WaitAsync(TimeSpan.FromSeconds(5));
                 var result = await reducerSubscriberResultTCS.Task;
                 tcs.SetResult(result.ObserverResult);
-                return result.ModelState;
+                return result;
             }) ?? Task.CompletedTask);
 
             await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));

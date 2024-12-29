@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers;
 
@@ -12,4 +13,4 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers;
 /// <param name="events">Collection of <see cref="AppendedEvent"/> to reduce from.</param>
 /// <param name="initialState">The initial state.</param>
 /// <returns>The reduced state.</returns>
-public delegate Task<ExpandoObject> ReducerDelegate(IEnumerable<AppendedEvent> events, ExpandoObject? initialState);
+public delegate Task<ReducerSubscriberResult> ReducerDelegate(IEnumerable<AppendedEvent> events, ExpandoObject? initialState);
