@@ -154,7 +154,7 @@ Lets start by defining a read model that will be used in the reducer.
 For the read model we will need code that produces the correct state.
 The following code reacts to `BookAddedToInventory` and produces the new state that should be persisted.
 
-{{snippet:Quickstart-Quickstart-BooksReducer}}
+{{snippet:Quickstart-BooksReducer}}
 
 The method `Added` does not come from the `IReducerFor<>` interface. The `IReducerFor<>` interface is in fact just a marker interface
 used for discovery purposes. It requires a generic argument telling the type of the read model. Chronicle will get the type and collect
