@@ -44,7 +44,7 @@ the event store to discover and register everything automatically.
 
 The following snippet configures the minimum and discovers everything for you.
 
-{{snippet:Quickstart-Setup}}
+{{snippet:Quickstart-Console-Setup}}
 
 ## Events
 
