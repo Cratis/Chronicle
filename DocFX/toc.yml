@@ -1,8 +1,0 @@
-- name: Home
-  homepage: index.html
-- name: Articles
-  href: articles/
-  homepage: articles/intro.html
-- name: Api Documentation
-  href: api/
-  homepage: api/index.md
