@@ -169,7 +169,7 @@ Opening your database client, you should be able to see the books:
 
 ### Projections
 
-While reducers provide a programmatic, imperative approach to altering state in your system, projections offer a declarative approach.
+While reducers provide a programmatic, imperative approach to altering state in your system, [projections](../../concepts/projection.md) offer a declarative approach.
 Although projections may not have the flexibility of a **reducer** or the power of a **reactor**, they possess unique capabilities
 that can be challenging to achieve with a **reactor** or **reducer**. For instance, projections support relationships such as one-to-many
 and one-to-one. When your goal is to produce state, projections will often be sufficient and will help you achieve your objectives more quickly.
