@@ -8,12 +8,24 @@ namespace Cratis.Chronicle;
 /// <summary>
 /// Represents a default <see cref="IServiceProvider"/> that will create instances of services using the default constructor.
 /// </summary>
-public class DefaultServiceProvider : IServiceProvider, IServiceProviderIsService
+public class DefaultServiceProvider : IServiceProvider, IServiceProviderIsService, IServiceScopeFactory, IServiceScope
 {
+    /// <inheritdoc/>
+    public IServiceProvider ServiceProvider => this;
+
+    /// <inheritdoc/>
+    public IServiceScope CreateScope() => this;
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+    }
+
     /// <inheritdoc/>
     public object? GetService(Type serviceType)
     {
         if (serviceType == typeof(IServiceProviderIsService)) return this;
+        if (serviceType == typeof(IServiceScopeFactory)) return this;
         return Activator.CreateInstance(serviceType);
     }
 
