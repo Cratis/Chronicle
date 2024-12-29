@@ -12,24 +12,6 @@ Chronicle has formalized the following event sequences:
 | ---- | ----------- |
 | Event Log | The main sequence you typically append to |
 
-## Collections
-
-Looking into the MongoDB and at the different collections for the different types of sequences,
-the shape of every event document has the following properties:
-
-| Property | Description |
-| -------- | ----------- |
-| _id | The sequence number |
-| correlationId | A unique identifier of the operation / transaction the event was part of |
-| causationId | An identifier for the series of actions that caused the event |
-| causedBy | An identifier pointing to information about who or which system caused the event |
-| type | The type of the event |
-| occurred | When the event occurred |
-| validFrom | When the event is valid from, domain specific. Defaults to the minimum date value |
-| eventSourceId | The event source identifier the event is for |
-| content | The actual content of the event, as a BSON document |
-| compensations | An array of compensations performed for the event |
-
 ## Event Type generations
 
 Every [event type](./event-type.md) can evolve over time. Evolutions are represented as generations.
