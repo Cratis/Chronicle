@@ -21,6 +21,13 @@ It should not be holding information for multiple purposes. For instance holding
 for specific purposes. Doing so makes the event unclear to reason about and requires logic in all observers and consumers
 of the event.
 
+## Immutable
+
+In an event sourced system, events are considered immutable because they represent facts that have occurred in the past.
+Once an event is recorded, it should not be altered, as doing so would compromise the integrity and reliability of the event log.
+Immutability ensures that the history of changes is preserved accurately, allowing the system to reconstruct past states and understand the sequence of events that led to the current state.
+This immutability is crucial for debugging, auditing, and maintaining a consistent and trustworthy system.
+
 ## Avoid nullables / empty values
 
 An event has happened, its not supposed to represent unclear states.
