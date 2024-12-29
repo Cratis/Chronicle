@@ -19,9 +19,10 @@ It provides the core server, referred to as the **Kernel** with a .NET client SD
 Although optimized for MongoDB, its extensible model provides extension points for other data stores.
 
 Read the documentation on our site [https://cratis.io](https://cratis.io) for all the details.
+All samples are available in our [Samples repo](https://github.com/cratis/samples).
 For general guidance on the core values and principles we adhere to, read more [here](https://github.com/Cratis/.github/blob/main/profile/README.md).
 
-# Support
+## Support
 
 [![githelp.app shield](https://rbpwwcsvhmbmfiphokrm.supabase.co/storage/v1/object/public/public_resources/Badge2%20-%20round%20corners.svg?t=2023-12-11T13%3A11%3A05.524Z)](https://githelp.app/repos/cratis)
 
