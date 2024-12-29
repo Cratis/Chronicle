@@ -47,9 +47,9 @@ The following snippet configures the minimum and discovers everything for you:
 ## Events
 
 Defining an event is straightforward. You can use either a C# `class` or a `record` type.
-We recommend using a `record` type because records are immutable, which aligns with the nature of an [event](../../concepts/event.md).
+We recommend using a `record` type because records are immutable, which aligns with the nature of an [event](../concepts/event.md).
 
-To define an event type, simply add the `[EventType]` attribute to the new type. This attribute allows the discovery system to automatically detect all event types. You can read more about event types [here](../../concepts/event-type.md).
+To define an event type, simply add the `[EventType]` attribute to the new type. This attribute allows the discovery system to automatically detect all event types. You can read more about event types [here](../concepts/event-type.md).
 
 Below is a set of events we will use for our library sample.
 
@@ -58,7 +58,7 @@ Below is a set of events we will use for our library sample.
 ## Appending events
 
 Once you have defined the events, you can start using them.
-Events represent state changes in your system, and you use them by appending them to an [event sequence](../../concepts/event-sequence.md).
+Events represent state changes in your system, and you use them by appending them to an [event sequence](../concepts/event-sequence.md).
 
 Chronicle provides a default event sequence called the **event log**. The **event log** is typically the main sequence you use, similar to the `main` branch of a **Git** repository.
 
@@ -78,7 +78,7 @@ The following code appends a couple of `UserOnboarded` events to indicate that u
 Next, we want to append a couple of events to represent books being added to our inventory:
 
 {{snippet:Quickstart-DemoData-Books}}
-Notice that the first parameter for the `Append` method is the [event source identifier](../../concepts/event-source.md).
+Notice that the first parameter for the `Append` method is the [event source identifier](../concepts/event-source.md).
 This identifier uniquely represents the object we're working on, similar to a **primary key** in a database.
 In our example, we are dealing with two concepts: **user** and **book**, so the identifiers will uniquely represent individual users and books.
 
@@ -169,7 +169,7 @@ Opening your database client, you should be able to see the books:
 
 ### Projections
 
-While reducers provide a programmatic, imperative approach to altering state in your system, [projections](../../concepts/projection.md) offer a declarative approach.
+While reducers provide a programmatic, imperative approach to altering state in your system, [projections](../concepts/projection.md) offer a declarative approach.
 Although projections may not have the flexibility of a **reducer** or the power of a **reactor**, they possess unique capabilities
 that can be challenging to achieve with a **reactor** or **reducer**. For instance, projections support relationships such as one-to-many
 and one-to-one. When your goal is to produce state, projections will often be sufficient and will help you achieve your objectives more quickly.

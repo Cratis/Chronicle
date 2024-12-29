@@ -1,4 +1,4 @@
-- name: Tutorials
+- name: Getting started
   href: get-started/toc.yml
 - name: Concepts
   href: concepts/toc.yml
