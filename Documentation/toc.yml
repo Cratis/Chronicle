@@ -6,7 +6,5 @@
   href: recipes/toc.yml
 - name: Clients
   href: clients/toc.yml
-- name: Consuming pre releases
-  href: consuming-pre-releases.md
 - name: Api
-  href: /api/chronicle/toc.yml
+  href: ../../api/chronicle/toc.yml
