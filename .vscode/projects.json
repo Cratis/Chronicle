@@ -30,7 +30,12 @@
     },
     {
         "name": "AssemblyFixer",
-        "path": "${workspaceFolder}/Source/Clients/AssemblyFixer",
-        "outputPath": "${workspaceFolder}/Source/Clients/AssemblyFixer/bin/Debug/net9.0/AssemblyFixer.dll"
+        "path": "${workspaceFolder}/Source/Tools/AssemblyFixer",
+        "outputPath": "${workspaceFolder}/Source/Tools/AssemblyFixer/bin/Debug/net9.0/AssemblyFixer.dll"
+    },
+    {
+        "name": "ResourceEmbedder",
+        "path": "${workspaceFolder}/Source/Tools/ResourceEmbedder",
+        "outputPath": "${workspaceFolder}/Source/Tools/ResourceEmbedder/bin/Debug/net9.0/ResourceEmbedder.dll"
     }
 ]

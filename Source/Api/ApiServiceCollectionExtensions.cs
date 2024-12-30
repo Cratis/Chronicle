@@ -35,7 +35,7 @@ public static class ApiServiceCollectionExtensions
             options.IncludeXmlComments(() =>
             {
                 var type = typeof(ApiServiceCollectionExtensions);
-                var resourceName = $"{type.Assembly.GetName().Name}.XmlDocs.xml";
+                var resourceName = $"{type.Assembly.GetName().Name}.xml";
                 var stream = type.Assembly.GetManifestResourceStream(resourceName);
                 var reader = XmlReader.Create(stream!);
                 return new XPathDocument(reader);
