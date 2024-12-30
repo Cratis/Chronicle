@@ -11,23 +11,14 @@ import Handlebars from 'handlebars';
 const routeTemplate = Handlebars.compile('/api/event-stores');
 
 class GetEventStoresSortBy {
-    private _value: SortingActionsForQuery<string[]>;
 
     constructor(readonly query: GetEventStores) {
-        this._value = new SortingActionsForQuery<string[]>('value', query);
     }
 
-    get value(): SortingActionsForQuery<string[]> {
-        return this._value;
-    }
 }
 
 class GetEventStoresSortByWithoutQuery {
-    private _value: SortingActions  = new SortingActions('value');
 
-    get value(): SortingActions {
-        return this._value;
-    }
 }
 
 export class GetEventStores extends QueryFor<string[]> {

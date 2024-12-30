@@ -83,7 +83,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Base", "Integration\Base\Ba
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.InProcess", "Integration\Orleans.InProcess\Orleans.InProcess.csproj", "{37018764-0CF2-45F8-9EFA-403BF952DC19}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResourceEmbedder", "Source\ResourceEmbedder\ResourceEmbedder.csproj", "{3336B622-E01F-403F-BB55-15366BA8A3E3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResourceEmbedder", "Source\Tools\ResourceEmbedder\ResourceEmbedder.csproj", "{3336B622-E01F-403F-BB55-15366BA8A3E3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

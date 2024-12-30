@@ -23,6 +23,7 @@
         <PackageReference Include="Swashbuckle.AspNetCore" />
         <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
         <PackageReference Include="Cratis.Applications" />
+        <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
     </ItemGroup>
 

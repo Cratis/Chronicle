@@ -5,7 +5,7 @@
         "outputPath": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net9.0/Cratis.Chronicle.Server.dll"
     },
     {
-        "name": "API",
+        "name": "Api",
         "path": "${workspaceFolder}/Source/Api",
         "outputPath": "${workspaceFolder}/Source/Api/bin/Debug/net9.0/Cratis.Chronicle.Api.dll"
     },

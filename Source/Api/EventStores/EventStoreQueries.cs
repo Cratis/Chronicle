@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
 
@@ -11,24 +12,26 @@ namespace Cratis.Api.EventStores;
 /// <summary>
 /// Represents the API for working with event stores.
 /// </summary>
-/// <param name="storage"><see cref="IStorage"/> for working with event stores.</param>
+/// <param name="eventStores">The <see cref="IEventStores"/> contract.</param>
 [Route("/api/event-stores")]
-public class EventStoreQueries(IStorage storage) : ControllerBase
+public class EventStoreQueries(IEventStores eventStores) : ControllerBase
 {
     /// <summary>
     /// Get all event stores registered.
     /// </summary>
     /// <returns>A collection of <see cref="EventStoreName"/>.</returns>
     [HttpGet]
-    public Task<IEnumerable<EventStoreName>> GetEventStores() => storage.GetEventStores();
+    public async Task<IEnumerable<string>> GetEventStores() => await eventStores.GetEventStores();
 
     /// <summary>
     /// Observes all event stores registered..
     /// </summary>
     /// <returns>An observable for observing a collection of <see cref="EventStoreName"/>.</returns>
     [HttpGet("observe")]
-    public ISubject<IEnumerable<EventStore>> AllEventStores() =>
-        new TransformingSubject<IEnumerable<EventStoreName>, IEnumerable<EventStore>>(
-            storage.ObserveEventStores(),
-            _ => _.Select(_ => new EventStore(_, string.Empty)));
+    public ISubject<IEnumerable<string>> AllEventStores()
+    {
+        var subject = new Subject<IEnumerable<string>>();
+        eventStores.ObserveEventStores().Subscribe(subject);
+        return subject;
+    }
 }

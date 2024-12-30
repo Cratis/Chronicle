@@ -5,7 +5,7 @@
 
 using Cratis.Execution;
 
-namespace Cratis.Api.Server;
+namespace Cratis.Chronicle.Api;
 
 /// <summary>
 /// Holds the extension methods for configuring the Api for the <see cref="IApplicationBuilder"/> type.
