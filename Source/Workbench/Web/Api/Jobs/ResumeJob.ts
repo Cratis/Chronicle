@@ -8,7 +8,6 @@
 import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
-import { Guid } from '@cratis/fundamentals';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/jobs/{{jobId}}/resume');
@@ -16,7 +15,7 @@ const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{name
 export interface IResumeJob {
     eventStore?: string;
     namespace?: string;
-    jobId?: Guid;
+    jobId?: string;
 }
 
 export class ResumeJobValidator extends CommandValidator {
@@ -34,7 +33,7 @@ export class ResumeJob extends Command<IResumeJob> implements IResumeJob {
 
     private _eventStore!: string;
     private _namespace!: string;
-    private _jobId!: Guid;
+    private _jobId!: string;
 
     constructor() {
         super(Object, false);
@@ -72,11 +71,11 @@ export class ResumeJob extends Command<IResumeJob> implements IResumeJob {
         this._namespace = value;
         this.propertyChanged('namespace');
     }
-    get jobId(): Guid {
+    get jobId(): string {
         return this._jobId;
     }
 
-    set jobId(value: Guid) {
+    set jobId(value: string) {
         this._jobId = value;
         this.propertyChanged('jobId');
     }

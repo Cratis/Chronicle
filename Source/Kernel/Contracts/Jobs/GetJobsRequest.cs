@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Contracts.Jobs;
 /// Represents the request for getting all jobs.
 /// </summary>
 [ProtoContract]
-public class GetAllRequest
+public class GetJobsRequest
 {
     /// <summary>
     /// Gets or sets the event store name.

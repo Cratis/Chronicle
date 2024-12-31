@@ -26,7 +26,7 @@ public class Observers(IStorage storage) : IObservers
     public Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IObservable<ObserverInformation> AllObservers(AllObserversRequest request, CallContext context = default) => throw new NotImplementedException();
+    public IObservable<ObserverInformation> ObserveObservers(AllObserversRequest request, CallContext context = default) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public async Task<IEnumerable<FailedPartition>> GetFailedPartitionsForObserver(FailedPartitionsForObserverRequest request, CallContext context = default)

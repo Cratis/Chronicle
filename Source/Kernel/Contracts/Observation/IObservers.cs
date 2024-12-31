@@ -55,7 +55,7 @@ public interface IObservers
     /// <param name="context">gRPC call context.</param>
     /// <returns>An observable of <see cref="ObserverInformation"/>.</returns>
     [Operation]
-    IObservable<ObserverInformation> AllObservers(AllObserversRequest request, CallContext context = default);
+    IObservable<ObserverInformation> ObserveObservers(AllObserversRequest request, CallContext context = default);
 
     /// <summary>
     /// Get all failed partitions for an observer.

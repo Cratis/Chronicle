@@ -6,27 +6,30 @@
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
 import { Guid } from '@cratis/fundamentals';
-import { JobStepProgress } from './JobStepProgress';
-import { JobStepStatus } from './JobStepStatus';
-import { JobStepStatusChanged } from './JobStepStatusChanged';
+import { JobProgress } from './JobProgress';
+import { JobStatus } from './JobStatus';
+import { JobStatusChanged } from './JobStatusChanged';
 
-export class JobStepState {
+export class Job {
 
     @field(Guid)
     id!: Guid;
 
     @field(String)
-    type!: string;
-
-    @field(String)
     name!: string;
 
+    @field(String)
+    details!: string;
+
+    @field(String)
+    type!: string;
+
     @field(Number)
-    status!: JobStepStatus;
+    status!: JobStatus;
 
-    @field(JobStepStatusChanged, true)
-    statusChanges!: JobStepStatusChanged[];
+    @field(JobStatusChanged, true)
+    statusChanges!: JobStatusChanged[];
 
-    @field(JobStepProgress)
-    progress!: JobStepProgress;
+    @field(JobProgress)
+    progress!: JobProgress;
 }
