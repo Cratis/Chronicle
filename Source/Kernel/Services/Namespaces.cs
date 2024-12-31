@@ -14,6 +14,10 @@ namespace Cratis.Chronicle.Services;
 public class Namespaces(IStorage storage) : INamespaces
 {
     /// <inheritdoc/>
+    public Task Ensure(EnsureNamespace command) =>
+        storage.GetEventStore(command.EventStore).Namespaces.Ensure(command.Name);
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<string>> GetNamespaces(GetNamespacesRequest request)
     {
         var eventStore = storage.GetEventStore(request.EventStore);
