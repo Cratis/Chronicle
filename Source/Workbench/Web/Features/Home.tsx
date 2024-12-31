@@ -16,10 +16,10 @@ export const Home = () => {
                     return (
                         <>
                             <StoreCard
-                                title={eventStore.name}
-                                path={`/event-store/${eventStore.name}/Default`}
+                                title={eventStore}
+                                path={`/event-store/${eventStore}/Default`}
                                 footer={<CardFooter />}
-                                description={eventStore.description}
+                                description=''
                             />
                         </>
                     );

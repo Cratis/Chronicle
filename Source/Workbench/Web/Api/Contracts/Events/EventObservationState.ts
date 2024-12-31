@@ -2,11 +2,11 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-/* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-export * from './AllPeople';
-export * from './CreateAndRegisterKeyFor';
-export * from './DeletePIIForPerson';
-export * from './Person';
-export * from './PersonalInformation';
-export * from './SearchForPeople';
+export enum EventObservationState {
+    none = 0,
+    initial = 1,
+    headOfReplay = 2,
+    replay = 4,
+    tailOfReplay = 8,
+}

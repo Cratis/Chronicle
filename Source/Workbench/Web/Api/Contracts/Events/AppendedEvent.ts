@@ -4,9 +4,18 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-export * from './AppendedEvent';
-export * from './EventContext';
-export * from './EventMetadata';
-export * from './EventObservationState';
-export * from './EventType';
-export * from './EventTypeRegistration';
+import { field } from '@cratis/fundamentals';
+import { EventContext } from './EventContext';
+import { EventMetadata } from './EventMetadata';
+
+export class AppendedEvent {
+
+    @field(EventMetadata)
+    metadata!: EventMetadata;
+
+    @field(EventContext)
+    context!: EventContext;
+
+    @field(String)
+    content!: string;
+}

@@ -6,29 +6,29 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import { AppendedEventWithJsonAsContent } from './AppendedEventWithJsonAsContent';
+import { AppendedEvent } from '../Contracts/Events/AppendedEvent';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}');
 
 class AppendedEventsSortBy {
-    private _metadata: SortingActionsForQuery<AppendedEventWithJsonAsContent[]>;
-    private _context: SortingActionsForQuery<AppendedEventWithJsonAsContent[]>;
-    private _content: SortingActionsForQuery<AppendedEventWithJsonAsContent[]>;
+    private _metadata: SortingActionsForQuery<AppendedEvent[]>;
+    private _context: SortingActionsForQuery<AppendedEvent[]>;
+    private _content: SortingActionsForQuery<AppendedEvent[]>;
 
     constructor(readonly query: AppendedEvents) {
-        this._metadata = new SortingActionsForQuery<AppendedEventWithJsonAsContent[]>('metadata', query);
-        this._context = new SortingActionsForQuery<AppendedEventWithJsonAsContent[]>('context', query);
-        this._content = new SortingActionsForQuery<AppendedEventWithJsonAsContent[]>('content', query);
+        this._metadata = new SortingActionsForQuery<AppendedEvent[]>('metadata', query);
+        this._context = new SortingActionsForQuery<AppendedEvent[]>('context', query);
+        this._content = new SortingActionsForQuery<AppendedEvent[]>('content', query);
     }
 
-    get metadata(): SortingActionsForQuery<AppendedEventWithJsonAsContent[]> {
+    get metadata(): SortingActionsForQuery<AppendedEvent[]> {
         return this._metadata;
     }
-    get context(): SortingActionsForQuery<AppendedEventWithJsonAsContent[]> {
+    get context(): SortingActionsForQuery<AppendedEvent[]> {
         return this._context;
     }
-    get content(): SortingActionsForQuery<AppendedEventWithJsonAsContent[]> {
+    get content(): SortingActionsForQuery<AppendedEvent[]> {
         return this._content;
     }
 }
@@ -56,15 +56,15 @@ export interface AppendedEventsArguments {
     eventSourceId?: string;
 }
 
-export class AppendedEvents extends QueryFor<AppendedEventWithJsonAsContent[], AppendedEventsArguments> {
+export class AppendedEvents extends QueryFor<AppendedEvent[], AppendedEventsArguments> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly defaultValue: AppendedEventWithJsonAsContent[] = [];
+    readonly defaultValue: AppendedEvent[] = [];
     private readonly _sortBy: AppendedEventsSortBy;
     private static readonly _sortBy: AppendedEventsSortByWithoutQuery = new AppendedEventsSortByWithoutQuery();
 
     constructor() {
-        super(AppendedEventWithJsonAsContent, true);
+        super(AppendedEvent, true);
         this._sortBy = new AppendedEventsSortBy(this);
     }
 
@@ -84,11 +84,11 @@ export class AppendedEvents extends QueryFor<AppendedEventWithJsonAsContent[], A
         return this._sortBy;
     }
 
-    static use(args?: AppendedEventsArguments, sorting?: Sorting): [QueryResultWithState<AppendedEventWithJsonAsContent[]>, PerformQuery<AppendedEventsArguments>, SetSorting] {
-        return useQuery<AppendedEventWithJsonAsContent[], AppendedEvents, AppendedEventsArguments>(AppendedEvents, args, sorting);
+    static use(args?: AppendedEventsArguments, sorting?: Sorting): [QueryResultWithState<AppendedEvent[]>, PerformQuery<AppendedEventsArguments>, SetSorting] {
+        return useQuery<AppendedEvent[], AppendedEvents, AppendedEventsArguments>(AppendedEvents, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AppendedEventsArguments, sorting?: Sorting): [QueryResultWithState<AppendedEventWithJsonAsContent[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
-        return useQueryWithPaging<AppendedEventWithJsonAsContent[], AppendedEvents>(AppendedEvents, new Paging(0, pageSize), args, sorting);
+    static useWithPaging(pageSize: number, args?: AppendedEventsArguments, sorting?: Sorting): [QueryResultWithState<AppendedEvent[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+        return useQueryWithPaging<AppendedEvent[], AppendedEvents>(AppendedEvents, new Paging(0, pageSize), args, sorting);
     }
 }

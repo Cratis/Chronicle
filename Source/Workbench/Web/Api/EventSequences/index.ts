@@ -18,4 +18,3 @@ export * from './Next';
 export * from './Redact';
 export * from './RedactMany';
 export * from './Tail';
-export * from './TailForObserver';
