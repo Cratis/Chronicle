@@ -127,7 +127,7 @@ export interface DataPageProps<TQuery extends IQueryFor<TDataType> | IObservable
     /**
      * The key to use for the data
      */
-    dataKey: string;
+    dataKey?: string | undefined;
 
     /**
      * The current selection.

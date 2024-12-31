@@ -16,6 +16,14 @@ public interface INamespaces
     /// </summary>
     /// <param name="request">A <see cref="GetNamespacesRequest"/> instance.</param>
     /// <returns>Collection of strings representing the names of the namespaces.</returns>
-    /// [Operation]
+    [Operation]
     Task<IEnumerable<string>> GetNamespaces(GetNamespacesRequest request);
+
+    /// <summary>
+    /// Observe all available namespaces in an event store.
+    /// </summary>
+    /// <param name="request">A <see cref="GetNamespacesRequest"/> instance.</param>
+    /// <returns>An observable of collection of strings representing the names of the namespaces.</returns>
+    [Operation]
+    IObservable<IEnumerable<string>> ObserveNamespaces(GetNamespacesRequest request);
 }

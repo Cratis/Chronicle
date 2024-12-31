@@ -22,5 +22,6 @@ public interface IEventStores
     /// Observe all available event stores.
     /// </summary>
     /// <returns>Observable of all event stores.</returns>
+    [Operation]
     IObservable<IEnumerable<string>> ObserveEventStores();
 }

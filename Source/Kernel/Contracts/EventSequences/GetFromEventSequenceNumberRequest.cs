@@ -28,17 +28,24 @@ public class GetFromEventSequenceNumberRequest : IEventSequenceRequest
     /// Gets or sets the event sequence number to get events from.
     /// </summary>
     [ProtoMember(4)]
-    public ulong EventSequenceNumber { get; set; }
+    public ulong FromEventSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event sequence number to get events from. This is optional.
+    /// </summary>
+    /// <remarks>If not set, it will get all events from the <see cref="FromEventSequenceNumber"/>.</remarks>
+    [ProtoMember(5)]
+    public ulong? ToEventSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the event source identifier.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(6)]
     public string? EventSourceId { get; set; }
 
     /// <summary>
     /// Gets or sets the event types to get.
     /// </summary>
-    [ProtoMember(6, IsRequired = true)]
+    [ProtoMember(7, IsRequired = true)]
     public IList<EventType> EventTypes { get; set; } = [];
 }

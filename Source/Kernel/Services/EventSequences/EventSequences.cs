@@ -60,6 +60,14 @@ public class EventSequences(
     }
 
     /// <inheritdoc/>
+    public async Task<GetTailSequenceNumberResponse> GetTailSequenceNumber(GetTailSequenceNumberRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceStorage(request);
+        var tail = await eventSequence.GetTailSequenceNumber();
+        return new() { SequenceNumber = tail };
+    }
+
+    /// <inheritdoc/>
     public async Task<GetForEventSourceIdAndEventTypesResponse> GetForEventSourceIdAndEventTypes(GetForEventSourceIdAndEventTypesRequest request, CallContext context = default)
     {
         var eventSequence = GetEventSequenceStorage(request);
@@ -100,12 +108,25 @@ public class EventSequences(
     {
         var eventSequence = GetEventSequenceStorage(request);
 
-        var cursor = await eventSequence.GetFromSequenceNumber(
-            request.EventSequenceNumber,
-            string.IsNullOrWhiteSpace(request.EventSourceId) ? (EventSourceId)null! : request.EventSourceId,
-            EventStreamType.All,
-            EventStreamId.Default,
-            request.EventTypes.ToChronicle());
+        IEventCursor cursor;
+
+        if (request.ToEventSequenceNumber is not null)
+        {
+            cursor = await eventSequence.GetRange(
+                request.FromEventSequenceNumber,
+                request.ToEventSequenceNumber,
+                string.IsNullOrWhiteSpace(request.EventSourceId) ? (EventSourceId)null! : request.EventSourceId,
+                request.EventTypes.ToChronicle());
+        }
+        else
+        {
+            cursor = await eventSequence.GetFromSequenceNumber(
+                request.FromEventSequenceNumber,
+                string.IsNullOrWhiteSpace(request.EventSourceId) ? (EventSourceId)null! : request.EventSourceId,
+                EventStreamType.All,
+                EventStreamId.Default,
+                request.EventTypes.ToChronicle());
+        }
 
         var events = new List<Contracts.Events.AppendedEvent>();
         while (await cursor.MoveNext())

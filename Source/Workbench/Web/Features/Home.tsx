@@ -8,20 +8,21 @@ import { AllEventStores } from 'Api/EventStores/AllEventStores';
 export const Home = () => {
     const [eventStores] = AllEventStores.use();
 
+    console.log(eventStores.data);
+
     return (
         <div>
             <h1 className='text-4xl m-3'>Select Event Store</h1>
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 '>
                 {eventStores.data.map((eventStore) => {
                     return (
-                        <>
-                            <StoreCard
-                                title={eventStore}
-                                path={`/event-store/${eventStore}/Default`}
-                                footer={<CardFooter />}
-                                description=''
-                            />
-                        </>
+                        <StoreCard
+                            key={eventStore}
+                            title={eventStore}
+                            path={`/event-store/${eventStore}/Default`}
+                            footer={<CardFooter />}
+                            description=''
+                        />
                     );
                 })}
             </div>

@@ -152,7 +152,7 @@ public class EventSequence(
             EventStoreName = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
-            EventSequenceNumber = sequenceNumber,
+            FromEventSequenceNumber = sequenceNumber,
             EventSourceId = eventSourceId?.Value ?? default,
             EventTypes = eventTypes?.ToContract() ?? []
         });

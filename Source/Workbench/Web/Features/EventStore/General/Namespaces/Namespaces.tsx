@@ -20,13 +20,16 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
         eventStore: params.eventStore!
     };
 
+    const nameColumn = (namespace: string) => {
+        return <>{namespace}</>;
+    };
+
     return (
         <>
             <DataPage
-                title={strings.eventStore.general.types.title}
+                title={strings.eventStore.general.namespaces.title}
                 query={AllNamespaces}
                 queryArguments={queryArgs}
-                dataKey='name'
                 emptyMessage={strings.eventStore.general.namespaces.empty}>
 
                 <DataPage.MenuItems>
@@ -37,7 +40,7 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>
-                    <Column field='name' header={strings.eventStore.general.namespaces.columns.name} sortable />
+                    <Column header={strings.eventStore.general.namespaces.columns.name} sortable body={nameColumn} />
                 </DataPage.Columns>
             </DataPage>
             <AddNamespaceDialogWrapper>

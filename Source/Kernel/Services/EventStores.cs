@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Subjects;
+using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Storage;
 
@@ -21,10 +21,6 @@ public class EventStores(IStorage storage) : IEventStores
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<string>> ObserveEventStores()
-    {
-        var subject = new Subject<IEnumerable<string>>();
-        storage.ObserveEventStores().Subscribe(eventStores => subject.OnNext(eventStores.Select(_ => _.Value).ToArray()));
-        return subject;
-    }
+    public IObservable<IEnumerable<string>> ObserveEventStores() =>
+        storage.ObserveEventStores().Select(_ => _.Select(e => e.Value));
 }

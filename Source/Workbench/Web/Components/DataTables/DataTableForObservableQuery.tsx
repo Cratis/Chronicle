@@ -36,7 +36,7 @@ export interface DataTableForObservableQueryProps<TQuery extends IObservableQuer
     /**
      * The key to use for the data
      */
-    dataKey: string;
+    dataKey?: string | undefined;
 
     /**
      * The current selection.
