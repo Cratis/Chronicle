@@ -9,11 +9,11 @@ namespace Cratis.Api.Events;
 /// Represents the API for working with event types.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="EventTypes"/> class.
+/// Initializes a new instance of the <see cref="EventTypeCommands"/> class.
 /// </remarks>
 /// <param name="eventTypes"><see cref="IEventTypes"/> service for actual registration.</param>
 [Route("/api/event-store/{eventStoreName}/types")]
-public class EventTypes(IEventTypes eventTypes) : Controller
+public class EventTypeCommands(IEventTypes eventTypes) : Controller
 {
     /// <summary>
     /// Register schemas.

@@ -6,7 +6,7 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import { EventType } from './EventType';
+import { EventType } from '../Contracts/Events/EventType';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/types');
@@ -14,10 +14,12 @@ const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/types'
 class AllEventTypesSortBy {
     private _id: SortingActionsForQuery<EventType[]>;
     private _generation: SortingActionsForQuery<EventType[]>;
+    private _tombstone: SortingActionsForQuery<EventType[]>;
 
     constructor(readonly query: AllEventTypes) {
         this._id = new SortingActionsForQuery<EventType[]>('id', query);
         this._generation = new SortingActionsForQuery<EventType[]>('generation', query);
+        this._tombstone = new SortingActionsForQuery<EventType[]>('tombstone', query);
     }
 
     get id(): SortingActionsForQuery<EventType[]> {
@@ -26,17 +28,24 @@ class AllEventTypesSortBy {
     get generation(): SortingActionsForQuery<EventType[]> {
         return this._generation;
     }
+    get tombstone(): SortingActionsForQuery<EventType[]> {
+        return this._tombstone;
+    }
 }
 
 class AllEventTypesSortByWithoutQuery {
     private _id: SortingActions  = new SortingActions('id');
     private _generation: SortingActions  = new SortingActions('generation');
+    private _tombstone: SortingActions  = new SortingActions('tombstone');
 
     get id(): SortingActions {
         return this._id;
     }
     get generation(): SortingActions {
         return this._generation;
+    }
+    get tombstone(): SortingActions {
+        return this._tombstone;
     }
 }
 

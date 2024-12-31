@@ -18,4 +18,18 @@ public interface IEventTypes
     /// <returns>Awaitable task.</returns>
     [Operation]
     Task Register(RegisterEventTypesRequest request);
+
+    /// <summary>
+    /// Get all the registered event types for an event store.
+    /// </summary>
+    /// <param name="request">The <see cref="GetAllEventTypesRequest"/> payload.</param>
+    /// <returns>A collection of <see cref="EventType"/> instances.</returns>
+    Task<IEnumerable<EventType>> GetAll(GetAllEventTypesRequest request);
+
+    /// <summary>
+    /// Get all the registered event types for an event store with full registration information.
+    /// </summary>
+    /// <param name="request">The <see cref="GetAllEventTypesRequest"/> payload.</param>
+    /// <returns>A collection of <see cref="EventTypeRegistration"/> instances.</returns>
+    Task<IEnumerable<EventTypeRegistration>> GetAllRegistrations(GetAllEventTypesRequest request);
 }

@@ -70,7 +70,6 @@ public class EventTypes : IEventTypes
         var registrations = _typesByEventType.Select(_ => new EventTypeRegistration
         {
             Type = _.Key.ToContract(),
-            FriendlyName = _.Value.Name,
             Schema = _schemasByEventType[_.Key].ToJson()
         }).ToList();
 

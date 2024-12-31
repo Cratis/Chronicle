@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Cratis.Api.Auditing;
 using Cratis.Api.EventTypes;
 using Cratis.Api.Identities;
+using Cratis.Chronicle.Contracts.Events;
 
 namespace Cratis.Api.EventSequences;
 

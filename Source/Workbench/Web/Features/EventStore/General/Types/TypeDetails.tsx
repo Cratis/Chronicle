@@ -4,8 +4,8 @@
 import { Column } from 'primereact/column';
 import { TreeNode } from 'primereact/treenode';
 import { TreeTable } from 'primereact/treetable';
-import { EventTypeWithSchemas } from 'Api/EventTypes';
 import { IDetailsComponentProps } from 'Components';
+import { EventTypeRegistration } from 'Api/Contracts/Events';
 
 const formatType = (type: string) => {
     switch (type) {
@@ -18,10 +18,10 @@ const formatType = (type: string) => {
     return type;
 };
 
-export const TypeDetails = (props: IDetailsComponentProps<EventTypeWithSchemas>) => {
+export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>) => {
     const propertyNodes: TreeNode[] = [];
 
-    const properties = props.item.schemas[0].properties;
+    const properties = JSON.parse(props.item.schema).properties;
     if (properties) {
         let index = 0;
 

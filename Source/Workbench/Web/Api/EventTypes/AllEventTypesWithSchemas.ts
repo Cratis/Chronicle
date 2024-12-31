@@ -6,37 +6,37 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import { EventTypeWithSchemas } from './EventTypeWithSchemas';
+import { EventTypeRegistration } from '../Contracts/Events/EventTypeRegistration';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/types/schemas');
 
 class AllEventTypesWithSchemasSortBy {
-    private _type: SortingActionsForQuery<EventTypeWithSchemas[]>;
-    private _schemas: SortingActionsForQuery<EventTypeWithSchemas[]>;
+    private _type: SortingActionsForQuery<EventTypeRegistration[]>;
+    private _schema: SortingActionsForQuery<EventTypeRegistration[]>;
 
     constructor(readonly query: AllEventTypesWithSchemas) {
-        this._type = new SortingActionsForQuery<EventTypeWithSchemas[]>('type', query);
-        this._schemas = new SortingActionsForQuery<EventTypeWithSchemas[]>('schemas', query);
+        this._type = new SortingActionsForQuery<EventTypeRegistration[]>('type', query);
+        this._schema = new SortingActionsForQuery<EventTypeRegistration[]>('schema', query);
     }
 
-    get type(): SortingActionsForQuery<EventTypeWithSchemas[]> {
+    get type(): SortingActionsForQuery<EventTypeRegistration[]> {
         return this._type;
     }
-    get schemas(): SortingActionsForQuery<EventTypeWithSchemas[]> {
-        return this._schemas;
+    get schema(): SortingActionsForQuery<EventTypeRegistration[]> {
+        return this._schema;
     }
 }
 
 class AllEventTypesWithSchemasSortByWithoutQuery {
     private _type: SortingActions  = new SortingActions('type');
-    private _schemas: SortingActions  = new SortingActions('schemas');
+    private _schema: SortingActions  = new SortingActions('schema');
 
     get type(): SortingActions {
         return this._type;
     }
-    get schemas(): SortingActions {
-        return this._schemas;
+    get schema(): SortingActions {
+        return this._schema;
     }
 }
 
@@ -44,15 +44,15 @@ export interface AllEventTypesWithSchemasArguments {
     eventStore: string;
 }
 
-export class AllEventTypesWithSchemas extends QueryFor<EventTypeWithSchemas[], AllEventTypesWithSchemasArguments> {
+export class AllEventTypesWithSchemas extends QueryFor<EventTypeRegistration[], AllEventTypesWithSchemasArguments> {
     readonly route: string = '/api/event-store/{eventStore}/types/schemas';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly defaultValue: EventTypeWithSchemas[] = [];
+    readonly defaultValue: EventTypeRegistration[] = [];
     private readonly _sortBy: AllEventTypesWithSchemasSortBy;
     private static readonly _sortBy: AllEventTypesWithSchemasSortByWithoutQuery = new AllEventTypesWithSchemasSortByWithoutQuery();
 
     constructor() {
-        super(EventTypeWithSchemas, true);
+        super(EventTypeRegistration, true);
         this._sortBy = new AllEventTypesWithSchemasSortBy(this);
     }
 
@@ -70,11 +70,11 @@ export class AllEventTypesWithSchemas extends QueryFor<EventTypeWithSchemas[], A
         return this._sortBy;
     }
 
-    static use(args?: AllEventTypesWithSchemasArguments, sorting?: Sorting): [QueryResultWithState<EventTypeWithSchemas[]>, PerformQuery<AllEventTypesWithSchemasArguments>, SetSorting] {
-        return useQuery<EventTypeWithSchemas[], AllEventTypesWithSchemas, AllEventTypesWithSchemasArguments>(AllEventTypesWithSchemas, args, sorting);
+    static use(args?: AllEventTypesWithSchemasArguments, sorting?: Sorting): [QueryResultWithState<EventTypeRegistration[]>, PerformQuery<AllEventTypesWithSchemasArguments>, SetSorting] {
+        return useQuery<EventTypeRegistration[], AllEventTypesWithSchemas, AllEventTypesWithSchemasArguments>(AllEventTypesWithSchemas, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllEventTypesWithSchemasArguments, sorting?: Sorting): [QueryResultWithState<EventTypeWithSchemas[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
-        return useQueryWithPaging<EventTypeWithSchemas[], AllEventTypesWithSchemas>(AllEventTypesWithSchemas, new Paging(0, pageSize), args, sorting);
+    static useWithPaging(pageSize: number, args?: AllEventTypesWithSchemasArguments, sorting?: Sorting): [QueryResultWithState<EventTypeRegistration[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+        return useQueryWithPaging<EventTypeRegistration[], AllEventTypesWithSchemas>(AllEventTypesWithSchemas, new Paging(0, pageSize), args, sorting);
     }
 }

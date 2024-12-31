@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Api.EventTypes;
+using Cratis.Chronicle.Contracts.Events;
 
 namespace Cratis.Api.EventSequences;
 
