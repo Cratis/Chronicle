@@ -11,7 +11,7 @@ using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
 
-namespace Cratis.Chronicle;
+namespace Cratis.Chronicle.Connections;
 
 /// <summary>
 /// Defines all the Kernel services available.

@@ -14,22 +14,23 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Tasks;
+using Cratis.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Grpc.Net.Client.Configuration;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc.Client;
 
-namespace Cratis.Chronicle;
+namespace Cratis.Chronicle.Connections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/>.
 /// </summary>
 public class ChronicleConnection : IChronicleConnection
 {
-    readonly ChronicleOptions _options;
-    readonly ITasks _tasks;
+    readonly ChronicleUrl _url;
+    readonly int _connectTimeout;
+    readonly ITaskFactory _tasks;
     readonly CancellationToken _cancellationToken;
     readonly ILogger<ChronicleConnection> _logger;
     GrpcChannel? _channel;
@@ -42,21 +43,24 @@ public class ChronicleConnection : IChronicleConnection
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnection"/> class.
     /// </summary>
-    /// <param name="options"><see cref="ChronicleOptions"/>.</param>
+    /// <param name="url"><see cref="ChronicleUrl"/> to connect with.</param>
+    /// <param name="connectTimeout">Timeout when connecting in seconds.</param>
     /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
-    /// <param name="tasks"><see cref="ITasks"/> to create tasks with.</param>
+    /// <param name="tasks"><see cref="ITaskFactory"/> to create tasks with.</param>
     /// <param name="logger">Logger for logging.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public ChronicleConnection(
-        ChronicleOptions options,
+        ChronicleUrl url,
+        int connectTimeout,
         IConnectionLifecycle connectionLifecycle,
-        ITasks tasks,
+        ITaskFactory tasks,
         ILogger<ChronicleConnection> logger,
         CancellationToken cancellationToken)
     {
         GrpcClientFactory.AllowUnencryptedHttp2 = true;
-        _options = options;
+        _url = url;
+        _connectTimeout = connectTimeout;
         Lifecycle = connectionLifecycle;
         _tasks = tasks;
         _cancellationToken = cancellationToken;
@@ -124,7 +128,7 @@ public class ChronicleConnection : IChronicleConnection
                 _channel.CreateGrpcService<IJobs>(),
                 _channel.CreateGrpcService<IServer>());
 
-            await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_options.ConnectTimeout));
+            await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout));
             _logger.Connected();
             await Lifecycle.Connected();
         }
@@ -149,7 +153,7 @@ public class ChronicleConnection : IChronicleConnection
             EnableMultipleHttp2Connections = true
         };
 
-        var address = $"http://{_options.Url.ServerAddress.Host}:{_options.Url.ServerAddress.Port}";
+        var address = $"http://{_url.ServerAddress.Host}:{_url.ServerAddress.Port}";
 
         return GrpcChannel.ForAddress(
             address,

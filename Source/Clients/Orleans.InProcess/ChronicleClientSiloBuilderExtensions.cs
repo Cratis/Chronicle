@@ -124,7 +124,7 @@ public static class ChronicleClientSiloBuilderExtensions
                 options.ServiceProvider = sp;
                 options.ArtifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
                 var storage = sp.GetRequiredService<IStorage>();
-                var services = new Cratis.Chronicle.Services(
+                var services = new Cratis.Chronicle.Connections.Services(
                     new Server::Cratis.Chronicle.Services.EventStores(storage),
                     new Server::Cratis.Chronicle.Services.Namespaces(storage),
                     new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
