@@ -5,8 +5,6 @@ using System.Text.Json;
 using Cratis.Applications.Queries;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventSequences;
-using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Api.EventSequences;
 
@@ -96,7 +94,7 @@ public class EventSequenceQueries(IEventSequences eventSequences, IQueryContextM
     /// <param name="eventSourceId">Optional event source id to get for.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet("range")]
-    public async Task<IQueryable<AppendedEventWithJsonAsContent>> AppendedEventsInRange(
+    public async Task<IQueryable<AppendedEvent>> AppendedEventsInRange(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string eventSequenceId,
