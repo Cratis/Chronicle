@@ -3,13 +3,14 @@
 
 import { DataPage } from 'Components';
 import strings from 'Strings';
-import { AppendedEvents, AppendedEventsArguments, AppendedEventWithJsonAsContent } from 'Api/EventSequences';
+import { AppendedEvents, AppendedEventsArguments } from 'Api/EventSequences';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { Column } from 'primereact/column';
 import { EventDetails } from './EventDetails';
+import { AppendedEvent } from 'Api/Contracts/Events';
 
-const occurred = (event: AppendedEventWithJsonAsContent) => {
+const occurred = (event: AppendedEvent) => {
     return event.context.occurred.toLocaleString();
 };
 
