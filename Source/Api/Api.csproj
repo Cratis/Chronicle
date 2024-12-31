@@ -11,6 +11,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../Clients/Connections/Connections.csproj" />
         <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Kernel/Grains.Interfaces/Grains.Interfaces.csproj" />
         <ProjectReference Include="../Kernel/Storage/Storage.csproj" />

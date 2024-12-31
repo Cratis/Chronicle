@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml;
 using System.Xml.XPath;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
@@ -18,6 +19,7 @@ using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
 using Grpc.Net.Client;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc.Client;
 
 namespace Cratis.Chronicle.Api;
@@ -57,19 +59,29 @@ public static class ApiServiceCollectionExtensions
 
         if (addGrpc)
         {
-            services.AddSingleton<GrpcConnectionManager>();
-            services.AddSingleton(sp => sp.GetRequiredService<GrpcConnectionManager>().Channel);
-            services.AddSingleton(sp => sp.GetRequiredService<GrpcChannel>().CreateGrpcService<IEventStores>());
-            services.AddSingleton(sp => sp.GetRequiredService<GrpcChannel>().CreateGrpcService<INamespaces>());
-            services.AddSingleton(sp => sp.GetRequiredService<GrpcChannel>().CreateGrpcService<IEventSequences>());
-            services.AddSingleton(sp => sp.GetRequiredService<GrpcChannel>().CreateGrpcService<IEventTypes>());
-            services.AddSingleton(sp => sp.GetRequiredService<GrpcChannel>().CreateGrpcService<IConstraints>());
-            services.AddSingleton(sp => sp.GetRequiredService<GrpcChannel>().CreateGrpcService<IObservers>());
-            services.AddSingleton(sp => sp.GetRequiredService<GrpcChannel>().CreateGrpcService<IReactors>());
-            services.AddSingleton(sp => sp.GetRequiredService<GrpcChannel>().CreateGrpcService<IReducers>());
-            services.AddSingleton(sp => sp.GetRequiredService<GrpcChannel>().CreateGrpcService<IProjections>());
-            services.AddSingleton(sp => sp.GetRequiredService<GrpcChannel>().CreateGrpcService<IJobs>());
-            services.AddSingleton(sp => sp.GetRequiredService<GrpcChannel>().CreateGrpcService<IServer>());
+            services.AddSingleton<IChronicleConnection>(sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<ChronicleApiOptions>>();
+                var connectionLifecycle = new ConnectionLifecycle(sp.GetRequiredService<ILogger<ConnectionLifecycle>>());
+                return new ChronicleConnection(
+                    options.Value.ChronicleUrl,
+                    options.Value.ConnectTimeout,
+                    connectionLifecycle,
+                    new Cratis.Tasks.TaskFactory(),
+                    sp.GetRequiredService<ILogger<ChronicleConnection>>(),
+                    CancellationToken.None);
+            });
+            services.AddSingleton(sp => sp.GetRequiredService<IChronicleConnection>().Services);
+            services.AddSingleton(sp => sp.GetRequiredService<IServices>().EventStores);
+            services.AddSingleton(sp => sp.GetRequiredService<IServices>().Namespaces);
+            services.AddSingleton(sp => sp.GetRequiredService<IServices>().EventSequences);
+            services.AddSingleton(sp => sp.GetRequiredService<IServices>().EventTypes);
+            services.AddSingleton(sp => sp.GetRequiredService<IServices>().Constraints);
+            services.AddSingleton(sp => sp.GetRequiredService<IServices>().Observers);
+            services.AddSingleton(sp => sp.GetRequiredService<IServices>().Reactors);
+            services.AddSingleton(sp => sp.GetRequiredService<IServices>().Reducers);
+            services.AddSingleton(sp => sp.GetRequiredService<IServices>().Projections);
+            services.AddSingleton(sp => sp.GetRequiredService<IServices>().Jobs);
         }
         return services;
     }
