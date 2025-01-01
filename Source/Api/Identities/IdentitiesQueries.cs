@@ -21,6 +21,18 @@ public class IdentitiesQueries(IIdentities identities) : ControllerBase
     /// <param name="namespace">The namespace to get identities for.</param>
     /// <returns>Collection of identities.</returns>
     [HttpGet]
+    public Task<IEnumerable<Identity>> GetIdentities(
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace) =>
+        identities.GetIdentities(new() { EventStore = eventStore, Namespace = @namespace });
+
+    /// <summary>
+    /// Observes all identities.
+    /// </summary>
+    /// <param name="eventStore">The event store to get identities for.</param>
+    /// <param name="namespace">The namespace to get identities for.</param>
+    /// <returns>Collection of identities.</returns>
+    [HttpGet("observe")]
     public ISubject<IEnumerable<Identity>> AllIdentities(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace)
