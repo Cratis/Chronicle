@@ -5,6 +5,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
@@ -30,6 +31,16 @@ public interface IServices
     INamespaces Namespaces { get; }
 
     /// <summary>
+    /// Gets the <see cref="IRecommendations"/> service.
+    /// </summary>
+    IRecommendations Recommendations { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IIdentities"/> service.
+    /// </summary>
+    IIdentities Identities { get; }
+
+    /// <summary>
     /// Gets the <see cref="IEventSequences"/> service.
     /// </summary>
     IEventSequences EventSequences { get; }
@@ -50,14 +61,14 @@ public interface IServices
     IObservers Observers { get; }
 
     /// <summary>
+    /// Gets the <see cref="IFailedPartitions"/> service.
+    /// </summary>
+    IFailedPartitions FailedPartitions { get; }
+
+    /// <summary>
     /// Gets the <see cref="IReactors"/> service.
     /// </summary>
     IReactors Reactors { get; }
-
-    /// <summary>
-    /// Gets the <see cref="IRecommendations"/> service.
-    /// </summary>
-    IRecommendations Recommendations { get; }
 
     /// <summary>
     /// Gets the <see cref="IReducers"/> service.

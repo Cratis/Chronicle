@@ -6,6 +6,7 @@ using Cratis.Api.Auditing;
 using Cratis.Api.EventTypes;
 using Cratis.Api.Identities;
 using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.Identities;
 
 namespace Cratis.Api.EventSequences;
 

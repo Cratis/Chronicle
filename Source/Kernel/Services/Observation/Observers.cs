@@ -37,11 +37,4 @@ public class Observers(IGrainFactory grainFactory, IStorage storage) : IObserver
     /// <inheritdoc/>
     public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default) =>
         storage.GetEventStore(request.EventStoreName).GetNamespace(request.Namespace).Observers.ObserveAll().Select(_ => _.ToContract());
-
-    /// <inheritdoc/>
-    public async Task<IEnumerable<FailedPartition>> GetFailedPartitionsForObserver(FailedPartitionsForObserverRequest request, CallContext context = default)
-    {
-        var failedPartitions = await storage.GetEventStore(request.EventStoreName).GetNamespace(request.Namespace).FailedPartitions.GetFor(request.ObserverId);
-        return failedPartitions.Partitions.Select(_ => _.ToContract()).ToArray();
-    }
 }

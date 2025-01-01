@@ -4,8 +4,6 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Reactive;
-using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Namespaces;
 
 namespace Cratis.Api.Namespaces;
 
@@ -20,7 +18,7 @@ public class NamespaceQueries(INamespaces namespaces) : ControllerBase
     /// Observes all namespaces registered.
     /// </summary>
     /// <param name="eventStore">The event store to observe namespaces for.</param>
-    /// <returns>An observable for observing a collection of <see cref="Namespace"/>.</returns>
+    /// <returns>An observable for observing a collection of namespace names.</returns>
     [HttpGet]
     public ISubject<IEnumerable<string>> AllNamespaces([FromRoute] string eventStore)
     {

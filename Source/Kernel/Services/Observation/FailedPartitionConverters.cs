@@ -13,6 +13,14 @@ public static class FailedPartitionConverters
     /// <summary>
     /// Convert from <see cref="Concepts.Observation.FailedPartition"/> to <see cref="FailedPartition"/>.
     /// </summary>
+    /// <param name="failedPartitions">Collection of <see cref="Concepts.Observation.FailedPartition"/> to convert from.</param>
+    /// <returns>Converted collection of <see cref="FailedPartition"/>.</returns>
+    public static IEnumerable<FailedPartition> ToContract(this IEnumerable<Concepts.Observation.FailedPartition> failedPartitions) =>
+        failedPartitions.Select(_ => _.ToContract());
+
+    /// <summary>
+    /// Convert from <see cref="Concepts.Observation.FailedPartition"/> to <see cref="FailedPartition"/>.
+    /// </summary>
     /// <param name="failedPartition"><see cref="Concepts.Observation.FailedPartition"/> to convert from.</param>
     /// <returns>Converted <see cref="FailedPartition"/>.</returns>
     public static FailedPartition ToContract(this Concepts.Observation.FailedPartition failedPartition)

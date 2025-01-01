@@ -8,6 +8,7 @@ using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Host;
+using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
@@ -118,12 +119,14 @@ public class ChronicleConnection : IChronicleConnection
             _services = new Services(
                 _channel.CreateGrpcService<IEventStores>(),
                 _channel.CreateGrpcService<INamespaces>(),
+                _channel.CreateGrpcService<IRecommendations>(),
+                _channel.CreateGrpcService<IIdentities>(),
                 _channel.CreateGrpcService<IEventSequences>(),
                 _channel.CreateGrpcService<IEventTypes>(),
                 _channel.CreateGrpcService<IConstraints>(),
                 _channel.CreateGrpcService<IObservers>(),
+                _channel.CreateGrpcService<IFailedPartitions>(),
                 _channel.CreateGrpcService<IReactors>(),
-                _channel.CreateGrpcService<IRecommendations>(),
                 _channel.CreateGrpcService<IReducers>(),
                 _channel.CreateGrpcService<IProjections>(),
                 _channel.CreateGrpcService<IJobs>(),

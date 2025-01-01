@@ -12,10 +12,6 @@
 
     <ItemGroup>
         <ProjectReference Include="../Clients/Connections/Connections.csproj" />
-        <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
-        <ProjectReference Include="../Kernel/Grains.Interfaces/Grains.Interfaces.csproj" />
-        <ProjectReference Include="../Kernel/Storage/Storage.csproj" />
-        <ProjectReference Include="../Kernel/Concepts/Concepts.csproj" />
         <ProjectReference Include="../Kernel/Contracts/Contracts.csproj" />
         <ProjectReference Include="../Tools/ResourceEmbedder/ResourceEmbedder.csproj" />
     </ItemGroup>
@@ -25,7 +21,6 @@
         <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
         <PackageReference Include="Cratis.Applications" />
         <PackageReference Include="Grpc.Net.Client" />
-        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
     </ItemGroup>
 
     <PropertyGroup>

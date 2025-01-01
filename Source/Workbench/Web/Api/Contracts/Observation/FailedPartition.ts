@@ -5,16 +5,17 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
-import { ArrayIndexer } from './ArrayIndexer';
+import { Guid } from '@cratis/fundamentals';
+import { FailedPartitionAttempt } from './FailedPartitionAttempt';
 
-export class ArrayIndexers {
+export class FailedPartition {
 
-    @field(Number)
-    count!: number;
+    @field(Guid)
+    id!: Guid;
 
-    @field(Boolean)
-    isEmpty!: boolean;
+    @field(String)
+    partition!: string;
 
-    @field(ArrayIndexer, true)
-    all!: ArrayIndexer[];
+    @field(FailedPartitionAttempt, true)
+    attempts!: FailedPartitionAttempt[];
 }

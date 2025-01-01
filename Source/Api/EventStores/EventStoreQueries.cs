@@ -2,10 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Reactive;
-using Cratis.Chronicle.Storage;
 
 namespace Cratis.Api.EventStores;
 
@@ -19,14 +17,14 @@ public class EventStoreQueries(IEventStores eventStores) : ControllerBase
     /// <summary>
     /// Get all event stores registered.
     /// </summary>
-    /// <returns>A collection of <see cref="EventStoreName"/>.</returns>
+    /// <returns>A collection of event store names.</returns>
     [HttpGet]
     public async Task<IEnumerable<string>> GetEventStores() => await eventStores.GetEventStores();
 
     /// <summary>
     /// Observes all event stores registered..
     /// </summary>
-    /// <returns>An observable for observing a collection of <see cref="EventStoreName"/>.</returns>
+    /// <returns>An observable for observing a collection of event store names.</returns>
     [HttpGet("observe")]
     public ISubject<IEnumerable<string>> AllEventStores()
     {

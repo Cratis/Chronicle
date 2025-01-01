@@ -56,12 +56,4 @@ public interface IObservers
     /// <returns>An observable of a collection of <see cref="ObserverInformation"/>.</returns>
     [Operation]
     IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default);
-
-    /// <summary>
-    /// Get all failed partitions for an observer.
-    /// </summary>
-    /// <param name="request">The <see cref="FailedPartitionsForObserverRequest"/>.</param>
-    /// <param name="context">gRPC call context.</param>
-    /// <returns>A collection of <see cref="FailedPartition"/>.</returns>
-    Task<IEnumerable<FailedPartition>> GetFailedPartitionsForObserver(FailedPartitionsForObserverRequest request, CallContext context = default);
 }

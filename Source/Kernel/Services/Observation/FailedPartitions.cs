@@ -1,0 +1,27 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Reactive.Linq;
+using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Storage;
+using ProtoBuf.Grpc;
+
+namespace Cratis.Chronicle.Services.Observation;
+
+/// <summary>
+/// Represents an implementation of <see cref="IFailedPartitions"/>.
+/// </summary>
+/// <param name="storage">The <see cref="IStorage"/>.</param>
+public class FailedPartitions(IStorage storage) : IFailedPartitions
+{
+    /// <inheritdoc/>
+    public async Task<IEnumerable<FailedPartition>> GetFailedPartitions(GetFailedPartitionsRequest request, CallContext context = default)
+    {
+        var failedPartitions = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).FailedPartitions.GetFor(request.ObserverId ?? null!);
+        return failedPartitions.Partitions.Select(_ => _.ToContract()).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<FailedPartition>> ObserveFailedPartitions(GetFailedPartitionsRequest request, CallContext context = default) =>
+        storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).FailedPartitions.ObserveAllFor(request.ObserverId ?? null!).Select(_ => _.ToContract());
+}
