@@ -14,7 +14,7 @@ public class and_there_are_no_failing_partitions : given.an_observer
 
     void Establish()
     {
-        type = ObserverType.Client;
+        type = ObserverType.Reactor;
     }
 
     async Task Because() => error = await Catch.Exception(() => _observer.Subscribe<NullObserverSubscriber>(type, [], SiloAddress.Zero));

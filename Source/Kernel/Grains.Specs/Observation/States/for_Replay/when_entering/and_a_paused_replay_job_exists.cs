@@ -19,7 +19,7 @@ public class and_a_paused_replay_job_exists : given.a_replay_state
     {
         _storedState = _storedState with
         {
-            Type = ObserverType.Client
+            Type = ObserverType.Reactor
         };
 
         _pausedJob = new()
@@ -61,5 +61,5 @@ public class and_a_paused_replay_job_exists : given.a_replay_state
 
     [Fact] void should_resume_paused_job() => _jobsManager.Received(1).Resume(_pausedJob.Id);
     [Fact] void should_begin_replay_only_one() => _observerServiceClient.Received(1).BeginReplayFor(Arg.Any<ObserverDetails>());
-    [Fact] void should_begin_replay_for_correct_observer() => _observerDetails.ShouldEqual(new(_storedState.Id, _observerKey, ObserverType.Client));
+    [Fact] void should_begin_replay_for_correct_observer() => _observerDetails.ShouldEqual(new(_storedState.Id, _observerKey, ObserverType.Reactor));
 }
