@@ -16,11 +16,11 @@ public class NamespaceCommands(INamespaces namespaces) : ControllerBase
     /// Ensure a namespace exists.
     /// </summary>
     /// <param name="eventStore">Name of the event store.</param>
-    /// <param name="namespace">Command for ensuring.</param>
+    /// <param name="command">Command for ensuring.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost]
     public Task EnsureNamespace(
         [FromRoute] string eventStore,
-        [FromBody] string @namespace) =>
-        namespaces.Ensure(new() { EventStore = eventStore, Name = @namespace });
+        [FromBody] Ensure command) =>
+        namespaces.Ensure(new() { EventStore = eventStore, Name = command.Namespace });
 }

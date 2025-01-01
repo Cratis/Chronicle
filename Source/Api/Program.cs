@@ -41,6 +41,8 @@ app
     .UseCratisApplicationModel()
     .UseCratisChronicleApi();
 
+Console.WriteLine($"Chronicle API started on port {chronicleApiOptions.ApiPort}");
+
 await app.RunAsync();
 
 static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)

@@ -21,7 +21,7 @@ export class NamespacesViewModel {
 
         const command = new EnsureNamespace();
         command.eventStore = this._params.eventStore!;
-        command.name = response.name;
+        command.namespace = response.name;
         await command.execute();
     }
 }
