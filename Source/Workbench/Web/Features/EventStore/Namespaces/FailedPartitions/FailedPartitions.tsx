@@ -8,7 +8,7 @@ import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { FailedPartition } from 'Api/Concepts/Observation';
+import { FailedPartition } from 'Api/Contracts/Observation';
 import { withViewModel } from '@cratis/applications.react.mvvm';
 import { FailedPartitionsViewModel } from './FailedPartitionsViewModel';
 import { DataPage, MenuItem } from 'Components';

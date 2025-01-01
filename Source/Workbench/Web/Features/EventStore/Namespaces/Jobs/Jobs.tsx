@@ -5,13 +5,14 @@ import strings from 'Strings';
 import { DataPage, MenuItem } from 'Components';
 import { Column } from 'primereact/column';
 import * as faIcons from 'react-icons/fa6';
-import { AllJobs, AllJobsArguments, JobInformation, JobStatus } from 'Api/Jobs';
+import { AllJobs, AllJobsArguments } from 'Api/Jobs';
+import { Job, JobStatus } from 'Api/Contracts/Jobs';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { withViewModel } from '@cratis/applications.react.mvvm';
 import { JobViewModels } from './JobViewModels';
 
-const jobStatus = (job: JobInformation) => {
+const jobStatus = (job: Job) => {
     switch (job.status) {
         case JobStatus.none:
             return strings.eventStore.namespaces.jobs.status.none;
@@ -39,7 +40,7 @@ const jobStatus = (job: JobInformation) => {
     return strings.eventStore.namespaces.jobs.status.none;
 };
 
-const progress = (job: JobInformation) => {
+const progress = (job: Job) => {
     const completedSteps = job.progress.failedSteps + job.progress.successfulSteps;
     const progress = (completedSteps / job.progress.totalSteps) * 100;
     return `${Math.abs(progress).toFixed()}%`;
@@ -59,7 +60,7 @@ export const Jobs = withViewModel(JobViewModels, ({ viewModel }) => {
             queryArguments={queryArgs}
             emptyMessage={strings.eventStore.namespaces.jobs.empty}
             dataKey='id'
-            onSelectionChange={e => viewModel.selectedJob = e.value as JobInformation}>
+            onSelectionChange={e => viewModel.selectedJob = e.value as Job}>
             <DataPage.MenuItems>
                 <MenuItem
                     id="stop"

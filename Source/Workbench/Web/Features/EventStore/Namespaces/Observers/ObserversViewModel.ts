@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { inject, injectable } from 'tsyringe';
-import { ObserverInformation } from 'Api/Concepts/Observation/ObserverInformation';
+import { ObserverInformation } from 'Api/Contracts/Observation/ObserverInformation';
 import { Replay } from 'Api/Observation';
 import { INamespaces } from 'State/Namespaces';
 import { DialogButtons, IDialogs } from '@cratis/applications.react.mvvm/dialogs';

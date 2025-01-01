@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { inject, injectable } from 'tsyringe';
-import { FailedPartition } from 'Api/Concepts/Observation';
+import { FailedPartition } from 'Api/Contracts/Observation';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { TryRecoverFailedPartition } from 'Api/Observation';
 
