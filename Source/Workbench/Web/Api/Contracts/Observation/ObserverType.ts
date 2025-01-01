@@ -5,7 +5,7 @@
 // eslint-disable-next-line header/header
 export enum ObserverType {
     unknown = 0,
-    client = 1,
+    reactor = 1,
     projection = 2,
     reducer = 3,
 }

@@ -6,26 +6,26 @@ using ProtoBuf;
 namespace Cratis.Chronicle.Contracts.Observation;
 
 /// <summary>
-/// Represents the request for rewinding an observer.
+/// Represents the request for rewinding a partition in an observer.
 /// </summary>
 [ProtoContract]
-public class RewindRequest
+public class ReplayPartition : IObserverCommand
 {
-    /// <summary>
-    /// Gets or sets the event store name.
-    /// </summary>
+    /// <inheritdoc/>
     [ProtoMember(1)]
     public string EventStoreName { get; set; }
 
-    /// <summary>
-    /// Gets or sets the namespace.
-    /// </summary>
+    /// <inheritdoc/>
     [ProtoMember(2)]
     public string Namespace { get; set; }
 
-    /// <summary>
-    /// Gets or sets the observer identifier.
-    /// </summary>
+    /// <inheritdoc/>
     [ProtoMember(3)]
-    public Guid ObserverId { get; set; }
+    public string ObserverId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the partition to rewind.
+    /// </summary>
+    [ProtoMember(4)]
+    public string Partition { get; set; }
 }

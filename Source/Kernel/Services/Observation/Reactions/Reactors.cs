@@ -45,7 +45,7 @@ public class Reactors(
                         register.Namespace,
                         register.Reactor.EventSequenceId,
                         register.ConnectionId);
-                    using (Tracing.RegisterObserver(key, ObserverType.Client))
+                    using (Tracing.RegisterObserver(key, ObserverType.Reactor))
                     {
                         clientObserver = grainFactory.GetGrain<IReactor>(key);
                         clientObserver.SetDefinitionAndSubscribe(register.Reactor.ToChronicle());

@@ -4,16 +4,6 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { field } from '@cratis/fundamentals';
-
-export class EventType {
-
-    @field(String)
-    id!: string;
-
-    @field(Number)
-    generation!: number;
-
-    @field(Boolean)
-    tombstone!: boolean;
-}
+export * from './ObserverInformation';
+export * from './ObserverRunningState';
+export * from './ObserverType';

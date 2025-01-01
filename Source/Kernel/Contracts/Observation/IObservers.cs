@@ -15,29 +15,29 @@ public interface IObservers
     /// <summary>
     /// Rewind an observer.
     /// </summary>
-    /// <param name="request">The rewind request.</param>
+    /// <param name="command">The replay command.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
     [Operation]
-    Task Rewind(RewindRequest request, CallContext context = default);
+    Task Replay(Replay command, CallContext context = default);
 
     /// <summary>
     /// Rewind a partition for an observer.
     /// </summary>
-    /// <param name="request">The rewind request.</param>
+    /// <param name="command">The replay command.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
     [Operation]
-    Task RewindPartition(RewindPartitionRequest request, CallContext context = default);
+    Task ReplayPartition(ReplayPartition command, CallContext context = default);
 
     /// <summary>
     /// Retry a failed partition for an observer.
     /// </summary>
-    /// <param name="request">The retry request.</param>
+    /// <param name="command">The retry command.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
     [Operation]
-    Task RetryPartition(RetryPartitionRequest request, CallContext context = default);
+    Task RetryPartition(RetryPartition command, CallContext context = default);
 
     /// <summary>
     /// Get all observers.
@@ -53,9 +53,9 @@ public interface IObservers
     /// </summary>
     /// <param name="request">The <see cref="AllObserversRequest"/>.</param>
     /// <param name="context">gRPC call context.</param>
-    /// <returns>An observable of <see cref="ObserverInformation"/>.</returns>
+    /// <returns>An observable of a collection of <see cref="ObserverInformation"/>.</returns>
     [Operation]
-    IObservable<ObserverInformation> ObserveObservers(AllObserversRequest request, CallContext context = default);
+    IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default);
 
     /// <summary>
     /// Get all failed partitions for an observer.

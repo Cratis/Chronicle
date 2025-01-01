@@ -6,7 +6,6 @@
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
 import { EventType } from '../Events/EventType';
-import { FailedPartition } from './FailedPartition';
 import { ObserverRunningState } from './ObserverRunningState';
 import { ObserverType } from './ObserverType';
 
@@ -32,7 +31,4 @@ export class ObserverInformation {
 
     @field(Number)
     runningState!: ObserverRunningState;
-
-    @field(FailedPartition, true)
-    failedPartitions!: FailedPartition[];
 }
