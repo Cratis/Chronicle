@@ -23,7 +23,7 @@ public static class ObserverInformationConverters
     /// Convert to contract.
     /// </summary>
     /// <param name="information"><see cref="Concepts.Observation.ObserverInformation"/> to convert from.</param>
-    /// <returns>Converted <see cref="ObserverInformation"/> </returns>
+    /// <returns>Converted <see cref="ObserverInformation"/>.</returns>
     public static ObserverInformation ToContract(this Concepts.Observation.ObserverInformation information) =>
         new()
         {
