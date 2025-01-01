@@ -1,8 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Api.Auditing;
-using Cratis.Chronicle.Api.Identities;
+using Cratis.Chronicle.Contracts.Auditing;
 using Cratis.Chronicle.Contracts.Identities;
 
 namespace Cratis.Chronicle.Api.EventSequences;
