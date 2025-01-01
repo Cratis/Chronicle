@@ -20,6 +20,7 @@
         <PackageReference Include="Swashbuckle.AspNetCore" />
         <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
         <PackageReference Include="Cratis.Applications" />
+        <PackageReference Include="Cratis.Applications.Swagger" />
         <PackageReference Include="Grpc.Net.Client" />
     </ItemGroup>
 

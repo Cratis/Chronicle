@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml;
 using System.Xml.XPath;
+using Cratis.Applications.Swagger;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
@@ -55,6 +56,8 @@ public static class ApiServiceCollectionExtensions
                 var reader = XmlReader.Create(stream!);
                 return new XPathDocument(reader);
             });
+
+            options.AddConcepts();
         });
 
         if (addGrpc)
