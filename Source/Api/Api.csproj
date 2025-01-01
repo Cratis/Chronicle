@@ -39,6 +39,10 @@
         <Exec Command="dotnet run $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).xml" WorkingDirectory="$(MSBuildProjectDirectory)/../Tools/ResourceEmbedder" />
     </Target>
 
+    <ItemGroup>
+        <EmbeddedResource Include="SwaggerDark.css" />
+    </ItemGroup>
+
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
         <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
     </ItemGroup>
