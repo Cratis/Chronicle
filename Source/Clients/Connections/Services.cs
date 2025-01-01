@@ -11,6 +11,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Contracts.Recommendations;
 
 namespace Cratis.Chronicle.Connections;
 
@@ -24,6 +25,7 @@ namespace Cratis.Chronicle.Connections;
 /// <param name="Constraints"><see cref="IConstraints"/> instance.</param>
 /// <param name="Observers"><see cref="IObservers"/> instance.</param>
 /// <param name="Reactors"><see cref="IReactors"/> instance.</param>
+/// <param name="Recommendations"><see cref="IRecommendations"/> instance.</param>
 /// <param name="Reducers"><see cref="IReducers"/> instance.</param>
 /// <param name="Projections"><see cref="IProjections"/> instance.</param>
 /// <param name="Jobs"><see cref="IJobs"/> instance.</param>
@@ -36,6 +38,7 @@ public record Services(
     IConstraints Constraints,
     IObservers Observers,
     IReactors Reactors,
+    IRecommendations Recommendations,
     IReducers Reducers,
     IProjections Projections,
     IJobs Jobs,

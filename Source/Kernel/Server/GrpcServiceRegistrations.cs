@@ -23,6 +23,7 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Clients.IConnectionService, Services.Clients.ConnectionService>();
         services.AddSingleton<Contracts.Observation.IObservers, Services.Observation.Observers>();
         services.AddSingleton<Contracts.Observation.Reactors.IReactors, Services.Observation.Reactors.Reactors>();
+        services.AddSingleton<Contracts.Recommendations.IRecommendations, Services.Recommendations.Recommendations>();
         services.AddSingleton<Contracts.Observation.Reducers.IReducers, Services.Observation.Reducers.Reducers>();
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
         services.AddSingleton<Contracts.Jobs.IJobs, Services.Jobs.Jobs>();
@@ -48,6 +49,7 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.Clients.ConnectionService>();
             _.MapGrpcService<Services.Observation.Observers>();
             _.MapGrpcService<Services.Observation.Reactors.Reactors>();
+            _.MapGrpcService<Services.Recommendations.Recommendations>();
             _.MapGrpcService<Services.Observation.Reducers.Reducers>();
             _.MapGrpcService<Services.Projections.Projections>();
             _.MapGrpcService<Services.Jobs.Jobs>();

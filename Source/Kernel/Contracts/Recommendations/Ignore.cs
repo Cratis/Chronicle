@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Contracts.Recommendations;
 /// Represents the request for getting recommendations.
 /// </summary>
 [ProtoContract]
-public class GetRecommendationsRequest
+public class Ignore
 {
     /// <summary>
     /// The name of the event store.
@@ -22,4 +22,10 @@ public class GetRecommendationsRequest
     /// </summary>
     [ProtoMember(2)]
     public string Namespace { get; set; }
+
+    /// <summary>
+    /// The unique identifier of the recommendation.
+    /// </summary>
+    [ProtoMember(3)]
+    public Guid RecommendationId { get; set; }
 }

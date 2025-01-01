@@ -13,6 +13,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Contracts.Recommendations;
 using Cratis.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -122,6 +123,7 @@ public class ChronicleConnection : IChronicleConnection
                 _channel.CreateGrpcService<IConstraints>(),
                 _channel.CreateGrpcService<IObservers>(),
                 _channel.CreateGrpcService<IReactors>(),
+                _channel.CreateGrpcService<IRecommendations>(),
                 _channel.CreateGrpcService<IReducers>(),
                 _channel.CreateGrpcService<IProjections>(),
                 _channel.CreateGrpcService<IJobs>(),

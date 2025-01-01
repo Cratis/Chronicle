@@ -79,6 +79,7 @@ public static class ApiServiceCollectionExtensions
             services.AddSingleton(sp => sp.GetRequiredService<IServices>().Constraints);
             services.AddSingleton(sp => sp.GetRequiredService<IServices>().Observers);
             services.AddSingleton(sp => sp.GetRequiredService<IServices>().Reactors);
+            services.AddSingleton(sp => sp.GetRequiredService<IServices>().Recommendations);
             services.AddSingleton(sp => sp.GetRequiredService<IServices>().Reducers);
             services.AddSingleton(sp => sp.GetRequiredService<IServices>().Projections);
             services.AddSingleton(sp => sp.GetRequiredService<IServices>().Jobs);

@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Contracts.Recommendations;
 
 namespace Cratis.Chronicle.Connections;
 
@@ -54,6 +55,11 @@ public interface IServices
     IReactors Reactors { get; }
 
     /// <summary>
+    /// Gets the <see cref="IRecommendations"/> service.
+    /// </summary>
+    IRecommendations Recommendations { get; }
+
+    /// <summary>
     /// Gets the <see cref="IReducers"/> service.
     /// </summary>
     IReducers Reducers { get; }
@@ -66,5 +72,5 @@ public interface IServices
     /// <summary>
     /// Gets the <see cref="IJobs"/> service.
     /// </summary>
-    IJobs Jobs { get; }
+    IJobs Jobs { get; }
 }
