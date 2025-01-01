@@ -9,7 +9,7 @@ import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/ap
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
 import { Causation } from '../Auditing/Causation';
-import { Identity } from '../Contracts/Identities/Identity';
+import { Identity } from '../Identities/Identity';
 import { EventToAppend } from './EventToAppend';
 import Handlebars from 'handlebars';
 

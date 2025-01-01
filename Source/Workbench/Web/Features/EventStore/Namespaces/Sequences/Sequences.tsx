@@ -8,7 +8,7 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { Column } from 'primereact/column';
 import { EventDetails } from './EventDetails';
-import { AppendedEvent } from 'Api/Contracts/Events';
+import { AppendedEvent } from 'Api/Events';
 
 const occurred = (event: AppendedEvent) => {
     return event.context.occurred.toLocaleString();

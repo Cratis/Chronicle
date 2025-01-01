@@ -5,17 +5,19 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
-import { Guid } from '@cratis/fundamentals';
-import { FailedPartitionAttempt } from './FailedPartitionAttempt';
+import { SerializableDateTimeOffset } from '../Primitives/SerializableDateTimeOffset';
 
-export class FailedPartition {
+export class FailedPartitionAttempt {
 
-    @field(Guid)
-    id!: Guid;
+    @field(SerializableDateTimeOffset)
+    occurred!: SerializableDateTimeOffset;
+
+    @field(Number)
+    sequenceNumber!: number;
+
+    @field(String, true)
+    messages!: string[];
 
     @field(String)
-    partition!: string;
-
-    @field(FailedPartitionAttempt, true)
-    attempts!: FailedPartitionAttempt[];
+    stackTrace!: string;
 }

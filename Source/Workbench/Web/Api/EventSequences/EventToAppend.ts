@@ -5,7 +5,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
-import { EventType } from '../Contracts/Events/EventType';
+import { EventType } from '../Events/EventType';
 
 export class EventToAppend {
 

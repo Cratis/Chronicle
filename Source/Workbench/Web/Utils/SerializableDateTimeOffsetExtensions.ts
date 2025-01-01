@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { SerializableDateTimeOffset } from 'Api/Contracts/Primitives';
+import { SerializableDateTimeOffset } from 'Api/Primitives';
 
 SerializableDateTimeOffset.prototype.toLocaleString = function () {
     const epochTicks = 621355968000000000; // Ticks at Unix epoch

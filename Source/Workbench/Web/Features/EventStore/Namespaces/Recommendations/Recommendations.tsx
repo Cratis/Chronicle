@@ -8,7 +8,7 @@ import { FilterMatchMode } from 'primereact/api';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { Column } from 'primereact/column';
-import { Recommendation } from 'Api/Contracts/Recommendations/Recommendation';
+import { Recommendation } from 'Api/Recommendations/Recommendation';
 import { RecommendationsViewModel } from './RecommendationViewModel';
 import * as faIcons from 'react-icons/fa6';
 import { withViewModel } from '@cratis/applications.react.mvvm';

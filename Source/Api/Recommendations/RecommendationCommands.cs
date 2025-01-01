@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Contracts.Recommendations;
 
-namespace Cratis.Api.Recommendations;
+namespace Cratis.Chronicle.Api.Recommendations;
 
 /// <summary>
 /// Represents the API for working with recommendations.

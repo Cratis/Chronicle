@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Recommendation } from 'Api/Contracts/Recommendations';
+import { Recommendation } from 'Api/Recommendations';
 import { inject, injectable } from 'tsyringe';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { Ignore, Perform } from 'Api/Recommendations';

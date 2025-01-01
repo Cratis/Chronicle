@@ -5,7 +5,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Reactive;
 
-namespace Cratis.Api.EventStores;
+namespace Cratis.Chronicle.Api.EventStores;
 
 /// <summary>
 /// Represents the API for working with event stores.

@@ -4,7 +4,7 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Observation;
 
-namespace Cratis.Api.Observation;
+namespace Cratis.Chronicle.Api.Observation;
 
 /// <summary>
 /// Represents the API for getting failed partitions.

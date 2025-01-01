@@ -5,7 +5,7 @@ import { Column } from 'primereact/column';
 import { TreeNode } from 'primereact/treenode';
 import { TreeTable } from 'primereact/treetable';
 import { IDetailsComponentProps } from 'Components';
-import { EventTypeRegistration } from 'Api/Contracts/Events';
+import { EventTypeRegistration } from 'Api/Events';
 
 const formatType = (type: string) => {
     switch (type) {

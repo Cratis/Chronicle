@@ -5,8 +5,8 @@ import { withViewModel } from '@cratis/applications.react.mvvm';
 import { ObserversViewModel } from './ObserversViewModel';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { ObserverType } from 'Api/Contracts/Observation/ObserverType';
-import { ObserverInformation } from 'Api/Contracts/Observation/ObserverInformation';
+import { ObserverType } from 'Api/Observation/ObserverType';
+import { ObserverInformation } from 'Api/Observation/ObserverInformation';
 import { FilterMatchMode } from 'primereact/api';
 import strings from 'Strings';
 import { AllObservers, AllObserversArguments } from 'Api/Observation';
@@ -14,7 +14,7 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
-import { ObserverRunningState } from 'Api/Contracts/Observation';
+import { ObserverRunningState } from 'Api/Observation';
 
 const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {

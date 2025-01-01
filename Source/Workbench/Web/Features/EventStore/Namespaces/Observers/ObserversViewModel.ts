@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { inject, injectable } from 'tsyringe';
-import { ObserverInformation } from 'Api/Contracts/Observation/ObserverInformation';
+import { ObserverInformation } from 'Api/Observation/ObserverInformation';
 import { Replay } from 'Api/Observation';
 import { INamespaces } from 'State/Namespaces';
 import { DialogButtons, IDialogs } from '@cratis/applications.react.mvvm/dialogs';
@@ -33,7 +33,7 @@ export class ObserversViewModel {
             const result = await this._dialogs.showConfirmation('Replay?', `Are you sure you want to replay ${observerId}?`, DialogButtons.YesNo);
             if (result == DialogResult.Yes) {
                 this._replay.eventStore = this._params.eventStore!;
-                this._replay.namespace = this.currentNamespace.name;
+                this._replay.namespace = this.currentNamespace;
                 this._replay.observerId = observerId;
                 const commandResult = await this._replay.execute();
                 commandResult

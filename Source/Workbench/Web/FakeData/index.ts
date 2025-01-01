@@ -6,7 +6,7 @@ import { NullObservableQueryConnection } from './NullObservableQueryConnection';
 import { ObservableQuerySubscription, OnNextResult, QueryResult } from '@cratis/applications/queries';
 import { container } from 'tsyringe';
 import { AllObservers } from 'Api/Observation/AllObservers';
-import { ObserverInformation } from 'Api/Contracts/Observation';
+import { ObserverInformation } from 'Api/Observation';
 import { AllNamespaces } from 'Api/Namespaces';
 import observers from './Observers.json';
 import namespaces from './Namespaces.json';

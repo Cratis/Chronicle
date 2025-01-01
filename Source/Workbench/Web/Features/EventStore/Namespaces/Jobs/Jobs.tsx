@@ -6,7 +6,7 @@ import { DataPage, MenuItem } from 'Components';
 import { Column } from 'primereact/column';
 import * as faIcons from 'react-icons/fa6';
 import { AllJobs, AllJobsArguments } from 'Api/Jobs';
-import { Job, JobStatus } from 'Api/Contracts/Jobs';
+import { Job, JobStatus } from 'Api/Jobs';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { withViewModel } from '@cratis/applications.react.mvvm';

@@ -28,6 +28,7 @@ public static class FailedPartitionConverters
         return new FailedPartition
         {
             Id = failedPartition.Id,
+            ObserverId = failedPartition.ObserverId.ToString(),
             Partition = failedPartition.Partition.ToString(),
             Attempts = failedPartition.Attempts.Select(_ => _.ToContract())
         };
@@ -42,7 +43,7 @@ public static class FailedPartitionConverters
     {
         return new FailedPartitionAttempt
         {
-            Occurred = failedPartitionAttempt.Occurred,
+            Occurred = failedPartitionAttempt.Occurred!,
             SequenceNumber = failedPartitionAttempt.SequenceNumber,
             Messages = failedPartitionAttempt.Messages,
             StackTrace = failedPartitionAttempt.StackTrace

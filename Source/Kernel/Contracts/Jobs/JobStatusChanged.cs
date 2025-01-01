@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Primitives;
 using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Jobs;
@@ -21,7 +22,7 @@ public class JobStatusChanged
     /// Gets or sets when the event occurred.
     /// </summary>
     [ProtoMember(2)]
-    public DateTimeOffset Occurred { get; set; }
+    public SerializableDateTimeOffset Occurred { get; set; }
 
     /// <summary>
     /// Gets or sets any exception messages that happened during the job step - typically when it failed.

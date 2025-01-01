@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Contracts;
 
-namespace Cratis.Api.Namespaces;
+namespace Cratis.Chronicle.Api.Namespaces;
 
 /// <summary>
 /// Represents the API for working with namespaces.

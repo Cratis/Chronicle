@@ -4,7 +4,7 @@
 import { Column } from 'primereact/column';
 import { TreeNode } from 'primereact/treenode';
 import { TreeTable } from 'primereact/treetable';
-import { AppendedEvent } from 'Api/Contracts/Events';
+import { AppendedEvent } from 'Api/Events';
 import { IDetailsComponentProps } from 'Components';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

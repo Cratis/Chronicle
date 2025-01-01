@@ -5,6 +5,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
+import { SerializableDateTimeOffset } from '../Primitives/SerializableDateTimeOffset';
 
 export class ConnectedClient {
 
@@ -14,8 +15,8 @@ export class ConnectedClient {
     @field(String)
     version!: string;
 
-    @field(Date)
-    lastSeen!: Date;
+    @field(SerializableDateTimeOffset)
+    lastSeen!: SerializableDateTimeOffset;
 
     @field(Boolean)
     isRunningWithDebugger!: boolean;

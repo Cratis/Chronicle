@@ -4,7 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Events;
 
-namespace Cratis.Api.EventTypes;
+namespace Cratis.Chronicle.Api.EventTypes;
 
 /// <summary>
 /// Represents the API for working with event types.

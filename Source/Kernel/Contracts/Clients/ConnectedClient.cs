@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Primitives;
 using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Clients;
@@ -27,7 +28,7 @@ public class ConnectedClient
     /// Gets or sets the date and time the client was last seen.
     /// </summary>
     [ProtoMember(3)]
-    public DateTimeOffset LastSeen { get; set; }
+    public SerializableDateTimeOffset LastSeen { get; set; }
 
     /// <summary>
     /// Gets whether or not the client is running with debugger attached.

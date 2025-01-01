@@ -5,7 +5,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Reactive;
 
-namespace Cratis.Api.Namespaces;
+namespace Cratis.Chronicle.Api.Namespaces;
 
 /// <summary>
 /// Represents the API for working with namespaces.

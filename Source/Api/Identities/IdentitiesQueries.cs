@@ -5,7 +5,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Reactive;
 
-namespace Cratis.Api.Identities;
+namespace Cratis.Chronicle.Api.Identities;
 
 /// <summary>
 /// Represents the API for querying identities.

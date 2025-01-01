@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Primitives;
 using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Observation;
@@ -15,7 +16,7 @@ public class FailedPartitionAttempt
     /// Gets or sets when the attempt occurred.
     /// </summary>
     [ProtoMember(1)]
-    public DateTimeOffset Occurred { get; set; }
+    public SerializableDateTimeOffset Occurred { get; set; }
 
     /// <summary>
     /// Gets or sets the sequence number for the event that caused the failure.

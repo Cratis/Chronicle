@@ -8,6 +8,7 @@
 import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
+import { Guid } from '@cratis/fundamentals';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/jobs/{{jobId}}/delete');
@@ -15,7 +16,7 @@ const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{name
 export interface IDeleteJob {
     eventStore?: string;
     namespace?: string;
-    jobId?: string;
+    jobId?: Guid;
 }
 
 export class DeleteJobValidator extends CommandValidator {
@@ -33,7 +34,7 @@ export class DeleteJob extends Command<IDeleteJob> implements IDeleteJob {
 
     private _eventStore!: string;
     private _namespace!: string;
-    private _jobId!: string;
+    private _jobId!: Guid;
 
     constructor() {
         super(Object, false);
@@ -71,11 +72,11 @@ export class DeleteJob extends Command<IDeleteJob> implements IDeleteJob {
         this._namespace = value;
         this.propertyChanged('namespace');
     }
-    get jobId(): string {
+    get jobId(): Guid {
         return this._jobId;
     }
 
-    set jobId(value: string) {
+    set jobId(value: Guid) {
         this._jobId = value;
         this.propertyChanged('jobId');
     }

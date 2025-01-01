@@ -4,7 +4,7 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Jobs;
 
-namespace Cratis.Api.Jobs;
+namespace Cratis.Chronicle.Api.Jobs;
 
 /// <summary>
 /// Represents the API for working with jobs.

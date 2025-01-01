@@ -31,7 +31,7 @@
 
     <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
         <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../Workbench/Web/Api</CratisProxiesOutputPath>
-        <CratisProxiesSegmentsToSkip>2</CratisProxiesSegmentsToSkip>
+        <CratisProxiesSegmentsToSkip>3</CratisProxiesSegmentsToSkip>
     </PropertyGroup>
 
     <Target Name="EmbedXmlDocs" AfterTargets="AfterBuild">

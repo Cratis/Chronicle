@@ -6,7 +6,7 @@ using Cratis.Applications.Queries;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventSequences;
 
-namespace Cratis.Api.EventSequences;
+namespace Cratis.Chronicle.Api.EventSequences;
 
 /// <summary>
 /// Represents the API for working with the event log.

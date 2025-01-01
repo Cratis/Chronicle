@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { inject, injectable } from 'tsyringe';
-import { FailedPartition } from 'Api/Contracts/Observation';
+import { FailedPartition } from 'Api/Observation';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { TryRecoverFailedPartition } from 'Api/Observation';
 
@@ -20,7 +20,7 @@ export class FailedPartitionsViewModel {
             command.eventStore = this._params.eventStore!;
             command.namespace = this._params.namespace!;
             command.observerId = this.selectedFailedPartition.observerId;
-            command.partition = this.selectedFailedPartition.partition.value;
+            command.partition = this.selectedFailedPartition.partition;
             await command.execute();
         }
     }

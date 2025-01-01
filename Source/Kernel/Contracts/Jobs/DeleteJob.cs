@@ -27,5 +27,5 @@ public class DeleteJob
     /// The identifier of the job to stop.
     /// </summary>
     [ProtoMember(3)]
-    public string JobId { get; set; } = string.Empty;
+    public Guid JobId { get; set; }
 }

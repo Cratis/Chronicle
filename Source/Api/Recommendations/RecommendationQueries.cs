@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Api.EventStores;
+using Cratis.Chronicle.Api.EventStores;
 using Cratis.Chronicle.Contracts.Recommendations;
 using Cratis.Chronicle.Reactive;
 
-namespace Cratis.Api.Recommendations;
+namespace Cratis.Chronicle.Api.Recommendations;
 
 /// <summary>
 /// Represents the API for working with recommendations.

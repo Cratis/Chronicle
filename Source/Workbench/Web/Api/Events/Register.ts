@@ -8,7 +8,7 @@
 import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
-import { EventTypeRegistration } from '../Contracts/Events/EventTypeRegistration';
+import { EventTypeRegistration } from './EventTypeRegistration';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStoreName}}/types');

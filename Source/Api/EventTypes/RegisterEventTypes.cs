@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Contracts.Events;
 
-namespace Cratis.Api.Events;
+namespace Cratis.Chronicle.Api.Events;
 
 /// <summary>
 /// Payload for registering multiple event types.

@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Contracts.Jobs;
 
-namespace Cratis.Api.Jobs;
+namespace Cratis.Chronicle.Api.Jobs;
 
 /// <summary>
 /// Represents the API for working with jobs.
@@ -23,7 +23,7 @@ public class JobCommands(IJobs jobs) : ControllerBase
     public Task ResumeJob(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
-        [FromRoute] string jobId) =>
+        [FromRoute] Guid jobId) =>
         jobs.Resume(new() { EventStoreName = eventStore, Namespace = @namespace, JobId = jobId });
 
     /// <summary>
@@ -37,7 +37,7 @@ public class JobCommands(IJobs jobs) : ControllerBase
     public Task StopJob(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
-        [FromRoute] string jobId) =>
+        [FromRoute] Guid jobId) =>
         jobs.Stop(new() { EventStoreName = eventStore, Namespace = @namespace, JobId = jobId });
 
     /// <summary>
@@ -51,6 +51,6 @@ public class JobCommands(IJobs jobs) : ControllerBase
     public Task DeleteJob(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
-        [FromRoute] string jobId) =>
+        [FromRoute] Guid jobId) =>
         jobs.Delete(new() { EventStoreName = eventStore, Namespace = @namespace, JobId = jobId });
 }
