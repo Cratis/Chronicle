@@ -11,26 +11,26 @@ import { Validator } from '@cratis/applications/validation';
 import { EventTypeRegistration } from './EventTypeRegistration';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStoreName}}/types');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/types');
 
 export interface IRegister {
-    eventStoreName?: string;
+    eventStore?: string;
     types?: EventTypeRegistration[];
 }
 
 export class RegisterValidator extends CommandValidator {
     readonly properties: CommandPropertyValidators = {
-        eventStoreName: new Validator(),
+        eventStore: new Validator(),
         types: new Validator(),
     };
 }
 
 export class Register extends Command<IRegister> implements IRegister {
-    readonly route: string = '/api/event-store/{eventStoreName}/types';
+    readonly route: string = '/api/event-store/{eventStore}/types';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RegisterValidator();
 
-    private _eventStoreName!: string;
+    private _eventStore!: string;
     private _types!: EventTypeRegistration[];
 
     constructor() {
@@ -39,24 +39,24 @@ export class Register extends Command<IRegister> implements IRegister {
 
     get requestArguments(): string[] {
         return [
-            'eventStoreName',
+            'eventStore',
         ];
     }
 
     get properties(): string[] {
         return [
-            'eventStoreName',
+            'eventStore',
             'types',
         ];
     }
 
-    get eventStoreName(): string {
-        return this._eventStoreName;
+    get eventStore(): string {
+        return this._eventStore;
     }
 
-    set eventStoreName(value: string) {
-        this._eventStoreName = value;
-        this.propertyChanged('eventStoreName');
+    set eventStore(value: string) {
+        this._eventStore = value;
+        this.propertyChanged('eventStore');
     }
     get types(): EventTypeRegistration[] {
         return this._types;
