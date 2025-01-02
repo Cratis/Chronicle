@@ -1,10 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Api.Auditing;
-using Cratis.Api.Identities;
+using Cratis.Chronicle.Api.Identities;
+using Cratis.Chronicle.Contracts.Auditing;
+using Cratis.Chronicle.Contracts.Identities;
 
-namespace Cratis.Api.EventSequences;
+namespace Cratis.Chronicle.Api.EventSequences;
 
 /// <summary>
 /// Command for redacting single event.

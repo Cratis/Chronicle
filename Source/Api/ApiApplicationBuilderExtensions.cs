@@ -5,7 +5,7 @@
 
 using Cratis.Execution;
 
-namespace Cratis.Api.Server;
+namespace Cratis.Chronicle.Api;
 
 /// <summary>
 /// Holds the extension methods for configuring the Api for the <see cref="IApplicationBuilder"/> type.
@@ -29,7 +29,17 @@ public static class ApiApplicationBuilderExtensions
         app.UseWebSockets();
         app.UseEndpoints(endpoints => endpoints.MapControllers());
         app.UseSwagger();
-        app.UseSwaggerUI(options => options.InjectStylesheet("/swagger-ui/SwaggerDark.css"));
+        app.UseSwaggerUI(options =>
+        {
+            var resourceName = typeof(ApiApplicationBuilderExtensions).Namespace + ".SwaggerDark.css";
+            using var stream = typeof(ApiApplicationBuilderExtensions).Assembly.GetManifestResourceStream(resourceName);
+            if (stream is not null)
+            {
+                using var streamReader = new StreamReader(stream);
+                var styles = streamReader.ReadToEnd();
+                options.HeadContent = $"{options.HeadContent}<style>{styles}</style>";
+            }
+        });
 
         return app;
     }

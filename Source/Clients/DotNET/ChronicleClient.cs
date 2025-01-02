@@ -58,9 +58,10 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
         var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
         _connection = new ChronicleConnection(
-            options,
+            options.Url,
+            options.ConnectTimeout,
             connectionLifecycle,
-            new Tasks.Tasks(),
+            new Cratis.Tasks.TaskFactory(),
             options.LoggerFactory.CreateLogger<ChronicleConnection>(),
             CancellationToken.None);
     }

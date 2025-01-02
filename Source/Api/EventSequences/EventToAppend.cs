@@ -2,9 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Api.EventTypes;
+using Cratis.Chronicle.Api.EventTypes;
+using Cratis.Chronicle.Contracts.Events;
 
-namespace Cratis.Api.EventSequences;
+namespace Cratis.Chronicle.Api.EventSequences;
 
 /// <summary>
 /// Represents the payload for appending an event.

@@ -5,7 +5,7 @@ import { OverlayPanel } from 'primereact/overlaypanel';
 import { useRef } from 'react';
 import { ImDatabase } from "react-icons/im";
 import { ItemsList } from 'Components/ItemsList/ItemsList';
-import { AllEventStores, EventStore as EventStoreDefinition } from 'Api/EventStores';
+import { AllEventStores } from 'Api/EventStores';
 
 export const EventStore = () => {
     const selectEventStorePanel = useRef<OverlayPanel>(null);
@@ -17,9 +17,8 @@ export const EventStore = () => {
             <ImDatabase size={25} />
 
             <OverlayPanel ref={selectEventStorePanel}>
-                <ItemsList<EventStoreDefinition> items={eventStores.data} idProperty="name" nameProperty="name" />
+                <ItemsList<string> items={eventStores.data} />
             </OverlayPanel>
-
         </div>
     </div>);
 };

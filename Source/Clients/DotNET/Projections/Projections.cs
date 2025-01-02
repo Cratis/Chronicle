@@ -68,7 +68,7 @@ public class Projections(
         var request = new GetInstanceByIdRequest
         {
             ProjectionId = projectionDefinition.Identifier,
-            EventStoreName = eventStore.Name,
+            EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
             ModelKey = modelKey,
@@ -85,7 +85,7 @@ public class Projections(
         var request = new GetInstanceByIdRequest
         {
             ProjectionId = projectionDefinition.Identifier,
-            EventStoreName = eventStore.Name,
+            EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
             ModelKey = modelKey,
@@ -106,7 +106,7 @@ public class Projections(
         var request = new GetInstanceByIdForSessionRequest
         {
             ProjectionId = projectionDefinition.Identifier,
-            EventStoreName = eventStore.Name,
+            EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
             ModelKey = modelKey,
@@ -135,7 +135,7 @@ public class Projections(
         var request = new GetInstanceByIdForSessionWithEventsAppliedRequest
         {
             ProjectionId = projectionDefinition.Identifier,
-            EventStoreName = eventStore.Name,
+            EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
             ModelKey = modelKey,
@@ -155,7 +155,7 @@ public class Projections(
         var request = new DehydrateSessionRequest
         {
             ProjectionId = projectionDefinition.Identifier,
-            EventStoreName = eventStore.Name,
+            EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
             ModelKey = modelKey,
@@ -190,7 +190,7 @@ public class Projections(
     {
         await eventStore.Connection.Services.Projections.Register(new()
         {
-            EventStoreName = eventStore.Name,
+            EventStore = eventStore.Name,
             Projections = [.. Definitions]
         });
     }

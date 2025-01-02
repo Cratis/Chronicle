@@ -8,7 +8,7 @@ import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { FailedPartition } from 'Api/Concepts/Observation';
+import { FailedPartition } from 'Api/Observation';
 import { withViewModel } from '@cratis/applications.react.mvvm';
 import { FailedPartitionsViewModel } from './FailedPartitionsViewModel';
 import { DataPage, MenuItem } from 'Components';
@@ -19,7 +19,7 @@ const defaultFilters: DataTableFilterMeta = {
 };
 
 const partition = (failedPartition: FailedPartition) => {
-    return Object.values(failedPartition.partition.value).join('');
+    return Object.values(failedPartition.partition).join('');
 };
 
 const attempts = (failedPartition: FailedPartition) => {
@@ -27,7 +27,8 @@ const attempts = (failedPartition: FailedPartition) => {
 };
 
 const lastAttempt = (failedPartition: FailedPartition) => {
-    return failedPartition.lastAttempt.occurred.toLocaleString();
+    if( failedPartition.attempts.length === 0 ) return '';
+    return failedPartition.attempts[failedPartition.attempts.length-1].occurred.toLocaleString();
 };
 
 export const FailedPartitions = withViewModel(FailedPartitionsViewModel, ({ viewModel }) => {

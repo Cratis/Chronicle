@@ -1,5 +1,10 @@
 {
+    "apiPort": 8080,
     "port": 35000,
+    "features": {
+        "api": true,
+        "workbench": true
+    },
     "storage": {
         "type": "MongoDB",
         "connectionDetails": "mongodb://localhost:27017"

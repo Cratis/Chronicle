@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Namespace } from 'Api/Namespaces';
 import { BehaviorSubject } from 'rxjs';
 
 /**
@@ -11,13 +10,16 @@ export abstract class INamespaces {
     /**
      * Gets the current namespace value.
      */
-    abstract readonly currentNamespace: BehaviorSubject<Namespace>;
+    abstract readonly currentNamespace: BehaviorSubject<string>;
 
     /**
      * Set the current namespace.
      */
-    abstract readonly setCurrentNamespace: (namespace: Namespace) => void;
+    abstract readonly setCurrentNamespace: (namespace: string) => void;
 
-    abstract readonly namespaces: BehaviorSubject<Namespace[]>;
+    /**
+     * Gets the observable namespaces.
+     */
+    abstract readonly namespaces: BehaviorSubject<string[]>;
 }
 

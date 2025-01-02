@@ -6,8 +6,8 @@ import { NullObservableQueryConnection } from './NullObservableQueryConnection';
 import { ObservableQuerySubscription, OnNextResult, QueryResult } from '@cratis/applications/queries';
 import { container } from 'tsyringe';
 import { AllObservers } from 'Api/Observation/AllObservers';
-import { ObserverInformation } from 'Api/Concepts/Observation';
-import { AllNamespaces, Namespace } from 'Api/Namespaces';
+import { ObserverInformation } from 'Api/Observation';
+import { AllNamespaces } from 'Api/Namespaces';
 import observers from './Observers.json';
 import namespaces from './Namespaces.json';
 
@@ -40,7 +40,7 @@ function registerFakeQuery<TDataType>(queryType: Constructor, itemConstructor: C
 export class FakeData {
     static initialize() {
         registerFakeQuery(AllObservers, ObserverInformation, observers);
-        registerFakeQuery(AllNamespaces, Namespace, namespaces);
+        registerFakeQuery(AllNamespaces, String, namespaces);
     }
 }
 

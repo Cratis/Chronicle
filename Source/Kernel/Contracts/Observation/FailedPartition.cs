@@ -18,14 +18,20 @@ public class FailedPartition
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the partition that is failed.
+    /// Gets or sets the observer id.
     /// </summary>
     [ProtoMember(2)]
+    public string ObserverId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the partition that is failed.
+    /// </summary>
+    [ProtoMember(3)]
     public string Partition { get; set; }
 
     /// <summary>
     /// Gets or sets the attempts for the failed partition.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(4)]
     public IEnumerable<FailedPartitionAttempt> Attempts { get; set; }
 }

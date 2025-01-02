@@ -18,14 +18,8 @@ public class EventTypeRegistration
     public EventType Type { get; set; } = new EventType();
 
     /// <summary>
-    /// Gets or sets the friendly name of the event type.
-    /// </summary>
-    [ProtoMember(2)]
-    public string FriendlyName { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the JSON schema of the event type.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(2)]
     public string Schema { get; set; } = string.Empty;
 }

@@ -17,7 +17,7 @@ public class and_no_jobs_are_running : given.a_replay_state
     {
         _storedState = _storedState with
         {
-            Type = ObserverType.Client,
+            Type = ObserverType.Reactor,
             NextEventSequenceNumber = 42,
             EventTypes =
             [
@@ -51,5 +51,5 @@ public class and_no_jobs_are_running : given.a_replay_state
     [Fact] void should_start_catch_up_job_with_correct_subscription() => _request.ObserverSubscription.ShouldEqual(_subscription);
     [Fact] void should_start_catch_up_job_with_correct_event_types() => _request.EventTypes.ShouldEqual(_storedState.EventTypes);
     [Fact] void should_begin_replay_only_one() => _observerServiceClient.Received(1).BeginReplayFor(Arg.Any<ObserverDetails>());
-    [Fact] void should_begin_replay_for_correct_observer() => _observerDetails.ShouldEqual(new ObserverDetails(_storedState.Id, _observerKey, ObserverType.Client));
+    [Fact] void should_begin_replay_for_correct_observer() => _observerDetails.ShouldEqual(new ObserverDetails(_storedState.Id, _observerKey, ObserverType.Reactor));
 }

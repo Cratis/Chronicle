@@ -9,7 +9,7 @@ public class when_deactivating : given.an_observer
 {
     async Task Establish()
     {
-        await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Client, [], SiloAddress.Zero);
+        await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [], SiloAddress.Zero);
         _storageStats.ResetCounts();
     }
 

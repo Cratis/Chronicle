@@ -5,7 +5,6 @@ import { BehaviorSubject } from 'rxjs';
 import sinon, { SinonStubbedInstance } from 'sinon';
 import { ObserversViewModel } from '../../../ObserversViewModel';
 import { INamespaces } from 'State/Namespaces';
-import { Namespace } from 'Api/Namespaces';
 import { Replay } from 'Api/Observation';
 import { Dialogs } from '@cratis/applications.react.mvvm/dialogs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -13,9 +12,9 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 export class a_view_model {
     constructor() {
         this.namespaces = {
-            currentNamespace: new BehaviorSubject<Namespace>({ name: '', description: '' }),
+            currentNamespace: new BehaviorSubject<string>(''),
             setCurrentNamespace: sinon.stub(),
-            namespaces: new BehaviorSubject<Namespace[]>([])
+            namespaces: new BehaviorSubject<string[]>([])
 
         };
         this.replay = sinon.createStubInstance(Replay);

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Storage;
 
@@ -18,4 +19,8 @@ public class EventStores(IStorage storage) : IEventStores
         var eventStores = await storage.GetEventStores();
         return eventStores.Select(_ => _.Value).ToArray();
     }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<string>> ObserveEventStores() =>
+        storage.ObserveEventStores().Select(_ => _.Select(e => e.Value));
 }

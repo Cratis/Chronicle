@@ -9,7 +9,7 @@ import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, 
 import { Identity } from './Identity';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/identities');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/identities/observe');
 
 class AllIdentitiesSortBy {
     private _subject: SortingActionsForObservableQuery<Identity[]>;
@@ -63,7 +63,7 @@ export interface AllIdentitiesArguments {
     namespace: string;
 }
 export class AllIdentities extends ObservableQueryFor<Identity[], AllIdentitiesArguments> {
-    readonly route: string = '/api/event-store/{eventStore}/{namespace}/identities';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/identities/observe';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Identity[] = [];
     private readonly _sortBy: AllIdentitiesSortBy;

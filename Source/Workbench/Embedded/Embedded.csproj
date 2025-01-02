@@ -57,7 +57,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
     </ItemGroup>
 </Project>

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Connections</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Connections</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
+            <!-- <PrivateAssets>all</PrivateAssets> -->
+        </ProjectReference>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <!-- <PrivateAssets>all</PrivateAssets> -->
+        </ProjectReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          <PrivateAssets>all</PrivateAssets>
+        </PackageReference> -->
+        <PackageReference Include="protobuf-net.Grpc" />
+        <PackageReference Include="Grpc.Net.Client" />
+        <PackageReference Include="System.Reactive" />
+    </ItemGroup>
+</Project>

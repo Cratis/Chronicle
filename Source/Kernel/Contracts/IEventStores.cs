@@ -17,4 +17,11 @@ public interface IEventStores
     /// <returns>Collection of strings representing the names of the event stores.</returns>
     [Operation]
     Task<IEnumerable<string>> GetEventStores();
+
+    /// <summary>
+    /// Observe all available event stores.
+    /// </summary>
+    /// <returns>Observable of all event stores.</returns>
+    [Operation]
+    IObservable<IEnumerable<string>> ObserveEventStores();
 }

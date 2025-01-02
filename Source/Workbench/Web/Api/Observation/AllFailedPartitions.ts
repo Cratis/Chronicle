@@ -6,73 +6,55 @@
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import { FailedPartition } from '../Concepts/Observation/FailedPartition';
+import { FailedPartition } from './FailedPartition';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/failed-partitions/{{observerId?}}');
 
 class AllFailedPartitionsSortBy {
     private _id: SortingActionsForObservableQuery<FailedPartition[]>;
-    private _partition: SortingActionsForObservableQuery<FailedPartition[]>;
     private _observerId: SortingActionsForObservableQuery<FailedPartition[]>;
+    private _partition: SortingActionsForObservableQuery<FailedPartition[]>;
     private _attempts: SortingActionsForObservableQuery<FailedPartition[]>;
-    private _isResolved: SortingActionsForObservableQuery<FailedPartition[]>;
-    private _lastAttempt: SortingActionsForObservableQuery<FailedPartition[]>;
 
     constructor(readonly query: AllFailedPartitions) {
         this._id = new SortingActionsForObservableQuery<FailedPartition[]>('id', query);
-        this._partition = new SortingActionsForObservableQuery<FailedPartition[]>('partition', query);
         this._observerId = new SortingActionsForObservableQuery<FailedPartition[]>('observerId', query);
+        this._partition = new SortingActionsForObservableQuery<FailedPartition[]>('partition', query);
         this._attempts = new SortingActionsForObservableQuery<FailedPartition[]>('attempts', query);
-        this._isResolved = new SortingActionsForObservableQuery<FailedPartition[]>('isResolved', query);
-        this._lastAttempt = new SortingActionsForObservableQuery<FailedPartition[]>('lastAttempt', query);
     }
 
     get id(): SortingActionsForObservableQuery<FailedPartition[]> {
         return this._id;
     }
-    get partition(): SortingActionsForObservableQuery<FailedPartition[]> {
-        return this._partition;
-    }
     get observerId(): SortingActionsForObservableQuery<FailedPartition[]> {
         return this._observerId;
     }
+    get partition(): SortingActionsForObservableQuery<FailedPartition[]> {
+        return this._partition;
+    }
     get attempts(): SortingActionsForObservableQuery<FailedPartition[]> {
         return this._attempts;
-    }
-    get isResolved(): SortingActionsForObservableQuery<FailedPartition[]> {
-        return this._isResolved;
-    }
-    get lastAttempt(): SortingActionsForObservableQuery<FailedPartition[]> {
-        return this._lastAttempt;
     }
 }
 
 class AllFailedPartitionsSortByWithoutQuery {
     private _id: SortingActions  = new SortingActions('id');
-    private _partition: SortingActions  = new SortingActions('partition');
     private _observerId: SortingActions  = new SortingActions('observerId');
+    private _partition: SortingActions  = new SortingActions('partition');
     private _attempts: SortingActions  = new SortingActions('attempts');
-    private _isResolved: SortingActions  = new SortingActions('isResolved');
-    private _lastAttempt: SortingActions  = new SortingActions('lastAttempt');
 
     get id(): SortingActions {
         return this._id;
     }
-    get partition(): SortingActions {
-        return this._partition;
-    }
     get observerId(): SortingActions {
         return this._observerId;
     }
+    get partition(): SortingActions {
+        return this._partition;
+    }
     get attempts(): SortingActions {
         return this._attempts;
-    }
-    get isResolved(): SortingActions {
-        return this._isResolved;
-    }
-    get lastAttempt(): SortingActions {
-        return this._lastAttempt;
     }
 }
 

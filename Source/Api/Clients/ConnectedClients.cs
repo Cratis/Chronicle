@@ -3,7 +3,7 @@
 
 using ConnectedClient = Cratis.Chronicle.Contracts.Clients.ConnectedClient;
 
-namespace Cratis.Api.Clients;
+namespace Cratis.Chronicle.Api.Clients;
 
 /// <summary>
 /// Represents the API for querying connected clients.

@@ -6,5 +6,3 @@
 // eslint-disable-next-line header/header
 export * from './AllEventTypes';
 export * from './AllEventTypesWithSchemas';
-export * from './EventType';
-export * from './EventTypeWithSchemas';

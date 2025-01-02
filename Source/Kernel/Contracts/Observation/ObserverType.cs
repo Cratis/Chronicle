@@ -14,9 +14,9 @@ public enum ObserverType
     Unknown = 0,
 
     /// <summary>
-    /// Client type of observer.
+    /// Reactor type of observer.
     /// </summary>
-    Client = 1,
+    Reactor = 1,
 
     /// <summary>
     /// Projection type of observer.

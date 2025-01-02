@@ -11,10 +11,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
-        <ProjectReference Include="../Kernel/Grains.Interfaces/Grains.Interfaces.csproj" />
-        <ProjectReference Include="../Kernel/Storage/Storage.csproj" />
-        <ProjectReference Include="../Kernel/Concepts/Concepts.csproj" />
+        <ProjectReference Include="../Clients/Connections/Connections.csproj" />
         <ProjectReference Include="../Kernel/Contracts/Contracts.csproj" />
         <ProjectReference Include="../Tools/ResourceEmbedder/ResourceEmbedder.csproj" />
     </ItemGroup>
@@ -23,7 +20,8 @@
         <PackageReference Include="Swashbuckle.AspNetCore" />
         <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
         <PackageReference Include="Cratis.Applications" />
-        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+        <PackageReference Include="Cratis.Applications.Swagger" />
+        <PackageReference Include="Grpc.Net.Client" />
     </ItemGroup>
 
     <PropertyGroup>
@@ -34,13 +32,17 @@
 
     <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
         <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../Workbench/Web/Api</CratisProxiesOutputPath>
-        <CratisProxiesSegmentsToSkip>2</CratisProxiesSegmentsToSkip>
+        <CratisProxiesSegmentsToSkip>3</CratisProxiesSegmentsToSkip>
     </PropertyGroup>
 
     <Target Name="EmbedXmlDocs" AfterTargets="AfterBuild">
         <Message Text="Embedded XML documentation : $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll" Importance="high" />
         <Exec Command="dotnet run $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).xml" WorkingDirectory="$(MSBuildProjectDirectory)/../Tools/ResourceEmbedder" />
     </Target>
+
+    <ItemGroup>
+        <EmbeddedResource Include="SwaggerDark.css" />
+    </ItemGroup>
 
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
         <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />

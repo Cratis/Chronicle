@@ -2,8 +2,8 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <ApplicationModel>14.15.10</ApplicationModel>
-        <Fundamentals>6.0.3</Fundamentals>
+        <ApplicationModel>15.0.12</ApplicationModel>
+        <Fundamentals>6.1.0</Fundamentals>
         <Orleans>9.0.1</Orleans>
     </PropertyGroup>
     <ItemGroup>
@@ -23,6 +23,7 @@
         <PackageVersion Include="Cratis.Applications.Orleans" Version="$(ApplicationModel)" />
         <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="$(ApplicationModel)" />
         <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="$(ApplicationModel)" />
+        <PackageVersion Include="Cratis.Applications.Swagger" Version="$(ApplicationModel)" />
         <!-- Orleans -->
         <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />

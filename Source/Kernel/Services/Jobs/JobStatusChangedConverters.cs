@@ -19,7 +19,7 @@ public static class JobStatusChangedConverters
         new()
         {
             Status = (JobStatus)(int)statusChanged.Status,
-            Occurred = statusChanged.Occurred,
+            Occurred = statusChanged.Occurred!,
             ExceptionMessages = statusChanged.ExceptionMessages.ToList(),
             ExceptionStackTrace = statusChanged.ExceptionStackTrace
         };

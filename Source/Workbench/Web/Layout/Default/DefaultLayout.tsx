@@ -13,7 +13,6 @@ import { Footer } from './Footer';
 import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
 import { useContext, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Namespace } from 'Api/Namespaces';
 import * as Shared from 'Shared';
 
 interface IDefaultLayoutProps {
@@ -29,9 +28,9 @@ export const DefaultLayout = (props: IDefaultLayoutProps) => {
     const location = useLocation();
     const [namespace, setNamespace] = useState('');
 
-    const namespaceSelected = (namespace: Namespace) => {
-        setNamespace(namespace.name);
-        const newRoute = location.pathname.replace(params.namespace!, namespace.name);
+    const namespaceSelected = (namespace: string) => {
+        setNamespace(namespace);
+        const newRoute = location.pathname.replace(params.namespace!, namespace);
         navigate(newRoute);
     };
 

@@ -14,13 +14,13 @@ const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/namesp
 
 export interface IEnsureNamespace {
     eventStore?: string;
-    name?: string;
+    namespace?: string;
 }
 
 export class EnsureNamespaceValidator extends CommandValidator {
     readonly properties: CommandPropertyValidators = {
         eventStore: new Validator(),
-        name: new Validator(),
+        namespace: new Validator(),
     };
 }
 
@@ -30,7 +30,7 @@ export class EnsureNamespace extends Command<IEnsureNamespace> implements IEnsur
     readonly validation: CommandValidator = new EnsureNamespaceValidator();
 
     private _eventStore!: string;
-    private _name!: string;
+    private _namespace!: string;
 
     constructor() {
         super(Object, false);
@@ -45,7 +45,7 @@ export class EnsureNamespace extends Command<IEnsureNamespace> implements IEnsur
     get properties(): string[] {
         return [
             'eventStore',
-            'name',
+            'namespace',
         ];
     }
 
@@ -57,13 +57,13 @@ export class EnsureNamespace extends Command<IEnsureNamespace> implements IEnsur
         this._eventStore = value;
         this.propertyChanged('eventStore');
     }
-    get name(): string {
-        return this._name;
+    get namespace(): string {
+        return this._namespace;
     }
 
-    set name(value: string) {
-        this._name = value;
-        this.propertyChanged('name');
+    set namespace(value: string) {
+        this._namespace = value;
+        this.propertyChanged('namespace');
     }
 
     static use(initialValues?: IEnsureNamespace): [EnsureNamespace, SetCommandValues<IEnsureNamespace>, ClearCommandValues] {

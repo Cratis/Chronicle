@@ -16,7 +16,7 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
     {
         _storedState = _storedState with
         {
-            Type = ObserverType.Client
+            Type = ObserverType.Reactor
         };
 
         _jobsManager

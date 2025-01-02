@@ -36,7 +36,7 @@ export interface DataTableForQueryProps<TQuery extends IQueryFor<TDataType>, TDa
     /**
      * The key to use for the data
      */
-    dataKey: string;
+    dataKey?: string | undefined;
 
     /**
      * The current selection.

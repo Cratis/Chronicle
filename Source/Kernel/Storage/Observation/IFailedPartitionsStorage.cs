@@ -33,7 +33,7 @@ public interface IFailedPartitionsStorage
     /// <summary>
     /// Get all the failed partitions for a specific <see cref="ObserverId"/>.
     /// </summary>
-    /// /// <param name="observerId"><see cref="ObserverId"/> to get for.</param>
+    /// <param name="observerId">Optional <see cref="ObserverId"/> to get for.</param>
     /// <returns><see cref="FailedPartitions"/> instance.</returns>
-    Task<FailedPartitions> GetFor(ObserverId observerId);
+    Task<FailedPartitions> GetFor(ObserverId? observerId);
 }

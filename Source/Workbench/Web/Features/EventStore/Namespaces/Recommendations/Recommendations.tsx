@@ -8,7 +8,7 @@ import { FilterMatchMode } from 'primereact/api';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { Column } from 'primereact/column';
-import { RecommendationInformation } from 'Api/Concepts/Recommendations/RecommendationInformation';
+import { Recommendation } from 'Api/Recommendations/Recommendation';
 import { RecommendationsViewModel } from './RecommendationViewModel';
 import * as faIcons from 'react-icons/fa6';
 import { withViewModel } from '@cratis/applications.react.mvvm';
@@ -18,7 +18,7 @@ const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
 };
 
-const occurred = (recommendation: RecommendationInformation) => {
+const occurred = (recommendation: Recommendation) => {
     return recommendation.occurred.toLocaleString();
 };
 
@@ -35,7 +35,7 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
             title={strings.eventStore.namespaces.recommendations.title}
             query={AllRecommendations}
             queryArguments={queryArgs}
-            onSelectionChange={(e) => (viewModel.selectedRecommendation = e.value as RecommendationInformation)}
+            onSelectionChange={(e) => (viewModel.selectedRecommendation = e.value as Recommendation)}
             dataKey='id'
             defaultFilters={defaultFilters}
             globalFilterFields={['tombstone']}

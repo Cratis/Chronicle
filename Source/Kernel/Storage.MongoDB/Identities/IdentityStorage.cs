@@ -116,6 +116,13 @@ public class IdentityStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<Identity>> GetAll()
+    {
+        var result = await GetCollection().FindAsync(_ => true);
+        return result.ToEnumerable().Select(_ => new Identity(_.Subject, _.Name, _.UserName));
+    }
+
+    /// <inheritdoc/>
     public ISubject<IEnumerable<Identity>> ObserveAll() =>
         new TransformingSubject<IEnumerable<MongoDBIdentity>, IEnumerable<Identity>>(
             GetCollection().Observe(),

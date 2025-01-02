@@ -78,9 +78,9 @@ public static class ObserverHelpers
         using var cts = new CancellationTokenSource(timeout.Value);
         while (!failedPartitions.Any() && !cts.IsCancellationRequested)
         {
-            failedPartitions = await eventStore.Connection.Services.Observers.GetFailedPartitionsForObserver(new()
+            failedPartitions = await eventStore.Connection.Services.FailedPartitions.GetFailedPartitions(new()
             {
-                EventStoreName = eventStore.Name.Value,
+                EventStore = eventStore.Name.Value,
                 Namespace = Concepts.EventStoreNamespaceName.Default,
                 ObserverId = observerId
             });
