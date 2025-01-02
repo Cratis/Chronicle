@@ -66,6 +66,14 @@ public class ChronicleConnection : IChronicleConnection
         _tasks = tasks;
         _cancellationToken = cancellationToken;
         _logger = logger;
+
+        _cancellationToken.Register(() =>
+        {
+            _connectTcs?.TrySetCanceled();
+            _keepAliveSubscription?.Dispose();
+            _channel?.ShutdownAsync().GetAwaiter().GetResult();
+            _channel?.Dispose();
+        });
     }
 #pragma warning restore CS8618
 
@@ -108,11 +116,12 @@ public class ChronicleConnection : IChronicleConnection
         _lastKeepAlive = DateTimeOffset.UtcNow;
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _keepAliveSubscription = _connectionService.Connect(new()
-        {
-            ConnectionId = Lifecycle.ConnectionId,
-            IsRunningWithDebugger = Debugger.IsAttached,
-        }).Subscribe(HandleConnection);
+        _keepAliveSubscription = _connectionService.Connect(
+            new()
+            {
+                ConnectionId = Lifecycle.ConnectionId,
+                IsRunningWithDebugger = Debugger.IsAttached,
+            }).Subscribe(HandleConnection);
 
         try
         {

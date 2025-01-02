@@ -64,6 +64,7 @@ public static class ApiServiceCollectionExtensions
         {
             services.AddSingleton<IChronicleConnection>(sp =>
             {
+                var lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
                 var options = sp.GetRequiredService<IOptions<ChronicleApiOptions>>();
                 var connectionLifecycle = new ConnectionLifecycle(sp.GetRequiredService<ILogger<ConnectionLifecycle>>());
                 return new ChronicleConnection(
@@ -72,7 +73,7 @@ public static class ApiServiceCollectionExtensions
                     connectionLifecycle,
                     new Cratis.Tasks.TaskFactory(),
                     sp.GetRequiredService<ILogger<ChronicleConnection>>(),
-                    CancellationToken.None);
+                    lifetime.ApplicationStopping);
             });
             services.AddSingleton(sp => sp.GetRequiredService<IChronicleConnection>().Services);
             services.AddSingleton(sp => sp.GetRequiredService<IServices>().EventStores);
