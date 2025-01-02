@@ -30,11 +30,11 @@ public class Observers(IGrainFactory grainFactory, IStorage storage) : IObserver
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)
     {
-        var observers = await storage.GetEventStore(request.EventStoreName).GetNamespace(request.Namespace).Observers.GetAll();
+        var observers = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
         return observers.ToContract();
     }
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default) =>
-        storage.GetEventStore(request.EventStoreName).GetNamespace(request.Namespace).Observers.ObserveAll().Select(_ => _.ToContract());
+        storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.ObserveAll().Select(_ => _.ToContract());
 }

@@ -75,7 +75,7 @@ public class EventTypes : IEventTypes
 
         await _eventStore.Connection.Services.EventTypes.Register(new()
         {
-            EventStoreName = _eventStore.Name,
+            EventStore = _eventStore.Name,
             Types = registrations
         });
     }

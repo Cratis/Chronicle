@@ -22,8 +22,8 @@ public static class ObserverExtensions
     /// <returns>An instance of the observer.</returns>
     public static IObserver GetObserver(this IGrainFactory grainFactory, IStorage storage, IObserverCommand command)
     {
-        var observerState = storage.GetEventStore(command.EventStoreName).GetNamespace(command.Namespace).Observers.Get(command.ObserverId).Result;
-        var key = new ObserverKey(command.ObserverId, command.EventStoreName, command.Namespace, observerState.EventSequenceId);
+        var observerState = storage.GetEventStore(command.EventStore).GetNamespace(command.Namespace).Observers.Get(command.ObserverId).Result;
+        var key = new ObserverKey(command.ObserverId, command.EventStore, command.Namespace, observerState.EventSequenceId);
         return grainFactory.GetGrain<IObserver>(key);
     }
 }

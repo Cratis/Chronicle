@@ -61,7 +61,7 @@ public class EventSequence(
         var identity = identityProvider.GetCurrent();
         var response = await connection.Services.EventSequences.Append(new()
         {
-            EventStoreName = eventStoreName,
+            EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             EventSourceType = eventSourceType,
@@ -132,7 +132,7 @@ public class EventSequence(
     {
         var result = await connection.Services.EventSequences.HasEventsForEventSourceId(new()
         {
-            EventStoreName = eventStoreName,
+            EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             EventSourceId = eventSourceId
@@ -149,7 +149,7 @@ public class EventSequence(
     {
         var result = await connection.Services.EventSequences.GetEventsFromEventSequenceNumber(new()
         {
-            EventStoreName = eventStoreName,
+            EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             FromEventSequenceNumber = sequenceNumber,
@@ -170,7 +170,7 @@ public class EventSequence(
     {
         var result = await connection.Services.EventSequences.GetForEventSourceIdAndEventTypes(new()
         {
-            EventStoreName = eventStoreName,
+            EventStore = eventStoreName,
             EventStreamType = eventStreamType ?? EventStreamType.All,
             EventStreamId = eventStreamId ?? EventStreamId.Default,
             Namespace = @namespace,
@@ -212,7 +212,7 @@ public class EventSequence(
         var identity = identityProvider.GetCurrent();
         var response = await connection.Services.EventSequences.AppendMany(new()
         {
-            EventStoreName = eventStoreName,
+            EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             CorrelationId = correlationIdAccessor.Current,

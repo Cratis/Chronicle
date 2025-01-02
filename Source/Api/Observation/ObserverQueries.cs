@@ -23,7 +23,7 @@ public class ObserverQueries(IObservers observers) : ControllerBase
     public Task<IEnumerable<ObserverInformation>> GetObservers(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        observers.GetObservers(new() { EventStoreName = eventStore, Namespace = @namespace });
+        observers.GetObservers(new() { EventStore = eventStore, Namespace = @namespace });
 
     /// <summary>
     /// Get and observe all observers for an event store and namespace.
@@ -37,7 +37,7 @@ public class ObserverQueries(IObservers observers) : ControllerBase
         [FromRoute] string @namespace)
     {
         var subject = new Subject<IEnumerable<ObserverInformation>>();
-        observers.ObserveObservers(new() { EventStoreName = eventStore, Namespace = @namespace }).Subscribe(subject);
+        observers.ObserveObservers(new() { EventStore = eventStore, Namespace = @namespace }).Subscribe(subject);
         return subject;
     }
 }

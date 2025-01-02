@@ -25,7 +25,7 @@ public class JobQueries(IJobs jobs) : ControllerBase
         [FromRoute] string @namespace )
     {
         var subject = new Subject<IEnumerable<Job>>();
-        jobs.ObserveJobs(new() { EventStoreName = eventStore, Namespace = @namespace }).Subscribe(subject);
+        jobs.ObserveJobs(new() { EventStore = eventStore, Namespace = @namespace }).Subscribe(subject);
         return subject;
     }
 }

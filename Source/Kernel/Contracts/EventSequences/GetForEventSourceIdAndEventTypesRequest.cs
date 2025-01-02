@@ -14,7 +14,7 @@ public class GetForEventSourceIdAndEventTypesRequest : IEventSequenceRequest
 {
     /// <inheritdoc/>
     [ProtoMember(1)]
-    public string EventStoreName { get; set; }
+    public string EventStore { get; set; }
 
     /// <inheritdoc/>
     [ProtoMember(2)]

@@ -40,7 +40,7 @@ public class Constraints(
     {
         var request = new RegisterConstraintsRequest
         {
-            EventStoreName = eventStore.Name,
+            EventStore = eventStore.Name,
             Constraints = _constraints.ConvertAll(_ => _.ToContract())
         };
         return eventStore.Connection.Services.Constraints.Register(request);

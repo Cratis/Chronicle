@@ -55,7 +55,7 @@ public static class JobsHelpers
     static Task<IEnumerable<Job>> GetJobs(this IEventStore eventStore) =>
          eventStore.Connection.Services.Jobs.GetJobs(new()
          {
-             EventStoreName = eventStore.Name.Value,
+             EventStore = eventStore.Name.Value,
              Namespace = Concepts.EventStoreNamespaceName.Default
          });
 }

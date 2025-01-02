@@ -35,7 +35,7 @@ public class EventSequenceQueries(IEventSequences eventSequences, IQueryContextM
 
         var tail = await eventSequences.GetTailSequenceNumber(new()
         {
-            EventStoreName = eventStore,
+            EventStore = eventStore,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId
         });
@@ -44,7 +44,7 @@ public class EventSequenceQueries(IEventSequences eventSequences, IQueryContextM
         var from = (ulong)(queryContext.Paging.Page * queryContext.Paging.Size);
         var response = await eventSequences.GetEventsFromEventSequenceNumber(new()
         {
-            EventStoreName = eventStore,
+            EventStore = eventStore,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             FromEventSequenceNumber = from,

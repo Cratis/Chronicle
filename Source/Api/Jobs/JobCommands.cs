@@ -24,7 +24,7 @@ public class JobCommands(IJobs jobs) : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid jobId) =>
-        jobs.Resume(new() { EventStoreName = eventStore, Namespace = @namespace, JobId = jobId });
+        jobs.Resume(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId });
 
     /// <summary>
     /// Stop a specific job.
@@ -38,7 +38,7 @@ public class JobCommands(IJobs jobs) : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid jobId) =>
-        jobs.Stop(new() { EventStoreName = eventStore, Namespace = @namespace, JobId = jobId });
+        jobs.Stop(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId });
 
     /// <summary>
     /// Delete a specific job.
@@ -52,5 +52,5 @@ public class JobCommands(IJobs jobs) : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid jobId) =>
-        jobs.Delete(new() { EventStoreName = eventStore, Namespace = @namespace, JobId = jobId });
+        jobs.Delete(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId });
 }

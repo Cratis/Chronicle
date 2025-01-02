@@ -27,7 +27,7 @@ public class EventTypeCommands(IEventTypes eventTypes) : Controller
         [FromBody] RegisterEventTypes payload) =>
             eventTypes.Register(new RegisterEventTypesRequest
             {
-                EventStoreName = eventStoreName,
+                EventStore = eventStoreName,
                 Types = payload.Types.ToList()
             });
 }

@@ -19,7 +19,7 @@ public class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
     /// <inheritdoc/>
     public Task Stop(StopJob command, CallContext context = default)
     {
-        var key = new JobsManagerKey(command.EventStoreName, command.Namespace);
+        var key = new JobsManagerKey(command.EventStore, command.Namespace);
         var manager = grainFactory.GetGrain<IJobsManager>(0, key);
         return manager.Stop(command.JobId);
     }
@@ -27,7 +27,7 @@ public class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
     /// <inheritdoc/>
     public Task Resume(ResumeJob command, CallContext context = default)
     {
-        var key = new JobsManagerKey(command.EventStoreName, command.Namespace);
+        var key = new JobsManagerKey(command.EventStore, command.Namespace);
         var manager = grainFactory.GetGrain<IJobsManager>(0, key);
         return manager.Resume(command.JobId);
     }
@@ -35,7 +35,7 @@ public class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
     /// <inheritdoc/>
     public Task Delete(DeleteJob command, CallContext context = default)
     {
-        var key = new JobsManagerKey(command.EventStoreName, command.Namespace);
+        var key = new JobsManagerKey(command.EventStore, command.Namespace);
         var manager = grainFactory.GetGrain<IJobsManager>(0, key);
         return manager.Delete(command.JobId);
     }
@@ -43,7 +43,7 @@ public class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
     /// <inheritdoc/>
     public async Task<IEnumerable<Job>> GetJobs(GetJobsRequest request, CallContext context = default)
     {
-        var key = new JobsManagerKey(request.EventStoreName, request.Namespace);
+        var key = new JobsManagerKey(request.EventStore, request.Namespace);
         var manager = grainFactory.GetGrain<IJobsManager>(0, key);
         return (await manager.GetAllJobs()).ToContract();
     }
@@ -51,7 +51,7 @@ public class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
     /// <inheritdoc/>
     public IObservable<IEnumerable<Job>> ObserveJobs(GetJobsRequest request, CallContext context = default)
     {
-        var catchOrObserve = storage.GetEventStore(request.EventStoreName).GetNamespace(request.Namespace).Jobs.ObserveJobs();
+        var catchOrObserve = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Jobs.ObserveJobs();
         if (catchOrObserve.IsSuccess)
         {
             return catchOrObserve.AsT0.Select(_ => _.ToContract());

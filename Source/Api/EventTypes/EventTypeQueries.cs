@@ -20,7 +20,7 @@ public class EventTypeQueries(IEventTypes eventTypes) : ControllerBase
     /// <returns>Collection of event types.</returns>
     [HttpGet]
     public Task<IEnumerable<EventType>> AllEventTypes([FromRoute] string eventStore) =>
-        eventTypes.GetAll(new() { EventStoreName = eventStore });
+        eventTypes.GetAll(new() { EventStore = eventStore });
 
     /// <summary>
     /// Gets all event types with schemas.
@@ -29,5 +29,5 @@ public class EventTypeQueries(IEventTypes eventTypes) : ControllerBase
     /// <returns>Collection of event types with schemas.</returns>
     [HttpGet("schemas")]
     public Task<IEnumerable<EventTypeRegistration>> AllEventTypesWithSchemas([FromRoute] string eventStore) =>
-        eventTypes.GetAllRegistrations(new() { EventStoreName = eventStore });
+        eventTypes.GetAllRegistrations(new() { EventStore = eventStore });
 }

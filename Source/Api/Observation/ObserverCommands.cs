@@ -24,7 +24,7 @@ public class ObserverCommands(IObservers observers) : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string observerId) =>
-        observers.Replay(new() { EventStoreName = eventStore, Namespace = @namespace, ObserverId = observerId });
+        observers.Replay(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId });
 
     /// <summary>
     /// Retry a specific partition in an event store and specific namespace.
@@ -40,7 +40,7 @@ public class ObserverCommands(IObservers observers) : ControllerBase
         [FromRoute] string @namespace,
         [FromRoute] string observerId,
         [FromRoute] string partition) =>
-        observers.ReplayPartition(new() { EventStoreName = eventStore, Namespace = @namespace, ObserverId = observerId, Partition = partition });
+        observers.ReplayPartition(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId, Partition = partition });
 
     /// <summary>
     /// Rewind a specific observer in an event store and specific namespace.
@@ -56,5 +56,5 @@ public class ObserverCommands(IObservers observers) : ControllerBase
         [FromRoute] string @namespace,
         [FromRoute] string observerId,
         [FromRoute] string partition) =>
-        observers.RetryPartition(new() { EventStoreName = eventStore, Namespace = @namespace, ObserverId = observerId, Partition = partition });
+        observers.RetryPartition(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId, Partition = partition });
 }

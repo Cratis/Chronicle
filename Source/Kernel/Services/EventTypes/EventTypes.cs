@@ -23,21 +23,21 @@ public class EventTypes(IStorage storage) : IEventTypes
         foreach (var eventType in request.Types)
         {
             var schema = await JsonSchema.FromJsonAsync(eventType.Schema);
-            await storage.GetEventStore(request.EventStoreName).EventTypes.Register(eventType.Type.ToChronicle(), schema);
+            await storage.GetEventStore(request.EventStore).EventTypes.Register(eventType.Type.ToChronicle(), schema);
         }
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Contracts.Events.EventType>> GetAll(GetAllEventTypesRequest request)
     {
-        var eventTypes = await storage.GetEventStore(request.EventStoreName).EventTypes.GetLatestForAllEventTypes();
+        var eventTypes = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
         return eventTypes.Select(_ => _.Type.ToContract());
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeRegistration>> GetAllRegistrations(GetAllEventTypesRequest request)
     {
-        var eventTypes = await storage.GetEventStore(request.EventStoreName).EventTypes.GetLatestForAllEventTypes();
+        var eventTypes = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
         return eventTypes.Select(_ => new EventTypeRegistration
         {
             Type = _.Type.ToContract(),

@@ -128,7 +128,7 @@ public class Reducers(
         var registration = new RegisterReducer
         {
             ConnectionId = eventStore.Connection.Lifecycle.ConnectionId,
-            EventStoreName = eventStore.Name,
+            EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             Reducer = new ReducerDefinition
             {

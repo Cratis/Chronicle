@@ -41,7 +41,7 @@ public class Reactors(
                 case RegisterReactor register:
                     var key = new ConnectedObserverKey(
                         register.Reactor.ReactorId,
-                        register.EventStoreName,
+                        register.EventStore,
                         register.Namespace,
                         register.Reactor.EventSequenceId,
                         register.ConnectionId);
