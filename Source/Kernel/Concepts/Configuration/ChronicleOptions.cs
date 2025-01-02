@@ -19,6 +19,11 @@ public class ChronicleOptions
     public int ApiPort { get; init; } = 8080;
 
     /// <summary>
+    /// Feature toggles for Chronicle.
+    /// </summary>
+    public Features Features { get; init; } = new Features();
+
+    /// <summary>
     /// Gets or inits the storage configuration.
     /// </summary>
     public Storage Storage { get; init; } = new Storage();
