@@ -2,10 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Api;
-using Cratis.Chronicle.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -15,26 +13,14 @@ namespace Cratis.Chronicle.Workbench.Embedded;
 /// <summary>
 /// Represents the WebServer that is hosting the Chronicle Workbench.
 /// </summary>
-public class WebServer : IStartupTask
+/// <param name="workbenchOptions">The <see cref="ChronicleWorkbenchOptions"/>.</param>
+public class WebServer(IOptions<ChronicleWorkbenchOptions> workbenchOptions) : IHostedService
 {
-    readonly WebApplication _webApplication;
-    readonly IGrainFactory _grainFactory;
-    readonly IStorage _storage;
+    WebApplication? _webApplication;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="WebServer"/> class.
-    /// </summary>
-    /// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
-    /// <param name="storage">The <see cref="IStorage"/>.</param>
-    /// <param name="workbenchOptions">The <see cref="ChronicleWorkbenchOptions"/>.</param>
-    public WebServer(
-        IGrainFactory grainFactory,
-        IStorage storage,
-        IOptions<ChronicleWorkbenchOptions> workbenchOptions)
+    /// <inheritdoc/>
+    public Task StartAsync(CancellationToken cancellationToken)
     {
-        _grainFactory = grainFactory;
-        _storage = storage;
-
         var builder = WebApplication.CreateBuilder();
 
         builder.Host
@@ -42,7 +28,6 @@ public class WebServer : IStartupTask
 
         builder.Services.AddCratisChronicleApi();
 
-        AddServicesFromHost(builder.Services);
         builder.WebHost
             .UseKestrel()
             .UseUrls($"http://*:{workbenchOptions.Value.Port}");
@@ -51,7 +36,7 @@ public class WebServer : IStartupTask
 
         _webApplication.UseCratisChronicleApi();
 
-        var rootType = typeof(WorkbenchApplicationBuilderExtensions);
+        var rootType = typeof(WorkbenchWebApplicationBuilderExtensions);
         var rootResourceNamespace = $"{rootType.Namespace}.Files";
         var fileProvider = new ManifestEmbeddedFileProvider(rootType.Assembly, rootResourceNamespace);
         _webApplication.UseDefaultFiles(new DefaultFilesOptions
@@ -65,17 +50,13 @@ public class WebServer : IStartupTask
         };
         _webApplication.UseStaticFiles(staticFileOptions);
         _webApplication.MapFallbackToFile("index.html", staticFileOptions);
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task Execute(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _webApplication.StartAsync(cancellationToken);
-    }
-
-    void AddServicesFromHost(IServiceCollection services)
-    {
-        services.AddSingleton(_grainFactory);
-        services.AddSingleton(_storage);
+        await (_webApplication?.DisposeAsync() ?? ValueTask.CompletedTask);
     }
 }

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Workbench.Embedded;
 /// <summary>
 /// Defines the extension methods for configuring the workbench for the <see cref="IApplicationBuilder"/> type.
 /// </summary>
-public static class WorkbenchApplicationBuilderExtensions
+public static class WorkbenchWebApplicationBuilderExtensions
 {
     /// <summary>
     /// Gets the default section path for the Chronicle configuration.
@@ -25,16 +25,16 @@ public static class WorkbenchApplicationBuilderExtensions
     /// <param name="configureOptions">Optional <see cref="Action{T}"/> for configuring options.</param>
     /// <param name="configSection">Optional config section.</param>
     /// <returns><see cref="WebApplicationBuilder"/> for continuation.</returns>
-    public static ISiloBuilder UseCratisChronicleWorkbench(
-        this ISiloBuilder builder,
+    public static WebApplicationBuilder UseCratisChronicleWorkbench(
+        this WebApplicationBuilder builder,
         Action<ChronicleWorkbenchOptions>? configureOptions = default,
         string? configSection = default)
     {
         configSection ??= ConfigurationPath.Combine(DefaultSectionPaths);
+
         builder.Services.AddOptions(configureOptions);
         builder.Configuration.Bind(configSection);
-
-        builder.AddStartupTask<WebServer>();
+        builder.Services.AddHostedService<WebServer>();
 
         return builder;
     }
