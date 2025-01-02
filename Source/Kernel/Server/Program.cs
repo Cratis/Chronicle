@@ -22,6 +22,7 @@ CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.Zero);
 builder.Configuration.AddJsonFile("chronicle.json", optional: true, reloadOnChange: true);
 
 var chronicleOptions = new ChronicleOptions();
