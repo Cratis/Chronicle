@@ -17,11 +17,17 @@ public class FailedPartitions(IStorage storage) : IFailedPartitions
     /// <inheritdoc/>
     public async Task<IEnumerable<FailedPartition>> GetFailedPartitions(GetFailedPartitionsRequest request, CallContext context = default)
     {
-        var failedPartitions = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).FailedPartitions.GetFor(request.ObserverId ?? null!);
+        var failedPartitions = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).FailedPartitions.GetFor(GetObserverId(request.ObserverId));
         return failedPartitions.Partitions.Select(_ => _.ToContract()).ToArray();
     }
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<FailedPartition>> ObserveFailedPartitions(GetFailedPartitionsRequest request, CallContext context = default) =>
-        storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).FailedPartitions.ObserveAllFor(request.ObserverId ?? null!).Select(_ => _.ToContract());
+        storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).FailedPartitions.ObserveAllFor(GetObserverId(request.ObserverId)).Select(_ => _.ToContract());
+
+    Concepts.Observation.ObserverId? GetObserverId(string? observerId) => observerId switch
+    {
+        null => null,
+        _ => (Concepts.Observation.ObserverId)observerId
+    };
 }
