@@ -118,24 +118,12 @@ public static class ChronicleClientSiloBuilderExtensions
 
             services.AddSingleton<IChronicleClient>(sp =>
             {
-                var grainFactory = sp.GetRequiredService<IGrainFactory>();
-                var clusterClient = sp.GetRequiredService<IClusterClient>();
                 var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
                 options.ServiceProvider = sp;
                 options.ArtifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
-                var storage = sp.GetRequiredService<IStorage>();
-                var services = new Cratis.Chronicle.Connections.Services(
-                    new Server::Cratis.Chronicle.Services.EventStores(storage),
-                    new Server::Cratis.Chronicle.Services.Namespaces(storage),
-                    new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
-                    new EventTypes(storage),
-                    new Constraints(grainFactory),
-                    new Observers(storage),
-                    new Server::Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>()),
-                    new Server::Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IExpandoObjectConverter>()),
-                    new Server::Cratis.Chronicle.Services.Projections.Projections(grainFactory),
-                    new Server::Cratis.Chronicle.Services.Jobs.Jobs(grainFactory),
-                    new Server::Cratis.Chronicle.Services.Host.Server(clusterClient));
+
+                var grainFactory = sp.GetRequiredService<IGrainFactory>();
+                var services = sp.GetRequiredService<IServices>();
 
                 var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
                 var connection = new Cratis.Chronicle.Orleans.InProcess.ChronicleConnection(connectionLifecycle, services, grainFactory);

@@ -28,7 +28,11 @@ builder.Configuration.AddJsonFile("chronicle.json", optional: true, reloadOnChan
 var chronicleOptions = new ChronicleOptions();
 builder.Configuration.Bind(chronicleOptions);
 builder.Services.Configure<ChronicleOptions>(builder.Configuration);
-builder.Services.AddCratisChronicleApi();
+
+if (chronicleOptions.Features.Api)
+{
+    builder.Services.AddCratisChronicleApi(false);
+}
 
 builder.WebHost.UseKestrel(options =>
 {
@@ -77,6 +81,7 @@ builder.Host
 
 var app = builder.Build();
 app.UseRouting();
+app.UseCratisApplicationModel();
 
 if (chronicleOptions.Features.Api)
 {

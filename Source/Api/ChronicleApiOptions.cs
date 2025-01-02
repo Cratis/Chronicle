@@ -13,7 +13,7 @@ public class ChronicleApiOptions
     /// <summary>
     /// Gets the port for the REST API.
     /// </summary>
-    public int ApiPort { get; init; } = 8082;
+    public int ApiPort { get; init; } = 8080;
 
     /// <summary>
     /// Gets the <see cref="ChronicleUrl"/> to use.
