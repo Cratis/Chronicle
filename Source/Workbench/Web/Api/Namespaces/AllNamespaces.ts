@@ -4,7 +4,7 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
+import { ObservableQueryFor, QueryResultWithState, Sorting, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import Handlebars from 'handlebars';
 

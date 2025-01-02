@@ -4,11 +4,11 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
+import { QueryFor, QueryResultWithState, Sorting, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/sequences');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/sequences');
 
 class AllEventSequencesSortBy {
 
@@ -21,8 +21,12 @@ class AllEventSequencesSortByWithoutQuery {
 
 }
 
-export class AllEventSequences extends QueryFor<string[]> {
-    readonly route: string = '/api/event-store/sequences';
+export interface AllEventSequencesArguments {
+    eventStore: string;
+}
+
+export class AllEventSequences extends QueryFor<string[], AllEventSequencesArguments> {
+    readonly route: string = '/api/event-store/{eventStore}/sequences';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: string[] = [];
     private readonly _sortBy: AllEventSequencesSortBy;
@@ -35,6 +39,7 @@ export class AllEventSequences extends QueryFor<string[]> {
 
     get requiredRequestArguments(): string[] {
         return [
+            'eventStore',
         ];
     }
 
@@ -46,11 +51,11 @@ export class AllEventSequences extends QueryFor<string[]> {
         return this._sortBy;
     }
 
-    static use(sorting?: Sorting): [QueryResultWithState<string[]>, PerformQuery, SetSorting] {
-        return useQuery<string[], AllEventSequences>(AllEventSequences, undefined, sorting);
+    static use(args?: AllEventSequencesArguments, sorting?: Sorting): [QueryResultWithState<string[]>, PerformQuery<AllEventSequencesArguments>, SetSorting] {
+        return useQuery<string[], AllEventSequences, AllEventSequencesArguments>(AllEventSequences, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, sorting?: Sorting): [QueryResultWithState<string[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
-        return useQueryWithPaging<string[], AllEventSequences>(AllEventSequences, new Paging(0, pageSize), undefined, sorting);
+    static useWithPaging(pageSize: number, args?: AllEventSequencesArguments, sorting?: Sorting): [QueryResultWithState<string[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+        return useQueryWithPaging<string[], AllEventSequences>(AllEventSequences, new Paging(0, pageSize), args, sorting);
     }
 }
