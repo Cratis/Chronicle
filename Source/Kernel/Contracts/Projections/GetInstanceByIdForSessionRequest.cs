@@ -15,7 +15,7 @@ public class GetInstanceByIdForSessionRequest
     /// Gets or sets the event store name.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStoreName { get; set; }
+    public string EventStore { get; set; }
 
     /// <summary>
     /// Gets or sets the namespace.

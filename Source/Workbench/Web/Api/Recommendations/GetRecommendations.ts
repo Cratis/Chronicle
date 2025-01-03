@@ -6,39 +6,39 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import { RecommendationInformation } from '../Concepts/Recommendations/RecommendationInformation';
+import { Recommendation } from './Recommendation';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/recommendations');
 
 class GetRecommendationsSortBy {
-    private _id: SortingActionsForQuery<RecommendationInformation[]>;
-    private _name: SortingActionsForQuery<RecommendationInformation[]>;
-    private _description: SortingActionsForQuery<RecommendationInformation[]>;
-    private _type: SortingActionsForQuery<RecommendationInformation[]>;
-    private _occurred: SortingActionsForQuery<RecommendationInformation[]>;
+    private _id: SortingActionsForQuery<Recommendation[]>;
+    private _name: SortingActionsForQuery<Recommendation[]>;
+    private _description: SortingActionsForQuery<Recommendation[]>;
+    private _type: SortingActionsForQuery<Recommendation[]>;
+    private _occurred: SortingActionsForQuery<Recommendation[]>;
 
     constructor(readonly query: GetRecommendations) {
-        this._id = new SortingActionsForQuery<RecommendationInformation[]>('id', query);
-        this._name = new SortingActionsForQuery<RecommendationInformation[]>('name', query);
-        this._description = new SortingActionsForQuery<RecommendationInformation[]>('description', query);
-        this._type = new SortingActionsForQuery<RecommendationInformation[]>('type', query);
-        this._occurred = new SortingActionsForQuery<RecommendationInformation[]>('occurred', query);
+        this._id = new SortingActionsForQuery<Recommendation[]>('id', query);
+        this._name = new SortingActionsForQuery<Recommendation[]>('name', query);
+        this._description = new SortingActionsForQuery<Recommendation[]>('description', query);
+        this._type = new SortingActionsForQuery<Recommendation[]>('type', query);
+        this._occurred = new SortingActionsForQuery<Recommendation[]>('occurred', query);
     }
 
-    get id(): SortingActionsForQuery<RecommendationInformation[]> {
+    get id(): SortingActionsForQuery<Recommendation[]> {
         return this._id;
     }
-    get name(): SortingActionsForQuery<RecommendationInformation[]> {
+    get name(): SortingActionsForQuery<Recommendation[]> {
         return this._name;
     }
-    get description(): SortingActionsForQuery<RecommendationInformation[]> {
+    get description(): SortingActionsForQuery<Recommendation[]> {
         return this._description;
     }
-    get type(): SortingActionsForQuery<RecommendationInformation[]> {
+    get type(): SortingActionsForQuery<Recommendation[]> {
         return this._type;
     }
-    get occurred(): SortingActionsForQuery<RecommendationInformation[]> {
+    get occurred(): SortingActionsForQuery<Recommendation[]> {
         return this._occurred;
     }
 }
@@ -72,15 +72,15 @@ export interface GetRecommendationsArguments {
     namespace: string;
 }
 
-export class GetRecommendations extends QueryFor<RecommendationInformation[], GetRecommendationsArguments> {
+export class GetRecommendations extends QueryFor<Recommendation[], GetRecommendationsArguments> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/recommendations';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly defaultValue: RecommendationInformation[] = [];
+    readonly defaultValue: Recommendation[] = [];
     private readonly _sortBy: GetRecommendationsSortBy;
     private static readonly _sortBy: GetRecommendationsSortByWithoutQuery = new GetRecommendationsSortByWithoutQuery();
 
     constructor() {
-        super(RecommendationInformation, true);
+        super(Recommendation, true);
         this._sortBy = new GetRecommendationsSortBy(this);
     }
 
@@ -99,11 +99,11 @@ export class GetRecommendations extends QueryFor<RecommendationInformation[], Ge
         return this._sortBy;
     }
 
-    static use(args?: GetRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<RecommendationInformation[]>, PerformQuery<GetRecommendationsArguments>, SetSorting] {
-        return useQuery<RecommendationInformation[], GetRecommendations, GetRecommendationsArguments>(GetRecommendations, args, sorting);
+    static use(args?: GetRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<Recommendation[]>, PerformQuery<GetRecommendationsArguments>, SetSorting] {
+        return useQuery<Recommendation[], GetRecommendations, GetRecommendationsArguments>(GetRecommendations, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: GetRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<RecommendationInformation[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
-        return useQueryWithPaging<RecommendationInformation[], GetRecommendations>(GetRecommendations, new Paging(0, pageSize), args, sorting);
+    static useWithPaging(pageSize: number, args?: GetRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<Recommendation[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+        return useQueryWithPaging<Recommendation[], GetRecommendations>(GetRecommendations, new Paging(0, pageSize), args, sorting);
     }
 }

@@ -117,7 +117,7 @@
             },
             "sequences": {
                 "title": "Sequences",
-                "empty": "No sequences found",
+                "empty": "No events found",
                 "columns": {
                     "sequenceNumber": "Sequence number",
                     "eventType": "Event Type",

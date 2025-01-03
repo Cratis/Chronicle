@@ -7,23 +7,16 @@ using Cratis.Chronicle;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Orleans.InProcess;
 using Cratis.Chronicle.Orleans.Transactions;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Setup;
-using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
-using Cratis.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Server::Cratis.Chronicle.Services.Events;
-using Server::Cratis.Chronicle.Services.Events.Constraints;
-using Server::Cratis.Chronicle.Services.EventSequences;
-using Server::Cratis.Chronicle.Services.Observation;
 
 namespace Orleans.Hosting;
 
@@ -118,24 +111,12 @@ public static class ChronicleClientSiloBuilderExtensions
 
             services.AddSingleton<IChronicleClient>(sp =>
             {
-                var grainFactory = sp.GetRequiredService<IGrainFactory>();
-                var clusterClient = sp.GetRequiredService<IClusterClient>();
                 var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
                 options.ServiceProvider = sp;
                 options.ArtifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
-                var storage = sp.GetRequiredService<IStorage>();
-                var services = new Cratis.Chronicle.Services(
-                    new Server::Cratis.Chronicle.Services.EventStores(storage),
-                    new Server::Cratis.Chronicle.Services.Namespaces(storage),
-                    new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
-                    new EventTypes(storage),
-                    new Constraints(grainFactory),
-                    new Observers(storage),
-                    new Server::Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>()),
-                    new Server::Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IExpandoObjectConverter>()),
-                    new Server::Cratis.Chronicle.Services.Projections.Projections(grainFactory),
-                    new Server::Cratis.Chronicle.Services.Jobs.Jobs(grainFactory),
-                    new Server::Cratis.Chronicle.Services.Host.Server(clusterClient));
+
+                var grainFactory = sp.GetRequiredService<IGrainFactory>();
+                var services = sp.GetRequiredService<IServices>();
 
                 var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
                 var connection = new Cratis.Chronicle.Orleans.InProcess.ChronicleConnection(connectionLifecycle, services, grainFactory);

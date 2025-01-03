@@ -8,7 +8,6 @@ import { useLayoutContext } from "../context/LayoutContext";
 import { CurrentNamespace } from "./CurrentNamespace";
 import { InputText } from 'primereact/inputtext';
 import { ItemsList } from 'Components/ItemsList/ItemsList';
-import { Namespace } from 'Api/Namespaces';
 import { INamespaceSelectorProps, NamespaceSelectorViewModel } from './NamespaceSelectorViewModel';
 import { withViewModel } from '@cratis/applications.react.mvvm';
 import css from './NamespaceSelector.module.css';
@@ -19,18 +18,18 @@ export const NamespaceSelector = withViewModel<NamespaceSelectorViewModel, IName
 
     const op = useRef<OverlayPanel>(null);
 
-    const selectNamespace = (namespace: Namespace) => {
+    const selectNamespace = (namespace: string) => {
         props.onNamespaceSelected(namespace);
         viewModel.onNamespaceSelected(namespace);
         op?.current?.hide();
     };
 
-    const filteredNamespaces = useMemo(() => viewModel.namespaces.filter((t) => t.name?.toLowerCase().includes(search.toLowerCase())), [viewModel.namespaces, search]);
+    const filteredNamespaces = useMemo(() => viewModel.namespaces.filter((t) => t.toLowerCase().includes(search.toLowerCase())), [viewModel.namespaces, search]);
 
     return (
         <div>
             <CurrentNamespace compact={!layoutConfig.leftSidebarOpen}
-                namespace={viewModel.currentNamespace?.name} onClick={(e) => {
+                namespace={viewModel.currentNamespace} onClick={(e) => {
                     op?.current?.toggle(e, null);
                 }} />
 
@@ -46,7 +45,7 @@ export const NamespaceSelector = withViewModel<NamespaceSelectorViewModel, IName
                             }} />
                     </div>
 
-                    <ItemsList<Namespace> items={filteredNamespaces} idProperty='name' nameProperty='name' onItemClicked={selectNamespace} />
+                    <ItemsList<string> items={filteredNamespaces} onItemClicked={selectNamespace} />
                 </div>
             </OverlayPanel>
         </div>);

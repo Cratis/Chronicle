@@ -5,8 +5,8 @@ import { withViewModel } from '@cratis/applications.react.mvvm';
 import { ObserversViewModel } from './ObserversViewModel';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { ObserverType } from 'Api/Concepts/Observation/ObserverType';
-import { ObserverInformation } from 'Api/Concepts/Observation/ObserverInformation';
+import { ObserverType } from 'Api/Observation/ObserverType';
+import { ObserverInformation } from 'Api/Observation/ObserverInformation';
 import { FilterMatchMode } from 'primereact/api';
 import strings from 'Strings';
 import { AllObservers, AllObserversArguments } from 'Api/Observation';
@@ -14,13 +14,13 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
-import { ObserverRunningState } from 'Api/Concepts/Observation';
+import { ObserverRunningState } from 'Api/Observation';
 
 const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {
         case ObserverType.unknown:
             return strings.eventStore.namespaces.observers.types.unknown;
-        case ObserverType.client:
+        case ObserverType.reactor:
             return strings.eventStore.namespaces.observers.types.reactor;
         case ObserverType.projection:
             return strings.eventStore.namespaces.observers.types.projection;
@@ -68,7 +68,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const queryArgs: AllObserversArguments = {
         eventStore: params.eventStore!,
-        namespace: viewModel.currentNamespace.name
+        namespace: viewModel.currentNamespace
     };
 
     return (

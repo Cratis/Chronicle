@@ -41,11 +41,11 @@ public class Reactors(
                 case RegisterReactor register:
                     var key = new ConnectedObserverKey(
                         register.Reactor.ReactorId,
-                        register.EventStoreName,
+                        register.EventStore,
                         register.Namespace,
                         register.Reactor.EventSequenceId,
                         register.ConnectionId);
-                    using (Tracing.RegisterObserver(key, ObserverType.Client))
+                    using (Tracing.RegisterObserver(key, ObserverType.Reactor))
                     {
                         clientObserver = grainFactory.GetGrain<IReactor>(key);
                         clientObserver.SetDefinitionAndSubscribe(register.Reactor.ToChronicle());

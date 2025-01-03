@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { inject, injectable } from 'tsyringe';
-import { DeleteJob, JobInformation, ResumeJob, StopJob } from 'Api/Jobs';
+import { DeleteJob, Job, ResumeJob, StopJob } from 'Api/Jobs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { Guid } from '@cratis/fundamentals';
 
@@ -12,7 +12,7 @@ export class JobViewModels {
     constructor(@inject('params') private readonly _params: EventStoreAndNamespaceParams) {
     }
 
-    selectedJob: JobInformation | undefined;
+    selectedJob: Job | undefined;
 
     async stop() {
         const command = new StopJob();

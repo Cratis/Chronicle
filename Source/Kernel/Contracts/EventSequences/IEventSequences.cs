@@ -31,6 +31,15 @@ public interface IEventSequences
     Task<AppendManyResponse> AppendMany(AppendManyRequest request, CallContext context = default);
 
     /// <summary>
+    /// Get the tail sequence number for an event sequence.
+    /// </summary>
+    /// <param name="request">The <see cref="GetTailSequenceNumberRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The sequence number of the tail event.</returns>
+    [Operation]
+    Task<GetTailSequenceNumberResponse> GetTailSequenceNumber(GetTailSequenceNumberRequest request, CallContext context = default);
+
+    /// <summary>
     /// Get events for an event source id and specific event types.
     /// </summary>
     /// <param name="request">The <see cref="GetForEventSourceIdAndEventTypesRequest"/>.</param>

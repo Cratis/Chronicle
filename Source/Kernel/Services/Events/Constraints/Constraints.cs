@@ -15,7 +15,7 @@ public class Constraints(IGrainFactory grainFactory) : IConstraints
     /// <inheritdoc/>
     public async Task Register(RegisterConstraintsRequest request)
     {
-        var key = new ConstraintsKey(request.EventStoreName);
+        var key = new ConstraintsKey(request.EventStore);
         var grain = grainFactory.GetGrain<Grains.Events.Constraints.IConstraints>(key);
 
         var constraints = request.Constraints.Select(_ => _.ToChronicle()).ToArray();

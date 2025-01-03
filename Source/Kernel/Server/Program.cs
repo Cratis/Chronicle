@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using Cratis.Api.Server;
+using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
@@ -22,16 +22,24 @@ CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.Zero);
 builder.Configuration.AddJsonFile("chronicle.json", optional: true, reloadOnChange: true);
 
 var chronicleOptions = new ChronicleOptions();
 builder.Configuration.Bind(chronicleOptions);
 builder.Services.Configure<ChronicleOptions>(builder.Configuration);
-builder.Services.AddCratisChronicleApi();
+
+if (chronicleOptions.Features.Api)
+{
+    builder.Services.AddCratisChronicleApi(false);
+}
 
 builder.WebHost.UseKestrel(options =>
 {
-    options.ListenAnyIP(chronicleOptions.ApiPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
+    if (chronicleOptions.Features.Api)
+    {
+        options.ListenAnyIP(chronicleOptions.ApiPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
+    }
     options.ListenAnyIP(chronicleOptions.Port, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
@@ -72,14 +80,22 @@ builder.Host
    });
 
 var app = builder.Build();
-app
-    .UseRouting()
-    .UseCratisChronicleApi()
-    .UseDefaultFiles()
-    .UseStaticFiles()
-    .MapGrpcServices();
+app.UseRouting();
+app.UseCratisApplicationModel();
 
-app.MapFallbackToFile("index.html");
+if (chronicleOptions.Features.Api)
+{
+    app.UseCratisChronicleApi();
+}
+
+if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
+{
+    app.UseDefaultFiles()
+        .UseStaticFiles();
+
+    app.MapFallbackToFile("index.html");
+}
+app.MapGrpcServices();
 
 await app.RunAsync();
 

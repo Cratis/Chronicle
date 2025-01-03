@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using Cratis.Chronicle;
+using Cratis.Chronicle.Connections;
 
 namespace Microsoft.AspNetCore.Builder;
 

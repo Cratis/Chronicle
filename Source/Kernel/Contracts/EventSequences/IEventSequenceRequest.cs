@@ -11,7 +11,7 @@ public interface IEventSequenceRequest
     /// <summary>
     /// Gets or sets the event store name.
     /// </summary>
-    string EventStoreName { get; set; }
+    string EventStore { get; set; }
 
     /// <summary>
     /// Gets or sets the namespace.

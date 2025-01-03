@@ -13,7 +13,7 @@ public class and_replay_was_started : given.a_replay_state
     {
         _storedState = _storedState with
         {
-            Type = ObserverType.Client
+            Type = ObserverType.Reactor
         };
 
         _observerServiceClient
@@ -26,5 +26,5 @@ public class and_replay_was_started : given.a_replay_state
     async Task Because() => _resultingStoredState = await _state.OnLeave(_storedState);
 
     [Fact] void should_end_replay_only_one() => _observerServiceClient.Received(1).BeginReplayFor(Arg.Any<ObserverDetails>());
-    [Fact] void should_end_replay_for_correct_observer() => observer_details.ShouldEqual(new ObserverDetails(_storedState.Id, _observerKey, ObserverType.Client));
+    [Fact] void should_end_replay_for_correct_observer() => observer_details.ShouldEqual(new ObserverDetails(_storedState.Id, _observerKey, ObserverType.Reactor));
 }

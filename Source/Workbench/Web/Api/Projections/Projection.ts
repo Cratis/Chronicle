@@ -5,11 +5,12 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
+import { Guid } from '@cratis/fundamentals';
 
 export class Projection {
 
-    @field(String)
-    id!: string;
+    @field(Guid)
+    id!: Guid;
 
     @field(Boolean)
     isActive!: boolean;

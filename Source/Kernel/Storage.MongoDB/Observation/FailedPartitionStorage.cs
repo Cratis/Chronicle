@@ -44,9 +44,11 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     }
 
     /// <inheritdoc/>
-    public async Task<FailedPartitions> GetFor(ObserverId observerId)
+    public async Task<FailedPartitions> GetFor(ObserverId? observerId)
     {
-        var cursor = await Collection.FindAsync(_ => _.ObserverId == observerId).ConfigureAwait(false);
+        var cursor = observerId is null ?
+            await Collection.FindAsync(_ => true).ConfigureAwait(false) :
+            await Collection.FindAsync(_ => _.ObserverId == observerId).ConfigureAwait(false);
 
         return new FailedPartitions
         {

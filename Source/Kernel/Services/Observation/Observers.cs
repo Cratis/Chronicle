@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Storage;
 using ProtoBuf.Grpc;
@@ -10,28 +11,30 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IObservers"/>.
 /// </summary>
+/// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
 /// <param name="storage">The <see cref="IStorage"/>.</param>
-public class Observers(IStorage storage) : IObservers
+public class Observers(IGrainFactory grainFactory, IStorage storage) : IObservers
 {
     /// <inheritdoc/>
-    public Task RetryPartition(RetryPartitionRequest request, CallContext context = default) => throw new NotImplementedException();
+    public Task RetryPartition(RetryPartition command, CallContext context = default) =>
+        grainFactory.GetObserver(storage, command).TryStartRecoverJobForFailedPartition(command.Partition);
 
     /// <inheritdoc/>
-    public Task Rewind(RewindRequest request, CallContext context = default) => throw new NotImplementedException();
+    public Task Replay(Replay command, CallContext context = default) =>
+        grainFactory.GetObserver(storage, command).Replay();
 
     /// <inheritdoc/>
-    public Task RewindPartition(RewindPartitionRequest request, CallContext context = default) => throw new NotImplementedException();
+    public Task ReplayPartition(ReplayPartition command, CallContext context = default) =>
+        grainFactory.GetObserver(storage, command).ReplayPartition(command.Partition);
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default) => throw new NotImplementedException();
-
-    /// <inheritdoc/>
-    public IObservable<ObserverInformation> AllObservers(AllObserversRequest request, CallContext context = default) => throw new NotImplementedException();
-
-    /// <inheritdoc/>
-    public async Task<IEnumerable<FailedPartition>> GetFailedPartitionsForObserver(FailedPartitionsForObserverRequest request, CallContext context = default)
+    public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)
     {
-        var failedPartitions = await storage.GetEventStore(request.EventStoreName).GetNamespace(request.Namespace).FailedPartitions.GetFor(request.ObserverId);
-        return failedPartitions.Partitions.Select(_ => _.ToContract()).ToArray();
+        var observers = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+        return observers.ToContract();
     }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default) =>
+        storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.ObserveAll().Select(_ => _.ToContract());
 }

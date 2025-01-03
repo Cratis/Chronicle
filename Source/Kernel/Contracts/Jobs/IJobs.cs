@@ -13,10 +13,42 @@ namespace Cratis.Chronicle.Contracts.Jobs;
 public interface IJobs
 {
     /// <summary>
+    /// Stop a specific job.
+    /// </summary>
+    /// <param name="command"><see cref="StopJob"/> command.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Stop(StopJob command, CallContext context = default);
+
+    /// <summary>
+    /// Resume a specific job.
+    /// </summary>
+    /// <param name="command"><see cref="StopJob"/> command.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Resume(ResumeJob command, CallContext context = default);
+
+    /// <summary>
+    /// Delete a specific job.
+    /// </summary>
+    /// <param name="command"><see cref="StopJob"/> command.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Delete(DeleteJob command, CallContext context = default);
+
+    /// <summary>
     /// Get all jobs.
     /// </summary>
-    /// <param name="request">The <see cref="GetAllRequest"/>.</param>
+    /// <param name="request">The <see cref="GetJobsRequest"/>.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Collection of all jobs.</returns>
-    Task<IEnumerable<Job>> GetAll(GetAllRequest request, CallContext context = default);
+    Task<IEnumerable<Job>> GetJobs(GetJobsRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Observe all jobs.
+    /// </summary>
+    /// <param name="request">The <see cref="GetJobsRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Observable of collection of all jobs.</returns>
+    IObservable<IEnumerable<Job>> ObserveJobs(GetJobsRequest request, CallContext context = default);
 }

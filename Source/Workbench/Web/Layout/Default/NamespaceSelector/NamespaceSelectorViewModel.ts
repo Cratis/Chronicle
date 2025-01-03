@@ -2,11 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { inject, injectable } from 'tsyringe';
-import { Namespace } from 'Api/Namespaces';
 import { INamespaces } from 'State/Namespaces';
 
 export interface INamespaceSelectorProps {
-    onNamespaceSelected: (namespace: Namespace) => void;
+    onNamespaceSelected: (namespace: string) => void;
 }
 
 @injectable()
@@ -25,10 +24,10 @@ export class NamespaceSelectorViewModel {
         });
     }
 
-    currentNamespace: Namespace = { name: '', description: '' };
-    namespaces: Namespace[] = [];
+    currentNamespace: string = '';
+    namespaces: string[] = [];
 
-    onNamespaceSelected(namespace: Namespace) {
+    onNamespaceSelected(namespace: string) {
         this.currentNamespace = namespace;
         this._props.onNamespaceSelected(namespace);
         this._namespaces.setCurrentNamespace(namespace);

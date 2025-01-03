@@ -51,7 +51,7 @@ public class Reducers(
                 case RegisterReducer register:
                     var key = new ConnectedObserverKey(
                         register.Reducer.ReducerId,
-                        register.EventStoreName,
+                        register.EventStore,
                         register.Namespace,
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);

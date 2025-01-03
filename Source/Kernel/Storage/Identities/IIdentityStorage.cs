@@ -57,6 +57,12 @@ public interface IIdentityStorage
     Task<Identity> GetSingleFor(IdentityId identityId);
 
     /// <summary>
+    /// Get all identities.
+    /// </summary>
+    /// <returns>Collection of <see cref="Identity"/>.</returns>
+    Task<IEnumerable<Identity>> GetAll();
+
+    /// <summary>
     /// Observe all identities.
     /// </summary>
     /// <returns>An observable of collection of <see cref="Identity"/>.</returns>

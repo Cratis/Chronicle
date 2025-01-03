@@ -2,8 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { inject, injectable } from 'tsyringe';
-import { ObserverInformation } from 'Api/Concepts/Observation/ObserverInformation';
-import { Namespace } from 'Api/Namespaces';
+import { ObserverInformation } from 'Api/Observation/ObserverInformation';
 import { Replay } from 'Api/Observation';
 import { INamespaces } from 'State/Namespaces';
 import { DialogButtons, IDialogs } from '@cratis/applications.react.mvvm/dialogs';
@@ -18,14 +17,14 @@ export class ObserversViewModel {
         private readonly _replay: Replay,
         private readonly _dialogs: IDialogs,
         @inject('params') private readonly _params: EventStoreAndNamespaceParams) {
-        this.currentNamespace = { name: '', description: '' };
+        this.currentNamespace = '';
 
         namespaces.currentNamespace.subscribe(namespace => {
             this.currentNamespace = namespace;
         });
     }
 
-    currentNamespace: Namespace;
+    currentNamespace: string;
     selectedObserver: ObserverInformation | undefined;
 
     async replay() {
@@ -34,7 +33,7 @@ export class ObserversViewModel {
             const result = await this._dialogs.showConfirmation('Replay?', `Are you sure you want to replay ${observerId}?`, DialogButtons.YesNo);
             if (result == DialogResult.Yes) {
                 this._replay.eventStore = this._params.eventStore!;
-                this._replay.namespace = this.currentNamespace.name;
+                this._replay.namespace = this.currentNamespace;
                 this._replay.observerId = observerId;
                 const commandResult = await this._replay.execute();
                 commandResult

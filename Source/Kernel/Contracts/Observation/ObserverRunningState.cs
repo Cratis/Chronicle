@@ -11,6 +11,11 @@ public enum ObserverRunningState
     /// <summary>
     /// Observer is in an unknown state.
     /// </summary>
+    Unknown = -1,
+
+    /// <summary>
+    /// Observer is in an unknown state.
+    /// </summary>
     New = 0,
 
     /// <summary>
@@ -64,7 +69,7 @@ public enum ObserverRunningState
     Disconnected = 10,
 
     /// <summary>
-    /// Observer is disconnected.
+    /// Observer is indexing.
     /// </summary>
     Indexing = 11,
 }

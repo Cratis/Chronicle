@@ -31,9 +31,9 @@ public class a_reactor_observing_an_event_that_can_fail(GlobalFixture globalFixt
         ObserverId = reactorObserverState.Id;
     }
 
-    protected Task<IEnumerable<FailedPartition>> GetFailedPartitions() => EventStore.Connection.Services.Observers.GetFailedPartitionsForObserver(new()
+    protected Task<IEnumerable<FailedPartition>> GetFailedPartitions() => EventStore.Connection.Services.FailedPartitions.GetFailedPartitions(new()
     {
-        EventStoreName = EventStore.Name.Value,
+        EventStore = EventStore.Name.Value,
         Namespace = Concepts.EventStoreNamespaceName.Default,
         ObserverId = ObserverId
     });

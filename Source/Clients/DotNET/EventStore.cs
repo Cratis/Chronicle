@@ -231,7 +231,7 @@ public class EventStore : IEventStore
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
     {
-        var namespaces = await Connection.Services.Namespaces.GetNamespaces(new(_eventStoreName));
+        var namespaces = await Connection.Services.Namespaces.GetNamespaces(new() { EventStore = _eventStoreName });
         return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
     }
 }

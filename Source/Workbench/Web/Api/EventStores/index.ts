@@ -5,5 +5,4 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 export * from './AllEventStores';
-export * from './EventStore';
 export * from './GetEventStores';

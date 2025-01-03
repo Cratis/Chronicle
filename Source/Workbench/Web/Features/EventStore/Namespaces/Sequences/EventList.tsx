@@ -3,7 +3,8 @@
 
 import { Column } from 'primereact/column';
 import { DataTableForQuery } from 'Components/index';
-import { AppendedEvents, AppendedEventsArguments, AppendedEventWithJsonAsContent } from 'Api/EventSequences';
+import { AppendedEvents, AppendedEventsArguments } from 'Api/EventSequences';
+import { AppendedEvent } from 'Api/Events';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
@@ -12,7 +13,7 @@ export interface EventListProps {
     events: object[];
 }
 
-const occurred = (event: AppendedEventWithJsonAsContent) => {
+const occurred = (event: AppendedEvent) => {
     return event.context.occurred.toLocaleString();
 };
 

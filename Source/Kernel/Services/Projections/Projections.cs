@@ -17,7 +17,7 @@ public class Projections(IGrainFactory grainFactory) : IProjections
     /// <inheritdoc/>
     public Task Register(RegisterRequest request, CallContext context = default)
     {
-        var projectionsManager = grainFactory.GetGrain<Grains.Projections.IProjectionsManager>(request.EventStoreName);
+        var projectionsManager = grainFactory.GetGrain<Grains.Projections.IProjectionsManager>(request.EventStore);
         var projections = request.Projections.Select(_ => _.ToChronicle()).ToArray();
 
         _ = Task.Run(() => projectionsManager.Register(projections));
@@ -29,7 +29,7 @@ public class Projections(IGrainFactory grainFactory) : IProjections
     {
         var projectionKey = new ImmediateProjectionKey(
             request.ProjectionId,
-            request.EventStoreName,
+            request.EventStore,
             request.Namespace,
             request.EventSequenceId,
             request.ModelKey);
@@ -45,7 +45,7 @@ public class Projections(IGrainFactory grainFactory) : IProjections
     {
         var projectionKey = new ImmediateProjectionKey(
             request.ProjectionId,
-            request.EventStoreName,
+            request.EventStore,
             request.Namespace,
             request.EventSequenceId,
             request.ModelKey,
@@ -62,7 +62,7 @@ public class Projections(IGrainFactory grainFactory) : IProjections
     {
         var projectionKey = new ImmediateProjectionKey(
             request.ProjectionId,
-            request.EventStoreName,
+            request.EventStore,
             request.Namespace,
             request.EventSequenceId,
             request.ModelKey,
@@ -80,7 +80,7 @@ public class Projections(IGrainFactory grainFactory) : IProjections
     {
         var projectionKey = new ImmediateProjectionKey(
             request.ProjectionId,
-            request.EventStoreName,
+            request.EventStore,
             request.Namespace,
             request.EventSequenceId,
             request.ModelKey,

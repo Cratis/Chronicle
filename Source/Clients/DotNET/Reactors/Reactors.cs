@@ -141,7 +141,7 @@ public class Reactors : IReactors
         var registration = new RegisterReactor
         {
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
-            EventStoreName = _eventStore.Name,
+            EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             Reactor = new ReactorDefinition
             {

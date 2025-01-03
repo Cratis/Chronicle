@@ -5,11 +5,12 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
+import { SerializableDateTimeOffset } from '../Primitives/SerializableDateTimeOffset';
 
 export class Causation {
 
-    @field(Date)
-    occurred!: Date;
+    @field(SerializableDateTimeOffset)
+    occurred!: SerializableDateTimeOffset;
 
     @field(String)
     type!: string;

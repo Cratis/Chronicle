@@ -2,18 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Contracts.Observation;
 
-namespace Cratis.Api.Observation;
+namespace Cratis.Chronicle.Api.Observation;
 
 /// <summary>
 /// Represents the API for working with observers.
 /// </summary>
-/// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
+/// <param name="observers"><see cref="IObservers"/> for working with observers.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/observers")]
-public class ObserverQueries(IStorage storage) : ControllerBase
+public class ObserverQueries(IObservers observers) : ControllerBase
 {
     /// <summary>
     /// Get all observers for an event store and namespace.
@@ -23,9 +21,9 @@ public class ObserverQueries(IStorage storage) : ControllerBase
     /// <returns>Collection of <see cref="ObserverInformation"/>.</returns>
     [HttpGet("all-observers")]
     public Task<IEnumerable<ObserverInformation>> GetObservers(
-        [FromRoute] EventStoreName eventStore,
-        [FromRoute] EventStoreNamespaceName @namespace) =>
-        throw new NotImplementedException();
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace) =>
+        observers.GetObservers(new() { EventStore = eventStore, Namespace = @namespace });
 
     /// <summary>
     /// Get and observe all observers for an event store and namespace.
@@ -35,10 +33,11 @@ public class ObserverQueries(IStorage storage) : ControllerBase
     /// <returns>An observable of a collection of <see cref="ObserverInformation"/>.</returns>
     [HttpGet("all-observers/observe")]
     public ISubject<IEnumerable<ObserverInformation>> AllObservers(
-        [FromRoute] EventStoreName eventStore,
-        [FromRoute] EventStoreNamespaceName @namespace)
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace)
     {
-        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
-        return namespaceStorage.Observers.ObserveAll();
+        var subject = new Subject<IEnumerable<ObserverInformation>>();
+        observers.ObserveObservers(new() { EventStore = eventStore, Namespace = @namespace }).Subscribe(subject);
+        return subject;
     }
 }

@@ -1,54 +1,42 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Recommendations;
-using Cratis.Chronicle.Grains.Recommendations;
+using Cratis.Chronicle.Contracts.Recommendations;
 
-namespace Cratis.Api.Recommendations;
+namespace Cratis.Chronicle.Api.Recommendations;
 
 /// <summary>
 /// Represents the API for working with recommendations.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="RecommendationCommands"/> class.
-/// </remarks>
-/// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
+/// <param name="recommendations"><see cref="IRecommendations"/> for recommendations.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/recommendations")]
-public class RecommendationCommands(IGrainFactory grainFactory) : ControllerBase
+public class RecommendationCommands(IRecommendations recommendations) : ControllerBase
 {
     /// <summary>
     /// Perform a recommendation.
     /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> for the recommendation.</param>
-    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> for the recommendation.</param>
-    /// <param name="recommendationId">The <see cref="RecommendationId"/> of the recommendation to perform.</param>
+    /// <param name="eventStore">EventStore the recommendations are for.</param>
+    /// <param name="namespace">Namespace the recommendations are for.</param>
+    /// <param name="recommendationId">The unique identifier of the recommendation to perform.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("{recommendationId}/perform")]
-    public async Task Perform(
-        [FromRoute] EventStoreName eventStore,
-        [FromRoute] EventStoreNamespaceName @namespace,
-        [FromRoute] RecommendationId recommendationId)
-    {
-        await GetRecommendationsManager(eventStore, @namespace).Perform(recommendationId);
-    }
+    public Task Perform(
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] Guid recommendationId) =>
+        recommendations.Perform(new() { EventStore = eventStore, Namespace = @namespace, RecommendationId = recommendationId });
 
     /// <summary>
     /// Ignore a recommendation.
     /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> for the recommendation.</param>
-    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> for the recommendation.</param>
-    /// <param name="recommendationId">The <see cref="RecommendationId"/> of the recommendation to ignore.</param>
+    /// <param name="eventStore">EventStore the recommendations are for.</param>
+    /// <param name="namespace">Namespace the recommendations are for.</param>
+    /// <param name="recommendationId">The unique identifier of the recommendation to perform.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("{recommendationId}/ignore")]
-    public async Task Ignore(
-        [FromRoute] EventStoreName eventStore,
-        [FromRoute] EventStoreNamespaceName @namespace,
-        [FromRoute] RecommendationId recommendationId)
-    {
-        await GetRecommendationsManager(eventStore, @namespace).Ignore(recommendationId);
-    }
-
-    IRecommendationsManager GetRecommendationsManager(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
-        grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(eventStore, @namespace));
+    public Task Ignore(
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] Guid recommendationId) =>
+        recommendations.Ignore(new() { EventStore = eventStore, Namespace = @namespace, RecommendationId = recommendationId });
 }

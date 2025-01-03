@@ -4,7 +4,7 @@
 import { Column } from 'primereact/column';
 import { TreeNode } from 'primereact/treenode';
 import { TreeTable } from 'primereact/treetable';
-import { AppendedEventWithJsonAsContent } from 'Api/EventSequences';
+import { AppendedEvent } from 'Api/Events';
 import { IDetailsComponentProps } from 'Components';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,7 +28,7 @@ const addContent = (node: TreeNode, current: any, currentLevel: string) => {
     }
 };
 
-const buildContextNode = (event: AppendedEventWithJsonAsContent) => {
+const buildContextNode = (event: AppendedEvent) => {
     const contextNode: TreeNode = {
         key: '0',
         data: {
@@ -100,7 +100,7 @@ const buildContextNode = (event: AppendedEventWithJsonAsContent) => {
     return contextNode;
 };
 
-export const EventDetails = (props: IDetailsComponentProps<AppendedEventWithJsonAsContent>) => {
+export const EventDetails = (props: IDetailsComponentProps<AppendedEvent>) => {
     const contextNodes: TreeNode[] = [];
 
     contextNodes.push(buildContextNode(props.item));
@@ -115,7 +115,7 @@ export const EventDetails = (props: IDetailsComponentProps<AppendedEventWithJson
 
     contextNodes.push(contentNode);
 
-    const current = props.item.content;
+    const current = JSON.parse(props.item.content);
     const currentLevel = '1';
     addContent(contentNode, current, currentLevel);
 

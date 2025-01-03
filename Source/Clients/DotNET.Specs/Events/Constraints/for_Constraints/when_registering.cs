@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using IContractsConstraints = Cratis.Chronicle.Contracts.Events.Constraints.IConstraints;
 
@@ -36,5 +37,5 @@ public class when_registering : given.two_constraints
 
     Task Because() => _constraints.Register();
 
-    [Fact] void should_register_with_correct_event_store_name() => _request.EventStoreName.ShouldEqual(_eventStoreName.Value);
+    [Fact] void should_register_with_correct_event_store_name() => _request.EventStore.ShouldEqual(_eventStoreName.Value);
 }

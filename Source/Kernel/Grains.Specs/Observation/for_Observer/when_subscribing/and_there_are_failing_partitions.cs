@@ -19,7 +19,7 @@ public class and_there_are_failing_partitions : given.an_observer
         failedPartitions = new();
         firstFailedPartition = failedPartitions.AddFailedPartition("some-event-source");
         secondFailedPartition = failedPartitions.AddFailedPartition("some-event-source2");
-        type = ObserverType.Client;
+        type = ObserverType.Reactor;
         _failedPartitionsStorage.State = failedPartitions;
     }
 

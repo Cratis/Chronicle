@@ -23,6 +23,12 @@
         <ProjectReference Include="../Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+        <ProjectReference Include="../Services/Services.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Clients/Connections/Connections.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="../Diagnostics/Diagnostics.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
