@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!-- https://github.com/ravibpatel/ILRepack.Lib.MSBuild.Task -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+  <Target Name="PerformRepackaging" AfterTargets="Build">
+  <!-- Condition="'$(Configuration)' == 'Release'" -->
     <ItemGroup>
         <AssembliesToExclude Include="$(TargetPath)"/>
     </ItemGroup>
 
     <ItemGroup>
-        <InputAssemblies Include="$(TargetPath)"/>
-        <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle*.dll" Exclude="@(AssembliesToExclude)"/>
+        <!-- <InputAssemblies Include="$(TargetPath)"/> -->
+        <!-- <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle*.dll" Exclude="@(AssembliesToExclude)"/> -->
         <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
     </ItemGroup>
 
@@ -16,11 +17,15 @@
         AllowDuplicateResources="false"
         DebugInfo="true"
         Internalize="true"
+        CopyAttributes="false"
+        ExcludeInternalizeSerializable="false"
         InputAssemblies="@(InputAssemblies)"
-        InternalizeExclude="@(DoNotInternalizeAssemblies)"
+        InternalizeAssembly="@(InternalizeAssemblies)"
         OutputFile="$(TargetPath)"
         Parallel="false"
         LibraryPath="@(LibraryPath)"
+        Verbose="true"
+        LogFile="$(OutputPath)/ILRepack.log"
         TargetKind="SameAsPrimaryAssembly"/>
   </Target>
 </Project>
