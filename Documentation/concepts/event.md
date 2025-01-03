@@ -96,5 +96,5 @@ The same approach applies for defining the events as described in this document.
 ## Event discovery
 
 There are a couple of well known approaches to discovering events in your domain; [Event Storming](https://www.eventstorming.com)
-and [Event Modelling](https://eventmodeling.org). We tend to favor the latter as it is more detailed and not just events. It gives a good
+and [Event Modelling](https://eventmodeling.org). We tend to favor the latter as it has more focused building blocks. It gives a good
 overview of a an entire system and the flows in it.
