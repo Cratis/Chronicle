@@ -225,3 +225,7 @@ If you try to get documents using the C# MongoDB Client, you will need to add th
 application:
 
 {{snippet:Quickstart-MongoDBDefaults}}
+
+With this you can query the collections as expected using the **MongoDB.Driver**:
+
+{{snippet:Quickstart-BorrowedBook}}
