@@ -32,9 +32,23 @@ you open telemetry data:
 
 {{snippet:Quickstart-DockerCompose}}
 
+## Setup project
+
+Start by creating a folder for your project and then create a .NET console project inside this folder:
+
+```shell
+dotnet new console
+```
+
+Add a reference to the [Chronicle client package](https://www.nuget.org/packages/Cratis.Chronicle):
+
+```shell
+dotnet add package Cratis.Chronicle
+```
+
 ## Client
 
-Chronicle is accessed through its client called `ChronicleClient`. 
+Chronicle is accessed through its client called `ChronicleClient`.
 From this instance, you can get the event store you want to work with.
 
 The simplest approach is to rely on the automatic discovery of artifacts by instructing the event store to
@@ -211,3 +225,7 @@ If you try to get documents using the C# MongoDB Client, you will need to add th
 application:
 
 {{snippet:Quickstart-MongoDBDefaults}}
+
+With this you can query the collections as expected using the **MongoDB.Driver**:
+
+{{snippet:Quickstart-BorrowedBook}}
