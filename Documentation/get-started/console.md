@@ -229,4 +229,4 @@ application:
 
 With this you can query the collections as expected using the **MongoDB.Driver**:
 
-{{snippet:Quickstart-BorrowedBook}}
+{{snippet:Quickstart-BorrowedBooks}}
