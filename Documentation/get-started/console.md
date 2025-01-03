@@ -92,6 +92,7 @@ The following code appends a couple of `UserOnboarded` events to indicate that u
 Next, we want to append a couple of events to represent books being added to our inventory:
 
 {{snippet:Quickstart-DemoData-Books}}
+
 Notice that the first parameter for the `Append` method is the [event source identifier](../concepts/event-source.md).
 This identifier uniquely represents the object we're working on, similar to a **primary key** in a database.
 In our example, we are dealing with two concepts: **user** and **book**, so the identifiers will uniquely represent individual users and books.
