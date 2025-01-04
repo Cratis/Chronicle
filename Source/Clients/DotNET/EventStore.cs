@@ -128,13 +128,6 @@ public class EventStore : IEventStore
             this,
             EventTypes,
             clientArtifactsProvider,
-            new RulesProjections(
-                serviceProvider,
-                clientArtifactsProvider,
-                EventTypes,
-                modelNameResolver,
-                schemaGenerator,
-                jsonSerializerOptions),
             schemaGenerator,
             modelNameResolver,
             _eventSerializer,
