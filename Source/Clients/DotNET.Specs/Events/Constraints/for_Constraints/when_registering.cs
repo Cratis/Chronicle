@@ -28,8 +28,6 @@ public class when_registering : given.two_constraints
         _services.Constraints.Returns(_constraintsService);
         _firstConstraintContract = new Constraint { Name = _firstConstraintName };
         _secondConstraintContract = new Constraint { Name = _secondConstraintName };
-        _firstConstraint.ToContract().Returns(_firstConstraintContract);
-        _secondConstraint.ToContract().Returns(_secondConstraintContract);
         _constraintsService
             .When(_ => _.Register(Arg.Any<RegisterConstraintsRequest>()))
             .Do(_ => _request = _.ArgAt<RegisterConstraintsRequest>(0));
