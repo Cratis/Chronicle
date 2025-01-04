@@ -5,6 +5,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.InProcess" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Api" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <!-- <PrivateAssets>all</PrivateAssets> -->
         </ProjectReference>

@@ -6,6 +6,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.XUnit"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj">
             <!-- <PrivateAssets>all</PrivateAssets> -->
         </ProjectReference>
