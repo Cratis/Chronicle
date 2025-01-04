@@ -53,7 +53,7 @@ public static class JobsHelpers
     }
 
     static Task<IEnumerable<Job>> GetJobs(this IEventStore eventStore) =>
-         eventStore.Connection.Services.Jobs.GetJobs(new()
+         (eventStore.Connection as IChronicleServicesAccessor)!.Services.Jobs.GetJobs(new()
          {
              EventStore = eventStore.Name.Value,
              Namespace = Concepts.EventStoreNamespaceName.Default

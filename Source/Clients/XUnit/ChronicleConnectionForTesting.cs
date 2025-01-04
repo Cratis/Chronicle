@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.XUnit;
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/> for testing.
 /// </summary>
-public class ChronicleConnectionForTesting : IChronicleConnection
+public class ChronicleConnectionForTesting : IChronicleConnection, IChronicleServicesAccessor
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnectionForTesting"/> class.
@@ -22,7 +22,7 @@ public class ChronicleConnectionForTesting : IChronicleConnection
     public IConnectionLifecycle Lifecycle { get; }
 
     /// <inheritdoc/>
-    public IServices Services => throw new NotImplementedException();
+    IServices IChronicleServicesAccessor.Services => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public void Dispose()

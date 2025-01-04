@@ -6,9 +6,12 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.InProcess" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Integration.Orleans.InProcess" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Api" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Setup" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit" />
     </ItemGroup>
 
     <ItemGroup>

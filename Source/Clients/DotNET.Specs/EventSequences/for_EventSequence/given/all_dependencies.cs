@@ -18,8 +18,9 @@ public class all_dependencies : Specification
     protected ICausationManager _causationManager;
     protected IIdentityProvider _identityProvider;
     protected IChronicleConnection _connection;
+    internal IChronicleServicesAccessor _serviceAccessor;
     protected IEventSequences _eventSequences;
-    protected IServices services;
+    internal IServices services;
     protected ICorrelationIdAccessor _correlationIdAccessor;
 
 
@@ -30,10 +31,11 @@ public class all_dependencies : Specification
         _eventSerializer = Substitute.For<IEventSerializer>();
         _causationManager = Substitute.For<ICausationManager>();
         _identityProvider = Substitute.For<IIdentityProvider>();
-        _connection = Substitute.For<IChronicleConnection>();
+        _connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
+        _serviceAccessor = _connection as IChronicleServicesAccessor;
         _eventSequences = Substitute.For<IEventSequences>();
         services = Substitute.For<IServices>();
-        _connection.Services.Returns(services);
+        _serviceAccessor.Services.Returns(services);
         services.EventSequences.Returns(_eventSequences);
         _correlationIdAccessor = Substitute.For<ICorrelationIdAccessor>();
         _correlationIdAccessor.Current.Returns((CorrelationId)Guid.Empty);

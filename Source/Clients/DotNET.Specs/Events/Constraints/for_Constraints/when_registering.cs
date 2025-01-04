@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Events.Constraints.for_Constraints;
 public class when_registering : given.two_constraints
 {
     IChronicleConnection _connection;
+    IChronicleServicesAccessor _servicesAccessor;
     IServices _services;
     IContractsConstraints _constraintsService;
     Constraint _firstConstraintContract;
@@ -18,9 +19,10 @@ public class when_registering : given.two_constraints
 
     void Establish()
     {
-        _connection = Substitute.For<IChronicleConnection>();
+        _connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
+        _servicesAccessor = _connection as IChronicleServicesAccessor;
         _services = Substitute.For<IServices>();
-        _connection.Services.Returns(_services);
+        _servicesAccessor.Services.Returns(_services);
         _eventStore.Connection.Returns(_connection);
         _constraintsService = Substitute.For<IContractsConstraints>();
         _services.Constraints.Returns(_constraintsService);

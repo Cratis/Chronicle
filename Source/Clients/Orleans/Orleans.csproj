@@ -13,6 +13,9 @@
         <ProjectReference Include="../DotNET/DotNET.csproj">
             <!-- <PrivateAssets>all</PrivateAssets> -->
         </ProjectReference>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <!-- <PrivateAssets>all</PrivateAssets> -->
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>

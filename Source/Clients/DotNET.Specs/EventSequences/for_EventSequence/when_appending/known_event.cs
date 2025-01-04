@@ -55,7 +55,7 @@ public class known_event : given.an_event_sequence
             Errors = []
         };
 
-        _connection.Services.EventSequences.Append(Arg.Any<AppendRequest>(), CallContext.Default).Returns(_response);
+        _serviceAccessor.Services.EventSequences.Append(Arg.Any<AppendRequest>(), CallContext.Default).Returns(_response);
     }
 
     async Task Because() => await event_sequence.Append(_eventSourceId, _event);

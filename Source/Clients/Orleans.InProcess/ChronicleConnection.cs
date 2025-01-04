@@ -17,25 +17,24 @@ namespace Cratis.Chronicle.Orleans.InProcess;
 /// Initializes a new instance of the <see cref="ChronicleConnection"/> class.
 /// </remarks>
 /// <param name="lifecycle"><see cref="IConnectionLifecycle"/> for managing lifecycle.</param>
-/// <param name="services"><see cref="IServices"/> to use.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with grains.</param>
 public class ChronicleConnection(
     IConnectionLifecycle lifecycle,
-    IServices services,
-    IGrainFactory grainFactory) : IChronicleConnection
+    IGrainFactory grainFactory) : IChronicleConnection, IChronicleServicesAccessor
 {
+    IServices? _services;
     ConnectionService? _connectionService;
 
     /// <inheritdoc/>
     public IConnectionLifecycle Lifecycle { get; } = lifecycle;
 
     /// <inheritdoc/>
-    public IServices Services
+    IServices IChronicleServicesAccessor.Services
     {
         get
         {
             ConnectIfNotConnected();
-            return services;
+            return _services!;
         }
     }
 
@@ -43,6 +42,12 @@ public class ChronicleConnection(
     public void Dispose()
     {
     }
+
+    /// <summary>
+    /// Set the services.
+    /// </summary>
+    /// <param name="services">Services to set.</param>
+    internal void SetServices(IServices services) => _services = services;
 
     void ConnectIfNotConnected()
     {

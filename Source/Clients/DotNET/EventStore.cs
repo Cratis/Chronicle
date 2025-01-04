@@ -11,6 +11,7 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Transactions;
 using Cratis.Models;
@@ -123,7 +124,7 @@ public class EventStore : IEventStore
             jsonSerializerOptions,
             loggerFactory.CreateLogger<Reducers.Reducers>());
 
-        Projections = new Projections.Projections(
+        var projections = new Projections.Projections(
             this,
             EventTypes,
             clientArtifactsProvider,
@@ -132,6 +133,8 @@ public class EventStore : IEventStore
             _eventSerializer,
             serviceProvider,
             jsonSerializerOptions);
+        projections.SetRulesProjections(new RulesProjections(serviceProvider, clientArtifactsProvider, EventTypes, modelNameResolver, schemaGenerator, jsonSerializerOptions));
+        Projections = projections;
 
         AggregateRootFactory = new AggregateRootFactory(
             this,

@@ -21,7 +21,7 @@
         OutputFile="$(TargetPath)"
         Parallel="false"
         LibraryPath="@(LibraryPath)"
-        Verbose="true"
+        Verbose="false"
         LogFile="$(OutputPath)/ILRepack.log"
         TargetKind="SameAsPrimaryAssembly"/>
   </Target>

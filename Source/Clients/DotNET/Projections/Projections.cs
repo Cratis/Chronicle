@@ -40,7 +40,7 @@ public class Projections(
     JsonSerializerOptions jsonSerializerOptions) : IProjections
 {
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
-    readonly RulesProjections _rulesProjections = new(serviceProvider, clientArtifacts, eventTypes, modelNameResolver, schemaGenerator, jsonSerializerOptions);
+    IRulesProjections? _rulesProjections;
 
     IDictionary<Type, ProjectionDefinition> _definitionsByModelType = new Dictionary<Type, ProjectionDefinition>();
 
@@ -181,7 +181,7 @@ public class Projections(
 
         Definitions =
             ((IEnumerable<ProjectionDefinition>)[
-                .. _rulesProjections.Discover(),
+                .. _rulesProjections?.Discover() ?? ImmutableList<ProjectionDefinition>.Empty,
                 .. _definitionsByModelType.Values.ToList()
             ]).ToImmutableList();
 
@@ -197,6 +197,12 @@ public class Projections(
             Projections = [.. Definitions]
         });
     }
+
+    /// <summary>
+    /// Sets the <see cref="IRulesProjections"/>.
+    /// </summary>
+    /// <param name="rulesProjections"><see cref="IRulesProjections"/> instance to set.</param>
+    internal void SetRulesProjections(IRulesProjections rulesProjections) => _rulesProjections = rulesProjections;
 
     static Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,

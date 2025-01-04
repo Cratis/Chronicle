@@ -76,9 +76,12 @@ public static class ObserverHelpers
         timeout ??= TimeSpan.FromSeconds(5);
         var failedPartitions = Enumerable.Empty<FailedPartition>();
         using var cts = new CancellationTokenSource(timeout.Value);
+
+        var service = (eventStore.Connection as IChronicleServicesAccessor)!.Services.FailedPartitions;
+
         while (!failedPartitions.Any() && !cts.IsCancellationRequested)
         {
-            failedPartitions = await eventStore.Connection.Services.FailedPartitions.GetFailedPartitions(new()
+            failedPartitions = await service.GetFailedPartitions(new()
             {
                 EventStore = eventStore.Name.Value,
                 Namespace = Concepts.EventStoreNamespaceName.Default,
