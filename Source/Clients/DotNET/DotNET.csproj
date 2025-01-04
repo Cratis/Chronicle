@@ -26,6 +26,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle.Connections.dll" />
+    </ItemGroup>
+
+    <ItemGroup>
         <InternalAssemblies Include="$(OutputPath)/Cratis.Chronicle.Contracts.dll" />
         <InternalAssemblies Include="$(OutputPath)/Cratis.Chronicle.Infrastructure.dll" />
     </ItemGroup>
