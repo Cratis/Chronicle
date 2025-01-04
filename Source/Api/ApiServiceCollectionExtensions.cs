@@ -75,7 +75,7 @@ public static class ApiServiceCollectionExtensions
                     sp.GetRequiredService<ILogger<ChronicleConnection>>(),
                     lifetime.ApplicationStopping);
             });
-            services.AddSingleton(sp => sp.GetRequiredService<IChronicleConnection>().Services);
+            services.AddSingleton(sp => (sp.GetRequiredService<IChronicleConnection>() as IChronicleServicesAccessor)!.Services);
         }
 
         services.AddSingleton(sp => sp.GetRequiredService<IServices>().EventStores);
