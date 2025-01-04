@@ -27,7 +27,7 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/>.
 /// </summary>
-public class ChronicleConnection : IChronicleConnection
+public class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor
 {
     readonly ChronicleUrl _url;
     readonly int _connectTimeout;
@@ -81,7 +81,7 @@ public class ChronicleConnection : IChronicleConnection
     public IConnectionLifecycle Lifecycle { get; }
 
     /// <inheritdoc/>
-    public IServices Services
+    IServices IChronicleServicesAccessor.Services
     {
         get
         {

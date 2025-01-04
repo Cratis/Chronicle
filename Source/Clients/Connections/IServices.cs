@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Defines all the Kernel services available.
 /// </summary>
-public interface IServices
+internal interface IServices
 {
     /// <summary>
     /// Gets the <see cref="IEventStores"/> service.

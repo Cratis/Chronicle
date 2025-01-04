@@ -6,14 +6,14 @@ namespace Cratis.Chronicle.Auditing;
 /// <summary>
 /// Extension methods for converting to and from <see cref="Causation"/>.
 /// </summary>
-public static class CausationConverters
+internal static class CausationConverters
 {
     /// <summary>
     /// Convert to contract representation.
     /// </summary>
     /// <param name="causations">Collection of <see cref="Causation"/> to convert.</param>
     /// <returns>Converted collection of <see cref="Contracts.Auditing.Causation"/>.</returns>
-    public static IList<Contracts.Auditing.Causation> ToContract(this IEnumerable<Causation> causations) =>
+    internal static IList<Contracts.Auditing.Causation> ToContract(this IEnumerable<Causation> causations) =>
         causations.Select(c => c.ToContract()).ToList();
 
     /// <summary>
@@ -21,7 +21,7 @@ public static class CausationConverters
     /// </summary>
     /// <param name="causation"><see cref="Causation"/> to convert.</param>
     /// <returns>Converted <see cref="Contracts.Auditing.Causation"/>.</returns>
-    public static Contracts.Auditing.Causation ToContract(this Causation causation) =>
+    internal static Contracts.Auditing.Causation ToContract(this Causation causation) =>
         new()
         {
             Occurred = causation.Occurred!,
@@ -34,7 +34,7 @@ public static class CausationConverters
     /// </summary>
     /// <param name="causations">Collection of <see cref="Contracts.Auditing.Causation"/> to convert from..</param>
     /// <returns>Converted collection of <see cref="Causation"/>.</returns>
-    public static IEnumerable<Causation> ToClient(this IEnumerable<Contracts.Auditing.Causation> causations) =>
+    internal static IEnumerable<Causation> ToClient(this IEnumerable<Contracts.Auditing.Causation> causations) =>
         causations.Select(c => c.ToClient()).ToArray();
 
     /// <summary>
@@ -42,6 +42,6 @@ public static class CausationConverters
     /// </summary>
     /// <param name="causation"><see cref="Contracts.Auditing.Causation"/> to convert from.</param>
     /// <returns>Converted <see cref="Causation"/>.</returns>
-    public static Causation ToClient(this Contracts.Auditing.Causation causation) =>
+    internal static Causation ToClient(this Contracts.Auditing.Causation causation) =>
         new(causation.Occurred, causation.Type, causation.Properties ?? new Dictionary<string, string>());
 }

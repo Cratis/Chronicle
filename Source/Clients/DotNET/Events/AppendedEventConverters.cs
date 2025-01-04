@@ -11,14 +11,14 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// Converter methods for <see cref="AppendedEvent"/>.
 /// </summary>
-public static class AppendedEventConverters
+internal static class AppendedEventConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="AppendedEvent"/>.
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to convert.</param>
     /// <returns>Converted contract version.</returns>
-    public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event) => new()
+    internal static Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event) => new()
     {
         Metadata = @event.Metadata.ToContract(),
         Context = @event.Context.ToContract(),
@@ -30,7 +30,7 @@ public static class AppendedEventConverters
     /// </summary>
     /// <param name="event"><see cref="Contracts.Events.AppendedEvent"/> to convert.</param>
     /// <returns>Converted Chronicle version.</returns>
-    public static AppendedEvent ToClient(this Contracts.Events.AppendedEvent @event) => new(
+    internal static AppendedEvent ToClient(this Contracts.Events.AppendedEvent @event) => new(
             @event.Metadata.ToClient(),
             @event.Context.ToClient(),
             JsonSerializer.Deserialize<ExpandoObject>(@event.Content, Globals.JsonSerializerOptions)!);
@@ -40,6 +40,6 @@ public static class AppendedEventConverters
     /// </summary>
     /// <param name="events">Collection of <see cref="Contracts.Events.AppendedEvent"/> to convert from.</param>
     /// <returns>An immutable collection of <see cref="AppendedEvent"/>.</returns>
-    public static IImmutableList<AppendedEvent> ToClient(this IEnumerable<Contracts.Events.AppendedEvent> events) =>
+    internal static IImmutableList<AppendedEvent> ToClient(this IEnumerable<Contracts.Events.AppendedEvent> events) =>
         events.Select(_ => _.ToClient()).ToImmutableList();
 }

@@ -33,7 +33,7 @@ namespace Cratis.Chronicle.Connections;
 /// <param name="Projections"><see cref="IProjections"/> instance.</param>
 /// <param name="Jobs"><see cref="IJobs"/> instance.</param>
 /// <param name="server"><see cref="IServer"/> instance.</param>
-public record Services(
+internal sealed record Services(
     IEventStores EventStores,
     INamespaces Namespaces,
     IRecommendations Recommendations,

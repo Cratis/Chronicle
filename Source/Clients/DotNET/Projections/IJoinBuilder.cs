@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Cratis.Chronicle.Contracts.Projections;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -20,10 +19,4 @@ public interface IJoinBuilder<TModel, TEvent> : IModelPropertiesBuilder<TModel, 
     /// <param name="keyAccessor">Accessor for the property to use.</param>
     /// <returns>Builder continuation.</returns>
     IJoinBuilder<TModel, TEvent> On<TProperty>(Expression<Func<TModel, TProperty>> keyAccessor);
-
-    /// <summary>
-    /// Build <see cref="JoinDefinition"/> from the builder.
-    /// </summary>
-    /// <returns>A new instance of <see cref="JoinDefinition"/>.</returns>
-    JoinDefinition Build();
 }

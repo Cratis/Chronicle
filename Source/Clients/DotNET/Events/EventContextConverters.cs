@@ -9,14 +9,14 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// Converter methods for <see cref="EventContext"/>.
 /// </summary>
-public static class EventContextConverters
+internal static class EventContextConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="EventContext"/>.
     /// </summary>
     /// <param name="context"><see cref="EventContext"/> to convert.</param>
     /// <returns>Converted <see cref="Contracts.Events.EventContext"/>.</returns>
-    public static Contracts.Events.EventContext ToContract(this EventContext context) => new()
+    internal static Contracts.Events.EventContext ToContract(this EventContext context) => new()
     {
         EventSourceType = context.EventSourceType,
         EventSourceId = context.EventSourceId,
@@ -37,7 +37,7 @@ public static class EventContextConverters
     /// </summary>
     /// <param name="context"><see cref="Contracts.Events.EventContext"/> to convert.</param>
     /// <returns>Converted <see cref="EventContext"/>.</returns>
-    public static EventContext ToClient(this Contracts.Events.EventContext context) => new(
+    internal static EventContext ToClient(this Contracts.Events.EventContext context) => new(
         context.EventSourceType,
         context.EventSourceId,
         context.EventStreamType,

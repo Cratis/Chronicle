@@ -6,14 +6,14 @@ namespace Cratis.Chronicle.Identities;
 /// <summary>
 /// Extension methods for converting to and from <see cref="Identity"/>.
 /// </summary>
-public static class IdentityConverters
+internal static class IdentityConverters
 {
     /// <summary>
-    /// Convert to <see cref="Chronicle.Contracts.Identities.Identity"/>.
+    /// Convert to <see cref="Contracts.Identities.Identity"/>.
     /// </summary>
     /// <param name="identity"><see cref="Identity"/> to convert.</param>
-    /// <returns>Converted <see cref="Chronicle.Contracts.Identities.Identity"/>.</returns>
-    public static Chronicle.Contracts.Identities.Identity ToContract(this Identity identity) => new()
+    /// <returns>Converted <see cref="Contracts.Identities.Identity"/>.</returns>
+    internal static Contracts.Identities.Identity ToContract(this Identity identity) => new()
     {
         Subject = identity.Subject,
         Name = identity.Name,
@@ -24,8 +24,8 @@ public static class IdentityConverters
     /// <summary>
     /// Convert to Chronicle representation.
     /// </summary>
-    /// <param name="identity"><see cref="Chronicle.Contracts.Identities.Identity"/> to convert from.</param>
+    /// <param name="identity"><see cref="Contracts.Identities.Identity"/> to convert from.</param>
     /// <returns>Converted <see cref="Identity"/>.</returns>
-    public static Identity ToClient(this Chronicle.Contracts.Identities.Identity identity) =>
+    internal static Identity ToClient(this Contracts.Identities.Identity identity) =>
         new(identity.Subject, identity.Name, identity.UserName, identity.OnBehalfOf?.ToClient());
 }

@@ -25,6 +25,7 @@ namespace Cratis.Chronicle;
 public class EventStore : IEventStore
 {
     readonly EventStoreName _eventStoreName;
+    readonly IChronicleServicesAccessor _servicesAccessor;
     readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
@@ -67,6 +68,7 @@ public class EventStore : IEventStore
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
+        _servicesAccessor = (connection as IChronicleServicesAccessor)!;
         _correlationIdAccessor = correlationIdAccessor;
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
         UnitOfWorkManager = new UnitOfWorkManager(this);
@@ -231,7 +233,7 @@ public class EventStore : IEventStore
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
     {
-        var namespaces = await Connection.Services.Namespaces.GetNamespaces(new() { EventStore = _eventStoreName });
+        var namespaces = await _servicesAccessor.Services.Namespaces.GetNamespaces(new() { EventStore = _eventStoreName });
         return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
     }
 }

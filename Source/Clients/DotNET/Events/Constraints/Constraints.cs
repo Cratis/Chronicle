@@ -15,6 +15,7 @@ public class Constraints(
     IEventStore eventStore,
     IEnumerable<ICanProvideConstraints> constraintsProviders) : IConstraints
 {
+    readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     readonly List<IConstraintDefinition> _constraints = [];
 
     /// <inheritdoc/>
@@ -43,7 +44,7 @@ public class Constraints(
             EventStore = eventStore.Name,
             Constraints = _constraints.ConvertAll(_ => _.ToContract())
         };
-        return eventStore.Connection.Services.Constraints.Register(request);
+        return _servicesAccessor.Services.Constraints.Register(request);
     }
 
     /// <inheritdoc/>

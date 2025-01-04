@@ -36,7 +36,7 @@ public class EventSerializer : IEventSerializer
         {
             Converters =
             {
-                new EventRedactedConverter(eventTypes)
+                new EventRedactedConverters(eventTypes)
             }
         };
         _additionalEventInformationProviders = clientArtifacts.AdditionalEventInformationProviders

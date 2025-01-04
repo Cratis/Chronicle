@@ -6,12 +6,12 @@ using Cratis.Chronicle.Connections;
 namespace Cratis.Chronicle;
 
 /// <summary>
-/// Defines a system that manages the connection to Cratis.
+/// Internal interface for getting the services available.
 /// </summary>
-public interface IChronicleConnection : IDisposable
+internal interface IChronicleServicesAccessor
 {
     /// <summary>
-    /// Gets the <see cref="IConnectionLifecycle"/> service.
+    /// Gets the available services.
     /// </summary>
-    IConnectionLifecycle Lifecycle { get; }
+    IServices Services { get; }
 }

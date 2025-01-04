@@ -10,10 +10,10 @@ namespace Cratis.Chronicle.Events;
 /// Represents a <see cref="JsonConverter"/> for <see cref="EventRedacted"/>.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="EventRedactedConverter"/> class.
+/// Initializes a new instance of the <see cref="EventRedactedConverters"/> class.
 /// </remarks>
 /// <param name="eventTypes"><see creF="IEventTypes"/> for event type resolution.</param>
-public class EventRedactedConverter(IEventTypes eventTypes) : JsonConverter<EventRedacted>
+internal class EventRedactedConverters(IEventTypes eventTypes) : JsonConverter<EventRedacted>
 {
     /// <inheritdoc/>
     public override EventRedacted? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

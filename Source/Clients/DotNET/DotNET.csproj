@@ -2,10 +2,15 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle</AssemblyName>
         <RootNamespace>Cratis.Chronicle</RootNamespace>
-        <!-- <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile> -->
-        <ILRepack>dotnet ilrepack</ILRepack>
-        <LibPaths>@(ReferencePathWithRefAssemblies->'/lib:%(RelativeDir)',' ')</LibPaths>
+        <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
     </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Orleans" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.XUnit" />
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="../Connections/Connections.csproj"/>
@@ -15,23 +20,30 @@
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+        <ProjectReference Include="../../Tools/InternalsVerifier/InternalsVerifier.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
-        <InputAssemblies Include="$(OutputPath)Cratis.Chronicle.dll" />
-        <InputAssemblies Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
-        <InputAssemblies Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" />
+        <InternalAssemblies Include="$(OutputPath)/Cratis.Chronicle.Contracts.dll" />
+        <InternalAssemblies Include="$(OutputPath)/Cratis.Chronicle.Infrastructure.dll" />
     </ItemGroup>
 
-    <Target Name="MergeAssemblies" AfterTargets="Build">
-        <Exec Command="$(ILRepack) $(LibPaths) /out:$(TargetPath) /internalize @(InputAssemblies->'%(FullPath)', ' ')" />
+    <PropertyGroup>
+        <InternalNamespaces>@(InternalAssemblies->'%(Filename)', ';')</InternalNamespaces>
+    </PropertyGroup>
+
+    <Target Name="VerifyInternals" AfterTargets="ILRepack">
+        <Message Text="dotnet run $(TargetPath) &quot;$(InternalNamespaces)&quot;" Importance="high" />
+        <Exec Command="dotnet run $(TargetPath) &quot;$(InternalNamespaces)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/InternalsVerifier" />
     </Target>
 
     <ItemGroup>
-        <!-- <PackageReference Include="ILRepack.Lib.MSBuild.Task">
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-          <PrivateAssets>all</PrivateAssets>
-        </PackageReference> -->
+        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="automapper" />
         <PackageReference Include="FluentValidation" />

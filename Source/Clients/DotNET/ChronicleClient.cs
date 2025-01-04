@@ -23,7 +23,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
     const string MachineNameMetadataKey = "machineName";
     const string ProcessMetadataKey = "process";
 
-    readonly IChronicleConnection? _connection;
+    readonly IChronicleConnection _connection;
+    readonly IChronicleServicesAccessor _servicesAccessor;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
 
@@ -64,6 +65,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             new Cratis.Tasks.TaskFactory(),
             options.LoggerFactory.CreateLogger<ChronicleConnection>(),
             CancellationToken.None);
+        _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
 
     /// <summary>
@@ -78,6 +80,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _connection = connection;
+        _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
 
     /// <inheritdoc/>
@@ -89,7 +92,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        _connection?.Dispose();
+        _connection.Dispose();
     }
 
     /// <inheritdoc/>
@@ -107,7 +110,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         eventStore = new EventStore(
             name,
             @namespace,
-            _connection!,
+            _connection,
             Options.ArtifactsProvider,
             Options.CorrelationIdAccessor,
             CausationManager,
@@ -125,12 +128,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores(CancellationToken cancellationToken = default)
     {
-        if (_connection is null)
-        {
-            return [];
-        }
-
-        var eventStores = await _connection.Services.EventStores.GetEventStores();
+        var eventStores = await _servicesAccessor.Services.EventStores.GetEventStores();
         return eventStores.Select(_ => (EventStoreName)_).ToArray();
     }
 

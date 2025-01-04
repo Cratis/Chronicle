@@ -41,6 +41,8 @@ public class Projections(
     IServiceProvider serviceProvider,
     JsonSerializerOptions jsonSerializerOptions) : IProjections
 {
+    readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+
     IDictionary<Type, ProjectionDefinition> _definitionsByModelType = new Dictionary<Type, ProjectionDefinition>();
 
     /// <inheritdoc/>
@@ -74,7 +76,7 @@ public class Projections(
             ModelKey = modelKey,
         };
 
-        var result = await eventStore.Connection.Services.Projections.GetInstanceById(request);
+        var result = await _servicesAccessor.Services.Projections.GetInstanceById(request);
         return result.ToClient<TModel>();
     }
 
@@ -91,7 +93,7 @@ public class Projections(
             ModelKey = modelKey,
         };
 
-        var result = await eventStore.Connection.Services.Projections.GetInstanceById(request);
+        var result = await _servicesAccessor.Services.Projections.GetInstanceById(request);
         return result.ToClient();
     }
 
@@ -113,7 +115,7 @@ public class Projections(
             SessionId = sessionId
         };
 
-        var result = await eventStore.Connection.Services.Projections.GetInstanceByIdForSession(request);
+        var result = await _servicesAccessor.Services.Projections.GetInstanceByIdForSession(request);
         return result.ToClient(modelType);
     }
 
@@ -143,7 +145,7 @@ public class Projections(
             Events = eventsToApply.ToContract()
         };
 
-        var result = await eventStore.Connection.Services.Projections.GetInstanceByIdFOrSessionWithEventsApplied(request);
+        var result = await _servicesAccessor.Services.Projections.GetInstanceByIdFOrSessionWithEventsApplied(request);
         return result.ToClient(modelType);
     }
 
@@ -162,7 +164,7 @@ public class Projections(
             SessionId = sessionId
         };
 
-        await eventStore.Connection.Services.Projections.DehydrateSession(request);
+        await _servicesAccessor.Services.Projections.DehydrateSession(request);
     }
 
     /// <inheritdoc/>
@@ -188,7 +190,7 @@ public class Projections(
     /// <inheritdoc/>
     public async Task Register()
     {
-        await eventStore.Connection.Services.Projections.Register(new()
+        await _servicesAccessor.Services.Projections.Register(new()
         {
             EventStore = eventStore.Name,
             Projections = [.. Definitions]

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections;
@@ -53,10 +52,4 @@ public interface IChildrenBuilder<TParentModel, TChildModel> : IProjectionBuilde
     /// <typeparam name="TEvent">Type of event.</typeparam>
     /// <returns>Builder continuation.</returns>
     IChildrenBuilder<TParentModel, TChildModel> FromEventProperty<TEvent>(Expression<Func<TEvent, TChildModel>> propertyExpression);
-
-    /// <summary>
-    /// Build the <see cref="ChildrenDefinition"/>.
-    /// </summary>
-    /// <returns>A a new <see cref="ChildrenDefinition"/>.</returns>
-    ChildrenDefinition Build();
 }
