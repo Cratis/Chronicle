@@ -7,13 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj">
-            <!-- <PrivateAssets>none</PrivateAssets> -->
-        </ProjectReference>
+        <ProjectReference Include="../DotNET/DotNET.csproj"/>
 
-        <ProjectReference Include="../AspNetCore/AspNetCore.csproj">
-            <!-- <PrivateAssets>none</PrivateAssets> -->
-        </ProjectReference>
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
 
         <ProjectReference Include="../Orleans/Orleans.csproj">
             <PrivateAssets>all</PrivateAssets>
@@ -56,21 +52,6 @@
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
     </ItemGroup>
-
-    <ItemGroup>
-        <FilteredReferences Include="@(ProjectReference->WithMetadataValue('PrivateAssets', 'all'))"
-                         KeepMetadata="PrivateAssets;TargetPath" />
-        <InternalAssemblies Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"/>
-    </ItemGroup>
-
-    <PropertyGroup>
-        <InternalNamespaces>@(InternalAssemblies->'%(Filename)', ';')</InternalNamespaces>
-    </PropertyGroup>
-
-    <Target Name="Blah" AfterTargets="Build">
-        <Message Text="Internal assembly: @(InternalAssemblies)" Importance="high" />
-        <Message Text="Filtered Project references: @(FilteredReferences->'%(Filename)')" Importance="high" />
-    </Target>
 
     <ItemGroup>
         <PackageReference Include="ILRepack.Lib.MSBuild.Task">

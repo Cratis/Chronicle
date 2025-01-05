@@ -25,17 +25,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <InputAssemblies Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
+        <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
     </ItemGroup>
-
-    <ItemGroup>
-        <InternalAssemblies Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" />
-        <InternalAssemblies Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
-    </ItemGroup>
-
-    <PropertyGroup>
-        <InternalNamespaces>@(InternalAssemblies->'%(Filename)', ';')</InternalNamespaces>
-    </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="ILRepack.Lib.MSBuild.Task">
