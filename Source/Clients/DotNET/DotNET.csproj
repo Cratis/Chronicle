@@ -6,6 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.AspNetCore" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Orleans" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit" />
@@ -24,12 +25,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle.Connections.dll" />
+        <InputAssemblies Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
     </ItemGroup>
 
     <ItemGroup>
-        <InternalAssemblies Include="$(OutputPath)/Cratis.Chronicle.Contracts.dll" />
-        <InternalAssemblies Include="$(OutputPath)/Cratis.Chronicle.Infrastructure.dll" />
+        <InternalAssemblies Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" />
+        <InternalAssemblies Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
     </ItemGroup>
 
     <PropertyGroup>
@@ -42,7 +43,6 @@
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Hosting" />
-        <PackageReference Include="automapper" />
         <PackageReference Include="FluentValidation" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
