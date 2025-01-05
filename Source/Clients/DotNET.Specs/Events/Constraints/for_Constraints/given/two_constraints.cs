@@ -14,10 +14,13 @@ public class two_constraints : no_constraints
 
     async Task Establish()
     {
-        _firstConstraint = new(_firstConstraintName, _ => "FirstConstraintViolationMessage", [], null);
-        _secondConstraint = new(_secondConstraintName, _ => "SecondConstraintViolationMessage", "", null);
+        _firstConstraint = new(_firstConstraintName, FirstConstraintMessageProvider, [], null);
+        _secondConstraint = new(_secondConstraintName, SecondConstraintMessageProvider, "", null);
 
         _constraintsProvider.Provide().Returns(new IConstraintDefinition[] { _firstConstraint, _secondConstraint }.ToImmutableList());
         await _constraints.Discover();
     }
+
+    protected virtual ConstraintViolationMessage FirstConstraintMessageProvider(ConstraintViolation violation) => "FirstConstraintViolationMessage";
+    protected virtual ConstraintViolationMessage SecondConstraintMessageProvider(ConstraintViolation violation) => "SecondConstraintViolationMessage";
 }

@@ -17,8 +17,6 @@ public class when_resolving_message_for_violation : given.two_constraints
         _firstPropertyValue = Guid.NewGuid().ToString();
         _secondPropertyValue = Guid.NewGuid().ToString();
 
-        _firstConstraint.MessageCallback(Arg.Any<ConstraintViolation>()).Returns((ConstraintViolationMessage)$"First {{{_firstProperty}}} second {{{_secondProperty}}}");
-
         _violation = new ConstraintViolation(
             "SomeEvent",
             EventSequenceNumber.First,
@@ -30,6 +28,8 @@ public class when_resolving_message_for_violation : given.two_constraints
                 { _secondProperty, _secondPropertyValue }
             });
     }
+
+    protected override ConstraintViolationMessage FirstConstraintMessageProvider(ConstraintViolation violation) => $"First {{{_firstProperty}}} second {{{_secondProperty}}}";
 
     void Because() => _result = _constraints.ResolveMessageFor(_violation);
 
