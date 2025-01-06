@@ -27,9 +27,7 @@
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Setup/Setup.csproj"/>
 
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj">
             <PrivateAssets>all</PrivateAssets>
@@ -44,13 +42,16 @@
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
 
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Setup.dll" />
+        <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" />
     </ItemGroup>
 
     <ItemGroup>

@@ -16,6 +16,7 @@
 
     <PropertyGroup>
         <InternalNamespaces>@(InternalAssemblies->'%(Filename)', ';')</InternalNamespaces>
+        <InternalAssemblyNames>@(InternalAssemblies->'%(Filename)', ';')</InternalAssemblyNames>
     </PropertyGroup>
 
     <ILRepack
@@ -34,5 +35,6 @@
         TargetKind="SameAsPrimaryAssembly"/>
 
     <Exec Command="dotnet run $(TargetPath) &quot;$(InternalNamespaces)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/InternalsVerifier" />
+    <Exec Command="dotnet run $(TargetPath) &quot;$(InternalAssemblyNames)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />
   </Target>
 </Project>

@@ -63,6 +63,22 @@
             }
         },
         {
+            "name": ".NET Core Launch (AssemblyFixer)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Source/Tools/AssemblyFixer/bin/Debug/net9.0/AssemblyFixer.dll",
+            "args": [
+                "${workspaceFolder}/Source/Clients/Orleans.InProcess/bin/Debug/net9.0/Cratis.Chronicle.Orleans.InProcess.dll",
+                "Cratis.Chronicle.Orleans;Cratis.Chronicle.Grains;Cratis.Chronicle.Grains.Interfaces"
+            ],
+            "cwd": "${workspaceFolder}/Source/Tools/InternalsVerifier",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
             "name": ".NET Core Launch (Server)",
             "type": "coreclr",
             "request": "launch",

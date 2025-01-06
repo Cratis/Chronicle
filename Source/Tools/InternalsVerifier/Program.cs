@@ -25,7 +25,13 @@ foreach (var @namespace in internalNamespaces)
     var namespaceCount = 0;
     Console.WriteLine($"Checking namespace '{@namespace}'");
 
-    foreach (var internalType in assembly.MainModule.Types.Where(_ => _.Namespace.StartsWith(@namespace) && _.IsPublic).ToArray())
+    // We're looking for types that has a namespace that starts with the namespace we're looking for and is Public - meaning available for any consumer
+    // We want to ignore types that are in the same namespace as the assembly itself, as they are not internal to the assembly
+    // This is based on a convention and assumption that assembly == namespace, pretty much
+    foreach (var internalType in assembly.MainModule.Types.Where(_ =>
+        _.Namespace.StartsWith(@namespace) &&
+        !_.Namespace.StartsWith(assembly.Name.Name) &&
+        _.IsPublic).ToArray())
     {
         violationCount++;
         namespaceCount++;
@@ -48,7 +54,7 @@ foreach (var @namespace in internalNamespaces)
 
     if (namespaceCount == 0)
     {
-        Console.WriteLine("\nNo internal type violations found");
+        Console.WriteLine("\nNo internal type violations found\n");
     }
 }
 
@@ -60,5 +66,6 @@ if (violationCount > 0)
 }
 else
 {
+    Console.WriteLine("------------------------------------");
     Console.WriteLine("No violations found");
 }
