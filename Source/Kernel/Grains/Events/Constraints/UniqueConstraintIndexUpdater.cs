@@ -27,6 +27,11 @@ public class UniqueConstraintIndexUpdater(
         }
         else
         {
+            if (!definition.SupportsEventType(context.EventTypeId))
+            {
+                return;
+            }
+
             var value = definition.GetPropertiesAndValues(context).GetValue();
             if (value is not null)
             {
