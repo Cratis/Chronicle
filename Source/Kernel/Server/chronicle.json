@@ -8,5 +8,11 @@
     "storage": {
         "type": "MongoDB",
         "connectionDetails": "mongodb://localhost:27017"
+    },
+    "observers": {
+        "maxRetryAttempts": 10,
+        "retryDelayInSeconds": 1,
+        "retryDelayExponentialFactor": 2,
+        "maxRetryDelayInSeconds": 600
     }
 }
