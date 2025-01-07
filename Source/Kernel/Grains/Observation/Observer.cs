@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
@@ -28,6 +29,7 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// </remarks>
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
 /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
+/// <param name="configurationProvider">The <see cref="IProvideConfigurationForObserver"/> for getting the <see cref="Observers"/> configuration.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -36,6 +38,7 @@ public class Observer(
     [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
     IPersistentState<FailedPartitions> failures,
     IObserverServiceClient replayStateServiceClient,
+    IProvideConfigurationForObserver configurationProvider,
     ILogger<Observer> logger,
     IMeter<Observer> meter,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
@@ -236,9 +239,10 @@ public class Observer(
         _metrics?.PartitionFailed(partition);
         logger.PartitionFailed(partition, sequenceNumber);
         var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
-        if (failure.Attempts.Count() < 10)
+        var config = await configurationProvider.GetFor(_observerKey);
+        if (config.MaxRetryAttempts == 0 || failure.Attempts.Count() < config.MaxRetryAttempts)
         {
-            await this.RegisterOrUpdateReminder(partition.ToString(), GetNextRetryDelay(failure), TimeSpan.FromHours(48));
+            await this.RegisterOrUpdateReminder(partition.ToString(), GetNextRetryDelay(failure, config), TimeSpan.FromHours(48));
         }
         else
         {
@@ -452,10 +456,22 @@ public class Observer(
         await base.WriteStateAsync();
     }
 
-    static TimeSpan GetNextRetryDelay(FailedPartition failure)
+    static TimeSpan GetNextRetryDelay(FailedPartition failure, Observers config)
     {
-        var time = TimeSpan.FromSeconds((failure.Attempts.Count() - 1) * 2);
-        return time.TotalMilliseconds == 0 ? TimeSpan.FromMilliseconds(100) : time;
+        var time = TimeSpan.FromSeconds(config.RetryDelayInSeconds * Math.Pow(config.RetryDelayExponentialFactor, failure.Attempts.Count()));
+        var maxTime = TimeSpan.FromSeconds(config.MaxRetryDelayInSeconds);
+
+        if (time > maxTime)
+        {
+            return maxTime;
+        }
+
+        if (time == TimeSpan.Zero)
+        {
+            return TimeSpan.FromSeconds(config.RetryDelayInSeconds);
+        }
+
+        return time;
     }
 
     void HandleNewLastHandledEvent(EventSequenceNumber lastHandledEvent)

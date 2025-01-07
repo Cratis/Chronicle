@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Concepts.Configuration;
 public class ConfigurationForObserverProvider(IOptionsMonitor<ChronicleOptions> optionsMonitor) : IProvideConfigurationForObserver
 {
     /// <inheritdoc/>
-    public Task<Observers> GetFor(ObserverSubscriberKey observerSubscriberKey)
+    public Task<Observers> GetFor(ObserverKey observerKey)
     {
         // TODO: Merge with persisted config and attributes.
         return Task.FromResult(optionsMonitor.CurrentValue.Observers);

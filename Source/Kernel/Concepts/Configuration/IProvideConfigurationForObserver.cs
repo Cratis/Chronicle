@@ -13,7 +13,7 @@ public interface IProvideConfigurationForObserver
     /// <summary>
     /// Gets the <see cref="Observers"/> configuration for the.
     /// </summary>
-    /// <param name="observerSubscriberKey">The <see cref="ObserverSubscriberKey"/> that uniquely identifies the observer.</param>
+    /// <param name="observerKey">The <see cref="ObserverKey"/> that uniquely identifies the observer.</param>
     /// <returns>The configuration.</returns>
-    Task<Observers> GetFor(ObserverSubscriberKey observerSubscriberKey);
+    Task<Observers> GetFor(ObserverKey observerKey);
 }
