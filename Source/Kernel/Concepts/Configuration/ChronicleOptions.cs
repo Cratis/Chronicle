@@ -31,5 +31,5 @@ public class ChronicleOptions
     /// <summary>
     /// Gets the observers configuration.
     /// </summary>
-    public Observers Observers { get; init; } = new Observers();
+    public Observers Observers { get; init; } = new Observers();
 }
