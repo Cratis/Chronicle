@@ -23,12 +23,12 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 /// Initializes a new instance of the <see cref="ReactorObserverSubscriber"/> class.
 /// </remarks>
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for notifying actual clients.</param>
-/// <param name="configurationProvider"><see cref="IProvideConfigurationForObserver"/> for providing <see cref="Observers"/> config.</param>
+/// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for providing <see cref="Observers"/> config.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [ConnectedObserverPlacement]
 public class ReactorObserverSubscriber(
     IReactorMediator reactorMediator,
-    IProvideConfigurationForObserver configurationProvider,
+    IConfigurationForObserverProvider configurationProvider,
     ILogger<ReactorObserverSubscriber> logger) : Grain, IReactorObserverSubscriber
 {
     ObserverKey _key = ObserverKey.NotSet;

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Concepts.Configuration;
 /// <summary>
 /// Represents a system that can provide the <see cref="Observers"/> configuration for an observer.
 /// </summary>
-public interface IProvideConfigurationForObserver
+public interface IConfigurationForObserverProvider
 {
     /// <summary>
     /// Gets the <see cref="Observers"/> configuration for the.

@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Observation;
 namespace Cratis.Chronicle.Grains.Observation;
 
 /// <summary>
-/// Extension methods for <see cref="IProvideConfigurationForObserver"/>.
+/// Extension methods for <see cref="IConfigurationForObserverProvider"/>.
 /// </summary>
 public static class ObserverConfigProviderExtensions
 {
@@ -17,7 +17,7 @@ public static class ObserverConfigProviderExtensions
     /// <param name="key">The observer key.</param>
     /// <returns>The timeout.</returns>
     public static async Task<TimeSpan> GetSubscriberTimeoutForObserver(
-        this IProvideConfigurationForObserver provider,
+        this IConfigurationForObserverProvider provider,
         ObserverKey key)
     {
         var config = await provider.GetFor(key);

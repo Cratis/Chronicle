@@ -21,13 +21,13 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 /// </remarks>
 /// <param name="reducerPipelineFactory"><see cref="IReducerPipelineFactory"/> for creating pipelines.</param>
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for notifying actual clients.</param>
-/// <param name="configurationProvider"><see cref="IProvideConfigurationForObserver"/> for providing <see cref="Observers"/> config.</param>
+/// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for providing <see cref="Observers"/> config.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
 public class ReducerObserverSubscriber(
     IReducerPipelineFactory reducerPipelineFactory,
     IReducerMediator reducerMediator,
-    IProvideConfigurationForObserver configurationProvider,
+    IConfigurationForObserverProvider configurationProvider,
     ILogger<ReducerObserverSubscriber> logger) : Grain<ReducerDefinition>, IReducerObserverSubscriber
 {
     ObserverKey _key = ObserverKey.NotSet;
