@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
@@ -22,28 +21,23 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 /// </remarks>
 /// <param name="reducerPipelineFactory"><see cref="IReducerPipelineFactory"/> for creating pipelines.</param>
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for notifying actual clients.</param>
+/// <param name="configurationProvider"><see cref="IProvideConfigurationForObserver"/> for providing <see cref="Observers"/> config.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
 public class ReducerObserverSubscriber(
     IReducerPipelineFactory reducerPipelineFactory,
     IReducerMediator reducerMediator,
+    IProvideConfigurationForObserver configurationProvider,
     ILogger<ReducerObserverSubscriber> logger) : Grain<ReducerDefinition>, IReducerObserverSubscriber
 {
-    ObserverSubscriberKey _key = new(ObserverId.Unspecified, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Unspecified, EventSourceId.Unspecified, string.Empty);
-    EventStoreName _eventStore = EventStoreName.NotSet;
-    ObserverId _observerId = ObserverId.Unspecified;
-    EventStoreNamespaceName _namespace = EventStoreNamespaceName.NotSet;
-    EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
+    ObserverKey _key = ObserverKey.NotSet;
     IReducerPipeline? _pipeline;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _key = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
-        _observerId = _key.ObserverId;
-        _eventStore = _key.EventStore;
-        _namespace = _key.Namespace;
-        _eventSequenceId = _key.EventSequenceId;
+        var subscriberKey = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
+        _key = new(subscriberKey.ObserverId, subscriberKey.EventStore, subscriberKey.Namespace, subscriberKey.EventSequenceId);
 
         await HandlePipeline();
     }
@@ -51,22 +45,20 @@ public class ReducerObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        await Task.CompletedTask;
-
         foreach (var @event in events)
         {
             logger.EventReceived(
-                _observerId,
-                _eventStore,
-                _namespace,
+                _key.ObserverId,
+                _key.EventStore,
+                _key.Namespace,
                 @event.Metadata.Type.Id,
-                _eventSequenceId,
+                _key.EventSequenceId,
                 @event.Context.SequenceNumber);
         }
 
         if (context.Metadata is not ConnectedClient connectedClient)
         {
-            throw new MissingStateForReducerSubscriber(_observerId);
+            throw new MissingStateForReducerSubscriber(_key.ObserverId);
         }
 
         var tcs = new TaskCompletionSource<ObserverSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -77,23 +69,23 @@ public class ReducerObserverSubscriber(
                 events,
                 new Key(firstEvent.Context.EventSourceId, ArrayIndexers.NoIndexers));
 
+            var timeout = await configurationProvider.GetSubscriberTimeoutForObserver(_key);
             await (_pipeline?.Handle(reducerContext, async (events, initialState) =>
             {
                 var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-
                 reducerMediator.OnNext(
-                    _observerId,
+                    _key.ObserverId,
                     connectedClient.ConnectionId,
                     new(events, initialState),
                     reducerSubscriberResultTCS);
 
-                await reducerSubscriberResultTCS.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                await reducerSubscriberResultTCS.Task.WaitAsync(timeout);
                 var result = await reducerSubscriberResultTCS.Task;
                 tcs.SetResult(result.ObserverResult);
                 return result;
             }) ?? Task.CompletedTask);
 
-            await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await tcs.Task.WaitAsync(timeout);
             return await tcs.Task;
         }
         catch (TaskCanceledException)
@@ -108,6 +100,6 @@ public class ReducerObserverSubscriber(
 
     async Task HandlePipeline()
     {
-        _pipeline = await reducerPipelineFactory.Create(_eventStore, _namespace, State);
+        _pipeline = await reducerPipelineFactory.Create(_key.EventStore, _key.Namespace, State);
     }
 }
