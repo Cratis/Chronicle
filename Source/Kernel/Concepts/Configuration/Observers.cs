@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Concepts.Configuration;
 public class Observers
 {
     /// <summary>
+    /// Gets the timeout in seconds for observer calling its subscriber.
+    /// </summary>
+    public int SubscriberTimeoutInSeconds { get; init; } = 5;
+
+    /// <summary>
     /// Gets the maximum number of retries that can be attempted on a failed observer partition.
     /// </summary>
     /// <remarks>
