@@ -20,35 +20,42 @@
 
         <ProjectReference Include="../../Kernel/Compliance/Compliance.csproj">
             <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Grains/Grains.csproj">
             <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Grains.Interfaces/Grains.Interfaces.csproj">
             <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Setup/Setup.csproj"/>
 
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj">
             <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Services/Services.csproj">
             <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
             <Aliases>Server</Aliases>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
             <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
 
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
     </ItemGroup>
 
