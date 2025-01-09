@@ -3,6 +3,8 @@
         <AssemblyName>Cratis.Chronicle</AssemblyName>
         <RootNamespace>Cratis.Chronicle</RootNamespace>
         <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
+        <ContractsAssembly>$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll</ContractsAssembly>
+        <ContractsImplementationAssembly>Cratis.Chronicle.Contracts.Implementations</ContractsImplementationAssembly>
     </PropertyGroup>
 
     <ItemGroup>
@@ -12,21 +14,31 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.XUnit" />
         <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+        <InternalsVisibleTo Include="ProtoBuf.Grpc.Internal.Proxies" />
+        <InternalsVisibleTo Include="System.Reflection.Emit" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="../Connections/Connections.csproj"/>
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
             <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
+        <InternalAssembly Include="$(OutputPath)$(ContractsImplementationAssembly).dll" />
         <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
     </ItemGroup>
+
+    <Target Name="GrpcClients" BeforeTargets="PerformRepackaging">
+        <Message Text="Generating gRPC clients" Importance="high" />
+        <Exec Command="dotnet run &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
+    </Target>
 
     <ItemGroup>
         <PackageReference Include="ILRepack.Lib.MSBuild.Task">
