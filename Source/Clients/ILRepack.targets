@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!-- https://github.com/ravibpatel/ILRepack.Lib.MSBuild.Task -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+  <Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Repack)' == 'true'">
     <ItemGroup>
         <InputAssemblies Include="$(TargetPath)"/>
         <InputAssemblies Include="@(AssemblyToMerge)"/>
+        <InputAssemblies Include="@(InternalAssembly)"/>
         <FilteredReferences Include="@(ProjectReference->WithMetadataValue('PrivateAssets', 'all'))"
                          KeepMetadata="PrivateAssets;TargetPath" />
         <InternalAssemblies Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"/>
@@ -30,6 +31,7 @@
         Parallel="true"
         LibraryPath="@(LibraryPath)"
         Verbose="false"
+        XmlDocumentation="true"
         LogFile="$(OutputPath)/ILRepack.log"
         TargetKind="SameAsPrimaryAssembly"/>
 
