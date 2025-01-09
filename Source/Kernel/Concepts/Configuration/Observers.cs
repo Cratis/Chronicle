@@ -29,7 +29,7 @@ public class Observers
     /// <summary>
     /// Gets the retry delay exponential factor.
     /// </summary>
-    public int RetryDelayExponentialFactor { get; set; } = 2;
+    public int RetryDelayExponentialFactor { get; init; } = 2;
 
     /// <summary>
     /// Gets the max delay time in seconds for retrying a failed partition.
