@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <IsPackable>false</IsPackable>
+        <NoWarn>$(NoWarn);SA1600</NoWarn>
+    </PropertyGroup>
+    <ItemGroup>
+      <PackageReference Include="protobuf-net.Grpc" />
+      <PackageReference Include="Grpc.Net.Client" />
+    </ItemGroup>
+</Project>
