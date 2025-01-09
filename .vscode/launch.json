@@ -72,7 +72,23 @@
                 "${workspaceFolder}/Source/Clients/Orleans.InProcess/bin/Debug/net9.0/Cratis.Chronicle.Orleans.InProcess.dll",
                 "Cratis.Chronicle.Orleans;Cratis.Chronicle.Grains;Cratis.Chronicle.Grains.Interfaces"
             ],
-            "cwd": "${workspaceFolder}/Source/Tools/InternalsVerifier",
+            "cwd": "${workspaceFolder}/Source/Tools/AssemblyFixer",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": ".NET Core Launch (GrpcClients)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Source/Tools/GrpcClients/bin/Debug/net9.0/GrpcClients.dll",
+            "args": [
+                "${workspaceFolder}/Source/Clients/DotNET/bin/Release/net9.0/Cratis.Chronicle.Contracts.dll",
+                "Cratis.Chronicle.Contracts.Implementations"
+            ],
+            "cwd": "${workspaceFolder}/Source/Tools/GrpcClients",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
