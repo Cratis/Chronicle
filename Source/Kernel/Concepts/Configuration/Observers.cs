@@ -11,7 +11,7 @@ public class Observers
     /// <summary>
     /// Gets the timeout in seconds for observer calling its subscriber.
     /// </summary>
-    public int SubscriberTimeoutInSeconds { get; init; } = 5;
+    public int SubscriberTimeout { get; init; } = 5;
 
     /// <summary>
     /// Gets the maximum number of retries that can be attempted on a failed observer partition.
@@ -24,15 +24,15 @@ public class Observers
     /// <summary>
     /// Gets the delay for attempting to retry a failed partition in seconds.
     /// </summary>
-    public int RetryDelayInSeconds { get; init; } = 1;
+    public int BackoffDelay { get; init; } = 1;
 
     /// <summary>
     /// Gets the retry delay exponential factor.
     /// </summary>
-    public int RetryDelayExponentialFactor { get; init; } = 2;
+    public float ExponentialBackoffDelayFactor { get; init; } = 2;
 
     /// <summary>
     /// Gets the max delay time in seconds for retrying a failed partition.
     /// </summary>
-    public int MaxRetryDelayInSeconds { get; init; } = 60 * 10;
+    public int MaximumBackoffDelay { get; init; } = 60 * 10;
 }

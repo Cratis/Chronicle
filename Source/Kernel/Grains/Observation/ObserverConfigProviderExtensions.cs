@@ -21,7 +21,7 @@ public static class ObserverConfigProviderExtensions
         ObserverKey key)
     {
         var config = await provider.GetFor(key);
-        var timeout = TimeSpan.FromSeconds(config.SubscriberTimeoutInSeconds);
+        var timeout = TimeSpan.FromSeconds(config.SubscriberTimeout);
         if (timeout <= TimeSpan.Zero)
         {
             timeout = TimeSpan.FromSeconds(5);

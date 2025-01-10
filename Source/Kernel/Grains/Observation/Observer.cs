@@ -458,8 +458,8 @@ public class Observer(
 
     static TimeSpan GetNextRetryDelay(FailedPartition failure, Observers config)
     {
-        var time = TimeSpan.FromSeconds(config.RetryDelayInSeconds * Math.Pow(config.RetryDelayExponentialFactor, failure.Attempts.Count()));
-        var maxTime = TimeSpan.FromSeconds(config.MaxRetryDelayInSeconds);
+        var time = TimeSpan.FromSeconds(config.BackoffDelay * Math.Pow(config.ExponentialBackoffDelayFactor, failure.Attempts.Count()));
+        var maxTime = TimeSpan.FromSeconds(config.MaximumBackoffDelay);
 
         if (time > maxTime)
         {
@@ -468,7 +468,7 @@ public class Observer(
 
         if (time == TimeSpan.Zero)
         {
-            return TimeSpan.FromSeconds(config.RetryDelayInSeconds);
+            return TimeSpan.FromSeconds(config.BackoffDelay);
         }
 
         return time;
