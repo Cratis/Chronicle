@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Orleans.InProcess;
 /// </remarks>
 /// <param name="lifecycle"><see cref="IConnectionLifecycle"/> for managing lifecycle.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with grains.</param>
-public class ChronicleConnection(
+internal class ChronicleConnection(
     IConnectionLifecycle lifecycle,
     IGrainFactory grainFactory) : IChronicleConnection, IChronicleServicesAccessor
 {
