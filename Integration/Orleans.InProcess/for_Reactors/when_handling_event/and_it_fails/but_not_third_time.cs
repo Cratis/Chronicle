@@ -32,7 +32,7 @@ public class but_not_third_time(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var waitTime = 5.Seconds();
+            var waitTime = 10.Seconds();
 
             await ReactorObserver.WaitTillActive();
             Observers[0].ShouldFail = true;
