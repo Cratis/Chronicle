@@ -35,15 +35,17 @@ public static class StorageProviderExtensions
             builder.AddRetry(options.Retry);
             builder.AddTimeout(options.Timeout);
 
-            var telemetryOptions = new TelemetryOptions(context.GetOptions<TelemetryOptions>());
-            telemetryOptions.SeverityProvider = ev =>
+            var telemetryOptions = new TelemetryOptions(context.GetOptions<TelemetryOptions>())
             {
-                if (options.ResilienceEventSeverities.TryGetValue(ev.Event.EventName, out var severity))
+                SeverityProvider = ev =>
                 {
-                    return severity;
-                }
+                    if (options.ResilienceEventSeverities.TryGetValue(ev.Event.EventName, out var severity))
+                    {
+                        return severity;
+                    }
 
-                return ev.Event.Severity;
+                    return ev.Event.Severity;
+                }
             };
             builder.ConfigureTelemetry(telemetryOptions);
         });

@@ -27,7 +27,9 @@ public class ResilientStorageOptions
     /// <summary>
     /// Gets or sets the value indicating whether to enable Polly recording telemetry for each "OnRetry" event.
     /// </summary>
+#pragma warning disable MA0016
     public Dictionary<string, ResilienceEventSeverity> ResilienceEventSeverities { get; set; } = new(StringComparer.InvariantCulture)
+#pragma warning restore MA0016
     {
         { "OnRetry", ResilienceEventSeverity.Debug }
     };
