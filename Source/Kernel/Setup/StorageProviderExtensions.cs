@@ -38,10 +38,9 @@ public static class StorageProviderExtensions
             var telemetryOptions = new TelemetryOptions(context.GetOptions<TelemetryOptions>());
             telemetryOptions.SeverityProvider = ev =>
             {
-                // Docs https://github.com/App-vNext/Polly/blob/main/docs/advanced/telemetry.md/
-                if (ev.Event.EventName == "OnRetry")
+                if (options.ResilienceEventSeverities.TryGetValue(ev.Event.EventName, out var severity))
                 {
-                    return options.OnRetryEventSeverity;
+                    return severity;
                 }
 
                 return ev.Event.Severity;
