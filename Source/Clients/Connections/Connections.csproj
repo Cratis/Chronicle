@@ -17,19 +17,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
-        </ProjectReference>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
-        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj"/>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <!-- <PackageReference Include="ILRepack.Lib.MSBuild.Task">
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-          <PrivateAssets>all</PrivateAssets>
-        </PackageReference> -->
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />
