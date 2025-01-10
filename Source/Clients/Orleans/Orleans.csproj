@@ -10,19 +10,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
-        </ProjectReference>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
-        </ProjectReference>
+        <ProjectReference Include="../DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <!-- <PackageReference Include="ILRepack.Lib.MSBuild.Task">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference> -->
         <PackageReference Include="Microsoft.Orleans.Sdk" />
     </ItemGroup>
 </Project>
