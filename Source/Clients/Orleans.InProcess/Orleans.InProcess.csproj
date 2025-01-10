@@ -18,6 +18,16 @@
 
         <ProjectReference Include="../Orleans/Orleans.csproj"/>
 
+        <ProjectReference Include="../Connections/Connections.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+
         <ProjectReference Include="../../Kernel/Compliance/Compliance.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
@@ -63,6 +73,8 @@
         <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Orleans.dll" />
         <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Setup.dll" />
         <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" />
+        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
+        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" />
     </ItemGroup>
 
     <ItemGroup>
