@@ -10,10 +10,10 @@
         "connectionDetails": "mongodb://localhost:27017"
     },
     "observers": {
-        "subscriberTimeoutInSeconds": 5,
+        "subscriberTimeout": 5,
         "maxRetryAttempts": 10,
-        "retryDelayInSeconds": 1,
-        "retryDelayExponentialFactor": 2,
-        "maxRetryDelayInSeconds": 600
+        "backoffDelay": 1,
+        "exponentialBackoffDelayFactor": 2,
+        "maximumBackoffDelay": 600
     }
 }
