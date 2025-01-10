@@ -240,7 +240,7 @@ public class Observer(
         logger.PartitionFailed(partition, sequenceNumber);
         var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         var config = await configurationProvider.GetFor(_observerKey);
-        if (config.MaxRetryAttempts == 0 || failure.Attempts.Count() < config.MaxRetryAttempts)
+        if (config.MaxRetryAttempts == 0 || failure.Attempts.Count() <= config.MaxRetryAttempts)
         {
             await this.RegisterOrUpdateReminder(partition.ToString(), GetNextRetryDelay(failure, config), TimeSpan.FromHours(48));
         }
