@@ -18,22 +18,35 @@ public class InProcessAwareGrpcClientProxiesClientFactory : ClientFactory
     /// <inheritdoc/>
     public override TService CreateClient<TService>(CallInvoker channel)
     {
-        var marshallerCache = BinderConfiguration.GetType().GetProperty("MarshallerCache", BindingFlags.NonPublic | BindingFlags.Instance)!;
-        var getMarshallerMethod = marshallerCache.GetType().GetMethod("GetMarshaller", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
+        var marshallerCacheProperty = BinderConfiguration.GetType().GetProperty("MarshallerCache", BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var marshallerCache = marshallerCacheProperty.GetValue(BinderConfiguration)!;
+        var getMarshallerGenericMethod = marshallerCache.GetType().GetMethod("GetMarshaller", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
 
         var serviceType = typeof(TService);
         var implementationTypeName = $"{serviceType.Namespace}.{serviceType.Name.Substring(1)}";
-        var implementationType = serviceType.Assembly.GetType(implementationTypeName);
+        var implementationType = serviceType.Assembly.GetType(implementationTypeName) as TypeInfo;
         if (implementationType is not null)
         {
             var instance = (TService)Activator.CreateInstance(implementationType, channel)!;
-            var marshallerFields = implementationType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance).Where(_ => _.Name.StartsWith("_m")).ToArray();
-            var methods = serviceType.GetMethods();
+            var marshallerFields = implementationType.DeclaredFields;
 
-            // Get return value and find a matching field (_m*)
-            // Get input parameter and find a matching field (_m*)
-            // If there is no return type or input parameter type, find a matching Marshaller<Empty> field
-            // Get marshaller from cache for each field and initialize all fields
+#pragma warning disable RCS1201 // Use method chaining
+            marshallerFields = marshallerFields
+                            .Where(_ => _.FieldType.IsGenericType)
+                            .ToArray();
+#pragma warning restore RCS1201 // Use method chaining
+
+            marshallerFields = marshallerFields
+                .Where(_ => _.FieldType.IsGenericType && _.FieldType.GetGenericTypeDefinition() == typeof(Marshaller<>))
+                .ToArray();
+
+            foreach (var field in marshallerFields)
+            {
+                var getMarshallerMethod = getMarshallerGenericMethod.MakeGenericMethod(field.FieldType.GetGenericArguments()[0]);
+                var marshaller = getMarshallerMethod.Invoke(marshallerCache, [])!;
+                field.SetValue(instance, marshaller);
+            }
+
             var initMethod = implementationType.GetMethod("Init", BindingFlags.Public | BindingFlags.Static);
             initMethod?.Invoke(null, []);
             return instance;
