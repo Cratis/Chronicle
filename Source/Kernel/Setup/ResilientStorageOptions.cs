@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using Polly.Retry;
+using Polly.Telemetry;
 using Polly.Timeout;
 namespace Cratis.Chronicle.Setup;
 
@@ -22,4 +23,9 @@ public class ResilientStorageOptions
     /// </summary>
     [Required]
     public TimeoutStrategyOptions Timeout { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the value indicating whether to enable Polly recording telemetry for each "OnRetry" event.
+    /// </summary>
+    public ResilienceEventSeverity OnRetryEventSeverity { get; set; } = ResilienceEventSeverity.Debug;
 }

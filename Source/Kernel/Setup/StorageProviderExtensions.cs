@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
 using Polly;
 using Polly.Registry;
+using Polly.Telemetry;
 
 namespace Orleans.Hosting;
 
@@ -33,6 +34,19 @@ public static class StorageProviderExtensions
             var options = context.GetOptions<ResilientStorageOptions>();
             builder.AddRetry(options.Retry);
             builder.AddTimeout(options.Timeout);
+
+            var telemetryOptions = new TelemetryOptions(context.GetOptions<TelemetryOptions>());
+            telemetryOptions.SeverityProvider = ev =>
+            {
+                // Docs https://github.com/App-vNext/Polly/blob/main/docs/advanced/telemetry.md/
+                if (ev.Event.EventName == "OnRetry")
+                {
+                    return options.OnRetryEventSeverity;
+                }
+
+                return ev.Event.Severity;
+            };
+            builder.ConfigureTelemetry(telemetryOptions);
         });
 
         builder.ConfigureServices(services =>
