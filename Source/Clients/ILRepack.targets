@@ -9,7 +9,7 @@
         <FilteredReferences Include="@(ProjectReference->WithMetadataValue('PrivateAssets', 'all'))"
                          KeepMetadata="PrivateAssets;TargetPath" />
         <InternalAssemblies Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"/>
-        <InputAssemblies Include="@(InternalAssemblies)"/>
+        <InputAssemblies Include="@(InternalAssemblies)" Exclude="@(AssemblyToExcludeFromMerge)"/>
         <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
         <DoNotInternalizeAssemblies Include="@(AssemblyToMerge)"/>
     </ItemGroup>
@@ -32,6 +32,7 @@
         LibraryPath="@(LibraryPath)"
         Verbose="false"
         XmlDocumentation="true"
+        Union="true"
         LogFile="$(OutputPath)/ILRepack.log"
         TargetKind="SameAsPrimaryAssembly"/>
 
