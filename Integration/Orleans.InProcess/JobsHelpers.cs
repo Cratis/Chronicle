@@ -25,7 +25,7 @@ public static class JobsHelpers
         while (!jobs.Any() && !cts.IsCancellationRequested)
         {
             jobs = await eventStore.GetJobs();
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(20);
         }
 
         return jobs;
@@ -47,7 +47,7 @@ public static class JobsHelpers
         while (jobs.Any() && !jobs.All(_ => includeStatuses.Contains(_.Status)) && !cts.IsCancellationRequested)
         {
             jobs = await eventStore.GetJobs();
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(20);
         }
         return jobs;
     }

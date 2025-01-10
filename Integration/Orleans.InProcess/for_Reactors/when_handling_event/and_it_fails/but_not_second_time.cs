@@ -32,8 +32,8 @@ public class but_not_second_time(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var waitTime = 5.Seconds();
-            await ReactorObserver.WaitTillActive();
+            var waitTime = 10.Seconds();
+            await ReactorObserver.WaitTillActive(waitTime);
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = false;
             await EventStore.EventLog.Append(EventSourceId, Event);
@@ -42,11 +42,11 @@ public class but_not_second_time(context context) : Given<context>(context)
             await Tcs[0].Task.WaitAsync(waitTime);
 
             FailedPartitionsBeforeRetry = await EventStore.WaitForThereToBeFailedPartitions(ObserverId);
-            Jobs = await EventStore.WaitForThereToBeJobs();
+            Jobs = await EventStore.WaitForThereToBeJobs(waitTime);
 
             // Wait for the second event to have been handled
             await Tcs[1].Task.WaitAsync(waitTime);
-            await EventStore.WaitForThereToBeNoJobs();
+            await EventStore.WaitForThereToBeNoJobs(waitTime);
 
             FailedPartitionsAfterRetry = await GetFailedPartitions();
             ObserverState = await ReactorObserver.GetState();
