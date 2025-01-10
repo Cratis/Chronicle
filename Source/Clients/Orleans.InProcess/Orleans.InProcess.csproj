@@ -12,11 +12,23 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../DotNET/DotNET.csproj">
+            <Properties>Repack=false</Properties>
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
 
-        <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj">
+            <Properties>Repack=false</Properties>
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
 
-        <ProjectReference Include="../Orleans/Orleans.csproj"/>
+        <ProjectReference Include="../Orleans/Orleans.csproj">
+            <Properties>Repack=false</Properties>
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
 
         <ProjectReference Include="../Connections/Connections.csproj">
             <PrivateAssets>all</PrivateAssets>
@@ -70,11 +82,15 @@
     </ItemGroup>
 
     <ItemGroup>
+        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.DotNET.dll" />
+        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
+        <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.dll" />
         <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Orleans.dll" />
         <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Setup.dll" />
         <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" />
-        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
-        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" />
+        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.dll" />
+        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.AspNetCore.dll" />
+        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.Orleans.dll" />
     </ItemGroup>
 
     <ItemGroup>
