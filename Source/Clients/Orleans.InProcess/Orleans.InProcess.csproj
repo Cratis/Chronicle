@@ -35,6 +35,12 @@
             <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+
+
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
@@ -54,6 +60,8 @@
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Projections/Projections.csproj"/>
 
         <ProjectReference Include="../../Kernel/Setup/Setup.csproj"/>
 
@@ -83,7 +91,6 @@
 
     <ItemGroup>
         <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.DotNET.dll" />
-        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
         <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.dll" />
         <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Orleans.dll" />
         <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Setup.dll" />
