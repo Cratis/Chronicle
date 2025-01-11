@@ -44,4 +44,4 @@ The following snippet configures the minimum and discovers everything for you:
 
 With this you can query the collections as expected using the **MongoDB.Driver**:
 
-{{snippet:Quickstart-BorrowedBooks}}
+{{snippet:Quickstart-Books}}
