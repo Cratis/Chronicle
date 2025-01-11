@@ -1,2 +1,4 @@
 - name: Console
   href: console.md
+- name: ASP.NET Core
+  href: aspnetcore.md
