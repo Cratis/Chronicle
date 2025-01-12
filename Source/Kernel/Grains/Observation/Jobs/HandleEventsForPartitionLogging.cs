@@ -66,13 +66,13 @@ internal static partial class HandleEventsForPartitionLogging
 internal static class HandleEventsForPartitionScopes
 {
     internal static IDisposable? BeginObserverScope(this ILogger<HandleEventsForPartition> logger, ObserverKey observerKey, JobId jobId, JobStepId jobStepId) =>
-        logger.BeginScope(new Dictionary<string, object>
+        logger.BeginScope(new
         {
-            ["ObserverId"] = observerKey.ObserverId,
-            ["EventStore"] = observerKey.EventStore,
-            ["Namespace"] = observerKey.Namespace,
-            ["EventSequenceId"] = observerKey.EventSequenceId,
-            ["JobId"] = jobId,
-            ["JobStepId"] = jobStepId
+            observerKey.ObserverId,
+            observerKey.EventStore,
+            observerKey.Namespace,
+            observerKey.EventSequenceId,
+            JobId = jobId,
+            JobStepId = jobStepId
         });
 }
