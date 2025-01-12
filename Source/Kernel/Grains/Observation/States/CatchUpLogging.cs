@@ -29,11 +29,11 @@ internal static partial class CatchUpLogMessages
 internal static class CatchUpScopes
 {
     internal static IDisposable? BeginCatchUpScope(this ILogger<CatchUp> logger, ObserverId observerId, ObserverKey observerKey) =>
-        logger.BeginScope(new Dictionary<string, object>
+        logger.BeginScope(new
         {
-            ["ObserverId"] = observerId,
-            ["EventStore"] = observerKey.EventStore,
-            ["Namespace"] = observerKey.Namespace,
-            ["EventSequenceId"] = observerKey.EventSequenceId
+            ObserverId = observerId,
+            observerKey.EventStore,
+            observerKey.Namespace,
+            observerKey.EventSequenceId
         });
 }

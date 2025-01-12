@@ -28,12 +28,12 @@ internal static partial class ImmediateProjectionsLogMessages
 internal static class ImmediateProjectionScopes
 {
     internal static IDisposable? BeginImmediateProjectionScope(this ILogger<ImmediateProjection> logger, ProjectionId projectionId, ImmediateProjectionKey projectionKey) =>
-        logger.BeginScope(new Dictionary<string, object>
+        logger.BeginScope(new
         {
-            ["ProjectionId"] = projectionId,
-            ["EventStore"] = projectionKey.EventStore,
-            ["Namespace"] = projectionKey.Namespace,
-            ["EventSequenceId"] = projectionKey.EventSequenceId,
-            ["SessionId"] = projectionKey.SessionId ?? Guid.Empty
+            ProjectionId = projectionId,
+            projectionKey.EventStore,
+            projectionKey.Namespace,
+            projectionKey.EventSequenceId,
+            SessionId = projectionKey.SessionId ?? Guid.Empty
         });
 }

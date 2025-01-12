@@ -58,9 +58,9 @@ internal static partial class JobsManagerLogMessages
 internal static class JobsManagerScopes
 {
     internal static IDisposable? BeginJobsManagerScope(this ILogger<JobsManager> logger, JobsManagerKey key) =>
-        logger.BeginScope(new Dictionary<string, object>
+        logger.BeginScope(new
         {
-            ["EventStore"] = key.EventStore,
-            ["Namespace"] = key.Namespace
+            key.EventStore,
+            key.Namespace
         });
 }

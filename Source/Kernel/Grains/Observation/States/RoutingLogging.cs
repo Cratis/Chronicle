@@ -44,11 +44,11 @@ internal static partial class RoutingLogMessages
 internal static class RoutingScopes
 {
     internal static IDisposable? BeginRoutingScope(this ILogger<Routing> logger, ObserverId observerId, ObserverKey observerKey) =>
-        logger.BeginScope(new Dictionary<string, object>
+        logger.BeginScope(new
         {
-            ["ObserverId"] = observerId,
-            ["EventStore"] = observerKey.EventStore,
-            ["Namespace"] = observerKey.Namespace,
-            ["EventSequenceId"] = observerKey.EventSequenceId
+            ObserverId = observerId,
+            observerKey.EventStore,
+            observerKey.Namespace,
+            observerKey.EventSequenceId
         });
 }
