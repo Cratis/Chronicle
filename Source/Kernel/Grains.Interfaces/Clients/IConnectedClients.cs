@@ -35,20 +35,6 @@ public interface IConnectedClients : IGrainWithIntegerKey
     Task<bool> OnClientPing(ConnectionId connectionId);
 
     /// <summary>
-    /// Subscribe to when a client is disconnected.
-    /// </summary>
-    /// <param name="subscriber">Subscriber to notify.</param>
-    /// <returns>Awaitable task.</returns>
-    Task SubscribeDisconnected(INotifyClientDisconnected subscriber);
-
-    /// <summary>
-    /// Unsubscribe to when a client is disconnected.
-    /// </summary>
-    /// <param name="subscriber">Subscriber to notify.</param>
-    /// <returns>Awaitable task.</returns>
-    Task UnsubscribeDisconnected(INotifyClientDisconnected subscriber);
-
-    /// <summary>
     /// Check whether or not a client by its <see cref="ConnectionId"/> is connected.
     /// </summary>
     /// <param name="connectionId">The <see cref="ConnectionId"/> to check.</param>

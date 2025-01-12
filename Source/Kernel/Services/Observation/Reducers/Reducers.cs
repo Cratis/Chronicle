@@ -13,6 +13,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
+using Microsoft.Extensions.Logging;
 using NJsonSchema;
 using ProtoBuf.Grpc;
 using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
@@ -28,19 +29,23 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for observing actual events as they are made available.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class Reducers(
     IGrainFactory grainFactory,
     IReducerMediator reducerMediator,
-    IExpandoObjectConverter expandoObjectConverter) : IReducers
+    IExpandoObjectConverter expandoObjectConverter,
+    ILogger<Reducers> logger) : IReducers
 {
     /// <inheritdoc/>
     public IObservable<ReduceOperationMessage> Observe(IObservable<ReducerMessage> messages, CallContext context = default)
     {
+        logger.Observe();
+
         var registrationTcs = new TaskCompletionSource<RegisterReducer>(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource<ReducerSubscriberResult>? reducerResultTcs = null;
         TaskCompletionSource<ReduceOperation>? reduceOperationTcs;
 
-        IReducer clientObserver = null!;
+        IReducer? clientObserver = null;
 
         var model = new Model(ModelName.NotSet, new JsonSchema());
 
@@ -49,21 +54,12 @@ public class Reducers(
             switch (message.Content.Value)
             {
                 case RegisterReducer register:
-                    var key = new ConnectedObserverKey(
+                    logger.Registering(
                         register.Reducer.ReducerId,
                         register.EventStore,
                         register.Namespace,
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
-                    using (Tracing.RegisterObserver(key, ObserverType.Reducer))
-                    {
-                        clientObserver = grainFactory.GetGrain<IReducer>(key);
-                        var reducerDefinition = register.Reducer.ToChronicle();
-                        clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
-
-                        var modelSchema = JsonSchema.FromJsonAsync(reducerDefinition.Model.Schema).GetAwaiter().GetResult();
-                        model = new Model(reducerDefinition.Model.Name, modelSchema);
-                    }
 
                     registrationTcs.SetResult(register);
                     break;
@@ -92,58 +88,116 @@ public class Reducers(
             }
         });
 
-        return Observable.Create<ReduceOperationMessage>(async (observer, cancellationToken) =>
-        {
-            var connectionId = ConnectionId.NotSet;
-            var observerId = ObserverId.Unspecified;
+        var connectionId = ConnectionId.NotSet;
+        var observerId = ObserverId.Unspecified;
+        IObserver<ReduceOperationMessage>? observableObserver = null;
 
-            try
+        var observable = Observable.Create<ReduceOperationMessage>(
+            async (observer, cancellationToken) =>
             {
-                var registration = await registrationTcs.Task;
-                connectionId = registration.ConnectionId;
-                observerId = registration.Reducer.ReducerId;
-
-                reduceOperationTcs = new TaskCompletionSource<ReduceOperation>(TaskCreationOptions.RunContinuationsAsynchronously);
-                reducerMediator.Subscribe(
-                    registration.Reducer.ReducerId,
-                    registration.ConnectionId,
-                    (reduceOperation, tcs) =>
-                    {
-                        reducerResultTcs = tcs;
-                        reduceOperationTcs.SetResult(reduceOperation);
-                    });
-
-                while (!context.CancellationToken.IsCancellationRequested)
+                observableObserver = observer;
+                try
                 {
-                    var reduceOperation = await reduceOperationTcs.Task;
-                    var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.Schema).ToString();
-                    var message = new ReduceOperationMessage()
-                    {
-                        InitialState = initialState,
-                        Events = reduceOperation.Events.Select(_ => _.ToContract()).ToArray()
-                    };
+                    var registration = await registrationTcs.Task;
+                    connectionId = registration.ConnectionId;
+                    observerId = registration.Reducer.ReducerId;
 
-                    observer.OnNext(message);
-                    if (context.CancellationToken.IsCancellationRequested)
+                    logger.Subscribing(
+                        registration.Reducer.ReducerId,
+                        registration.EventStore,
+                        registration.Namespace,
+                        registration.Reducer.EventSequenceId,
+                        registration.ConnectionId);
+
+                    var key = new ConnectedObserverKey(
+                        registration.Reducer.ReducerId,
+                        registration.EventStore,
+                        registration.Namespace,
+                        registration.Reducer.EventSequenceId,
+                        registration.ConnectionId);
+
+                    using (Tracing.RegisterObserver(key, ObserverType.Reducer))
                     {
-                        break;
+                        var reducerDefinition = registration.Reducer.ToChronicle();
+
+                        clientObserver = grainFactory.GetGrain<IReducer>(key);
+                        await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+
+                        var modelSchema = await JsonSchema.FromJsonAsync(reducerDefinition.Model.Schema);
+                        model = new Model(reducerDefinition.Model.Name, modelSchema);
                     }
 
                     reduceOperationTcs = new TaskCompletionSource<ReduceOperation>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    reducerMediator.Subscribe(
+                        registration.Reducer.ReducerId,
+                        registration.ConnectionId,
+                        (reduceOperation, tcs) =>
+                        {
+                            reducerResultTcs = tcs;
+                            reduceOperationTcs.SetResult(reduceOperation);
+                        });
+
+                    while (!context.CancellationToken.IsCancellationRequested)
+                    {
+                        var reduceOperation = await reduceOperationTcs.Task;
+                        var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.Schema).ToString();
+                        var message = new ReduceOperationMessage()
+                        {
+                            InitialState = initialState,
+                            Events = reduceOperation.Events.Select(_ => _.ToContract()).ToArray()
+                        };
+
+                        observer.OnNext(message);
+                        if (context.CancellationToken.IsCancellationRequested)
+                        {
+                            break;
+                        }
+
+                        reduceOperationTcs = new TaskCompletionSource<ReduceOperation>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    }
+
+                    logger.Disconnected(
+                        registration.Reducer.ReducerId,
+                        registration.EventStore,
+                        registration.Namespace,
+                        registration.Reducer.EventSequenceId,
+                        registration.ConnectionId);
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                reducerMediator.Disconnected(observerId, connectionId);
-                reducerResultTcs?.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
-                observer.OnCompleted();
-            }
-            catch (Exception ex)
-            {
-                reducerMediator.Disconnected(observerId, connectionId);
-                reducerResultTcs?.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
-                observer.OnError(ex);
-            }
+                catch (OperationCanceledException)
+                {
+                    logger.DisconnectedUngracefully(observerId, connectionId);
+                    clientObserver = null;
+                }
+                catch (Exception ex)
+                {
+                    logger.Disengage(observerId, connectionId, ex);
+                    observer.OnError(ex);
+                }
+                finally
+                {
+                    reducerMediator.Disconnected(observerId, connectionId);
+                    reducerResultTcs?.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
+                    await clientObserver!.Unsubscribe();
+                    clientObserver = null;
+                }
+            });
+
+        CancellationTokenRegistration? register = null;
+
+        register = context.CancellationToken.Register(() =>
+        {
+            logger.ObserverStreamDisconnected(observerId, connectionId);
+            observableObserver?.OnCompleted();
+
+            clientObserver?.Unsubscribe().GetAwaiter().GetResult();
+
+            reducerMediator.Disconnected(observerId, connectionId);
+            reducerResultTcs?.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
+            clientObserver = null;
+
+            register?.Dispose();
         });
+
+        return observable;
     }
 }

@@ -16,4 +16,10 @@ public interface IReactor : IGrainWithStringKey
     /// <param name="definition">The <see cref="ReactorDefinition"/> to start observing.</param>
     /// <returns>Awaitable task.</returns>
     Task SetDefinitionAndSubscribe(ReactorDefinition definition);
+
+    /// <summary>
+    /// Unsubscribe the observer.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Unsubscribe();
 }
