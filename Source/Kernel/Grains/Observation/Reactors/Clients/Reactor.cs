@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
@@ -27,7 +26,7 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 public class Reactor(
     IReactorDefinitionComparer reactorDefinitionComparer,
     ILocalSiloDetails localSiloDetails,
-    ILogger<Reactor> logger) : Grain<ReactorDefinition>, IReactor, INotifyClientDisconnected
+    ILogger<Reactor> logger) : Grain<ReactorDefinition>, IReactor
 {
     IConnectedClients? _connectedClients;
     ConnectedObserverKey? _observerKey;
@@ -35,12 +34,13 @@ public class Reactor(
     bool _subscribed;
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
-        await _connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
 
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -75,17 +75,18 @@ public class Reactor(
     }
 
     /// <inheritdoc/>
-    public async Task OnClientDisconnected(ConnectedClient client)
+    public async Task Unsubscribe()
     {
-        if (client.ConnectionId != _observerKey!.ConnectionId) return;
+        logger.ClientDisconnected(
+            _observerKey!.ConnectionId,
+            _observerKey!.EventStore,
+            _observerKey.ObserverId!,
+            _observerKey!.EventSequenceId,
+            _observerKey!.Namespace);
 
-        logger.ClientDisconnected(client.ConnectionId, _observerKey!.EventStore, _observerKey.ObserverId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
         var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         var observer = GrainFactory.GetGrain<IObserver>(key);
-        DeactivateOnIdle();
-        await Task.WhenAll(
-            observer.Unsubscribe(),
-            _connectedClients!.UnsubscribeDisconnected(this.AsReference<INotifyClientDisconnected>()));
+        await observer.Unsubscribe();
 
         _subscribed = false;
     }

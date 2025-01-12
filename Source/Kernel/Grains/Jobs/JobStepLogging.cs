@@ -68,19 +68,19 @@ internal static partial class JobStepLogMessages
 internal static class JobStepScopes
 {
     internal static IDisposable? BeginJobStepScope(this ILogger<IJobStep> logger, JobStepState state) =>
-        logger.BeginScope(new Dictionary<string, object>
+        logger.BeginScope(new
         {
-            ["JobId"] = state.Id.JobId,
-            ["JobStepId"] = state.Id.JobStepId,
-            ["JobStepName"] = state.Name,
-            ["JobStepStatus"] = state.Status
+            state.Id.JobId,
+            state.Id.JobStepId,
+            JobStepName = state.Name,
+            JobStepStatus = state.Status
         });
     internal static IDisposable? BeginJobStepScope(this ILogger<IJobStep> logger, JobStepIdentifier jobStepIdentifier, JobStepName jobStepName, JobStepStatus jobStepStatus = JobStepStatus.Unknown) =>
-        logger.BeginScope(new Dictionary<string, object>
+        logger.BeginScope(new
         {
-            ["JobId"] = jobStepIdentifier.JobId,
-            ["JobStepId"] = jobStepIdentifier.JobStepId,
-            ["JobStepName"] = jobStepName,
-            ["JobStepStatus"] = jobStepStatus
+            jobStepIdentifier.JobId,
+            jobStepIdentifier.JobStepId,
+            JobStepName = jobStepName,
+            JobStepStatus = jobStepStatus
         });
 }

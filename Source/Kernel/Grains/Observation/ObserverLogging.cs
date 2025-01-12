@@ -63,11 +63,11 @@ internal static partial class ObserverLogMessages
 internal static class ObserverScopes
 {
     internal static IDisposable? BeginObserverScope(this ILogger<Observer> logger, ObserverId observerId, ObserverKey observerKey) =>
-        logger.BeginScope(new Dictionary<string, object>
+        logger.BeginScope(new
         {
-            ["ObserverId"] = observerId,
-            ["EventStore"] = observerKey.EventStore,
-            ["Namespace"] = observerKey.Namespace,
-            ["EventSequenceId"] = observerKey.EventSequenceId
+            ObserverId = observerId,
+            observerKey.EventStore,
+            observerKey.Namespace,
+            observerKey.EventSequenceId
         });
 }

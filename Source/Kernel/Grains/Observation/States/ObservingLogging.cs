@@ -30,11 +30,11 @@ internal static class ObservingScopes
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         EventSequenceId eventSequenceId) =>
-        logger.BeginScope(new Dictionary<string, object>
+        logger.BeginScope(new
         {
-            ["ObserverId"] = state.Id,
-            ["EventStore"] = eventStore,
-            ["Namespace"] = @namespace,
-            ["EventSequenceId"] = eventSequenceId
+            ObserverId = state.Id,
+            EventStore = eventStore,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId
         });
 }

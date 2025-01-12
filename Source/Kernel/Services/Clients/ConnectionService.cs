@@ -25,29 +25,37 @@ public class ConnectionService(IGrainFactory grainFactory) : IConnectionService
         var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
         var subject = new Subject<ConnectionKeepAlive>();
 
-        _ = Task.Run(async () =>
-        {
-            await connectedClients.OnClientConnected(
-                request.ConnectionId,
-                request.ClientVersion,
-                request.IsRunningWithDebugger);
-
-            while (!context.CancellationToken.IsCancellationRequested)
+        _ = Task.Run(
+            async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                await connectedClients.OnClientConnected(
+                    request.ConnectionId,
+                    request.ClientVersion,
+                    request.IsRunningWithDebugger);
 
-                if (context.CancellationToken.IsCancellationRequested)
+                while (!context.CancellationToken.IsCancellationRequested)
                 {
-                    break;
+                    await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
+                    if (context.CancellationToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    subject.OnNext(new ConnectionKeepAlive
+                    {
+                        ConnectionId = request.ConnectionId
+                    });
                 }
 
-                subject.OnNext(new ConnectionKeepAlive
-                {
-                    ConnectionId = request.ConnectionId
-                });
-            }
+                await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
+            },
+            context.CancellationToken);
 
-            await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
+        context.CancellationToken.Register(() =>
+        {
+            subject.OnCompleted();
+            subject.Dispose();
         });
 
         return subject;
