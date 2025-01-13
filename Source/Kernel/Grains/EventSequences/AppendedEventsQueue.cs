@@ -24,7 +24,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly ConcurrentQueue<IEnumerable<AppendedEvent>> _queue = new();
     readonly AsyncManualResetEvent _queueEvent = new();
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
-    readonly TaskCompletionSource _queueTaskCompletionSource = new();
+    readonly TaskCompletionSource _queueTaskCompletionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly Task _queueTask;
     ConcurrentBag<AppendedEventsQueueObserverSubscription> _subscriptions = [];
     IMeterScope<AppendedEventsQueue>? _metrics;
