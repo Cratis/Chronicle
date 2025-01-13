@@ -17,6 +17,7 @@ public class User(IAggregateRootFactory aggregateRootFactory) : AggregateRoot, I
     public StateProperty<UserName> Name = StateProperty<UserName>.Empty;
     public StateProperty<bool> Deleted = StateProperty<bool>.Empty;
 
+    public Task Create() => ApplyIfNotDeleted(new UserCreated());
     public Task Onboard(UserName name) => ApplyIfNotDeleted(new UserOnBoarded(name));
     public Task Delete() => ApplyIfNotDeleted(new Events.UserDeleted());
     public Task ChangeUserName(UserName newName) =>

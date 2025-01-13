@@ -25,6 +25,7 @@ public class UnitOfWork(
     readonly ConcurrentDictionary<EventSequenceId, ConcurrentBag<EventForEventSourceIdWithSequenceNumber>> _events = [];
     readonly ConcurrentBag<ConstraintViolation> _constraintViolations = [];
     readonly ConcurrentBag<AppendError> _appendErrors = [];
+    readonly IList<IUnitOfWorkEnlistee> _enlistees = [];
 
     EventSequenceNumber? _lastCommittedEventSequenceNumber;
     Action<IUnitOfWork> _onCompleted = onCompleted;
@@ -109,6 +110,9 @@ public class UnitOfWork(
         eventSequenceNumber = _lastCommittedEventSequenceNumber;
         return eventSequenceNumber is not null;
     }
+
+    /// <inheritdoc/>
+    public void Enlist(IUnitOfWorkEnlistee enlistee) => _enlistees.Add(enlistee);
 
     /// <inheritdoc/>
     public void Dispose()
