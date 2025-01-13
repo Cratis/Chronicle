@@ -11,16 +11,18 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// </summary>
 public class AppendedEventsQueues : Grain, IAppendedEventsQueues
 {
-    readonly IAppendedEventsQueue[] _queues;
+    IAppendedEventsQueue[] _queues = [];
     int _nextQueue;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AppendedEventsQueues"/> class.
-    /// </summary>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-    public AppendedEventsQueues(IGrainFactory grainFactory)
+    /// <inheritdoc/>
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _queues = Enumerable.Range(0, 8).Select(_ => grainFactory.GetGrain<IAppendedEventsQueue>(_, this.GetPrimaryKeyString())).ToArray();
+        // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
+        DelayDeactivation(TimeSpan.MaxValue);
+
+        _queues = Enumerable.Range(0, 8).Select(_ => GrainFactory.GetGrain<IAppendedEventsQueue>(_, this.GetPrimaryKeyString())).ToArray();
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

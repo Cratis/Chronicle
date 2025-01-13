@@ -24,7 +24,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly ConcurrentQueue<IEnumerable<AppendedEvent>> _queue = new();
     readonly AsyncManualResetEvent _queueEvent = new();
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
-    readonly TaskCompletionSource _queueTaskCompletionSource = new();
+    readonly TaskCompletionSource _queueTaskCompletionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly Task _queueTask;
     ConcurrentBag<AppendedEventsQueueObserverSubscription> _subscriptions = [];
     IMeterScope<AppendedEventsQueue>? _metrics;
@@ -51,6 +51,9 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
+        DelayDeactivation(TimeSpan.MaxValue);
+
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
         _metrics = _meter.BeginScope(key, queueId);
         return base.OnActivateAsync(cancellationToken);
@@ -88,7 +91,18 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     public void Dispose()
     {
         _queueTaskCompletionSource.SetCanceled();
+
+        if (!_queueTask.IsCompleted)
+        {
+            try
+            {
+                _queueTask.Wait(1000);
+            }
+            catch { }
+        }
+
         _queueTask.Dispose();
+
         _metrics?.Dispose();
     }
 
