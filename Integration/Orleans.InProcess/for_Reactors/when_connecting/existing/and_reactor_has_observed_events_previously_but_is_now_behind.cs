@@ -34,14 +34,14 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind(contex
             ReactorObserver = GetObserverFor<ReactorWithoutDelay>();
             await ReactorObserver.WaitTillActive();
 
-            FirstEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10).ToList();
+            FirstEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10, "Blah").ToList();
             var result = await EventStore.EventLog.AppendMany(FirstEvents);
             var lastHandled = result.SequenceNumbers.Last();
 
             await ReactorObserver.WaitTillReachesEventSequenceNumber(lastHandled);
             reactor.Disconnect();
 
-            CatchupEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10).ToList();
+            CatchupEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10, "Blah").ToList();
             result = await EventStore.EventLog.AppendMany(CatchupEvents);
             LastEventSequenceNumberAfterDisconnect = result.SequenceNumbers.Last();
         }
@@ -49,9 +49,8 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind(contex
         async Task Because()
         {
             await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await ReactorObserver.WaitTillActive();
-            ReactorObserverState = await ReactorObserver.GetState();
-
+            // await ReactorObserver.WaitTillActive();
+            // ReactorObserverState = await ReactorObserver.GetState();
             await ReactorObserver.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
             ReactorObserverState = await ReactorObserver.GetState();
         }
