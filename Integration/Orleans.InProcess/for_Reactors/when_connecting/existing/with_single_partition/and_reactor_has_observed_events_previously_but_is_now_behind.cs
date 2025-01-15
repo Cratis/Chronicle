@@ -49,8 +49,6 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind(contex
         async Task Because()
         {
             await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            // await ReactorObserver.WaitTillActive();
-            // ReactorObserverState = await ReactorObserver.GetState();
             await ReactorObserver.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
             ReactorObserverState = await ReactorObserver.GetState();
         }
@@ -61,18 +59,4 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind(contex
 
     [Fact]
     void should_catch_up_all_events_added_while_disconnected() => Context.ReactorObserverState.LastHandledEventSequenceNumber.Value.ShouldEqual(Context.LastEventSequenceNumberAfterDisconnect.Value);
-}
-
-public static class EventForEventSourceIdHelpers
-{
-    public static EventForEventSourceId Create(object content, EventSourceId? eventSourceId = null, Auditing.Causation? causation = null)
-    {
-        return new EventForEventSourceId(
-            eventSourceId ?? $"Random event source {Random.Shared.Next()}",
-            content,
-            causation ?? new Auditing.Causation(DateTimeOffset.UtcNow, Auditing.CausationType.Unknown, new Dictionary<string, string>()));
-    }
-
-    public static IEnumerable<EventForEventSourceId> CreateMultiple(Func<int, object> content, int num, EventSourceId? eventSourceId = null)
-        => Enumerable.Range(0, num).Select(i => Create(content(i), eventSourceId));
 }
