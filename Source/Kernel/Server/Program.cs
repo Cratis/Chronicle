@@ -44,6 +44,9 @@ builder.WebHost.UseKestrel(options =>
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
 
+// Core Mongo database name for Chronicle
+const string database = "chronicle";
+
 builder.Host
    .UseDefaultServiceProvider(_ =>
    {
@@ -54,12 +57,11 @@ builder.Host
    .UseCratisMongoDB(mongo =>
    {
        mongo.Server = chronicleOptions.Storage.ConnectionDetails;
-       mongo.Database = "chronicle";
+       mongo.Database = database;
    })
    .UseOrleans(_ => _
-       .UseLocalhostClustering() // TODO: Implement MongoDB clustering
        .AddChronicleToSilo(_ => _
-           .WithMongoDB())
+           .WithMongoDB(chronicleOptions.Storage.ConnectionDetails, database))
        .UseDashboard(options =>
        {
            options.Host = "*";
