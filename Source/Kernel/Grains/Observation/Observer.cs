@@ -368,7 +368,7 @@ public class Observer(
 
                     var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                     tailEventSequenceNumber = firstEvent.Metadata.SequenceNumber;
-                    var result = await subscriber.OnNext(eventsToHandle, new(_subscription.Arguments));
+                    var result = await subscriber.OnNext(partition, eventsToHandle, new(_subscription.Arguments));
                     numEventsSuccessfullyHandled = result.HandledAnyEvents
                         ? eventsToHandle.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation)
                         : EventCount.Zero;

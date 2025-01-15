@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
+using Cratis.Collections;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
@@ -35,8 +36,7 @@ public class Reactors(
         logger.Observe();
 
         var registrationTcs = new TaskCompletionSource<RegisterReactor>(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource<ObserverSubscriberResult>? observationResultTcs = null;
-        TaskCompletionSource<IEnumerable<AppendedEvent>>? eventsTcs;
+        Dictionary<EventSourceId, TaskCompletionSource<ObserverSubscriberResult>> observationResultTcs = [];
         IReactor clientObserver = null!;
 
         messages.Subscribe(message =>
@@ -68,7 +68,12 @@ public class Reactors(
                         result.ExceptionMessages,
                         result.ExceptionStackTrace);
 
-                    observationResultTcs?.SetResult(subscriberResult);
+                    if (observationResultTcs.TryGetValue(result.Partition, out var tcs))
+                    {
+                        tcs.SetResult(subscriberResult);
+                        observationResultTcs.Remove(result.Partition);
+                    }
+
                     break;
             }
         });
@@ -105,28 +110,17 @@ public class Reactors(
                     await clientObserver.SetDefinitionAndSubscribe(registration.Reactor.ToChronicle());
                 }
 
-                eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>(TaskCreationOptions.RunContinuationsAsynchronously);
                 reactorMediator.Subscribe(
                     registration.Reactor.ReactorId,
                     registration.ConnectionId,
-                    (events, tcs) =>
+                    (partition, events, tcs) =>
                     {
-                        observationResultTcs = tcs;
-                        eventsTcs.SetResult(events);
+                        observationResultTcs[partition] = tcs;
+                        var eventsToObserve = events.Select(_ => _.ToContract()).ToArray();
+                        observer.OnNext(new EventsToObserve { Partition = partition.Value.ToString()!, Events = eventsToObserve });
                     });
 
-                while (!context.CancellationToken.IsCancellationRequested)
-                {
-                    var events = await eventsTcs.Task;
-                    var eventsToObserve = events.Select(_ => _.ToContract()).ToArray();
-                    observer.OnNext(new EventsToObserve { Events = eventsToObserve });
-                    if (context.CancellationToken.IsCancellationRequested)
-                    {
-                        break;
-                    }
-
-                    eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>(TaskCreationOptions.RunContinuationsAsynchronously);
-                }
+                await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 
                 logger.Disconnected(
                     registration.Reactor.ReactorId,
@@ -148,7 +142,7 @@ public class Reactors(
             finally
             {
                 reactorMediator.Disconnected(observerId, connectionId);
-                observationResultTcs?.SetResult(ObserverSubscriberResult.Disconnected());
+                observationResultTcs.Values.ForEach(_ => _.SetResult(ObserverSubscriberResult.Disconnected()));
                 await clientObserver!.Unsubscribe();
                 clientObserver = null!;
             }
@@ -162,8 +156,7 @@ public class Reactors(
             observableObserver?.OnCompleted();
             clientObserver?.Unsubscribe().GetAwaiter().GetResult();
             reactorMediator.Disconnected(observerId, connectionId);
-            observationResultTcs?.TrySetCanceled();
-
+            observationResultTcs.Values.ForEach(_ => _.TrySetCanceled());
             register?.Dispose();
         });
 

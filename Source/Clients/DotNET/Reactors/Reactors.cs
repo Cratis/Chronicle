@@ -227,6 +227,7 @@ public class Reactors : IReactors
 
         var result = new ReactorResult
         {
+            Partition = events.Partition,
             State = state,
             LastSuccessfulObservation = lastSuccessfullyObservedEvent,
             ExceptionMessages = exceptionMessages.ToList(),

@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.DependencyInjection;
 
@@ -30,12 +31,13 @@ public class ReactorMediator : IReactorMediator
     public void OnNext(
         ReactorId reactorId,
         ConnectionId connectionId,
+        Key partition,
         IEnumerable<AppendedEvent> events,
         TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource)
     {
         if (_observers.TryGetValue(new(reactorId, connectionId), out var observable))
         {
-            observable(events, taskCompletionSource);
+            observable(partition, events, taskCompletionSource);
         }
         else
         {

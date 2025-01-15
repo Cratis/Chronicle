@@ -43,7 +43,7 @@ public class ReducerObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
         foreach (var @event in events)
         {
