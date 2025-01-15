@@ -65,9 +65,7 @@ public class Routing(
     {
         return Task.FromResult(state with
         {
-            EventTypes = _subscription.IsSubscribed ? _subscription.EventTypes : state.EventTypes,
-            NextEventSequenceNumber = _tailEventSequenceNumber.Next(),
-            NextEventSequenceNumberForEventTypes = _tailEventSequenceNumberForEventTypes.Next()
+            EventTypes = _subscription.IsSubscribed ? _subscription.EventTypes : state.EventTypes
         });
     }
 
@@ -118,6 +116,12 @@ public class Routing(
         else
         {
             logger.Observing();
+            state = state with
+            {
+                NextEventSequenceNumber = _tailEventSequenceNumber.Next(),
+                NextEventSequenceNumberForEventTypes = _tailEventSequenceNumberForEventTypes.Next()
+            };
+
             await StateMachine.TransitionTo<Observing>();
         }
 

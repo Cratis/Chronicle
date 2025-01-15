@@ -129,6 +129,13 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Notify that the observer has been caught up.
+    /// </summary>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
+    /// <returns>Awaitable task.</returns>
+    Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
     /// Notify that the partition was caught.
     /// </summary>
     /// <param name="partition">The partition that has caught up.</param>

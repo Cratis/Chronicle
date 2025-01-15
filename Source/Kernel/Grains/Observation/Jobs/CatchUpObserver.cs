@@ -37,7 +37,7 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
             }
         }
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.TransitionTo<Routing>();
+        await observer.CaughtUp(State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>
