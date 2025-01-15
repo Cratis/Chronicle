@@ -12,6 +12,11 @@ namespace Cratis.Chronicle.Setup;
 public interface IChronicleBuilder
 {
     /// <summary>
+    /// Gets the <see cref="ISiloBuilder"/> for the builder.
+    /// </summary>
+    ISiloBuilder SiloBuilder { get; }
+
+    /// <summary>
     /// Gets the <see cref="IServiceCollection"/> for the builder.
     /// </summary>
     IServiceCollection Services { get; }
