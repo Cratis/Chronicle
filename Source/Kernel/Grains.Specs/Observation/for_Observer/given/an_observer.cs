@@ -13,6 +13,7 @@ using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute.ClearExtensions;
 using Orleans.Core;
 using Orleans.Streams;
 using Orleans.TestKit;
