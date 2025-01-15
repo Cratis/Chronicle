@@ -22,7 +22,7 @@ public class ReactorHandler(
     ReactorId reactorId,
     EventSequenceId eventSequenceId,
     IReactorInvoker reactorInvoker,
-    ICausationManager causationManager)
+    ICausationManager causationManager) : IDisposable
 {
     /// <summary>
     /// The Reactor id causation property.
@@ -54,6 +54,8 @@ public class ReactorHandler(
     /// </summary>
     public static readonly CausationType CausationType = new("Client Reactor");
 
+    readonly CancellationTokenSource _cancellationTokenSource = new();
+
     /// <summary>
     /// Gets the unique identifier of the Reactor.
     /// </summary>
@@ -68,6 +70,11 @@ public class ReactorHandler(
     /// Gets the event types for the Reactor.
     /// </summary>
     public IEnumerable<EventType> EventTypes => reactorInvoker.EventTypes;
+
+    /// <summary>
+    /// Gets the <see cref="CancellationToken"/> for the handler.
+    /// </summary>
+    public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
     /// <summary>
     /// Handle next event.
@@ -94,4 +101,12 @@ public class ReactorHandler(
 
         BaseIdentityProvider.ClearCurrentIdentity();
     }
+
+    /// <summary>
+    /// Disconnect the handler.
+    /// </summary>
+    public void Disconnect() => _cancellationTokenSource.Cancel();
+
+    /// <inheritdoc/>
+    public void Dispose() => _cancellationTokenSource.Dispose();
 }

@@ -21,6 +21,14 @@ public interface IReactors
     Task Register();
 
     /// <summary>
+    /// Registers a <typeparamref name="TReactor"/> reactor with Chronicle.
+    /// </summary>
+    /// <typeparam name="TReactor">The reactor type.</typeparam>
+    /// <returns>Awaitable task.</returns>
+    Task<ReactorHandler> Register<TReactor>()
+        where TReactor : IReactor;
+
+    /// <summary>
     /// Gets a specific handler by its <see cref="ReactorId"/>.
     /// </summary>
     /// <param name="id"><see cref="ReactorId"/> to get for.</param>
