@@ -33,21 +33,9 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Install .NET and ASP.NET Core runtimes (v8.0.12)
-        run: |
-          # Download and install .NET runtime
-          wget https://download.visualstudio.microsoft.com/download/pr/a91ddad4-a3c2-4303-9efc-1ca6b7af850c/be1763df9211599df1cf1c6f504b3c41/dotnet-sdk-8.0.405-linux-x64.tar.gz
-          mkdir -p $HOME/dotnet && tar zxf dotnet-sdk-8.0.405-linux-x64.tar.gz -C $HOME/dotnet
-          export DOTNET_ROOT=$HOME/dotnet
-          export PATH=$PATH:$HOME/dotnet
-
-          # Verify installations
-          dotnet --list-sdks
-          dotnet --list-runtimes
-
-          ls /usr/share/dotnet/shared/Microsoft.AspNetCore.App/
+          dotnet-version: |
+            8.0.12
+            ${{ env.DOTNET_VERSION }}
 
       - name: Build
         run: dotnet build --configuration Release
