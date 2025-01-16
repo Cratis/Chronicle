@@ -11,6 +11,7 @@ public class ReactorThatCanFail(TaskCompletionSource tcs) : IReactor
 {
     public bool ShouldFail { get; set; }
     public TimeSpan HandleTime { get; set; } = TimeSpan.Zero;
+    public int HandledEvents;
 
     public async Task OnSomeEvent(SomeEvent evt, EventContext ctx)
     {
@@ -20,6 +21,18 @@ public class ReactorThatCanFail(TaskCompletionSource tcs) : IReactor
         {
             ShouldFail = false;
             throw new Exception("Something went wrong");
+        }
+
+        Interlocked.Increment(ref HandledEvents);
+    }
+
+    public async Task WaitTillHandledEventReaches(int count, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpan.FromSeconds(5);
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (HandledEvents != count)
+        {
+            await Task.Delay(20, cts.Token);
         }
     }
 }

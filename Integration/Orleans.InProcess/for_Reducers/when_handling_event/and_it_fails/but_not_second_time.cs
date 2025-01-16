@@ -50,6 +50,7 @@ public class but_not_second_time(context context) : Given<context>(context)
 
             FailedPartitionsAfterRetry = await GetFailedPartitions();
             ObserverState = await ReducerObserver.GetState();
+            await Observers[1].WaitTillHandledEventReaches(1);
         }
     }
 

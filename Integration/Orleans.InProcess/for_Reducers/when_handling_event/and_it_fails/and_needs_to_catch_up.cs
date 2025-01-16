@@ -63,6 +63,7 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
 
             FailedPartitionsAfterRetry = await GetFailedPartitions();
             ObserverState = await ReducerObserver.GetState();
+            await Observers[2].WaitTillHandledEventReaches(1);
         }
     }
 

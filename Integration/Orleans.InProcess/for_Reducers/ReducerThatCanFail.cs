@@ -11,6 +11,7 @@ public class ReducerThatCanFail(TaskCompletionSource tcs) : IReducerFor<SomeRead
 {
     public bool ShouldFail { get; set; }
     public TimeSpan HandleTime { get; set; } = TimeSpan.Zero;
+    public int HandledEvents;
 
     public async Task<SomeReadModel?> OnSomeEvent(SomeEvent evt, SomeReadModel? input, EventContext ctx)
     {
@@ -22,7 +23,19 @@ public class ReducerThatCanFail(TaskCompletionSource tcs) : IReducerFor<SomeRead
             throw new Exception("Something went wrong");
         }
 
+
+        Interlocked.Increment(ref HandledEvents);
         input ??= new SomeReadModel(0);
         return input with { Number = evt.Number };
+    }
+
+    public async Task WaitTillHandledEventReaches(int count, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpan.FromSeconds(5);
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (HandledEvents != count)
+        {
+            await Task.Delay(20, cts.Token);
+        }
     }
 }
