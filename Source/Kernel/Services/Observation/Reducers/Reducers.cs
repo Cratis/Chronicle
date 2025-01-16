@@ -13,6 +13,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
+using Cratis.Collections;
 using Microsoft.Extensions.Logging;
 using NJsonSchema;
 using ProtoBuf.Grpc;
@@ -42,9 +43,7 @@ public class Reducers(
         logger.Observe();
 
         var registrationTcs = new TaskCompletionSource<RegisterReducer>(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource<ReducerSubscriberResult>? reducerResultTcs = null;
-        TaskCompletionSource<ReduceOperation>? reduceOperationTcs;
-
+        Dictionary<EventSourceId, TaskCompletionSource<ReducerSubscriberResult>> reducerResultTcs = [];
         IReducer? clientObserver = null;
 
         var model = new Model(ModelName.NotSet, new JsonSchema());
@@ -83,7 +82,12 @@ public class Reducers(
                             result.ExceptionStackTrace),
                         expandoObjectConverter.ToExpandoObject(modelAsJson, model.Schema));
 
-                    reducerResultTcs?.SetResult(subscriberResult);
+                    if (reducerResultTcs.TryGetValue(result.Partition, out var tcs))
+                    {
+                        tcs.SetResult(subscriberResult);
+                        reducerResultTcs.Remove(result.Partition);
+                    }
+
                     break;
             }
         });
@@ -127,34 +131,24 @@ public class Reducers(
                         model = new Model(reducerDefinition.Model.Name, modelSchema);
                     }
 
-                    reduceOperationTcs = new TaskCompletionSource<ReduceOperation>(TaskCreationOptions.RunContinuationsAsynchronously);
                     reducerMediator.Subscribe(
                         registration.Reducer.ReducerId,
                         registration.ConnectionId,
                         (reduceOperation, tcs) =>
                         {
-                            reducerResultTcs = tcs;
-                            reduceOperationTcs.SetResult(reduceOperation);
+                            reducerResultTcs[reduceOperation.Partition] = tcs;
+                            var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.Schema).ToString();
+                            var message = new ReduceOperationMessage()
+                            {
+                                Partition = reduceOperation.Partition.Value.ToString()!,
+                                InitialState = initialState,
+                                Events = reduceOperation.Events.Select(_ => _.ToContract()).ToArray()
+                            };
+
+                            observer.OnNext(message);
                         });
 
-                    while (!context.CancellationToken.IsCancellationRequested)
-                    {
-                        var reduceOperation = await reduceOperationTcs.Task;
-                        var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.Schema).ToString();
-                        var message = new ReduceOperationMessage()
-                        {
-                            InitialState = initialState,
-                            Events = reduceOperation.Events.Select(_ => _.ToContract()).ToArray()
-                        };
-
-                        observer.OnNext(message);
-                        if (context.CancellationToken.IsCancellationRequested)
-                        {
-                            break;
-                        }
-
-                        reduceOperationTcs = new TaskCompletionSource<ReduceOperation>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    }
+                    await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 
                     logger.Disconnected(
                         registration.Reducer.ReducerId,
@@ -176,7 +170,7 @@ public class Reducers(
                 finally
                 {
                     reducerMediator.Disconnected(observerId, connectionId);
-                    reducerResultTcs?.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
+                    reducerResultTcs.Values.ForEach(_ => _.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject())));
                     await clientObserver!.Unsubscribe();
                     clientObserver = null;
                 }
@@ -192,7 +186,7 @@ public class Reducers(
             clientObserver?.Unsubscribe().GetAwaiter().GetResult();
 
             reducerMediator.Disconnected(observerId, connectionId);
-            reducerResultTcs?.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
+            reducerResultTcs.Values.ForEach(_ => _.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject())));
             clientObserver = null;
 
             register?.Dispose();

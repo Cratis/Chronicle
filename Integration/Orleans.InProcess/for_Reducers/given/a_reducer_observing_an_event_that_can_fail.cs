@@ -5,14 +5,14 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
 
-namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.given;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.given;
 
-public class a_reactor_observing_an_event_that_can_fail(GlobalFixture globalFixture, int numberOfObservations) : IntegrationSpecificationContext(globalFixture)
+public class a_reducer_observing_an_event_that_can_fail(GlobalFixture globalFixture, int numberOfObservations) : IntegrationSpecificationContext(globalFixture)
 {
     public TaskCompletionSource[] Tcs;
-    public ReactorThatCanFail[] Observers;
-    public IObserver ReactorObserver;
-    public override IEnumerable<Type> Reactors => [typeof(ReactorThatCanFail)];
+    public ReducerThatCanFail[] Observers;
+    public IObserver ReducerObserver;
+    public override IEnumerable<Type> Reducers => [typeof(ReducerThatCanFail)];
     public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
     public Concepts.Observation.ObserverId ObserverId;
     int _activationCount;
@@ -20,15 +20,15 @@ public class a_reactor_observing_an_event_that_can_fail(GlobalFixture globalFixt
     protected override void ConfigureServices(IServiceCollection services)
     {
         Tcs = Enumerable.Range(0, numberOfObservations).Select(_ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).ToArray();
-        Observers = Enumerable.Range(0, numberOfObservations).Select(index => new ReactorThatCanFail(Tcs[index])).ToArray();
+        Observers = Enumerable.Range(0, numberOfObservations).Select(index => new ReducerThatCanFail(Tcs[index])).ToArray();
         services.AddTransient(_ => Observers[_activationCount++]);
     }
 
     async Task Establish()
     {
-        ReactorObserver = GetObserverForReactor<ReactorThatCanFail>();
-        var reactorObserverState = await ReactorObserver.GetState();
-        ObserverId = reactorObserverState.Id;
+        ReducerObserver = GetObserverForReducer<ReducerThatCanFail>();
+        var reducerObserverState = await ReducerObserver.GetState();
+        ObserverId = reducerObserverState.Id;
     }
 
     protected Task<IEnumerable<FailedPartition>> GetFailedPartitions() => EventStore.Connection.Services.FailedPartitions.GetFailedPartitions(new()

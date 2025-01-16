@@ -61,17 +61,8 @@ public class Reducers(
                                     var readModelType = reducerType.GetReadModelType();
                                     reducerValidator.Validate(reducerType);
                                     var eventSequenceId = reducerType.GetEventSequenceId();
-                                    return new ReducerHandler(
-                                        reducerType.GetReducerId(),
-                                        eventSequenceId,
-                                        new ReducerInvoker(
-                                            eventTypes,
-                                            reducerType,
-                                            readModelType),
-                                        eventSerializer,
-                                        ShouldReducerBeActive(reducerType, readModelType)) as IReducerHandler;
+                                    return CreateHandlerFor(reducerType, readModelType) as IReducerHandler;
                                 });
-
         return Task.CompletedTask;
     }
 
@@ -85,6 +76,18 @@ public class Reducers(
             RegisterReducer(handler);
         }
         await Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<IReducerHandler> Register<TReducer, TModel>()
+        where TReducer : IReducerFor<TModel>
+    {
+        var reducerType = typeof(TReducer);
+        var modelType = typeof(TModel);
+        var handler = CreateHandlerFor(reducerType, modelType);
+        RegisterReducer(handler);
+        _handlers.Add(modelType, handler);
+        return Task.FromResult<IReducerHandler>(handler);
     }
 
     /// <inheritdoc/>
@@ -118,6 +121,28 @@ public class Reducers(
 
     /// <inheritdoc/>
     public bool HasReducerFor(Type modelType) => _handlers.ContainsKey(modelType);
+
+    ReducerHandler CreateHandlerFor(Type reducerType, Type modelType)
+    {
+        var handler = new ReducerHandler(
+            reducerType.GetReducerId(),
+            reducerType.GetEventSequenceId(),
+            new ReducerInvoker(
+                eventTypes,
+                reducerType,
+                modelType),
+            eventSerializer,
+            ShouldReducerBeActive(reducerType, modelType));
+
+        CancellationTokenRegistration? register = null;
+        register = handler.CancellationToken.Register(() =>
+        {
+            _handlers.Remove(modelType);
+            register?.Dispose();
+        });
+
+        return handler;
+    }
 
     void RegisterReducer(IReducerHandler handler)
     {
@@ -190,8 +215,17 @@ public class Reducers(
             var initialState = operation.InitialState is null ? null : JsonSerializer.Deserialize(operation.InitialState, handler.ReadModelType, jsonSerializerOptions);
             var reduceResult = await handler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider);
 
-            modelState = JsonSerializer.Serialize(reduceResult.ModelState, jsonSerializerOptions);
-            lastSuccessfullyObservedEvent = appendedEvents[^1].Metadata.SequenceNumber;
+            lastSuccessfullyObservedEvent = reduceResult.LastSuccessfullyObservedEvent;
+            if (reduceResult.IsSuccess)
+            {
+                modelState = JsonSerializer.Serialize(reduceResult.ModelState, jsonSerializerOptions);
+            }
+            else
+            {
+                exceptionMessages = reduceResult.ErrorMessages;
+                exceptionStackTrace = reduceResult.StackTrace;
+                state = ObservationState.Failed;
+            }
         }
         catch (Exception ex)
         {
@@ -203,6 +237,7 @@ public class Reducers(
 
         var result = new ReducerResult
         {
+            Partition = operation.Partition,
             ModelState = modelState,
             State = state,
             LastSuccessfulObservation = lastSuccessfullyObservedEvent,

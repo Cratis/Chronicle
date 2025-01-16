@@ -31,7 +31,7 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind(contex
         async Task Establish()
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            ReactorObserver = GetObserverFor<ReactorWithoutDelay>();
+            ReactorObserver = GetObserverForReactor<ReactorWithoutDelay>();
             await ReactorObserver.WaitTillActive();
 
             FirstEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10).ToList();

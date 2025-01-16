@@ -4,25 +4,25 @@
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
 
-namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.given;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.given;
 
-public class a_reactor_observing_an_event(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
+public class a_reducer_observing_an_event(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
 {
     public TaskCompletionSource Tcs;
-    public SomeReactor Reactor;
-    public IObserver ReactorObserver;
+    public SomeReducer Reducer;
+    public IObserver ReducerObserver;
     public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
-    public override IEnumerable<Type> Reactors => [typeof(SomeReactor)];
+    public override IEnumerable<Type> Reducers => [typeof(SomeReducer)];
 
     protected override void ConfigureServices(IServiceCollection services)
     {
         Tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        Reactor = new SomeReactor(Tcs);
-        services.AddSingleton(Reactor);
+        Reducer = new SomeReducer(Tcs);
+        services.AddSingleton(Reducer);
     }
 
     void Establish()
     {
-        ReactorObserver = GetObserverForReactor<SomeReactor>();
+        ReducerObserver = GetObserverForReducer<SomeReducer>();
     }
 }

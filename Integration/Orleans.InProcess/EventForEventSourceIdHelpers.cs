@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
 public static class EventForEventSourceIdHelpers
 {

@@ -76,7 +76,7 @@ public class ReducerObserverSubscriber(
                 reducerMediator.OnNext(
                     _key.ObserverId,
                     connectedClient.ConnectionId,
-                    new(events, initialState),
+                    new(partition, events, initialState),
                     reducerSubscriberResultTCS);
 
                 await reducerSubscriberResultTCS.Task.WaitAsync(timeout);
