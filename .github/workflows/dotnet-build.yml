@@ -47,6 +47,8 @@ jobs:
           dotnet --list-sdks
           dotnet --list-runtimes
 
+          ls /usr/share/dotnet/shared/Microsoft.AspNetCore.App/
+
       - name: Build
         run: dotnet build --configuration Release
 
