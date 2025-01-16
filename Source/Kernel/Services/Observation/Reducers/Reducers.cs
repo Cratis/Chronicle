@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json.Nodes;
@@ -43,7 +44,7 @@ public class Reducers(
         logger.Observe();
 
         var registrationTcs = new TaskCompletionSource<RegisterReducer>(TaskCreationOptions.RunContinuationsAsynchronously);
-        Dictionary<EventSourceId, TaskCompletionSource<ReducerSubscriberResult>> reducerResultTcs = [];
+        ConcurrentDictionary<EventSourceId, TaskCompletionSource<ReducerSubscriberResult>> reducerResultTcs = [];
         IReducer? clientObserver = null;
 
         var model = new Model(ModelName.NotSet, new JsonSchema());
@@ -85,7 +86,7 @@ public class Reducers(
                     if (reducerResultTcs.TryGetValue(result.Partition, out var tcs))
                     {
                         tcs.SetResult(subscriberResult);
-                        reducerResultTcs.Remove(result.Partition);
+                        reducerResultTcs.TryRemove(result.Partition, out _);
                     }
 
                     break;

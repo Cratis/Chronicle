@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
@@ -36,7 +37,7 @@ public class Reactors(
         logger.Observe();
 
         var registrationTcs = new TaskCompletionSource<RegisterReactor>(TaskCreationOptions.RunContinuationsAsynchronously);
-        Dictionary<EventSourceId, TaskCompletionSource<ObserverSubscriberResult>> reactorResultTcs = [];
+        ConcurrentDictionary<EventSourceId, TaskCompletionSource<ObserverSubscriberResult>> reactorResultTcs = [];
         IReactor clientObserver = null!;
 
         messages.Subscribe(message =>
@@ -71,7 +72,7 @@ public class Reactors(
                     if (reactorResultTcs.TryGetValue(result.Partition, out var tcs))
                     {
                         tcs.SetResult(subscriberResult);
-                        reactorResultTcs.Remove(result.Partition);
+                        reactorResultTcs.TryRemove(result.Partition, out _);
                     }
 
                     break;
