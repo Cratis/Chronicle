@@ -10,7 +10,6 @@ using Cratis.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Orleans.Concurrency;
 using Orleans.Providers;
 using Orleans.Utilities;
 
@@ -22,7 +21,6 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
 /// <typeparam name="TJobState">Type of state for the job.</typeparam>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Jobs)]
-[Reentrant]
 public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest>
     where TRequest : class
     where TJobState : JobState
@@ -312,6 +310,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         {
             _logger.StepSuccessfullyCompleted(stepId);
             State.Progress.SuccessfulSteps++;
+
             if ((await WriteState()).TryGetException(out var writeStateError))
             {
                 _logger.FailedUpdatingSuccessfulSteps(writeStateError, State.Progress.SuccessfulSteps);
