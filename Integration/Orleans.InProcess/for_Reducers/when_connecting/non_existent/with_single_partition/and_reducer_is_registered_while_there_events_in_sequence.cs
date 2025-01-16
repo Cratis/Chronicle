@@ -40,6 +40,7 @@ public class and_reducer_is_registered_while_there_events_in_sequence(context co
             await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
             ReducerObserver = GetObserverForReducer<ReducerWithoutDelay>();
             await ReducerObserver.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAppended);
+            await Reducer.WaitTillHandledEventReaches(Events.Count);
 
             ReducerObserverState = await ReducerObserver.GetState();
         }

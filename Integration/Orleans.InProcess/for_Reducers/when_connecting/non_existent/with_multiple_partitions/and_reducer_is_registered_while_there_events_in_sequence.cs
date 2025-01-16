@@ -20,7 +20,6 @@ using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunni
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_connecting.non_existent.with_multiple_partitions;
 
 [Collection(GlobalCollection.Name)]
-[Trait("Category", "Output")]
 public class and_reducer_is_registered_while_there_events_in_sequence(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : given.a_disconnected_reducer_observing_an_event(globalFixture)

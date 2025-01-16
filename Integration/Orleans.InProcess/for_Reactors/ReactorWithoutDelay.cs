@@ -16,4 +16,14 @@ public class ReactorWithoutDelay : IReactor
         Interlocked.Increment(ref HandledEvents);
         return Task.CompletedTask;
     }
+
+    public async Task WaitTillHandledEventReaches(int count, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpan.FromSeconds(5);
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (HandledEvents != count)
+        {
+            await Task.Delay(20, cts.Token);
+        }
+    }
 }

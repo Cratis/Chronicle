@@ -23,7 +23,6 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind(contex
         public List<EventForEventSourceId> FirstEvents;
         public List<EventForEventSourceId> CatchupEvents;
 
-        public SomeReactor Reactor;
         public ObserverState ReactorObserverState;
 
         public EventSequenceNumber LastEventSequenceNumberAfterDisconnect;
@@ -50,6 +49,7 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind(contex
         {
             await EventStore.Reactors.Register<ReactorWithoutDelay>();
             await ReactorObserver.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
+            await Reactor.WaitTillHandledEventReaches(FirstEvents.Count + CatchupEvents.Count);
             ReactorObserverState = await ReactorObserver.GetState();
         }
     }
@@ -59,4 +59,7 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind(contex
 
     [Fact]
     void should_catch_up_all_events_added_while_disconnected() => Context.ReactorObserverState.LastHandledEventSequenceNumber.Value.ShouldEqual(Context.LastEventSequenceNumberAfterDisconnect.Value);
+
+    [Fact]
+    void should_process_all_events() => Context.Reactor.HandledEvents.ShouldEqual(Context.FirstEvents.Count + Context.CatchupEvents.Count);
 }

@@ -10,47 +10,35 @@ using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Storage.Observation;
 using Humanizer;
-using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_connecting.existing.with_single_partition.and_reactor_has_observed_events_previously_but_is_now_behind.context;
+using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_connecting.non_existent.with_single_partition.and_reactor_is_registered_while_there_events_in_sequence.context;
 using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunningState;
 
-namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_connecting.existing.with_single_partition;
+namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_connecting.non_existent.with_single_partition;
 
 [Collection(GlobalCollection.Name)]
-public class and_reactor_has_observed_events_previously_but_is_now_behind(context context) : Given<context>(context)
+public class and_reactor_is_registered_while_there_events_in_sequence(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : given.a_disconnected_reactor_observing_an_event(globalFixture)
     {
-        public List<EventForEventSourceId> FirstEvents;
-        public List<EventForEventSourceId> CatchupEvents;
-
+        public List<EventForEventSourceId> Events;
         public ObserverState ReactorObserverState;
 
         public EventSequenceNumber LastEventSequenceNumberAfterDisconnect;
 
         async Task Establish()
         {
-            var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            ReactorObserver = GetObserverForReactor<ReactorWithoutDelay>();
-            await ReactorObserver.WaitTillActive();
-
-            FirstEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10, "Partition").ToList();
-            var result = await EventStore.EventLog.AppendMany(FirstEvents);
-            var lastHandled = result.SequenceNumbers.Last();
-
-            await ReactorObserver.WaitTillReachesEventSequenceNumber(lastHandled);
-            reactor.Disconnect();
-
-            CatchupEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10, "Partition").ToList();
-            result = await EventStore.EventLog.AppendMany(CatchupEvents);
+            Events = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10, "Partition").ToList();
+            var result = await EventStore.EventLog.AppendMany(Events);
             LastEventSequenceNumberAfterDisconnect = result.SequenceNumbers.Last();
         }
 
         async Task Because()
         {
+            ReactorObserver = GetObserverForReactor<ReactorWithoutDelay>();
             await EventStore.Reactors.Register<ReactorWithoutDelay>();
             await ReactorObserver.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
-            await Reactor.WaitTillHandledEventReaches(FirstEvents.Count + CatchupEvents.Count);
             ReactorObserverState = await ReactorObserver.GetState();
+            await Reactor.WaitTillHandledEventReaches(Events.Count);
         }
     }
 
@@ -61,5 +49,5 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind(contex
     void should_catch_up_all_events_added_while_disconnected() => Context.ReactorObserverState.LastHandledEventSequenceNumber.Value.ShouldEqual(Context.LastEventSequenceNumberAfterDisconnect.Value);
 
     [Fact]
-    void should_process_all_events() => Context.Reactor.HandledEvents.ShouldEqual(Context.FirstEvents.Count + Context.CatchupEvents.Count);
+    void should_process_all_events() => Context.Reactor.HandledEvents.ShouldEqual(Context.Events.Count);
 }
