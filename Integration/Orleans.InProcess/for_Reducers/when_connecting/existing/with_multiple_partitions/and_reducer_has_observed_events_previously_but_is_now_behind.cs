@@ -22,8 +22,6 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
     {
         public List<EventForEventSourceId> FirstEvents;
         public List<EventForEventSourceId> CatchupEvents;
-
-        public SomeReducer Reducer;
         public ObserverState ReducerObserverState;
 
         public EventSequenceNumber LastEventSequenceNumberAfterDisconnect;
