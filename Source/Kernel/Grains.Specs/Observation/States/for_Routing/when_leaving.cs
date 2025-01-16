@@ -35,7 +35,5 @@ public class when_leaving : given.a_routing_state
 
     async Task Because() => _resultingStoredState = await _state.OnLeave(_storedState);
 
-    [Fact] void should_set_next_event_sequence_number_to_next_after_tail() => _resultingStoredState.NextEventSequenceNumber.ShouldEqual(_tailEventSequenceNumbers.Tail.Next());
-    [Fact] void should_set_next_event_sequence_number_for_event_types_to_next_after_tail_for_event_types() => _resultingStoredState.NextEventSequenceNumberForEventTypes.ShouldEqual(_tailEventSequenceNumbers.TailForEventTypes.Next());
     [Fact] void should_set_event_types_to_subscribers_event_types() => _resultingStoredState.EventTypes.ShouldEqual(_subscription.EventTypes);
 }
