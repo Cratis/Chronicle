@@ -35,6 +35,25 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Install .NET and ASP.NET Core runtimes (v8.0.12)
+        run: |
+          # Download and install .NET runtime
+          wget https://dotnetcli.azureedge.net/dotnet/Runtime/8.0.12/dotnet-runtime-8.0.12-linux-x64.tar.gz
+          mkdir -p ~/.dotnet
+          tar zxf dotnet-runtime-8.0.12-linux-x64.tar.gz -C ~/.dotnet
+
+          # Download and install ASP.NET Core runtime
+          wget https://dotnetcli.azureedge.net/dotnet/aspnetcore/8.0.12/aspnetcore-runtime-8.0.12-linux-x64.tar.gz
+          tar zxf aspnetcore-runtime-8.0.12-linux-x64.tar.gz -C ~/.dotnet
+
+          # Set environment variables
+          export DOTNET_ROOT=~/.dotnet
+          export PATH=$DOTNET_ROOT:$PATH
+
+          # Verify installations
+          dotnet --list-sdks
+          dotnet --list-runtimes
+
       - name: Build
         run: dotnet build --configuration Release
 
