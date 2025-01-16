@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
+using Xunit.Abstractions;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.given;
 
