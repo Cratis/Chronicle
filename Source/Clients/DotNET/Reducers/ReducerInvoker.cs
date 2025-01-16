@@ -13,7 +13,6 @@ namespace Cratis.Chronicle.Reducers;
 /// </summary>
 public class ReducerInvoker : IReducerInvoker
 {
-    static readonly MethodInfo _getResultMethod = typeof(ReducerInvoker).GetMethod(nameof(GetResult), BindingFlags.Instance | BindingFlags.NonPublic)!;
     readonly Dictionary<Type, MethodInfo> _methodsByEventType = [];
     readonly Type _targetType;
 
@@ -45,7 +44,7 @@ public class ReducerInvoker : IReducerInvoker
     public Type ReadModelType { get; }
 
     /// <inheritdoc/>
-    public Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
+    public async Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
     {
         var actualReducer = serviceProvider.GetRequiredService(_targetType);
 
@@ -77,7 +76,9 @@ public class ReducerInvoker : IReducerInvoker
                     }
                     else
                     {
-                        initialReadModelContent = _getResultMethod.GetGenericMethodDefinition().MakeGenericMethod(ReadModelType).Invoke(this, [returnValue]);
+                        var task = (Task)returnValue;
+                        await task;
+                        initialReadModelContent = task.GetType().GetProperty(nameof(Task<int>.Result))?.GetValue(task);
                     }
 
                     lastSuccessfulObservedEventAndContext = eventAndContext;
@@ -85,22 +86,18 @@ public class ReducerInvoker : IReducerInvoker
             }
             catch (Exception ex)
             {
-                return Task.FromResult(
-                        new ReduceResult(
+                return new ReduceResult(
                             initialReadModelContent,
                             lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                             ex.GetAllMessages(),
-                            ex.StackTrace ?? string.Empty));
+                            ex.StackTrace ?? string.Empty);
             }
         }
 
-        return Task.FromResult(
-            new ReduceResult(
+        return new ReduceResult(
                 initialReadModelContent,
                 lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 [],
-                string.Empty));
+                string.Empty);
     }
-
-    TReadModel GetResult<TReadModel>(Task<TReadModel> task) => task.GetAwaiter().GetResult();
 }

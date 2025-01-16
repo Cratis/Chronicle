@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -25,7 +24,7 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
     public override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        if (!State.HandledAllEvents)
+        if (!AllStepsCompletedSuccessfully)
         {
             if (State.LastHandledEventSequenceNumber.IsActualValue)
             {
@@ -36,8 +35,9 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
                 logger.NoneEventsWereHandled(nameof(CatchUpObserver));
             }
         }
+
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.TransitionTo<Routing>();
+        await observer.CaughtUp(State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>

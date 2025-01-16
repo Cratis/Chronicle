@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation.Placement;
 using Microsoft.Extensions.Logging;
@@ -42,7 +43,7 @@ public class ReactorObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
         foreach (var @event in events)
         {
@@ -63,7 +64,7 @@ public class ReactorObserverSubscriber(
         try
         {
             var timeout = await configurationProvider.GetSubscriberTimeoutForObserver(_key);
-            reactorMediator.OnNext(_key.ObserverId, connectedClient.ConnectionId, events, tcs);
+            reactorMediator.OnNext(_key.ObserverId, connectedClient.ConnectionId, partition, events, tcs);
             return await tcs.Task.WaitAsync(timeout);
         }
         catch (TaskCanceledException taskCanceledException)

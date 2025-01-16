@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
@@ -9,6 +10,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
+using Cratis.Collections;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
@@ -35,8 +37,7 @@ public class Reactors(
         logger.Observe();
 
         var registrationTcs = new TaskCompletionSource<RegisterReactor>(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource<ObserverSubscriberResult>? observationResultTcs = null;
-        TaskCompletionSource<IEnumerable<AppendedEvent>>? eventsTcs;
+        ConcurrentDictionary<EventSourceId, TaskCompletionSource<ObserverSubscriberResult>> reactorResultTcs = [];
         IReactor clientObserver = null!;
 
         messages.Subscribe(message =>
@@ -68,7 +69,12 @@ public class Reactors(
                         result.ExceptionMessages,
                         result.ExceptionStackTrace);
 
-                    observationResultTcs?.SetResult(subscriberResult);
+                    if (reactorResultTcs.TryGetValue(result.Partition, out var tcs))
+                    {
+                        tcs.SetResult(subscriberResult);
+                        reactorResultTcs.TryRemove(result.Partition, out _);
+                    }
+
                     break;
             }
         });
@@ -105,28 +111,17 @@ public class Reactors(
                     await clientObserver.SetDefinitionAndSubscribe(registration.Reactor.ToChronicle());
                 }
 
-                eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>(TaskCreationOptions.RunContinuationsAsynchronously);
                 reactorMediator.Subscribe(
                     registration.Reactor.ReactorId,
                     registration.ConnectionId,
-                    (events, tcs) =>
+                    (partition, events, tcs) =>
                     {
-                        observationResultTcs = tcs;
-                        eventsTcs.SetResult(events);
+                        reactorResultTcs[partition] = tcs;
+                        var eventsToObserve = events.Select(_ => _.ToContract()).ToArray();
+                        observer.OnNext(new EventsToObserve { Partition = partition.Value.ToString()!, Events = eventsToObserve });
                     });
 
-                while (!context.CancellationToken.IsCancellationRequested)
-                {
-                    var events = await eventsTcs.Task;
-                    var eventsToObserve = events.Select(_ => _.ToContract()).ToArray();
-                    observer.OnNext(new EventsToObserve { Events = eventsToObserve });
-                    if (context.CancellationToken.IsCancellationRequested)
-                    {
-                        break;
-                    }
-
-                    eventsTcs = new TaskCompletionSource<IEnumerable<AppendedEvent>>(TaskCreationOptions.RunContinuationsAsynchronously);
-                }
+                await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 
                 logger.Disconnected(
                     registration.Reactor.ReactorId,
@@ -148,7 +143,7 @@ public class Reactors(
             finally
             {
                 reactorMediator.Disconnected(observerId, connectionId);
-                observationResultTcs?.SetResult(ObserverSubscriberResult.Disconnected());
+                reactorResultTcs.Values.ForEach(_ => _.SetResult(ObserverSubscriberResult.Disconnected()));
                 await clientObserver!.Unsubscribe();
                 clientObserver = null!;
             }
@@ -162,8 +157,7 @@ public class Reactors(
             observableObserver?.OnCompleted();
             clientObserver?.Unsubscribe().GetAwaiter().GetResult();
             reactorMediator.Disconnected(observerId, connectionId);
-            observationResultTcs?.TrySetCanceled();
-
+            reactorResultTcs.Values.ForEach(_ => _.TrySetCanceled());
             register?.Dispose();
         });
 

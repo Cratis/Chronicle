@@ -218,6 +218,15 @@ public class Observer(
     }
 
     /// <inheritdoc/>
+    public async Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        await WriteStateAsync();
+        await TransitionTo<Routing>();
+    }
+
+    /// <inheritdoc/>
     public async Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -271,6 +280,15 @@ public class Observer(
         logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        await WriteStateAsync();
+        await TransitionTo<Routing>();
     }
 
     /// <inheritdoc/>
@@ -359,7 +377,7 @@ public class Observer(
 
                     var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                     tailEventSequenceNumber = firstEvent.Metadata.SequenceNumber;
-                    var result = await subscriber.OnNext(eventsToHandle, new(_subscription.Arguments));
+                    var result = await subscriber.OnNext(partition, eventsToHandle, new(_subscription.Arguments));
                     numEventsSuccessfullyHandled = result.HandledAnyEvents
                         ? eventsToHandle.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation)
                         : EventCount.Zero;

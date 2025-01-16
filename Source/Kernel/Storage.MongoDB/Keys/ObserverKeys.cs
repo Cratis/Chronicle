@@ -28,7 +28,7 @@ public class ObserverKeys(
     public IAsyncEnumerator<Key> GetAsyncEnumerator(CancellationToken cancellationToken = default)
     {
         var filter = Builders<Event>.Filter.And(
-            Builders<Event>.Filter.Gt(_ => _.SequenceNumber, fromEventSequenceNumber),
+            Builders<Event>.Filter.Gte(_ => _.SequenceNumber, fromEventSequenceNumber),
             Builders<Event>.Filter.In(_ => _.Type, _eventTypes));
 
         var cursor = collection.DistinctAsync(_ => _.EventSourceId, filter, cancellationToken: cancellationToken)

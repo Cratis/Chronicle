@@ -95,6 +95,13 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber);
 
     /// <summary>
+    /// Notify that the observer has been replayed.
+    /// </summary>
+    /// <param name="lastHandledEventSequenceNumber">The <see cref="EventSequenceNumber"/> it has been replayed to.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
     /// Notify that the partition has been replayed.
     /// </summary>
     /// <param name="partition">The partition that has been replayed.</param>
@@ -127,6 +134,13 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
     Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
+    /// Notify that the observer has been caught up.
+    /// </summary>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
+    /// <returns>Awaitable task.</returns>
+    Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Notify that the partition was caught.

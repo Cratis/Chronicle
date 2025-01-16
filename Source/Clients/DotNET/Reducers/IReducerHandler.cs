@@ -37,6 +37,11 @@ public interface IReducerHandler
     bool IsActive { get; }
 
     /// <summary>
+    /// Gets the <see cref="CancellationToken"/> for the handler.
+    /// </summary>
+    CancellationToken CancellationToken { get; }
+
+    /// <summary>
     /// Gets the <see cref="IReducerInvoker"/> that will perform the invocations.
     /// </summary>
     IReducerInvoker Invoker { get; }
@@ -49,4 +54,9 @@ public interface IReducerHandler
     /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for creating the actual instance of the reducer.</param>
     /// <returns>Reduced read model.</returns>
     Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial, IServiceProvider serviceProvider);
+
+    /// <summary>
+    /// Disconnect the handler.
+    /// </summary>
+    void Disconnect();
 }

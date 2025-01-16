@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
 
@@ -13,7 +14,7 @@ public class and_subscriber_throws_an_exception : given.an_observer_with_subscri
 
     void Establish() =>
         _subscriber
-            .When(_ => _.OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>()))
+            .When(_ => _.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>()))
             .Throws(new ExceptionWithPreDefinedStackTrace(_exceptionMessage, _exceptionStackTrace));
 
     async Task Because() => await _observer.Handle(_eventSourceId, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);

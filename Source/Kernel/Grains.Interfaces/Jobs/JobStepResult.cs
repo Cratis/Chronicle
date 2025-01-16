@@ -22,7 +22,7 @@ public class JobStepResult(Result<object?, PerformJobStepError> result)
     /// </summary>
     /// <param name="input">The optional result object.</param>
     /// <returns>The <see cref="JobStepResult"/>.</returns>
-    public static JobStepResult Succeeded(object? input = default) => new(Concepts.Result.Success<object?, PerformJobStepError>(input));
+    public static JobStepResult Succeeded(object? input = default) => new(Result.Success<object?, PerformJobStepError>(input));
 
     /// <summary>
     /// Creates a failed <see cref="JobStepResult"/>.

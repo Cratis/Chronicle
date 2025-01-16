@@ -26,7 +26,7 @@ public class a_reactor_observing_an_event_that_can_fail(GlobalFixture globalFixt
 
     async Task Establish()
     {
-        ReactorObserver = GetObserverFor<ReactorThatCanFail>();
+        ReactorObserver = GetObserverForReactor<ReactorThatCanFail>();
         var reactorObserverState = await ReactorObserver.GetState();
         ObserverId = reactorObserverState.Id;
     }
