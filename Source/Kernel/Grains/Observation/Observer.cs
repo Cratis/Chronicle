@@ -218,6 +218,15 @@ public class Observer(
     }
 
     /// <inheritdoc/>
+    public async Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        await WriteStateAsync();
+        await TransitionTo<Routing>();
+    }
+
+    /// <inheritdoc/>
     public async Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
