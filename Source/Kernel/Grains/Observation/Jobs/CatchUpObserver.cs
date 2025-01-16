@@ -35,11 +35,9 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
                 logger.NoneEventsWereHandled(nameof(CatchUpObserver));
             }
         }
-        else
-        {
-            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-            await observer.CaughtUp(State.LastHandledEventSequenceNumber);
-        }
+
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+        await observer.CaughtUp(State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>
