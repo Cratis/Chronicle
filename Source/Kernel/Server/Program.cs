@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -44,9 +45,6 @@ builder.WebHost.UseKestrel(options =>
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
 
-// Core Mongo database name for Chronicle
-const string database = "chronicle";
-
 builder.Host
    .UseDefaultServiceProvider(_ =>
    {
@@ -57,17 +55,18 @@ builder.Host
    .UseCratisMongoDB(mongo =>
    {
        mongo.Server = chronicleOptions.Storage.ConnectionDetails;
-       mongo.Database = database;
+       mongo.Database = WellKnownDatabaseNames.Chronicle;
    })
    .UseOrleans(_ => _
-       .AddChronicleToSilo(_ => _
-           .WithMongoDB(chronicleOptions.Storage.ConnectionDetails, database))
-       .UseDashboard(options =>
-       {
-           options.Host = "*";
-           options.Port = 8081;
-           options.HostSelf = true;
-       }))
+        .UseLocalhostClustering()
+        .AddChronicleToSilo(_ => _
+           .WithMongoDB(chronicleOptions.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle))
+        .UseDashboard(options =>
+        {
+            options.Host = "*";
+            options.Port = 8081;
+            options.HostSelf = true;
+        }))
    .ConfigureServices((context, services) =>
    {
        services

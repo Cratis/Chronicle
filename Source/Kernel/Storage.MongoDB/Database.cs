@@ -33,7 +33,7 @@ public class Database : IDatabase
         var settings = MongoClientSettings.FromUrl(url);
         settings.DirectConnection = mongoDBOptions.Value.DirectConnection;
         var client = clientManager.GetClientFor(settings);
-        _database = client.GetDatabase("chronicle+main");
+        _database = client.GetDatabase(WellKnownDatabaseNames.Chronicle);
         _clientManager = clientManager;
         _mongoDBOptions = mongoDBOptions;
     }
