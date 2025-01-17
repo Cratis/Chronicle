@@ -5,11 +5,9 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
-using Cratis.Chronicle.Storage.MongoDB.Reminders;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson.Serialization;
-using Orleans.Providers.MongoDB.Configuration;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -31,11 +29,12 @@ public static class MongoDBChronicleBuilderExtensions
     {
         builder.SiloBuilder
             .UseMongoDBClient(server)
-            .UseMongoDBClustering(options =>
-            {
-                options.DatabaseName = database;
-                options.Strategy = MongoDBMembershipStrategy.Multiple;
-            })
+
+            // .UseMongoDBClustering(options =>
+            // {
+            //     options.DatabaseName = database;
+            //     options.Strategy = MongoDBMembershipStrategy.Multiple;
+            // })
             .UseMongoDBReminders(options => options.DatabaseName = database);
 
         builder.ConfigureServices(services =>
@@ -55,7 +54,6 @@ public static class MongoDBChronicleBuilderExtensions
             _mongoDBArtifactsInitialized = true;
         }
 
-        builder.ConfigureServices(services => services.AddSingleton<IReminderTable, ReminderTable>());
         return builder;
     }
 }
