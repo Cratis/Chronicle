@@ -73,7 +73,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/wwwroot
+          path: ./Source/Workbench/Web/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Get yarn cache directory path
@@ -107,7 +107,7 @@ jobs:
           yarn build
 
       - name: Build Workbench
-        working-directory: ./Source/Workbench
+        working-directory: ./Source/Workbench/Web
         run: |
           yarn build
 
@@ -215,7 +215,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/wwwroot
+          path: ./Source/Workbench/Web/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU
