@@ -5,7 +5,6 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
-using Cratis.Chronicle.Storage.MongoDB.Reminders;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson.Serialization;
@@ -23,9 +22,21 @@ public static class MongoDBChronicleBuilderExtensions
     /// Configure Chronicle to use MongoDB.
     /// </summary>
     /// <param name="builder"><see cref="IChronicleBuilder"/> to configure.</param>
+    /// <param name="server">Connection string for the MongoDB server.</param>
+    /// <param name="database">Name of the database to use.</param>
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
-    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder)
+    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database)
     {
+        builder.SiloBuilder
+            .UseMongoDBClient(server)
+
+            // .UseMongoDBClustering(options =>
+            // {
+            //     options.DatabaseName = database;
+            //     options.Strategy = MongoDBMembershipStrategy.Multiple;
+            // })
+            .UseMongoDBReminders(options => options.DatabaseName = database);
+
         builder.ConfigureServices(services =>
         {
             services.AddSingleton<IDatabase, Database>();
@@ -43,7 +54,6 @@ public static class MongoDBChronicleBuilderExtensions
             _mongoDBArtifactsInitialized = true;
         }
 
-        builder.ConfigureServices(services => services.AddSingleton<IReminderTable, ReminderTable>());
         return builder;
     }
 }

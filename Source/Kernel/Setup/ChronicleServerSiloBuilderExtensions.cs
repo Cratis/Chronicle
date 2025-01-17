@@ -50,7 +50,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
 
         builder.Services.AddChronicleMeter();
-        var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration);
+        var chronicleBuilder = new ChronicleBuilder(builder, builder.Services, builder.Configuration);
         configure?.Invoke(chronicleBuilder);
         return builder;
     }

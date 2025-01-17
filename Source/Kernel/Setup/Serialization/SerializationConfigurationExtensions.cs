@@ -34,6 +34,39 @@ public static class SerializationConfigurationExtensions
         return siloBuilder;
     }
 
+    /// <summary>
+    /// Adds the serializer for appended events.
+    /// </summary>
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
+    public static IServiceCollection AddAppendedEventSerializer(this IServiceCollection services)
+    {
+        services.AddSerializer(builder =>
+        {
+            builder.Services
+                .AddCompleteSerializer<AppendedEventSerializer>()
+                .AddCompleteSerializer<OneOfSerializer>();
+        });
+        return services;
+    }
+
+    /// <summary>
+    /// Add a complete serializer, convenience method when a serializer implements all the interfaces.
+    /// </summary>
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <typeparam name="TSerializer">Type of serializer.</typeparam>
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
+    public static IServiceCollection AddCompleteSerializer<TSerializer>(this IServiceCollection services)
+        where TSerializer : class, IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
+    {
+        services.AddSingleton<TSerializer>();
+        services.AddSingleton<IGeneralizedCodec, TSerializer>();
+        services.AddSingleton<IGeneralizedCopier, TSerializer>();
+        services.AddSingleton<ITypeFilter, TSerializer>();
+
+        return services;
+    }
+
     static void Configure(this IServiceCollection services)
     {
         var options = new JsonSerializerOptions(Globals.JsonSerializerOptions);
@@ -56,27 +89,5 @@ public static class SerializationConfigurationExtensions
             serializerBuilder => serializerBuilder.AddJsonSerializer(
             _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Cratis") ?? false),
             options));
-    }
-
-    static IServiceCollection AddAppendedEventSerializer(this IServiceCollection services)
-    {
-        services.AddSerializer(builder =>
-        {
-            builder.Services
-                .AddCompleteSerializer<AppendedEventSerializer>()
-                .AddCompleteSerializer<OneOfSerializer>();
-        });
-        return services;
-    }
-
-    static IServiceCollection AddCompleteSerializer<TSerializer>(this IServiceCollection services)
-        where TSerializer : class, IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
-    {
-        services.AddSingleton<TSerializer>();
-        services.AddSingleton<IGeneralizedCodec, TSerializer>();
-        services.AddSingleton<IGeneralizedCopier, TSerializer>();
-        services.AddSingleton<ITypeFilter, TSerializer>();
-
-        return services;
     }
 }
