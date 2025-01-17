@@ -9,10 +9,14 @@ namespace Cratis.Chronicle.Setup;
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleBuilder"/>.
 /// </summary>
+/// <param name="siloBuilder"><see cref="ISiloBuilder"/> to use.</param>
 /// <param name="services"><see cref="IServiceCollection"/> to use.</param>
 /// <param name="configuration"><see cref="IConfiguration"/> to use.</param>
-public class ChronicleBuilder(IServiceCollection services, IConfiguration configuration) : IChronicleBuilder
+public class ChronicleBuilder(ISiloBuilder siloBuilder, IServiceCollection services, IConfiguration configuration) : IChronicleBuilder
 {
+    /// <inheritdoc/>
+    public ISiloBuilder SiloBuilder { get; } = siloBuilder;
+
     /// <inheritdoc/>
     public IServiceCollection Services { get; } = services;
 
