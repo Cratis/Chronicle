@@ -6,11 +6,13 @@
   href: event-source.md
 - name: Event Store
   href: event-store.md
+- name: Namespaces
+  href: namespaces.md
 - name: Event Sequence
   href: event-sequence.md
 - name: Observers
   href: observers.md
 - name: Projection
   href: projection.md
-- name: Namespaces
-  href: namespaces.md
+- name: Constraints
+  href: constraints.md
