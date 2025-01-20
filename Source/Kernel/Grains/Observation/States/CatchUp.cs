@@ -65,7 +65,7 @@ public class CatchUp(
             logger.StartCatchUpJob(state.NextEventSequenceNumber);
             await jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(
                 JobId.New(),
-                new CatchUpObserverRequest(
+                new(
                     observerKey,
                     subscription,
                     state.NextEventSequenceNumber,

@@ -136,9 +136,8 @@ public class Routing(
 
     bool CanFastForward(ObserverState state) =>
         IsFallingBehind(state) &&
-        state.NextEventSequenceNumberForEventTypes.IsActualValue &&
         _tailEventSequenceNumberForEventTypes.IsActualValue &&
-        _tailEventSequenceNumberForEventTypes < state.NextEventSequenceNumberForEventTypes;
+        _tailEventSequenceNumberForEventTypes <= state.LastHandledEventSequenceNumber;
 
     bool IsFallingBehind(ObserverState state) =>
         state.NextEventSequenceNumber.IsActualValue &&
