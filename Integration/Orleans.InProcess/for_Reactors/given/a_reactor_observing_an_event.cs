@@ -23,6 +23,6 @@ public class a_reactor_observing_an_event(GlobalFixture globalFixture) : Integra
 
     void Establish()
     {
-        ReactorObserver = GetObserverFor<SomeReactor>();
+        ReactorObserver = GetObserverForReactor<SomeReactor>();
     }
 }

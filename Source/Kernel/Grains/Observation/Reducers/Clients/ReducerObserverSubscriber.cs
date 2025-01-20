@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
-using Cratis.Chronicle.Properties;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
@@ -43,7 +42,7 @@ public class ReducerObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
         foreach (var @event in events)
         {
@@ -64,10 +63,9 @@ public class ReducerObserverSubscriber(
         var tcs = new TaskCompletionSource<ObserverSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         try
         {
-            var firstEvent = events.First();
             var reducerContext = new ReducerContext(
                 events,
-                new Key(firstEvent.Context.EventSourceId, ArrayIndexers.NoIndexers));
+                partition);
 
             var timeout = await configurationProvider.GetSubscriberTimeoutForObserver(_key);
             await (_pipeline?.Handle(reducerContext, async (events, initialState) =>
@@ -76,7 +74,7 @@ public class ReducerObserverSubscriber(
                 reducerMediator.OnNext(
                     _key.ObserverId,
                     connectedClient.ConnectionId,
-                    new(events, initialState),
+                    new(partition, events, initialState),
                     reducerSubscriberResultTCS);
 
                 await reducerSubscriberResultTCS.Task.WaitAsync(timeout);

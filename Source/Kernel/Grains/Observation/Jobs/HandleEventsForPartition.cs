@@ -245,7 +245,7 @@ public class HandleEventsForPartition(
             var eventsToHandle = SetObservationStateIfSpecified(request, events);
             if (eventsToHandle.Length != 0)
             {
-                var result = await _subscriber!.OnNext(eventsToHandle, subscriberContext);
+                var result = await _subscriber!.OnNext(request.Partition, eventsToHandle, subscriberContext);
                 return (result, eventsToHandle);
             }
 

@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -25,8 +24,20 @@ public class ReplayObserver(IStorage storage, ILogger<ReplayObserver> logger) : 
     public override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
+        if (!AllStepsCompletedSuccessfully)
+        {
+            if (State.LastHandledEventSequenceNumber.IsActualValue)
+            {
+                logger.NotAllEventsWereHandled(nameof(CatchUpObserver), State.LastHandledEventSequenceNumber);
+            }
+            else
+            {
+                logger.NoneEventsWereHandled(nameof(CatchUpObserver));
+            }
+        }
+
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.TransitionTo<Routing>();
+        await observer.Replayed(State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>

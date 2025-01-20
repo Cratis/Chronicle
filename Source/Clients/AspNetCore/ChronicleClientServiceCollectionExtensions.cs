@@ -6,6 +6,7 @@ using Cratis.Chronicle;
 using Cratis.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Builder;
@@ -32,7 +33,8 @@ public static class ChronicleClientServiceCollectionExtensions
                 ServiceProvider = sp,
                 SoftwareVersion = options.SoftwareVersion,
                 SoftwareCommit = options.SoftwareCommit,
-                ProgramIdentifier = options.ProgramIdentifier
+                ProgramIdentifier = options.ProgramIdentifier,
+                LoggerFactory = sp.GetRequiredService<ILoggerFactory>(),
             };
             return new ChronicleClient(chronicleOptions);
         });

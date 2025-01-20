@@ -1,6 +1,7 @@
 name: .NET Build
 
 env:
+  DOTNET8_VERSION: "8.0.405"
   DOTNET_VERSION: "9.0.x"
 
 on:
@@ -33,7 +34,9 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET_VERSION }}
 
       - name: Build
         run: dotnet build --configuration Release

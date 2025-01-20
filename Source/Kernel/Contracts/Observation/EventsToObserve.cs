@@ -13,8 +13,14 @@ namespace Cratis.Chronicle.Contracts.Observation;
 public class EventsToObserve
 {
     /// <summary>
-    /// Gets or sets a collection of <see cref="AppendedEvent"/>.
+    /// Gets or sets the partition to observe.
     /// </summary>
     [ProtoMember(1)]
+    public string Partition { get; set; }
+
+    /// <summary>
+    /// Gets or sets a collection of <see cref="AppendedEvent"/>.
+    /// </summary>
+    [ProtoMember(2)]
     public IList<AppendedEvent> Events { get; set; }
 }

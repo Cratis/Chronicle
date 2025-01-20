@@ -8,7 +8,7 @@ using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
 
 [Collection(GlobalCollection.Name)]
-public class many_events(context context, ITestOutputHelper testLogger) : Given<context>(context)
+public class many_events(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     {
@@ -37,7 +37,6 @@ public class many_events(context context, ITestOutputHelper testLogger) : Given<
     {
         foreach (var (e, i) in Context.Events.Select((item, index) => (item, index)))
         {
-            testLogger.WriteLine($"Checking stored event {i + 1}");
             await Context.ShouldHaveStoredCorrectEvent<SomeEvent>((ulong)i, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.Events[i].Content));
         }
     }

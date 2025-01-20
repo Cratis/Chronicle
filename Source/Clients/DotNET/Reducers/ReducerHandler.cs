@@ -22,8 +22,10 @@ public class ReducerHandler(
     EventSequenceId eventSequenceId,
     IReducerInvoker invoker,
     IEventSerializer eventSerializer,
-    bool isActive) : IReducerHandler
+    bool isActive) : IReducerHandler, IDisposable
 {
+    readonly CancellationTokenSource _cancellationTokenSource = new();
+
     /// <inheritdoc/>
     public ReducerId Id { get; } = reducerId;
 
@@ -43,6 +45,9 @@ public class ReducerHandler(
     public IReducerInvoker Invoker => invoker;
 
     /// <inheritdoc/>
+    public CancellationToken CancellationToken => _cancellationTokenSource.Token;
+
+    /// <inheritdoc/>
     public async Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial, IServiceProvider serviceProvider)
     {
         var tasks = events.Select(async @event =>
@@ -53,4 +58,10 @@ public class ReducerHandler(
         var eventAndContexts = await Task.WhenAll(tasks.ToArray()!);
         return await invoker.Invoke(serviceProvider, eventAndContexts, initial);
     }
+
+    /// <inheritdoc/>
+    public void Disconnect() => _cancellationTokenSource.Cancel();
+
+    /// <inheritdoc/>
+    public void Dispose() => _cancellationTokenSource.Dispose();
 }

@@ -40,7 +40,7 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
         {
             EventSourceId = "some source";
             Event = new SomeEvent(42);
-            ReactorObserver = GetObserverFor<SomeReactor>();
+            ReactorObserver = GetObserverForReactor<SomeReactor>();
         }
 
         async Task Because()

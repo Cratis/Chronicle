@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Grains.Observation;
 public static class ObserverConfigProviderExtensions
 {
     /// <summary>
-    /// Gets the timout for observer subscriber request.
+    /// Gets the timeout for observer subscriber request.
     /// </summary>
     /// <param name="provider">The configuration provider.</param>
     /// <param name="key">The observer key.</param>

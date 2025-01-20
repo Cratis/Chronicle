@@ -21,6 +21,15 @@ public interface IReducers
     Task Register();
 
     /// <summary>
+    /// Registers a <typeparamref name="TReducer"/> reducer with Chronicle.
+    /// </summary>
+    /// <typeparam name="TReducer">The reactor type.</typeparam>
+    /// <typeparam name="TModel">The model type the reducer is for.</typeparam>
+    /// <returns>Awaitable task.</returns>
+    Task<IReducerHandler> Register<TReducer, TModel>()
+        where TReducer : IReducerFor<TModel>;
+
+    /// <summary>
     /// Check if there is a reducer for a specific model type.
     /// </summary>
     /// <param name="modelType">Model type to check for.</param>
