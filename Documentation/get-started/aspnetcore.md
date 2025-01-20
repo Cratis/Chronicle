@@ -46,6 +46,17 @@ all discovery and registration of artifacts will happen automatically.
 
 [!INCLUDE [common](./common.md)]
 
+## Using in APIs
+
+Appending events is typically something you would be doing directly, or indirectly through an API exposed as a minimal
+API or a Controller.
+
+{{snippet:Quickstart-AspNetCore-BookBorrowed}}
+
+The code exposes an API endpoint that takes parameters for what book to borrow and what user is borrowing it.
+It then appends a `BookBorrowed` event. The `bookId` is used as the [event source](../concepts/event-source.md), while
+the `userId` is part of the event.
+
 ## Services
 
 Chronicle will leverage the IOC container to get instances of any artifacts it discovers and will create instances of,
@@ -70,13 +81,7 @@ class instances as themselves, meaning you can then take dependencies to concret
 You might run into issues with the Microsoft service provider not validating these correctly. Depending on your setup you
 might want to ignore the validation errors that will happen at runtime. This can be done by adding the following code:
 
-```csharp
-builder.Host.UseDefaultServiceProvider(_ =>
-   {
-       _.ValidateScopes = false;
-       _.ValidateOnBuild = false;
-   });
-```
+{{snippet:Quickstart-AspNetCore-ServiceValidation}}
 
 The code turns of validation of wrong scoping of dependencies and general validation when it is building the service provider.
 
@@ -98,5 +103,3 @@ The following code shows how to set this up for your `WebApplicationBuilder` to 
 With this you can now quite easily create a type that encapsulates getting the data that takes a specific collection as a dependency:
 
 {{snippet:Quickstart-Books}}
-
-## Endpoints
