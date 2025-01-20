@@ -18,10 +18,3 @@ With Chronicle, all namespace specific data sits in its own database in the unde
 data storage. This helps us avoid data leakage between namespaces, or tenants. With this
 you also get a better utilization of resources with mechanisms like indexing that happens
 on a database level.
-
-## How?
-
-```csharp
-var client = new ChronicleClient("chronicle://localhost:35000");
-var eventStore = client.GetEventStore("MyEventStore", "MyNamespace"); // The second parameter gets you access to a specific namespace
-```
