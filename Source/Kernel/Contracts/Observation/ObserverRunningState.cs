@@ -24,7 +24,12 @@ public enum ObserverRunningState
     Suspended = 2,
 
     /// <summary>
+    /// Observer is replaying.
+    /// </summary>
+    Replaying = 3,
+
+    /// <summary>
     /// Observer is disconnected.
     /// </summary>
-    Disconnected = 3,
+    Disconnected = 4,
 }

@@ -41,7 +41,7 @@ public record ObserverState(
               EventSequenceId.Unspecified,
               ObserverType.Unknown,
               EventSequenceNumber.Unavailable,
-              ObserverRunningState.New,
+              ObserverRunningState.Unknown,
               new HashSet<Key>(),
               new HashSet<Key>())
     {

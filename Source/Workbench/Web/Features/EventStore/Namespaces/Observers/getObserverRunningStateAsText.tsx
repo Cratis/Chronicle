@@ -14,6 +14,8 @@ export const getObserverRunningStateAsText = (
             return strings.eventStore.namespaces.observers.states.active;
         case ObserverRunningState.suspended:
             return strings.eventStore.namespaces.observers.states.suspended;
+        case ObserverRunningState.replaying:
+            return strings.eventStore.namespaces.observers.states.replaying;
         case ObserverRunningState.disconnected:
             return strings.eventStore.namespaces.observers.states.disconnected;
     }
