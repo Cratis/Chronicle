@@ -14,6 +14,7 @@ using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
@@ -273,6 +274,40 @@ public class Observer(
         logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task CatchUp()
+    {
+        using var scope = logger.BeginObserverScope(State.Id, _observerKey);
+        var subscription = await GetSubscription();
+
+        var jobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
+        var jobsForThisObserver = jobs.Where(IsJobForThisObserver);
+        if (jobs.Any(_ => _.Status == JobStatus.Running))
+        {
+            logger.FinishingExistingCatchUpJob();
+            return;
+        }
+
+        var pausedJob = jobs.FirstOrDefault(_ => _.Status == JobStatus.Paused);
+
+        if (pausedJob is not null)
+        {
+            logger.ResumingCatchUpJob();
+            await _jobsManager.Resume(pausedJob.Id);
+        }
+        else
+        {
+            logger.StartCatchUpJob(State.NextEventSequenceNumber);
+            await _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(
+                JobId.New(),
+                new(
+                    _observerKey,
+                    subscription,
+                    State.NextEventSequenceNumber,
+                    State.EventTypes));
+        }
     }
 
     /// <inheritdoc/>
@@ -580,6 +615,9 @@ public class Observer(
             number => number != lastHandledEventSequenceNumber,
             error => error);
     }
+
+    bool IsJobForThisObserver(JobState jobState) =>
+        ((ReplayObserverRequest)jobState.Request).ObserverKey == _observerKey;
 
     class WriteSuspension : IDisposable
     {

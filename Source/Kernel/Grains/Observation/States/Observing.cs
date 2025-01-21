@@ -14,9 +14,6 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// <summary>
 /// Represents the observing state of an observer.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Observing"/> class.
-/// </remarks>
 /// <param name="appendedEventsQueues"><see cref="IAppendedEventsQueue"/> for the observer.</param>
 /// <param name="eventStore"><see cref="EventStoreName"/> the state is for.</param>
 /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the state is for.</param>

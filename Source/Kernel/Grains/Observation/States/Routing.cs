@@ -13,9 +13,6 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// <summary>
 /// Represents the subscribing state of an observer.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Routing"/> class.
-/// </remarks>
 /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
 /// <param name="replayEvaluator"><see cref="IReplayEvaluator"/> for evaluating replays.</param>
 /// <param name="eventSequence"><see cref="IEventSequence"/> provider.</param>
@@ -102,7 +99,7 @@ public class Routing(
         if (IsFallingBehind(state))
         {
             logger.CatchingUp();
-            await StateMachine.TransitionTo<CatchUp>();
+            await Observer.CatchUp();
         }
         else
         {
