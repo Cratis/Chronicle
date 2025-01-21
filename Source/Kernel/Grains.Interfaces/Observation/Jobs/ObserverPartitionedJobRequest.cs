@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// <param name="ObserverKey">The additional <see cref="ObserverKey"/> for the observer to catch up.</param>
 /// <param name="ObserverSubscription">The <see cref="ObserverSubscription"/> for the observer.</param>
 /// <param name="Key"><see cref="Key">Partition</see> to retry.</param>
-public abstract record ObserverPartitionedJobRequest(ObserverKey ObserverKey, ObserverSubscription ObserverSubscription, Key Key)
+public abstract record ObserverPartitionedJobRequest(ObserverKey ObserverKey, ObserverSubscription ObserverSubscription, Key Key) : IObserverJobRequest
 {
     /// <summary>
     /// Creates an <see cref="ObserverSubscriberKey"/> from the request.

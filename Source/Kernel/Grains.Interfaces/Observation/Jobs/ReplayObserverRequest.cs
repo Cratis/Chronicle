@@ -15,4 +15,4 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 public record ReplayObserverRequest(
     ObserverKey ObserverKey,
     ObserverSubscription ObserverSubscription,
-    IEnumerable<EventType> EventTypes);
+    IEnumerable<EventType> EventTypes) : IObserverJobRequest;

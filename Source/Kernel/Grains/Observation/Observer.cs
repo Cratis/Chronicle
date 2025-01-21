@@ -136,6 +136,7 @@ public class Observer(
             siloAddress,
             subscriberArgs);
 
+        await ResumeJobs();
         await TransitionTo<Routing>();
         await TryRecoverAllFailedPartitions();
     }
@@ -518,6 +519,18 @@ public class Observer(
         }
 
         return time;
+    }
+
+    async Task ResumeJobs()
+    {
+        var unfilteredJobs = await _jobsManager.GetAllJobs();
+        var jobs = unfilteredJobs.Where(_ =>
+                        _.Request is IObserverJobRequest &&
+                        _.IsResumable).ToArray();
+        foreach (var job in jobs)
+        {
+            await _jobsManager.Resume(job.Id);
+        }
     }
 
     void HandleNewLastHandledEvent(EventSequenceNumber lastHandledEvent)

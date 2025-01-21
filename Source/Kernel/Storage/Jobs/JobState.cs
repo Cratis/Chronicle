@@ -49,4 +49,12 @@ public class JobState
     /// Gets or sets the request associated with the job.
     /// </summary>
     public object Request { get; set; } = default!;
+
+    /// <summary>
+    /// Gets whether the job is resumable.
+    /// </summary>
+    public bool IsResumable =>
+        Status == JobStatus.None ||
+        Status == JobStatus.Paused ||
+        Status == JobStatus.Stopped;
 }

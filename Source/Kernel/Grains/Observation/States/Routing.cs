@@ -100,6 +100,7 @@ public class Routing(
         {
             logger.CatchingUp();
             await Observer.CatchUp();
+            await StateMachine.TransitionTo<Observing>();
         }
         else
         {
@@ -118,7 +119,7 @@ public class Routing(
     bool CanFastForward(ObserverState state) =>
         IsFallingBehind(state) &&
         (!_nextUnhandledEventSequenceNumber.IsActualValue ||
-        _nextUnhandledEventSequenceNumber < state.LastHandledEventSequenceNumber);
+        (_nextUnhandledEventSequenceNumber < state.LastHandledEventSequenceNumber && state.LastHandledEventSequenceNumber.IsActualValue));
 
     bool IsFallingBehind(ObserverState state) =>
         state.NextEventSequenceNumber.IsActualValue &&
