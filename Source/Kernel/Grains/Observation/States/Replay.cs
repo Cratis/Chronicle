@@ -36,7 +36,6 @@ public class Replay(
     /// <inheritdoc/>
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
-        typeof(Indexing),
         typeof(Routing),
         typeof(Disconnected)
     }.ToImmutableList();

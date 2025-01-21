@@ -40,7 +40,6 @@ public class Observing(
         typeof(Routing),
         typeof(CatchUp),
         typeof(Replay),
-        typeof(Indexing),
         typeof(Disconnected)
     }.ToImmutableList();
 

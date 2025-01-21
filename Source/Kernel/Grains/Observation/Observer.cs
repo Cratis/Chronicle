@@ -153,11 +153,6 @@ public class Observer(
             _eventSequence,
             loggerFactory.CreateLogger<Routing>()),
 
-        new CatchUp(
-            _observerKey,
-            _jobsManager,
-            loggerFactory.CreateLogger<CatchUp>()),
-
         new ResumeReplay(
             _observerKey,
             replayStateServiceClient,
@@ -168,8 +163,6 @@ public class Observer(
             replayStateServiceClient,
             _jobsManager,
             loggerFactory.CreateLogger<Replay>()),
-
-        new Indexing(),
 
         new Observing(
             _appendedEventsQueues,

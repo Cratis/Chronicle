@@ -27,13 +27,12 @@ public class CatchUp(
     ILogger<CatchUp> logger) : BaseObserverState
 {
     /// <inheritdoc/>
-    public override ObserverRunningState RunningState => ObserverRunningState.CatchingUp;
+    public override ObserverRunningState RunningState => ObserverRunningState.Unknown;
 
     /// <inheritdoc/>
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Replay),
-        typeof(Indexing),
         typeof(Routing),
         typeof(Disconnected)
     }.ToImmutableList();
