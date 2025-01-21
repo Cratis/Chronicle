@@ -38,7 +38,6 @@ public class Observing(
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Routing),
-        typeof(CatchUp),
         typeof(Replay),
         typeof(Disconnected)
     }.ToImmutableList();

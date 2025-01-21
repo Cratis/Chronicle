@@ -37,7 +37,6 @@ public class Routing(
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Disconnected),
-        typeof(CatchUp),
         typeof(ResumeReplay),
         typeof(Replay),
         typeof(Observing)
