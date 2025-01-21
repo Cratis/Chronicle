@@ -14,9 +14,6 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// <summary>
 /// Represents the state for resuming replay of an observer.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="CatchUp"/> class.
-/// </remarks>
 /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
 /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
 /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>

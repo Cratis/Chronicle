@@ -28,16 +28,15 @@ public class Routing(
 {
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     EventSequenceNumber _tailEventSequenceNumber = EventSequenceNumber.Unavailable;
-    EventSequenceNumber _tailEventSequenceNumberForEventTypes = EventSequenceNumber.Unavailable;
+    EventSequenceNumber _nextUnhandledEventSequenceNumber = EventSequenceNumber.Unavailable;
 
     /// <inheritdoc/>
-    public override ObserverRunningState RunningState => ObserverRunningState.Routing;
+    public override ObserverRunningState RunningState => ObserverRunningState.Unknown;
 
     /// <inheritdoc/>
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Disconnected),
-        typeof(Indexing),
         typeof(CatchUp),
         typeof(ResumeReplay),
         typeof(Replay),
@@ -53,9 +52,10 @@ public class Routing(
         logger.Entering();
 
         _tailEventSequenceNumber = await eventSequence.GetTailSequenceNumber();
-        _tailEventSequenceNumberForEventTypes = await eventSequence.GetTailSequenceNumberForEventTypes(_subscription.EventTypes.ToList());
+        var getNextToHandleResult = await eventSequence.GetNextSequenceNumberGreaterOrEqualTo(state.NextEventSequenceNumber, _subscription.EventTypes.ToList());
+        _nextUnhandledEventSequenceNumber = getNextToHandleResult.Match(eventSequenceNumber => eventSequenceNumber, _ => EventSequenceNumber.Unavailable);
 
-        logger.TailEventSequenceNumbers(_tailEventSequenceNumber, _tailEventSequenceNumberForEventTypes);
+        logger.TailEventSequenceNumbers(_tailEventSequenceNumber, _nextUnhandledEventSequenceNumber);
 
         return await EvaluateState(state);
     }
@@ -71,13 +71,6 @@ public class Routing(
 
     async Task<ObserverState> EvaluateState(ObserverState state)
     {
-        if (IsIndexing(state))
-        {
-            logger.Indexing();
-            await StateMachine.TransitionTo<Indexing>();
-            return state;
-        }
-
         if (!_subscription.IsSubscribed)
         {
             logger.NotSubscribed();
@@ -85,19 +78,7 @@ public class Routing(
             return state;
         }
 
-        if (NeedsToCatchup(state))
-        {
-            if (CanFastForward(state))
-            {
-                logger.FastForwarding();
-                state = state with { NextEventSequenceNumber = _tailEventSequenceNumber.Next() };
-                return await EvaluateState(state);
-            }
-
-            logger.CatchingUp();
-            await StateMachine.TransitionTo<CatchUp>();
-        }
-        else if (state.RunningState == ObserverRunningState.Replaying)
+        if (state.RunningState == ObserverRunningState.Replaying)
         {
             logger.Replaying();
             await StateMachine.TransitionTo<ResumeReplay>();
@@ -108,18 +89,28 @@ public class Routing(
             state,
             _subscription,
             _tailEventSequenceNumber,
-            _tailEventSequenceNumberForEventTypes)))
+            _nextUnhandledEventSequenceNumber)))
         {
             logger.NeedsToReplay();
             await StateMachine.TransitionTo<Replay>();
+        }
+        else if (CanFastForward(state))
+        {
+            logger.FastForwarding();
+            state = state with { NextEventSequenceNumber = _tailEventSequenceNumber.Next() };
+            return await EvaluateState(state);
+        }
+        if (IsFallingBehind(state))
+        {
+            logger.CatchingUp();
+            await StateMachine.TransitionTo<CatchUp>();
         }
         else
         {
             logger.Observing();
             state = state with
             {
-                NextEventSequenceNumber = _tailEventSequenceNumber.Next(),
-                NextEventSequenceNumberForEventTypes = _tailEventSequenceNumberForEventTypes.Next()
+                NextEventSequenceNumber = _tailEventSequenceNumber.Next()
             };
 
             await StateMachine.TransitionTo<Observing>();
@@ -128,16 +119,10 @@ public class Routing(
         return state;
     }
 
-    bool IsIndexing(ObserverState state) => state.RunningState == ObserverRunningState.Indexing;
-
-    bool NeedsToCatchup(ObserverState state) =>
-        state.RunningState == ObserverRunningState.CatchingUp ||
-        IsFallingBehind(state);
-
     bool CanFastForward(ObserverState state) =>
         IsFallingBehind(state) &&
-        _tailEventSequenceNumberForEventTypes.IsActualValue &&
-        _tailEventSequenceNumberForEventTypes <= state.LastHandledEventSequenceNumber;
+        (!_nextUnhandledEventSequenceNumber.IsActualValue ||
+        _nextUnhandledEventSequenceNumber < state.LastHandledEventSequenceNumber);
 
     bool IsFallingBehind(ObserverState state) =>
         state.NextEventSequenceNumber.IsActualValue &&
