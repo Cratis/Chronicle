@@ -1,36 +1,21 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
-import { ObserverRunningState } from 'Api/Observation/ObserverRunningState';
 
+import strings from 'Strings';
+import { ObserverRunningState } from 'Api/Observation/ObserverRunningState';
 
 export const getObserverRunningStateAsText = (
     runningState: ObserverRunningState | string
 ) => {
     switch (runningState) {
-        case ObserverRunningState.new:
-            return 'New';
-        case ObserverRunningState.routing:
-            return 'Routing';
-        case ObserverRunningState.replaying:
-            return 'Replaying';
-        case ObserverRunningState.catchingUp:
-            return 'CatchingUp';
+        case ObserverRunningState.unknown:
+            return strings.eventStore.namespaces.observers.states.unknown;
         case ObserverRunningState.active:
-            return 'Active';
-        case ObserverRunningState.paused:
-            return 'Paused';
-        case ObserverRunningState.stopped:
-            return 'Stopped';
+            return strings.eventStore.namespaces.observers.states.active;
         case ObserverRunningState.suspended:
-            return 'Suspended';
-        case ObserverRunningState.failed:
-            return 'Failed';
-        case ObserverRunningState.tailOfReplay:
-            return 'TailOfReplay';
+            return strings.eventStore.namespaces.observers.states.suspended;
         case ObserverRunningState.disconnected:
-            return 'Disconnected';
-        case ObserverRunningState.indexing:
-            return 'Indexing';
+            return strings.eventStore.namespaces.observers.states.disconnected;
     }
     return '[N/A]';
 };
