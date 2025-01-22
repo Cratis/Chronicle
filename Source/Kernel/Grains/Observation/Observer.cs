@@ -52,6 +52,7 @@ public class Observer(
     IEventSequence _eventSequence = null!;
     IAppendedEventsQueues _appendedEventsQueues = null!;
     IMeterScope<Observer>? _metrics;
+    bool _isPreparingCatchup;
 
     /// <inheritdoc/>
     protected override Type InitialState => typeof(Routing);
@@ -280,6 +281,7 @@ public class Observer(
     /// <inheritdoc/>
     public async Task CatchUp()
     {
+        _isPreparingCatchup = true;
         using var scope = logger.BeginObserverScope(State.Id, _observerKey);
 
         var subscription = await GetSubscription();
@@ -323,6 +325,8 @@ public class Observer(
         }
 
         await WriteStateAsync();
+
+        _isPreparingCatchup = false;
     }
 
     /// <inheritdoc/>
@@ -371,6 +375,11 @@ public class Observer(
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         if (!_subscription.IsSubscribed || Failures.IsFailed(partition))
+        {
+            return;
+        }
+
+        if (_isPreparingCatchup)
         {
             return;
         }
