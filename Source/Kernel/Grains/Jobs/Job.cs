@@ -118,7 +118,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             var grainId = this.GetGrainId();
             var tcs = new TaskCompletionSource<IImmutableList<JobStepDetails>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            PrepareAllSteps(request, tcs);
+            await PrepareAllSteps(request, tcs);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             tcs.Task.ContinueWith(
                 async getPreparedJobSteps =>
