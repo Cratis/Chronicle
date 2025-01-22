@@ -21,6 +21,8 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// <param name="logger">The logger.</param>
 public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
 {
+    IObserver? _observer;
+
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
@@ -59,6 +61,13 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
     }
 
     /// <inheritdoc/>
+    protected override Task OnBeforePrepareSteps(CatchUpObserverRequest request)
+    {
+        _observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
         var observerKeyIndexes = storage.GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
@@ -82,8 +91,7 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
             keysForSteps.Add(key);
         }
 
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.RegisterCatchingUpPartitions(keysForSteps);
+        await (_observer?.RegisterCatchingUpPartitions(keysForSteps) ?? Task.CompletedTask);
 
         return steps.ToImmutableList();
     }
