@@ -43,7 +43,7 @@ public class a_replay_state : Specification
         _storedState = new ObserverState
         {
             Id = _observerId,
-            RunningState = ObserverRunningState.CatchingUp,
+            RunningState = ObserverRunningState.Unknown,
         };
 
         _subscription = new ObserverSubscription(

@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Grains.Observation.for_Observer.given;
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_partition_caught_up.given;
 
-public class all_dependencies : an_observer
+public class an_observer_with_one_partition_being_caught_up : an_observer
 {
     protected static Key _partition;
     protected static EventSequenceNumber _lastHandledEventSequenceNumber;
