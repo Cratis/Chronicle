@@ -7,5 +7,6 @@ export enum ObserverRunningState {
     unknown = 0,
     active = 1,
     suspended = 2,
-    disconnected = 3,
+    replaying = 3,
+    disconnected = 4,
 }
