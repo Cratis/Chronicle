@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Grains.Observation;
 
@@ -140,6 +141,14 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task CatchUp();
+
+    /// <summary>
+    /// Register partitions that the observer is catching up.
+    /// </summary>
+    /// <param name="partitions">Collection of <see cref="Key">partitions</see>.</param>
+    /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
+    Task RegisterCatchingUpPartitions(IEnumerable<Key> partitions);
 
     /// <summary>
     /// Notify that the observer has been caught up.

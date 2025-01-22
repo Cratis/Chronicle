@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
@@ -62,10 +63,10 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
     {
         var observerKeyIndexes = storage.GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
         var index = await observerKeyIndexes.GetFor(request.ObserverKey);
-
         var keys = index.GetKeys(request.FromEventSequenceNumber);
 
         var steps = new List<JobStepDetails>();
+        var keysForSteps = new List<Key>();
 
         await foreach (var key in keys)
         {
@@ -78,7 +79,11 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
                     EventSequenceNumber.Max,
                     EventObservationState.None,
                     request.EventTypes)));
+            keysForSteps.Add(key);
         }
+
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+        await observer.RegisterCatchingUpPartitions(keysForSteps);
 
         return steps.ToImmutableList();
     }

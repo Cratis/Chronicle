@@ -281,6 +281,7 @@ public class Observer(
     public async Task CatchUp()
     {
         using var scope = logger.BeginObserverScope(State.Id, _observerKey);
+
         var subscription = await GetSubscription();
 
         var jobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
@@ -309,6 +310,19 @@ public class Observer(
                     State.NextEventSequenceNumber,
                     State.EventTypes));
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task RegisterCatchingUpPartitions(IEnumerable<Key> partitions)
+    {
+        using var scope = logger.BeginObserverScope(State.Id, _observerKey);
+        logger.RegisteringCatchingUpPartitions();
+        foreach (var partition in partitions)
+        {
+            State.CatchingUpPartitions.Add(partition);
+        }
+
+        await WriteStateAsync();
     }
 
     /// <inheritdoc/>

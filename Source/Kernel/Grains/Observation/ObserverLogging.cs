@@ -70,6 +70,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Trace, "Start new catch up job from event sequence number {EventSequenceNumber}")]
     internal static partial void StartCatchUpJob(this ILogger<Observer> logger, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Trace, "Registering partitions that are catching up")]
+    internal static partial void RegisteringCatchingUpPartitions(this ILogger<Observer> logger);
 }
 
 internal static class ObserverScopes
