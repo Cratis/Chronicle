@@ -580,8 +580,10 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                 _ = await ThisJob.WriteStatusChanged(JobStatus.Failed);
                 _ = await ThisJob.Stop();
             }
-
-            _ = await ThisJob.WriteStatusChanged(JobStatus.Running); // What to do if this fails?
+            else
+            {
+                _ = await ThisJob.WriteStatusChanged(JobStatus.Running); // What to do if this fails?
+            }
         }
         catch (Exception ex)
         {
