@@ -2,8 +2,8 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <ApplicationModel>15.0.12</ApplicationModel>
-        <Fundamentals>6.1.3</Fundamentals>
+        <ApplicationModel>15.0.14</ApplicationModel>
+        <Fundamentals>6.1.5</Fundamentals>
         <Orleans>9.0.1</Orleans>
     </PropertyGroup>
     <ItemGroup>
@@ -110,22 +110,22 @@
     </ItemGroup>
 
     <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
-        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
+        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.1" />
         <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.1" />
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.1" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.1" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.1" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.0" />
-        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.0.1" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.1" />
+        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.1.0" />
         <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.1" />
         <PackageVersion Include="System.Text.Json" Version="9.0.1" />
-        <PackageVersion Include="OpenTelemetry" Version="1.10.0" />
-        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.10.0" />
+        <PackageVersion Include="OpenTelemetry" Version="1.11.0" />
+        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.11.0" />
         <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.10.1" />
         <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.10.0" />
         <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.10.0" />
-        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.10.0" />
+        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.0" />
         <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.10.0-beta.1" />
-        <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.10.0" />
+        <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.11.0" />
     </ItemGroup>
 </Project>
