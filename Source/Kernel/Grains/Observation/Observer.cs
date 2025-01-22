@@ -137,8 +137,8 @@ public class Observer(
             subscriberArgs);
 
         await ResumeJobs();
-        await TransitionTo<Routing>();
         await TryRecoverAllFailedPartitions();
+        await TransitionTo<Routing>();
     }
 
     /// <inheritdoc/>
@@ -469,6 +469,11 @@ public class Observer(
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
         await RemoveReminder(reminderName);
+        if (!_subscription.IsSubscribed)
+        {
+            return;
+        }
+
         var partition = failures.State.Partitions.FirstOrDefault(_ => _.Partition.ToString() == reminderName);
         if (partition is not null)
         {
