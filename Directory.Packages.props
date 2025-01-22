@@ -112,12 +112,12 @@
     <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
         <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
         <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.0" />
-        <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+        <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.1" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.1" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.1" />
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.0" />
         <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.0.0" />
-        <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+        <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.1" />
         <PackageVersion Include="System.Text.Json" Version="9.0.0" />
         <PackageVersion Include="OpenTelemetry" Version="1.10.0" />
         <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.10.0" />
