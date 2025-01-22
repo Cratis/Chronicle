@@ -58,6 +58,21 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Last handled event reported is not an actual value")]
     internal static partial void LastHandledEventIsNotActualValue(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Trace, "Entering catchup state")]
+    internal static partial void Entering(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Trace, "Existing catch up job running, will let it finish")]
+    internal static partial void FinishingExistingCatchUpJob(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Trace, "Existing catch up job found - resuming")]
+    internal static partial void ResumingCatchUpJob(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Trace, "Start new catch up job from event sequence number {EventSequenceNumber}")]
+    internal static partial void StartCatchUpJob(this ILogger<Observer> logger, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Trace, "Registering partitions that are catching up")]
+    internal static partial void RegisteringCatchingUpPartitions(this ILogger<Observer> logger);
 }
 
 internal static class ObserverScopes

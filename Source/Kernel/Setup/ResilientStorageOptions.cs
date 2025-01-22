@@ -31,6 +31,8 @@ public class ResilientStorageOptions
     public Dictionary<string, ResilienceEventSeverity> ResilienceEventSeverities { get; set; } = new(StringComparer.InvariantCulture)
 #pragma warning restore MA0016
     {
-        { "OnRetry", ResilienceEventSeverity.Debug }
+        { "PipelineExecuting", ResilienceEventSeverity.Debug },
+        { "ExecutionAttempt", ResilienceEventSeverity.Debug },
+        { "PipelineExecuted", ResilienceEventSeverity.Debug },
     };
 }

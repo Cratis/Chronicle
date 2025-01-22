@@ -69,7 +69,7 @@ public class an_observer : Specification
         _failedPartitionsStorage.State = _failedPartitionsState;
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
-        _eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
+        _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
 
         _observer = await _silo.CreateGrainAsync<Observer>(_observerKey);
 

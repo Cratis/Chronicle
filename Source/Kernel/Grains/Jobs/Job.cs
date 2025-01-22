@@ -118,7 +118,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
             var grainId = this.GetGrainId();
             var tcs = new TaskCompletionSource<IImmutableList<JobStepDetails>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            PrepareAllSteps(request, tcs);
+            await PrepareAllSteps(request, tcs);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             tcs.Task.ContinueWith(
                 async getPreparedJobSteps =>
@@ -482,10 +482,17 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     }
 
     /// <summary>
-    /// Start the job.
+    /// Called before preparing steps.
     /// </summary>
     /// <param name="request">The request associated with the job.</param>
     /// <returns>Awaitable task.</returns>
+    protected virtual Task OnBeforePrepareSteps(TRequest request) => Task.CompletedTask;
+
+    /// <summary>
+    /// Start the job.
+    /// </summary>
+    /// <param name="request">The request associated with the job.</param>
+    /// <returns>Collection of <see cref="JobStepDetails"/> .</returns>
     protected abstract Task<IImmutableList<JobStepDetails>> PrepareSteps(TRequest request);
 
     /// <summary>
@@ -559,12 +566,16 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                 details.Request,
                 details.ResultType));
 
-    void PrepareAllSteps(TRequest request, TaskCompletionSource<IImmutableList<JobStepDetails>> tcs) => _ = Task.Run(async () =>
+    async Task PrepareAllSteps(TRequest request, TaskCompletionSource<IImmutableList<JobStepDetails>> tcs)
     {
-        var steps = await PrepareSteps(request);
-        await ThisJob.SetTotalSteps(steps.Count);
-        tcs.SetResult(steps);
-    });
+        await OnBeforePrepareSteps(request);
+        _ = Task.Run(async () =>
+        {
+            var steps = await PrepareSteps(request);
+            await ThisJob.SetTotalSteps(steps.Count);
+            tcs.SetResult(steps);
+        });
+    }
 
     void PrepareAndStartAllJobSteps(GrainId grainId) => _ = Task.Run(async () =>
     {
@@ -580,8 +591,10 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
                 _ = await ThisJob.WriteStatusChanged(JobStatus.Failed);
                 _ = await ThisJob.Stop();
             }
-
-            _ = await ThisJob.WriteStatusChanged(JobStatus.Running); // What to do if this fails?
+            else
+            {
+                _ = await ThisJob.WriteStatusChanged(JobStatus.Running); // What to do if this fails?
+            }
         }
         catch (Exception ex)
         {

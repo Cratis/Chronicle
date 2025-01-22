@@ -58,17 +58,10 @@ public static class ObserverInformationConverters
     public static ObserverRunningState ToContract(this Concepts.Observation.ObserverRunningState state) =>
         state switch
         {
-            Concepts.Observation.ObserverRunningState.New => ObserverRunningState.New,
-            Concepts.Observation.ObserverRunningState.Routing => ObserverRunningState.Routing,
-            Concepts.Observation.ObserverRunningState.Replaying => ObserverRunningState.Replaying,
-            Concepts.Observation.ObserverRunningState.CatchingUp => ObserverRunningState.CatchingUp,
             Concepts.Observation.ObserverRunningState.Active => ObserverRunningState.Active,
-            Concepts.Observation.ObserverRunningState.Stopped => ObserverRunningState.Stopped,
             Concepts.Observation.ObserverRunningState.Suspended => ObserverRunningState.Suspended,
-            Concepts.Observation.ObserverRunningState.Failed => ObserverRunningState.Failed,
-            Concepts.Observation.ObserverRunningState.TailOfReplay => ObserverRunningState.TailOfReplay,
+            Concepts.Observation.ObserverRunningState.Replaying => ObserverRunningState.Replaying,
             Concepts.Observation.ObserverRunningState.Disconnected => ObserverRunningState.Disconnected,
-            Concepts.Observation.ObserverRunningState.Indexing => ObserverRunningState.Indexing,
             _ => ObserverRunningState.Unknown
         };
 }

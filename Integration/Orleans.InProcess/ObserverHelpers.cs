@@ -23,7 +23,7 @@ public static class ObserverHelpers
     public static async Task WaitForState(this IObserver observer, ObserverRunningState runningState, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpan.FromSeconds(5);
-        var currentRunningState = ObserverRunningState.New;
+        var currentRunningState = ObserverRunningState.Unknown;
         using var cts = new CancellationTokenSource(timeout.Value);
         while (currentRunningState != runningState && !cts.IsCancellationRequested)
         {

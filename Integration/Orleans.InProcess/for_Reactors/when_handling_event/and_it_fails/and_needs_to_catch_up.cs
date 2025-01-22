@@ -14,7 +14,6 @@ using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunni
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_handling_event.and_it_fails;
 
 [Collection(GlobalCollection.Name)]
-[Trait("Category", "Output")]
 public class and_needs_to_catch_up(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : given.a_reactor_observing_an_event_that_can_fail(globalFixture, 3)
@@ -51,13 +50,13 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
             FailedPartitionsBeforeRetry = await EventStore.WaitForThereToBeFailedPartitions(ObserverId);
             Jobs = await EventStore.WaitForThereToBeJobs(waitTime);
 
-            // Wait for the second event to have been handled
+            // Wait for the first event to be handled a second time (retry)
             await Tcs[1].Task.WaitAsync(waitTime);
 
             // Append an event to be caught up
             await EventStore.EventLog.Append(EventSourceId, Event);
 
-            // Wait for the third event to have been handled
+            // Wait for the second event to have been handled for the third time after retry
             await Tcs[2].Task.WaitAsync(waitTime);
             JobsWithCatchUp = await EventStore.WaitForThereToBeJobs(waitTime);
             JobsAfterCompleted = await EventStore.WaitForThereToBeNoJobs(waitTime);

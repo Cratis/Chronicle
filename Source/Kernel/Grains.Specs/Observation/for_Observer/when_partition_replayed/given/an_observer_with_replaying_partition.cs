@@ -4,9 +4,10 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Grains.Observation.for_Observer.given;
+
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_partition_replayed.given;
 
-public class all_dependencies : an_observer
+public class an_observer_with_replaying_partition : an_observer
 {
     protected static Key _partition;
     protected static EventSequenceNumber _lastHandledEventSequenceNumber;

@@ -143,19 +143,11 @@
                     "reducer": "Reducer"
                 },
                 "states": {
-                    "new": "New",
-                    "routing": "Routing",
-                    "replaying": "Relaying",
-                    "catchingUp": "Catching Up",
+                    "unknown": "Unknown",
                     "active": "Active",
-                    "paused": "Paused",
-                    "stopped": "Stopped",
                     "suspended": "Suspended",
-                    "failed": "Failed",
-                    "tailOfReplay": "Tail Of Replay",
-                    "disconnected": "Disconnected",
-                    "indexing": "Indexing",
-                    "unknown": "Unknown"
+                    "replaying": "Replaying",
+                    "disconnected": "Disconnected"
                 }
             },
             "failedPartitions": {

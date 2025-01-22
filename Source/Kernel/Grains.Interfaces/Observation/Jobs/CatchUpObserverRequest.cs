@@ -17,4 +17,4 @@ public record CatchUpObserverRequest(
     ObserverKey ObserverKey,
     ObserverSubscription ObserverSubscription,
     EventSequenceNumber FromEventSequenceNumber,
-    IEnumerable<EventType> EventTypes);
+    IEnumerable<EventType> EventTypes) : IObserverJobRequest;

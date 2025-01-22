@@ -14,6 +14,7 @@ using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
@@ -51,6 +52,7 @@ public class Observer(
     IEventSequence _eventSequence = null!;
     IAppendedEventsQueues _appendedEventsQueues = null!;
     IMeterScope<Observer>? _metrics;
+    bool _isPreparingCatchup;
 
     /// <inheritdoc/>
     protected override Type InitialState => typeof(Routing);
@@ -135,8 +137,9 @@ public class Observer(
             siloAddress,
             subscriberArgs);
 
-        await TransitionTo<Routing>();
+        await ResumeJobs();
         await TryRecoverAllFailedPartitions();
+        await TransitionTo<Routing>();
     }
 
     /// <inheritdoc/>
@@ -153,11 +156,6 @@ public class Observer(
             _eventSequence,
             loggerFactory.CreateLogger<Routing>()),
 
-        new CatchUp(
-            _observerKey,
-            _jobsManager,
-            loggerFactory.CreateLogger<CatchUp>()),
-
         new ResumeReplay(
             _observerKey,
             replayStateServiceClient,
@@ -168,8 +166,6 @@ public class Observer(
             replayStateServiceClient,
             _jobsManager,
             loggerFactory.CreateLogger<Replay>()),
-
-        new Indexing(),
 
         new Observing(
             _appendedEventsQueues,
@@ -283,6 +279,57 @@ public class Observer(
     }
 
     /// <inheritdoc/>
+    public async Task CatchUp()
+    {
+        _isPreparingCatchup = true;
+        using var scope = logger.BeginObserverScope(State.Id, _observerKey);
+
+        var subscription = await GetSubscription();
+
+        var jobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
+        var jobsForThisObserver = jobs.Where(IsJobForThisObserver);
+        if (jobs.Any(_ => _.Status == JobStatus.Running))
+        {
+            logger.FinishingExistingCatchUpJob();
+            return;
+        }
+
+        var pausedJob = jobs.FirstOrDefault(_ => _.Status == JobStatus.Paused);
+
+        if (pausedJob is not null)
+        {
+            logger.ResumingCatchUpJob();
+            await _jobsManager.Resume(pausedJob.Id);
+        }
+        else
+        {
+            logger.StartCatchUpJob(State.NextEventSequenceNumber);
+            await _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(
+                JobId.New(),
+                new(
+                    _observerKey,
+                    subscription,
+                    State.NextEventSequenceNumber,
+                    State.EventTypes));
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task RegisterCatchingUpPartitions(IEnumerable<Key> partitions)
+    {
+        using var scope = logger.BeginObserverScope(State.Id, _observerKey);
+        logger.RegisteringCatchingUpPartitions();
+        foreach (var partition in partitions)
+        {
+            State.CatchingUpPartitions.Add(partition);
+        }
+
+        await WriteStateAsync();
+
+        _isPreparingCatchup = false;
+    }
+
+    /// <inheritdoc/>
     public async Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -328,6 +375,11 @@ public class Observer(
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         if (!_subscription.IsSubscribed || Failures.IsFailed(partition))
+        {
+            return;
+        }
+
+        if (_isPreparingCatchup)
         {
             return;
         }
@@ -440,6 +492,11 @@ public class Observer(
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
         await RemoveReminder(reminderName);
+        if (!_subscription.IsSubscribed)
+        {
+            return;
+        }
+
         var partition = failures.State.Partitions.FirstOrDefault(_ => _.Partition.ToString() == reminderName);
         if (partition is not null)
         {
@@ -490,6 +547,18 @@ public class Observer(
         }
 
         return time;
+    }
+
+    async Task ResumeJobs()
+    {
+        var unfilteredJobs = await _jobsManager.GetAllJobs();
+        var jobs = unfilteredJobs.Where(_ =>
+                        _.Request is IObserverJobRequest &&
+                        _.IsResumable).ToArray();
+        foreach (var job in jobs)
+        {
+            await _jobsManager.Resume(job.Id);
+        }
     }
 
     void HandleNewLastHandledEvent(EventSequenceNumber lastHandledEvent)
@@ -587,6 +656,9 @@ public class Observer(
             number => number != lastHandledEventSequenceNumber,
             error => error);
     }
+
+    bool IsJobForThisObserver(JobState jobState) =>
+        ((ReplayObserverRequest)jobState.Request).ObserverKey == _observerKey;
 
     class WriteSuspension : IDisposable
     {
