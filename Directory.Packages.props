@@ -63,7 +63,7 @@
         </PackageVersion>
         <PackageVersion Include="Mono.Cecil" Version="0.11.6" />
         <PackageVersion Include="NJsonSchema" Version="11.1.0" />
-        <PackageVersion Include="Polly.Core" Version="8.5.0" />
+        <PackageVersion Include="Polly.Core" Version="8.5.1" />
         <PackageVersion Include="protobuf-net.BuildTools" Version="3.2.33">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
@@ -96,9 +96,9 @@
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="[8.0.1]" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="[8.0.2]" />
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="[8.0.2]" />
-        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="[8.10.0]" />
+        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="[9.0.0]" />
         <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="[8.0.1]" />
-        <PackageVersion Include="System.Text.Json" Version="[8.0.5]" />
+        <PackageVersion Include="System.Text.Json" Version="[9.0.0]" />
         <PackageVersion Include="OpenTelemetry" Version="[1.9.0]" />
         <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="[1.9.0]" />
         <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="[1.9.0]" />
