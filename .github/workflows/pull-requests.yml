@@ -80,10 +80,10 @@ jobs:
         id: yarn-cache-dir-path
         run: echo "::set-output name=dir::$(yarn cache dir)"
 
-      - name: Setup node v16
+      - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 16.x
+          node-version: 20.x
           registry-url: "https://registry.npmjs.org"
 
       - uses: actions/cache@v3
