@@ -78,8 +78,10 @@ public class Routing(
         {
             logger.Replaying();
             await StateMachine.TransitionTo<ResumeReplay>();
+            return state;
         }
-        else if (await replayEvaluator.Evaluate(new(
+
+        if (await replayEvaluator.Evaluate(new(
             state.Id,
             observerKey,
             state,
@@ -89,8 +91,10 @@ public class Routing(
         {
             logger.NeedsToReplay();
             await StateMachine.TransitionTo<Replay>();
+            return state;
         }
-        else if (CanFastForward(state))
+
+        if (CanFastForward(state))
         {
             logger.FastForwarding();
             state = state with { NextEventSequenceNumber = _tailEventSequenceNumber.Next() };
