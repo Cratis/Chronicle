@@ -60,7 +60,7 @@ builder.Host
    .UseOrleans(_ => _
         .UseLocalhostClustering()
         .AddChronicleToSilo(_ => _
-           .WithMongoDB(chronicleOptions.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle))
+           .WithMongoDB(chronicleOptions))
         .UseDashboard(options =>
         {
             options.Host = "*";
