@@ -63,6 +63,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <inheritdoc/>
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        Dispose();
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
         _queue.Enqueue(appendedEvents);
