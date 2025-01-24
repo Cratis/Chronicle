@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// </summary>
 public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
+    readonly ITaskFactory _taskFactory;
     readonly IGrainFactory _grainFactory;
     readonly IMeter<AppendedEventsQueue> _meter;
     readonly ILogger<AppendedEventsQueue> _logger;
@@ -25,7 +26,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly AsyncManualResetEvent _queueEvent = new();
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
     readonly TaskCompletionSource _queueTaskCompletionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    readonly Task _queueTask;
+    Task _queueTask = Task.CompletedTask;
+    bool _isDisposed;
     ConcurrentBag<AppendedEventsQueueObserverSubscription> _subscriptions = [];
     IMeterScope<AppendedEventsQueue>? _metrics;
 
@@ -42,10 +44,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         IMeter<AppendedEventsQueue> meter,
         ILogger<AppendedEventsQueue> logger)
     {
+        _taskFactory = taskFactory;
         _grainFactory = grainFactory;
         _meter = meter;
         _logger = logger;
-        _queueTask = taskFactory.Run(QueueHandler);
+        StartQueueHandler();
     }
 
     /// <inheritdoc/>
@@ -90,6 +93,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        _isDisposed = true;
         _queueTaskCompletionSource.SetCanceled();
 
         if (!_queueTask.IsCompleted)
@@ -149,6 +153,19 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         });
     }
 
+    void StartQueueHandler()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _queueTask = _taskFactory.Run(QueueHandler);
+
+        // The queue task should never stop, then the queue will be stopped. We restart it if it stops. A sort of "watch dog".
+        _queueTask.ContinueWith(_ => StartQueueHandler(), TaskScheduler.Default);
+    }
+
     async Task QueueHandler()
     {
         while (!_queueTaskCompletionSource.Task.IsCanceled)
@@ -198,7 +215,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
     }
 
-    private async Task HandleSingle(IEnumerable<AppendedEvent> events)
+    async Task HandleSingle(IEnumerable<AppendedEvent> events)
     {
         var @event = events.First();
         foreach (var subscription in _subscriptions)
@@ -212,7 +229,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
     }
 
-    private async Task HandlePartitioned(IEnumerable<AppendedEvent> events)
+    async Task HandlePartitioned(IEnumerable<AppendedEvent> events)
     {
         foreach (var group in events.GroupBy(@event => @event.Context.EventSourceId))
         {
