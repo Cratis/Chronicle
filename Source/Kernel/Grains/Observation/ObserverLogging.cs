@@ -85,6 +85,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Trace, "Registering partitions that are catching up")]
     internal static partial void RegisteringCatchingUpPartitions(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Critical, "Observer failed for unknown reasons after handling events")]
+    internal static partial void ObserverFailedForUnknownReasonsAfterHandlingEvents(this ILogger<Observer> logger, Exception exception);
 }
 
 internal static class ObserverScopes

@@ -455,18 +455,26 @@ public class Observer(
                     exceptionStackTrace = ex.StackTrace ?? string.Empty;
                 }
             }
-            if (failed)
-            {
-                await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
-            }
-            else
-            {
-                _metrics?.SuccessfulObservation();
-            }
 
-            if (stateChanged)
+            try
             {
-                await WriteStateAsync();
+                if (failed)
+                {
+                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
+                }
+                else
+                {
+                    _metrics?.SuccessfulObservation();
+                }
+
+                if (stateChanged)
+                {
+                    await WriteStateAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.ObserverFailedForUnknownReasonsAfterHandlingEvents(ex);
             }
         }
     }
