@@ -374,25 +374,8 @@ public class Observer(
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
-        if (!_subscription.IsSubscribed || Failures.IsFailed(partition))
+        if (!ShouldHandleEvent(partition))
         {
-            return;
-        }
-
-        if (_isPreparingCatchup)
-        {
-            return;
-        }
-
-        if (State.ReplayingPartitions.Contains(partition))
-        {
-            logger.PartitionReplayingCannotHandleNewEvents(partition);
-            return;
-        }
-
-        if (State.CatchingUpPartitions.Contains(partition))
-        {
-            logger.PartitionCatchingUpCannotHandleNewEvents(partition);
             return;
         }
 
@@ -547,6 +530,47 @@ public class Observer(
         }
 
         return time;
+    }
+
+    bool ShouldHandleEvent(Key partition)
+    {
+        if (!_subscription.IsSubscribed)
+        {
+            logger.ObserverIsNotSubscribed();
+            return false;
+        }
+
+        if (Failures.IsFailed(partition))
+        {
+            logger.PartitionIsFailed(partition);
+            return false;
+        }
+
+        if (State.RunningState != ObserverRunningState.Active)
+        {
+            logger.ObserverIsNotActive();
+            return false;
+        }
+
+        if (_isPreparingCatchup)
+        {
+            logger.ObserverIsPreparingCatchup();
+            return false;
+        }
+
+        if (State.ReplayingPartitions.Contains(partition))
+        {
+            logger.PartitionReplayingCannotHandleNewEvents(partition);
+            return false;
+        }
+
+        if (State.CatchingUpPartitions.Contains(partition))
+        {
+            logger.PartitionCatchingUpCannotHandleNewEvents(partition);
+            return false;
+        }
+
+        return true;
     }
 
     async Task ResumeJobs()

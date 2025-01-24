@@ -44,6 +44,18 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Resuming catchup for partition {Partition} starting from event sequence number {EventSequenceNumber}")]
     internal static partial void StartingCatchUpForPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
 
+    [LoggerMessage(LogLevel.Debug, "Observer is not subscribed, ignoring handling of event")]
+    internal static partial void ObserverIsNotSubscribed(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Observer is not active, ignoring handling of event")]
+    internal static partial void ObserverIsNotActive(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Partition '{Partition}' is in a failed state, ignoring handling of event")]
+    internal static partial void PartitionIsFailed(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Observer is preparing catchup, ignoring handling of event")]
+    internal static partial void ObserverIsPreparingCatchup(this ILogger<Observer> logger);
+
     [LoggerMessage(LogLevel.Debug, "Partition {Partition} is replaying events and cannot accept new events to handle")]
     internal static partial void PartitionReplayingCannotHandleNewEvents(this ILogger<Observer> logger, Key partition);
 
