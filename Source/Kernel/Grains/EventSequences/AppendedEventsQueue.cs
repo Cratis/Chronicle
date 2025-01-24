@@ -81,7 +81,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var subscription = _subscriptions.SingleOrDefault(subscription => subscription.ObserverKey == observerKey);
         if (subscription != null)
         {
-            _subscriptions = new(_subscriptions.Except([subscription]));
+            _subscriptions = [.. _subscriptions.Except([subscription])];
         }
 
         return Task.CompletedTask;
@@ -101,7 +101,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             catch { }
         }
 
-        _queueTask.Dispose();
+        if (_queueTask.Status is
+                TaskStatus.RanToCompletion or
+                TaskStatus.Canceled or
+                TaskStatus.Faulted)
+        {
+            _queueTask.Dispose();
+        }
 
         _metrics?.Dispose();
     }
@@ -147,36 +153,48 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         while (!_queueTaskCompletionSource.Task.IsCanceled)
         {
-            await _queueEvent.WaitAsync();
-            _queueEmptyEvent.Reset();
-            if (_queueTaskCompletionSource.Task.IsCanceled)
+            try
             {
-                return;
-            }
+                await _queueEvent.WaitAsync();
+                _queueEmptyEvent.Reset();
+                if (_queueTaskCompletionSource.Task.IsCanceled)
+                {
+                    return;
+                }
 
-            while (_queue.TryDequeue(out var events))
+                while (_queue.TryDequeue(out var events))
+                {
+                    var eventsNotHandled = true;
+                    while (eventsNotHandled)
+                    {
+                        try
+                        {
+                            var count = events.Count();
+                            Func<IEnumerable<AppendedEvent>, Task> handler = count == 1 ?
+                                HandleSingle :
+                                HandlePartitioned;
+
+                            await handler(events);
+
+                            _metrics?.EventsHandled(count);
+                            eventsNotHandled = false;
+                        }
+                        catch (Exception ex)
+                        {
+                            // We ignore any failures, the queue should never fail
+                            _logger.NotifyingObserversFailed(ex);
+                            _metrics?.EventsHandlingFailures();
+                        }
+                    }
+                }
+
+                _queueEvent.Reset();
+                _queueEmptyEvent.Set();
+            }
+            catch (Exception exception)
             {
-                try
-                {
-                    var count = events.Count();
-                    Func<IEnumerable<AppendedEvent>, Task> handler = count == 1 ?
-                        HandleSingle :
-                        HandlePartitioned;
-
-                    await handler(events);
-
-                    _metrics?.EventsHandled(count);
-                }
-                catch (Exception ex)
-                {
-                    // We ignore any failures, the queue should never fail
-                    _logger.NotifyingObserversFailed(ex);
-                    _metrics?.EventsHandlingFailures();
-                }
+                _logger.QueueHandlerFailed(exception);
             }
-
-            _queueEvent.Reset();
-            _queueEmptyEvent.Set();
         }
     }
 
