@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Grains.EventSequences.for_AppendedEventsQueue.when_enqueuing;
 
-public class with_subscriber_that_throws_exception : given.a_single_subscriber_with_an_event_type
+public class with_subscriber_that_throws_exception_on_first_handle : given.a_single_subscriber_with_an_event_type
 {
     AppendedEvent _appendedEvent;
     EventSourceId _eventSourceId;
@@ -17,15 +17,23 @@ public class with_subscriber_that_throws_exception : given.a_single_subscriber_w
         _eventSourceId = Guid.NewGuid();
         _appendedEvent = _appendedEvent with { Context = EventContext.Empty with { EventSourceId = _eventSourceId } };
 
+        var callCount = 0;
         _observer
             .When(_ => _.Handle(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>()))
-            .Do(_ => throw new Exception());
+            .Do(_ =>
+            {
+                switch (callCount++)
+                {
+                    case 0:
+                        throw new Exception();
+                    case 1:
+                        break;
+                }
+            });
     }
 
     async Task Because()
     {
-        await _queue.Enqueue([_appendedEvent]);
-        await _queue.AwaitQueueDepletion();
         await _queue.Enqueue([_appendedEvent]);
         await _queue.AwaitQueueDepletion();
     }

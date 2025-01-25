@@ -4,6 +4,7 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Grains.Clients;
+using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Clients;
@@ -11,11 +12,11 @@ namespace Cratis.Chronicle.Services.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IConnectionService"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ConnectionService"/> class.
-/// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
-public class ConnectionService(IGrainFactory grainFactory) : IConnectionService
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+public class ConnectionService(
+    IGrainFactory grainFactory,
+    ILogger<ConnectionService> logger) : IConnectionService
 {
     /// <inheritdoc/>
     public IObservable<ConnectionKeepAlive> Connect(
@@ -33,19 +34,26 @@ public class ConnectionService(IGrainFactory grainFactory) : IConnectionService
                     request.ClientVersion,
                     request.IsRunningWithDebugger);
 
-                while (!context.CancellationToken.IsCancellationRequested)
+                try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
-
-                    if (context.CancellationToken.IsCancellationRequested)
+                    while (!context.CancellationToken.IsCancellationRequested)
                     {
-                        break;
+                        await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
+                        if (context.CancellationToken.IsCancellationRequested)
+                        {
+                            break;
+                        }
+
+                        subject.OnNext(new ConnectionKeepAlive
+                        {
+                            ConnectionId = request.ConnectionId
+                        });
                     }
-
-                    subject.OnNext(new ConnectionKeepAlive
-                    {
-                        ConnectionId = request.ConnectionId
-                    });
+                }
+                catch (Exception ex)
+                {
+                    logger.FailureDuringKeepAlive(request.ConnectionId, ex);
                 }
 
                 await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
