@@ -118,8 +118,10 @@ public static class ChronicleClientSiloBuilderExtensions
                 var grainFactory = sp.GetRequiredService<IGrainFactory>();
                 var services = sp.GetRequiredService<IServices>();
 
+                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+
                 var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
-                var connection = new Cratis.Chronicle.Orleans.InProcess.ChronicleConnection(connectionLifecycle, services, grainFactory);
+                var connection = new Cratis.Chronicle.Orleans.InProcess.ChronicleConnection(connectionLifecycle, services, grainFactory, loggerFactory);
                 return new ChronicleClient(connection, options);
             });
 

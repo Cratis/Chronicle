@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// </summary>
 public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
+    readonly ITaskFactory _taskFactory;
     readonly IGrainFactory _grainFactory;
     readonly IMeter<AppendedEventsQueue> _meter;
     readonly ILogger<AppendedEventsQueue> _logger;
@@ -25,7 +26,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly AsyncManualResetEvent _queueEvent = new();
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
     readonly TaskCompletionSource _queueTaskCompletionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    readonly Task _queueTask;
+    Task _queueTask = Task.CompletedTask;
+    bool _isDisposed;
     ConcurrentBag<AppendedEventsQueueObserverSubscription> _subscriptions = [];
     IMeterScope<AppendedEventsQueue>? _metrics;
 
@@ -42,10 +44,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         IMeter<AppendedEventsQueue> meter,
         ILogger<AppendedEventsQueue> logger)
     {
+        _taskFactory = taskFactory;
         _grainFactory = grainFactory;
         _meter = meter;
         _logger = logger;
-        _queueTask = taskFactory.Run(QueueHandler);
+        StartQueueHandler();
     }
 
     /// <inheritdoc/>
@@ -57,6 +60,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
         _metrics = _meter.BeginScope(key, queueId);
         return base.OnActivateAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        Dispose();
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -81,7 +91,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var subscription = _subscriptions.SingleOrDefault(subscription => subscription.ObserverKey == observerKey);
         if (subscription != null)
         {
-            _subscriptions = new(_subscriptions.Except([subscription]));
+            _subscriptions = [.. _subscriptions.Except([subscription])];
         }
 
         return Task.CompletedTask;
@@ -90,6 +100,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        _isDisposed = true;
         _queueTaskCompletionSource.SetCanceled();
 
         if (!_queueTask.IsCompleted)
@@ -101,7 +112,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             catch { }
         }
 
-        _queueTask.Dispose();
+        if (_queueTask.Status is
+                TaskStatus.RanToCompletion or
+                TaskStatus.Canceled or
+                TaskStatus.Faulted)
+        {
+            _queueTask.Dispose();
+        }
 
         _metrics?.Dispose();
     }
@@ -143,44 +160,69 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         });
     }
 
+    void StartQueueHandler()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _queueTask = _taskFactory.Run(QueueHandler);
+
+        // The queue task should never stop, then the queue will be stopped. We restart it if it stops. A sort of "watch dog".
+        _queueTask.ContinueWith(_ => StartQueueHandler(), TaskScheduler.Default);
+    }
+
     async Task QueueHandler()
     {
         while (!_queueTaskCompletionSource.Task.IsCanceled)
         {
-            await _queueEvent.WaitAsync();
-            _queueEmptyEvent.Reset();
-            if (_queueTaskCompletionSource.Task.IsCanceled)
+            try
             {
-                return;
-            }
+                await _queueEvent.WaitAsync();
+                _queueEmptyEvent.Reset();
+                if (_queueTaskCompletionSource.Task.IsCanceled)
+                {
+                    return;
+                }
 
-            while (_queue.TryDequeue(out var events))
+                while (_queue.TryDequeue(out var events))
+                {
+                    var eventsNotHandled = true;
+                    while (eventsNotHandled)
+                    {
+                        try
+                        {
+                            var count = events.Count();
+                            Func<IEnumerable<AppendedEvent>, Task> handler = count == 1 ?
+                                HandleSingle :
+                                HandlePartitioned;
+
+                            await handler(events);
+
+                            _metrics?.EventsHandled(count);
+                            eventsNotHandled = false;
+                        }
+                        catch (Exception ex)
+                        {
+                            // We ignore any failures, the queue should never fail
+                            _logger.NotifyingObserversFailed(ex);
+                            _metrics?.EventsHandlingFailures();
+                        }
+                    }
+                }
+
+                _queueEvent.Reset();
+                _queueEmptyEvent.Set();
+            }
+            catch (Exception exception)
             {
-                try
-                {
-                    var count = events.Count();
-                    Func<IEnumerable<AppendedEvent>, Task> handler = count == 1 ?
-                        HandleSingle :
-                        HandlePartitioned;
-
-                    await handler(events);
-
-                    _metrics?.EventsHandled(count);
-                }
-                catch (Exception ex)
-                {
-                    // We ignore any failures, the queue should never fail
-                    _logger.NotifyingObserversFailed(ex);
-                    _metrics?.EventsHandlingFailures();
-                }
+                _logger.QueueHandlerFailed(exception);
             }
-
-            _queueEvent.Reset();
-            _queueEmptyEvent.Set();
         }
     }
 
-    private async Task HandleSingle(IEnumerable<AppendedEvent> events)
+    async Task HandleSingle(IEnumerable<AppendedEvent> events)
     {
         var @event = events.First();
         foreach (var subscription in _subscriptions)
@@ -194,7 +236,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
     }
 
-    private async Task HandlePartitioned(IEnumerable<AppendedEvent> events)
+    async Task HandlePartitioned(IEnumerable<AppendedEvent> events)
     {
         foreach (var group in events.GroupBy(@event => @event.Context.EventSourceId))
         {
