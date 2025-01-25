@@ -86,6 +86,13 @@ public class Projection(
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    public Task UnsubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber)
+    {
+        _definitionObservers.Unsubscribe(subscriber);
+        return Task.CompletedTask;
+    }
+
     async Task AddReplayRecommendationForAllNamespaces(ProjectionKey key, IEnumerable<EventStoreNamespaceName> namespaces)
     {
         foreach (var @namespace in namespaces)
