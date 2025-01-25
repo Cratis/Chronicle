@@ -23,4 +23,11 @@ public interface IProjection : IGrainWithStringKey
     /// <param name="subscriber"><see cref="INotifyProjectionDefinitionsChanged"/> to subscribe.</param>
     /// <returns>Awaitable task.</returns>
     Task SubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber);
+
+    /// <summary>
+    /// Unsubscribe to changes in projection or pipeline definition changes.
+    /// </summary>
+    /// <param name="subscriber"><see cref="INotifyProjectionDefinitionsChanged"/> to subscribe.</param>
+    /// <returns>Awaitable task.</returns>
+    Task UnsubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber);
 }
