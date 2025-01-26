@@ -50,19 +50,8 @@
         }
     },
     "include": [
-        "global.d.ts",
-        "Api",
-        "Shared",
-        "State",
-        "Components",
-        "FakeData",
-        "Layout",
-        "Infrastructure/MVVM",
-        "Utils",
-        "App.tsx",
-        "index.tsx",
-        "Features",
-        "given.ts"
+        "**/*.ts",
+        "**/*.tsx"
     ],
     "exclude": [
         "vite.config.ts"
