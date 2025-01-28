@@ -50,7 +50,7 @@
         <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
         <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="$(Orleans)" />
         <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
-        <PackageVersion Include="Roslynator.Analyzers" Version="4.12.10" />
+        <PackageVersion Include="Roslynator.Analyzers" Version="4.12.11" />
         <PackageVersion Include="Meziantou.Analyzer" Version="2.0.186" />
         <!-- Not categorized -->
         <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
