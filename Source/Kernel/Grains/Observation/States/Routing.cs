@@ -128,5 +128,5 @@ public class Routing(
     bool IsFallingBehind(ObserverState state) =>
         state.NextEventSequenceNumber.IsActualValue &&
         _tailEventSequenceNumber.IsActualValue &&
-        state.NextEventSequenceNumber < _tailEventSequenceNumber;
+        state.NextEventSequenceNumber <= _tailEventSequenceNumber;
 }
