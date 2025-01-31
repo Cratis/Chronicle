@@ -50,6 +50,7 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind(contex
             await EventStore.Reactors.Register<ReactorWithoutDelay>();
             await ReactorObserver.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
             await Reactor.WaitTillHandledEventReaches(FirstEvents.Count + CatchupEvents.Count);
+            await ReactorObserver.WaitTillActive();
             ReactorObserverState = await ReactorObserver.GetState();
         }
     }
