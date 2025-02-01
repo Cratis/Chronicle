@@ -50,6 +50,7 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
         {
             await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
             await ReducerObserver.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
+            await ReducerObserver.WaitTillActive();
             ReducerObserverState = await ReducerObserver.GetState();
         }
     }

@@ -25,6 +25,7 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// Get the state from the observer.
     /// </summary>
     /// <returns>The <see cref="ObserverState"/>.</returns>
+    [AlwaysInterleave]
     Task<ObserverState> GetState();
 
     /// <summary>
@@ -38,18 +39,21 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// Get the subscription for the observer.
     /// </summary>
     /// <returns>Tbe <see cref="ObserverSubscription"/>.</returns>
+    [AlwaysInterleave]
     Task<ObserverSubscription> GetSubscription();
 
     /// <summary>
     /// Check if the observer has a subscription subscribed.
     /// </summary>
     /// <returns>True if it has, false if not.</returns>
+    [AlwaysInterleave]
     Task<bool> IsSubscribed();
 
     /// <summary>
     /// Get the event types that the observer is observing.
     /// </summary>
     /// <returns>Collection of <see cref="EventType"/>.</returns>
+    [AlwaysInterleave]
     Task<IEnumerable<EventType>> GetEventTypes();
 
     /// <summary>

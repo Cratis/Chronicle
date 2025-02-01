@@ -37,8 +37,9 @@ public class and_reactor_is_registered_while_there_events_in_sequence(context co
             ReactorObserver = GetObserverForReactor<ReactorWithoutDelay>();
             await EventStore.Reactors.Register<ReactorWithoutDelay>();
             await ReactorObserver.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
-            ReactorObserverState = await ReactorObserver.GetState();
             await Reactor.WaitTillHandledEventReaches(Events.Count);
+            await ReactorObserver.WaitTillActive();
+            ReactorObserverState = await ReactorObserver.GetState();
         }
     }
 
