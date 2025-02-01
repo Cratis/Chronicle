@@ -26,7 +26,7 @@ internal class ChronicleConnection(
     ConnectionService? _connectionService;
 
     /// <inheritdoc/>
-    public IConnectionLifecycle Lifecycle { get; } = lifecycle;
+    IConnectionLifecycle IChronicleConnection.Lifecycle => lifecycle;
 
     /// <inheritdoc/>
     IServices IChronicleServicesAccessor.Services
@@ -51,7 +51,7 @@ internal class ChronicleConnection(
 
     void ConnectIfNotConnected()
     {
-        if (!Lifecycle.IsConnected)
+        if (!lifecycle.IsConnected)
         {
             Connect();
         }
@@ -62,10 +62,10 @@ internal class ChronicleConnection(
         _connectionService = new ConnectionService(grainFactory);
         _connectionService.Connect(new()
         {
-            ConnectionId = Lifecycle.ConnectionId,
+            ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
         }).Subscribe(HandleConnection);
-        Lifecycle.Connected();
+        lifecycle.Connected();
     }
 
     void HandleConnection(ConnectionKeepAlive keepAlive)

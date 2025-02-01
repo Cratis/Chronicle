@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
