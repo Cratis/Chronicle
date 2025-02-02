@@ -12,7 +12,7 @@
 
         <InternalAssemblies
             Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"
-            Exclude="@(DoNotInternalizeAssemblies)"/>
+            Exclude="@(DoNotInternalizeAssembly)"/>
 
         <InputAssemblies
             Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"
@@ -34,7 +34,7 @@
         InputAssemblies="@(InputAssemblies)"
         InternalizeAssembly="@(InternalizeAssemblies)"
         Internalize="true"
-        InternalizeExclude="@(DoNotInternalizeAssemblies)"
+        InternalizeExclude="@(DoNotInternalizeAssembly)"
         OutputFile="$(TargetPath)"
         Parallel="true"
         LibraryPath="@(LibraryPath)"

@@ -98,11 +98,11 @@
     <ItemGroup>
         <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.DotNET.dll" />
         <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" />
-        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.dll" />
-        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
-        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.AspNetCore.dll" />
-        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.Orleans.dll" />
-        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.Setup.dll" />
+        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.dll" />
+        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
+        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.AspNetCore.dll" />
+        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Orleans.dll" />
+        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Setup.dll" />
     </ItemGroup>
 
     <ItemGroup>
