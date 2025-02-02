@@ -8,7 +8,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
-namespace Cratis.Chronicle.Rules;
+namespace Cratis.Chronicle.AspNetCore.Rules;
 
 /// <summary>
 /// Represents a <see cref="ObjectModelValidator"/> for <see cref="RulesFor{TSelf, TCommand}"/>.
