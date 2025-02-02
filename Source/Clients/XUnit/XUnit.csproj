@@ -7,6 +7,12 @@
 
     <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj" />
+
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+
         <ProjectReference Include="../Connections/Connections.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
@@ -18,7 +24,15 @@
     </ItemGroup>
 
     <ItemGroup>
+        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="xunit">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
     </ItemGroup>

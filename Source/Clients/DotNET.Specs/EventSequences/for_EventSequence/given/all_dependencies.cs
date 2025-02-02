@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;

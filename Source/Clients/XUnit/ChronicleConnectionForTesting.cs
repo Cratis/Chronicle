@@ -2,13 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 
 namespace Cratis.Chronicle.XUnit;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/> for testing.
 /// </summary>
-public class ChronicleConnectionForTesting : IChronicleConnection, IChronicleServicesAccessor
+internal sealed class ChronicleConnectionForTesting : IChronicleConnection, IChronicleServicesAccessor
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnectionForTesting"/> class.

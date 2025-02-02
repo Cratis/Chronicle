@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 
 namespace Cratis.Chronicle.Events.Constraints.for_Constraints.given;
 
