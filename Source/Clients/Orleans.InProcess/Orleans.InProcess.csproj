@@ -101,6 +101,7 @@
         <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.dll" />
         <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
         <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.AspNetCore.dll" />
+        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
         <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Orleans.dll" />
         <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Setup.dll" />
     </ItemGroup>

@@ -35,6 +35,7 @@
     <ItemGroup>
         <InternalAssembly Include="$(OutputPath)$(ContractsImplementationAssembly).dll" />
         <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
+        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
     </ItemGroup>
 
     <Target Name="GrpcClients" BeforeTargets="PerformRepackaging">
