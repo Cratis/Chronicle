@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Rules;
 using Cratis.Reflection;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
