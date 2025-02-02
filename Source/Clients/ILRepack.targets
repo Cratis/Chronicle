@@ -8,10 +8,16 @@
         <InputAssemblies Include="@(InternalAssembly)"/>
         <FilteredReferences Include="@(ProjectReference->WithMetadataValue('PrivateAssets', 'all'))"
                          KeepMetadata="PrivateAssets;TargetPath" />
-        <InternalAssemblies Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"/>
-        <InputAssemblies Include="@(InternalAssemblies)" Exclude="@(AssemblyToExcludeFromMerge)"/>
+
+        <InternalAssemblies
+            Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"
+            Exclude="@(DoNotInternalizeAssemblies)"/>
+
+        <InputAssemblies
+            Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"
+            Exclude="@(AssemblyToExcludeFromMerge)"/>
+
         <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
-        <DoNotInternalizeAssemblies Include="@(AssemblyToMerge)"/>
     </ItemGroup>
 
     <PropertyGroup>
@@ -22,11 +28,12 @@
     <ILRepack
         AllowDuplicateResources="false"
         DebugInfo="true"
-        Internalize="true"
         CopyAttributes="false"
         ExcludeInternalizeSerializable="false"
         InputAssemblies="@(InputAssemblies)"
         InternalizeAssembly="@(InternalizeAssemblies)"
+        Internalize="true"
+        InternalizeExclude="@(DoNotInternalizeAssemblies)"
         OutputFile="$(TargetPath)"
         Parallel="true"
         LibraryPath="@(LibraryPath)"
