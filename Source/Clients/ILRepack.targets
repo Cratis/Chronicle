@@ -18,12 +18,17 @@
             Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"
             Exclude="@(AssemblyToExcludeFromMerge)"/>
 
+        <AssembliesToFix
+            Include="@(InputAssemblies)"
+            Exclude="$(TargetPath)"/>
+
         <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
     </ItemGroup>
 
     <PropertyGroup>
         <InternalNamespaces>@(InternalAssemblies->'%(Filename)', ';')</InternalNamespaces>
         <InternalAssemblyNames>@(InternalAssemblies->'%(Filename)', ';')</InternalAssemblyNames>
+        <AssemblyNamesToFix>@(AssembliesToFix->'%(Filename)', ';')</AssemblyNamesToFix>
     </PropertyGroup>
 
     <ILRepack
@@ -46,6 +51,6 @@
         TargetKind="SameAsPrimaryAssembly"/>
 
     <Exec Command="dotnet run $(TargetPath) &quot;$(InternalNamespaces)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/InternalsVerifier" />
-    <Exec Command="dotnet run $(TargetPath) &quot;$(InternalAssemblyNames)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />
+    <Exec Command="dotnet run $(TargetPath) &quot;$(AssemblyNamesToFix)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />
   </Target>
 </Project>
