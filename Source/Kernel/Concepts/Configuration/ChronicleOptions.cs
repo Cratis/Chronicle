@@ -27,4 +27,9 @@ public class ChronicleOptions
     /// Gets or inits the storage configuration.
     /// </summary>
     public Storage Storage { get; init; } = new Storage();
+
+    /// <summary>
+    /// Gets the observers configuration.
+    /// </summary>
+    public Observers Observers { get; init; } = new Observers();
 }

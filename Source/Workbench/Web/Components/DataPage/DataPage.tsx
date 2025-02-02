@@ -173,7 +173,6 @@ const DataPage = <TQuery extends IQueryFor<TDataType> | IObservableQueryFor<TDat
                 <Allotment className="h-full" proportionalLayout={false}>
                     <Allotment.Pane className="flex-grow">
                         {props.children}
-
                     </Allotment.Pane>
                     {props.detailsComponent && selectedItem &&
                         <Allotment.Pane preferredSize="450px">

@@ -40,7 +40,7 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
         {
             EventSourceId = "some source";
             Event = new SomeEvent(42);
-            ReactorObserver = GetObserverFor<SomeReactor>();
+            ReactorObserver = GetObserverForReactor<SomeReactor>();
         }
 
         async Task Because()
@@ -77,9 +77,6 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
 
     [Fact]
     void should_have_correct_observer_state_next_event_sequence_number() => Context.ReactorObserverState.NextEventSequenceNumber.Value.ShouldEqual(1ul);
-
-    [Fact]
-    void should_have_correct_observer_state_next_event_sequence_number_for_event_types() => Context.ReactorObserverState.NextEventSequenceNumberForEventTypes.Value.ShouldEqual(EventSequenceNumber.Unavailable.Value);
 
     [Fact]
     void should_not_have_failed_partitions() => Context.FailedPartitions.ShouldBeEmpty();

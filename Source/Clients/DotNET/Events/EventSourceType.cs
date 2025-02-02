@@ -17,7 +17,7 @@ public record EventSourceType(string Value) : ConceptAs<string>(Value)
     /// <summary>
     /// Gets the default <see cref="EventSourceType"/>.
     /// </summary>
-    public static readonly EventSourceType Default = new("default");
+    public static readonly EventSourceType Default = new("Default");
 
     /// <summary>
     /// Convert from a <see cref="string"/> to an <see cref="EventSourceType"/>.

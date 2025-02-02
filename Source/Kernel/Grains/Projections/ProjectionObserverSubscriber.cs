@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -23,13 +24,13 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// </remarks>
 /// <param name="projectionManager"><see cref="IProjectionManager"/> for getting projections.</param>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
-/// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineManager"/> for creating projection pipelines.</param>
+/// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for creating projection pipelines.</param>
 /// <param name="logger">The logger.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class ProjectionObserverSubscriber(
     IProjectionManager projectionManager,
     IProjectionFactory projectionFactory,
-    IProjectionPipelineManager projectionPipelineFactory,
+    IProjectionPipelineManager projectionPipelineManager,
     ILogger<ProjectionObserverSubscriber> logger) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
     ObserverSubscriberKey _key = new(ObserverId.Unspecified, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Unspecified, EventSourceId.Unspecified, string.Empty);
@@ -45,6 +46,13 @@ public class ProjectionObserverSubscriber(
     }
 
     /// <inheritdoc/>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+        await projection.UnsubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
+    }
+
+    /// <inheritdoc/>
     public async Task OnProjectionDefinitionsChanged()
     {
         await ReadStateAsync();
@@ -52,7 +60,7 @@ public class ProjectionObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
         if (_pipeline is null)
         {
@@ -90,6 +98,6 @@ public class ProjectionObserverSubscriber(
         {
             projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State);
         }
-        _pipeline = projectionPipelineFactory.GetFor(_key.EventStore, _key.Namespace, projection);
+        _pipeline = projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
     }
 }

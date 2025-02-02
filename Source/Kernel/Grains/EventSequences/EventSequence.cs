@@ -193,13 +193,13 @@ public class EventSequence(
             while(!appendResult.IsSuccess);
 
             var appendedSequenceNumber = State.SequenceNumber;
-            State.SequenceNumber = State.SequenceNumber.Next();
+            State.SequenceNumber = appendedSequenceNumber.Next();
+            State.TailSequenceNumberPerEventType[eventType.Id] = appendedSequenceNumber;
             await WriteStateAsync();
 
             _metrics?.AppendedEvent(eventSourceId, eventType.Id);
             var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
             await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
-            State.TailSequenceNumberPerEventType[eventType.Id] = State.SequenceNumber;
             await constraintContext.Update(State.SequenceNumber);
 
             return AppendResult.Success(correlationId, appendedSequenceNumber);

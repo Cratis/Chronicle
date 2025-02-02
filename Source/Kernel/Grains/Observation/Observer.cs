@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
@@ -13,6 +14,7 @@ using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
@@ -28,6 +30,7 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// </remarks>
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
 /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
+/// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -36,6 +39,7 @@ public class Observer(
     [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
     IPersistentState<FailedPartitions> failures,
     IObserverServiceClient replayStateServiceClient,
+    IConfigurationForObserverProvider configurationProvider,
     ILogger<Observer> logger,
     IMeter<Observer> meter,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
@@ -48,6 +52,7 @@ public class Observer(
     IEventSequence _eventSequence = null!;
     IAppendedEventsQueues _appendedEventsQueues = null!;
     IMeterScope<Observer>? _metrics;
+    bool _isPreparingCatchup;
 
     /// <inheritdoc/>
     protected override Type InitialState => typeof(Routing);
@@ -132,8 +137,9 @@ public class Observer(
             siloAddress,
             subscriberArgs);
 
-        await TransitionTo<Routing>();
+        await ResumeJobs();
         await TryRecoverAllFailedPartitions();
+        await TransitionTo<Routing>();
     }
 
     /// <inheritdoc/>
@@ -150,11 +156,6 @@ public class Observer(
             _eventSequence,
             loggerFactory.CreateLogger<Routing>()),
 
-        new CatchUp(
-            _observerKey,
-            _jobsManager,
-            loggerFactory.CreateLogger<CatchUp>()),
-
         new ResumeReplay(
             _observerKey,
             replayStateServiceClient,
@@ -165,8 +166,6 @@ public class Observer(
             replayStateServiceClient,
             _jobsManager,
             loggerFactory.CreateLogger<Replay>()),
-
-        new Indexing(),
 
         new Observing(
             _appendedEventsQueues,
@@ -215,6 +214,15 @@ public class Observer(
     }
 
     /// <inheritdoc/>
+    public async Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        await WriteStateAsync();
+        await TransitionTo<Routing>();
+    }
+
+    /// <inheritdoc/>
     public async Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -236,9 +244,10 @@ public class Observer(
         _metrics?.PartitionFailed(partition);
         logger.PartitionFailed(partition, sequenceNumber);
         var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
-        if (failure.Attempts.Count() < 10)
+        var config = await configurationProvider.GetFor(_observerKey);
+        if (config.MaxRetryAttempts == 0 || failure.Attempts.Count() <= config.MaxRetryAttempts)
         {
-            await this.RegisterOrUpdateReminder(partition.ToString(), GetNextRetryDelay(failure), TimeSpan.FromHours(48));
+            await this.RegisterOrUpdateReminder(partition.ToString(), GetNextRetryDelay(failure, config), TimeSpan.FromHours(48));
         }
         else
         {
@@ -267,6 +276,66 @@ public class Observer(
         logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task CatchUp()
+    {
+        _isPreparingCatchup = true;
+        using var scope = logger.BeginObserverScope(State.Id, _observerKey);
+
+        var subscription = await GetSubscription();
+
+        var jobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
+        var jobsForThisObserver = jobs.Where(IsJobForThisObserver);
+        if (jobs.Any(_ => _.Status == JobStatus.Running))
+        {
+            logger.FinishingExistingCatchUpJob();
+            return;
+        }
+
+        var pausedJob = jobs.FirstOrDefault(_ => _.Status == JobStatus.Paused);
+
+        if (pausedJob is not null)
+        {
+            logger.ResumingCatchUpJob();
+            await _jobsManager.Resume(pausedJob.Id);
+        }
+        else
+        {
+            logger.StartCatchUpJob(State.NextEventSequenceNumber);
+            await _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(
+                JobId.New(),
+                new(
+                    _observerKey,
+                    subscription,
+                    State.NextEventSequenceNumber,
+                    State.EventTypes));
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task RegisterCatchingUpPartitions(IEnumerable<Key> partitions)
+    {
+        using var scope = logger.BeginObserverScope(State.Id, _observerKey);
+        logger.RegisteringCatchingUpPartitions();
+        foreach (var partition in partitions)
+        {
+            State.CatchingUpPartitions.Add(partition);
+        }
+
+        await WriteStateAsync();
+
+        _isPreparingCatchup = false;
+    }
+
+    /// <inheritdoc/>
+    public async Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        await WriteStateAsync();
+        await TransitionTo<Routing>();
     }
 
     /// <inheritdoc/>
@@ -305,20 +374,8 @@ public class Observer(
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
-        if (!_subscription.IsSubscribed || Failures.IsFailed(partition))
+        if (!ShouldHandleEvent(partition))
         {
-            return;
-        }
-
-        if (State.ReplayingPartitions.Contains(partition))
-        {
-            logger.PartitionReplayingCannotHandleNewEvents(partition);
-            return;
-        }
-
-        if (State.CatchingUpPartitions.Contains(partition))
-        {
-            logger.PartitionCatchingUpCannotHandleNewEvents(partition);
             return;
         }
 
@@ -355,7 +412,7 @@ public class Observer(
 
                     var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                     tailEventSequenceNumber = firstEvent.Metadata.SequenceNumber;
-                    var result = await subscriber.OnNext(eventsToHandle, new(_subscription.Arguments));
+                    var result = await subscriber.OnNext(partition, eventsToHandle, new(_subscription.Arguments));
                     numEventsSuccessfullyHandled = result.HandledAnyEvents
                         ? eventsToHandle.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation)
                         : EventCount.Zero;
@@ -398,18 +455,26 @@ public class Observer(
                     exceptionStackTrace = ex.StackTrace ?? string.Empty;
                 }
             }
-            if (failed)
-            {
-                await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
-            }
-            else
-            {
-                _metrics?.SuccessfulObservation();
-            }
 
-            if (stateChanged)
+            try
             {
-                await WriteStateAsync();
+                if (failed)
+                {
+                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
+                }
+                else
+                {
+                    _metrics?.SuccessfulObservation();
+                }
+
+                if (stateChanged)
+                {
+                    await WriteStateAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.ObserverFailedForUnknownReasonsAfterHandlingEvents(ex);
             }
         }
     }
@@ -418,6 +483,11 @@ public class Observer(
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
         await RemoveReminder(reminderName);
+        if (!_subscription.IsSubscribed)
+        {
+            return;
+        }
+
         var partition = failures.State.Partitions.FirstOrDefault(_ => _.Partition.ToString() == reminderName);
         if (partition is not null)
         {
@@ -452,10 +522,75 @@ public class Observer(
         await base.WriteStateAsync();
     }
 
-    static TimeSpan GetNextRetryDelay(FailedPartition failure)
+    static TimeSpan GetNextRetryDelay(FailedPartition failure, Observers config)
     {
-        var time = TimeSpan.FromSeconds((failure.Attempts.Count() - 1) * 2);
-        return time.TotalMilliseconds == 0 ? TimeSpan.FromMilliseconds(100) : time;
+        var time = TimeSpan.FromSeconds(config.BackoffDelay * Math.Pow(config.ExponentialBackoffDelayFactor, failure.Attempts.Count()));
+        var maxTime = TimeSpan.FromSeconds(config.MaximumBackoffDelay);
+
+        if (time > maxTime)
+        {
+            return maxTime;
+        }
+
+        if (time == TimeSpan.Zero)
+        {
+            return TimeSpan.FromSeconds(config.BackoffDelay);
+        }
+
+        return time;
+    }
+
+    bool ShouldHandleEvent(Key partition)
+    {
+        if (!_subscription.IsSubscribed)
+        {
+            logger.ObserverIsNotSubscribed();
+            return false;
+        }
+
+        if (Failures.IsFailed(partition))
+        {
+            logger.PartitionIsFailed(partition);
+            return false;
+        }
+
+        if (State.RunningState != ObserverRunningState.Active)
+        {
+            logger.ObserverIsNotActive();
+            return false;
+        }
+
+        if (_isPreparingCatchup)
+        {
+            logger.ObserverIsPreparingCatchup();
+            return false;
+        }
+
+        if (State.ReplayingPartitions.Contains(partition))
+        {
+            logger.PartitionReplayingCannotHandleNewEvents(partition);
+            return false;
+        }
+
+        if (State.CatchingUpPartitions.Contains(partition))
+        {
+            logger.PartitionCatchingUpCannotHandleNewEvents(partition);
+            return false;
+        }
+
+        return true;
+    }
+
+    async Task ResumeJobs()
+    {
+        var unfilteredJobs = await _jobsManager.GetAllJobs();
+        var jobs = unfilteredJobs.Where(_ =>
+                        _.Request is IObserverJobRequest &&
+                        _.IsResumable).ToArray();
+        foreach (var job in jobs)
+        {
+            await _jobsManager.Resume(job.Id);
+        }
     }
 
     void HandleNewLastHandledEvent(EventSequenceNumber lastHandledEvent)
@@ -553,6 +688,9 @@ public class Observer(
             number => number != lastHandledEventSequenceNumber,
             error => error);
     }
+
+    bool IsJobForThisObserver(JobState jobState) =>
+        ((ReplayObserverRequest)jobState.Request).ObserverKey == _observerKey;
 
     class WriteSuspension : IDisposable
     {

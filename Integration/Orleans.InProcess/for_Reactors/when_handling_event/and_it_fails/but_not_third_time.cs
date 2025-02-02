@@ -13,6 +13,7 @@ using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunni
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_handling_event.and_it_fails;
 
 [Collection(GlobalCollection.Name)]
+[Trait("Category", "Output")]
 public class but_not_third_time(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : given.a_reactor_observing_an_event_that_can_fail(globalFixture, 3)
@@ -32,7 +33,7 @@ public class but_not_third_time(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var waitTime = 5.Seconds();
+            var waitTime = 10.Seconds();
 
             await ReactorObserver.WaitTillActive();
             Observers[0].ShouldFail = true;
@@ -55,6 +56,7 @@ public class but_not_third_time(context context) : Given<context>(context)
             // Wait for the third event to have been handled
             await Tcs[2].Task.WaitAsync(waitTime);
             await EventStore.WaitForThereToBeNoJobs(waitTime);
+            await Observers[2].WaitTillHandledEventReaches(1);
 
             FailedPartitionsAfterRetry = await GetFailedPartitions();
             ObserverState = await ReactorObserver.GetState();

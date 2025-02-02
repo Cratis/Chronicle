@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation.Placement;
 using Microsoft.Extensions.Logging;
@@ -24,64 +24,57 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 /// Initializes a new instance of the <see cref="ReactorObserverSubscriber"/> class.
 /// </remarks>
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for notifying actual clients.</param>
+/// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for providing <see cref="Observers"/> config.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [ConnectedObserverPlacement]
 public class ReactorObserverSubscriber(
     IReactorMediator reactorMediator,
+    IConfigurationForObserverProvider configurationProvider,
     ILogger<ReactorObserverSubscriber> logger) : Grain, IReactorObserverSubscriber
 {
-    EventStoreName _eventStore = EventStoreName.NotSet;
-    ObserverId _observerId = ObserverId.Unspecified;
-    EventStoreNamespaceName _namespace = EventStoreNamespaceName.NotSet;
-    EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
+    ObserverKey _key = ObserverKey.NotSet;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        var key = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
-        _observerId = key.ObserverId;
-        _eventStore = key.EventStore;
-        _namespace = key.Namespace;
-        _eventSequenceId = key.EventSequenceId;
+        var subscriberKey = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
+        _key = new(subscriberKey.ObserverId, subscriberKey.EventStore, subscriberKey.Namespace, subscriberKey.EventSequenceId);
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
         foreach (var @event in events)
         {
             logger.EventReceived(
-                _observerId,
-                _eventStore,
-                _namespace,
+                _key.ObserverId,
+                _key.EventStore,
+                _key.Namespace,
                 @event.Metadata.Type.Id,
-                _eventSequenceId,
+                _key.EventSequenceId,
                 @event.Context.SequenceNumber);
         }
 
         if (context.Metadata is not ConnectedClient connectedClient)
         {
-            throw new MissingStateForReactorSubscriber(_observerId);
+            throw new MissingStateForReactorSubscriber(_key.ObserverId);
         }
         var tcs = new TaskCompletionSource<ObserverSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         try
         {
-            reactorMediator.OnNext(
-                _observerId,
-                connectedClient.ConnectionId,
-                events,
-                tcs);
-            return await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var timeout = await configurationProvider.GetSubscriberTimeoutForObserver(_key);
+            reactorMediator.OnNext(_key.ObserverId, connectedClient.ConnectionId, partition, events, tcs);
+            return await tcs.Task.WaitAsync(timeout);
         }
         catch (TaskCanceledException taskCanceledException)
         {
-            logger.OnNextException(taskCanceledException, _observerId, _eventStore, _namespace);
+            logger.OnNextException(taskCanceledException, _key.ObserverId, _key.EventStore, _key.Namespace);
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
         }
         catch (TimeoutException timeoutException)
         {
-            logger.OnNextException(timeoutException, _observerId, _eventStore, _namespace);
+            logger.OnNextException(timeoutException, _key.ObserverId, _key.EventStore, _key.Namespace);
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Timeout");
         }
     }

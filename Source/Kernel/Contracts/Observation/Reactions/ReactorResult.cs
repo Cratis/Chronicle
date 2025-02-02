@@ -12,26 +12,32 @@ namespace Cratis.Chronicle.Contracts.Observation.Reactors;
 public class ReactorResult
 {
     /// <summary>
-    /// Gets or sets the state of the observer.
+    /// Gets or sets the partition that was observed.
     /// </summary>
     [ProtoMember(1)]
+    public string Partition { get; set; }
+
+    /// <summary>
+    /// Gets or sets the state of the observer.
+    /// </summary>
+    [ProtoMember(2)]
     public ObservationState State { get; set; }
 
     /// <summary>
     /// Gets or sets the last successful observation.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(3)]
     public ulong LastSuccessfulObservation { get; set; }
 
     /// <summary>
     /// Gets or sets the exception messages.
     /// </summary>
-    [ProtoMember(3, IsRequired = true)]
+    [ProtoMember(4, IsRequired = true)]
     public IList<string> ExceptionMessages { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the exception stack trace.
     /// </summary>
-    [ProtoMember(4)]
+    [ProtoMember(5)]
     public string ExceptionStackTrace { get; set; }
 }

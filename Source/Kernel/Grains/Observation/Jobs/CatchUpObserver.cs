@@ -4,8 +4,8 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -21,11 +21,13 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// <param name="logger">The logger.</param>
 public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
 {
+    IObserver? _observer;
+
     /// <inheritdoc/>
     public override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        if (!State.HandledAllEvents)
+        if (!AllStepsCompletedSuccessfully)
         {
             if (State.LastHandledEventSequenceNumber.IsActualValue)
             {
@@ -36,8 +38,9 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
                 logger.NoneEventsWereHandled(nameof(CatchUpObserver));
             }
         }
+
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.TransitionTo<Routing>();
+        await observer.CaughtUp(State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>
@@ -58,14 +61,21 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
     }
 
     /// <inheritdoc/>
+    protected override Task OnBeforePrepareSteps(CatchUpObserverRequest request)
+    {
+        _observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
         var observerKeyIndexes = storage.GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
         var index = await observerKeyIndexes.GetFor(request.ObserverKey);
-
         var keys = index.GetKeys(request.FromEventSequenceNumber);
 
         var steps = new List<JobStepDetails>();
+        var keysForSteps = new List<Key>();
 
         await foreach (var key in keys)
         {
@@ -78,7 +88,10 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
                     EventSequenceNumber.Max,
                     EventObservationState.None,
                     request.EventTypes)));
+            keysForSteps.Add(key);
         }
+
+        await (_observer?.RegisterCatchingUpPartitions(keysForSteps) ?? Task.CompletedTask);
 
         return steps.ToImmutableList();
     }

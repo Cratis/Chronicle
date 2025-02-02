@@ -4,7 +4,6 @@
 using System.Diagnostics;
 using Cratis.Chronicle.Concepts.Clients;
 using Microsoft.Extensions.Logging;
-using Orleans.Utilities;
 
 namespace Cratis.Chronicle.Grains.Clients;
 
@@ -21,7 +20,6 @@ public class ConnectedClients(
     IConnectedClientsMetricsFactory metricsFactory) : Grain, IConnectedClients
 {
     readonly List<ConnectedClient> _clients = [];
-    readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger);
     IConnectedClientsMetrics? _metrics;
 
     /// <inheritdoc/>
@@ -54,7 +52,7 @@ public class ConnectedClients(
     }
 
     /// <inheritdoc/>
-    public async Task OnClientDisconnected(ConnectionId connectionId, string reason)
+    public Task OnClientDisconnected(ConnectionId connectionId, string reason)
     {
         logger.ClientDisconnected(connectionId, reason);
 
@@ -62,10 +60,11 @@ public class ConnectedClients(
         if (client is not null)
         {
             _clients.Remove(client);
-            await _clientDisconnectedObservers.Notify(_ => _.OnClientDisconnected(client));
         }
 
         _metrics?.SetConnectedClients(_clients.Count);
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -83,20 +82,6 @@ public class ConnectedClients(
 
     /// <inheritdoc/>
     public Task<IEnumerable<ConnectedClient>> GetAllConnectedClients() => Task.FromResult(_clients.AsEnumerable());
-
-    /// <inheritdoc/>
-    public Task SubscribeDisconnected(INotifyClientDisconnected subscriber)
-    {
-        _clientDisconnectedObservers.Subscribe(subscriber, subscriber);
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public Task UnsubscribeDisconnected(INotifyClientDisconnected subscriber)
-    {
-        _clientDisconnectedObservers.Unsubscribe(subscriber);
-        return Task.CompletedTask;
-    }
 
     /// <inheritdoc/>
     public Task<bool> IsConnected(ConnectionId connectionId) => Task.FromResult(_clients.Exists(_ => _.ConnectionId == connectionId));

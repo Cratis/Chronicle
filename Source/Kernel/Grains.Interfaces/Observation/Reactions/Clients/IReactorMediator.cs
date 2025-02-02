@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 
 namespace Cratis.Chronicle.Grains.Observation.Reactors.Clients;
@@ -25,9 +26,10 @@ public interface IReactorMediator
     /// </summary>
     /// <param name="reactorId"><see cref="ReactorId"/> to send to.</param>
     /// <param name="connectionId"><see cref="ConnectionId"/> to send to.</param>
+    /// <param name="partition"><see cref="Key"/> for the partition.</param>
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to observe.</param>
     /// <param name="taskCompletionSource"><see cref="TaskCompletionSource{T}"/> to return <see cref="ObserverSubscriberResult"/> to.</param>
-    void OnNext(ReactorId reactorId, ConnectionId connectionId, IEnumerable<AppendedEvent> events, TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource);
+    void OnNext(ReactorId reactorId, ConnectionId connectionId, Key partition, IEnumerable<AppendedEvent> events, TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource);
 
     /// <summary>
     /// Notify that a client has connected.

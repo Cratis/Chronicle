@@ -19,12 +19,12 @@ namespace Cratis.Chronicle.Reactors;
 /// </summary>
 public class Reactors : IReactors
 {
-    #if NET9_0
+#if NET9_0
     static readonly Lock _registerLock = new();
-    #endif
-    #if NET8_0
+#endif
+#if NET8_0
     static readonly object _registerLock = new();
-    #endif
+#endif
     readonly IEventStore _eventStore;
     readonly IEventTypes _eventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
@@ -83,11 +83,7 @@ public class Reactors : IReactors
         var handlers = _clientArtifactsProvider.Reactors
                             .ToDictionary(
                                 _ => _,
-                                reactorType => new ReactorHandler(
-                                    reactorType.GetReactorId(),
-                                    reactorType.GetEventSequenceId(),
-                                    new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, logger),
-                                    _causationManager));
+                                CreateHandlerFor);
 
         foreach (var handler in handlers)
         {
@@ -123,6 +119,19 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
+    public Task<ReactorHandler> Register<TReactor>()
+        where TReactor : IReactor
+    {
+        var reactorType = typeof(TReactor);
+        var reactorHandler = CreateHandlerFor(reactorType);
+
+        RegisterReactor(reactorHandler);
+        _handlers.Add(reactorType, reactorHandler);
+
+        return Task.FromResult(reactorHandler);
+    }
+
+    /// <inheritdoc/>
     public ReactorHandler GetHandlerById(ReactorId id)
     {
         var reactorHandler = _handlers.Values.SingleOrDefault(_ => _.Id == id);
@@ -136,6 +145,23 @@ public class Reactors : IReactors
         {
             throw new UnknownReactorId(reactorId);
         }
+    }
+
+    ReactorHandler CreateHandlerFor(Type reactorType)
+    {
+        var handler = new ReactorHandler(
+                                    reactorType.GetReactorId(),
+                                    reactorType.GetEventSequenceId(),
+                                    new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, _loggerFactory.CreateLogger<ReactorInvoker>()),
+                                    _causationManager);
+
+        CancellationTokenRegistration? register = null;
+        register = handler.CancellationToken.Register(() =>
+        {
+            _handlers.Remove(reactorType);
+            register?.Dispose();
+        });
+        return handler;
     }
 
     void RegisterReactor(ReactorHandler handler)
@@ -157,7 +183,7 @@ public class Reactors : IReactors
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var messages = new BehaviorSubject<ReactorMessage>(new(new(registration)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
-        var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages);
+        var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages, handler.CancellationToken);
 
         // https://github.com/dotnet/reactive/issues/459
         eventsToObserve
@@ -204,6 +230,7 @@ public class Reactors : IReactors
 
         var result = new ReactorResult
         {
+            Partition = events.Partition,
             State = state,
             LastSuccessfulObservation = lastSuccessfullyObservedEvent,
             ExceptionMessages = exceptionMessages.ToList(),

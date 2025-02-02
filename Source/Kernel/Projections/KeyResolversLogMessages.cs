@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 internal static partial class KeyResolversLogMessages
 {
-    [LoggerMessage(LogLevel.Information, "Resolving key using key resolver: {KeyResolverName}")]
+    [LoggerMessage(LogLevel.Trace, "Resolving key using key resolver: {KeyResolverName}")]
     internal static partial void ResolvingKey(this ILogger<KeyResolvers> logger, string keyResolverName);
 
     [LoggerMessage(LogLevel.Warning, "An error occurred while resolving the key resolver: {KeyResolverName}")]

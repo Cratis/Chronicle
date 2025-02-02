@@ -4,6 +4,7 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Grains.Clients;
+using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Clients;
@@ -11,11 +12,11 @@ namespace Cratis.Chronicle.Services.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IConnectionService"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ConnectionService"/> class.
-/// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
-public class ConnectionService(IGrainFactory grainFactory) : IConnectionService
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+public class ConnectionService(
+    IGrainFactory grainFactory,
+    ILogger<ConnectionService> logger) : IConnectionService
 {
     /// <inheritdoc/>
     public IObservable<ConnectionKeepAlive> Connect(
@@ -25,29 +26,44 @@ public class ConnectionService(IGrainFactory grainFactory) : IConnectionService
         var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
         var subject = new Subject<ConnectionKeepAlive>();
 
-        _ = Task.Run(async () =>
-        {
-            await connectedClients.OnClientConnected(
-                request.ConnectionId,
-                request.ClientVersion,
-                request.IsRunningWithDebugger);
-
-            while (!context.CancellationToken.IsCancellationRequested)
+        _ = Task.Run(
+            async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                await connectedClients.OnClientConnected(
+                    request.ConnectionId,
+                    request.ClientVersion,
+                    request.IsRunningWithDebugger);
 
-                if (context.CancellationToken.IsCancellationRequested)
+                try
                 {
-                    break;
+                    while (!context.CancellationToken.IsCancellationRequested)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
+                        if (context.CancellationToken.IsCancellationRequested)
+                        {
+                            break;
+                        }
+
+                        subject.OnNext(new ConnectionKeepAlive
+                        {
+                            ConnectionId = request.ConnectionId
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.FailureDuringKeepAlive(request.ConnectionId, ex);
                 }
 
-                subject.OnNext(new ConnectionKeepAlive
-                {
-                    ConnectionId = request.ConnectionId
-                });
-            }
+                await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
+            },
+            context.CancellationToken);
 
-            await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
+        context.CancellationToken.Register(() =>
+        {
+            subject.OnCompleted();
+            subject.Dispose();
         });
 
         return subject;

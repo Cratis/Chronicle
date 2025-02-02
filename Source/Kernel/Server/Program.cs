@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -54,18 +55,18 @@ builder.Host
    .UseCratisMongoDB(mongo =>
    {
        mongo.Server = chronicleOptions.Storage.ConnectionDetails;
-       mongo.Database = "chronicle";
+       mongo.Database = WellKnownDatabaseNames.Chronicle;
    })
    .UseOrleans(_ => _
-       .UseLocalhostClustering() // TODO: Implement MongoDB clustering
-       .AddChronicleToSilo(_ => _
-           .WithMongoDB())
-       .UseDashboard(options =>
-       {
-           options.Host = "*";
-           options.Port = 8081;
-           options.HostSelf = true;
-       }))
+        .UseLocalhostClustering()
+        .AddChronicleToSilo(_ => _
+           .WithMongoDB(chronicleOptions))
+        .UseDashboard(options =>
+        {
+            options.Host = "*";
+            options.Port = 8081;
+            options.HostSelf = true;
+        }))
    .ConfigureServices((context, services) =>
    {
        services

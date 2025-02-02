@@ -9,15 +9,19 @@ using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.DependencyInjection;
 using Cratis.Json;
 using DotNet.Testcontainers.Networks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Orleans.Storage;
+using Orleans.TestingHost;
 using Orleans.TestingHost.Logging;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess;
@@ -30,6 +34,8 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     protected override IHostBuilder CreateHostBuilder()
     {
         var builder = Host.CreateDefaultBuilder();
+
+        var chronicleOptions = new Concepts.Configuration.ChronicleOptions();
         builder.UseCratisMongoDB(
             mongo =>
             {
@@ -45,10 +51,14 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
             .ConfigureServices((ctx, services) =>
             {
-                services.AddChronicleTelemetry(ctx.Configuration);
                 services.AddSingleton(Globals.JsonSerializerOptions);
+                services.AddBindingsByConvention();
+                services.AddSelfBindings();
+                services.AddChronicleTelemetry(ctx.Configuration);
                 services.AddControllers();
+                ctx.Configuration.Bind(chronicleOptions);
                 services.Configure<ChronicleOptions>(opts => opts.ArtifactsProvider = this);
+
                 ConfigureServices(services);
             });
         builder.AddCratisChronicle();
@@ -57,9 +67,9 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
             {
                 silo
                     .UseLocalhostClustering()
-                    .AddCratisChronicle(
-                        options => options.EventStoreName = Constants.EventStore,
-                        _ => _.WithMongoDB());
+                    .AddCratisChronicle(_ => _.EventStoreName = Constants.EventStore)
+                    .AddChronicleToSilo(_ => _
+                        .WithMongoDB(chronicleOptions.Storage.ConnectionDetails, Constants.EventStore));
             })
             .UseConsoleLifetime();
 
@@ -92,10 +102,18 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public IEventSequence GetEventSequenceGrain(EventSequenceId id) => Services.GetRequiredService<IGrainFactory>().GetGrain<IEventSequence>(CreateEventSequenceKey(id));
     public EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, Constants.EventStore, Concepts.EventStoreNamespaceName.Default);
 
-    public IObserver GetObserverFor<T>() => Services.GetRequiredService<IGrainFactory>()
+    public IObserver GetObserverForReactor<T>() => Services.GetRequiredService<IGrainFactory>()
         .GetGrain<IObserver>(
             new ObserverKey(
                 typeof(T).GetReactorId().Value,
+                Constants.EventStore,
+                Concepts.EventStoreNamespaceName.Default,
+                EventSequenceId.Log));
+
+    public IObserver GetObserverForReducer<T>() => Services.GetRequiredService<IGrainFactory>()
+        .GetGrain<IObserver>(
+            new ObserverKey(
+                typeof(T).GetReducerId().Value,
                 Constants.EventStore,
                 Concepts.EventStoreNamespaceName.Default,
                 EventSequenceId.Log));

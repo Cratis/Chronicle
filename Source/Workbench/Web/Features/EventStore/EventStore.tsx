@@ -31,11 +31,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.jobs, url: ':namespace/jobs', icon: mdIcons.MdGroupWork },
                 { label: strings.mainMenu.sequences, url: ':namespace/sequences', icon: mdIcons.MdDataArray },
                 { label: strings.mainMenu.observers, url: ':namespace/observers', icon: mdIcons.MdAirlineStops },
-                {
-                    label: strings.mainMenu.failedPartitions,
-                    url: ':namespace/failed-partitions',
-                    icon: mdIcons.MdErrorOutline
-                },
+                { label: strings.mainMenu.failedPartitions, url: ':namespace/failed-partitions', icon: mdIcons.MdErrorOutline },
                 { label: strings.mainMenu.identities, url: ':namespace/identities', icon: mdIcons.MdPeople },
             ]
         },

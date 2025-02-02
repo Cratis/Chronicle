@@ -13,4 +13,7 @@ internal static partial class AppendedEventsQueueLogMessages
 {
     [LoggerMessage(LogLevel.Error, "Failed notifying observers")]
     internal static partial void NotifyingObserversFailed(this ILogger<AppendedEventsQueue> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Error, "An error occurred while handling appended events in queue. Keep on processing.")]
+    internal static partial void QueueHandlerFailed(this ILogger<AppendedEventsQueue> logger, Exception exception);
 }

@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_partition_caught_up.needing_catchup;
 
-public class and_last_handled_event_is_greater_than_current_last_handled_and_next_event_sequence_number : given.all_dependencies
+public class and_last_handled_event_is_greater_than_current_last_handled_and_next_event_sequence_number : given.an_observer_with_one_partition_being_caught_up
 {
     static EventSequenceNumber _newSequenceNumber;
 

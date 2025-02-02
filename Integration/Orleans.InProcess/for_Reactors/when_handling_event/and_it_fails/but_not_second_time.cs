@@ -13,6 +13,7 @@ using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunni
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_handling_event.and_it_fails;
 
 [Collection(GlobalCollection.Name)]
+[Trait("Category", "Output")]
 public class but_not_second_time(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : given.a_reactor_observing_an_event_that_can_fail(globalFixture, 2)
@@ -32,8 +33,8 @@ public class but_not_second_time(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var waitTime = 5.Seconds();
-            await ReactorObserver.WaitTillActive();
+            var waitTime = 10.Seconds();
+            await ReactorObserver.WaitTillActive(waitTime);
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = false;
             await EventStore.EventLog.Append(EventSourceId, Event);
@@ -42,11 +43,12 @@ public class but_not_second_time(context context) : Given<context>(context)
             await Tcs[0].Task.WaitAsync(waitTime);
 
             FailedPartitionsBeforeRetry = await EventStore.WaitForThereToBeFailedPartitions(ObserverId);
-            Jobs = await EventStore.WaitForThereToBeJobs();
+            Jobs = await EventStore.WaitForThereToBeJobs(waitTime);
 
             // Wait for the second event to have been handled
             await Tcs[1].Task.WaitAsync(waitTime);
-            await EventStore.WaitForThereToBeNoJobs();
+            await EventStore.WaitForThereToBeNoJobs(waitTime);
+            await Observers[1].WaitTillHandledEventReaches(1);
 
             FailedPartitionsAfterRetry = await GetFailedPartitions();
             ObserverState = await ReactorObserver.GetState();

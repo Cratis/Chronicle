@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Grains.Events.Constraints;
@@ -10,6 +11,15 @@ namespace Cratis.Chronicle.Grains.Events.Constraints;
 /// </summary>
 public static class UniqueConstraintDefinitionExtensions
 {
+    /// <summary>
+    /// Check if the <see cref="UniqueConstraintDefinition"/> supports a given event type.
+    /// </summary>
+    /// <param name="definition"><see cref="UniqueConstraintDefinition"/> to check.</param>
+    /// <param name="eventTypeId"><see cref="EventTypeId"/> to check for.</param>
+    /// <returns>True if it does, false if not.</returns>
+    public static bool SupportsEventType(this UniqueConstraintDefinition definition, EventTypeId eventTypeId) =>
+        definition.EventDefinitions.Any(_ => _.EventTypeId == eventTypeId);
+
     /// <summary>
     /// Get the property and value for the <see cref="UniqueConstraintDefinition"/> based on the <see cref="ConstraintValidationContext"/>.
     /// </summary>

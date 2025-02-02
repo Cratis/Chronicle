@@ -13,14 +13,20 @@ namespace Cratis.Chronicle.Contracts.Observation.Reducers;
 public class ReduceOperationMessage
 {
     /// <summary>
-    /// Gets or sets the initial state.
+    /// Gets or sets the partition that was observed.
     /// </summary>
     [ProtoMember(1)]
+    public string Partition { get; set; }
+
+    /// <summary>
+    /// Gets or sets the initial state.
+    /// </summary>
+    [ProtoMember(2)]
     public string? InitialState { get; set; }
 
     /// <summary>
     /// Gets or sets a collection of <see cref="AppendedEvent"/>.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(3)]
     public IList<AppendedEvent> Events { get; set; }
 }

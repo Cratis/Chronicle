@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
@@ -37,9 +38,14 @@ public class an_observer : Specification
     protected IStorage<FailedPartitions> _failedPartitionsStorage;
     protected TestStorageStats _failedPartitionsStorageStats => _silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
     protected IEventSequence _eventSequence;
-
+    protected IConfigurationForObserverProvider _configurationProvider;
+    protected Observers _observersConfig;
     async Task Establish()
     {
+        _observersConfig = new();
+        _configurationProvider = Substitute.For<IConfigurationForObserverProvider>();
+        _configurationProvider.GetFor(Arg.Any<ObserverKey>()).Returns(_observersConfig);
+        _silo.AddService(_configurationProvider);
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
         _eventSequence = Substitute.For<IEventSequence>();
@@ -63,7 +69,7 @@ public class an_observer : Specification
         _failedPartitionsStorage.State = _failedPartitionsState;
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
-        _eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
+        _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
 
         _observer = await _silo.CreateGrainAsync<Observer>(_observerKey);
 

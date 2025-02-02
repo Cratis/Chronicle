@@ -3,8 +3,10 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle;
+using Cratis.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Builder;
@@ -31,7 +33,8 @@ public static class ChronicleClientServiceCollectionExtensions
                 ServiceProvider = sp,
                 SoftwareVersion = options.SoftwareVersion,
                 SoftwareCommit = options.SoftwareCommit,
-                ProgramIdentifier = options.ProgramIdentifier
+                ProgramIdentifier = options.ProgramIdentifier,
+                LoggerFactory = sp.GetRequiredService<ILoggerFactory>(),
             };
             return new ChronicleClient(chronicleOptions);
         });
@@ -65,6 +68,7 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ArtifactsProvider);
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ModelNameConvention);
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.CorrelationIdAccessor);
+        services.AddSingleton(Globals.JsonSerializerOptions);
 
         return services;
     }

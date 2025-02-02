@@ -7,6 +7,7 @@ using System.Diagnostics;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
+using Microsoft.Extensions.Logging;
 using Server::Cratis.Chronicle.Services.Clients;
 
 namespace Cratis.Chronicle.Orleans.InProcess;
@@ -19,9 +20,11 @@ namespace Cratis.Chronicle.Orleans.InProcess;
 /// </remarks>
 /// <param name="lifecycle"><see cref="IConnectionLifecycle"/> for managing lifecycle.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with grains.</param>
+/// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 internal class ChronicleConnection(
     IConnectionLifecycle lifecycle,
-    IGrainFactory grainFactory) : IChronicleConnection, IChronicleServicesAccessor
+    IGrainFactory grainFactory,
+    ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor
 {
     IServices? _services;
     ConnectionService? _connectionService;
@@ -60,7 +63,7 @@ internal class ChronicleConnection(
 
     void Connect()
     {
-        _connectionService = new ConnectionService(grainFactory);
+        _connectionService = new ConnectionService(grainFactory, loggerFactory.CreateLogger<ConnectionService>());
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,

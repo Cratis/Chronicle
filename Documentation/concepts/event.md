@@ -35,7 +35,7 @@ As with singular purpose, nullables means its up for interpretation and logic ne
 for every observers and consumers of the event.
 
 > Note: There are conditions where it makes sense to allow null, typical data collection scenario might be the case.
-> For instance, a person might not have a middle name. Recommend reading up on concepts and nullability [here](../fundamentals/concepts.md)
+> For instance, a person might not have a middle name. Recommend reading up on concepts and nullability [here](../../Fundamentals/concepts.md)
 
 ## Cohesion
 
@@ -96,5 +96,5 @@ The same approach applies for defining the events as described in this document.
 ## Event discovery
 
 There are a couple of well known approaches to discovering events in your domain; [Event Storming](https://www.eventstorming.com)
-and [Event Modelling](https://eventmodeling.org). We tend to favor the latter as it is more detailed and not just events. It gives a good
+and [Event Modelling](https://eventmodeling.org). We tend to favor the latter as it has more focused building blocks. It gives a good
 overview of a an entire system and the flows in it.

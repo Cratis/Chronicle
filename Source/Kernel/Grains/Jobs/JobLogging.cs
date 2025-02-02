@@ -106,10 +106,10 @@ internal static partial class JobLogMessages
 internal static class JobScopes
 {
     internal static IDisposable? BeginJobScope(this ILogger<IJob> logger, JobId jobId, JobKey key) =>
-        logger.BeginScope(new Dictionary<string, object>
+        logger.BeginScope(new
         {
-            ["JobId"] = jobId,
-            ["EventStore"] = key.EventStore,
-            ["Namespace"] = key.Namespace
+            JobId = jobId,
+            key.EventStore,
+            key.Namespace
         });
 }

@@ -5,6 +5,8 @@ Namespaces provide a way to provide segregation of data in the same event store.
 This can typically be used for multi-tenant scenarios were you have multiple
 tenants of your system and you want to provide data segregation between them.
 
+When not specified, Chronicle will use the **Default** namespace.
+
 > Note: A tenant is typically an organization or an organizational unit that uses a system.
 > In cloud terminology it is often linked to Software as a Service offerings were companies
 > can sign up to use a system. The system being the same for all these companies, or tenants,
@@ -16,10 +18,3 @@ With Chronicle, all namespace specific data sits in its own database in the unde
 data storage. This helps us avoid data leakage between namespaces, or tenants. With this
 you also get a better utilization of resources with mechanisms like indexing that happens
 on a database level.
-
-## How?
-
-```csharp
-var client = new ChronicleClient("chronicle://localhost:35000");
-var eventStore = client.GetEventStore("MyEventStore", "MyNamespace"); // The second parameter gets you access to the second namespace
-```

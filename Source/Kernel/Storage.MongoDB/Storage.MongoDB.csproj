@@ -12,6 +12,8 @@
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="MongoDB.Driver" />
         <PackageReference Include="Cratis.Applications.MongoDB" />
+        <PackageReference Include="Orleans.Providers.MongoDB" />
+
     </ItemGroup>
 
     <ItemGroup>

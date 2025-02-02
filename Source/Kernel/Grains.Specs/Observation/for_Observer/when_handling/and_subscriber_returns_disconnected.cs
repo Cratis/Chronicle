@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
@@ -11,7 +12,7 @@ public class and_subscriber_returns_disconnected : given.an_observer_with_subscr
     void Establish()
     {
         _subscriber
-            .OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
+            .OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
             .Returns(Task.FromResult(ObserverSubscriberResult.Disconnected()));
         _stateStorage.State = _stateStorage.State with
         {

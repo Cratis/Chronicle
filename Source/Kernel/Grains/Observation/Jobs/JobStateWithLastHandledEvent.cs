@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
+
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
@@ -29,12 +30,20 @@ public class JobStateWithLastHandledEvent : JobState
     {
         if (result.TryGetFullResult<HandleEventsForPartitionResult>(out var handleEventsResult, out _))
         {
-            LastHandledEventSequenceNumber = handleEventsResult.LastHandledEventSequenceNumber;
-            HandledAllEvents = true;
+            if (!LastHandledEventSequenceNumber.IsActualValue ||
+                handleEventsResult.LastHandledEventSequenceNumber > LastHandledEventSequenceNumber)
+            {
+                LastHandledEventSequenceNumber = handleEventsResult.LastHandledEventSequenceNumber;
+                HandledAllEvents = true;
+            }
         }
         else if (handleEventsResult is not null)
         {
-            LastHandledEventSequenceNumber = handleEventsResult.LastHandledEventSequenceNumber;
+            if (!LastHandledEventSequenceNumber.IsActualValue ||
+                handleEventsResult.LastHandledEventSequenceNumber > LastHandledEventSequenceNumber)
+            {
+                LastHandledEventSequenceNumber = handleEventsResult.LastHandledEventSequenceNumber;
+            }
         }
     }
 }

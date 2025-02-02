@@ -3,8 +3,10 @@
 
 using System.Collections.Immutable;
 using Cratis.Applications.Orleans.StateMachines;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
@@ -38,7 +40,7 @@ public class a_routing_state : Specification
         _state.SetStateMachine(_observer);
         _storedState = new ObserverState
         {
-            RunningState = ObserverRunningState.Routing,
+            RunningState = ObserverRunningState.Unknown,
         };
 
         _subscription = new ObserverSubscription(
@@ -54,6 +56,7 @@ public class a_routing_state : Specification
         _tailEventSequenceNumbers = new TailEventSequenceNumbers(_storedState.EventSequenceId, _subscription.EventTypes.ToImmutableList(), 0, 0);
 
         _eventSequence.GetTailSequenceNumber().Returns(_ => Task.FromResult(_tailEventSequenceNumbers.Tail));
-        _eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns(_ => Task.FromResult(_tailEventSequenceNumbers.TailForEventTypes));
+        _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>())
+        .Returns(_ => Task.FromResult(Result<EventSequenceNumber, GetSequenceNumberError>.Success(_tailEventSequenceNumbers.TailForEventTypes)));
     }
 }

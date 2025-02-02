@@ -4,13 +4,14 @@
 using Cratis.Chronicle.Concepts.Events;
 namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_partition_replayed.needing_catchup;
 
-public class and_last_handled_event_is_less_than_current_last_handled : given.all_dependencies
+public class and_last_handled_event_is_less_than_current_last_handled : given.an_observer_with_replaying_partition
 {
     static EventSequenceNumber _newSequenceNumber;
 
     void Establish()
     {
         _newSequenceNumber = _lastHandledEventSequenceNumber - 1;
+
         EventSequenceHasNextEvent(_newSequenceNumber);
     }
 
