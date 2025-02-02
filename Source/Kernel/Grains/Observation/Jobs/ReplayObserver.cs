@@ -32,7 +32,7 @@ public class ReplayObserver(IStorage storage, ILogger<ReplayObserver> logger) : 
             }
             else
             {
-                logger.NoneEventsWereHandled(nameof(CatchUpObserver));
+                logger.NoEventsWereHandled(nameof(CatchUpObserver));
             }
         }
 

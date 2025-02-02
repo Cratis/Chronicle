@@ -190,7 +190,7 @@ public class HandleEventsForPartition(
 
             if (lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
             {
-                logger.HandledNoneEvents(request.Partition);
+                logger.HandledNoEvents(request.Partition);
             }
             else
             {
