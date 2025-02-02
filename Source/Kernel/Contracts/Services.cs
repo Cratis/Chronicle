@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
@@ -14,7 +13,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.Recommendations;
 
-namespace Cratis.Chronicle.Connections;
+namespace Cratis.Chronicle.Contracts;
 
 /// <summary>
 /// Represents an implementation of <see cref="IServices"/>.
@@ -33,7 +32,7 @@ namespace Cratis.Chronicle.Connections;
 /// <param name="Projections"><see cref="IProjections"/> instance.</param>
 /// <param name="Jobs"><see cref="IJobs"/> instance.</param>
 /// <param name="server"><see cref="IServer"/> instance.</param>
-internal sealed record Services(
+public sealed record Services(
     IEventStores EventStores,
     INamespaces Namespaces,
     IRecommendations Recommendations,

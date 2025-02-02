@@ -5,6 +5,7 @@ extern alias Server;
 
 using System.Diagnostics;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Server::Cratis.Chronicle.Services.Clients;
 

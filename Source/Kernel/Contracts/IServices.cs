@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
@@ -13,12 +12,12 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.Recommendations;
 
-namespace Cratis.Chronicle.Connections;
+namespace Cratis.Chronicle.Contracts;
 
 /// <summary>
 /// Defines all the Kernel services available.
 /// </summary>
-internal interface IServices
+public interface IServices
 {
     /// <summary>
     /// Gets the <see cref="IEventStores"/> service.
