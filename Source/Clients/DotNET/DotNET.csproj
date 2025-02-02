@@ -3,7 +3,6 @@
         <AssemblyName>Cratis.Chronicle</AssemblyName>
         <RootNamespace>Cratis.Chronicle</RootNamespace>
         <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
-        <ContractsAssembly>$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll</ContractsAssembly>
         <ContractsImplementationAssembly>Cratis.Chronicle.Contracts.Implementations</ContractsImplementationAssembly>
     </PropertyGroup>
 
