@@ -8,8 +8,8 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.ProjectionEngine;
-using Cratis.Chronicle.ProjectionEngine.Pipelines;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.Pipelines;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 

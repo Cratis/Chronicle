@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.ProjectionEngine;
-using Cratis.Chronicle.ProjectionEngine.Pipelines;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.Pipelines;
 
 namespace Cratis.Chronicle.Grains.Observation;
 

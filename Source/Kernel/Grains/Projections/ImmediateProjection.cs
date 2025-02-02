@@ -11,13 +11,13 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.ProjectionEngine;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
-using EngineProjection = Cratis.Chronicle.ProjectionEngine.IProjection;
+using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Grains.Projections;
 
