@@ -2,6 +2,7 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.XUnit</AssemblyName>
         <RootNamespace>Cratis.Chronicle.XUnit</RootNamespace>
+        <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
 
@@ -24,7 +25,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" />
+        <DoNotInternalizeAssemblies Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
     </ItemGroup>
 
     <ItemGroup>
