@@ -145,8 +145,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           message: |
-            NuGet packages for this PR, e.g. Cratis:
-            https://github.com/cratis/chronicle/packages/1655206?version=${{ needs.release.outputs.version }}
+            NuGet packages for this PR, e.g. Chronicle:
+            https://github.com/Cratis/Chronicle/pkgs/nuget/Cratis.Chronicle
           allow-repeats: false
 
   publish-docker:
