@@ -6,8 +6,9 @@
         <InputAssemblies Include="$(TargetPath)"/>
         <InputAssemblies Include="@(AssemblyToMerge)"/>
         <InputAssemblies Include="@(InternalAssembly)"/>
-        <FilteredReferences Include="@(ProjectReference->WithMetadataValue('PrivateAssets', 'all'))"
-                         KeepMetadata="PrivateAssets;TargetPath" />
+        <FilteredReferences
+            Include="@(ProjectReference->WithMetadataValue('PrivateAssets', 'all'))"
+            KeepMetadata="PrivateAssets;TargetPath" />
 
         <InternalAssemblies
             Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"
@@ -37,9 +38,10 @@
         OutputFile="$(TargetPath)"
         Parallel="true"
         LibraryPath="@(LibraryPath)"
-        Verbose="false"
+        Verbose="true"
         XmlDocumentation="true"
         Union="true"
+        AllowedDuplicateNamespaces="Cratis.Chronicle.Projections"
         LogFile="$(OutputPath)/ILRepack.log"
         TargetKind="SameAsPrimaryAssembly"/>
 
