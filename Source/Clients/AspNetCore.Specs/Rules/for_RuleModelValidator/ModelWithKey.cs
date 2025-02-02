@@ -3,10 +3,6 @@
 
 using Cratis.Chronicle.Models;
 
-namespace Cratis.Chronicle.Rules.for_Rules.for_RulesModelValidator;
+namespace Cratis.Chronicle.AspNetCore.Rules.for_Rules.for_RulesModelValidator;
 
-public class ModelClassWithKey
-{
-    [ModelKey]
-    public string Id { get; set; }
-}
+public record ModelWithKey([ModelKey] string Id);

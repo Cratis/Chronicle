@@ -3,6 +3,6 @@
 
 using Cratis.Chronicle.Models;
 
-namespace Cratis.Chronicle.Rules.for_Rules.for_RulesModelValidator;
+namespace Cratis.Chronicle.AspNetCore.Rules.for_Rules.for_RulesModelValidator;
 
 public record ModelWithMultipleKeys([ModelKey] string Id, [ModelKey] string SecondId);

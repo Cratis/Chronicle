@@ -3,13 +3,10 @@
 
 using Cratis.Chronicle.Models;
 
-namespace Cratis.Chronicle.Rules.for_Rules.for_RulesModelValidator;
+namespace Cratis.Chronicle.AspNetCore.Rules.for_Rules.for_RulesModelValidator;
 
-public class ModelClassWithMultipleKeys
+public class ModelClassWithKey
 {
     [ModelKey]
     public string Id { get; set; }
-
-    [ModelKey]
-    public string SecondId { get; set; }
 }

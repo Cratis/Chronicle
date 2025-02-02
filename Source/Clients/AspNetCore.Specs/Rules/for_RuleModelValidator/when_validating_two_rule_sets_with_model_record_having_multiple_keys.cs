@@ -1,11 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Rules;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
-namespace Cratis.Chronicle.Rules.for_Rules.for_RulesModelValidator;
+namespace Cratis.Chronicle.AspNetCore.Rules.for_Rules.for_RulesModelValidator;
 
 public class when_validating_two_rule_sets_with_model_record_having_multiple_keys : given.two_rule_sets
 {
