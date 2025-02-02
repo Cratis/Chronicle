@@ -55,9 +55,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grains.Specs", "Source\Kern
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grains", "Source\Kernel\Grains\Grains.csproj", "{B6CFF824-DFC0-40CF-9384-F9C604AE4875}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Projections.Specs", "Source\Kernel\Projections.Specs\Projections.Specs.csproj", "{21BBFCA3-474B-4D2C-9BA4-A1C19A540D2D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Projections.Specs", "Source\Kernel\ProjectionEngine.Specs\ProjectionEngine.Specs.csproj", "{21BBFCA3-474B-4D2C-9BA4-A1C19A540D2D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Projections", "Source\Kernel\Projections\Projections.csproj", "{337E0D02-BBF2-4DC3-9797-342C3FE5ED1B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Projections", "Source\Kernel\ProjectionEngine\ProjectionEngine.csproj", "{337E0D02-BBF2-4DC3-9797-342C3FE5ED1B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Source\Kernel\Server\Server.csproj", "{72D97809-8D85-4749-91EA-11F4B60F4027}"
 EndProject

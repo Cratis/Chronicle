@@ -13,7 +13,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Compliance/Compliance.csproj" />
-        <ProjectReference Include="../Projections/Projections.csproj" />
+        <ProjectReference Include="../ProjectionEngine/ProjectionEngine.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj">
