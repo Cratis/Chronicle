@@ -14,18 +14,18 @@ if (args.Length < 2)
 }
 
 var assemblyPath = args[0];
-var internalAssemblies = args[1].Split(';');
+var assembliesToFix = args[1].Split(';');
 var tempAssemblyPath = Path.GetTempFileName();
 
-Console.WriteLine($"Fixing assembly {assemblyPath} - removing ApplicationPart attribute for internal assemblies");
-internalAssemblies.ForEach(_ => Console.WriteLine($"  Internal assembly: {_}"));
+Console.WriteLine($"Fixing assembly {assemblyPath} - removing ApplicationPart attribute for assemblies");
+assembliesToFix.ForEach(_ => Console.WriteLine($"  Assembly assembly: {_}"));
 
 var assembly = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters { ReadWrite = true, ReadSymbols = true });
 var customAttributes = assembly.CustomAttributes.Where(_ => _.AttributeType.FullName == "Orleans.ApplicationPartAttribute");
 var attributesToRemove = customAttributes.Where(attribute =>
 {
     var argument = attribute.ConstructorArguments[0].Value.ToString() ?? string.Empty;
-    return attribute.ConstructorArguments.Count == 1 && internalAssemblies.Any(ia => ia == argument);
+    return attribute.ConstructorArguments.Count == 1 && assembliesToFix.Any(ia => ia == argument);
 }).ToList();
 
 attributesToRemove.ForEach(attribute =>
