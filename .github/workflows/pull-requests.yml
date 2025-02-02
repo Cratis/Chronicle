@@ -147,6 +147,8 @@ jobs:
           message: |
             NuGet packages for this PR, e.g. Chronicle:
             https://github.com/Cratis/Chronicle/pkgs/nuget/Cratis.Chronicle
+
+            Use version: ${{ needs.release.outputs.version }}
           allow-repeats: false
 
   publish-docker:
