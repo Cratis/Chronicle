@@ -22,10 +22,4 @@ public record JobType(string Value) : ConceptAs<string>(Value)
     /// </summary>
     /// <param name="type"><see cref="Type"/> to convert from.</param>
     public static implicit operator JobType(Type type) => new(type.Name);
-
-    /// <summary>
-    /// Implicitly convert from <see cref="JobType"/> to <see cref="Type"/>.
-    /// </summary>
-    /// <param name="type"><see cref="JobType"/> to convert from.</param>
-    public static implicit operator Type(JobType type) => Type.GetType(type.Value) ?? throw new UnknownClrTypeForJobType(type);
 }
