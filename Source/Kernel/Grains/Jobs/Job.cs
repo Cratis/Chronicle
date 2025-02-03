@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// <typeparam name="TJobState">Type of state for the job.</typeparam>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Jobs)]
 public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest>
-    where TRequest : class
+    where TRequest : class, IJobRequest
     where TJobState : JobState
 {
     Dictionary<JobStepId, JobStepGrainAndRequest> _jobStepGrains = [];
@@ -94,9 +94,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         JobKey = keyExtension;
 
         ThisJob = GrainFactory.GetReference<IJob<TRequest>>(this);
-
-        State.Name = GetType().Name;
-        State.Type = this.GetGrainType();
+        State.Type = GetType();
         Storage = ServiceProvider.GetRequiredService<IStorage>()
             .GetEventStore(JobKey.EventStore)
             .GetNamespace(JobKey.Namespace);
