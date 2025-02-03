@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Concepts.Jobs;
 
 /// <summary>
-/// Represents type of a job.
+/// Represents type of a Job.
 /// </summary>
 /// <param name="Value">String representation of the job type.</param>
 /// <remarks>
