@@ -141,10 +141,13 @@ public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobType
             {
                 return error;
             }
-            var jobType = jobTypes.GetFor(typeof(TJobType));
+            if (jobTypes.GetFor(typeof(TJobType)).TryPickT1(out _, out var jobType))
+            {
+                return JobError.TypeIsNotAssociatedWithAJobType;
+            }
+
             var jobTypeFilter = Builders<JobState>.Filter.Eq(_ => _.Type, jobType);
             var statusFilters = statuses.Select(status => Builders<JobState>.Filter.Eq(_ => _.Status, status));
-
             var filter = statuses.Length == 0 ?
                 jobTypeFilter :
                 Builders<JobState>.Filter.And(jobTypeFilter, Builders<JobState>.Filter.Or(statusFilters));
