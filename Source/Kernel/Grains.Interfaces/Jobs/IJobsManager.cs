@@ -28,7 +28,7 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
     /// <returns>Awaitable task.</returns>
     Task Start<TJob, TRequest>(JobId jobId, TRequest request)
         where TJob : IJob<TRequest>
-        where TRequest : class;
+        where TRequest : class, IJobRequest;
 
     /// <summary>
     /// Resume a job.
@@ -59,7 +59,7 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
     /// <returns>Collection of job states.</returns>
     Task<IImmutableList<JobState>> GetJobsOfType<TJob, TRequest>()
         where TJob : IJob<TRequest>
-        where TRequest : class;
+        where TRequest : class, IJobRequest;
 
     /// <summary>
     /// Get all jobs.
