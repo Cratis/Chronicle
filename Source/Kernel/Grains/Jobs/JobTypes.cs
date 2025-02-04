@@ -17,6 +17,7 @@ public class JobTypes : IJobTypes
     readonly Dictionary<JobType, Type> _jobTypes = [];
     readonly Dictionary<Type, JobType> _jobTypePerType = [];
     readonly Dictionary<JobType, Type> _jobRequestTypes = [];
+    readonly Dictionary<Type, Type> _jobRequestTypeToJobType = [];
 
     /// <summary>
     /// Initializes an instance of the <see cref="JobTypes"/> class.
@@ -56,6 +57,14 @@ public class JobTypes : IJobTypes
             : IJobTypes.GetRequestClrTypeForError.CouldNotFindType;
     }
 
+    /// <inheritdoc/>
+    public Result<Type, IJobTypes.GetRequestClrTypeForError> GetJobClrTypeFromRequestClrType(Type jobRequestClrType)
+    {
+        return _jobRequestTypeToJobType.TryGetValue(jobRequestClrType, out var jobClrType)
+            ? jobClrType
+            : IJobTypes.GetRequestClrTypeForError.CouldNotFindType;
+    }
+
     void InitializeMap(ITypes types)
     {
         PopulateJobTypes(types);
@@ -64,7 +73,9 @@ public class JobTypes : IJobTypes
 
     void PopulateJobTypes(ITypes types)
     {
-        foreach (var jobClrType in types.FindMultiple<IJob>().Where(type => type is { IsClass: true, IsAbstract: false } && type != typeof(NullJob)))
+        foreach (var jobClrType in types.FindMultiple<IJob>()
+                     .Where(type => type is { IsClass: true, IsAbstract: false, IsInterface: false, IsGenericType: false }
+                                    && type != typeof(NullJob) && type.Assembly.FullName != typeof(IJob).Assembly.FullName))
         {
             var jobTypeAttribute = jobClrType.GetCustomAttribute<JobTypeAttribute>();
             var jobType = jobTypeAttribute?.JobType ?? jobClrType;
@@ -95,7 +106,9 @@ public class JobTypes : IJobTypes
                     throw new JobTypeMustHaveARequestType(jobType, jobClrType);
                 default:
                     // First generic argument of IJob<TRequest> is the type of the request
-                    _jobRequestTypes.Add(jobType, jobInterfaces[0].GetGenericArguments()[0]);
+                    var requestType = jobInterfaces[0].GetGenericArguments()[0];
+                    _jobRequestTypes.Add(jobType, requestType);
+                    _jobRequestTypeToJobType.Add(requestType, jobClrType);
                     break;
             }
         }
