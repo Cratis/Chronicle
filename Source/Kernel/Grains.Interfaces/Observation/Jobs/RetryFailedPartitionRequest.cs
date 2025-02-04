@@ -8,7 +8,7 @@ using Cratis.Chronicle.Concepts.Observation;
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
-/// Represents the request for a <see cref="IRetryFailedPartitionJob"/>.
+/// Represents the request for a <see cref="IRetryFailedPartition"/>.
 /// </summary>
 /// <param name="ObserverKey">The additional <see cref="ObserverKey"/> for the observer to replay.</param>
 /// <param name="ObserverSubscription">The <see cref="ObserverSubscription"/> for the observer.</param>
