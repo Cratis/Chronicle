@@ -2,7 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <ApplicationModel>15.0.15</ApplicationModel>
+        <ApplicationModel>15.2.1</ApplicationModel>
         <Fundamentals>6.1.5</Fundamentals>
         <Orleans>9.0.1</Orleans>
     </PropertyGroup>
