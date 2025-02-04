@@ -675,7 +675,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         }
         catch (Exception e)
         {
-            _logger.FailedOnCompleted(e, State.Name);
+            _logger.FailedOnCompleted(e, State.Id, State.Type);
             return Result.Failed(JobError.UnknownError);
         }
     }
