@@ -18,6 +18,7 @@ public class JobStepState
     /// <summary>
     /// Gets or sets the <see cref="JobStepType"/> .
     /// </summary>
+    // TODO: We probably have to do the same thing here as for JobType
     public JobStepType Type { get; set; } = JobStepType.NotSet;
 
     /// <summary>
@@ -43,5 +44,6 @@ public class JobStepState
     /// <summary>
     /// Gets or sets the request associated with the job step.
     /// </summary>
+    // TODO: We probably have to remove this. It's at least not necessary
     public object Request { get; set; } = null!;
 }
