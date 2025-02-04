@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
 using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.Namespaces;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Reactors;
@@ -41,6 +42,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
+/// <param name="jobTypes"><see cref="IJobTypes"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class EventStoreStorage(
     EventStoreName eventStore,
@@ -52,6 +54,7 @@ public class EventStoreStorage(
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     IInstancesOf<ISinkFactory> sinkFactories,
+    IJobTypes jobTypes,
     ILoggerFactory loggerFactory) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
@@ -95,6 +98,7 @@ public class EventStoreStorage(
                 expandoObjectConverter,
                 jsonSerializerOptions,
                 sinkFactories,
+                jobTypes,
                 loggerFactory);
     }
 }
