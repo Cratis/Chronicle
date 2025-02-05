@@ -17,7 +17,6 @@ public class JobTypes : IJobTypes
     readonly Dictionary<JobType, Type> _jobTypes = [];
     readonly Dictionary<Type, JobType> _jobTypePerType = [];
     readonly Dictionary<JobType, Type> _jobRequestTypes = [];
-    readonly Dictionary<Type, Type> _jobRequestTypeToJobType = [];
 
     /// <summary>
     /// Initializes an instance of the <see cref="JobTypes"/> class.
@@ -54,14 +53,6 @@ public class JobTypes : IJobTypes
 
         return _jobRequestTypes.TryGetValue(type, out var jobRequestClrType)
             ? jobRequestClrType
-            : IJobTypes.GetRequestClrTypeForError.CouldNotFindType;
-    }
-
-    /// <inheritdoc/>
-    public Result<Type, IJobTypes.GetRequestClrTypeForError> GetJobClrTypeFromRequestClrType(Type jobRequestClrType)
-    {
-        return _jobRequestTypeToJobType.TryGetValue(jobRequestClrType, out var jobClrType)
-            ? jobClrType
             : IJobTypes.GetRequestClrTypeForError.CouldNotFindType;
     }
 
@@ -108,7 +99,6 @@ public class JobTypes : IJobTypes
                     // First generic argument of IJob<TRequest> is the type of the request
                     var requestType = jobInterfaces[0].GetGenericArguments()[0];
                     _jobRequestTypes.Add(jobType, requestType);
-                    _jobRequestTypeToJobType.Add(requestType, jobClrType);
                     break;
             }
         }

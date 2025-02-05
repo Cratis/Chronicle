@@ -55,11 +55,4 @@ public interface IJobTypes
     /// <param name="type">The <see cref="JobType"/>.</param>
     /// <returns><see cref="Result{T0, T1}"/> <see cref="Type"/> or <see cref="GetRequestClrTypeForError"/>.</returns>
     Result<Type, GetRequestClrTypeForError> GetRequestClrTypeFor(JobType type);
-
-    /// <summary>
-    /// Gets the job request <see cref="Type"/> associated with the <see cref="JobType"/>.
-    /// </summary>
-    /// <param name="jobRequestClrType">The job request clr type.</param>
-    /// <returns><see cref="Result{T0, T1}"/> <see cref="Type"/> or <see cref="GetRequestClrTypeForError"/>.</returns>
-    Result<Type, GetRequestClrTypeForError> GetJobClrTypeFromRequestClrType(Type jobRequestClrType);
 }
