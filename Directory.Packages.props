@@ -2,7 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <ApplicationModel>15.0.15</ApplicationModel>
+        <ApplicationModel>15.2.1</ApplicationModel>
         <Fundamentals>6.1.6</Fundamentals>
         <Orleans>9.0.1</Orleans>
     </PropertyGroup>
@@ -63,7 +63,7 @@
         </PackageVersion>
         <PackageVersion Include="Mono.Cecil" Version="0.11.6" />
         <PackageVersion Include="NJsonSchema" Version="11.1.0" />
-        <PackageVersion Include="Polly.Core" Version="8.5.1" />
+        <PackageVersion Include="Polly.Core" Version="8.5.2" />
         <PackageVersion Include="protobuf-net.BuildTools" Version="3.2.46">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
