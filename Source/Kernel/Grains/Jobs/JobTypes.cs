@@ -14,6 +14,11 @@ namespace Cratis.Chronicle.Grains.Jobs;
 [Singleton]
 public class JobTypes : IJobTypes
 {
+    /// <summary>
+    /// Gets the singleton instance of <see cref="IJobTypes"/>.
+    /// </summary>
+    public static IJobTypes Instance { get; private set; }
+
     readonly Dictionary<JobType, Type> _jobTypes = [];
     readonly Dictionary<Type, JobType> _jobTypePerType = [];
     readonly Dictionary<JobType, Type> _jobRequestTypes = [];
@@ -22,7 +27,11 @@ public class JobTypes : IJobTypes
     /// Initializes an instance of the <see cref="JobTypes"/> class.
     /// </summary>
     /// <param name="types">The <see cref="ITypes"/>.</param>
-    public JobTypes(ITypes types) => InitializeMap(types);
+    public JobTypes(ITypes types)
+    {
+        InitializeMap(types);
+        Instance = this;
+    }
 
     /// <inheritdoc />
     public Result<JobType, IJobTypes.GetForError> GetFor(Type type) =>
