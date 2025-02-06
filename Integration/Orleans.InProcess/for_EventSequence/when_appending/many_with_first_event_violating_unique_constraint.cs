@@ -28,7 +28,7 @@ public class many_with_first_event_violating_unique_constraint(context context) 
 
         public async Task Because()
         {
-            Result = await EventStore.EventLog.AppendMany(Guid.NewGuid().ToString(), [Event, Event]);
+            Result = await EventStore.EventLog.AppendMany(Guid.NewGuid().ToString(), [Event, new UserRemoved()]);
         }
     }
 
