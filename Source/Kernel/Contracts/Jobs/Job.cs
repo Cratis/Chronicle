@@ -19,44 +19,38 @@ public class Job
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the job.
-    /// </summary>
-    [ProtoMember(2)]
-    public string Name { get; set; }
-
-    /// <summary>
     /// Gets or sets the details for a job.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(2)]
     public string Details { get; set; }
 
     /// <summary>
     /// Gets or sets the type of the job.
     /// </summary>
-    [ProtoMember(4)]
+    [ProtoMember(3)]
     public string Type { get; set; }
 
     /// <summary>
     /// Gets or sets the status of the job.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(4)]
     public JobStatus Status { get; set; }
 
     /// <summary>
     /// Gets or sets when job was created.
     /// </summary>
-    [ProtoMember(6)]
+    [ProtoMember(5)]
     public SerializableDateTimeOffset Created { get; set; }
 
     /// <summary>
     /// Gets or sets collection of status changes that happened to the job.
     /// </summary>
-    [ProtoMember(7, IsRequired = true)]
+    [ProtoMember(6, IsRequired = true)]
     public IList<JobStatusChanged> StatusChanges { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the <see cref="JobProgress"/>.
     /// </summary>
-    [ProtoMember(8, IsRequired = true)]
+    [ProtoMember(7, IsRequired = true)]
     public JobProgress Progress { get; set; } = new();
 }
