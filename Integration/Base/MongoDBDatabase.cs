@@ -53,16 +53,23 @@ public class MongoDBDatabase : IDisposable
 
                 foreach (var document in cursor.Current)
                 {
-                    _changes.OnNext(document);
-                    var changesCollection = changeDatabase.GetCollection<BsonDocument>(document.CollectionNamespace.CollectionName);
-                    var changeDocument = new BsonDocument
+                    try
                     {
-                        { "_id", ObjectId.GenerateNewId() },
-                        { "documentKey", document.DocumentKey },
-                        { "operationType", document.OperationType.ToString() },
-                        { "fullDocument", document.FullDocument }
-                    };
-                    await changesCollection.InsertOneAsync(changeDocument);
+                        _changes.OnNext(document);
+                        var changesCollection = changeDatabase.GetCollection<BsonDocument>(document.CollectionNamespace.CollectionName);
+                        var changeDocument = new BsonDocument
+                        {
+                            { "_id", ObjectId.GenerateNewId() },
+                            { "documentKey", (BsonValue)document.DocumentKey ?? "N/A" },
+                            { "operationType", document.OperationType.ToString() },
+                            { "fullDocument", document.FullDocument ?? new BsonDocument() }
+                        };
+                        await changesCollection.InsertOneAsync(changeDocument);
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
                 }
             }
         });
