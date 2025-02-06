@@ -43,8 +43,7 @@ public class JobStateSerializer(IJobTypes jobTypes) : SerializerBase<JobState>
         while (context.Reader.ReadBsonType() != BsonType.EndOfDocument)
         {
             var fieldName = context.Reader.ReadName();
-            var propertyName = fieldName.ToPascalCase();
-            if (propertyName == nameof(JobState.Request))
+            if (fieldName.ToPascalCase() == nameof(JobState.Request))
             {
                 requestBookmark = context.Reader.GetBookmark();
                 context.Reader.SkipValue();
