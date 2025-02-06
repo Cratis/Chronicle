@@ -78,11 +78,9 @@ public static class SerializationConfigurationExtensions
         options.Converters.Add(new JoinDefinitionsConverter());
         options.Converters.Add(new RemovedWithDefinitionsConverter());
         options.Converters.Add(new RemovedWithJoinDefinitionsConverter());
+        options.Converters.Add(new JobStateConverter());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>());
-        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<JobStateJsonConverter, JobState>());
-        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<JobStepStateJsonConverter, JobStepState>());
-
         services.AddConceptSerializer();
         services.AddAppendedEventSerializer();
         services.AddSerializer(
