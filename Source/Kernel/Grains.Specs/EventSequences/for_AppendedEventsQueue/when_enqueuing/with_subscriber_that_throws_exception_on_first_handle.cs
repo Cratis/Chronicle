@@ -38,5 +38,5 @@ public class with_subscriber_that_throws_exception_on_first_handle : given.a_sin
         await _queue.AwaitQueueDepletion();
     }
 
-    [Fact] void should_call_handle_on_observer_twice() => _handledEvents.Count.ShouldEqual(2);
+    [Fact] void should_call_handle_on_observer_twice() => _handledEventsPerPartition[_eventSourceId].Count.ShouldEqual(2);
 }

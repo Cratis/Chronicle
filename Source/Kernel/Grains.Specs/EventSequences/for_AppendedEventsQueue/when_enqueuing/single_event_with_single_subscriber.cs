@@ -24,7 +24,7 @@ public class single_event_with_single_subscriber : given.a_single_subscriber_wit
         await _queue.AwaitQueueDepletion();
     }
 
-    [Fact] void should_call_handle_on_observer_once() => _handledEvents.Count.ShouldEqual(1);
-    [Fact] void should_call_handle_on_observer_with_correct_event_source_id() => _handledEvents[0].Partition.Value.ShouldEqual(_eventSourceId.Value);
-    [Fact] void should_call_handle_on_observer_with_correct_event() => _handledEvents[0].Events.ShouldContainOnly(_appendedEvent);
+    [Fact] void should_call_handle_on_observer_once() => _handledEventsPerPartition[_eventSourceId].Count.ShouldEqual(1);
+    [Fact] void should_call_handle_on_observer_with_correct_event_source_id() => _handledEventsPerPartition[_eventSourceId][0].Partition.Value.ShouldEqual(_eventSourceId.Value);
+    [Fact] void should_call_handle_on_observer_with_correct_event() => _handledEventsPerPartition[_eventSourceId][0].Events.ShouldContainOnly(_appendedEvent);
 }
