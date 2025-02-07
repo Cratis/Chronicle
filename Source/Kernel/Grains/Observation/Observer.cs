@@ -374,6 +374,11 @@ public class Observer(
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
+        if (!events.Any())
+        {
+            return;
+        }
+
         if (!ShouldHandleEvent(partition))
         {
             return;
