@@ -38,7 +38,7 @@ public class two_subscribers : all_dependencies
                 var events = callInfo.Arg<IEnumerable<AppendedEvent>>();
                 if (!_firstObserverHandledEventsPerPartition.TryGetValue(key, out var handledEvents))
                 {
-                    handledEvents = new();
+                    handledEvents = [];
                     _firstObserverHandledEventsPerPartition.TryAdd(key, handledEvents);
                 }
                 handledEvents.Add(new(key, events));
@@ -55,7 +55,7 @@ public class two_subscribers : all_dependencies
                 var events = callInfo.Arg<IEnumerable<AppendedEvent>>();
                 if (!_secondObserverHandledEventsPerPartition.TryGetValue(key, out var handledEvents))
                 {
-                    handledEvents = new();
+                    handledEvents = [];
                     _secondObserverHandledEventsPerPartition.TryAdd(key, handledEvents);
                 }
                 handledEvents.Add(new(key, events));

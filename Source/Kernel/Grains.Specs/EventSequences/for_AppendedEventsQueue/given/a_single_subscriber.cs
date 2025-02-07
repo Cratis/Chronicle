@@ -30,7 +30,7 @@ public abstract class a_single_subscriber : all_dependencies
                 var events = callInfo.Arg<IEnumerable<AppendedEvent>>();
                 if (!_handledEventsPerPartition.TryGetValue(key, out var handledEvents))
                 {
-                    handledEvents = new();
+                    handledEvents = [];
                     _handledEventsPerPartition.TryAdd(key, handledEvents);
                 }
                 handledEvents.Add(new(key, events));
