@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -16,8 +17,8 @@ public class two_subscribers : all_dependencies
     protected ObserverKey _secondObserverKey;
     protected IObserver _firstObserver;
     protected IObserver _secondObserver;
-    protected List<HandledEvents> _firstObserverHandledEvents = [];
-    protected List<HandledEvents> _secondObserverHandledEvents = [];
+    protected ConcurrentDictionary<Key, List<HandledEvents>> _firstObserverHandledEventsPerPartition = [];
+    protected ConcurrentDictionary<Key, List<HandledEvents>> _secondObserverHandledEventsPerPartition = [];
     protected AppendedEventsQueue _queue;
 
     void Establish()
@@ -35,7 +36,12 @@ public class two_subscribers : all_dependencies
             {
                 var key = callInfo.Arg<Key>();
                 var events = callInfo.Arg<IEnumerable<AppendedEvent>>();
-                _firstObserverHandledEvents.Add(new(key, events));
+                if (!_firstObserverHandledEventsPerPartition.TryGetValue(key, out var handledEvents))
+                {
+                    handledEvents = new();
+                    _firstObserverHandledEventsPerPartition.TryAdd(key, handledEvents);
+                }
+                handledEvents.Add(new(key, events));
             });
         _grainFactory.GetGrain<IObserver>(_firstObserverKey).Returns(_firstObserver);
 
@@ -47,7 +53,12 @@ public class two_subscribers : all_dependencies
             {
                 var key = callInfo.Arg<Key>();
                 var events = callInfo.Arg<IEnumerable<AppendedEvent>>();
-                _secondObserverHandledEvents.Add(new(key, events));
+                if (!_secondObserverHandledEventsPerPartition.TryGetValue(key, out var handledEvents))
+                {
+                    handledEvents = new();
+                    _secondObserverHandledEventsPerPartition.TryAdd(key, handledEvents);
+                }
+                handledEvents.Add(new(key, events));
             });
         _grainFactory.GetGrain<IObserver>(_secondObserverKey).Returns(_secondObserver);
     }
