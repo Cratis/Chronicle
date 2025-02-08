@@ -27,7 +27,7 @@ public class ReplayObserverPartition(ILogger<ReplayObserverPartition> logger) : 
 
         if (!State.LastHandledEventSequenceNumber.IsActualValue)
         {
-            logger.NoneEventsWereHandled(nameof(ReplayObserverPartition));
+            logger.NoEventsWereHandled(nameof(ReplayObserverPartition));
             return;
         }
         await observer.PartitionReplayed(Request.Key, State.LastHandledEventSequenceNumber);

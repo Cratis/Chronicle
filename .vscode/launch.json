@@ -47,24 +47,60 @@
             }
         },
         {
-            "name": ".NET Core Launch (Server)",
+            "name": ".NET Core Launch (InternalsVerifier)",
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net8.0/Cratis.Chronicle.Server.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Source/Kernel/Server",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Source/Tools/InternalsVerifier/bin/Debug/net9.0/InternalsVerifier.dll",
+            "args": [
+                "${workspaceFolder}/Source/Clients/DotNET/bin/Debug/net9.0/Cratis.Chronicle.dll",
+                "Cratis.Chronicle.Contracts"
+            ],
+            "cwd": "${workspaceFolder}/Source/Tools/InternalsVerifier",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
             }
         },
         {
-            "name": ".NET Core Launch (Basic sample)",
+            "name": ".NET Core Launch (AssemblyFixer)",
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Source/Tools/AssemblyFixer/bin/Debug/net9.0/AssemblyFixer.dll",
+            "args": [
+                "${workspaceFolder}/Source/Clients/Orleans.InProcess/bin/Debug/net9.0/Cratis.Chronicle.Orleans.InProcess.dll",
+                "Cratis.Chronicle.Orleans;Cratis.Chronicle.Grains;Cratis.Chronicle.Grains.Interfaces"
+            ],
+            "cwd": "${workspaceFolder}/Source/Tools/AssemblyFixer",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": ".NET Core Launch (GrpcClients)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Source/Tools/GrpcClients/bin/Debug/net9.0/GrpcClients.dll",
+            "args": [
+                "${workspaceFolder}/Source/Clients/DotNET/bin/Release/net9.0/Cratis.Chronicle.Contracts.dll",
+                "Cratis.Chronicle.Contracts.Implementations"
+            ],
+            "cwd": "${workspaceFolder}/Source/Tools/GrpcClients",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": ".NET Core Launch (Server)",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net9.0/Cratis.Chronicle.Server.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/Samples/Basic",
+            "cwd": "${workspaceFolder}/Source/Kernel/Server",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
@@ -91,13 +127,5 @@
             "command": "dotnet-build-commands.getTarget"
         }
     ],
-    "compounds": [
-        {
-            "name": "Server and Basic",
-            "configurations": [
-                ".NET Core Launch (Server)",
-                ".NET Core Launch (Basic sample)"
-            ]
-        }
-    ]
+    "compounds": []
 }

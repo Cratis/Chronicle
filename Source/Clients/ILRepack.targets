@@ -1,26 +1,56 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!-- https://github.com/ravibpatel/ILRepack.Lib.MSBuild.Task -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <ItemGroup>
-        <AssembliesToExclude Include="$(TargetPath)"/>
-    </ItemGroup>
-
+  <Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Repack)' == 'true'">
     <ItemGroup>
         <InputAssemblies Include="$(TargetPath)"/>
-        <InputAssemblies Include="$(OutputPath)/Cratis.Chronicle*.dll" Exclude="@(AssembliesToExclude)"/>
+        <InputAssemblies Include="@(AssemblyToMerge)"/>
+        <InputAssemblies Include="@(InternalAssembly)"/>
+        <FilteredReferences
+            Include="@(ProjectReference->WithMetadataValue('PrivateAssets', 'all'))"
+            KeepMetadata="PrivateAssets;TargetPath" />
+
+        <InternalAssemblies
+            Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"
+            Exclude="@(DoNotInternalizeAssembly)"/>
+
+        <InputAssemblies
+            Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"
+            Exclude="@(AssemblyToExcludeFromMerge)"/>
+
+        <AssembliesToFix
+            Include="@(InputAssemblies)"
+            Exclude="$(TargetPath)"/>
+
         <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
     </ItemGroup>
+
+    <PropertyGroup>
+        <InternalNamespaces>@(InternalAssemblies->'%(Filename)', ';')</InternalNamespaces>
+        <InternalAssemblyNames>@(InternalAssemblies->'%(Filename)', ';')</InternalAssemblyNames>
+        <AssemblyNamesToFix>@(AssembliesToFix->'%(Filename)', ';')</AssemblyNamesToFix>
+    </PropertyGroup>
 
     <ILRepack
         AllowDuplicateResources="false"
         DebugInfo="true"
-        Internalize="true"
+        CopyAttributes="false"
+        ExcludeInternalizeSerializable="false"
         InputAssemblies="@(InputAssemblies)"
-        InternalizeExclude="@(DoNotInternalizeAssemblies)"
+        InternalizeAssembly="@(InternalizeAssemblies)"
+        Internalize="true"
+        InternalizeExclude="@(DoNotInternalizeAssembly)"
         OutputFile="$(TargetPath)"
-        Parallel="false"
+        Parallel="true"
         LibraryPath="@(LibraryPath)"
+        Verbose="false"
+        XmlDocumentation="true"
+        Union="true"
+        AllowedDuplicateNamespaces="Cratis.Chronicle.Projections"
+        LogFile="$(OutputPath)/ILRepack.log"
         TargetKind="SameAsPrimaryAssembly"/>
+
+    <Exec Command="dotnet run $(TargetPath) &quot;$(InternalNamespaces)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/InternalsVerifier" />
+    <Exec Command="dotnet run $(TargetPath) &quot;$(AssemblyNamesToFix)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />
   </Target>
 </Project>

@@ -38,12 +38,12 @@ public class and_there_are_two_projections : given.all_dependencies
             _eventStore,
             _eventTypes,
             _clientArtifacts,
-            _rulesProjections,
             _schemaGenerator,
             _modelNameResolver,
             _eventSerializer,
             _serviceProvider,
             _jsonSerializerOptions);
+        projections.SetRulesProjections(_rulesProjections);
 
         _rulesProjections.Discover().Returns(ImmutableList<ProjectionDefinition>.Empty);
     }

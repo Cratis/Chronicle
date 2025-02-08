@@ -1,16 +1,31 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Collections;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 
-var assemblyPath = "/Volumes/Code/Cratis/Chronicle/Source/Clients/Orleans/bin/release/net8.0/Cratis.Chronicle.Orleans.dll";
+Console.WriteLine("\nAssembly fixer\n");
 
-var assembly = AssemblyDefinition.ReadAssembly(assemblyPath);
+if (args.Length < 2)
+{
+    Console.WriteLine("Usage: AssemblyFixer <assembly> <internal assembly names - separated by ;>");
+    Environment.Exit(1);
+}
+
+var assemblyPath = args[0];
+var assembliesToFix = args[1].Split(';');
+var tempAssemblyPath = Path.GetTempFileName();
+
+Console.WriteLine($"Fixing assembly {assemblyPath} - removing ApplicationPart attribute for assemblies");
+assembliesToFix.ForEach(_ => Console.WriteLine($"  Assembly assembly: {_}"));
+
+var assembly = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters { ReadWrite = true, ReadSymbols = true });
 var customAttributes = assembly.CustomAttributes.Where(_ => _.AttributeType.FullName == "Orleans.ApplicationPartAttribute");
 var attributesToRemove = customAttributes.Where(attribute =>
 {
     var argument = attribute.ConstructorArguments[0].Value.ToString() ?? string.Empty;
-    return attribute.ConstructorArguments.Count == 1 && argument.StartsWith("Cratis.Chronicle") && argument != "Cratis.Chronicle.Orleans";
+    return attribute.ConstructorArguments.Count == 1 && assembliesToFix.Any(ia => ia == argument);
 }).ToList();
 
 attributesToRemove.ForEach(attribute =>
@@ -19,4 +34,7 @@ attributesToRemove.ForEach(attribute =>
     assembly.CustomAttributes.Remove(attribute);
 });
 
-assembly.Write(Path.GetFileName(assemblyPath));
+assembly.Write(tempAssemblyPath, new WriterParameters { WriteSymbols = true, SymbolWriterProvider = new PortablePdbWriterProvider() });
+assembly.Dispose();
+
+File.Copy(tempAssemblyPath, assemblyPath, true);

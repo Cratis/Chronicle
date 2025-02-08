@@ -5,19 +5,23 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
-        </ProjectReference>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
-        </ProjectReference>
+        <InternalsVisibleTo Include="Cratis.Chronicle" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.AspNetCore" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.InProcess" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Integration.Orleans.InProcess" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Api" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Setup" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit" />
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     </ItemGroup>
 
     <ItemGroup>
-        <!-- <PackageReference Include="ILRepack.Lib.MSBuild.Task">
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-          <PrivateAssets>all</PrivateAssets>
-        </PackageReference> -->
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj"/>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />

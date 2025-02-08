@@ -39,7 +39,7 @@ jobs:
             ${{ env.DOTNET_VERSION }}
 
       - name: Build
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Release -p:Repack=true
 
       - name: Run tests
         run: dotnet test --no-build --configuration Release --settings specs.runsettings

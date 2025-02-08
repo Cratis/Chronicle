@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.Observation.Placement;
@@ -67,7 +67,7 @@ public static class ChronicleServerSiloBuilderExtensions
             var grainFactory = sp.GetRequiredService<IGrainFactory>();
             var clusterClient = sp.GetRequiredService<IClusterClient>();
             var storage = sp.GetRequiredService<IStorage>();
-            return new Cratis.Chronicle.Connections.Services(
+            return new Cratis.Chronicle.Contracts.Services(
                 new Cratis.Chronicle.Services.EventStores(storage),
                 new Cratis.Chronicle.Services.Namespaces(storage),
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),

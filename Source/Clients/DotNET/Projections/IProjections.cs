@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
-using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Models;
 
 namespace Cratis.Chronicle.Projections;
@@ -12,11 +10,6 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 public interface IProjections
 {
-    /// <summary>
-    /// Gets all the <see cref="ProjectionDefinition">projection definitions</see>.
-    /// </summary>
-    IImmutableList<ProjectionDefinition> Definitions { get; }
-
     /// <summary>
     /// Check if there is a definition for a specific projection identifier.
     /// </summary>

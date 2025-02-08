@@ -128,7 +128,7 @@ jobs:
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
       - name: Build
-        run: dotnet build --configuration Debug
+        run: dotnet build --configuration Debug -p:Repack=true
 
       - name: Add GitHub Package Registry to NuGet
         run: dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
@@ -145,8 +145,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           message: |
-            NuGet packages for this PR, e.g. Cratis:
-            https://github.com/cratis/chronicle/packages/1655206?version=${{ needs.release.outputs.version }}
+            NuGet packages for this PR, e.g. Chronicle:
+            https://github.com/Cratis/Chronicle/pkgs/nuget/Cratis.Chronicle
+
+            Use version: ${{ needs.release.outputs.version }}
           allow-repeats: false
 
   publish-docker:

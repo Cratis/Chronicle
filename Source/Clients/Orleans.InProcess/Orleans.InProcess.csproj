@@ -3,73 +3,117 @@
         <AssemblyName>Cratis.Chronicle.Orleans.InProcess</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Orleans.InProcess</RootNamespace>
         <NoWarn>$(NoWarn);ORLEANS0010</NoWarn>
+        <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Integration.Orleans.InProcess" />
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
+            <Properties>Repack=false</Properties>
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
+            <Properties>Repack=false</Properties>
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../Orleans/Orleans.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
+            <Properties>Repack=false</Properties>
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Compliance/Compliance.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Grains/Grains.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Grains.Interfaces/Grains.Interfaces.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
+        <ProjectReference Include="../Connections/Connections.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
+            <Properties>Repack=false</Properties>
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Compliance/Compliance.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Grains/Grains.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Grains.Interfaces/Grains.Interfaces.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Projections/Projections.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Services/Services.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
             <Aliases>Server</Aliases>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
-        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
 
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
-        <!-- <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.DotNET.dll" />
+        <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" />
+        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.dll" />
+        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
+        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.AspNetCore.dll" />
+        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Orleans.dll" />
+        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Setup.dll" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
-        </PackageReference> -->
+        </PackageReference>
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
-        <PackageReference Include="AutoMapper" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Cratis.Applications.Orleans" />
         <PackageReference Include="NJsonSchema" />

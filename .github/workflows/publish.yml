@@ -168,8 +168,16 @@ jobs:
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
+      - name: Build DotNET Client with repackaging
+        run: dotnet build --configuration Release -p:Repack=true
+        working-directory: ./Source/Clients/DotNET
+
+      - name: Build Orleans InProcess Client with repackaging
+        run: dotnet build --configuration Release -p:Repack=true
+        working-directory: ./Source/Clients/DotNET
+
       - name: Build
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Release -p:Repack=true
 
       - name: Create NuGet packages
         run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}

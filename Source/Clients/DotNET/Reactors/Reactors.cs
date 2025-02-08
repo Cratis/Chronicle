@@ -5,6 +5,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
@@ -34,6 +35,7 @@ public class Reactors : IReactors
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IDictionary<Type, ReactorHandler> _handlers = new Dictionary<Type, ReactorHandler>();
+    readonly IChronicleServicesAccessor _servicesAccessor;
 
     bool _registered;
 
@@ -61,6 +63,7 @@ public class Reactors : IReactors
         ILoggerFactory loggerFactory)
     {
         _eventStore = eventStore;
+        _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _eventTypes = eventTypes;
         _clientArtifactsProvider = clientArtifactsProvider;
         _serviceProvider = serviceProvider;
@@ -180,7 +183,7 @@ public class Reactors : IReactors
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var messages = new BehaviorSubject<ReactorMessage>(new(new(registration)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
-        var eventsToObserve = _eventStore.Connection.Services.Reactors.Observe(messages, handler.CancellationToken);
+        var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages, handler.CancellationToken);
 
         // https://github.com/dotnet/reactive/issues/459
         eventsToObserve

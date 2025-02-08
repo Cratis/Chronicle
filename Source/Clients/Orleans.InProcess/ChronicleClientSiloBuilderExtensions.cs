@@ -5,6 +5,7 @@ extern alias Server;
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Orleans.InProcess;
@@ -120,8 +121,9 @@ public static class ChronicleClientSiloBuilderExtensions
 
                 var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
-                var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
-                var connection = new Cratis.Chronicle.Orleans.InProcess.ChronicleConnection(connectionLifecycle, services, grainFactory, loggerFactory);
+                var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
+                var connection = new Cratis.Chronicle.Orleans.InProcess.ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
+                connection.SetServices(services);
                 return new ChronicleClient(connection, options);
             });
 
