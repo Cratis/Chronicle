@@ -116,7 +116,6 @@ public abstract class JobStep<TRequest, TResult, TState>(
             ThisJobStep = GetReferenceToSelf<IJobStep<TRequest, TResult>>();
 
             await Start(request, _cancellationTokenSource.Token);
-            state.State.Request = request!;
             var writeStateResult = await WriteStatusChange(JobStepStatus.Running);
             return writeStateResult.Match(
                 _ => Result<JobStepPrepareStartError>.Success(),
