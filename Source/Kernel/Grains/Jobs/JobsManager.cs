@@ -56,16 +56,10 @@ public class JobsManager(
 
         Task RehydrateJobs(IEnumerable<JobState> runningJobs)
         {
-            var tasks = runningJobs.Select(_ => _.Id).Select(async jobId =>
+            var tasks = runningJobs.Select(async jobState =>
             {
-                try
-                {
-                    await Resume(jobId);
-                }
-                catch (Exception ex)
-                {
-                    logger.ErrorResumingJob(ex, jobId);
-                }
+                var resumeJobResult = await ResumeJob(jobState);
+                await HandleResumeJobResult(jobState.Id, resumeJobResult);
             });
             return Task.WhenAll(tasks);
         }
@@ -101,48 +95,11 @@ public class JobsManager(
             async jobState =>
             {
                 var resumeJobResult = await ResumeJob(jobState);
-                await HandleResumeJobResult(resumeJobResult);
+                await HandleResumeJobResult(jobId, resumeJobResult);
             },
             error => HandleError(jobId, error),
             error => HandleUnknownFailure(jobId, error));
         return;
-
-        async Task HandleResumeJobResult(OneOf<Result<ResumeJobSuccess, ResumeJobError>, Storage.Jobs.JobError> resumeJobResult)
-        {
-            await resumeJobResult.Match(
-                resumeResult => resumeResult.Match(
-                    success =>
-                    {
-                        switch (success)
-                        {
-                            case ResumeJobSuccess.JobAlreadyRunning:
-                                logger.CannotResumeJobBecauseAlreadyRunning(jobId);
-                                break;
-                            case ResumeJobSuccess.JobCannotBeResumed:
-                                logger.CannotResumeJob(jobId);
-                                break;
-                        }
-                        return Task.CompletedTask;
-                    },
-                    resumeError => resumeError.Match<Task>(
-                            jobError => HandleError(jobId, jobError),
-                            failedResumingSteps =>
-                            {
-                                logger.FailedToResumeJobSteps(jobId, failedResumingSteps.FailedJobSteps);
-                                return Task.CompletedTask;
-                            })),
-                jobError => HandleError(jobId, jobError));
-        }
-        Task<OneOf<Result<ResumeJobSuccess, ResumeJobError>, Storage.Jobs.JobError>> ResumeJob(JobState jobState) => GetJobGrain(jobState)
-            .Match<Task<OneOf<Result<ResumeJobSuccess, ResumeJobError>, Storage.Jobs.JobError>>>(
-                async job =>
-                {
-                    var result = await job.Resume();
-                    return result.Match<OneOf<Result<ResumeJobSuccess, ResumeJobError>, Storage.Jobs.JobError>>(
-                        success => Result<ResumeJobSuccess, ResumeJobError>.Success(success),
-                        error => Result<ResumeJobSuccess, ResumeJobError>.Failed(error));
-                },
-                _ => Task.FromResult<OneOf<Result<ResumeJobSuccess, ResumeJobError>, Storage.Jobs.JobError>>(Storage.Jobs.JobError.TypeIsNotAssociatedWithAJobType));
     }
 
     /// <inheritdoc/>
@@ -150,7 +107,7 @@ public class JobsManager(
     {
         using var scope = logger.BeginJobsManagerScope(_key);
 
-        var stopJobResult = await TryStopJob(jobId);
+        var stopJobResult = await StopJob(jobId);
         await stopJobResult.Match(
             _ => Task.CompletedTask,
             jobError => HandleError(jobId, jobError),
@@ -165,7 +122,7 @@ public class JobsManager(
 
         logger.DeletingJob(jobId);
 
-        var stopJobResult = await TryStopJob(jobId);
+        var stopJobResult = await StopJob(jobId);
         var stoppedJob = await stopJobResult.Match(
             _ => Task.FromResult(true),
             async jobError =>
@@ -230,7 +187,45 @@ public class JobsManager(
             jobType => Result<IJob, IJobTypes.GetClrTypeForError>.Success((IJob)GrainFactory.GetGrain(jobType, jobState.Id, new JobKey(_key.EventStore, _key.Namespace))),
             error => error)!;
 
-    async Task<OneOf<None, JobError, Storage.Jobs.JobError, Exception>> TryStopJob(JobId jobId)
+    async Task HandleResumeJobResult(JobId jobId, OneOf<Result<ResumeJobSuccess, ResumeJobError>, Storage.Jobs.JobError> resumeJobResult)
+    {
+        await resumeJobResult.Match(
+            resumeResult => resumeResult.Match(
+                success =>
+                {
+                    switch (success)
+                    {
+                        case ResumeJobSuccess.JobAlreadyRunning:
+                            logger.CannotResumeJobBecauseAlreadyRunning(jobId);
+                            break;
+                        case ResumeJobSuccess.JobCannotBeResumed:
+                            logger.CannotResumeJob(jobId);
+                            break;
+                    }
+                    return Task.CompletedTask;
+                },
+                resumeError => resumeError.Match<Task>(
+                        jobError => HandleError(jobId, jobError),
+                        failedResumingSteps =>
+                        {
+                            logger.FailedToResumeJobSteps(jobId, failedResumingSteps.FailedJobSteps);
+                            return Task.CompletedTask;
+                        })),
+            jobError => HandleError(jobId, jobError));
+    }
+
+    Task<OneOf<Result<ResumeJobSuccess, ResumeJobError>, Storage.Jobs.JobError>> ResumeJob(JobState jobState) => GetJobGrain(jobState)
+            .Match<Task<OneOf<Result<ResumeJobSuccess, ResumeJobError>, Storage.Jobs.JobError>>>(
+                async job =>
+                {
+                    var result = await job.Resume();
+                    return result.Match<OneOf<Result<ResumeJobSuccess, ResumeJobError>, Storage.Jobs.JobError>>(
+                        success => Result<ResumeJobSuccess, ResumeJobError>.Success(success),
+                        error => Result<ResumeJobSuccess, ResumeJobError>.Failed(error));
+                },
+                _ => Task.FromResult<OneOf<Result<ResumeJobSuccess, ResumeJobError>, Storage.Jobs.JobError>>(Storage.Jobs.JobError.TypeIsNotAssociatedWithAJobType));
+
+    async Task<OneOf<None, JobError, Storage.Jobs.JobError, Exception>> StopJob(JobId jobId)
     {
         logger.StoppingJob(jobId);
 
@@ -238,7 +233,7 @@ public class JobsManager(
         return await jobStateResult.Match(
             async jobState =>
             {
-                var stopJobResult = await StopJob(jobState);
+                var stopJobResult = await GetJobGrainAndStop(jobState);
                 return stopJobResult.Match<OneOf<None, JobError, Storage.Jobs.JobError, Exception>>(
                     none => none,
                     jobError => jobError,
@@ -247,7 +242,7 @@ public class JobsManager(
             error => Task.FromResult<OneOf<None, JobError, Storage.Jobs.JobError, Exception>>(error),
             ex => Task.FromResult<OneOf<None, JobError, Storage.Jobs.JobError, Exception>>(ex));
 
-        Task<OneOf<None, JobError, Storage.Jobs.JobError>> StopJob(JobState jobState) => GetJobGrain(jobState)
+        Task<OneOf<None, JobError, Storage.Jobs.JobError>> GetJobGrainAndStop(JobState jobState) => GetJobGrain(jobState)
             .Match<Task<OneOf<None, JobError, Storage.Jobs.JobError>>>(
                 async job =>
                 {
@@ -295,16 +290,12 @@ public class JobsManager(
     Task HandleUnknownFailure(JobId jobId, Exception ex)
     {
         logger.UnknownError(ex, jobId);
-
-        // TODO: I'm not sure yet whether to throw or not.
         return Task.FromException(ex);
     }
 
     Task HandleUnknownFailure(Exception ex)
     {
         logger.UnknownError(ex);
-
-        // TODO: I'm not sure yet whether to throw or not.
         return Task.FromException(ex);
     }
 }
