@@ -102,7 +102,6 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         Storage = ServiceProvider.GetRequiredService<IStorage>()
             .GetEventStore(JobKey.EventStore)
             .GetNamespace(JobKey.Namespace);
-
         return Task.CompletedTask;
     }
 
@@ -114,6 +113,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         {
             _logger.Starting();
             _isRunning = true;
+            State.Created = DateTimeOffset.UtcNow;
             State.Request = request!;
             State.Details = GetJobDetails();
             await WriteStatusChanged(JobStatus.PreparingSteps);

@@ -19,7 +19,7 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
     Task Rehydrate();
 
     /// <summary>
-    /// Start a job.
+    /// Start a new job.
     /// </summary>
     /// <param name="jobId">The <see cref="JobId"/> uniquely identifying the job.</param>
     /// <param name="request">The request parameter being passed to the job.</param>
