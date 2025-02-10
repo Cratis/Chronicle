@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Primitives;
 using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Jobs;
@@ -18,28 +19,28 @@ public class Job
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the job.
-    /// </summary>
-    [ProtoMember(2)]
-    public string Name { get; set; }
-
-    /// <summary>
     /// Gets or sets the details for a job.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(2)]
     public string Details { get; set; }
 
     /// <summary>
     /// Gets or sets the type of the job.
     /// </summary>
-    [ProtoMember(4)]
+    [ProtoMember(3)]
     public string Type { get; set; }
 
     /// <summary>
     /// Gets or sets the status of the job.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(4)]
     public JobStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets when job was created.
+    /// </summary>
+    [ProtoMember(5)]
+    public SerializableDateTimeOffset Created { get; set; }
 
     /// <summary>
     /// Gets or sets collection of status changes that happened to the job.

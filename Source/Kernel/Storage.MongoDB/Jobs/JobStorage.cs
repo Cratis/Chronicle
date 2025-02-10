@@ -20,7 +20,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Jobs;
 /// Initializes a new instance of the <see cref="JobStorage"/> class.
 /// </remarks>
 /// <param name="database"><see cref="IEventStoreNamespaceDatabase"/> for persistence.</param>
-public class JobStorage(IEventStoreNamespaceDatabase database) : IJobStorage
+/// <param name="jobTypes"><see cref="IJobTypes"/> that knows about <see cref="JobType"/>.</param>
+public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobTypes) : IJobStorage
 {
     IMongoCollection<JobState> Collection => database.GetCollection<JobState>(WellKnownCollectionNames.Jobs);
 
@@ -140,10 +141,13 @@ public class JobStorage(IEventStoreNamespaceDatabase database) : IJobStorage
             {
                 return error;
             }
-            var jobType = (JobType)typeof(TJobType);
+            if (jobTypes.GetFor(typeof(TJobType)).TryPickT1(out _, out var jobType))
+            {
+                return JobError.TypeIsNotAssociatedWithAJobType;
+            }
+
             var jobTypeFilter = Builders<JobState>.Filter.Eq(_ => _.Type, jobType);
             var statusFilters = statuses.Select(status => Builders<JobState>.Filter.Eq(_ => _.Status, status));
-
             var filter = statuses.Length == 0 ?
                 jobTypeFilter :
                 Builders<JobState>.Filter.And(jobTypeFilter, Builders<JobState>.Filter.Or(statusFilters));

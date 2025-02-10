@@ -16,11 +16,6 @@ public class JobState
     public JobId Id { get; set; } = JobId.NotSet;
 
     /// <summary>
-    /// Gets or sets the name of the job.
-    /// </summary>
-    public JobName Name { get; set; } = JobName.NotSet;
-
-    /// <summary>
     /// Gets or sets the details for a job.
     /// </summary>
     public JobDetails Details { get; set; } = JobDetails.NotSet;
@@ -36,6 +31,11 @@ public class JobState
     public JobStatus Status { get; set; }
 
     /// <summary>
+    /// Gets or sets the time that this job was created.
+    /// </summary>
+    public DateTimeOffset Created { get; set; } = DateTimeOffset.MinValue;
+
+    /// <summary>
     /// Gets or sets collection of status changes that happened to the job.
     /// </summary>
     public IList<JobStatusChanged> StatusChanges { get; set; } = [];
@@ -48,7 +48,7 @@ public class JobState
     /// <summary>
     /// Gets or sets the request associated with the job.
     /// </summary>
-    public object Request { get; set; } = default!;
+    public IJobRequest Request { get; set; } = default!;
 
     /// <summary>
     /// Gets whether the job is resumable.

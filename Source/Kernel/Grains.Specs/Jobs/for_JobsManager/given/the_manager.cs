@@ -23,6 +23,7 @@ public class the_manager : Specification
     protected IEventStoreNamespaceStorage _namespaceStorage;
     protected IJobStorage _jobStorage;
     protected IJobStepStorage _jobStepStorage;
+    protected IJobTypes _jobTypes;
 
     protected List<JobState> _storedJobs;
 
@@ -34,11 +35,13 @@ public class the_manager : Specification
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _jobStorage = Substitute.For<IJobStorage>();
         _jobStepStorage = Substitute.For<IJobStepStorage>();
+        _jobTypes = Substitute.For<IJobTypes>();
 
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);
         _namespaceStorage.Jobs.Returns(_jobStorage);
         _namespaceStorage.JobSteps.Returns(_jobStepStorage);
+        _jobTypes.GetClrTypeFor(Arg.Any<JobType>()).Returns(Result.Failed<Type, IJobTypes.GetClrTypeForError>(IJobTypes.GetClrTypeForError.CouldNotFindType));
 
         _jobStorage.GetJobs(Arg.Any<JobStatus[]>()).Returns(_ => Task.FromResult(Catch.Success<IImmutableList<JobState>>([.. _storedJobs])));
         _jobStorage.GetJob(Arg.Any<JobId>()).Returns(callInfo => Task.FromResult(
@@ -48,6 +51,7 @@ public class the_manager : Specification
         _jobStepStorage.RemoveAllForJob(Arg.Any<JobId>()).Returns(Task.FromResult(Catch.Success()));
         _silo.AddService(_storage);
         _silo.AddService(NullLogger<JobsManager>.Instance);
+        _silo.AddService(_jobTypes);
         var loggerFactory = Substitute.For<ILoggerFactory>();
         _silo.AddService(loggerFactory);
         _managerKey = new ("event-store", "namespace");
@@ -60,9 +64,11 @@ public class the_manager : Specification
         var state = new JobState
         {
             Type = typeof(TJob),
-            Id = id
+            Id = id,
+            Created = DateTimeOffset.UtcNow
         };
         _storedJobs.Add(state);
+        _jobTypes.GetClrTypeFor(state.Type).Returns(Result.Success<Type, IJobTypes.GetClrTypeForError>(typeof(TJob)));
         return _silo.AddProbe<TJob>(state.Id, keyExtension: new JobKey(_managerKey.EventStore, _managerKey.Namespace));
     }
 }

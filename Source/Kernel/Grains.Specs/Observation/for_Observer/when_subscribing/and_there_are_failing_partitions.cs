@@ -39,10 +39,10 @@ public class and_there_are_failing_partitions : given.an_observer
     [Fact] void should_be_in_running_state() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_start_retry_failed_partition_jobs_for_first_partition() => _jobsManager
         .Received(1)
-        .Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(Arg.Any<JobId>(), Arg.Is<RetryFailedPartitionRequest>(_ => _.Key == firstFailedPartition.Partition &&
+        .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<JobId>(), Arg.Is<RetryFailedPartitionRequest>(_ => _.Key == firstFailedPartition.Partition &&
                                                                                                                                  _.FromSequenceNumber == firstFailedPartition.LastAttempt.SequenceNumber));
     [Fact] void should_start_retry_failed_partition_jobs_for_second_partition() => _jobsManager
         .Received(1)
-        .Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(Arg.Any<JobId>(), Arg.Is<RetryFailedPartitionRequest>(_ => _.Key == secondFailedPartition.Partition &&
+        .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<JobId>(), Arg.Is<RetryFailedPartitionRequest>(_ => _.Key == secondFailedPartition.Partition &&
                                                                                                                                        _.FromSequenceNumber == secondFailedPartition.LastAttempt.SequenceNumber));
 }

@@ -22,6 +22,9 @@ public class single_event_with_single_subscriber : given.a_single_subscriber_wit
     {
         await _queue.Enqueue([_appendedEvent]);
         await _queue.AwaitQueueDepletion();
+
+        // waiting for queue depletion does not guarantee that the event was actually handled
+        await Task.Delay(100);
     }
 
     [Fact] void should_call_handle_on_observer_once() => _handledEventsPerPartition[_eventSourceId].Count.ShouldEqual(1);

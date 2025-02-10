@@ -20,10 +20,10 @@ public static class JobsConverters
         new()
         {
             Id = job.Id,
-            Name = job.Name,
             Details = job.Details,
             Type = job.Type,
             Status = (JobStatus)(int)job.Status,
+            Created = job.Created!,
             StatusChanges = job.StatusChanges.ToContract(),
             Progress = job.Progress.ToContract()
         };

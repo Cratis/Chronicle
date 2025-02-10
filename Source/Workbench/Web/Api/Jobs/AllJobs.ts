@@ -13,28 +13,25 @@ const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{name
 
 class AllJobsSortBy {
     private _id: SortingActionsForObservableQuery<Job[]>;
-    private _name: SortingActionsForObservableQuery<Job[]>;
     private _details: SortingActionsForObservableQuery<Job[]>;
     private _type: SortingActionsForObservableQuery<Job[]>;
     private _status: SortingActionsForObservableQuery<Job[]>;
+    private _created: SortingActionsForObservableQuery<Job[]>;
     private _statusChanges: SortingActionsForObservableQuery<Job[]>;
     private _progress: SortingActionsForObservableQuery<Job[]>;
 
     constructor(readonly query: AllJobs) {
         this._id = new SortingActionsForObservableQuery<Job[]>('id', query);
-        this._name = new SortingActionsForObservableQuery<Job[]>('name', query);
         this._details = new SortingActionsForObservableQuery<Job[]>('details', query);
         this._type = new SortingActionsForObservableQuery<Job[]>('type', query);
         this._status = new SortingActionsForObservableQuery<Job[]>('status', query);
+        this._created = new SortingActionsForObservableQuery<Job[]>('created', query);
         this._statusChanges = new SortingActionsForObservableQuery<Job[]>('statusChanges', query);
         this._progress = new SortingActionsForObservableQuery<Job[]>('progress', query);
     }
 
     get id(): SortingActionsForObservableQuery<Job[]> {
         return this._id;
-    }
-    get name(): SortingActionsForObservableQuery<Job[]> {
-        return this._name;
     }
     get details(): SortingActionsForObservableQuery<Job[]> {
         return this._details;
@@ -44,6 +41,9 @@ class AllJobsSortBy {
     }
     get status(): SortingActionsForObservableQuery<Job[]> {
         return this._status;
+    }
+    get created(): SortingActionsForObservableQuery<Job[]> {
+        return this._created;
     }
     get statusChanges(): SortingActionsForObservableQuery<Job[]> {
         return this._statusChanges;
@@ -55,18 +55,15 @@ class AllJobsSortBy {
 
 class AllJobsSortByWithoutQuery {
     private _id: SortingActions  = new SortingActions('id');
-    private _name: SortingActions  = new SortingActions('name');
     private _details: SortingActions  = new SortingActions('details');
     private _type: SortingActions  = new SortingActions('type');
     private _status: SortingActions  = new SortingActions('status');
+    private _created: SortingActions  = new SortingActions('created');
     private _statusChanges: SortingActions  = new SortingActions('statusChanges');
     private _progress: SortingActions  = new SortingActions('progress');
 
     get id(): SortingActions {
         return this._id;
-    }
-    get name(): SortingActions {
-        return this._name;
     }
     get details(): SortingActions {
         return this._details;
@@ -76,6 +73,9 @@ class AllJobsSortByWithoutQuery {
     }
     get status(): SortingActions {
         return this._status;
+    }
+    get created(): SortingActions {
+        return this._created;
     }
     get statusChanges(): SortingActions {
         return this._statusChanges;

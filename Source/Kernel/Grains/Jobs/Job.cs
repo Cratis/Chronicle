@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// <typeparam name="TJobState">Type of state for the job.</typeparam>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Jobs)]
 public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest>
-    where TRequest : class
+    where TRequest : class, IJobRequest
     where TJobState : JobState
 {
     Dictionary<JobStepId, JobStepGrainAndRequest> _jobStepGrains = [];
@@ -85,22 +85,23 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _logger = ServiceProvider.GetService<ILogger<Job<TRequest, TJobState>>>() ?? new NullLogger<Job<TRequest, TJobState>>();
-
         _observers = new(
             TimeSpan.FromMinutes(1),
             ServiceProvider.GetService<ILogger<ObserverManager<IJobObserver>>>() ?? new NullLogger<ObserverManager<IJobObserver>>());
 
         JobId = this.GetPrimaryKey(out var keyExtension);
         JobKey = keyExtension;
-
         ThisJob = GrainFactory.GetReference<IJob<TRequest>>(this);
-
-        State.Name = GetType().Name;
-        State.Type = this.GetGrainType();
+        State.Type = ServiceProvider.GetRequiredService<IJobTypes>().GetFor(GetType()).Match(
+            jobType => jobType,
+            error => error switch
+            {
+                IJobTypes.GetForError.NoAssociatedJobType => throw new JobTypeNotAssociatedWithType(GetType()),
+                _ => throw new ArgumentOutOfRangeException(nameof(error), error, null)
+            });
         Storage = ServiceProvider.GetRequiredService<IStorage>()
             .GetEventStore(JobKey.EventStore)
             .GetNamespace(JobKey.Namespace);
-
         return Task.CompletedTask;
     }
 
@@ -112,6 +113,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         {
             _logger.Starting();
             _isRunning = true;
+            State.Created = DateTimeOffset.UtcNow;
             State.Request = request!;
             State.Details = GetJobDetails();
             await WriteStatusChanged(JobStatus.PreparingSteps);
@@ -673,7 +675,7 @@ public abstract class Job<TRequest, TJobState> : Grain<TJobState>, IJob<TRequest
         }
         catch (Exception e)
         {
-            _logger.FailedOnCompleted(e, State.Name);
+            _logger.FailedOnCompleted(e, State.Id, State.Type);
             return Result.Failed(JobError.UnknownError);
         }
     }
