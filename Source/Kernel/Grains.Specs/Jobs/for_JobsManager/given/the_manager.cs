@@ -64,7 +64,8 @@ public class the_manager : Specification
         var state = new JobState
         {
             Type = typeof(TJob),
-            Id = id
+            Id = id,
+            Created = DateTimeOffset.UtcNow
         };
         _storedJobs.Add(state);
         _jobTypes.GetClrTypeFor(state.Type).Returns(Result.Success<Type, IJobTypes.GetClrTypeForError>(typeof(TJob)));
