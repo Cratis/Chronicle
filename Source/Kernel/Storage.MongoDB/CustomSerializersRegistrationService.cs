@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Compliance.MongoDB;
+using Cratis.Reflection;
 using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,20 +18,20 @@ public class CustomSerializersRegistrationService(IServiceProvider serviceProvid
     /// <inheritdoc/>
     public Task Execute(CancellationToken cancellationToken)
     {
-        foreach (var type in types.FindMultiple<IBsonSerializationProvider>()
-                     .Where(type => type.Assembly.FullName!.Contains("Chronicle") && !type.IsGenericType)
-                     .Except([typeof(EncryptionKeySerializer)]))
+        foreach (var type in types.FindMultiple<IBsonSerializationProvider>().Where(IsEligibleForAutoRegistration))
         {
             var provider = (IBsonSerializationProvider)ActivatorUtilities.CreateInstance(serviceProvider, type);
             BsonSerializer.RegisterSerializationProvider(provider);
         }
-        foreach (var type in types.FindMultiple<IBsonSerializer>()
-                     .Where(type => type.Assembly.FullName!.Contains("Chronicle") && !type.IsGenericType)
-                     .Except([typeof(EncryptionKeySerializer)]))
+        foreach (var type in types.FindMultiple<IBsonSerializer>().Where(IsEligibleForAutoRegistration))
         {
             var serializer = (IBsonSerializer)ActivatorUtilities.CreateInstance(serviceProvider, type);
             BsonSerializer.TryRegisterSerializer(serializer.ValueType, serializer);
         }
         return Task.CompletedTask;
     }
+
+    static bool IsEligibleForAutoRegistration(Type type) => type.Assembly.FullName!.Contains("Cratis.Chronicle") &&
+                                                            !type.IsGenericType &&
+                                                            !type.HasAttribute<BsonSerializerDisableAutoRegistrationAttribute>();
 }
