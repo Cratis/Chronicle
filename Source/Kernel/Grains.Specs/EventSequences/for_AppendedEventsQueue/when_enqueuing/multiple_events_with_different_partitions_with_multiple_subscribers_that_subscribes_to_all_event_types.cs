@@ -31,6 +31,9 @@ public class multiple_events_with_different_partitions_with_multiple_subscribers
     {
         await _queue.Enqueue([_firstAppendedEvent, _secondAppendedEvent]);
         await _queue.AwaitQueueDepletion();
+
+        // waiting for queue depletion does not guarantee that the event was actually handled
+        await Task.Delay(100);
     }
 
     [Fact] void should_call_handle_on_first_observer_twice() => _firstObserverHandledEvents.Count.ShouldEqual(2);
