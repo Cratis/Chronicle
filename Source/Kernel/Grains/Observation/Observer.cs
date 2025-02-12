@@ -116,7 +116,7 @@ public partial class Observer(
 
         logger.Subscribing();
 
-        State = State with { Type = type };
+        State = State with { Type = type, EventTypes = eventTypes };
 
         _subscription = new ObserverSubscription(
             _observerId,
@@ -125,7 +125,7 @@ public partial class Observer(
             typeof(TObserverSubscriber),
             siloAddress,
             subscriberArgs);
-
+        await WriteStateAsync();
         await ResumeJobs();
         await TryRecoverAllFailedPartitions();
         await TransitionTo<Routing>();
@@ -216,11 +216,9 @@ public partial class Observer(
 
     async Task ResumeJobs()
     {
+        // TODO: Do this in a Task.WhenAll because JobsManager is reentrant now
         var unfilteredJobs = await _jobsManager.GetAllJobs();
-        var jobs = unfilteredJobs.Where(_ =>
-                        _.Request is IObserverJobRequest &&
-                        _.IsResumable).ToArray();
-        foreach (var job in jobs)
+        foreach (var job in unfilteredJobs.Where(job => job is { Request: IObserverJobRequest, IsResumable: true }).ToArray())
         {
             await _jobsManager.Resume(job.Id);
         }
