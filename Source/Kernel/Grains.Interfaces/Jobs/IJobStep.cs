@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Workers;
-using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Grains.Jobs;
 
@@ -14,39 +13,26 @@ namespace Cratis.Chronicle.Grains.Jobs;
 public interface IJobStep : IGrainWithGuidCompoundKey
 {
     /// <summary>
-    /// Start the job step.
-    /// </summary>
-    /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>
-    /// <param name="request">Request to start it with.</param>
-    /// <returns>Awaitable task.</returns>
-    Task<Result<JobStepPrepareStartError>> Start(GrainId jobId, object request);
-
-    /// <summary>
     /// Prepare the job step.
     /// </summary>
     /// <param name="request">Request to prepare it with.</param>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobStepPrepareStartError>> Prepare(object request);
+    Task<Result<PrepareJobStepError>> Prepare(object request);
 
     /// <summary>
-    /// Pause the job step.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    [AlwaysInterleave]
-    Task<Result<JobStepError>> Pause();
-
-    /// <summary>
-    /// Resume a job step.
+    /// Start the job step.
     /// </summary>
     /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobStepResumeSuccess, JobStepError>> Resume(GrainId jobId);
+    Task<Result<StartJobStepError>> Start(GrainId jobId);
 
     /// <summary>
     /// Stop the job step.
     /// </summary>
+    /// <remarks>
+    /// A stopped job step can be started again later given it has been prepared.
+    /// </remarks>
     /// <returns>Awaitable task.</returns>
-    [AlwaysInterleave]
     Task<Result<JobStepError>> Stop();
 
     /// <summary>
@@ -72,17 +58,9 @@ public interface IJobStep : IGrainWithGuidCompoundKey
 public interface IJobStep<in TRequest, TResult> : ICpuBoundWorker<TRequest, JobStepResult>, IJobStep
 {
     /// <summary>
-    /// Start the job step.
-    /// </summary>
-    /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>
-    /// <param name="request">Request to start it with.</param>
-    /// <returns>Awaitable task.</returns>
-    Task<Result<JobStepPrepareStartError>> Start(GrainId jobId, TRequest request);
-
-    /// <summary>
     /// Prepare the job step.
     /// </summary>
     /// <param name="request">Request to prepare it with.</param>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobStepPrepareStartError>> Prepare(TRequest request);
+    Task<Result<PrepareJobStepError>> Prepare(TRequest request);
 }

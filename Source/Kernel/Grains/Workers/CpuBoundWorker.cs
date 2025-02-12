@@ -50,9 +50,8 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     /// <summary>
     /// The method that actually performs the long-running work.
     /// </summary>
-    /// <param name="request">The request/parameters used for the execution of the method.</param>
     /// <returns>The result of the work.</returns>
-    protected abstract Task<PerformWorkResult<TResult>> PerformWork(TRequest request);
+    protected abstract Task<PerformWorkResult<TResult>> PerformWork();
 
     /// <summary>
     /// Method that gets called when the work has succeeded.
@@ -63,10 +62,9 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     /// <summary>
     /// Start long-running work with the provided parameter.
     /// </summary>
-    /// <param name="request">The parameter containing all necessary information to start the workload.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns>true if work is started, false if it was already started.</returns>
-    protected Task<bool> Start(TRequest request, CancellationToken cancellationToken = default)
+    protected Task<bool> Start(CancellationToken cancellationToken = default)
     {
         if (_task != null)
         {
@@ -76,7 +74,7 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
 
         _logger?.StartingTask();
         _status = CpuBoundWorkerStatus.Running;
-        _task = CreateTask(request, cancellationToken);
+        _task = CreateTask(cancellationToken);
 
         return Task.FromResult(true);
     }
@@ -84,11 +82,10 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     /// <summary>
     /// The task creation that fires off the long-running work to the <see cref="LimitedConcurrencyLevelTaskScheduler"/>.
     /// </summary>
-    /// <param name="request">The request to use for the invocation of the long-running work.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns>a <see cref="Task"/> representing the fact that the work has been dispatched.</returns>
 #pragma warning disable CA1859 // Use concrete types when possible for improved performance
-    Task CreateTask(TRequest request, CancellationToken cancellationToken = default)
+    Task CreateTask(CancellationToken cancellationToken = default)
 #pragma warning restore CA1859 // Use concrete types when possible for improved performance
     {
         return Task.Factory.StartNew(
@@ -104,7 +101,7 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
                 PerformWorkResult<TResult> performWorkResult;
                 try
                 {
-                    performWorkResult = await PerformWork(request);
+                    performWorkResult = await PerformWork();
                 }
                 catch (Exception e)
                 {
@@ -132,11 +129,14 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
                 _status = CpuBoundWorkerStatus.Completed;
                 _logger.TaskHasCompleted();
 
+                return;
+
                 void HandleCancellation()
                 {
                     _logger.TaskHasBeenCancelled();
                     _status = CpuBoundWorkerStatus.Stopped;
                     _result = WorkerGetResultError.WorkCancelled;
+                    _task = null;
                 }
 
                 void HandleException(Exception e)
@@ -149,11 +149,13 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
                         Error = PerformWorkError.WorkerError,
                         Exception = e
                     };
+                    _task = null;
                 }
                 void HandleError(PerformWorkError e)
                 {
                     _logger?.TaskHasFailed(e);
                     _status = CpuBoundWorkerStatus.Failed;
+                    _task = null;
                 }
             },
             cancellationToken,
