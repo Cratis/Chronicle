@@ -93,7 +93,7 @@
 
     <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
         <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.1" />
-        <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.1" />
+        <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.2" />
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.1" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.1" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.1" />
