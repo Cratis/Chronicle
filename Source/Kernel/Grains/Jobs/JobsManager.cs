@@ -9,6 +9,7 @@ using Cratis.Chronicle.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using OneOf.Types;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Grains.Jobs;
 
@@ -21,6 +22,7 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
 /// <param name="jobTypes"><see cref="IJobTypes"/> that knows about job type associations.</param>
 /// <param name="logger">Logger for logging.</param>
+[Reentrant]
 public class JobsManager(
     IStorage storage,
     IJobTypes jobTypes,

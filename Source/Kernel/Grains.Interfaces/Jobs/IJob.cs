@@ -114,5 +114,5 @@ public interface IJob<in TRequest> : IJob
     /// </summary>
     /// <param name="request">The request object for the job.</param>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobError>> Start(TRequest request);
+    Task<Result<StartJobError>> Start(TRequest request);
 }

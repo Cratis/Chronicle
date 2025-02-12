@@ -25,7 +25,6 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// Get the state from the observer.
     /// </summary>
     /// <returns>The <see cref="ObserverState"/>.</returns>
-    [AlwaysInterleave]
     Task<ObserverState> GetState();
 
     /// <summary>

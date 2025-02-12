@@ -56,15 +56,6 @@ public class Routing(
         return await EvaluateState(state);
     }
 
-    /// <inheritdoc/>
-    public override Task<ObserverState> OnLeave(ObserverState state)
-    {
-        return Task.FromResult(state with
-        {
-            EventTypes = _subscription.IsSubscribed ? _subscription.EventTypes : state.EventTypes
-        });
-    }
-
     async Task<ObserverState> EvaluateState(ObserverState state)
     {
         if (!_subscription.IsSubscribed)

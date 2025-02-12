@@ -42,7 +42,7 @@ public class ObserverKeysAsyncEnumerator(IAsyncCursor<EventSourceId> cursor) : I
                 return false;
             }
 
-            _queue = new Queue<Key>(cursor.Current.Select(_ => new Key(_.Value, ArrayIndexers.NoIndexers)));
+            _queue = new(cursor.Current.Select(_ => new Key(_.Value, ArrayIndexers.NoIndexers)));
         }
 
         if (_queue.Count == 0)
