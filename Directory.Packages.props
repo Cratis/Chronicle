@@ -96,7 +96,7 @@
         <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.1" />
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.1" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.1" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.1" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.2" />
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.1" />
         <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.1.0" />
         <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.1" />
