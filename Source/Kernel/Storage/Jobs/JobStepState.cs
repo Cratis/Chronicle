@@ -39,4 +39,9 @@ public class JobStepState
     /// Gets or sets the <see cref="JobStepProgress"/>.
     /// </summary>
     public JobStepProgress Progress { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets whether the job step has been prepared.
+    /// </summary>
+    public bool Prepared { get; set; }
 }
