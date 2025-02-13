@@ -169,7 +169,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
                 })
                 .Select(async jobStep =>
                 {
-                    var result = await jobStep.Grain.Resume(this.GetGrainId());
+                    var result = await jobStep.Grain.Start(this.GetGrainId());
                     return new
                     {
                         jobStep.Id,

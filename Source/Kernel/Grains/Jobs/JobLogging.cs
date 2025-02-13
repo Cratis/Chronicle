@@ -94,10 +94,10 @@ internal static partial class JobLogMessages
     internal static partial void FailedUpdatingStateAfterHandlingJobStepCompletion(this ILogger<IJob> logger, Exception ex, JobStepId jobStepId);
 
     [LoggerMessage(LogLevel.Warning, "Job failed preparing job step {JobStepId}. Error: {Error}")]
-    internal static partial void FailedPreparingJobStep(this ILogger<IJob> logger, JobStepId jobStepId, JobStepPrepareStartError error);
+    internal static partial void FailedPreparingJobStep(this ILogger<IJob> logger, JobStepId jobStepId, PrepareJobStepError error);
 
     [LoggerMessage(LogLevel.Warning, "Job failed starting job step {JobStepId}. Error: {Error}")]
-    internal static partial void FailedStartingJobStep(this ILogger<IJob> logger, JobStepId jobStepId, JobStepPrepareStartError error);
+    internal static partial void FailedStartingJobStep(this ILogger<IJob> logger, JobStepId jobStepId, StartJobStepError error);
 
     [LoggerMessage(LogLevel.Warning, "Job failed starting job step {JobStepId}")]
     internal static partial void FailedStartingJobStep(this ILogger<IJob> logger, Exception ex, JobStepId jobStepId);

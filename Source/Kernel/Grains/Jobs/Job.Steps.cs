@@ -246,7 +246,7 @@ public abstract partial class Job<TRequest, TJobState>
             {
                 if (!(await jobStep.Grain.Prepare(jobStep.Request)).TryGetError(out var prepareError))
                 {
-                    return (JobStepId: id, Result: Result.Success<JobStepPrepareStartError>());
+                    return (JobStepId: id, Result: Result.Success<PrepareJobStepError>());
                 }
                 _logger.FailedPreparingJobStep(id, prepareError);
                 return (JobStepId: id, Result: prepareError);
@@ -254,7 +254,7 @@ public abstract partial class Job<TRequest, TJobState>
             catch (Exception ex)
             {
                 _logger.ErrorPreparingJobStep(ex, id);
-                return (JobStepId: id, Result: Result.Failed(JobStepPrepareStartError.Unknown));
+                return (JobStepId: id, Result: Result.Failed(PrepareJobStepError.Unknown));
             }
         });
         var results = await Task.WhenAll(prepareAllSteps);
@@ -268,9 +268,9 @@ public abstract partial class Job<TRequest, TJobState>
             var (id, jobStep) = idAndGrain;
             try
             {
-                if (!(await jobStep.Grain.Start(grainId, jobStep.Request)).TryGetError(out var startError))
+                if (!(await jobStep.Grain.Start(grainId)).TryGetError(out var startError))
                 {
-                    return (JobStepId: id, Result: Result.Success<JobStepPrepareStartError>());
+                    return (JobStepId: id, Result: Result.Success<StartJobStepError>());
                 }
                 _logger.FailedStartingJobStep(id, startError);
                 return (JobStepId: id, Result: startError);
@@ -278,7 +278,7 @@ public abstract partial class Job<TRequest, TJobState>
             catch (Exception ex)
             {
                 _logger.FailedStartingJobStep(ex, id);
-                return (JobStepId: id, Result: Result.Failed(JobStepPrepareStartError.Unknown));
+                return (JobStepId: id, Result: Result.Failed(StartJobStepError.Unknown));
             }
         });
         var results = await Task.WhenAll(prepareAllSteps);
