@@ -13,6 +13,9 @@ public interface IJob : IGrainWithGuidCompoundKey
 {
     /// <summary>
     /// Pause a running job.
+    /// <remarks>
+    /// Pause is different from Stop in that a Paused Job can be Resumed while a Stopped Job cannot.
+    /// </remarks>
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task<Result<JobError>> Pause();
@@ -28,6 +31,7 @@ public interface IJob : IGrainWithGuidCompoundKey
 
     /// <summary>
     /// Stop a running job.
+    /// Stop is different from Pause in that a Stopped Job cannot be Resumed while a Paused Job can
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task<Result<JobError>> Stop();
@@ -43,6 +47,9 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// <summary>
     /// Report that a job step has been stopped.
     /// </summary>
+    /// <remarks>
+    /// This is different from succeeded and failed in that this signifies that a job step has been manually stopped or paused.
+    /// </remarks>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was stopped.</param>
     /// <param name="jobStepResult">The <see cref="JobStepResult"/> for the stopped step.</param>
     /// <returns>Awaitable task.</returns>
@@ -55,51 +62,6 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// <param name="jobStepResult">The <see cref="JobStepResult"/> for the failed step.</param>
     /// <returns>Awaitable task.</returns>
     Task<Result<JobError>> OnStepFailed(JobStepId stepId, JobStepResult jobStepResult);
-
-    /// <summary>
-    /// Called when the job has completed.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    Task OnCompleted();
-
-    /// <summary>
-    /// Adds a status change to the job.
-    /// </summary>
-    /// <param name="status"><see cref="JobStatus"/> to add.</param>
-    /// <param name="exception">Optional <see cref="Exception"/> associated with the status.</param>
-    /// <returns>Awaitable task.</returns>
-    /// <remarks>
-    /// This is called internally. Do not call this from external code.
-    /// Due to the intricacy of how jobs run from different task contexts outside of Orleans, this is needed to be able to
-    /// update state.
-    /// </remarks>
-    Task<Result<JobError>> WriteStatusChanged(JobStatus status, Exception? exception = null);
-
-    /// <summary>
-    /// Set the total number of steps for the job.
-    /// </summary>
-    /// <param name="totalSteps">The total of steps for the job.</param>
-    /// <returns>Awaitable task.</returns>
-    /// <remarks>
-    /// This is called internally. Do not call this from external code.
-    /// Due to the intricacy of how jobs run from different task contexts outside of Orleans, this is needed to be able to
-    /// update state.
-    /// </remarks>
-    Task<Result<JobError>> SetTotalSteps(int totalSteps);
-
-    /// <summary>
-    /// Subscribe to job events.
-    /// </summary>
-    /// <param name="observer"><see cref="IJobObserver"/> that will be notified.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Subscribe(IJobObserver observer);
-
-    /// <summary>
-    /// Unsubscribe to job events.
-    /// </summary>
-    /// <param name="observer"><see cref="IJobObserver"/> that will be notified.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Unsubscribe(IJobObserver observer);
 }
 
 /// <summary>
@@ -112,6 +74,9 @@ public interface IJob<in TRequest> : IJob
     /// <summary>
     /// Start the job.
     /// </summary>
+    /// <remarks>
+    /// This is different from Resume in that it will prepare job steps before starting them and therefore is a method that cannot be called again after the job steps has been prepared.
+    /// </remarks>
     /// <param name="request">The request object for the job.</param>
     /// <returns>Awaitable task.</returns>
     Task<Result<StartJobError>> Start(TRequest request);
