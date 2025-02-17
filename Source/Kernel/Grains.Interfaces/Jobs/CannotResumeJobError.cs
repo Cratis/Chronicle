@@ -4,22 +4,22 @@
 namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
-/// The type of success that happens when trying to resume a job.
+/// Error types for when a job cannot be resumed.
 /// </summary>
-public enum ResumeJobSuccess
+public enum CannotResumeJobError
 {
     /// <summary>
-    /// Successful resume.
+    /// Unknown error.
     /// </summary>
-    Success = 0,
+    Unknown = 0,
+
+    /// <summary>
+    /// Job has not been prepared and started beforehand.
+    /// </summary>
+    JobIsNotPrepared = 1,
 
     /// <summary>
     /// Job cannot be resumed.
     /// </summary>
-    JobIsCompleted = 1,
-
-    /// <summary>
-    /// Job cannot be resumed because it is already running.
-    /// </summary>
-    JobAlreadyRunning = 2,
+    JobCannotBeResumed = 2,
 }

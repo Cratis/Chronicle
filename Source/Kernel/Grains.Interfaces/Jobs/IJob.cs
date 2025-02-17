@@ -18,7 +18,7 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// </remarks>
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobError>> Pause();
+    Task<Result<PauseJobError>> Pause();
 
     /// <summary>
     /// Resume a job, either its paused, stopped or didn't get to finish before the host stopped.

@@ -32,4 +32,14 @@ public enum StartJobError
     /// There were no prepared job steps.
     /// </summary>
     NoJobStepsToStart = 4,
+
+    /// <summary>
+    /// The job has already been started and successfully been prepared before.
+    /// </summary>
+    AlreadyBeenPrepared = 5,
+
+    /// <summary>
+    /// The job has already completed and cannot be started again.
+    /// </summary>
+    AlreadyCompleted = 6,
 }
