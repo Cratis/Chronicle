@@ -52,7 +52,7 @@ public class JobsManager(
         using var scope = logger.BeginJobsManagerScope(_key);
 
         logger.Rehydrating();
-        var getRunningJobs = await _jobStorage!.GetJobs(JobStatus.Running, JobStatus.PreparingSteps, JobStatus.PreparingStepsForRunning);
+        var getRunningJobs = await _jobStorage!.GetJobs(JobStatus.Running, JobStatus.PreparingJob, JobStatus.PreparingSteps);
         await getRunningJobs.Match(RehydrateJobs, HandleUnknownFailure);
         return;
 
