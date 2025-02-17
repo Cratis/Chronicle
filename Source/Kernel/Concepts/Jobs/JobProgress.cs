@@ -24,9 +24,14 @@ public class JobProgress
     public int FailedSteps { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of stopped steps.
+    /// </summary>
+    public int StoppedSteps { get; set; }
+
+    /// <summary>
     /// Gets whether the job is completed.
     /// </summary>
-    public bool IsCompleted => SuccessfulSteps + FailedSteps == TotalSteps;
+    public bool IsCompleted => SuccessfulSteps + FailedSteps + StoppedSteps == TotalSteps;
 
     /// <summary>
     /// Gets or sets the current <see cref="JobProgressMessage"/> associated with the progress.
