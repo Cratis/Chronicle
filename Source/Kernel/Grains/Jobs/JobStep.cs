@@ -148,7 +148,6 @@ public abstract class JobStep<TRequest, TResult, TState>(
             await cancelTokenTask;
             _cancellationTokenSource = null;
             DeactivateOnIdle();
-            await Job.Unsubscribe(this.AsReference<IJobObserver>());
             return await WriteStatusChange(JobStepStatus.Stopped);
         }
         catch (Exception ex)
