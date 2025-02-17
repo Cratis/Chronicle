@@ -46,7 +46,16 @@ public interface IProjections
     /// <param name="context">gRPC call context.</param>
     /// <returns><see cref="ProjectionResult"/> containing the projected result and details of the projection.</returns>
     [Operation]
-    Task<ProjectionResult> GetInstanceByIdFOrSessionWithEventsApplied(GetInstanceByIdForSessionWithEventsAppliedRequest request, CallContext context = default);
+    Task<ProjectionResult> GetInstanceByIdForSessionWithEventsApplied(GetInstanceByIdForSessionWithEventsAppliedRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Observe changes for a specific projection.
+    /// </summary>
+    /// <param name="request"><see cref="ObserveChangesRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Observable of <see cref="ProjectionChangeset"/> containing the changeset for the projection.</returns>
+    [Operation]
+    IObservable<ProjectionChangeset> ObserveChanges(ObserveChangesRequest request, CallContext context = default);
 
     /// <summary>
     /// Dehydrate a specific projection session.

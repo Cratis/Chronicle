@@ -84,6 +84,14 @@ public interface IProjections
     Task DehydrateSession(ProjectionSessionId sessionId, Type modelType, ModelKey modelKey);
 
     /// <summary>
+    /// Observe changes for a specific model with optionally a specific <see cref="ModelKey"/>.
+    /// </summary>
+    /// <param name="modelKey">Optional <see cref="ModelKey"/> to observe changes for.</param>
+    /// <typeparam name="TModel">Type of model to observe changes for.</typeparam>
+    /// <returns>An observable of <see cref="ProjectionChangeset{TModel}"/>.</returns>
+    IObservable<ProjectionChangeset<TModel>> ObserveChangesFor<TModel>(ModelKey? modelKey = default);
+
+    /// <summary>
     /// Discover all projections from entry assembly and dependencies.
     /// </summary>
     /// <returns>Awaitable task.</returns>

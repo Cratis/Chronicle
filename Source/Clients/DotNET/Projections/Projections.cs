@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
@@ -143,7 +144,7 @@ public class Projections(
             Events = eventsToApply.ToContract()
         };
 
-        var result = await eventStore.Connection.Services.Projections.GetInstanceByIdFOrSessionWithEventsApplied(request);
+        var result = await eventStore.Connection.Services.Projections.GetInstanceByIdForSessionWithEventsApplied(request);
         return result.ToClient(modelType);
     }
 
@@ -163,6 +164,21 @@ public class Projections(
         };
 
         await eventStore.Connection.Services.Projections.DehydrateSession(request);
+    }
+
+    /// <inheritdoc/>
+    public IObservable<ProjectionChangeset<TModel>> ObserveChangesFor<TModel>(ModelKey? modelKey = null)
+    {
+        var projectionDefinition = _definitionsByModelType[typeof(TModel)];
+        var request = new ObserveChangesRequest
+        {
+            ProjectionId = projectionDefinition.Identifier,
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            ModelKey = modelKey?.Value
+        };
+
+        return eventStore.Connection.Services.Projections.ObserveChanges(request).Select(_ => _.ToClient<TModel>());
     }
 
     /// <inheritdoc/>

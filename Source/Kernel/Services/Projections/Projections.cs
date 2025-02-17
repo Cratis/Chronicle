@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Contracts.Projections;
@@ -58,7 +60,7 @@ public class Projections(IGrainFactory grainFactory) : IProjections
     }
 
     /// <inheritdoc/>
-    public async Task<ProjectionResult> GetInstanceByIdFOrSessionWithEventsApplied(GetInstanceByIdForSessionWithEventsAppliedRequest request, CallContext context = default)
+    public async Task<ProjectionResult> GetInstanceByIdForSessionWithEventsApplied(GetInstanceByIdForSessionWithEventsAppliedRequest request, CallContext context = default)
     {
         var projectionKey = new ImmediateProjectionKey(
             request.ProjectionId,
@@ -73,6 +75,12 @@ public class Projections(IGrainFactory grainFactory) : IProjections
         var eventsToApply = request.Events.Select(_ => _.ToChronicle()).ToArray();
         var result = await projection.GetCurrentModelInstanceWithAdditionalEventsApplied(eventsToApply);
         return result.ToContract();
+    }
+
+    /// <inheritdoc/>
+    public IObservable<ProjectionChangeset> ObserveChanges(ObserveChangesRequest request, CallContext context = default)
+    {
+        return new Subject<ProjectionChangeset>();
     }
 
     /// <inheritdoc/>
