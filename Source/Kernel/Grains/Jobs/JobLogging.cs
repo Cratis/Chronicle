@@ -45,6 +45,9 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Trace, "Step {JobStepId} successfully completed")]
     internal static partial void StepSuccessfullyCompleted(this ILogger<IJob> logger, JobStepId jobStepId);
 
+    [LoggerMessage(LogLevel.Trace, "Step {JobStepId} stopped")]
+    internal static partial void StepStopped(this ILogger<IJob> logger, JobStepId jobStepId);
+
     [LoggerMessage(LogLevel.Trace, "Step {JobStepId} failed")]
     internal static partial void StepFailed(this ILogger<IJob> logger, JobStepId jobStepId);
 
@@ -92,6 +95,9 @@ internal static partial class JobLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Job failed persisting state after handling job step completion for job step {JobStepId}")]
     internal static partial void FailedUpdatingStateAfterHandlingJobStepCompletion(this ILogger<IJob> logger, Exception ex, JobStepId jobStepId);
+
+    [LoggerMessage(LogLevel.Warning, "Job failed persisting state after handling completion")]
+    internal static partial void FailedUpdatingStateAfterHandlingCompletion(this ILogger<IJob> logger, Exception ex);
 
     [LoggerMessage(LogLevel.Warning, "Job failed preparing job step {JobStepId}. Error: {Error}")]
     internal static partial void FailedPreparingJobStep(this ILogger<IJob> logger, JobStepId jobStepId, PrepareJobStepError error);
