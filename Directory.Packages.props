@@ -98,7 +98,7 @@
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.2" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.2" />
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.2" />
-        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.1.0" />
+        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.2.0" />
         <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.2" />
         <PackageVersion Include="System.Text.Json" Version="9.0.2" />
         <PackageVersion Include="OpenTelemetry" Version="1.11.1" />
