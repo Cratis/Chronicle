@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Contracts.Projections;
 /// Defines the request for registering projections.
 /// </summary>
 [ProtoContract]
-public class ObserveChangesRequest
+public class ProjectionWatchRequest
 {
     /// <summary>
     /// Gets or sets the event store name.
@@ -18,20 +18,14 @@ public class ObserveChangesRequest
     public string EventStore { get; set; }
 
     /// <summary>
-    /// Gets or sets the namespace.
-    /// </summary>
-    [ProtoMember(2)]
-    public string Namespace { get; set; }
-
-    /// <summary>
     /// Gets or sets the projection id to observe changes for.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(2)]
     public string ProjectionId { get; set; }
 
     /// <summary>
     /// Gets or sets the model key to observe changes for - this is optional. If no key is specified, it will look for changes for all instances of the projection.
     /// </summary>
-    [ProtoMember(4)]
+    [ProtoMember(3)]
     public string? ModelKey { get; set; }
 }

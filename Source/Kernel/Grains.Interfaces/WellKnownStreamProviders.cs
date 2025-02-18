@@ -3,14 +3,13 @@
 
 namespace Cratis.Chronicle.Grains;
 
-
 /// <summary>
 /// Holds well known stream providers.
-/// /// </summary>
+/// </summary>
 public static class WellKnownStreamProviders
 {
     /// <summary>
     /// The name of the stream provider for projections.
     /// </summary>
-    public const string Projections = "Projections";
+    public const string ProjectionChangesets = "ProjectionChangesets";
 }

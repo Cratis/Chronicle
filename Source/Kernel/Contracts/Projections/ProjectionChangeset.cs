@@ -12,14 +12,20 @@ namespace Cratis.Chronicle.Contracts.Projections;
 public class ProjectionChangeset
 {
     /// <summary>
-    /// Gets or sets the key for the model that was affected.
+    /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(1)]
+    public string Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the key for the model that was affected.
+    /// </summary>
+    [ProtoMember(2)]
     public string ModelKey { get; set; }
 
     /// <summary>
     /// Gets or sets the model that was affected as JSON.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(3)]
     public string Model { get; set; }
 }

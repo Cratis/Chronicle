@@ -15,7 +15,13 @@ public interface IProjection : IGrainWithStringKey
     /// </summary>
     /// <param name="definition"><see cref="ProjectionDefinition"/> to refresh with.</param>
     /// <returns>Awaitable task.</returns>
-    Task SetDefinitionAndSubscribe(ProjectionDefinition definition);
+    Task SetDefinition(ProjectionDefinition definition);
+
+    /// <summary>
+    /// Get the projection definition.
+    /// </summary>
+    /// <returns>The current <see cref="ProjectionDefinition"/>.</returns>
+    Task<ProjectionDefinition> GetDefinition();
 
     /// <summary>
     /// Subscribe to changes in projection or pipeline definition changes.

@@ -24,7 +24,7 @@ public record ImmediateProjectionKey(
     ProjectionSessionId? SessionId = default)
 {
     /// <summary>
-    /// Implicitly convert from <see cref="ProjectionKey"/> to string.
+    /// Implicitly convert from <see cref="ImmediateProjectionKey"/> to string.
     /// </summary>
     /// <param name="key"><see cref="ImmediateProjectionKey"/> to convert from.</param>
     public static implicit operator string(ImmediateProjectionKey key) => key.ToString();

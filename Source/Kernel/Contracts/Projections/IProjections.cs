@@ -51,11 +51,11 @@ public interface IProjections
     /// <summary>
     /// Observe changes for a specific projection.
     /// </summary>
-    /// <param name="request"><see cref="ObserveChangesRequest"/> with all the details about the request.</param>
+    /// <param name="request"><see cref="ProjectionWatchRequest"/> with all the details about the request.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Observable of <see cref="ProjectionChangeset"/> containing the changeset for the projection.</returns>
     [Operation]
-    IObservable<ProjectionChangeset> Watch(ObserveChangesRequest request, CallContext context = default);
+    IObservable<ProjectionChangeset> Watch(ProjectionWatchRequest request, CallContext context = default);
 
     /// <summary>
     /// Dehydrate a specific projection session.

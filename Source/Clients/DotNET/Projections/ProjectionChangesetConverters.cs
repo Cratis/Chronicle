@@ -18,6 +18,7 @@ public static class ProjectionChangesetConverters
     /// <typeparam name="TModel">Type of model it should convert to.</typeparam>
     /// <returns>Converted <see cref="ProjectionChangeset{T}"/>.</returns>
     public static ProjectionChangeset<TModel> ToClient<TModel>(this Contracts.Projections.ProjectionChangeset changeset) => new(
+            changeset.Namespace,
             changeset.ModelKey,
             JsonSerializer.Deserialize<TModel>(changeset.Model, Globals.JsonSerializerOptions)!);
 }

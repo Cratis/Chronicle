@@ -170,11 +170,10 @@ public class Projections(
     public IObservable<ProjectionChangeset<TModel>> Watch<TModel>(ModelKey? modelKey = null)
     {
         var projectionDefinition = _definitionsByModelType[typeof(TModel)];
-        var request = new ObserveChangesRequest
+        var request = new ProjectionWatchRequest
         {
             ProjectionId = projectionDefinition.Identifier,
             EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
             ModelKey = modelKey?.Value
         };
 

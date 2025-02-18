@@ -11,9 +11,6 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// </summary>
 internal static partial class ProjectionLogging
 {
-    [LoggerMessage(LogLevel.Information, "Registering projection '{Identifier}'")]
-    internal static partial void Registering(this ILogger<Projection> logger, ProjectionId identifier);
-
     [LoggerMessage(LogLevel.Debug, "Setting projection definition and subscribing for projection '{Identifier}'")]
     internal static partial void SettingDefinition(this ILogger<Projection> logger, ProjectionId identifier);
 
