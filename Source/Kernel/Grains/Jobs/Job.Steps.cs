@@ -109,7 +109,7 @@ public abstract partial class Job<TRequest, TJobState>
         var jobStepType = typeof(TJobStep)
             .AllBaseAndImplementingTypes()
             .First(
-                _ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IJobStep<,>));
+                _ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IJobStep<,,>));
         var resultType = jobStepType.GetGenericArguments()[1];
         return new(
             typeof(TJobStep),

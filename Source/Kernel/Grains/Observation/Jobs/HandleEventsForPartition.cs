@@ -59,13 +59,6 @@ public class HandleEventsForPartition(
     }
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetLastSuccessfullyHandledEventSequenceNumber()
-    {
-        using var scope = logger.BeginJobStepScope(State);
-        return Task.FromResult(State.LastSuccessfullyHandledEventSequenceNumber);
-    }
-
-    /// <inheritdoc/>
     protected override ValueTask InitializeState(HandleEventsForPartitionArguments request)
     {
         State.EventObservationState = request.EventObservationState;
@@ -105,12 +98,11 @@ public class HandleEventsForPartition(
     /// <inheritdoc/>
     protected override async Task<Catch<JobStepResult>> PerformStep(CancellationToken cancellationToken)
     {
-        var storedState = State;
-        // Important: Do not use State directly. It needs to be referenced through the grain.
+        var storedState = await _selfGrainReference.GetState();
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         try
         {
-            lastSuccessfullyHandledEventSequenceNumber = await _selfGrainReference.GetLastSuccessfullyHandledEventSequenceNumber();
+            lastSuccessfullyHandledEventSequenceNumber = storedState.LastSuccessfullyHandledEventSequenceNumber;
             if (_subscriber is null || !storedState.ObserverSubscription.IsSubscribed)
             {
                 logger.PerformingStoppedUnsubscribed(storedState.Partition);
@@ -121,9 +113,15 @@ public class HandleEventsForPartition(
                 logger.CancelledBeforeHandlingAnyEvents(storedState.Partition);
                 return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
             }
-            var eventSequenceStorage = GetEventSequenceStorage(storedState.ObserverSubscription.ObserverKey.EventStore, storedState.ObserverSubscription.ObserverKey.Namespace, storedState.ObserverSubscription.ObserverKey.EventSequenceId);
+            var eventSequenceStorage = GetEventSequenceStorage(
+                storedState.ObserverSubscription.ObserverKey.EventStore,
+                storedState.ObserverSubscription.ObserverKey.Namespace,
+                storedState.ObserverSubscription.ObserverKey.EventSequenceId);
+
             using var events = await eventSequenceStorage.GetRange(
-                storedState.StartEventSequenceNumber,
+                storedState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
+                    ? storedState.StartEventSequenceNumber
+                    : storedState.LastSuccessfullyHandledEventSequenceNumber.Next(),
                 storedState.EndEventSequenceNumber,
                 _eventSourceId,
                 storedState.ObserverSubscription.EventTypes,

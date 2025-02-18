@@ -8,7 +8,7 @@ using Cratis.Chronicle.Storage.Jobs;
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
 /// <summary>
-/// Represents the state for a <see cref="HandleEventsForPartition"/> job step.
+/// Represents the state for a <see cref="IHandleEventsForPartition"/> job step.
 /// </summary>
 public class HandleEventsForPartitionState : JobStepState
 {

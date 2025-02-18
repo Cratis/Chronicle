@@ -23,7 +23,7 @@ namespace Cratis.Chronicle.Grains.Jobs;
 public abstract class JobStep<TRequest, TResult, TState>(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<TState> state,
-    ILogger<JobStep<TRequest, TResult, TState>> logger) : CpuBoundWorker<TRequest, JobStepResult>, IJobStep<TRequest, TResult>, IJobObserver, IDisposable
+    ILogger<JobStep<TRequest, TResult, TState>> logger) : CpuBoundWorker<TRequest, JobStepResult>, IJobStep<TRequest, TResult, TState>, IJobObserver, IDisposable
     where TState : JobStepState
 {
     CancellationTokenSource? _cancellationTokenSource = new();
@@ -42,12 +42,14 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <summary>
     /// Gets the job step as a Grain reference.
     /// </summary>
-    protected IJobStep<TRequest, TResult> ThisJobStep { get; private set; } = null!;
+    protected IJobStep<TRequest, TResult, TState> ThisJobStep { get; private set; } = null!;
 
     /// <summary>
     /// Gets the state for the job step.
     /// </summary>
+#pragma warning disable CA1721
     protected TState State => state.State;
+#pragma warning restore CA1721
 
     /// <summary>
     /// Gets the <see cref="JobStepIdentifier"/>.
@@ -104,7 +106,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
             _running = true;
             Job = GrainFactory.GetGrain(jobId).AsReference<IJob>();
-            ThisJobStep = GetReferenceToSelf<IJobStep<TRequest, TResult>>();
+            ThisJobStep = GetReferenceToSelf<IJobStep<TRequest, TResult, TState>>();
 
             var started = await Start(_cancellationTokenSource!.Token);
             if (started)
@@ -212,6 +214,9 @@ public abstract class JobStep<TRequest, TResult, TState>(
     }
 
     /// <inheritdoc/>
+    public Task<TState> GetState() => Task.FromResult(State);
+
+    /// <inheritdoc/>
     public Task OnJobStopped() => Stop();
 
     /// <inheritdoc/>
@@ -227,6 +232,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <summary>
     /// The method that gets called when the step should do its work.
     /// </summary>
+    /// <remarks>When this is executed it is not within the Activation Context. If context needs to be accessed then it needs to be referenced indirectly through a reference to itself.</remarks>
     /// <param name="cancellationToken">Cancellation token that can cancel the step work.</param>
     /// <returns>True if successful, false if not.</returns>
     protected abstract Task<Catch<JobStepResult>> PerformStep(CancellationToken cancellationToken);
@@ -245,7 +251,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <typeparam name="TGrain">The type of the grain.</typeparam>
     /// <returns>The grain reference.</returns>
     protected TGrain GetReferenceToSelf<TGrain>()
-        where TGrain : IJobStep<TRequest, TResult>
+        where TGrain : IJobStep<TRequest, TResult, TState>
         => GrainFactory.GetGrain(GrainReference.GrainId).AsReference<TGrain>();
 
     /// <inheritdoc/>

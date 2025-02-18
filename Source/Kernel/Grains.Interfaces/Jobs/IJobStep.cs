@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Workers;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Grains.Jobs;
 
@@ -55,7 +56,8 @@ public interface IJobStep : IGrainWithGuidCompoundKey
 /// </summary>
 /// <typeparam name="TRequest">Type of the request for the job step.</typeparam>
 /// <typeparam name="TResult">Type of the result for the job step.</typeparam>
-public interface IJobStep<in TRequest, TResult> : ICpuBoundWorker<TRequest, JobStepResult>, IJobStep
+/// <typeparam name="TState">Type of the state.</typeparam>
+public interface IJobStep<in TRequest, TResult, TState> : ICpuBoundWorker<TRequest, JobStepResult>, IJobStep
 {
     /// <summary>
     /// Prepare the job step.
@@ -63,4 +65,11 @@ public interface IJobStep<in TRequest, TResult> : ICpuBoundWorker<TRequest, JobS
     /// <param name="request">Request to prepare it with.</param>
     /// <returns>Awaitable task.</returns>
     Task<Result<PrepareJobStepError>> Prepare(TRequest request);
+
+    /// <summary>
+    /// Gets the <typeparamref name="TState"/>.
+    /// </summary>
+    /// <returns>The state.</returns>
+    [AlwaysInterleave]
+    Task<TState> GetState();
 }
