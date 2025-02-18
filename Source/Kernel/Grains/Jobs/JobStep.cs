@@ -191,8 +191,25 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// </summary>
     /// <param name="request">The request object for the step.</param>
     /// <returns>Awaitable task.</returns>
-    public virtual Task<Result<PrepareJobStepError>> Prepare(TRequest request) =>
-        Task.FromResult(Result.Success<PrepareJobStepError>());
+    public async Task<Result<PrepareJobStepError>> Prepare(TRequest request)
+    {
+        try
+        {
+            return await (await PrepareStep(request)).Match(
+                async none =>
+                {
+                    await InitializeState(request);
+                    _ = await WriteStateAsync();
+                    return Result<PrepareJobStepError>.Success();
+                },
+                error => Task.FromResult(Result.Failed<PrepareJobStepError>(error)));
+        }
+        catch (Exception ex)
+        {
+            logger.FailedPreparing(ex, Name);
+            return PrepareJobStepError.Unknown;
+        }
+    }
 
     /// <inheritdoc/>
     public Task OnJobStopped() => Stop();
@@ -201,11 +218,26 @@ public abstract class JobStep<TRequest, TResult, TState>(
     public Task OnJobPaused() => Stop();
 
     /// <summary>
+    /// Prepare the step before it starts.
+    /// </summary>
+    /// <param name="request">The request object for the step.</param>
+    /// <returns>Awaitable task.</returns>
+    protected abstract Task<Result<PrepareJobStepError>> PrepareStep(TRequest request);
+
+    /// <summary>
     /// The method that gets called when the step should do its work.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token that can cancel the step work.</param>
     /// <returns>True if successful, false if not.</returns>
     protected abstract Task<Catch<JobStepResult>> PerformStep(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Initialize the state from the initial request arguments.
+    /// </summary>
+    /// <remarks>This method is invoked after <see cref="PrepareStep"/> successfuly completed.</remarks>
+    /// <param name="request">The <typeparamref name="TRequest"/> initial request arguments.</param>
+    /// <returns>The <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+    protected abstract ValueTask InitializeState(TRequest request);
 
     /// <summary>
     /// Gets a grain reference to self.

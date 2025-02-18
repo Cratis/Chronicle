@@ -24,7 +24,7 @@ public class ConnectedClient
     public DateTimeOffset LastSeen { get; set; }
 
     /// <summary>
-    /// Gets whether or not the client is running with debugger attached.
+    /// Gets whether the client is running with debugger attached.
     /// </summary>
     public bool IsRunningWithDebugger { get; init; }
 }

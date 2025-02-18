@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.EventSequences;
@@ -38,6 +39,19 @@ public class Routing(
         typeof(Replay),
         typeof(Observing)
     }.ToImmutableList();
+
+    /// <inheritdoc/>
+    public override Task<ObserverState> OnLeave(ObserverState state)
+    {
+        if (_subscription.EventTypes.Any())
+        {
+            return Task.FromResult(state with
+            {
+                EventTypes = _subscription.EventTypes
+            });
+        }
+        return Task.FromResult(state);
+    }
 
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
