@@ -66,9 +66,9 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
             {
                 silo
                     .UseLocalhostClustering()
-                    .AddCratisChronicle(_ => _.EventStoreName = Constants.EventStore)
-                    .AddChronicleToSilo(_ => _
-                        .WithMongoDB(chronicleOptions.Storage.ConnectionDetails, Constants.EventStore));
+                    .AddCratisChronicle(
+                        options => options.EventStoreName = Constants.EventStore,
+                        chronicleBuilder => chronicleBuilder.WithMongoDB(chronicleOptions.Storage.ConnectionDetails, Constants.EventStore));
             })
             .UseConsoleLifetime();
 

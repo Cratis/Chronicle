@@ -64,7 +64,7 @@ public class but_not_third_time(context context) : Given<context>(context)
     }
 
     [Fact] void should_fail_one_partition() => Context.FailedPartitionsBeforeRetry.Count().ShouldEqual(1);
-    [Fact] void should_start_replaying_job() => Context.Jobs.First().Type.ShouldContain("RetryFailedPartitionJob");
+    [Fact] void should_start_replaying_job() => Context.Jobs.First().Type.ShouldContain("RetryFailedPartition");
     [Fact] void should_recover_failed_partition() => Context.FailedPartitionsAfterRetry.ShouldBeEmpty();
     [Fact] void should_have_the_active_observer_running_state() => Context.ObserverState.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_have_correct_last_handled_event_sequence_number() => Context.ObserverState.LastHandledEventSequenceNumber.Value.ShouldEqual(0ul);

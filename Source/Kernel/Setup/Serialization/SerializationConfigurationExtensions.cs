@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
@@ -78,11 +77,9 @@ public static class SerializationConfigurationExtensions
         options.Converters.Add(new JoinDefinitionsConverter());
         options.Converters.Add(new RemovedWithDefinitionsConverter());
         options.Converters.Add(new RemovedWithJoinDefinitionsConverter());
+        options.Converters.Add(new JobStateConverter());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>());
-        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<JobStateJsonConverter, JobState>());
-        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<JobStepStateJsonConverter, JobStepState>());
-
         services.AddConceptSerializer();
         services.AddAppendedEventSerializer();
         services.AddSerializer(

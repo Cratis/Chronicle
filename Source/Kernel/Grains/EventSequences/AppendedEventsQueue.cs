@@ -25,7 +25,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly ConcurrentQueue<IEnumerable<AppendedEvent>> _queue = new();
     readonly AsyncManualResetEvent _queueEvent = new();
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
-    readonly TaskCompletionSource _queueTaskCompletionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
     Task _queueTask = Task.CompletedTask;
     bool _isDisposed;
     ConcurrentBag<AppendedEventsQueueObserverSubscription> _subscriptions = [];
@@ -101,7 +100,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     public void Dispose()
     {
         _isDisposed = true;
-        _queueTaskCompletionSource.SetCanceled();
 
         if (!_queueTask.IsCompleted)
         {
@@ -126,12 +124,14 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <summary>
     /// Await the queue to be depleted.
     /// </summary>
+    /// <param name="periodNum">Optional amount of times it will check the queue.</param>
+    /// <param name="periodDelay">Optional time in ms it will wait after each check.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// This method will block until the queue is depleted. This is useful for testing purposes.
     /// It is not exposed on the interface as it is not intended for production use.
     /// </remarks>
-    public async Task AwaitQueueDepletion()
+    public async Task AwaitQueueDepletion(int periodNum = 10, int periodDelay = 10)
     {
         await Task.Run(async () =>
         {
@@ -139,16 +139,16 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             {
                 while (!_queue.IsEmpty)
                 {
-                    await Task.Delay(10);
+                    await Task.Delay(periodDelay);
                 }
                 await _queueEmptyEvent.WaitAsync();
             }
             else
             {
-                var count = 10;
+                var count = periodNum;
                 while (!_queue.IsEmpty)
                 {
-                    await Task.Delay(10);
+                    await Task.Delay(periodDelay);
                     if (--count == 0)
                     {
                         break;
@@ -168,20 +168,17 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
 
         _queueTask = _taskFactory.Run(QueueHandler);
-
-        // The queue task should never stop, then the queue will be stopped. We restart it if it stops. A sort of "watch dog".
-        _queueTask.ContinueWith(_ => StartQueueHandler(), TaskScheduler.Default);
     }
 
     async Task QueueHandler()
     {
-        while (!_queueTaskCompletionSource.Task.IsCanceled)
+        while (!_isDisposed)
         {
             try
             {
                 await _queueEvent.WaitAsync();
                 _queueEmptyEvent.Reset();
-                if (_queueTaskCompletionSource.Task.IsCanceled)
+                if (_isDisposed)
                 {
                     return;
                 }
@@ -220,6 +217,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 _logger.QueueHandlerFailed(exception);
             }
         }
+        StartQueueHandler();
     }
 
     async Task HandleSingle(IEnumerable<AppendedEvent> events)
@@ -227,12 +225,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var @event = events.First();
         foreach (var subscription in _subscriptions)
         {
-            if (subscription.EventTypeIds.Contains(@event.Metadata.Type.Id))
+            if (!subscription.EventTypeIds.Contains(@event.Metadata.Type.Id))
             {
-                var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                var eventToHandle = new List<AppendedEvent> { @event };
-                await observer.Handle(@event.Context.EventSourceId, eventToHandle);
+                continue;
             }
+            var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
+            var eventToHandle = new List<AppendedEvent> { @event };
+            await observer.Handle(@event.Context.EventSourceId, eventToHandle);
         }
     }
 

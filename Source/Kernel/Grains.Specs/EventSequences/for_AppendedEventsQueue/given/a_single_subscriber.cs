@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -14,7 +15,7 @@ public abstract class a_single_subscriber : all_dependencies
 {
     protected ObserverKey _observerKey;
     protected IObserver _observer;
-    protected List<HandledEvents> _handledEvents = [];
+    protected ConcurrentDictionary<Key, List<HandledEvents>> _handledEventsPerPartition = [];
     protected AppendedEventsQueue _queue;
 
     async Task Establish()
@@ -27,7 +28,12 @@ public abstract class a_single_subscriber : all_dependencies
             {
                 var key = callInfo.Arg<Key>();
                 var events = callInfo.Arg<IEnumerable<AppendedEvent>>();
-                _handledEvents.Add(new(key, events));
+                if (!_handledEventsPerPartition.TryGetValue(key, out var handledEvents))
+                {
+                    handledEvents = [];
+                    _handledEventsPerPartition.TryAdd(key, handledEvents);
+                }
+                handledEvents.Add(new(key, events));
             });
         _grainFactory.GetGrain<IObserver>(_observerKey).Returns(_observer);
 

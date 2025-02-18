@@ -107,7 +107,7 @@ public interface IJob : IGrainWithGuidCompoundKey
 /// </summary>
 /// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
 public interface IJob<in TRequest> : IJob
-    where TRequest : class
+    where TRequest : class, IJobRequest
 {
     /// <summary>
     /// Start the job.

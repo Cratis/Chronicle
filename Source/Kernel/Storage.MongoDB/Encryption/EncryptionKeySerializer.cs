@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.Compliance;
+using Cratis.Chronicle.Storage.MongoDB;
 using MongoDB.Bson.Serialization;
 
 namespace Cratis.Compliance.MongoDB;
@@ -9,6 +10,7 @@ namespace Cratis.Compliance.MongoDB;
 /// <summary>
 /// Represents a <see cref="IBsonSerializer{T}"/> for handling serialization of <see cref="EncryptionKey"/>.
 /// </summary>
+[BsonSerializerDisableAutoRegistration]
 public class EncryptionKeySerializer : IBsonSerializer<byte[]>
 {
     /// <inheritdoc/>

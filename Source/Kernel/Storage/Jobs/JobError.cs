@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Jobs;
 namespace Cratis.Chronicle.Storage.Jobs;
 
 /// <summary>
@@ -18,5 +19,10 @@ public enum JobError
     /// <summary>
     /// The <see cref="Type"/> of the job is derived from <see cref="JobState"/>.
     /// </summary>
-    TypeIsNotAJobStateType = 2
+    TypeIsNotAJobStateType = 2,
+
+    /// <summary>
+    /// The <see cref="Type"/> of the job does not have an associated <see cref="JobType"/>.
+    /// </summary>
+    TypeIsNotAssociatedWithAJobType = 3,
 }

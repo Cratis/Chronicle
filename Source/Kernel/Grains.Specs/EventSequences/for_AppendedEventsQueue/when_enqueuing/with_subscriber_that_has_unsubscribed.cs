@@ -23,7 +23,10 @@ public class with_subscriber_that_has_unsubscribed : given.a_single_subscriber_w
     {
         await _queue.Enqueue([_appendedEvent]);
         await _queue.AwaitQueueDepletion();
+
+        // waiting for queue depletion does not guarantee that the event was actually handled
+        await Task.Delay(100);
     }
 
-    [Fact] void should_not_call_handle_on_observer_twice() => _handledEvents.Count.ShouldEqual(0);
+    [Fact] void should_not_handle_any_events() => _handledEventsPerPartition.Count.ShouldEqual(0);
 }

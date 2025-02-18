@@ -42,6 +42,18 @@ internal static partial class JobsManagerLogMessages
     [LoggerMessage(LogLevel.Warning, "Job {JobId} could not be found")]
     internal static partial void JobCouldNotBeFound(this ILogger<JobsManager> logger, JobId jobId);
 
+    [LoggerMessage(LogLevel.Warning, "Job {JobId} an error occurred while performing action. {JobError}")]
+    internal static partial void JobErrorOccurred(this ILogger<JobsManager> logger, JobId jobId, JobError jobError);
+
+    [LoggerMessage(LogLevel.Warning, "Job {JobId} an error occurred while resuming job steps. {JobSteps}")]
+    internal static partial void FailedToResumeJobSteps(this ILogger<JobsManager> logger, JobId jobId, IEnumerable<JobStepId> jobSteps);
+
+    [LoggerMessage(LogLevel.Warning, "Job {JobId} cannot be resumed because it is running")]
+    internal static partial void CannotResumeJobBecauseAlreadyRunning(this ILogger<JobsManager> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Job {JobId} cannot be resumed")]
+    internal static partial void CannotResumeJob(this ILogger<JobsManager> logger, JobId jobId);
+
     [LoggerMessage(LogLevel.Warning, "Job {JobId} encountered error : {Error}")]
     internal static partial void JobErrorOccurred(this ILogger<JobsManager> logger, JobId jobId, Storage.Jobs.JobError error);
 
