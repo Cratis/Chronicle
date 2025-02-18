@@ -24,7 +24,7 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
     IObserver? _observer;
 
     /// <inheritdoc/>
-    public override async Task OnCompleted()
+    protected override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         if (!AllStepsCompletedSuccessfully)

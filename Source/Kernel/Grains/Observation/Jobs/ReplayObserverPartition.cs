@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 public class ReplayObserverPartition(ILogger<ReplayObserverPartition> logger) : Job<ReplayObserverPartitionRequest, JobStateWithLastHandledEvent>, IReplayObserverPartition
 {
     /// <inheritdoc/>
-    public override async Task OnCompleted()
+    protected override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);

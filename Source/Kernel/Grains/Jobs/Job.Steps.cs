@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Reflection;
 namespace Cratis.Chronicle.Grains.Jobs;
 
@@ -17,13 +19,7 @@ public abstract partial class Job<TRequest, TJobState>
         {
             _logger.StepSuccessfullyCompleted(stepId);
             State.Progress.SuccessfulSteps++;
-
-            if ((await WriteState()).TryGetException(out var writeStateError))
-            {
-                _logger.FailedUpdatingSuccessfulSteps(writeStateError, State.Progress.SuccessfulSteps);
-                return JobError.PersistStateError;
-            }
-
+            _ = await WriteState();
             var handleCompletedStepResult = await HandleJobStepCompleted(stepId, jobStepResult);
             return handleCompletedStepResult.Match(
                 _ => Result.Success<JobError>(),
@@ -41,7 +37,29 @@ public abstract partial class Job<TRequest, TJobState>
     }
 
     /// <inheritdoc/>
-    public Task<Result<JobError>> OnStepStopped(JobStepId stepId, JobStepResult jobStepResult) => Task.FromResult(Result<JobError>.Success());
+    public async Task<Result<JobError>> OnStepStopped(JobStepId stepId, JobStepResult jobStepResult)
+    {
+        using var scope = _logger.BeginJobScope(JobId, JobKey);
+        try
+        {
+            _logger.StepStopped(stepId);
+            State.Progress.StoppedSteps++;
+            _ = await WriteState();
+            var handleCompletedStepResult = await HandleJobStepCompleted(stepId, jobStepResult);
+            return handleCompletedStepResult.Match(
+                _ => Result.Success<JobError>(),
+                error =>
+                {
+                    _logger.FailedHandlingCompletedJobStep(stepId, error);
+                    return Result.Failed(error);
+                });
+        }
+        catch (Exception ex)
+        {
+            _logger.Failed(ex);
+            return JobError.UnknownError;
+        }
+    }
 
     /// <inheritdoc/>
     public async Task<Result<JobError>> OnStepFailed(JobStepId stepId, JobStepResult jobStepResult)
@@ -51,11 +69,7 @@ public abstract partial class Job<TRequest, TJobState>
         {
             _logger.StepFailed(stepId);
             State.Progress.FailedSteps++;
-            if ((await WriteState()).TryGetException(out var writeStateError))
-            {
-                _logger.FailedUpdatingFailedSteps(writeStateError, State.Progress.SuccessfulSteps);
-                return JobError.PersistStateError;
-            }
+            _ = await WriteState();
             var handleCompletedStepResult = await HandleJobStepCompleted(stepId, jobStepResult);
             return handleCompletedStepResult.Match(
                 _ => Result.Success<JobError>(),
@@ -125,27 +139,7 @@ public abstract partial class Job<TRequest, TJobState>
         {
             await OnStepCompleted(stepId, result);
             var handleCompletionResult = await HandleCompletion();
-            if (handleCompletionResult.TryGetError(out var handleCompletionError))
-            {
-                return handleCompletionError;
-            }
-            var needsToWriteState = handleCompletionResult.AsT0 switch
-            {
-                HandleCompletionSuccess.NotClearedState => true,
-                _ => false
-            };
-            if (!needsToWriteState)
-            {
-                return Result<JobError>.Success();
-            }
-            var writeStateResult = await WriteState();
-            return writeStateResult.Match(
-                _ => Result<JobError>.Success(),
-                ex =>
-                {
-                    _logger.FailedUpdatingStateAfterHandlingJobStepCompletion(ex, stepId);
-                    return JobError.PersistStateError;
-                });
+            return await HandleCompletionResult(handleCompletionResult);
         }
         catch (Exception ex)
         {
@@ -154,18 +148,51 @@ public abstract partial class Job<TRequest, TJobState>
         }
         finally
         {
-            await Unsubscribe(_jobStepGrains[stepId].Grain.AsReference<IJobObserver>());
-            _jobStepGrains.Remove(stepId);
+            await UnsubscribeJobStep(_jobStepGrains![stepId].AsReference<IJobObserver>());
+            _jobStepGrains.Remove(stepId, out _);
         }
     }
 
-    Dictionary<JobStepId, JobStepGrainAndRequest> CreateGrainsFromJobSteps(IImmutableList<JobStepDetails> jobSteps) =>
+    async Task<Result<JobError>> HandleCompletionResult(Result<HandleCompletionSuccess, JobError> completionResult)
+    {
+        if (completionResult.TryGetError(out var handleCompletionError))
+        {
+            return handleCompletionError;
+        }
+        var needsToWriteState = completionResult.AsT0 switch
+        {
+            HandleCompletionSuccess.NotClearedState => true,
+            _ => false
+        };
+        if (!needsToWriteState)
+        {
+            return Result<JobError>.Success();
+        }
+        var writeStateResult = await WriteState();
+        return writeStateResult.Match(
+            _ => Result<JobError>.Success(),
+            ex =>
+            {
+                _logger.FailedUpdatingStateAfterHandlingCompletion(ex);
+                return JobError.PersistStateError;
+            });
+    }
+
+    ReadOnlyDictionary<JobStepId, JobStepGrainAndRequest> CreateGrainsFromJobSteps(IImmutableList<JobStepDetails> jobSteps) =>
         jobSteps.ToDictionary(
             details => details.Id,
-            details => new JobStepGrainAndRequest(
-                (GrainFactory.GetGrain(details.Type, details.Id, keyExtension: details.Key) as IJobStep)!,
-                details.Request,
-                details.ResultType));
+            details => new JobStepGrainAndRequest(GetJobStepGrain(details), details.Request)).AsReadOnly();
+
+    async Task<ReadOnlyDictionary<JobStepId, IJobStep>> GetIdAndGrainReferenceToNonCompletedJobSteps()
+    {
+        var getJobSteps = await Storage.JobSteps.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused, JobStepStatus.Unknown);
+        getJobSteps.RethrowError();
+        var jobSteps = getJobSteps.AsT0;
+        return jobSteps.ToDictionary(jobStep => jobStep.Id.JobStepId, GetJobStepGrain).AsReadOnly();
+    }
+
+    IJobStep GetJobStepGrain(JobStepDetails details) => (GrainFactory.GetGrain(details.Type, details.Id, keyExtension: details.Key) as IJobStep)!;
+    IJobStep GetJobStepGrain(JobStepState state) => (GrainFactory.GetGrain((Type)state.Type, state.Id.JobStepId, keyExtension: new JobStepKey(state.Id.JobId, JobKey.EventStore, JobKey.Namespace)) as IJobStep)!;
 
     async Task<Result<StartJobError>> PrepareAndStartRunningAllSteps(TRequest request)
     {
@@ -174,7 +201,7 @@ public abstract partial class Job<TRequest, TJobState>
             var grainId = this.GetGrainId();
             await OnBeforePrepareSteps(request);
             var steps = await PrepareSteps(request);
-            await SetTotalSteps(steps.Count);
+            _ = await SetTotalSteps(steps.Count);
             if (steps.Count == 0)
             {
                 _logger.NoJobStepsToStart();
@@ -186,20 +213,19 @@ public abstract partial class Job<TRequest, TJobState>
                     _logger.FailedOnCompletedWhileNoJobSteps(onCompletedError);
                     _ = await WriteStatusChanged(JobStatus.CompletedWithFailures);
                 }
+                else if (!KeepAfterCompleted)
+                {
+                    await ClearStateAsync();
+                }
                 else
                 {
-                    await WriteStatusChanged(JobStatus.CompletedSuccessfully);
-                    if (!KeepAfterCompleted)
-                    {
-                        await ClearStateAsync();
-                    }
+                    _ = await WriteStatusChanged(JobStatus.CompletedSuccessfully);
                 }
                 return StartJobError.NoJobStepsToStart;
             }
 
             _logger.PreparingJobSteps(steps.Count);
-            _jobStepGrains = CreateGrainsFromJobSteps(steps);
-            return await PrepareAndStartAllJobSteps(grainId);
+            return await PrepareAndStartAllJobSteps(grainId, steps);
         }
         catch (Exception ex)
         {
@@ -209,27 +235,28 @@ public abstract partial class Job<TRequest, TJobState>
         }
     }
 
-    async Task<Result<StartJobError>> PrepareAndStartAllJobSteps(GrainId grainId)
+    async Task<Result<StartJobError>> PrepareAndStartAllJobSteps(GrainId grainId, IImmutableList<JobStepDetails> jobSteps)
     {
         using var scope = _logger.BeginJobScope(JobId, JobKey);
         _logger.PrepareJobStepsForRunning();
-        _ = await WriteStatusChanged(JobStatus.PreparingStepsForRunning);
-
-        var preparedAllJobSteps = await TryPrepareAllJobSteps();
-        if (!preparedAllJobSteps)
+        _ = await WriteStatusChanged(JobStatus.PreparingSteps);
+        var jobStepGrainAndRequests = CreateGrainsFromJobSteps(jobSteps);
+        if (!await TryPrepareAllJobSteps(jobStepGrainAndRequests))
         {
             _ = await WriteStatusChanged(JobStatus.Failed);
             return StartJobError.CouldNotPrepareJobSteps;
         }
-
+        _jobStepGrains = jobStepGrainAndRequests.ToDictionary(_ => _.Key, _ => _.Value.Grain).AsReadOnly();
+        _ = await WriteStatusChanged(JobStatus.StartingSteps);
         var startJobStepsResult = await StartAndSubscribeToAllJobSteps(grainId);
         if (startJobStepsResult.TryGetError(out var startJobStepsError))
         {
-            if (startJobStepsError == StartJobError.AllJobStepsFailedStarting)
+            if (startJobStepsError != StartJobError.AllJobStepsFailedStarting)
             {
-                _ = await HandleCompletion();
-                _ = await WriteState();
+                return startJobStepsError;
             }
+
+            _ = await HandleCompletionResult(await HandleCompletion());
             return startJobStepsError;
         }
 
@@ -237,9 +264,9 @@ public abstract partial class Job<TRequest, TJobState>
         return Result<StartJobError>.Success();
     }
 
-    async Task<bool> TryPrepareAllJobSteps()
+    async Task<bool> TryPrepareAllJobSteps(ReadOnlyDictionary<JobStepId, JobStepGrainAndRequest> jobStepRequests)
     {
-        var prepareAllSteps = _jobStepGrains.Select(async idAndGrain =>
+        var prepareAllSteps = jobStepRequests.Select(async idAndGrain =>
         {
             var (id, jobStep) = idAndGrain;
             try
@@ -263,12 +290,12 @@ public abstract partial class Job<TRequest, TJobState>
 
     async Task<Result<StartJobError>> StartAndSubscribeToAllJobSteps(GrainId grainId)
     {
-        var prepareAllSteps = _jobStepGrains.Select(async idAndGrain =>
+        var prepareAllSteps = _jobStepGrains!.Select(async idAndGrain =>
         {
             var (id, jobStep) = idAndGrain;
             try
             {
-                if (!(await jobStep.Grain.Start(grainId)).TryGetError(out var startError))
+                if (!(await jobStep.Start(grainId)).TryGetError(out var startError))
                 {
                     return (JobStepId: id, Result: Result.Success<StartJobStepError>());
                 }
@@ -285,8 +312,7 @@ public abstract partial class Job<TRequest, TJobState>
         var numFailedJobSteps = results.Count(finishedTask => !finishedTask.Result.IsSuccess);
         foreach (var idAndJobStep in results.Where(_ => _.Result.IsSuccess))
         {
-            var jobStepGrain = _jobStepGrains[idAndJobStep.JobStepId].Grain;
-            await Subscribe(jobStepGrain.AsReference<IJobObserver>());
+            await SubscribeJobStep(_jobStepGrains![idAndJobStep.JobStepId].AsReference<IJobObserver>());
         }
         if (numFailedJobSteps == 0)
         {
@@ -296,5 +322,16 @@ public abstract partial class Job<TRequest, TJobState>
         return numFailedJobSteps == results.Length
             ? StartJobError.AllJobStepsFailedStarting
             : StartJobError.FailedStartingSomeJobSteps;
+    }
+
+    Task SubscribeJobStep(IJobObserver observer)
+    {
+        _observers?.Subscribe(observer, observer);
+        return Task.CompletedTask;
+    }
+    Task UnsubscribeJobStep(IJobObserver observer)
+    {
+        _observers?.Unsubscribe(observer);
+        return Task.CompletedTask;
     }
 }

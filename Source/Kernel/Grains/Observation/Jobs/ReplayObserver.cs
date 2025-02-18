@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 public class ReplayObserver(IStorage storage, ILogger<ReplayObserver> logger) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
 {
     /// <inheritdoc/>
-    public override async Task OnCompleted()
+    protected override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         if (!AllStepsCompletedSuccessfully)

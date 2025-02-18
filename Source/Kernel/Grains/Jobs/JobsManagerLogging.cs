@@ -48,11 +48,11 @@ internal static partial class JobsManagerLogMessages
     [LoggerMessage(LogLevel.Warning, "Job {JobId} an error occurred while resuming job steps. {JobSteps}")]
     internal static partial void FailedToResumeJobSteps(this ILogger<JobsManager> logger, JobId jobId, IEnumerable<JobStepId> jobSteps);
 
-    [LoggerMessage(LogLevel.Warning, "Job {JobId} cannot be resumed because it is running")]
+    [LoggerMessage(LogLevel.Debug, "Job {JobId} cannot be resumed because it is running")]
     internal static partial void CannotResumeJobBecauseAlreadyRunning(this ILogger<JobsManager> logger, JobId jobId);
 
-    [LoggerMessage(LogLevel.Warning, "Job {JobId} cannot be resumed")]
-    internal static partial void CannotResumeJob(this ILogger<JobsManager> logger, JobId jobId);
+    [LoggerMessage(LogLevel.Debug, "Job {JobId} cannot be resumed because it is completed")]
+    internal static partial void CannotResumeJobBecauseCompleted(this ILogger<JobsManager> logger, JobId jobId);
 
     [LoggerMessage(LogLevel.Warning, "Job {JobId} encountered error : {Error}")]
     internal static partial void JobErrorOccurred(this ILogger<JobsManager> logger, JobId jobId, Storage.Jobs.JobError error);
@@ -65,6 +65,15 @@ internal static partial class JobsManagerLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Failed to stop Job {JobId}")]
     internal static partial void FailedToStopJob(this ILogger<JobsManager> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Could not resume Job {JobId} because it is not prepared yet")]
+    internal static partial void CannotResumeUnpreparedJob(this ILogger<JobsManager> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Job {JobId} cannot be resumed")]
+    internal static partial void JobCannotBeResumed(this ILogger<JobsManager> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to resume Job {JobId}")]
+    internal static partial void FailedResumingJob(this ILogger<JobsManager> logger, JobId jobId);
 }
 
 internal static class JobsManagerScopes

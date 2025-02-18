@@ -66,7 +66,7 @@ public class HandleEventsForPartition(
     }
 
     /// <inheritdoc/>
-    public override Task<Concepts.Result<JobStepPrepareStartError>> Prepare(HandleEventsForPartitionArguments request)
+    public override Task<Concepts.Result<PrepareJobStepError>> Prepare(HandleEventsForPartitionArguments request)
     {
         try
         {
@@ -78,21 +78,21 @@ public class HandleEventsForPartition(
             {
                 _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, request.ToObserverSubscriberKey()) as IObserverSubscriber)!;
                 logger.SuccessfullyPrepared(request.Partition);
-                return Task.FromResult(Result.Success<JobStepPrepareStartError>());
+                return Task.FromResult(Result.Success<PrepareJobStepError>());
             }
 
             logger.PreparingStoppedUnsubscribed(request.Partition);
-            return Task.FromResult(Result.Failed(JobStepPrepareStartError.CouldNotPrepare));
+            return Task.FromResult(Result.Failed(PrepareJobStepError.CannotPrepare));
         }
         catch (Exception e)
         {
             logger.FailedPreparing(e, nameof(HandleEventsForPartition));
-            return Task.FromResult(Result.Failed(JobStepPrepareStartError.UnexpectedErrorPreparing));
+            return Task.FromResult(Result.Failed(PrepareJobStepError.UnexpectedErrorPreparing));
         }
     }
 
     /// <inheritdoc/>
-    protected override async Task<Catch<JobStepResult>> PerformStep(HandleEventsForPartitionArguments request, CancellationToken cancellationToken)
+    protected override async Task<Catch<JobStepResult>> PerformStep(CancellationToken cancellationToken)
     {
         // Important: Do not use State directly. It needs to be referenced through the grain.
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;

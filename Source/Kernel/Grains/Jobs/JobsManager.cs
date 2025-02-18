@@ -101,7 +101,6 @@ public class JobsManager(
             },
             error => HandleError(jobId, error),
             error => HandleUnknownFailure(jobId, error));
-        return;
     }
 
     /// <inheritdoc/>
@@ -200,8 +199,8 @@ public class JobsManager(
                         case ResumeJobSuccess.JobAlreadyRunning:
                             logger.CannotResumeJobBecauseAlreadyRunning(jobId);
                             break;
-                        case ResumeJobSuccess.JobCannotBeResumed:
-                            logger.CannotResumeJob(jobId);
+                        case ResumeJobSuccess.JobIsCompleted:
+                            logger.CannotResumeJobBecauseCompleted(jobId);
                             break;
                     }
                     return Task.CompletedTask;
@@ -284,6 +283,22 @@ public class JobsManager(
         {
             default:
                 logger.JobErrorOccurred(jobId, jobError);
+                break;
+        }
+        return Task.CompletedTask;
+    }
+    Task HandleError(JobId jobId, CannotResumeJobError jobError)
+    {
+        switch (jobError)
+        {
+            case CannotResumeJobError.JobIsNotPrepared:
+                logger.CannotResumeUnpreparedJob(jobId);
+                break;
+            case CannotResumeJobError.JobCannotBeResumed:
+                logger.JobCannotBeResumed(jobId);
+                break;
+            default:
+                logger.FailedResumingJob(jobId);
                 break;
         }
         return Task.CompletedTask;
