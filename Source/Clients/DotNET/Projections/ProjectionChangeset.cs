@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Projections;
 /// Represents the changeset for a projection.
 /// </summary>
 /// <typeparam name="TModel">Type of model the projection is for.</typeparam>
+/// <param name="Namespace">The namespace for the event store.</param>
 /// <param name="ModelKey">The <see cref="ModelKey"/> for the model.</param>
 /// <param name="Instance">The instance of the model.</param>
-public record ProjectionChangeset<TModel>(ModelKey ModelKey, TModel Instance);
+public record ProjectionChangeset<TModel>(EventStoreNamespaceName Namespace, ModelKey ModelKey, TModel Instance);

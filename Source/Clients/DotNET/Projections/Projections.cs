@@ -167,7 +167,7 @@ public class Projections(
     }
 
     /// <inheritdoc/>
-    public IObservable<ProjectionChangeset<TModel>> ObserveChangesFor<TModel>(ModelKey? modelKey = null)
+    public IObservable<ProjectionChangeset<TModel>> Watch<TModel>(ModelKey? modelKey = null)
     {
         var projectionDefinition = _definitionsByModelType[typeof(TModel)];
         var request = new ObserveChangesRequest
@@ -178,7 +178,7 @@ public class Projections(
             ModelKey = modelKey?.Value
         };
 
-        return eventStore.Connection.Services.Projections.ObserveChanges(request).Select(_ => _.ToClient<TModel>());
+        return eventStore.Connection.Services.Projections.Watch(request).Select(_ => _.ToClient<TModel>());
     }
 
     /// <inheritdoc/>

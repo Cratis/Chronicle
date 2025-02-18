@@ -89,7 +89,7 @@ public interface IProjections
     /// <param name="modelKey">Optional <see cref="ModelKey"/> to observe changes for.</param>
     /// <typeparam name="TModel">Type of model to observe changes for.</typeparam>
     /// <returns>An observable of <see cref="ProjectionChangeset{TModel}"/>.</returns>
-    IObservable<ProjectionChangeset<TModel>> ObserveChangesFor<TModel>(ModelKey? modelKey = default);
+    IObservable<ProjectionChangeset<TModel>> Watch<TModel>(ModelKey? modelKey = default);
 
     /// <summary>
     /// Discover all projections from entry assembly and dependencies.
