@@ -40,6 +40,11 @@ public abstract class JobStep<TRequest, TResult, TState>(
     protected IJob Job { get; private set; } = new NullJob();
 
     /// <summary>
+    /// Gets the parent job id.
+    /// </summary>
+    protected JobId JobId { get; private set; } = null!;
+
+    /// <summary>
     /// Gets the job step as a Grain reference.
     /// </summary>
     protected IJobStep<TRequest, TResult, TState> ThisJobStep { get; private set; } = null!;
@@ -106,6 +111,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
             _running = true;
             Job = GrainFactory.GetGrain(jobId).AsReference<IJob>();
+            JobId = Job.GetPrimaryKey();
             ThisJobStep = GetReferenceToSelf<IJobStep<TRequest, TResult, TState>>();
 
             var started = await Start(_cancellationTokenSource!.Token);
@@ -233,9 +239,10 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// The method that gets called when the step should do its work.
     /// </summary>
     /// <remarks>When this is executed it is not within the Activation Context. If context needs to be accessed then it needs to be referenced indirectly through a reference to itself.</remarks>
+    /// <param name="currentState">The current state of the job step.</param>
     /// <param name="cancellationToken">Cancellation token that can cancel the step work.</param>
     /// <returns>True if successful, false if not.</returns>
-    protected abstract Task<Catch<JobStepResult>> PerformStep(CancellationToken cancellationToken);
+    protected abstract Task<Catch<JobStepResult>> PerformStep(TState currentState, CancellationToken cancellationToken);
 
     /// <summary>
     /// Initialize the state from the initial request arguments.
@@ -269,7 +276,8 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
         // TODO: Should we do something here if it fails?
         _ = await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
-        var performStepResult = await PerformStep(_cancellationTokenSource.Token);
+        var currentState = await ThisJobStep.GetState();
+        var performStepResult = await PerformStep(currentState, _cancellationTokenSource.Token);
         var result = await performStepResult.Match(HandleJobStepResult, HandleException);
         DeactivateOnIdle();
         return result;

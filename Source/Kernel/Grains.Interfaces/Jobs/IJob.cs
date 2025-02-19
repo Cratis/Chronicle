@@ -7,7 +7,7 @@ using Cratis.Chronicle.Concepts.Jobs;
 namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
-/// Represents a job that typically runs as long-running with <see cref="IJobStep{TRequest, TResult}"/>.
+/// Represents a job that typically runs as long-running with <see cref="IJobStep{TRequest, TResult, TState}"/>.
 /// </summary>
 public interface IJob : IGrainWithGuidCompoundKey
 {
@@ -65,7 +65,7 @@ public interface IJob : IGrainWithGuidCompoundKey
 }
 
 /// <summary>
-/// Represents a job that typically runs as long-running with <see cref="IJobStep{TRequest, TResult}"/>.
+/// Represents a job that typically runs as long-running with <see cref="IJobStep{TRequest, TResult, TState}"/>.
 /// </summary>
 /// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
 public interface IJob<in TRequest> : IJob
