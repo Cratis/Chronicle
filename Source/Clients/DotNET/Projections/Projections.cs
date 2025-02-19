@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.Projections;
 /// </remarks>
 /// <param name="eventStore"><see cref="IEventStore"/> the projections belongs to.</param>
 /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
+/// <param name="projectionWatcherManager"><see cref="IProjectionWatcherManager"/> for managing watchers.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
 /// <param name="rulesProjections"><see cref="IRulesProjections"/> for getting projection definitions related to rules.</param>
 /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
@@ -34,6 +35,7 @@ namespace Cratis.Chronicle.Projections;
 public class Projections(
     IEventStore eventStore,
     IEventTypes eventTypes,
+    IProjectionWatcherManager projectionWatcherManager,
     IClientArtifactsProvider clientArtifacts,
     IRulesProjections rulesProjections,
     IJsonSchemaGenerator schemaGenerator,
@@ -52,6 +54,12 @@ public class Projections(
 
     /// <inheritdoc/>
     public bool HasFor(Type modelType) => _definitionsByModelType.ContainsKey(modelType);
+
+    /// <inheritdoc/>
+    public ProjectionId GetProjectionIdForModel<TModelType>() => GetProjectionIdForModel(typeof(TModelType));
+
+    /// <inheritdoc/>
+    public ProjectionId GetProjectionIdForModel(Type modelType) => _definitionsByModelType[modelType].Identifier;
 
     /// <inheritdoc/>
     public async Task<ProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey)
@@ -167,18 +175,7 @@ public class Projections(
     }
 
     /// <inheritdoc/>
-    public IObservable<ProjectionChangeset<TModel>> Watch<TModel>(ModelKey? modelKey = null)
-    {
-        var projectionDefinition = _definitionsByModelType[typeof(TModel)];
-        var request = new ProjectionWatchRequest
-        {
-            ProjectionId = projectionDefinition.Identifier,
-            EventStore = eventStore.Name,
-            ModelKey = modelKey?.Value
-        };
-
-        return eventStore.Connection.Services.Projections.Watch(request).Select(_ => _.ToClient<TModel>());
-    }
+    public IObservable<ProjectionChangeset<TModel>> Watch<TModel>() => projectionWatcherManager.GetWatcher<TModel>().Observable;
 
     /// <inheritdoc/>
     public Task Discover()

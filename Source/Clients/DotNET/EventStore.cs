@@ -125,6 +125,7 @@ public class EventStore : IEventStore
         Projections = new Projections.Projections(
             this,
             EventTypes,
+            new ProjectionWatcherManager(new ProjectionWatcherFactory(this), this),
             clientArtifactsProvider,
             new RulesProjections(
                 serviceProvider,
