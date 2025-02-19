@@ -15,7 +15,7 @@ public class ProjectionWatcher<TModel> : IProjectionWatcher<TModel>, IDisposable
 {
     readonly Subject<ProjectionChangeset<TModel>> _observable;
     readonly IEventStore _eventStore;
-    readonly Action _stopped;
+    Action? _stopped;
     IObservable<ProjectionChangeset>? _serverObservable;
 
     /// <summary>
@@ -38,7 +38,8 @@ public class ProjectionWatcher<TModel> : IProjectionWatcher<TModel>, IDisposable
     public void Dispose()
     {
         _eventStore.Connection.Lifecycle.OnConnected += ClientConnected;
-        _stopped();
+        _stopped?.Invoke();
+        _stopped = null;
         _observable.Dispose();
     }
 
@@ -57,7 +58,8 @@ public class ProjectionWatcher<TModel> : IProjectionWatcher<TModel>, IDisposable
     /// <inheritdoc/>
     public void Stop()
     {
-        _stopped();
+        _stopped?.Invoke();
+        _stopped = null;
         Dispose();
     }
 
