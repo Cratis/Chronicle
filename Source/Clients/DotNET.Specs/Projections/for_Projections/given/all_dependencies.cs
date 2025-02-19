@@ -13,6 +13,7 @@ public class all_dependencies : Specification
 {
     protected IEventStore _eventStore;
     protected IEventTypes _eventTypes;
+    protected IProjectionWatcherManager _projectionWatcherManager;
     protected IClientArtifactsProvider _clientArtifacts;
     protected IRulesProjections _rulesProjections;
     protected IJsonSchemaGenerator _schemaGenerator;
@@ -25,6 +26,7 @@ public class all_dependencies : Specification
     {
         _eventStore = Substitute.For<IEventStore>();
         _eventTypes = Substitute.For<IEventTypes>();
+        _projectionWatcherManager = Substitute.For<IProjectionWatcherManager>();
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _rulesProjections = Substitute.For<IRulesProjections>();
         _schemaGenerator = Substitute.For<IJsonSchemaGenerator>();

@@ -17,6 +17,7 @@ public class and_there_are_no_projections : given.all_dependencies
         projections = new Projections(
             _eventStore,
             _eventTypes,
+            _projectionWatcherManager,
             _clientArtifacts,
             _rulesProjections,
             _schemaGenerator,
