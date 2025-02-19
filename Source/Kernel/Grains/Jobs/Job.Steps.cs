@@ -183,12 +183,12 @@ public abstract partial class Job<TRequest, TJobState>
             details => details.Id,
             details => new JobStepGrainAndRequest(GetJobStepGrain(details), details.Request)).AsReadOnly();
 
-    async Task<ReadOnlyDictionary<JobStepId, IJobStep>> GetIdAndGrainReferenceToNonCompletedJobSteps()
+    async Task<Dictionary<JobStepId, IJobStep>> GetIdAndGrainReferenceToNonCompletedJobSteps()
     {
         var getJobSteps = await Storage.JobSteps.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused, JobStepStatus.Unknown);
         getJobSteps.RethrowError();
         var jobSteps = getJobSteps.AsT0;
-        return jobSteps.ToDictionary(jobStep => jobStep.Id.JobStepId, GetJobStepGrain).AsReadOnly();
+        return jobSteps.ToDictionary(jobStep => jobStep.Id.JobStepId, GetJobStepGrain);
     }
 
     IJobStep GetJobStepGrain(JobStepDetails details) => (GrainFactory.GetGrain(details.Type, details.Id, keyExtension: details.Key) as IJobStep)!;
@@ -246,7 +246,7 @@ public abstract partial class Job<TRequest, TJobState>
             _ = await WriteStatusChanged(JobStatus.Failed);
             return StartJobError.CouldNotPrepareJobSteps;
         }
-        _jobStepGrains = jobStepGrainAndRequests.ToDictionary(_ => _.Key, _ => _.Value.Grain).AsReadOnly();
+        _jobStepGrains = jobStepGrainAndRequests.ToDictionary(_ => _.Key, _ => _.Value.Grain);
         _ = await WriteStatusChanged(JobStatus.StartingSteps);
         var startJobStepsResult = await StartAndSubscribeToAllJobSteps(grainId);
         if (startJobStepsResult.TryGetError(out var startJobStepsError))

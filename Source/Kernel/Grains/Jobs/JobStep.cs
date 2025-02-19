@@ -85,6 +85,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         var jobStepKey = (JobStepKey)key;
         var grainType = this.GetGrainType();
         Name = GetType().Name;
+        JobId = jobStepKey.JobId;
         Identifier = new(jobStepKey.JobId, JobStepId);
 
         state.State.Name = Name;
@@ -111,7 +112,6 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
             _running = true;
             Job = GrainFactory.GetGrain(jobId).AsReference<IJob>();
-            JobId = Job.GetPrimaryKey();
             ThisJobStep = GetReferenceToSelf<IJobStep<TRequest, TResult, TState>>();
 
             var started = await Start(_cancellationTokenSource!.Token);

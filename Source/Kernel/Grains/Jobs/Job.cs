@@ -24,7 +24,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     where TRequest : class, IJobRequest
     where TJobState : JobState
 {
-    ReadOnlyDictionary<JobStepId, IJobStep>? _jobStepGrains;
+    Dictionary<JobStepId, IJobStep>? _jobStepGrains;
     ObserverManager<IJobObserver>? _observers;
     ILogger<IJob> _logger = null!;
 
