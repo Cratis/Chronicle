@@ -26,6 +26,6 @@ public class ProjectionWatcherManager(IProjectionWatcherFactory projectionWatche
             }
         }
 
-        return (watcher as ProjectionWatcher<TModel>)!;
+        return (watcher as IProjectionWatcher<TModel>)!;
     }
 }
