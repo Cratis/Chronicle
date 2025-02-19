@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -99,12 +98,16 @@ public class Projections(
         var projection = grainFactory.GetGrain<Grains.Projections.IProjection>(new ProjectionKey(request.ProjectionId, request.EventStore));
 
         var stream = streamProvider.GetStream<Grains.Projections.ProjectionChangeset>(streamId);
+        StreamSubscriptionHandle<Grains.Projections.ProjectionChangeset>? subscription = null;
 
         var observable = Observable.Create<ProjectionChangeset>(async (observer, cancellationToken) =>
         {
             var definition = await projection.GetDefinition();
             var modelSchema = await JsonSchema.FromJsonAsync(definition.Model.Schema);
-            var subscription = await stream.SubscribeAsync((changeset, _) =>
+
+            var subscriptions = await stream.GetAllSubscriptionHandles();
+
+            subscription = await stream.SubscribeAsync((changeset, _) =>
             {
                 var jsonInstance = expandoObjectConverter.ToJsonObject(changeset.Model, modelSchema);
                 observer.OnNext(new ProjectionChangeset
@@ -116,9 +119,12 @@ public class Projections(
 
                 return Task.CompletedTask;
             });
+
+            await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         });
 
-        return new Subject<ProjectionChangeset>();
+        context.CancellationToken.Register(() => subscription?.UnsubscribeAsync().GetAwaiter().GetResult());
+        return observable;
     }
 
     /// <inheritdoc/>
