@@ -22,4 +22,3 @@ public class first_time_and_client_is_disconnected : given.a_projection_watcher_
     [Fact] void should_return_expected_watcher() => _watcher.ShouldEqual(_expectedWatcher);
     [Fact] void should_not_start_watcher() => _expectedWatcher.DidNotReceive().Start();
 }
-

@@ -27,4 +27,3 @@ public class second_time_and_client_is_disconnected : given.a_projection_watcher
     [Fact] void should_return_expected_watcher_second_time() => _secondWatcher.ShouldEqual(_expectedWatcher);
     [Fact] void should_not_start_watcher() => _expectedWatcher.DidNotReceive().Start();
 }
-
