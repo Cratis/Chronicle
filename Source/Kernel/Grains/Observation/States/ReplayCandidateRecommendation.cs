@@ -24,11 +24,6 @@ public class ReplayCandidateRecommendation : Recommendation<ReplayCandidateReque
         var subscription = await observer.GetSubscription();
         var eventTypes = await observer.GetEventTypes();
 
-        await jobsManager.Start<IReplayObserver, ReplayObserverRequest>(
-            JobId.New(),
-            new ReplayObserverRequest(
-                request.ObserverKey,
-                subscription,
-                eventTypes));
+        await jobsManager.Start<IReplayObserver, ReplayObserverRequest>(new(request.ObserverKey, subscription, eventTypes));
     }
 }

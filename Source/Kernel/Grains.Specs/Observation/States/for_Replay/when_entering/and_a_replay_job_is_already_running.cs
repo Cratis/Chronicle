@@ -40,5 +40,5 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
     [Fact] void should_not_resume_a_job() => _jobsManager.DidNotReceive().Resume(Arg.Any<JobId>());
-    [Fact] void should_not_start_a_new_job() => _jobsManager.DidNotReceive().Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<JobId>(), Arg.Any<ReplayObserverRequest>());
+    [Fact] void should_not_start_a_new_job() => _jobsManager.DidNotReceive().Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<ReplayObserverRequest>());
 }

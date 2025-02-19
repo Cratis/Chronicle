@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 
@@ -21,12 +22,24 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
     /// <summary>
     /// Start a new job.
     /// </summary>
-    /// <param name="jobId">The <see cref="JobId"/> uniquely identifying the job.</param>
     /// <param name="request">The request parameter being passed to the job.</param>
     /// <typeparam name="TJob">Type of job to start.</typeparam>
     /// <typeparam name="TRequest">Type of the request to pass along.</typeparam>
     /// <returns>Awaitable task.</returns>
-    Task Start<TJob, TRequest>(JobId jobId, TRequest request)
+    Task<Result<JobId, StartJobError>> Start<TJob, TRequest>(TRequest request)
+        where TJob : IJob<TRequest>
+        where TRequest : class, IJobRequest;
+
+    /// <summary>
+    /// Start a new job.
+    /// </summary>
+    /// <remarks>Mainly used for testing purposes.</remarks>
+    /// <param name="jobId">The <see cref="JobId"/>.</param>
+    /// <param name="request">The request parameter being passed to the job.</param>
+    /// <typeparam name="TJob">Type of job to start.</typeparam>
+    /// <typeparam name="TRequest">Type of the request to pass along.</typeparam>
+    /// <returns>Awaitable task.</returns>
+    Task<Result<JobId, StartJobError>> Start<TJob, TRequest>(JobId jobId, TRequest request)
         where TJob : IJob<TRequest>
         where TRequest : class, IJobRequest;
 

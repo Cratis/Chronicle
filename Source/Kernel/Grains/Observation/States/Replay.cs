@@ -66,12 +66,7 @@ public class Replay(
         }
 
         logger.StartReplayJob();
-        await jobsManager.Start<IReplayObserver, ReplayObserverRequest>(
-            JobId.New(),
-            new ReplayObserverRequest(
-                observerKey,
-                subscription,
-                state.EventTypes));
+        await jobsManager.Start<IReplayObserver, ReplayObserverRequest>(new(observerKey, subscription, state.EventTypes));
         return state;
     }
 

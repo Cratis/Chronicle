@@ -68,12 +68,17 @@ public class JobsManager(
     }
 
     /// <inheritdoc/>
-    public async Task Start<TJob, TRequest>(JobId jobId, TRequest request)
+    public Task<Result<JobId, StartJobError>> Start<TJob, TRequest>(TRequest request)
+        where TJob : IJob<TRequest>
+        where TRequest : class, IJobRequest
+        => Start<TJob, TRequest>(JobId.New(), request);
+
+    /// <inheritdoc/>
+    public async Task<Result<JobId, StartJobError>> Start<TJob, TRequest>(JobId jobId, TRequest request)
         where TJob : IJob<TRequest>
         where TRequest : class, IJobRequest
     {
         using var scope = logger.BeginJobsManagerScope(_key);
-
         logger.StartingJob(jobId);
 
         var job = GrainFactory.GetGrain<TJob>(
@@ -82,7 +87,7 @@ public class JobsManager(
                 _key.EventStore,
                 _key.Namespace));
 
-        await job.Start(request);
+        return (await job.Start(request)).Match<Result<JobId, StartJobError>>(_ => jobId, error => error);
     }
 
     /// <inheritdoc/>

@@ -79,15 +79,14 @@ public class an_observer : Specification
 
     protected void CheckStartedCatchupJob(EventSequenceNumber lastHandled, Key _partition) => _jobsManager.Received(1)
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
-            Arg.Any<JobId>(), Arg.Is<CatchUpObserverPartitionRequest>(_ =>
+            Arg.Is<CatchUpObserverPartitionRequest>(_ =>
                 _.ObserverKey == _observerKey &&
                 _.Key == _partition &&
                 _.FromSequenceNumber == lastHandled.Next() &&
                 _.EventTypes.SequenceEqual(_stateStorage.State.EventTypes)));
 
     protected void CheckDidNotStartCatchupJob() => _jobsManager.DidNotReceive()
-        .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
-            Arg.Any<JobId>(), Arg.Any<CatchUpObserverPartitionRequest>());
+        .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>());
 
     protected void EventSequenceHasNextEvent(EventSequenceNumber sequenceNumber) => _eventSequence
         .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber, Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
