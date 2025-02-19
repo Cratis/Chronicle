@@ -89,7 +89,7 @@ public class ProjectionObserverSubscriber(
                 logger.SuccessfullyHandledEvent(@event.Metadata.SequenceNumber, _key);
             }
 
-            if (changeset is not null)
+            if (changeset?.HasChanges == true)
             {
                 await _changeStream!.OnNextAsync(new ProjectionChangeset(_key.Namespace, partition.ToString(), changeset.CurrentState));
             }
