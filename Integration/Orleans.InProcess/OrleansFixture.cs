@@ -93,6 +93,8 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public IEventStoreNamespaceStorage GetEventStoreNamespaceStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => EventStoreStorage.GetNamespace(namespaceName ?? Concepts.EventStoreNamespaceName.Default);
     public IEventSequenceStorage GetEventLogStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => GetEventStoreNamespaceStorage(namespaceName).GetEventSequence(EventSequenceId.Log);
 
+    public IGrainFactory GrainFactory => Services.GetRequiredService<IGrainFactory>();
+
     public TStorage GetGrainStorage<TStorage>(string key)
         where TStorage : IGrainStorage => (TStorage)Services.GetRequiredKeyedService<IGrainStorage>(key);
     public EventSequencesStorageProvider GetEventSequenceStatesStorage() => GetGrainStorage<EventSequencesStorageProvider>(WellKnownGrainStorageProviders.EventSequences);
@@ -100,7 +102,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public IEventSequence GetEventSequenceGrain(EventSequenceId id) => Services.GetRequiredService<IGrainFactory>().GetGrain<IEventSequence>(CreateEventSequenceKey(id));
     public EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, Constants.EventStore, Concepts.EventStoreNamespaceName.Default);
 
-    public IObserver GetObserverForReactor<T>() => Services.GetRequiredService<IGrainFactory>()
+    public IObserver GetObserverForReactor<T>() => GrainFactory
         .GetGrain<IObserver>(
             new ObserverKey(
                 typeof(T).GetReactorId().Value,
@@ -108,7 +110,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
                 Concepts.EventStoreNamespaceName.Default,
                 EventSequenceId.Log));
 
-    public IObserver GetObserverForReducer<T>() => Services.GetRequiredService<IGrainFactory>()
+    public IObserver GetObserverForReducer<T>() => GrainFactory
         .GetGrain<IObserver>(
             new ObserverKey(
                 typeof(T).GetReducerId().Value,
@@ -116,7 +118,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
                 Concepts.EventStoreNamespaceName.Default,
                 EventSequenceId.Log));
 
-    public IObserver GetObserverForProjection<TProjection>() => Services.GetRequiredService<IGrainFactory>()
+    public IObserver GetObserverForProjection<TProjection>() => GrainFactory
         .GetGrain<IObserver>(
             new ObserverKey(typeof(TProjection).GetProjectionId().Value,
                 Constants.EventStore,
