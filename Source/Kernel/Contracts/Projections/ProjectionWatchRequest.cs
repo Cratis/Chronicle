@@ -22,10 +22,4 @@ public class ProjectionWatchRequest
     /// </summary>
     [ProtoMember(2)]
     public string ProjectionId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the model key to observe changes for - this is optional. If no key is specified, it will look for changes for all instances of the projection.
-    /// </summary>
-    [ProtoMember(3)]
-    public string? ModelKey { get; set; }
 }
