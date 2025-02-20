@@ -105,8 +105,6 @@ public class Projections(
             var definition = await projection.GetDefinition();
             var modelSchema = await JsonSchema.FromJsonAsync(definition.Model.Schema);
 
-            var subscriptions = await stream.GetAllSubscriptionHandles();
-
             subscription = await stream.SubscribeAsync((changeset, _) =>
             {
                 var jsonInstance = expandoObjectConverter.ToJsonObject(changeset.Model, modelSchema);
