@@ -62,7 +62,7 @@ public class MongoDBDatabase : IDisposable
                             { "_id", ObjectId.GenerateNewId() },
                             { "documentKey", (BsonValue)document.DocumentKey ?? "N/A" },
                             { "operationType", document.OperationType.ToString() },
-                            { "fullDocument", document.FullDocument ?? new BsonDocument() }
+                            { "fullDocument", document.FullDocument ?? [] }
                         };
                         await changesCollection.InsertOneAsync(changeDocument);
                     }
