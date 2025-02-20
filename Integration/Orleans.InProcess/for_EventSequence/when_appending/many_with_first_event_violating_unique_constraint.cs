@@ -33,6 +33,6 @@ public class many_with_first_event_violating_unique_constraint(context context) 
     }
 
     [Fact] void should_not_succeed_on_second_attempt() => Context.Result.IsSuccess.ShouldBeFalse();
-    [Fact] void should_not_commit_any_of_the_two_events() => Context.EventLogSequenceGrain.GetTailSequenceNumber().Result.Value.ShouldEqual(EventSequenceNumber.First.Value);
+    [Fact] async Task should_not_commit_any_of_the_two_events() => (await Context.EventLogSequenceGrain.GetTailSequenceNumber()).Value.ShouldEqual(EventSequenceNumber.First.Value);
 }
 
