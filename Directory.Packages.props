@@ -4,7 +4,7 @@
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
         <ApplicationModel>15.2.1</ApplicationModel>
         <Fundamentals>6.1.6</Fundamentals>
-        <Orleans>9.0.1</Orleans>
+        <Orleans>9.1.2</Orleans>
     </PropertyGroup>
     <ItemGroup>
         <!-- System -->
