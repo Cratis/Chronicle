@@ -19,6 +19,7 @@
     <ItemGroup>
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
+        <PackageReference Include="Microsoft.Orleans.Streaming" />
     </ItemGroup>
 
 </Project>

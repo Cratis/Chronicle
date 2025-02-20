@@ -33,6 +33,7 @@
         <PackageVersion Include="Microsoft.Orleans.Serialization" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="$(Orleans)" />
+        <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Reminders" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Sdk" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="$(Orleans)" />
@@ -84,7 +85,7 @@
         <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.4" />
         <PackageVersion Include="Testcontainers" Version="4.2.0" />
         <PackageVersion Include="xunit" Version="2.9.3" />
-        <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+        <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.2" />
         <PackageVersion Include="NSubstitute" Version="5.3.0" />
         <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.12.0" />
     </ItemGroup>

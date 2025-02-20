@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
@@ -23,6 +24,7 @@ namespace Cratis.Chronicle.Projections;
 /// </remarks>
 /// <param name="eventStore"><see cref="IEventStore"/> the projections belongs to.</param>
 /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
+/// <param name="projectionWatcherManager"><see cref="IProjectionWatcherManager"/> for managing watchers.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
 /// <param name="rulesProjections"><see cref="IRulesProjections"/> for getting projection definitions related to rules.</param>
 /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
@@ -33,6 +35,7 @@ namespace Cratis.Chronicle.Projections;
 public class Projections(
     IEventStore eventStore,
     IEventTypes eventTypes,
+    IProjectionWatcherManager projectionWatcherManager,
     IClientArtifactsProvider clientArtifacts,
     IRulesProjections rulesProjections,
     IJsonSchemaGenerator schemaGenerator,
@@ -51,6 +54,12 @@ public class Projections(
 
     /// <inheritdoc/>
     public bool HasFor(Type modelType) => _definitionsByModelType.ContainsKey(modelType);
+
+    /// <inheritdoc/>
+    public ProjectionId GetProjectionIdForModel<TModelType>() => GetProjectionIdForModel(typeof(TModelType));
+
+    /// <inheritdoc/>
+    public ProjectionId GetProjectionIdForModel(Type modelType) => _definitionsByModelType[modelType].Identifier;
 
     /// <inheritdoc/>
     public async Task<ProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey)
@@ -143,7 +152,7 @@ public class Projections(
             Events = eventsToApply.ToContract()
         };
 
-        var result = await eventStore.Connection.Services.Projections.GetInstanceByIdFOrSessionWithEventsApplied(request);
+        var result = await eventStore.Connection.Services.Projections.GetInstanceByIdForSessionWithEventsApplied(request);
         return result.ToClient(modelType);
     }
 
@@ -164,6 +173,9 @@ public class Projections(
 
         await eventStore.Connection.Services.Projections.DehydrateSession(request);
     }
+
+    /// <inheritdoc/>
+    public IObservable<ProjectionChangeset<TModel>> Watch<TModel>() => projectionWatcherManager.GetWatcher<TModel>().Observable;
 
     /// <inheritdoc/>
     public Task Discover()

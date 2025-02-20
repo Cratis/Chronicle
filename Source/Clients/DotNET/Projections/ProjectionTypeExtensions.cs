@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Projections;
 public static class ProjectionTypeExtensions
 {
     /// <summary>
-    /// Get the reducer id for a type.
+    /// Get the projection id for a type.
     /// </summary>
     /// <param name="type"><see cref="Type"/> to get from.</param>
     /// <returns>The <see cref="ProjectionId"/> for the type.</returns>
@@ -42,9 +42,9 @@ public static class ProjectionTypeExtensions
     }
 
     /// <summary>
-    /// Get the type of the read model for a reducer.
+    /// Get the type of the read model for a projection.
     /// </summary>
-    /// <param name="type">Reducer type to get for.</param>
+    /// <param name="type">Projection type to get for.</param>
     /// <returns>Type of read model.</returns>
     public static Type GetReadModelType(this Type type)
     {
