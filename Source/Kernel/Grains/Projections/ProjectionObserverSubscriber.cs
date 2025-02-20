@@ -89,7 +89,8 @@ public class ProjectionObserverSubscriber(
                 logger.SuccessfullyHandledEvent(@event.Metadata.SequenceNumber, _key);
             }
 
-            if (changeset?.HasChanges == true)
+            // Note: We don't want to send changesets if the projection is not active
+            if (changeset?.HasChanges == true && State.IsActive)
             {
                 await _changeStream!.OnNextAsync(new ProjectionChangeset(_key.Namespace, partition.ToString(), changeset.CurrentState));
             }
