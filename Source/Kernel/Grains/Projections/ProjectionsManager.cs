@@ -60,6 +60,7 @@ public class ProjectionsManager(
             var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);
             var projection = GrainFactory.GetGrain<IProjection>(key);
             await projection.SetDefinition(projectionDefinition);
+            await SubscribeIfNotSubscribed(projectionDefinition, added.Namespace);
         }
     }
 
