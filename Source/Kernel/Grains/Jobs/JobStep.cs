@@ -20,6 +20,7 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// </remarks>
 /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
 /// <param name="logger">The logger.</param>
+[KeepAlive]
 public abstract class JobStep<TRequest, TResult, TState>(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<TState> state,
@@ -65,9 +66,6 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
-        DelayDeactivation(TimeSpan.MaxValue);
-
         await base.OnActivateAsync(cancellationToken);
 
         _ = this.GetPrimaryKey(out var key);

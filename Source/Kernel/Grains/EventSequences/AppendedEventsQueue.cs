@@ -16,6 +16,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// <summary>
 /// Represents the state of <see cref="AppendedEventsQueues"/>.
 /// </summary>
+[KeepAlive]
 public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
     readonly ITaskFactory _taskFactory;
@@ -53,9 +54,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
-        DelayDeactivation(TimeSpan.MaxValue);
-
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
         _metrics = _meter.BeginScope(key, queueId);
         return base.OnActivateAsync(cancellationToken);

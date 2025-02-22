@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// Represents an implementation of <see cref="IAppendedEventsQueues"/>.
 /// </summary>
 /// <param name="options"><see cref="ChronicleOptions"/> for configuration.</param>
+[KeepAlive]
 public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, IAppendedEventsQueues
 {
     IAppendedEventsQueue[] _queues = [];
@@ -20,9 +21,6 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
-        DelayDeactivation(TimeSpan.MaxValue);
-
         _queues = Enumerable.Range(0, options.Value.Events.Queues).Select(_ => GrainFactory.GetGrain<IAppendedEventsQueue>(_, this.GetPrimaryKeyString())).ToArray();
 
         return Task.CompletedTask;
