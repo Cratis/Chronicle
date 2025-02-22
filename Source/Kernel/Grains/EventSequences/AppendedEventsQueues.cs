@@ -1,15 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAppendedEventsQueues"/>.
 /// </summary>
-public class AppendedEventsQueues : Grain, IAppendedEventsQueues
+/// <param name="options"><see cref="ChronicleOptions"/> for configuration.</param>
+public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, IAppendedEventsQueues
 {
     IAppendedEventsQueue[] _queues = [];
     int _nextQueue;
@@ -20,7 +23,7 @@ public class AppendedEventsQueues : Grain, IAppendedEventsQueues
         // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
         DelayDeactivation(TimeSpan.MaxValue);
 
-        _queues = Enumerable.Range(0, 8).Select(_ => GrainFactory.GetGrain<IAppendedEventsQueue>(_, this.GetPrimaryKeyString())).ToArray();
+        _queues = Enumerable.Range(0, options.Value.Events.Queues).Select(_ => GrainFactory.GetGrain<IAppendedEventsQueue>(_, this.GetPrimaryKeyString())).ToArray();
 
         return Task.CompletedTask;
     }
