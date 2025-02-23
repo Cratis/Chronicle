@@ -156,7 +156,7 @@ public class Projections(
             Events = eventsToApply.ToContract()
         };
 
-        var result = await _servicesAccessor.Services.Projections.GetInstanceByIdFOrSessionWithEventsApplied(request);
+        var result = await _servicesAccessor.Services.Projections.GetInstanceByIdForSessionWithEventsApplied(request);
         return result.ToClient(modelType);
     }
 
