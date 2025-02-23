@@ -29,7 +29,7 @@ public class RetryFailedPartition(ILogger<RetryFailedPartition> logger) : Job<Re
 
         if (!State.LastHandledEventSequenceNumber.IsActualValue)
         {
-            logger.NoEventsWereHandled(nameof(RetryFailedPartitionJob));
+            logger.NoEventsWereHandled(nameof(RetryFailedPartition));
             return;
         }
         await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber);
