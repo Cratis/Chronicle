@@ -26,6 +26,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
         {
             _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             EventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
+            EventsToAppend.Add(EventAppended);
         }
 
         async Task Because()
@@ -35,9 +36,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
                 WatchResult = result;
                 _tcs.SetResult();
             });
-            var result = await EventStore.EventLog.Append(EventSourceId, EventAppended);
             await _tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            await WaitForProjectionAndSetResult(result.SequenceNumber);
             observable.Dispose();
         }
     }
