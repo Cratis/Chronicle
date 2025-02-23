@@ -134,11 +134,13 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
 
     protected override void Dispose(bool disposing)
     {
+#if DEBUG
         if (!_backupPerformed)
         {
             GlobalFixture.PerformBackup(_name);
             _backupPerformed = true;
         }
+#endif
         GlobalFixture.RemoveAllDatabases().GetAwaiter().GetResult();
         base.Dispose(false);
     }
