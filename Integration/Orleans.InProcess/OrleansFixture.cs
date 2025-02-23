@@ -27,7 +27,9 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
 public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory<Startup>, IClientArtifactsProvider
 {
+#if DEBUG
     bool _backupPerformed;
+#endif
     string _name = string.Empty;
 
     protected override IHostBuilder CreateHostBuilder()
