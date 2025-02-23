@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Projections;
 
 namespace Cratis.Chronicle.Projections;
@@ -15,6 +16,7 @@ public class ProjectionWatcher<TModel> : IProjectionWatcher<TModel>, IDisposable
 {
     readonly Subject<ProjectionChangeset<TModel>> _observable;
     readonly IEventStore _eventStore;
+    readonly IChronicleServicesAccessor _servicesAccessor;
     Action? _stopped;
     IObservable<ProjectionChangeset>? _serverObservable;
 
@@ -26,6 +28,7 @@ public class ProjectionWatcher<TModel> : IProjectionWatcher<TModel>, IDisposable
     public ProjectionWatcher(IEventStore eventStore, Action stopped)
     {
         _observable = new Subject<ProjectionChangeset<TModel>>();
+        _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _eventStore = eventStore;
         _stopped = stopped;
         _eventStore.Connection.Lifecycle.OnConnected += ClientConnected;
@@ -51,7 +54,7 @@ public class ProjectionWatcher<TModel> : IProjectionWatcher<TModel>, IDisposable
             ProjectionId = _eventStore.Projections.GetProjectionIdForModel<TModel>(),
             EventStore = _eventStore.Name
         };
-        _serverObservable = _eventStore.Connection.Services.Projections.Watch(request);
+        _serverObservable = _servicesAccessor.Services.Projections.Watch(request);
         _serverObservable.Subscribe(_ => _observable.OnNext(_.ToClient<TModel>()));
     }
 
