@@ -57,4 +57,4 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Run integration tests for .Net 9
-        run: dotnet test --logger "console;verbosity=normal" --configuration Debug --settings integration.runsettings
+        run: dotnet test --logger "console;verbosity=normal" --configuration Release --settings integration.runsettings
