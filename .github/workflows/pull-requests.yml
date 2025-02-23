@@ -3,7 +3,7 @@ name: PR Prerelase
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
   NUGET_SOURCE: https://nuget.pkg.github.com/cratis/index.json
-  DOTNET8_VERSION: "8.0.405"
+  DOTNET8_VERSION: "8.0.406"
   DOTNET_VERSION: "9.0.x"
   KERNEL_CACHE: "kernel-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"

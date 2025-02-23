@@ -12,7 +12,7 @@
 name: "CodeQL Advanced"
 
 env:
-  DOTNET8_VERSION: "8.0.405"
+  DOTNET8_VERSION: "8.0.406"
   DOTNET_VERSION: "9.0.x"
 
 on:

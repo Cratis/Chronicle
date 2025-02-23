@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// Represents a job for retrying a failed partition.
 /// </summary>
 /// <param name="logger">The logger.</param>
-public class RetryFailedPartitionJob(ILogger<RetryFailedPartitionJob> logger) : Job<RetryFailedPartitionRequest, JobStateWithLastHandledEvent>, IRetryFailedPartitionJob
+public class RetryFailedPartition(ILogger<RetryFailedPartition> logger) : Job<RetryFailedPartitionRequest, JobStateWithLastHandledEvent>, IRetryFailedPartition
 {
     /// <inheritdoc/>
     public override async Task OnCompleted()
@@ -23,7 +23,7 @@ public class RetryFailedPartitionJob(ILogger<RetryFailedPartitionJob> logger) : 
 
         if (State is { HandledAllEvents: false, LastHandledEventSequenceNumber.IsActualValue: true })
         {
-            logger.NotAllEventsWereHandled(nameof(RetryFailedPartitionJob), State.LastHandledEventSequenceNumber);
+            logger.NotAllEventsWereHandled(nameof(RetryFailedPartition), State.LastHandledEventSequenceNumber);
             await observer.FailedPartitionPartiallyRecovered(Request.Key, State.LastHandledEventSequenceNumber);
         }
 

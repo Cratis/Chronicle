@@ -28,7 +28,9 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
 public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory<Startup>, IClientArtifactsProvider
 {
+#if DEBUG
     bool _backupPerformed;
+#endif
     string _name = string.Empty;
 
     protected override IHostBuilder CreateHostBuilder()
@@ -67,9 +69,9 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
             {
                 silo
                     .UseLocalhostClustering()
-                    .AddCratisChronicle(_ => _.EventStoreName = Constants.EventStore)
-                    .AddChronicleToSilo(_ => _
-                        .WithMongoDB(chronicleOptions.Storage.ConnectionDetails, Constants.EventStore));
+                    .AddCratisChronicle(
+                        options => options.EventStoreName = Constants.EventStore,
+                        chronicleBuilder => chronicleBuilder.WithMongoDB(chronicleOptions.Storage.ConnectionDetails, Constants.EventStore));
             })
             .UseConsoleLifetime();
 
@@ -136,11 +138,13 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
 
     protected override void Dispose(bool disposing)
     {
+#if DEBUG
         if (!_backupPerformed)
         {
             GlobalFixture.PerformBackup(_name);
             _backupPerformed = true;
         }
+#endif
         GlobalFixture.RemoveAllDatabases().GetAwaiter().GetResult();
         base.Dispose(false);
     }

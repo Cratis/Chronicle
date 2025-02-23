@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
@@ -149,75 +150,19 @@ public class EventSequence(
     {
         try
         {
-            var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-
-            var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
-            var compliantEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
-
-            var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject);
-            var constraintValidationResult = await constraintContext.Validate();
-            if (!constraintValidationResult.IsValid)
+            var getValidAndCompliantEvent = await GetValidAndCompliantEvent(eventSourceType, eventSourceId, eventStreamId, eventType, content, correlationId);
+            if (getValidAndCompliantEvent.TryGetError(out var error))
             {
-                _metrics?.ConstraintViolation(eventSourceId, eventType.Id);
-                return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
+                return error;
             }
 
-            Result<AppendedEvent, AppendEventError>? appendResult = null;
+            var (compliantEvent, constraintContext) = getValidAndCompliantEvent.AsT0;
 
-            var identity = await IdentityStorage.GetFor(causedBy);
-            do
-            {
-                await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventType.Id);
-                var occurred = DateTimeOffset.UtcNow;
-                logger.Appending(
-                    _eventSequenceKey.EventStore,
-                    _eventSequenceKey.Namespace,
-                    _eventSequenceId,
-                    eventType,
-                    eventSourceId,
-                    State.SequenceNumber);
-
-                appendResult = await EventSequenceStorage.Append(
-                    State.SequenceNumber,
-                    eventSourceType,
-                    eventSourceId,
-                    eventStreamType,
-                    eventStreamId,
-                    eventType,
-                    correlationId,
-                    causation,
-                    identity,
-                    occurred,
-                    compliantEventAsExpandoObject);
-            }
-            while(!appendResult.IsSuccess);
-
-            var appendedSequenceNumber = State.SequenceNumber;
-            State.SequenceNumber = appendedSequenceNumber.Next();
-            State.TailSequenceNumberPerEventType[eventType.Id] = appendedSequenceNumber;
-            await WriteStateAsync();
-
-            _metrics?.AppendedEvent(eventSourceId, eventType.Id);
-            var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
-            await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
-            await constraintContext.Update(State.SequenceNumber);
-
-            return AppendResult.Success(correlationId, appendedSequenceNumber);
+            return await AppendValidAndCompliantEvent(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, compliantEvent, constraintContext);
         }
         catch (Exception ex)
         {
-            _metrics?.FailedAppending(eventSourceId, eventType.Id);
-            logger.ErrorAppending(
-                _eventSequenceKey.EventStore,
-                _eventSequenceKey.Namespace,
-                eventType,
-                eventStreamId.Value,
-                eventSourceType,
-                eventSourceId,
-                State.SequenceNumber,
-                ex);
-
-            return AppendResult.Failed(correlationId, [ex.Message]);
+            return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
         }
     }
 
@@ -228,20 +173,48 @@ public class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
-        var results = new List<AppendResult>();
-
-        foreach (var @event in events)
+        var tasks = events.Select(async e =>
         {
-            results.Add(await Append(
-                @event.EventSourceType,
-                @event.EventSourceId,
-                @event.eventStreamType,
-                @event.eventStreamId,
-                @event.EventType,
-                @event.Content,
+            var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamId, e.EventType, e.Content, correlationId);
+            return (Event: e, Result: result);
+        });
+
+        var getValidAndCompliantEvents = await Task.WhenAll(tasks);
+        var failedEvents = getValidAndCompliantEvents.Where(eventAndResult => !eventAndResult.Result.IsSuccess).ToList();
+
+        if (failedEvents.Count != 0)
+        {
+            return new()
+            {
+                CorrelationId = correlationId,
+                ConstraintViolations = failedEvents.SelectMany(r => r.Result.AsT1.ConstraintViolations).ToImmutableList(),
+                Errors = failedEvents.SelectMany(r => r.Result.AsT1.Errors).ToImmutableList(),
+            };
+        }
+
+        var results = new List<AppendResult>();
+        foreach (var (eventToAppend, validAndCompliantEvent) in getValidAndCompliantEvents)
+        {
+            var (compliantEvent, constraintContext) = validAndCompliantEvent.AsT0;
+            var appendResult = await AppendValidAndCompliantEvent(
+                eventToAppend.EventSourceType,
+                eventToAppend.EventSourceId,
+                eventToAppend.eventStreamType,
+                eventToAppend.eventStreamId,
+                eventToAppend.EventType,
                 correlationId,
                 causation,
-                causedBy));
+                causedBy,
+                compliantEvent,
+                constraintContext);
+            results.Add(appendResult);
+            if (appendResult.IsSuccess)
+            {
+                continue;
+            }
+
+            logger.FailedDuringAppendingManyEvents();
+            break;
         }
 
         return new()
@@ -321,6 +294,129 @@ public class EventSequence(
             await IdentityStorage.GetFor(causedBy),
             DateTimeOffset.UtcNow);
         await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
+    }
+
+    async Task<AppendResult> AppendValidAndCompliantEvent(
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        Identity causedBy,
+        ExpandoObject compliantEvent,
+        ConstraintValidationContext constraintContext)
+    {
+        try
+        {
+            Result<AppendedEvent, AppendEventError>? appendResult = null;
+
+            var identity = await IdentityStorage.GetFor(causedBy);
+            do
+            {
+                await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventType.Id);
+                var occurred = DateTimeOffset.UtcNow;
+                logger.Appending(
+                    _eventSequenceKey.EventStore,
+                    _eventSequenceKey.Namespace,
+                    _eventSequenceId,
+                    eventType,
+                    eventSourceId,
+                    State.SequenceNumber);
+
+                appendResult = await EventSequenceStorage.Append(
+                    State.SequenceNumber,
+                    eventSourceType,
+                    eventSourceId,
+                    eventStreamType,
+                    eventStreamId,
+                    eventType,
+                    correlationId,
+                    causation,
+                    identity,
+                    occurred,
+                    compliantEvent);
+            }
+            while(!appendResult.IsSuccess);
+
+            var appendedSequenceNumber = State.SequenceNumber;
+            State.SequenceNumber = appendedSequenceNumber.Next();
+            State.TailSequenceNumberPerEventType[eventType.Id] = appendedSequenceNumber;
+            await WriteStateAsync();
+
+            _metrics?.AppendedEvent(eventSourceId, eventType.Id);
+            var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
+            await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
+            await constraintContext.Update(State.SequenceNumber);
+
+            return AppendResult.Success(correlationId, appendedSequenceNumber);
+        }
+        catch (Exception ex)
+        {
+            return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
+        }
+    }
+
+    async Task<Result<(ExpandoObject CompliantEvent, ConstraintValidationContext ConstraintValidationContext), AppendResult>> GetValidAndCompliantEvent(
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        JsonObject content,
+        CorrelationId correlationId)
+    {
+        try
+        {
+            var compliantEventAsExpandoObject = await MakeEventCompliant(eventSourceId, eventType, content);
+            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, compliantEventAsExpandoObject);
+            if (checkConstraintViolation.TryGetError(out var error))
+            {
+                return error;
+            }
+
+            return (compliantEventAsExpandoObject, (ConstraintValidationContext)checkConstraintViolation);
+        }
+        catch (Exception ex)
+        {
+            return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
+        }
+    }
+
+    AppendResult HandleAppendEventException(Exception ex, EventSourceType eventSourceType, EventSourceId eventSourceId, EventType eventType, EventStreamId eventStreamId, CorrelationId correlationId)
+    {
+        _metrics?.FailedAppending(eventSourceId, eventType.Id);
+        logger.ErrorAppending(
+            _eventSequenceKey.EventStore,
+            _eventSequenceKey.Namespace,
+            eventType,
+            eventStreamId.Value,
+            eventSourceType,
+            eventSourceId,
+            State.SequenceNumber,
+            ex);
+
+        return AppendResult.Failed(correlationId, [ex.Message]);
+    }
+
+    async Task<ExpandoObject> MakeEventCompliant(EventSourceId eventSourceId, EventType eventType, JsonObject content)
+    {
+        var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
+
+        var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
+        return expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
+    }
+
+    async Task<Result<ConstraintValidationContext, AppendResult>> CheckConstraintViolation(EventSourceId eventSourceId, EventType eventType, CorrelationId correlationId, ExpandoObject compliantEventAsExpandoObject)
+    {
+        var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject);
+        var constraintValidationResult = await constraintContext.Validate();
+        if (constraintValidationResult.IsValid)
+        {
+            return constraintContext;
+        }
+        _metrics?.ConstraintViolation(eventSourceId, eventType.Id);
+        return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
     }
 
     async Task HandleFailedAppendResult(Result<AppendedEvent, AppendEventError>? appendResult, EventType eventType, EventSourceId eventSourceId, string eventName)

@@ -29,8 +29,8 @@ public class UniqueConstraintValidator(
     /// <inheritdoc/>
     public async Task<ConstraintValidationResult> Validate(ConstraintValidationContext context)
     {
-        var propertiesWithValues = definition.GetPropertiesAndValues(context);
-        if (!propertiesWithValues.Any())
+        var propertiesWithValues = definition.GetPropertiesAndValues(context).ToList();
+        if (propertiesWithValues.Count == 0)
         {
             return ConstraintValidationResult.Success;
         }

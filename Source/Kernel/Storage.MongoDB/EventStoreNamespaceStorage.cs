@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -57,6 +58,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
+    /// <param name="jobTypes"><see cref="IJobTypes"/>.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStoreNamespaceStorage(
         EventStoreName eventStore,
@@ -67,6 +69,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         IInstancesOf<ISinkFactory> sinkFactories,
+        IJobTypes jobTypes,
         ILoggerFactory loggerFactory)
     {
         _eventStore = eventStore;
@@ -78,7 +81,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         _loggerFactory = loggerFactory;
         Changesets = new ChangesetStorage(eventStoreNamespaceDatabase);
         Identities = new IdentityStorage(eventStoreNamespaceDatabase, loggerFactory.CreateLogger<IdentityStorage>());
-        Jobs = new JobStorage(eventStoreNamespaceDatabase);
+        Jobs = new JobStorage(eventStoreNamespaceDatabase, jobTypes);
         JobSteps = new JobStepStorage(eventStoreNamespaceDatabase);
         Observers = new ObserverStorage(eventStoreNamespaceDatabase);
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);

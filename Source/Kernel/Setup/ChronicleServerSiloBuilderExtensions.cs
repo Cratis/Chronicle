@@ -1,9 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains;
+using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Placement;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
@@ -17,6 +20,7 @@ using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
 using Cratis.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Orleans.Hosting;
@@ -34,6 +38,7 @@ public static class ChronicleServerSiloBuilderExtensions
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder AddChronicleToSilo(this ISiloBuilder builder, Action<IChronicleBuilder>? configure = default)
     {
+        builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
         builder
             .AddChronicleServicesAsInMemory()
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
@@ -43,6 +48,8 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddReplayStateManagement()
             .AddReminders()
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
+            .AddStreaming()
+            .AddMemoryStreams(WellKnownStreamProviders.ProjectionChangesets)
             .AddStorageProviders()
             .ConfigureCpuBoundWorkers()
             .ConfigureSerialization();
@@ -67,6 +74,8 @@ public static class ChronicleServerSiloBuilderExtensions
             var grainFactory = sp.GetRequiredService<IGrainFactory>();
             var clusterClient = sp.GetRequiredService<IClusterClient>();
             var storage = sp.GetRequiredService<IStorage>();
+            var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();
+            var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
             return new Cratis.Chronicle.Contracts.Services(
                 new Cratis.Chronicle.Services.EventStores(storage),
                 new Cratis.Chronicle.Services.Namespaces(storage),
@@ -78,8 +87,8 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Observers(grainFactory, storage),
                 new FailedPartitions(storage),
                 new Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
-                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IExpandoObjectConverter>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
-                new Cratis.Chronicle.Services.Projections.Projections(grainFactory),
+                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
+                new Cratis.Chronicle.Services.Projections.Projections(clusterClient, grainFactory, expandoObjectConverter, jsonSerializerOptions),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),
                 new Cratis.Chronicle.Services.Host.Server(clusterClient));
         });

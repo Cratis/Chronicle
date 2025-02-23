@@ -31,5 +31,5 @@ public class and_there_are_no_failing_partitions : given.an_observer
     }
 
     [Fact] void should_be_in_running_state() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
-    [Fact] void should_not_start_retry_failed_partition_jobs() => _jobsManager.DidNotReceive().Start<IRetryFailedPartitionJob, RetryFailedPartitionRequest>(Arg.Any<JobId>(), Arg.Any<RetryFailedPartitionRequest>());
+    [Fact] void should_not_start_retry_failed_partition_jobs() => _jobsManager.DidNotReceive().Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<JobId>(), Arg.Any<RetryFailedPartitionRequest>());
 }

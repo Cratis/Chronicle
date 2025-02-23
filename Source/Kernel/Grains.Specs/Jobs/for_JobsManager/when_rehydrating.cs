@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Moq;
 namespace Cratis.Chronicle.Grains.Jobs.for_JobsManager;
@@ -18,6 +19,8 @@ public class when_rehydrating : given.the_manager
         _secondJobId = Guid.Parse("d090f5e6-5a6a-43b1-8580-4973e3c69521");
         _firstJob = AddJob<INullJobWithSomeRequest>(_firstJobId);
         _secondJob = AddJob<INullJobWithSomeRequest>(_secondJobId);
+        _firstJob.Setup(_ => _.Resume()).ReturnsAsync(Result<ResumeJobSuccess, ResumeJobError>.Success(ResumeJobSuccess.Success));
+        _secondJob.Setup(_ => _.Resume()).ReturnsAsync(Result<ResumeJobSuccess, ResumeJobError>.Success(ResumeJobSuccess.Success));
     }
 
     Task Because() => _manager.Rehydrate();

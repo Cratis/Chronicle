@@ -128,6 +128,7 @@ public class EventStore : IEventStore
         var projections = new Projections.Projections(
             this,
             EventTypes,
+            new ProjectionWatcherManager(new ProjectionWatcherFactory(this), this),
             clientArtifactsProvider,
             schemaGenerator,
             modelNameResolver,

@@ -19,6 +19,11 @@ public class ChronicleOptions
     public int ApiPort { get; init; } = 8080;
 
     /// <summary>
+    /// Gets the <see cref="Events"/> configuration.
+    /// </summary>
+    public Events Events { get; init; } = new Events();
+
+    /// <summary>
     /// Feature toggles for Chronicle.
     /// </summary>
     public Features Features { get; init; } = new Features();

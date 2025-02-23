@@ -54,7 +54,7 @@ public record EventWithPropertiesForAllSupportedTypes(
         random.Next(5000),
         (float)Math.Round(random.NextSingle(), 3),
         random.NextDouble(),
-        (EnumWithValues)random.Next((int)EnumWithValues.ThirdValue),
+        (EnumWithValues)random.Next((int)EnumWithValues.FirstValue, (int)EnumWithValues.ThirdValue),
         Guid.NewGuid(),
         DateTime.UtcNow.AddDays(random.Next(60)).RoundDownTicks(),
         DateOnly.FromDateTime(DateTime.UtcNow.AddDays(random.Next(60))),

@@ -31,6 +31,9 @@ internal static partial class EventSequenceLogMessages
     [LoggerMessage(LogLevel.Information, "Redacting events with event source id {EventSourceId} and event types {EventTypes} in event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace}")]
     internal static partial void RedactingMultiple(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
 
+    [LoggerMessage(LogLevel.Critical, "A critical error occurred while appending many events after successfully validating all event constraints. One or more events was committed while they should have been rolled back and not been written to the event store")]
+    internal static partial void FailedDuringAppendingManyEvents(this ILogger<EventSequence> logger);
+
     [LoggerMessage(LogLevel.Debug, "Getting tail sequence number for event types from event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace} for event types {EventTypes}")]
     internal static partial void GettingTailSequenceNumberForEventTypes(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes);
 

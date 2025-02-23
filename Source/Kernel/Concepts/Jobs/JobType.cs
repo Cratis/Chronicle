@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Concepts.Jobs;
 
 /// <summary>
-/// Represents type of a job.
+/// Represents type of a Job.
 /// </summary>
 /// <param name="Value">String representation of the job type.</param>
 /// <remarks>
@@ -21,11 +21,5 @@ public record JobType(string Value) : ConceptAs<string>(Value)
     /// Implicitly convert from <see cref="Type"/> to <see cref="JobType"/>.
     /// </summary>
     /// <param name="type"><see cref="Type"/> to convert from.</param>
-    public static implicit operator JobType(Type type) => new(type.AssemblyQualifiedName ?? type.Name);
-
-    /// <summary>
-    /// Implicitly convert from <see cref="JobType"/> to <see cref="Type"/>.
-    /// </summary>
-    /// <param name="type"><see cref="JobType"/> to convert from.</param>
-    public static implicit operator Type(JobType type) => Type.GetType(type.Value) ?? throw new UnknownClrTypeForJobType(type);
+    public static implicit operator JobType(Type type) => new(type.Name);
 }

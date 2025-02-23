@@ -78,8 +78,8 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Warning, "Job failed on completed")]
     internal static partial void FailedOnCompleted(this ILogger<IJob> logger, Exception error);
 
-    [LoggerMessage(LogLevel.Warning, "Job {JobName} failed unexpectedly on OnCompleted")]
-    internal static partial void FailedOnCompleted(this ILogger<IJob> logger, Exception ex, string jobName);
+    [LoggerMessage(LogLevel.Warning, "Job {JobId} {JobType} failed unexpectedly on OnCompleted")]
+    internal static partial void FailedOnCompleted(this ILogger<IJob> logger, Exception ex, JobId jobId, JobType jobType);
 
     [LoggerMessage(LogLevel.Warning, "Job failed on completed while there are no job steps to run, but Job will still clear state. Error: {JobError}")]
     internal static partial void FailedOnCompletedWhileNoJobSteps(this ILogger<IJob> logger, JobError jobError);

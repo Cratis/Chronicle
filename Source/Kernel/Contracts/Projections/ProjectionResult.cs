@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Contracts.Projections;
 public class ProjectionResult
 {
     /// <summary>
-    /// Gets or sets the result of the projection.
+    /// Gets or sets the result of the projection as JSON.
     /// </summary>
     [ProtoMember(1)]
     public string Model { get; set; } = string.Empty;
