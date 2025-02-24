@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
 using Cratis.Models;
@@ -121,6 +122,17 @@ public class Reducers(
 
     /// <inheritdoc/>
     public bool HasReducerFor(Type modelType) => _handlers.ContainsKey(modelType);
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions<TReducer>() =>
+        GetFailedPartitions(typeof(TReducer));
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions(Type reducerType)
+    {
+        var handler = GetByType(reducerType);
+        return eventStore.FailedPartitions.GetFailedPartitionsFor(handler.Id);
+    }
 
     ReducerHandler CreateHandlerFor(Type reducerType, Type modelType)
     {
