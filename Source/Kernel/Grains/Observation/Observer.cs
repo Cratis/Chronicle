@@ -332,6 +332,8 @@ public class Observer(
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+
+        State.CatchingUpPartitions.Clear();
         await WriteStateAsync();
         await TransitionTo<Routing>();
     }
