@@ -11,9 +11,11 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
 using Microsoft.Extensions.Logging;
+using NJsonSchema;
 using Orleans.Providers;
 using Orleans.Streams;
 
@@ -28,17 +30,20 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <param name="projectionManager"><see cref="IProjectionManager"/> for getting projections.</param>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for creating projection pipelines.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
 /// <param name="logger">The logger.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class ProjectionObserverSubscriber(
     IProjectionManager projectionManager,
     IProjectionFactory projectionFactory,
     IProjectionPipelineManager projectionPipelineManager,
+    IExpandoObjectConverter expandoObjectConverter,
     ILogger<ProjectionObserverSubscriber> logger) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
     ObserverSubscriberKey _key = new(ObserverId.Unspecified, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Unspecified, EventSourceId.Unspecified, string.Empty);
     IProjectionPipeline? _pipeline;
     IAsyncStream<ProjectionChangeset>? _changeStream;
+    JsonSchema? _schema;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -92,7 +97,8 @@ public class ProjectionObserverSubscriber(
             // Note: We don't want to send changesets if the projection is not active
             if (changeset?.HasChanges == true && State.IsActive)
             {
-                await _changeStream!.OnNextAsync(new ProjectionChangeset(_key.Namespace, partition.ToString(), changeset.CurrentState));
+                var model = expandoObjectConverter.ToJsonObject(changeset.CurrentState, _schema!);
+                await _changeStream!.OnNextAsync(new ProjectionChangeset(_key.Namespace, partition.ToString(), model));
             }
 
             logger.SuccessfullyHandledAllEvents(_key);
@@ -116,5 +122,6 @@ public class ProjectionObserverSubscriber(
             projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State);
         }
         _pipeline = projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
+        _schema = await JsonSchema.FromJsonAsync(State.Model.Schema);
     }
 }
