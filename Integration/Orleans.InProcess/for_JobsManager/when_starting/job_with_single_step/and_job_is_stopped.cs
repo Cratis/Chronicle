@@ -8,26 +8,29 @@ using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 using Cratis.Chronicle.Storage.Jobs;
-using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_step_completes_successfully.context;
+using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_step_fails.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step;
 
 [Collection(GlobalCollection.Name)]
-public class and_job_step_completes_successfully(context context) : Given<context>(context)
+public class and_job_is_stopped(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : given.all_dependencies(globalFixture)
     {
         public Result<JobId, StartJobError> StartJobResult;
         public JobState CompletedJobState;
-        public JobId JobId;
         public IImmutableList<JobStepState> JobStepStates;
+        public JobId JobId;
 
         async Task Because()
         {
-            TheJobStepProcessor.SetNumJobStepsToComplete(1);
+            var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            TheJobStepProcessor.SetStartTask(taskCompletionSource.Task);
             StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true });
-            await TheJobStepProcessor.WaitForStepsToBeCompleted();
             JobId = StartJobResult.AsT0;
+            await TheJobStepProcessor.WaitForAllPreparedStepsToBeStarted();
+            await JobsManager.Stop(JobId);
+            taskCompletionSource.SetResult();
             var getJobState = await JobStorage.GetJob(JobId);
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
             CompletedJobState = getJobState.AsT0;
@@ -42,20 +45,23 @@ public class and_job_step_completes_successfully(context context) : Given<contex
     public void should_have_correct_job_type() => Context.CompletedJobState.Type.Value.ShouldEqual(nameof(JobWithSingleStep));
 
     [Fact]
-    public void should_not_keep_any_job_step_states_after_completed() => Context.JobStepStates.ShouldBeEmpty();
+    public void should_keep_state_of_failed_job_step() => Context.JobStepStates.ShouldContainSingleItem();
 
     [Fact]
-    public void should_have_completed_job_successfully() => Context.CompletedJobState.Status.ShouldEqual(JobStatus.CompletedSuccessfully);
+    public void should_have_job_step_state_where_status_is_stopped() => Context.JobStepStates[0].Status.ShouldEqual(JobStepStatus.Stopped);
+
+    [Fact]
+    public void should_have_stopped_job_status() => Context.CompletedJobState.Status.ShouldEqual(JobStatus.Stopped);
 
     [Fact]
     public void should_have_completed_job_progress() => Context.CompletedJobState.Progress.IsCompleted.ShouldBeTrue();
 
     [Fact]
-    public void should_have_job_progress_with_one_successful_step() => Context.CompletedJobState.Progress.SuccessfulSteps.ShouldEqual(1);
+    public void should_have_job_progress_with_one_stopped_step() => Context.CompletedJobState.Progress.StoppedSteps.ShouldEqual(1);
 
     [Fact]
-    public void should_perform_work_for_job_step_only_once() => Context.TheJobStepProcessor.ShouldHavePerformedJobStepCalls(Context.JobId, 1);
+    public void should_perform_work_for_job_step_only_once() => Context.TheJobStepProcessor.GetNumPerformCallsPerJobStep(Context.StartJobResult.AsT0).ShouldContainSingleItem();
 
     [Fact]
-    public void should_have_completed_work_successfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, JobStepStatus.Succeeded, 1);
+    public void should_have_stopped_work_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, JobStepStatus.Stopped, 1);
 }

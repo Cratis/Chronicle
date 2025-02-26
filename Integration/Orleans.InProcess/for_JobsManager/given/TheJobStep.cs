@@ -1,7 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
@@ -43,27 +46,39 @@ public class TheJobStep(
         try
         {
             await _selfGrainReference.IncrementPerformCalled();
+            jobStepProcessor.PerformJobStep(JobId, JobStepId, currentState);
+            await jobStepProcessor.WaitForStart();
             if (currentState.WaitCount >= currentState.NumTimesPerformCalled)
             {
                 await Task.Delay(currentState.WaitTime, cancellationToken);
+            }
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return await HandleStopped();
             }
             if (currentState.ShouldFail)
             {
                 throw new Exception("Should fail");
             }
-            jobStepProcessor.PerformJobStep(JobId, JobStepId, currentState);
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState);
+
+            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, JobStepStatus.Succeeded);
             return JobStepResult.Succeeded(new TheJobStepResult());
         }
         catch (Exception ex) when (ex is OperationCanceledException or TaskCanceledException)
         {
-            await _selfGrainReference.IncrementStopped();
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState);
-            return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
+            return await HandleStopped();
         }
         catch (Exception ex)
         {
+            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, JobStepStatus.Failed);
             return JobStepResult.Failed(PerformJobStepError.Failed(ex));
+        }
+
+        async Task<Catch<JobStepResult>> HandleStopped()
+        {
+            await _selfGrainReference.IncrementStopped();
+            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, JobStepStatus.Stopped);
+            return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
         }
     }
 

@@ -178,6 +178,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         using var scope = logger.BeginJobStepScope(State);
         try
         {
+            // TODO: Here report either failed or stopped
             var onStepFailedResult = await Job.OnStepFailed(JobStepId, JobStepResult.Failed(error));
             return await onStepFailedResult.Match(
                 _ => WriteStatusChange(JobStepStatus.Failed, error.ErrorMessages, error.ExceptionStackTrace),

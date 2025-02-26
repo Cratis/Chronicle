@@ -9,17 +9,42 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 [Singleton, IgnoreConvention]
 public class TheJobStepProcessor
 {
-    readonly TaskCompletionSource _allPreparedJobsCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public class PreparedJobSteps : List<(JobStepId JobStepId, Type JobStepType)>
+    {
+        public PreparedJobSteps(IEnumerable<(JobStepId JobStepId, Type JobStepType)> list) : base(list)
+        { }
+    }
+    public class PerformedJobStepCalls : Dictionary<JobStepId, IList<TheJobStepState>>;
+    public class CompletedJobSteps : Dictionary<JobStepId, (TheJobStepState State, JobStepStatus Status)>;
+
+    readonly TaskCompletionSource _allPreparedJobsStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _jobsCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    Task _startTask = Task.CompletedTask;
     int _numJobStepsToComplete;
+
+    volatile int _numJobStepsPrepared;
+    volatile int _numJobStepsStarted;
     volatile int _numJobStepsCompleted;
 
-    public readonly ConcurrentDictionary<JobId, (JobStepId JobStepId, Type JobStepType)> JobSteps = new();
-    public readonly ConcurrentDictionary<JobId, Dictionary<JobStepId, IList<TheJobStepState>>> JobStepPerformCalls = new();
-    public readonly ConcurrentDictionary<JobId, Dictionary<JobStepId, TheJobStepState>> CompletedJobSteps = new();
+    public readonly ConcurrentDictionary<JobId, PreparedJobSteps> JobSteps = new();
+    public readonly ConcurrentDictionary<JobId, PerformedJobStepCalls> JobStepPerformCalls = new();
+    public readonly ConcurrentDictionary<JobId, CompletedJobSteps> CompletedSteps = new();
 
     public void SetNumJobStepsToComplete(int numJobSteps) => _numJobStepsToComplete = numJobSteps;
+    public void SetStartTask(Task startTask) => _startTask = startTask;
+    public Task WaitForStart() => _startTask;
+    public Task WaitForAllPreparedStepsToBeStarted(TimeSpan? maxWaitTime = null) => _allPreparedJobsStarted.Task.WaitAsync(maxWaitTime ?? TimeSpan.FromSeconds(10));
+    public Task WaitForStepsToBeCompleted(TimeSpan? maxWaitTime = null) => _jobsCompleted.Task.WaitAsync(maxWaitTime ?? TimeSpan.FromSeconds(10));
 
-    public Task WaitForAllStepsToBeCompleted(TimeSpan? maxWaitTime = null) => _allPreparedJobsCompleted.Task.WaitAsync(maxWaitTime ?? TimeSpan.FromSeconds(10));
+    public IEnumerable<JobStepId> GetJobStepsForJob(JobId jobId)
+    {
+        if (!JobSteps.TryGetValue(jobId, out var jobSteps))
+        {
+            return [];
+        }
+        return jobSteps.Select(_ => _.JobStepId);
+    }
 
     public int GetNumPerformCallsFor(JobId jobId, JobStepId jobStepId)
     {
@@ -32,15 +57,37 @@ public class TheJobStepProcessor
             : jobStepCalls.Count;
     }
 
+    public Dictionary<JobStepId, int> GetNumPerformCallsPerJobStep(JobId jobId)
+    {
+        if (!JobStepPerformCalls.TryGetValue(jobId, out var jobSteps))
+        {
+            return [];
+        }
+        return jobSteps.ToDictionary(_ => _.Key, _ => _.Value.Count);
+    }
+
+    public CompletedJobSteps GetCompletedJobSteps(JobId jobId)
+    {
+        if (!CompletedSteps.TryGetValue(jobId, out var completedJobSteps))
+        {
+            return [];
+        }
+        return completedJobSteps;
+    }
+
 #pragma warning disable MA0106
-    public void JobStepPrepared(JobId JobId, JobStepId jobStepId, Type jobStepType) => JobSteps.AddOrUpdate(JobId, (jobStepId, jobStepType), (_, __) => (jobStepId, jobStepType));
+    public void JobStepPrepared(JobId JobId, JobStepId jobStepId, Type jobStepType)
+    {
+        JobSteps.AddOrUpdate(JobId, new PreparedJobSteps([(jobStepId, jobStepType)]), (_, jobSteps) => new(jobSteps.Concat([(jobStepId, jobStepType)])));
+        Interlocked.Increment(ref _numJobStepsPrepared);
+    }
 #pragma warning restore MA0106
 
     public void PerformJobStep(JobId jobId, JobStepId jobStepId, TheJobStepState jobStepState)
     {
         JobStepPerformCalls.AddOrUpdate(
             jobId,
-            new Dictionary<JobStepId, IList<TheJobStepState>>
+            new PerformedJobStepCalls
             {
                 {
                     jobStepId, new List<TheJobStepState>
@@ -61,29 +108,35 @@ public class TheJobStepProcessor
                 return states;
             });
 #pragma warning restore MA0106
+
+        Interlocked.Increment(ref _numJobStepsStarted);
+        if (_numJobStepsStarted >= _numJobStepsPrepared)
+        {
+            _allPreparedJobsStarted.TrySetResult();
+        }
     }
 
-    public void JobStepCompleted(JobId jobId, JobStepId jobStepId, TheJobStepState jobStepState)
+    public void JobStepCompleted(JobId jobId, JobStepId jobStepId, TheJobStepState jobStepState, JobStepStatus status)
     {
-        CompletedJobSteps.AddOrUpdate(
+        CompletedSteps.AddOrUpdate(
             jobId,
-            new Dictionary<JobStepId, TheJobStepState>
+            new CompletedJobSteps
             {
                 {
-                    jobStepId, jobStepState
+                    jobStepId, (jobStepState, status)
                 }
             },
 #pragma warning disable MA0106
             (id, states) =>
             {
-                states.Add(jobStepId, jobStepState);
+                states.Add(jobStepId, (jobStepState, status));
                 return states;
             });
 #pragma warning restore MA0106
         Interlocked.Increment(ref _numJobStepsCompleted);
         if (_numJobStepsCompleted >= _numJobStepsToComplete)
         {
-            _allPreparedJobsCompleted.TrySetResult();
+            _jobsCompleted.TrySetResult();
         }
     }
 }
