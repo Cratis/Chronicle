@@ -8,7 +8,8 @@ using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 using Cratis.Chronicle.Storage.Jobs;
-using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_step_fails.context;
+using Humanizer;
+using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_is_stopped.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step;
 
@@ -35,6 +36,7 @@ public class and_job_is_stopped(context context) : Given<context>(context)
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
             CompletedJobState = getJobState.AsT0;
             JobStepStates = getJobStepState.AsT0;
+            await Task.Delay(1.Seconds());
         }
     }
 
@@ -45,10 +47,7 @@ public class and_job_is_stopped(context context) : Given<context>(context)
     public void should_have_correct_job_type() => Context.CompletedJobState.Type.Value.ShouldEqual(nameof(JobWithSingleStep));
 
     [Fact]
-    public void should_keep_state_of_failed_job_step() => Context.JobStepStates.ShouldContainSingleItem();
-
-    [Fact]
-    public void should_have_job_step_state_where_status_is_stopped() => Context.JobStepStates[0].Status.ShouldEqual(JobStepStatus.Stopped);
+    public void should_remove_state_of_job_step() => Context.JobStepStates.ShouldBeEmpty();
 
     [Fact]
     public void should_have_stopped_job_status() => Context.CompletedJobState.Status.ShouldEqual(JobStatus.Stopped);
