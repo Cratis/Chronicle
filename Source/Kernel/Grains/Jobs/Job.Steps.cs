@@ -205,22 +205,7 @@ public abstract partial class Job<TRequest, TJobState>
             if (steps.Count == 0)
             {
                 _logger.NoJobStepsToStart();
-
-                // TODO: Not sure if Complete should be called or HandleCompletion
-                var onCompletedResult = await Complete();
-                if (onCompletedResult.TryGetError(out var onCompletedError))
-                {
-                    _logger.FailedOnCompletedWhileNoJobSteps(onCompletedError);
-                    _ = await WriteStatusChanged(JobStatus.CompletedWithFailures);
-                }
-                else if (!KeepAfterCompleted)
-                {
-                    await ClearStateAsync();
-                }
-                else
-                {
-                    _ = await WriteStatusChanged(JobStatus.CompletedSuccessfully);
-                }
+                _ = HandleCompletion();
                 return StartJobError.NoJobStepsToStart;
             }
 
