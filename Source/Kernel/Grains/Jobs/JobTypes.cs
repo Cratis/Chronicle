@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.CodeDom.Compiler;
 using System.Reflection;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.DependencyInjection;
+using Cratis.Reflection;
 using Cratis.Types;
 namespace Cratis.Chronicle.Grains.Jobs;
 
@@ -75,7 +77,7 @@ public class JobTypes : IJobTypes
     {
         foreach (var jobClrType in types.FindMultiple<IJob>()
                      .Where(type => type is { IsClass: true, IsAbstract: false, IsInterface: false, IsGenericType: false }
-                                    && type != typeof(NullJob) && type.Assembly.FullName != typeof(IJob).Assembly.FullName))
+                                    && !type.HasAttribute<GeneratedCodeAttribute>() && type != typeof(NullJob) && type.Assembly.FullName != typeof(IJob).Assembly.FullName))
         {
             var jobTypeAttribute = jobClrType.GetCustomAttribute<JobTypeAttribute>();
             var jobType = jobTypeAttribute?.JobType ?? jobClrType;
@@ -83,11 +85,12 @@ public class JobTypes : IJobTypes
             {
                 throw new ArgumentException($"JobType for type {jobClrType} is not set");
             }
-            if (!_jobTypes.TryAdd(jobType, jobClrType))
+            var jobInterface = jobClrType.GetInterfaces().Single(jobInterfaceType => jobInterfaceType.GetInterfaces().Any(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IJob<>)));
+            if (!_jobTypes.TryAdd(jobType, jobInterface))
             {
-                throw new JobTypeAlreadyExists(jobType, _jobTypes[jobType], jobClrType);
+                throw new JobTypeAlreadyExists(jobType, _jobTypes[jobType], jobInterface);
             }
-            _jobTypePerType.Add(jobClrType, jobType);
+            _jobTypePerType.Add(jobInterface, jobType);
         }
     }
     void PopulateJobRequestTypes()
