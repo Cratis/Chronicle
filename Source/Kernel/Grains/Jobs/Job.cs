@@ -93,7 +93,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         JobId = this.GetPrimaryKey(out var keyExtension);
         JobKey = keyExtension;
         ThisJob = GrainFactory.GetReference<IJob<TRequest>>(this);
-        State.Type = ServiceProvider.GetRequiredService<IJobTypes>().GetFor(GetType()).Match(
+        State.Type = ServiceProvider.GetRequiredService<IJobTypes>().GetFor(this.GetGrainType()).Match(
             jobType => jobType,
             error => error switch
             {
