@@ -3,13 +3,12 @@
 
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
-
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.given;
 
-public class a_disconnected_reactor_observing_an_event(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
+public class a_disconnected_reactor_observing_no_event_types(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
 {
     public TaskCompletionSource Tcs;
-    public ReactorWithoutDelay Reactor;
+    public ReactorWithoutHandlers Reactor;
     public IObserver ReactorObserver;
     public override IEnumerable<Type> EventTypes => [typeof(SomeEvent), typeof(SomeOtherEvent)];
 
