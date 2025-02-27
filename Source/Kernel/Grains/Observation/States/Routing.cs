@@ -79,6 +79,13 @@ public class Routing(
             return state;
         }
 
+        if (!_subscription.EventTypes.Any())
+        {
+            logger.NoEventTypes();
+            await StateMachine.TransitionTo<Disconnected>();
+            return state;
+        }
+
         if (state.RunningState == ObserverRunningState.Replaying)
         {
             logger.Replaying();
