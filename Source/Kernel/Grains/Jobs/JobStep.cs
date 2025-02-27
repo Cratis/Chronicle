@@ -346,9 +346,17 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
         async Task<Result<PerformWorkError>> ReportError(PerformJobStepError error)
         {
-            logger.ReportFailurePerformingWork();
-            var reportFailureResult = await ThisJobStep.ReportFailure(error);
-            return reportFailureResult.Match(_ => Result<PerformWorkError>.Success(), _ => PerformWorkError.WorkerError);
+            try
+            {
+                logger.ReportFailurePerformingWork();
+                var reportFailureResult = await ThisJobStep.ReportFailure(error);
+                return reportFailureResult.Match(_ => Result<PerformWorkError>.Success(), _ => PerformWorkError.WorkerError);
+            }
+            catch (Exception ex)
+            {
+                logger.FailedUnexpectedly(ex);
+                return PerformWorkError.WorkerError;
+            }
         }
     }
 
