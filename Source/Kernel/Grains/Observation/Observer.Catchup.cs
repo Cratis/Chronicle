@@ -19,7 +19,6 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(State.Id, _observerKey);
 
         var subscription = await GetSubscription();
-
         var jobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
         if (jobs.Any(_ => _.Status == JobStatus.Running))
         {
@@ -37,7 +36,7 @@ public partial class Observer
         else
         {
             logger.StartCatchUpJob(State.NextEventSequenceNumber);
-            await _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(new(_observerKey, subscription, State.NextEventSequenceNumber, State.EventTypes));
+            await _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(new(_observerKey, subscription, State.NextEventSequenceNumber, subscription.EventTypes));
         }
     }
 
