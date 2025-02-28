@@ -25,7 +25,7 @@ public class JobStateSerializer(IJobTypes jobTypes) : SerializerBase<JobState>
     {
         var (jobState, requestBookmark, endBookmark) = DeserializeJobStateExceptRequest(context);
         context.Reader.ReturnToBookmark(requestBookmark);
-        var jobRequestClrType = jobTypes.GetRequestClrTypeFor(jobState.Type).Match(type => type, _ => throw new UnknownClrTypeForJobType(jobState.Type));
+        var jobRequestClrType = jobTypes.GetRequestClrTypeForOrThrow(jobState.Type);
         ValueType.GetProperty(nameof(JobState.Request))!
             .SetValue(jobState, BsonSerializer.Deserialize(context.Reader, jobRequestClrType));
 
