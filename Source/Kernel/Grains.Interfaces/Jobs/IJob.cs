@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Storage.Jobs;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Grains.Jobs;
 
@@ -62,6 +64,13 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// <param name="jobStepResult">The <see cref="JobStepResult"/> for the failed step.</param>
     /// <returns>Awaitable task.</returns>
     Task<Result<JobError>> OnStepFailed(JobStepId stepId, JobStepResult jobStepResult);
+
+    /// <summary>
+    /// Gets the job state.
+    /// </summary>
+    /// <returns>The job state.</returns>
+    [AlwaysInterleave]
+    Task<JobState> GetState();
 }
 
 /// <summary>

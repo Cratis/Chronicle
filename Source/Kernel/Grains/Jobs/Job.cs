@@ -79,6 +79,11 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     protected bool AllStepsCompletedSuccessfully => State.Progress.SuccessfulSteps == State.Progress.TotalSteps;
 
     /// <inheritdoc/>
+#pragma warning disable CA1721
+    public Task<JobState> GetState() => Task.FromResult<JobState>(State);
+#pragma warning restore CA1721
+
+    /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
@@ -92,13 +97,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         JobId = this.GetPrimaryKey(out var keyExtension);
         JobKey = keyExtension;
         ThisJob = GrainFactory.GetReference<IJob<TRequest>>(this);
-        State.Type = ServiceProvider.GetRequiredService<IJobTypes>().GetFor(this.GetGrainType()).Match(
-            jobType => jobType,
-            error => error switch
-            {
-                IJobTypes.GetForError.NoAssociatedJobType => throw new JobTypeNotAssociatedWithType(GetType()),
-                _ => throw new ArgumentOutOfRangeException(nameof(error), error, null)
-            });
+        State.Type = ServiceProvider.GetRequiredService<IJobTypes>().GetForOrThrow(this.GetGrainType());
         Storage = ServiceProvider.GetRequiredService<IStorage>()
             .GetEventStore(JobKey.EventStore)
             .GetNamespace(JobKey.Namespace);
