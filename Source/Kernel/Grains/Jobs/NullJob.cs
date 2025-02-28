@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Storage.Jobs;
 
 namespace Cratis.Chronicle.Grains.Jobs;
 
@@ -13,6 +14,9 @@ public class NullJob : IJob
 {
     /// <inheritdoc/>
     public Task<Result<JobError>> OnStepFailed(JobStepId stepId, JobStepResult jobStepResult) => Task.FromResult(Result.Success<JobError>());
+
+    /// <inheritdoc/>
+    public Task<JobType> GetJobType() => Task.FromResult<JobType>(new("NullJob"));
 
     /// <inheritdoc/>
     public Task<Result<JobError>> OnStepStopped(JobStepId stepId, JobStepResult jobStepResult) => Task.FromResult(Result.Success<JobError>());

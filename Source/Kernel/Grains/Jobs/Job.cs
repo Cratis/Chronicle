@@ -80,7 +80,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
 
     /// <inheritdoc/>
 #pragma warning disable CA1721
-    public Task<JobState> GetState() => Task.FromResult<JobState>(State);
+    public Task<JobType> GetJobType() => Task.FromResult(State.Type);
 #pragma warning restore CA1721
 
     /// <inheritdoc/>

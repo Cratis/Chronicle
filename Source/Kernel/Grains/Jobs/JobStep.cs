@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Workers;
 using Cratis.Chronicle.Storage.Jobs;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Jobs;
@@ -26,28 +27,23 @@ public abstract class JobStep<TRequest, TResult, TState>(
     ILogger<JobStep<TRequest, TResult, TState>> logger) : CpuBoundWorker<TRequest, JobStepResult>, IJobStep<TRequest, TResult, TState>, IJobObserver, IDisposable
     where TState : JobStepState
 {
+    IJobStep<TRequest, TResult, TState> _thisJobStep = null!;
     CancellationTokenSource? _cancellationTokenSource = new();
+    IJob? _job;
+
     bool _running;
 
     /// <summary>
     /// Gets the <see cref="JobStepId"/> for this job step.
     /// </summary>
-    public JobStepId JobStepId => this.GetPrimaryKey();
+    protected JobStepId JobStepId => this.GetPrimaryKey();
 
-    /// <summary>
-    /// Gets the parent job.
-    /// </summary>
-    protected IJob Job { get; private set; } = new NullJob();
+    IJob Job => _job ??= GetJobReference();
 
     /// <summary>
     /// Gets the parent job id.
     /// </summary>
     protected JobId JobId { get; private set; } = null!;
-
-    /// <summary>
-    /// Gets the job step as a Grain reference.
-    /// </summary>
-    protected IJobStep<TRequest, TResult, TState> ThisJobStep { get; private set; } = null!;
 
     /// <summary>
     /// Gets the state for the job step.
@@ -95,7 +91,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<StartJobStepError>> Start(GrainId jobId)
+    public async Task<Result<StartJobStepError>> Start(GrainId jobGrainId)
     {
         using var scope = logger.BeginJobStepScope(State);
         try
@@ -111,8 +107,9 @@ public abstract class JobStep<TRequest, TResult, TState>(
             }
 
             _running = true;
-            Job = GrainFactory.GetGrain(jobId).AsReference<IJob>();
-            ThisJobStep = GetReferenceToSelf<IJobStep<TRequest, TResult, TState>>();
+            var job = GrainFactory.GetGrain(jobGrainId).AsReference<IJob>();
+            State.JobType = await job.GetJobType();
+            _thisJobStep = GetReferenceToSelf<IJobStep<TRequest, TResult, TState>>();
 
             var started = await Start(_cancellationTokenSource!.Token);
             if (started)
@@ -178,10 +175,11 @@ public abstract class JobStep<TRequest, TResult, TState>(
         using var scope = logger.BeginJobStepScope(State);
         try
         {
-            // TODO: Here report either failed or stopped
-            var onStepFailedResult = await Job.OnStepFailed(JobStepId, JobStepResult.Failed(error));
-            return await onStepFailedResult.Match(
-                _ => WriteStatusChange(JobStepStatus.Failed, error.ErrorMessages, error.ExceptionStackTrace),
+            var result = error.Cancelled
+                ? await Job.OnStepStopped(JobStepId, JobStepResult.Failed(error))
+                : await Job.OnStepFailed(JobStepId, JobStepResult.Failed(error));
+            return await result.Match(
+                _ => WriteStatusChange(error.Cancelled ? JobStepStatus.Stopped : JobStepStatus.Failed, error.ErrorMessages, error.ExceptionStackTrace),
                 onStepFailedError =>
                 {
                     logger.FailedReportJobStepFailure(onStepFailedError);
@@ -230,6 +228,20 @@ public abstract class JobStep<TRequest, TResult, TState>(
     public Task OnJobPaused() => Stop();
 
     /// <summary>
+    /// Gets the parent job.
+    /// </summary>
+    /// <returns><see cref="IJob"/> grain reference.</returns>
+    protected IJob GetJobReference()
+    {
+        var jobGrainType = ServiceProvider.GetRequiredService<IJobTypes>().GetClrTypeForOrThrow(State.JobType);
+        _ = this.GetPrimaryKey(out var key);
+        var jobStepKey = (JobStepKey)key;
+        return GrainFactory.GetGrain(jobGrainType, State.Id.JobId, new JobKey(
+            jobStepKey.EventStore,
+            jobStepKey.Namespace)).AsReference<IJob>();
+    }
+
+    /// <summary>
     /// Prepare the step before it starts.
     /// </summary>
     /// <param name="request">The request object for the step.</param>
@@ -276,8 +288,8 @@ public abstract class JobStep<TRequest, TResult, TState>(
         using var scope = logger.BeginJobStepScope(Identifier, Name, JobStepStatus.Running);
 
         // TODO: Should we do something here if it fails?
-        _ = await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
-        var currentState = await ThisJobStep.GetState();
+        _ = await _thisJobStep.ReportStatusChange(JobStepStatus.Running);
+        var currentState = await _thisJobStep.GetState();
         var performStepResult = await PerformStep(currentState, _cancellationTokenSource.Token);
         var result = await performStepResult.Match(HandleJobStepResult, HandleException);
         DeactivateOnIdle();
@@ -289,45 +301,56 @@ public abstract class JobStep<TRequest, TResult, TState>(
             {
                 Result = jobStepResult
             };
-            if (!jobStepResult.TryGetError(out var error))
+            try
             {
-                if ((await Job.OnStepSucceeded(JobStepId, jobStepResult)).TryGetError(out var errorReportingSuccess))
+                if (!jobStepResult.TryGetError(out var error))
                 {
-                    logger.FailedReportJobStepSuccess(errorReportingSuccess);
-                    performWorkResult = performWorkResult with
+                    if ((await Job.OnStepSucceeded(JobStepId, jobStepResult)).TryGetError(out var errorReportingSuccess))
                     {
-                        Error = PerformWorkError.WorkerError
-                    };
-                }
+                        logger.FailedReportJobStepSuccess(errorReportingSuccess);
+                        performWorkResult = performWorkResult with
+                        {
+                            Error = PerformWorkError.WorkerError
+                        };
+                    }
 
-                if ((await ThisJobStep.ReportStatusChange(JobStepStatus.Succeeded)).TryGetError(out var errorChangingStatus))
+                    if ((await _thisJobStep.ReportStatusChange(JobStepStatus.Succeeded)).TryGetError(out var errorChangingStatus))
+                    {
+                        logger.PerformingWorkFailedPersistState(errorChangingStatus);
+                        performWorkResult = performWorkResult with
+                        {
+                            Error = PerformWorkError.WorkerError
+                        };
+                    }
+                }
+                else
                 {
-                    logger.PerformingWorkFailedPersistState(errorChangingStatus);
                     performWorkResult = performWorkResult with
                     {
-                        Error = PerformWorkError.WorkerError
+                        Error = error.Cancelled ? PerformWorkError.Cancelled : PerformWorkError.PerformingWorkError
                     };
+
+                    if ((await ReportError(error)).TryGetError(out var errorReportingFailure))
+                    {
+    #pragma warning disable CA1848 // This will rarely happen.
+                        logger.LogWarning("Failed to report that that the performing of job step was cancelled. Error: {ReportError}", errorReportingFailure);
+    #pragma warning restore CA1848
+                        performWorkResult = performWorkResult with
+                        {
+                            Error = errorReportingFailure
+                        };
+                    }
                 }
+                return performWorkResult;
             }
-            else
+            catch (Exception ex)
             {
-                performWorkResult = performWorkResult with
+                logger.FailedUnexpectedly(ex);
+                return performWorkResult with
                 {
-                    Error = error.Cancelled ? PerformWorkError.Cancelled : PerformWorkError.PerformingWorkError
+                    Error = PerformWorkError.WorkerError
                 };
-
-                if ((await ReportError(error)).TryGetError(out var errorReportingFailure))
-                {
-#pragma warning disable CA1848 // This will rarely happen.
-                    logger.LogWarning("Failed to report that that the performing of job step was cancelled. Error: {ReportError}", errorReportingFailure);
-#pragma warning restore CA1848
-                    performWorkResult = performWorkResult with
-                    {
-                        Error = errorReportingFailure
-                    };
-                }
             }
-            return performWorkResult;
         }
 
         async Task<PerformWorkResult<JobStepResult>> HandleException(Exception ex)
@@ -349,7 +372,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
             try
             {
                 logger.ReportFailurePerformingWork();
-                var reportFailureResult = await ThisJobStep.ReportFailure(error);
+                var reportFailureResult = await _thisJobStep.ReportFailure(error);
                 return reportFailureResult.Match(_ => Result<PerformWorkError>.Success(), _ => PerformWorkError.WorkerError);
             }
             catch (Exception ex)
