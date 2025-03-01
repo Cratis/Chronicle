@@ -9,6 +9,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -137,6 +138,17 @@ public class Reactors : IReactors
         var reactorHandler = _handlers.Values.SingleOrDefault(_ => _.Id == id);
         ThrowIfUnknownReactorId(reactorHandler, id);
         return reactorHandler!;
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions<TReactor>() =>
+        GetFailedPartitions(typeof(TReactor));
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions(Type reactorType)
+    {
+        var handler = _handlers[reactorType];
+        return _eventStore.FailedPartitions.GetFailedPartitionsFor(handler.Id);
     }
 
     static void ThrowIfUnknownReactorId(ReactorHandler? handler, ReactorId reactorId)

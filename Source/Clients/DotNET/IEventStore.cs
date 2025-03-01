@@ -6,6 +6,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
@@ -72,6 +73,11 @@ public interface IEventStore
     /// Gets the <see cref="IProjections"/> for the event store.
     /// </summary>
     IProjections Projections { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IFailedPartitions"/> for the event store.
+    /// </summary>
+    IFailedPartitions FailedPartitions { get; }
 
     /// <summary>
     /// Discover all artifacts for the event store.

@@ -141,9 +141,9 @@ public class HandleEventsForPartition(
                     exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
                     lastEventSequenceNumberAttempted = lastSuccessfullyHandledEventSequenceNumber.Next();
                 }
-                else
+                else if (handleEventsResult.TryGetResult(out var handledEventsResult))
                 {
-                    var (eventObserverResult, handledEvents) = handleEventsResult.AsT0;
+                    var (eventObserverResult, handledEvents) = handledEventsResult;
                     if (eventObserverResult.LastSuccessfulObservation.IsActualValue)
                     {
                         handledCount = events.Current.Count(_ => _.Metadata.SequenceNumber <= eventObserverResult.LastSuccessfulObservation);

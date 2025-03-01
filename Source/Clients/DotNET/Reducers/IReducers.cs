@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Observation;
+
 namespace Cratis.Chronicle.Reducers;
 
 /// <summary>
@@ -69,4 +71,18 @@ public interface IReducers
     /// <param name="reducerId"><see cref="ReducerId"/> to get for.</param>
     /// <returns>The type.</returns>
     Type GetClrType(ReducerId reducerId);
+
+    /// <summary>
+    /// Get any failed partitions for a specific reducer.
+    /// </summary>
+    /// <typeparam name="TReducer">Type of reducer.</typeparam>
+    /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
+    Task<IEnumerable<FailedPartition>> GetFailedPartitions<TReducer>();
+
+    /// <summary>
+    /// Get any failed partitions for a specific reducer.
+    /// </summary>
+    /// <param name="reducerType">Type of reducer.</param>
+    /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
+    Task<IEnumerable<FailedPartition>> GetFailedPartitions(Type reducerType);
 }
