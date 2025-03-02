@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 
-namespace Cratis.Chronicle.Concepts.Configuration;
+namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
 /// Represents a system that can provide the <see cref="Observers"/> configuration for an observer.

@@ -13,6 +13,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Compliance/Compliance.csproj" />
+        <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Projections/Projections.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />

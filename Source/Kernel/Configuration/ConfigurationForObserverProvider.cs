@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Cratis.Chronicle.Concepts.Configuration;
+namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IConfigurationForObserverProvider"/>.

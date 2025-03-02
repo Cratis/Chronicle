@@ -3,7 +3,7 @@
 
 using System.Globalization;
 using Cratis.Chronicle.Api;
-using Cratis.Chronicle.Concepts.Configuration;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Setup;

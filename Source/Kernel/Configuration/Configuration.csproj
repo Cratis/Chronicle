@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Configuration</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Configuration</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Concepts/Concepts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+    </ItemGroup>
+</Project>
