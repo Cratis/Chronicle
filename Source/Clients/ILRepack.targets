@@ -41,7 +41,7 @@
         Internalize="true"
         InternalizeExclude="@(DoNotInternalizeAssembly)"
         OutputFile="$(TargetPath)"
-        Parallel="true"
+        Parallel="false"
         LibraryPath="@(LibraryPath)"
         Verbose="false"
         XmlDocumentation="true"
