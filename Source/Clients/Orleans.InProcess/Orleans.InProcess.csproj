@@ -66,6 +66,8 @@
     </ItemGroup>
 
     <ItemGroup>
+        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.DotNET.dll" />
+        <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" />
         <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Setup.dll" />
     </ItemGroup>
 
