@@ -37,7 +37,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     {
         var builder = Host.CreateDefaultBuilder();
 
-        var chronicleOptions = new Concepts.Configuration.ChronicleOptions();
+        var chronicleOptions = new Configuration.ChronicleOptions();
         builder.UseCratisMongoDB(
             mongo =>
             {
