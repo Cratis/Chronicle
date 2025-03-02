@@ -43,7 +43,7 @@
         OutputFile="$(TargetPath)"
         Parallel="true"
         LibraryPath="@(LibraryPath)"
-        Verbose="true"
+        Verbose="false"
         XmlDocumentation="true"
         Union="true"
         AllowedDuplicateNamespaces="Cratis.Chronicle.Projections"
