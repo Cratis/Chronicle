@@ -18,10 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Connections/Connections.csproj">
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
+        <ProjectReference Include="../Connections/Connections.csproj"/>
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
@@ -34,7 +31,6 @@
 
     <ItemGroup>
         <InternalAssembly Include="$(OutputPath)$(ContractsImplementationAssembly).dll" />
-        <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
         <DoNotInternalizeAssembly Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
     </ItemGroup>
 
