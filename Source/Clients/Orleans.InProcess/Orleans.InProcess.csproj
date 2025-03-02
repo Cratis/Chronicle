@@ -12,10 +12,23 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
-        <ProjectReference Include="../Orleans/Orleans.csproj"/>
-        <ProjectReference Include="../../Kernel/Storage/Storage.csproj"/>
+        <ProjectReference Include="../DotNET/DotNET.csproj">
+            <Properties>Repack=false</Properties>
+        </ProjectReference>
+
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj">
+            <Properties>Repack=false</Properties>
+        </ProjectReference>
+
+        <ProjectReference Include="../Orleans/Orleans.csproj">
+            <Properties>Repack=false</Properties>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+
         <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
 
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
