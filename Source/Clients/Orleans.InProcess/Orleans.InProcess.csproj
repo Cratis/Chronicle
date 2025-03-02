@@ -12,23 +12,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj">
-            <Properties>Repack=false</Properties>
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
+        <ProjectReference Include="../DotNET/DotNET.csproj"/>
 
-        <ProjectReference Include="../AspNetCore/AspNetCore.csproj">
-            <Properties>Repack=false</Properties>
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
 
-        <ProjectReference Include="../Orleans/Orleans.csproj">
-            <Properties>Repack=false</Properties>
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
+        <ProjectReference Include="../Orleans/Orleans.csproj"/>
 
         <ProjectReference Include="../Connections/Connections.csproj">
             <PrivateAssets>all</PrivateAssets>
