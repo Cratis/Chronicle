@@ -31,11 +31,6 @@
 
         <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
 
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
-
         <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
