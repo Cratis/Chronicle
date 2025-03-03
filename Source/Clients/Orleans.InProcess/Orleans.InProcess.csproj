@@ -29,7 +29,9 @@
             <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj">
             <PrivateAssets>all</PrivateAssets>
@@ -80,7 +82,6 @@
 
     <ItemGroup>
         <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.DotNET.dll" />
-        <AssemblyToMerge Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.AspNetCore.dll" />
