@@ -41,8 +41,22 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --framework net9.0 -p:Repack=true
 
-      - name: Run tests
-        run: dotnet test --no-build --configuration Release --framework net9.0 --settings specs.runsettings
+  dotnet-test:
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+
+        - name: Setup .Net
+          uses: actions/setup-dotnet@v4
+          with:
+            dotnet-version: |
+              ${{ env.DOTNET8_VERSION }}
+              ${{ env.DOTNET_VERSION }}
+
+        - name: Run tests
+          run: dotnet test --configuration Release --framework net9.0 --settings specs.runsettings
 
   integration:
     runs-on: ubuntu-latest
