@@ -5,7 +5,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Workers;
 using Cratis.Chronicle.Storage.Jobs;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Jobs;
@@ -107,7 +106,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
             _running = true;
             var job = GrainFactory.GetGrain(jobGrainId).AsReference<IJob>();
             State.JobType = await job.GetJobType();
-            _thisJobStep = GetReferenceToSelf<IJobStep<TRequest, TResult, TState>>();
+            _thisJobStep = this.AsReference<IJobStep<TRequest, TResult, TState>>();
             _job = GrainFactory.GetGrain<IJob>(jobGrainId);
             var started = await Start(_cancellationTokenSource!.Token);
             if (started)
@@ -247,15 +246,6 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <param name="request">The <typeparamref name="TRequest"/> initial request arguments.</param>
     /// <returns>The <see cref="ValueTask"/> representing the asynchronous operation.</returns>
     protected abstract ValueTask InitializeState(TRequest request);
-
-    /// <summary>
-    /// Gets a grain reference to self.
-    /// </summary>
-    /// <typeparam name="TGrain">The type of the grain.</typeparam>
-    /// <returns>The grain reference.</returns>
-    protected TGrain GetReferenceToSelf<TGrain>()
-        where TGrain : IJobStep<TRequest, TResult, TState>
-        => GrainFactory.GetGrain(GrainReference.GrainId).AsReference<TGrain>();
 
     /// <inheritdoc/>
     protected override async Task<PerformWorkResult<JobStepResult>> PerformWork()

@@ -41,7 +41,7 @@ public class HandleEventsForPartition(
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _selfGrainReference = GetReferenceToSelf<IHandleEventsForPartition>();
+        _selfGrainReference = this.AsReference<IHandleEventsForPartition>();
         return base.OnActivateAsync(cancellationToken);
     }
 
