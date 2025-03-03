@@ -29,7 +29,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
 {
     IJobStep<TRequest, TResult, TState> _thisJobStep = null!;
     CancellationTokenSource? _cancellationTokenSource = new();
-    IJob? _job;
+    IJob _job = new NullJob();
 
     bool _running;
 
@@ -37,8 +37,6 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// Gets the <see cref="JobStepId"/> for this job step.
     /// </summary>
     protected JobStepId JobStepId => this.GetPrimaryKey();
-
-    IJob Job => _job ??= GetJobReference();
 
     /// <summary>
     /// Gets the parent job id.
@@ -110,7 +108,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
             var job = GrainFactory.GetGrain(jobGrainId).AsReference<IJob>();
             State.JobType = await job.GetJobType();
             _thisJobStep = GetReferenceToSelf<IJobStep<TRequest, TResult, TState>>();
-
+            _job = GrainFactory.GetGrain<IJob>(jobGrainId);
             var started = await Start(_cancellationTokenSource!.Token);
             if (started)
             {
@@ -175,8 +173,8 @@ public abstract class JobStep<TRequest, TResult, TState>(
         try
         {
             var result = error.Cancelled
-                ? await Job.OnStepStopped(JobStepId, JobStepResult.Failed(error))
-                : await Job.OnStepFailed(JobStepId, JobStepResult.Failed(error));
+                ? await _job.OnStepStopped(JobStepId, JobStepResult.Failed(error))
+                : await _job.OnStepFailed(JobStepId, JobStepResult.Failed(error));
             return await result.Match(
                 _ => WriteStatusChange(error.Cancelled ? JobStepStatus.Stopped : JobStepStatus.Failed, error.ErrorMessages, error.ExceptionStackTrace),
                 onStepFailedError =>
@@ -225,20 +223,6 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
     /// <inheritdoc/>
     public Task OnJobPaused() => Stop();
-
-    /// <summary>
-    /// Gets the parent job.
-    /// </summary>
-    /// <returns><see cref="IJob"/> grain reference.</returns>
-    protected IJob GetJobReference()
-    {
-        var jobGrainType = ServiceProvider.GetRequiredService<IJobTypes>().GetClrTypeForOrThrow(State.JobType);
-        _ = this.GetPrimaryKey(out var key);
-        var jobStepKey = (JobStepKey)key;
-        return GrainFactory.GetGrain(jobGrainType, State.Id.JobId, new JobKey(
-            jobStepKey.EventStore,
-            jobStepKey.Namespace)).AsReference<IJob>();
-    }
 
     /// <summary>
     /// Prepare the step before it starts.
@@ -302,7 +286,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
             {
                 if (!jobStepResult.TryGetError(out var error))
                 {
-                    if ((await Job.OnStepSucceeded(JobStepId, jobStepResult)).TryGetError(out var errorReportingSuccess))
+                    if ((await _job.OnStepSucceeded(JobStepId, jobStepResult)).TryGetError(out var errorReportingSuccess))
                     {
                         logger.FailedReportJobStepSuccess(errorReportingSuccess);
                         performWorkResult = performWorkResult with
