@@ -22,7 +22,7 @@ public class TheJobStep(
 
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _selfGrainReference = GetReferenceToSelf<ITheJobStep>();
+        _selfGrainReference = this.AsReference<ITheJobStep>();
         return base.OnActivateAsync(cancellationToken);
     }
 
