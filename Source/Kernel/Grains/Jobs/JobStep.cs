@@ -152,7 +152,6 @@ public abstract class JobStep<TRequest, TResult, TState>(
             var cancelTokenTask = _cancellationTokenSource?.CancelAsync() ?? Task.CompletedTask;
             await cancelTokenTask;
             _cancellationTokenSource = null;
-            DeactivateOnIdle();
             return await WriteStatusChange(JobStepStatus.Stopped);
         }
         catch (Exception ex)
@@ -291,9 +290,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         _ = await _thisJobStep.ReportStatusChange(JobStepStatus.Running);
         var currentState = await _thisJobStep.GetState();
         var performStepResult = await PerformStep(currentState, _cancellationTokenSource.Token);
-        var result = await performStepResult.Match(HandleJobStepResult, HandleException);
-        DeactivateOnIdle();
-        return result;
+        return await performStepResult.Match(HandleJobStepResult, HandleException);
 
         async Task<PerformWorkResult<JobStepResult>> HandleJobStepResult(JobStepResult jobStepResult)
         {
@@ -332,9 +329,9 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
                     if ((await ReportError(error)).TryGetError(out var errorReportingFailure))
                     {
-    #pragma warning disable CA1848 // This will rarely happen.
+#pragma warning disable CA1848 // This will rarely happen.
                         logger.LogWarning("Failed to report that that the performing of job step was cancelled. Error: {ReportError}", errorReportingFailure);
-    #pragma warning restore CA1848
+#pragma warning restore CA1848
                         performWorkResult = performWorkResult with
                         {
                             Error = errorReportingFailure
@@ -350,6 +347,10 @@ public abstract class JobStep<TRequest, TResult, TState>(
                 {
                     Error = PerformWorkError.WorkerError
                 };
+            }
+            finally
+            {
+                DeactivateOnIdle();
             }
         }
 
