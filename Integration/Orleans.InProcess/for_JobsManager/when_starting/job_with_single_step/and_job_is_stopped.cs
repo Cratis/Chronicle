@@ -32,11 +32,9 @@ public class and_job_is_stopped(context context) : Given<context>(context)
             await TheJobStepProcessor.WaitForAllPreparedStepsToBeStarted();
             await JobsManager.Stop(JobId);
             taskCompletionSource.SetResult();
-            var getJobState = await JobStorage.GetJob(JobId);
+            CompletedJobState = await JobStorage.WaitTillJobCompleted<JobWithSingleStepState>(JobId);
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
-            CompletedJobState = getJobState.AsT0;
             JobStepStates = getJobStepState.AsT0;
-            await Task.Delay(1.Seconds());
         }
     }
 

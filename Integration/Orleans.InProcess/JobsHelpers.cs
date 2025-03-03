@@ -1,8 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Storage.Jobs;
+using JobStatus = Cratis.Chronicle.Contracts.Jobs.JobStatus;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
@@ -50,6 +53,23 @@ public static class JobsHelpers
             await Task.Delay(20);
         }
         return jobs;
+    }
+
+    public static async Task<TJobState> WaitTillJobCompleted<TJobState>(this IJobStorage jobStorage, JobId jobId, TimeSpan? timeout = null)
+        where TJobState : JobState
+    {
+        timeout ??= TimeSpan.FromSeconds(5);
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (true)
+        {
+            var getJobState = await jobStorage.Read<TJobState>(jobId);
+            var conditionMet = getJobState.Match(state => state.Progress.IsCompleted, _ => false, _ => false);
+            if (conditionMet)
+            {
+                return getJobState.AsT0;
+            }
+            await Task.Delay(20, cts.Token);
+        }
     }
 
     static Task<IEnumerable<Job>> GetJobs(this IEventStore eventStore) =>
