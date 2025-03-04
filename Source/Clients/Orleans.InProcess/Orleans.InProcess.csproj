@@ -105,6 +105,7 @@
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
+        <PackageReference Include="OneOf" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Cratis.Applications.Orleans" />
         <PackageReference Include="NJsonSchema" />
