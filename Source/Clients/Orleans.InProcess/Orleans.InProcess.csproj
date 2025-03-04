@@ -84,6 +84,7 @@
         <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.DotNET.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
+        <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Diagnostics.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.AspNetCore.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Orleans.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" />
