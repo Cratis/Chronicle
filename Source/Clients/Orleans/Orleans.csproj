@@ -11,7 +11,10 @@
 
     <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
