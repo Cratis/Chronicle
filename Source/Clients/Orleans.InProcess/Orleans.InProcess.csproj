@@ -105,6 +105,7 @@
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Diagnostics.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.AspNetCore.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Orleans.dll" />
+        <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Grains.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Setup.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Configuration.dll" />
