@@ -24,6 +24,11 @@
             <Properties>Repack=false</Properties>
         </ProjectReference>
 
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+
         <ProjectReference Include="../Connections/Connections.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
@@ -92,6 +97,7 @@
 
     <ItemGroup>
         <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.DotNET.dll" />
+        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" />
         <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
         <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.dll" />
