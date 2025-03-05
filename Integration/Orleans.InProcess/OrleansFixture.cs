@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.EventSequences;
@@ -36,7 +37,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     {
         var builder = Host.CreateDefaultBuilder();
 
-        var chronicleOptions = new Concepts.Configuration.ChronicleOptions();
+        var chronicleOptions = new Configuration.ChronicleOptions();
         builder.UseCratisMongoDB(
             mongo =>
             {
@@ -90,6 +91,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public MongoDBDatabase ReadModelsDatabase => GlobalFixture.ReadModels;
 
     public IEventStore EventStore => Services.GetRequiredService<IEventStore>();
+    internal IChronicleServicesAccessor ServicesAccessor => (EventStore.Connection as IChronicleServicesAccessor)!;
     public IChronicleClient ChronicleClient => Services.GetRequiredService<IChronicleClient>();
     public IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore(Constants.EventStore);
     public IEventStoreNamespaceStorage GetEventStoreNamespaceStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => EventStoreStorage.GetNamespace(namespaceName ?? Concepts.EventStoreNamespaceName.Default);

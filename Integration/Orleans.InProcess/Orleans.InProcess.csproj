@@ -7,8 +7,17 @@
     <ItemGroup>
         <ProjectReference Include="..\Base\Base.csproj" />
         <ProjectReference Include="..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
+        <ProjectReference Include="..\..\Source\Clients\Connections\Connections.csproj" />
+        <ProjectReference Include="..\..\Source\Clients\Orleans\Orleans.csproj" />
         <ProjectReference Include="..\..\Source\Clients\Orleans.InProcess\Orleans.InProcess.csproj" />
         <ProjectReference Include="..\..\Source\Kernel\Storage.MongoDB\Storage.MongoDB.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Source\Kernel\Concepts\Concepts.csproj" />
+        <ProjectReference Include="..\..\Source\Kernel\Contracts\Contracts.csproj" />
+        <ProjectReference Include="..\..\Source\Kernel\Grains\Grains.csproj" />
+        <ProjectReference Include="..\..\Source\Kernel\Diagnostics\Diagnostics.csproj" />
     </ItemGroup>
 
     <ItemGroup>

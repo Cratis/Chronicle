@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.Jobs;
@@ -76,7 +76,7 @@ public static class ChronicleServerSiloBuilderExtensions
             var storage = sp.GetRequiredService<IStorage>();
             var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();
             var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
-            return new Cratis.Chronicle.Connections.Services(
+            return new Cratis.Chronicle.Contracts.Services(
                 new Cratis.Chronicle.Services.EventStores(storage),
                 new Cratis.Chronicle.Services.Namespaces(storage),
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
