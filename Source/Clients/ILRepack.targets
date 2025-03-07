@@ -29,7 +29,10 @@
         <InternalNamespaces>@(InternalAssemblies->'%(Filename)', ';')</InternalNamespaces>
         <InternalAssemblyNames>@(InternalAssemblies->'%(Filename)', ';')</InternalAssemblyNames>
         <AssemblyNamesToFix>@(AssembliesToFix->'%(Filename)', ';')</AssemblyNamesToFix>
+        <RemoveReferences>@(RemoveReference->'%(Identity)', ';')</RemoveReferences>
     </PropertyGroup>
+
+    <Message Text="Remove References $(RemoveReferences)" Importance="high" />
 
     <ILRepack
         AllowDuplicateResources="false"
@@ -51,6 +54,6 @@
         TargetKind="SameAsPrimaryAssembly"/>
 
     <Exec Command="dotnet run $(TargetPath) &quot;$(InternalNamespaces)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/InternalsVerifier" />
-    <Exec Command="dotnet run $(TargetPath) &quot;$(AssemblyNamesToFix)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />
+    <Exec Command="dotnet run $(TargetPath) &quot;$(AssemblyNamesToFix)&quot; &quot;$(RemoveReferences)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />
   </Target>
 </Project>
