@@ -105,7 +105,7 @@ public class Sink(
     public async Task EndReplay()
     {
         await collections.EndReplay();
-        _isReplaying = true;
+        _isReplaying = false;
     }
 
     async Task RemoveChildFromAll(Key key, ChildRemovedFromAll childRemoved)
