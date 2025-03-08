@@ -8,6 +8,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.Extensions.Logging;
+using Orleans;
 using Server::Cratis.Chronicle.Services.Clients;
 
 namespace Cratis.Chronicle.Orleans.InProcess;

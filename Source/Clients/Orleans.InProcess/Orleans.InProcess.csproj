@@ -111,9 +111,9 @@
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Configuration.dll" />
         <DoNotInternalize Include="ChronicleOptions" />
         <DoNotInternalize Include="MongoDBChronicleBuilderExtensions" />
-        <RemoveReference Include="Cratis.Chronicle.Contracts" />
+        <!-- <RemoveReference Include="Cratis.Chronicle.Contracts" />
         <RemoveReference Include="Cratis.Chronicle.Connections" />
-        <RemoveReference Include="Cratis.Chronicle.Infrastructure" />
+        <RemoveReference Include="Cratis.Chronicle.Infrastructure" /> -->
     </ItemGroup>
 
     <ItemGroup>
