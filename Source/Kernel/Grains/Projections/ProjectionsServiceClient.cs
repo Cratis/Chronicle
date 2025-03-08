@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to use for getting grains.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting services.</param>
-public class ProjectionsServiceClient(IGrainFactory grainFactory, IServiceProvider serviceProvider) : GrainServiceClient<IProjectionsServiceClient>(serviceProvider), IProjectionsServiceClient
+public class ProjectionsServiceClient(IGrainFactory grainFactory, IServiceProvider serviceProvider) : GrainServiceClient<IProjectionsService>(serviceProvider), IProjectionsServiceClient
 {
     readonly IManagementGrain _managementGrain = grainFactory.GetGrain<IManagementGrain>(1);
 
@@ -23,6 +23,16 @@ public class ProjectionsServiceClient(IGrainFactory grainFactory, IServiceProvid
         foreach (var host in hosts.Keys)
         {
             await GetGrainService(host).Register(eventStore, definitions);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        var hosts = await _managementGrain.GetHosts(true);
+        foreach (var host in hosts.Keys)
+        {
+            await GetGrainService(host).NamespaceAdded(eventStore, @namespace);
         }
     }
 }

@@ -19,4 +19,12 @@ public interface IProjectionsService : IGrainService
     /// <param name="definitions">A collection of <see cref="ProjectionDefinition"/>.</param>
     /// <returns>Awaitable task.</returns>
     Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions);
+
+    /// <summary>
+    /// Triggered when a namespace is added to an event store.
+    /// </summary>
+    /// <param name="eventStore">Name of the event store.</param>
+    /// <param name="namespace">Name of the namespace.</param>
+    /// <returns>Awaitable task.</returns>
+    Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 }

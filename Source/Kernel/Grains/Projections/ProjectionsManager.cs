@@ -58,12 +58,17 @@ public class ProjectionsManager(
     /// <inheritdoc/>
     public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
     {
+        var eventStore = streamSubscription.ChannelId.GetKeyAsString();
+        if (_eventStoreName != eventStore) return Task.CompletedTask;
+
         streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
         return Task.CompletedTask;
     }
 
     async Task OnNamespaceAdded(NamespaceAdded added)
     {
+        await projectionsService.NamespaceAdded(_eventStoreName, added.Namespace);
+
         foreach (var projectionDefinition in State.Projections)
         {
             var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);

@@ -7,7 +7,6 @@ using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
-using Orleans.BroadcastChannel;
 
 namespace Cratis.Chronicle.Grains.Projections;
 
@@ -20,13 +19,14 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
 /// <param name="projections"><see cref="IProjections"/> for managing projections.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+[ImplicitChannelSubscription]
 public class ProjectionsService(
     GrainId grainId,
     Silo silo,
     IGrainFactory grainFactory,
     IStorage storage,
     IProjections projections,
-    ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IProjectionsService, IOnBroadcastChannelSubscribed
+    ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IProjectionsService
 {
     /// <inheritdoc/>
     public override async Task Init(IServiceProvider serviceProvider)
@@ -41,13 +41,6 @@ public class ProjectionsService(
     }
 
     /// <inheritdoc/>
-    public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
-    {
-        streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
     public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
     {
         var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
@@ -55,10 +48,7 @@ public class ProjectionsService(
         await projections.Register(eventStore, definitions, allNamespaces);
     }
 
-    async Task OnNamespaceAdded(NamespaceAdded added)
-    {
-        await projections.AddNamespace(added.EventStore, added.Namespace);
-    }
-
-    Task OnError(Exception exception) => Task.CompletedTask;
+    /// <inheritdoc/>
+    public Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+        projections.AddNamespace(eventStore, @namespace);
 }
