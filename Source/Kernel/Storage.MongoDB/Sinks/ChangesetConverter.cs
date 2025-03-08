@@ -205,12 +205,12 @@ public class ChangesetConverter(
 
         var joinArrayFiltersForDocument = new ArrayFilters();
         ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber, isReplaying).Wait();
-        BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
 
         if (!hasJoinChanges)
         {
             return;
         }
+        BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
         var filter = CreateJoinedFilterDefinition(key, joined);
         joinTasks.Add(collection.UpdateManyAsync(
             filter,
