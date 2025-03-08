@@ -10,12 +10,16 @@ namespace Cratis.Chronicle.Services;
 /// <summary>
 /// Represents an implementation of <see cref="INamespaces"/>.
 /// </summary>
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage">The <see cref="IStorage"/> for working with the storage.</param>
-public class Namespaces(IStorage storage) : INamespaces
+public class Namespaces(IGrainFactory grainFactory, IStorage storage) : INamespaces
 {
     /// <inheritdoc/>
-    public Task Ensure(EnsureNamespace command) =>
-        storage.GetEventStore(command.EventStore).Namespaces.Ensure(command.Name);
+    public async Task Ensure(EnsureNamespace command)
+    {
+        var namespaces = grainFactory.GetGrain<Grains.Namespaces.INamespaces>(command.EventStore);
+        await namespaces.Ensure(command.Name);
+    }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<string>> GetNamespaces(GetNamespacesRequest request)

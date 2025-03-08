@@ -79,7 +79,7 @@ public static class ChronicleServerSiloBuilderExtensions
             var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
             return new Cratis.Chronicle.Connections.Services(
                 new Cratis.Chronicle.Services.EventStores(storage),
-                new Cratis.Chronicle.Services.Namespaces(storage),
+                new Cratis.Chronicle.Services.Namespaces(grainFactory, storage),
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
                 new Cratis.Chronicle.Services.Identities.Identities(storage),
                 new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
