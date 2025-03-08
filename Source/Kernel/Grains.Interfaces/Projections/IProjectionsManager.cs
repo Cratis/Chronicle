@@ -17,9 +17,15 @@ public interface IProjectionsManager : IGrainWithStringKey
     Task Ensure();
 
     /// <summary>
+    /// Get all the <see cref="ProjectionDefinition">projection definitions</see> available.
+    /// </summary>
+    /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
+    Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions();
+
+    /// <summary>
     /// Register a set of <see cref="ProjectionDefinition"/> for the event store it belongs to.
     /// </summary>
     /// <param name="definitions">A collection of <see cref="ProjectionDefinition"/>.</param>
-    /// <returns>Async task.</returns>
+    /// <returns>Awaitable task.</returns>
     Task Register(IEnumerable<ProjectionDefinition> definitions);
 }
