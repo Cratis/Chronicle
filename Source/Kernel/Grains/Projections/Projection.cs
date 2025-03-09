@@ -100,10 +100,11 @@ public class Projection(
             var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
             await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
                 "Projection definition has changed.",
-                new ReplayCandidateRequest
+                new()
                 {
                     ObserverId = key.ProjectionId,
-                    ObserverKey = new ObserverKey(key.ProjectionId, key.EventStore, @namespace, key.EventSequenceId),
+                    ObserverKey = new(key.ProjectionId, key.EventStore, @namespace, key.EventSequenceId),
+                    ObserverType = ObserverType.Projection,
                     Reasons = [new ProjectionDefinitionChangedReplayCandidateReason()]
                 });
         }

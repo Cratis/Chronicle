@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Recommendations;
@@ -24,6 +23,6 @@ public class ReplayCandidateRecommendation : Recommendation<ReplayCandidateReque
         var subscription = await observer.GetSubscription();
         var eventTypes = await observer.GetEventTypes();
 
-        await jobsManager.Start<IReplayObserver, ReplayObserverRequest>(new(request.ObserverKey, subscription, eventTypes));
+        await jobsManager.Start<IReplayObserver, ReplayObserverRequest>(new(request.ObserverKey, request.ObserverType, subscription, eventTypes));
     }
 }

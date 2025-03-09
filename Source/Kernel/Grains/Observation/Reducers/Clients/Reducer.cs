@@ -108,10 +108,11 @@ public class Reducer(
             var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
             await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
                 "Reducer definition has changed.",
-                new ReplayCandidateRequest
+                new()
                 {
                     ObserverId = key.ReducerId,
-                    ObserverKey = new ObserverKey(key.ReducerId, key.EventStore, @namespace, key.EventSequenceId),
+                    ObserverKey = new(key.ReducerId, key.EventStore, @namespace, key.EventSequenceId),
+                    ObserverType = ObserverType.Reducer,
                     Reasons = [new ReducerDefinitionChangedReplayCandidateReason()]
                 });
         }

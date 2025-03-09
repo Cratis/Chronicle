@@ -48,6 +48,7 @@ public class ReplayObserverPartition(ILogger<ReplayObserverPartition> logger) : 
             CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
                     request.ObserverKey,
+                    request.ObserverType,
                     request.ObserverSubscription,
                     request.Key,
                     request.FromSequenceNumber,

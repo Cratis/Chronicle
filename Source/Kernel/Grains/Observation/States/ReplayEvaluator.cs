@@ -32,10 +32,11 @@ public class ReplayEvaluator(
         var recommendationsManager = grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(eventStore, @namespace));
         await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
             "Event types has changed.",
-            new ReplayCandidateRequest
+            new()
             {
                 ObserverId = context.Id,
                 ObserverKey = context.Key,
+                ObserverType = context.State.Type,
                 Reasons =
                 [
                     new EventTypesChangedReplayCandidateReason(
@@ -47,13 +48,13 @@ public class ReplayEvaluator(
         return false;
     }
 
-    bool NeedsToReplay(ReplayEvaluationContext context) =>
+    static bool NeedsToReplay(ReplayEvaluationContext context) =>
         HasDefinitionChanged(context) && HasEventsInSequence(context);
 
-    bool HasEventsInSequence(ReplayEvaluationContext context) =>
+    static bool HasEventsInSequence(ReplayEvaluationContext context) =>
         context.TailEventSequenceNumber.IsActualValue && context.TailEventSequenceNumberForEventTypes.IsActualValue;
 
-    bool HasDefinitionChanged(ReplayEvaluationContext context) =>
+    static bool HasDefinitionChanged(ReplayEvaluationContext context) =>
             context.State.EventTypes.Count() != context.Subscription.EventTypes.Count() ||
             !context.Subscription.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(context.State.EventTypes.OrderBy(_ => _.Id.Value));
 }
