@@ -21,29 +21,24 @@ public class SinkCollections(
     IMongoDatabase database) : ISinkCollections
 {
     bool _isReplaying;
-    DateTimeOffset _replayStart;
-
     string ReplayCollectionName => $"replay-{model.Name}";
 
     /// <inheritdoc/>
-    public async Task BeginReplay()
+    public async Task BeginReplay(Chronicle.Storage.Sinks.ReplayContext context)
     {
         _isReplaying = true;
-        _replayStart = DateTimeOffset.UtcNow;
         await PrepareInitialRun();
     }
 
     /// <inheritdoc/>
-    public async Task EndReplay()
+    public async Task EndReplay(Chronicle.Storage.Sinks.ReplayContext context)
     {
         var rewindName = ReplayCollectionName;
-        var rewoundCollectionsPrefix = $"{model.Name}-";
-        var oldCollectionName = $"{rewoundCollectionsPrefix}{_replayStart:yyyyMMddHHmmss}";
 
         var collectionNames = (await database.ListCollectionNamesAsync()).ToList();
         if (collectionNames.Contains(model.Name))
         {
-            await database.RenameCollectionAsync(model.Name, oldCollectionName);
+            await database.RenameCollectionAsync(model.Name, context.RevertModel);
         }
 
         if (collectionNames.Contains(rewindName))

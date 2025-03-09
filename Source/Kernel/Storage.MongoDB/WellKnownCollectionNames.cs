@@ -107,4 +107,9 @@ public static class WellKnownCollectionNames
     /// The collection that holds the definitions of constraints.
     /// </summary>
     public const string Constraints = "constraints";
+
+    /// <summary>
+    /// The collection that holds replay contexts.
+    /// </summary>
+    public const string ReplayContexts = "replay-contexts";
 }

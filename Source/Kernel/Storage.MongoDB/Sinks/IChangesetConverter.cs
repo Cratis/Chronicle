@@ -25,6 +25,5 @@ public interface IChangesetConverter
     Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(
         Key key,
         IChangeset<AppendedEvent, ExpandoObject> changeset,
-        EventSequenceNumber eventSequenceNumber,
-        bool isReplaying);
+        EventSequenceNumber eventSequenceNumber);
 }

@@ -30,10 +30,10 @@ public class ProjectionPipeline(
     ILogger<ProjectionPipeline> logger) : IProjectionPipeline
 {
     /// <inheritdoc/>
-    public Task BeginReplay() => sink.BeginReplay();
+    public Task BeginReplay(ReplayContext context) => sink.BeginReplay(context);
 
     /// <inheritdoc/>
-    public Task EndReplay() => sink.EndReplay();
+    public Task EndReplay(ReplayContext context) => sink.EndReplay(context);
 
     /// <inheritdoc/>
     public async Task<IChangeset<AppendedEvent, ExpandoObject>> Handle(AppendedEvent @event)

@@ -20,14 +20,16 @@ public interface ISinkCollections
     /// <summary>
     /// Signals that a replay is about to begin.
     /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task BeginReplay();
+    Task BeginReplay(Chronicle.Storage.Sinks.ReplayContext context);
 
     /// <summary>
     /// Signals that a replay has ended.
     /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task EndReplay();
+    Task EndReplay(Chronicle.Storage.Sinks.ReplayContext context);
 
     /// <summary>
     /// Prepare the sink for an initial run.

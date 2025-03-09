@@ -31,7 +31,7 @@ public class ReducerPipelineFactory(
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var modelSchema = await JsonSchema.FromJsonAsync(definition.Model.Schema);
         var model = new Model(definition.Model.Name, modelSchema);
-        var sink = namespaceStorage.Sinks.GetFor(definition.Sink.TypeId, model);
+        var sink = namespaceStorage.Sinks.GetFor(definition.Sink.TypeId, definition.Sink.ConfigurationId, model);
         var readModel = new Model(definition.Model.Name, modelSchema);
         return new ReducerPipeline(readModel, sink, objectComparer);
     }
