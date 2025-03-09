@@ -112,4 +112,9 @@ public static class WellKnownCollectionNames
     /// The collection that holds replay contexts.
     /// </summary>
     public const string ReplayContexts = "replay-contexts";
+
+    /// <summary>
+    /// The collection that holds replayed models.
+    /// </summary>
+    public const string ReplayedModels = "replayed-models";
 }

@@ -90,6 +90,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, Observers);
         Sinks = new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
+        ReplayedModels = new ReplayedModelsStorage(eventStoreNamespaceDatabase);
 
         _converter = new EventConverter(
             eventStore,
@@ -129,6 +130,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IReplayContexts ReplayContexts { get; }
+
+    /// <inheritdoc/>
+    public IReplayedModelsStorage ReplayedModels { get; }
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId)

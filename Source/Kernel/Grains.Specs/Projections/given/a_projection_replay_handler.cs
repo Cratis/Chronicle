@@ -21,6 +21,7 @@ public class a_projection_replay_handler : Specification
     protected IEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _eventStoreNamespaceStorage;
     protected IReplayContexts _replayContexts;
+    protected IReplayedModelsStorage _replayedModels;
     protected IProjectionPipeline _projectionPipeline;
     protected ObserverDetails _observerDetails;
 
@@ -38,6 +39,8 @@ public class a_projection_replay_handler : Specification
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_eventStoreNamespaceStorage);
         _eventStoreNamespaceStorage.ReplayContexts.Returns(_replayContexts);
+        _replayedModels = Substitute.For<IReplayedModelsStorage>();
+        _eventStoreNamespaceStorage.ReplayedModels.Returns(_replayedModels);
 
         _projectionPipelineManager = Substitute.For<IProjectionPipelineManager>();
         _projectionPipeline = Substitute.For<IProjectionPipeline>();

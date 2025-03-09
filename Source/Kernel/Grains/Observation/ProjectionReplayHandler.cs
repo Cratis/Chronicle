@@ -39,14 +39,15 @@ public class ProjectionReplayHandler(
     {
         if (projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
         {
-            var replayContexts = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace).ReplayContexts;
-            var contextResult = await replayContexts.TryGet(projection.Model.Name);
+            var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
+            var contextResult = await namespaceStorage.ReplayContexts.TryGet(projection.Model.Name);
             await contextResult.Match(
                 async context =>
                 {
                     var pipeline = projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
                     await pipeline.EndReplay(context);
-                    await replayContexts.Evict(projection.Model.Name);
+                    await namespaceStorage.ReplayedModels.Replayed(context);
+                    await namespaceStorage.ReplayContexts.Evict(projection.Model.Name);
                 },
                 _ => Task.CompletedTask);
         }
