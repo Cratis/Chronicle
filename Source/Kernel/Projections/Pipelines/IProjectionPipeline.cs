@@ -17,6 +17,12 @@ public interface IProjectionPipeline
     Task BeginReplay();
 
     /// <summary>
+    /// Notifies about the resuming of a replay.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task ResumeReplay();
+
+    /// <summary>
     /// Notifies about the end of a replay.
     /// </summary>
     /// <returns>Awaitable task.</returns>

@@ -47,6 +47,12 @@ public interface ISink
     Task BeginReplay();
 
     /// <summary>
+    /// Re-enter replay state.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task ResumeReplay();
+
+    /// <summary>
     /// End replay state.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>

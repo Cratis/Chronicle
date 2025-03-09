@@ -24,33 +24,18 @@ public class ObserverService(
     IInstancesOf<ICanHandleReplayForObserver> replayHandlers,
     ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IObserverService
 {
-    readonly IInstancesOf<ICanHandleReplayForObserver> _replayHandlers = replayHandlers;
+    /// <inheritdoc/>
+    public async Task BeginReplayFor(ObserverDetails observerDetails) => await ForEachHandler(handler => handler.BeginReplayFor(observerDetails));
 
     /// <inheritdoc/>
-    public override Task Init(IServiceProvider serviceProvider) =>
-        base.Init(serviceProvider);
+    public async Task ResumeReplayFor(ObserverDetails observerDetails) => await ForEachHandler(handler => handler.ResumeReplayFor(observerDetails));
 
     /// <inheritdoc/>
-    public async Task BeginReplayFor(ObserverDetails observerDetails)
+    public async Task EndReplayFor(ObserverDetails observerDetails) => await ForEachHandler(handler => handler.EndReplayFor(observerDetails));
+
+    async Task ForEachHandler(Func<ICanHandleReplayForObserver, Task> callback)
     {
-        foreach (var handler in _replayHandlers)
-        {
-            if (await handler.CanHandle(observerDetails))
-            {
-                await handler.BeginReplayFor(observerDetails);
-            }
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task EndReplayFor(ObserverDetails observerDetails)
-    {
-        foreach (var handler in _replayHandlers)
-        {
-            if (await handler.CanHandle(observerDetails))
-            {
-                await handler.EndReplayFor(observerDetails);
-            }
-        }
+        var tasks = replayHandlers.Select(callback);
+        await Task.WhenAll(tasks);
     }
 }

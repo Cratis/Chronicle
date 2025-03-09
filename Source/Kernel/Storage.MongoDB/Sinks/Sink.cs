@@ -102,6 +102,13 @@ public class Sink(
     }
 
     /// <inheritdoc/>
+    public async Task ResumeReplay()
+    {
+        _isReplaying = true;
+        await collections.BeginReplay();
+    }
+
+    /// <inheritdoc/>
     public async Task EndReplay()
     {
         await collections.EndReplay();

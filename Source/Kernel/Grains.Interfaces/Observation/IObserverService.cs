@@ -18,6 +18,13 @@ public interface IObserverService : IGrainService
     Task BeginReplayFor(ObserverDetails observerDetails);
 
     /// <summary>
+    /// Resume replay for a specific observer.
+    /// </summary>
+    /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ResumeReplayFor(ObserverDetails observerDetails);
+
+    /// <summary>
     /// End replay for a specific observer.
     /// </summary>
     /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 namespace Cratis.Chronicle.Grains.Observation;
 
 /// <summary>
@@ -9,23 +10,39 @@ namespace Cratis.Chronicle.Grains.Observation;
 public interface ICanHandleReplayForObserver
 {
     /// <summary>
-    /// Check if this can handle replay for a specific observer.
+    /// Represents an error that can occur.
     /// </summary>
-    /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
-    /// <returns>True if it can, false if not.</returns>
-    Task<bool> CanHandle(ObserverDetails observerDetails);
+    public enum Error
+    {
+        /// <summary>
+        /// Unknown error occurred.
+        /// </summary>
+        Unknown = 0,
+
+        /// <summary>
+        /// Handler cannot handle for the observer.
+        /// </summary>
+        CannotHandle = 1,
+    }
 
     /// <summary>
     /// Begin replay for a specific observer.
     /// </summary>
     /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
     /// <returns>Awaitable task.</returns>
-    Task BeginReplayFor(ObserverDetails observerDetails);
+    Task<Result<Error>> BeginReplayFor(ObserverDetails observerDetails);
+
+    /// <summary>
+    /// Resume replay for a specific observer.
+    /// </summary>
+    /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
+    /// <returns>Awaitable task.</returns>
+    Task<Result<Error>> ResumeReplayFor(ObserverDetails observerDetails);
 
     /// <summary>
     /// End replay for a specific observer.
     /// </summary>
     /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
     /// <returns>Awaitable task.</returns>
-    Task EndReplayFor(ObserverDetails observerDetails);
+    Task<Result<Error>> EndReplayFor(ObserverDetails observerDetails);
 }

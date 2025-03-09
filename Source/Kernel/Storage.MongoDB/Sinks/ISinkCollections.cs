@@ -24,6 +24,12 @@ public interface ISinkCollections
     Task BeginReplay();
 
     /// <summary>
+    /// Signals that a replay is about to resume.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task ResumeReplay();
+
+    /// <summary>
     /// Signals that a replay has ended.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>

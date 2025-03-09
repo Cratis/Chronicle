@@ -32,6 +32,13 @@ public class SinkCollections(
     }
 
     /// <inheritdoc/>
+    public Task ResumeReplay()
+    {
+        _isReplaying = true;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public async Task EndReplay()
     {
         var rewindName = ReplayCollectionName;
