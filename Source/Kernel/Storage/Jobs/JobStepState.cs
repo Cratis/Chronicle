@@ -21,11 +21,6 @@ public class JobStepState
     public JobStepType Type { get; set; } = JobStepType.NotSet;
 
     /// <summary>
-    /// Gets or sets the <see cref="JobType"/> .
-    /// </summary>
-    public JobType JobType { get; set; } = JobType.NotSet;
-
-    /// <summary>
     /// Gets or sets the name of the job step.
     /// </summary>
     public JobStepName Name { get; set; } = JobStepName.NotSet;
