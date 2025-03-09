@@ -35,7 +35,6 @@ public class Routing(
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Disconnected),
-        typeof(ResumeReplay),
         typeof(Replay),
         typeof(Observing)
     }.ToImmutableList();
@@ -83,26 +82,6 @@ public class Routing(
         {
             logger.NoEventTypes();
             await StateMachine.TransitionTo<Disconnected>();
-            return state;
-        }
-
-        if (state.RunningState == ObserverRunningState.Replaying)
-        {
-            logger.Replaying();
-            await StateMachine.TransitionTo<ResumeReplay>();
-            return state;
-        }
-
-        if (await replayEvaluator.Evaluate(new(
-            state.Id,
-            observerKey,
-            state,
-            _subscription,
-            _tailEventSequenceNumber,
-            _nextUnhandledEventSequenceNumber)))
-        {
-            logger.NeedsToReplay();
-            await StateMachine.TransitionTo<Replay>();
             return state;
         }
 
