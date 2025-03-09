@@ -13,7 +13,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task Replay()
     {
-        if (State.RunningState == ObserverRunningState.Active)
+        if (State.RunningState != ObserverRunningState.Replaying)
         {
             await TransitionTo<Replay>();
         }
