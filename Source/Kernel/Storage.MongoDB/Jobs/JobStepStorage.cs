@@ -74,28 +74,28 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
     {
         try
         {
+            var includeAll = ShouldIncludeAllJobSteps(statuses);
             var failedJobSteps = new List<JobStepState>();
-
+            var jobSteps = new List<JobStepState>();
             var filter = GetJobIdFilter<JobStepState>(jobId);
-            if (statuses.Any(_ => _ == JobStepStatus.Failed) || statuses.Length == 0)
-            {
-                var failedCursor = await FailedCollection.FindAsync(filter).ConfigureAwait(false);
-                failedJobSteps = failedCursor.ToList();
-
-                if (statuses.Any(_ => _ != JobStepStatus.Failed))
-                {
-                    return failedJobSteps.ToImmutableList();
-                }
-            }
 
             if (statuses.Length > 0)
             {
                 filter &= Builders<JobStepState>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
             }
 
-            var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-            var jobsSteps = cursor.ToList();
-            return jobsSteps.Concat(failedJobSteps).ToImmutableList();
+            if (ShouldBeStoredInFailedCollection(statuses) || includeAll)
+            {
+                var failedCursor = await FailedCollection.FindAsync(filter).ConfigureAwait(false);
+                failedJobSteps = failedCursor.ToList();
+            }
+            if (!statuses.All(ShouldBeStoredInFailedCollection) || includeAll)
+            {
+                var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
+                jobSteps = cursor.ToList();
+            }
+
+            return jobSteps.Concat(failedJobSteps).ToImmutableList();
         }
         catch (Exception ex)
         {
@@ -108,22 +108,23 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
     {
         try
         {
+            var includeAll = ShouldIncludeAllJobSteps(statuses);
             var filter = GetJobIdFilter<JobStepState>(jobId);
             var count = 0L;
-            if (statuses.Any(_ => _ == JobStepStatus.Failed) || statuses.Length == 0)
-            {
-                count = await FailedCollection.CountDocumentsAsync(filter).ConfigureAwait(false);
-                if (statuses.Any(_ => _ != JobStepStatus.Failed))
-                {
-                    return (int)count;
-                }
-            }
 
             if (statuses.Length > 0)
             {
                 filter &= Builders<JobStepState>.Filter.In(nameof(JobStepState.Status).ToCamelCase(), statuses);
             }
-            count += await Collection.CountDocumentsAsync(filter).ConfigureAwait(false);
+
+            if (ShouldBeStoredInFailedCollection(statuses) || includeAll)
+            {
+                count = await FailedCollection.CountDocumentsAsync(filter).ConfigureAwait(false);
+            }
+            if (!statuses.All(ShouldBeStoredInFailedCollection) || includeAll)
+            {
+                count += await Collection.CountDocumentsAsync(filter).ConfigureAwait(false);
+            }
             return (int)count;
         }
         catch (Exception ex)
@@ -180,7 +181,9 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
             }
 
             var actualState = (state as JobStepState)!;
-            var collection = actualState.Status == JobStepStatus.Failed ? GetTypedFailedCollection<TJobStepState>() : GetTypedCollection<TJobStepState>();
+            var collection = ShouldBeStoredInFailedCollection(actualState.Status)
+                ? GetTypedFailedCollection<TJobStepState>()
+                : GetTypedCollection<TJobStepState>();
             await collection.ReplaceOneAsync(GetIdFilter<TJobStepState>(jobId, jobStepId), state, new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
             return default(None);
         }
@@ -221,12 +224,12 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
     static FilterDefinition<TDocument> GetJobIdFilter<TDocument>(Guid jobId, string prefix = "") =>
         Builders<TDocument>.Filter.Eq(
             new StringFieldDefinition<TDocument, BsonBinaryData>($"{prefix}_id.jobId"),
-            new BsonBinaryData(jobId, GuidRepresentation.Standard));
+            new(jobId, GuidRepresentation.Standard));
 
     static FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid jobId, Guid jobStepId) =>
         Builders<TDocument>.Filter.Eq(
             new StringFieldDefinition<TDocument, BsonDocument>("_id"),
-            new BsonDocument
+            new()
             {
                 {
                     "jobId",
@@ -236,6 +239,12 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
                     "jobStepId", new BsonBinaryData(jobStepId, GuidRepresentation.Standard)
                 }
             });
+
+    static bool ShouldBeStoredInFailedCollection(JobStepStatus[] statuses) => statuses.Any(status => status is JobStepStatus.Failed or JobStepStatus.CompletedWithFailure);
+
+    static bool ShouldBeStoredInFailedCollection(JobStepStatus status) => status is JobStepStatus.Failed or JobStepStatus.CompletedWithFailure;
+
+    static bool ShouldIncludeAllJobSteps(JobStepStatus[] statuses) => statuses.Length == 0;
 
     IMongoCollection<TJobStepState> GetTypedCollection<TJobStepState>() => database.GetCollection<TJobStepState>(WellKnownCollectionNames.JobSteps);
 
