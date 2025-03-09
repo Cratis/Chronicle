@@ -44,17 +44,17 @@ public enum JobStatus
     CompletedWithFailures = 7,
 
     /// <summary>
-    /// The job has been paused.
+    /// The job has been stopped and can be resumed later.
     /// </summary>
-    Paused = 8,
-
-    /// <summary>
-    /// The job has been cancelled.
-    /// </summary>
-    Stopped = 9,
+    Stopped = 8,
 
     /// <summary>
     /// The job has failed and can't recover.
     /// </summary>
-    Failed = 10
+    Failed = 9,
+
+    /// <summary>
+    /// The job is scheduled to be removed.
+    /// </summary>
+    Removing = 10,
 }

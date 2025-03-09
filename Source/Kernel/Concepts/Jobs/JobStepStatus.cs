@@ -24,22 +24,22 @@ public enum JobStepStatus
     Running = 2,
 
     /// <summary>
-    /// The job step is completed.
+    /// The job step is completed successfully.
     /// </summary>
-    Succeeded = 3,
+    CompletedSuccessfully = 3,
 
     /// <summary>
-    /// The job step failed.
+    /// The job step completed with failure.
     /// </summary>
-    Failed = 4,
+    CompletedWithFailure = 4,
 
     /// <summary>
-    /// The job step has been stopped.
+    /// The job step has been stopped execution.
     /// </summary>
-    Paused = 5,
+    Stopped = 5,
 
     /// <summary>
-    /// The job step has been permanently stopped.
+    /// The job step failed internally.
     /// </summary>
-    Stopped = 6
+    Failed = 6,
 }
