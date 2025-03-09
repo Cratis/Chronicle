@@ -24,23 +24,25 @@ public class ReplayEvaluator(
     /// <inheritdoc/>
     public async Task<bool> Evaluate(ReplayEvaluationContext context)
     {
-        if (NeedsToReplay(context))
+        if (!NeedsToReplay(context))
         {
-            var recommendationsManager = grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(eventStore, @namespace));
-            await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
-                "Event types has changed.",
-                new ReplayCandidateRequest
-                {
-                    ObserverId = context.Id,
-                    ObserverKey = context.Key,
-                    Reasons =
-                    [
-                        new EventTypesChangedReplayCandidateReason(
-                            context.State.EventTypes,
-                            context.Subscription.EventTypes)
-                    ]
-                });
+            return false;
         }
+
+        var recommendationsManager = grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(eventStore, @namespace));
+        await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
+            "Event types has changed.",
+            new ReplayCandidateRequest
+            {
+                ObserverId = context.Id,
+                ObserverKey = context.Key,
+                Reasons =
+                [
+                    new EventTypesChangedReplayCandidateReason(
+                        context.State.EventTypes,
+                        context.Subscription.EventTypes)
+                ]
+            });
 
         return false;
     }
