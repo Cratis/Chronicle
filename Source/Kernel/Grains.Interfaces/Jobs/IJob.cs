@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
-using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Grains.Jobs;
 
@@ -13,13 +12,13 @@ namespace Cratis.Chronicle.Grains.Jobs;
 public interface IJob : IGrainWithGuidCompoundKey
 {
     /// <summary>
-    /// Pause a running job.
+    /// Stop a running job.
     /// <remarks>
-    /// Pause is different from Stop in that a Paused Job can be Resumed while a Stopped Job cannot.
+    /// Stop is different from Remove in that a stopped Job can be Resumed while a Removed Job cannot.
     /// </remarks>
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task<Result<PauseJobError>> Pause();
+    Task<Result<StopJobError>> Stop();
 
     /// <summary>
     /// Resume a job, either its paused, stopped or didn't get to finish before the host stopped.
@@ -31,11 +30,11 @@ public interface IJob : IGrainWithGuidCompoundKey
     Task<Result<ResumeJobSuccess, ResumeJobError>> Resume();
 
     /// <summary>
-    /// Stop a running job.
-    /// Stop is different from Pause in that a Stopped Job cannot be Resumed while a Paused Job can
+    /// Removed a running job.
+    /// Remove is different from Stop in that a removed Job cannot be Resumed while a Stopped Job can.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobError>> Stop();
+    Task<Result<RemoveJobError>> Remove();
 
     /// <summary>
     /// Report a successful completion of a job step.
@@ -63,13 +62,6 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// <param name="jobStepResult">The <see cref="JobStepResult"/> for the failed step.</param>
     /// <returns>Awaitable task.</returns>
     Task<Result<JobError>> OnStepFailed(JobStepId stepId, JobStepResult jobStepResult);
-
-    /// <summary>
-    /// Gets the <see cref="JobType"/>.
-    /// </summary>
-    /// <returns>The job state.</returns>
-    [AlwaysInterleave]
-    Task<JobType> GetJobType();
 }
 
 /// <summary>

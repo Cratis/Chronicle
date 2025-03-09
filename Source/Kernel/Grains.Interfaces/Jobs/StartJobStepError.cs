@@ -16,7 +16,17 @@ public enum StartJobStepError
     NotPrepared = 1,
 
     /// <summary>
-    /// The job step is already running.
+    /// The job step is already started.
     /// </summary>
-    AlreadyRunning = 2
+    AlreadyStarted = 2,
+
+    /// <summary>
+    /// The job step is in a completed state.
+    /// </summary>
+    Completed = 3,
+
+    /// <summary>
+    /// The job step is in an unrecoverable failed state.
+    /// </summary>
+    UnrecoverableFailedState = 4,
 }

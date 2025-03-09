@@ -4,9 +4,9 @@
 namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
-/// The type of errors that can occur when pausing a Job.
+/// The type of errors that can occur when stopping a Job.
 /// </summary>
-public enum PauseJobError
+public enum StopJobError
 {
     /// <summary>
     /// Unknown error.
@@ -14,7 +14,7 @@ public enum PauseJobError
     Unknown = 0,
 
     /// <summary>
-    /// Job has been completed some way and cannot be paused.
+    /// Job has been completed some way and cannot be stopped.
     /// </summary>
     JobIsCompleted = 1,
 
