@@ -3,11 +3,11 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
+
 namespace Cratis.Chronicle.Grains.Observation;
 
 public partial class Observer
@@ -19,25 +19,25 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(State.Id, _observerKey);
 
         var subscription = await GetSubscription();
-        var jobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
-        if (jobs.Any(_ => _.Status == JobStatus.Running))
-        {
-            logger.FinishingExistingCatchUpJob();
-            return;
-        }
-
-        var pausedJob = jobs.FirstOrDefault(_ => _.Status == JobStatus.Paused);
-
-        if (pausedJob is not null)
-        {
-            logger.ResumingCatchUpJob();
-            await _jobsManager.Resume(pausedJob.Id);
-        }
-        else
-        {
-            logger.StartCatchUpJob(State.NextEventSequenceNumber);
-            await _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(new(_observerKey, subscription, State.NextEventSequenceNumber, subscription.EventTypes));
-        }
+        await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
+            logger,
+            new(_observerKey, State.Type, subscription, State.NextEventSequenceNumber, subscription.EventTypes),
+            requestPredicate: null,
+            () =>
+            {
+                logger.FinishingExistingCatchUpJob();
+                return Task.CompletedTask;
+            },
+            () =>
+            {
+                logger.ResumingCatchUpJob();
+                return Task.CompletedTask;
+            },
+            () =>
+            {
+                logger.StartCatchUpJob(State.NextEventSequenceNumber);
+                return Task.CompletedTask;
+            });
     }
 
     /// <inheritdoc/>
@@ -110,7 +110,7 @@ public partial class Observer
         var nextEventSequenceNumber = lastHandledEventSequenceNumber.Next();
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);
-        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, _subscription, partition, nextEventSequenceNumber, State.EventTypes));
+        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, State.Type, _subscription, partition, nextEventSequenceNumber, State.EventTypes));
         await WriteStateAsync();
     }
 

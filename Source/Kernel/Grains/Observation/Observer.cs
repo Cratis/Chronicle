@@ -6,6 +6,7 @@ using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.EventSequences;
@@ -26,8 +27,8 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// Initializes a new instance of the <see cref="Observer"/> class.
 /// </remarks>
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
-/// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/> for notifying about replay to all silos.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
+/// <param name="replayEvaluator">The <see cref="IReplayEvaluator"/>.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -35,8 +36,8 @@ namespace Cratis.Chronicle.Grains.Observation;
 public partial class Observer(
     [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
     IPersistentState<FailedPartitions> failures,
-    IObserverServiceClient replayStateServiceClient,
     IConfigurationForObserverProvider configurationProvider,
+    IReplayEvaluator replayEvaluator,
     ILogger<Observer> logger,
     IMeter<Observer> meter,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
@@ -123,6 +124,11 @@ public partial class Observer(
             siloAddress,
             subscriberArgs);
         await WriteStateAsync();
+
+        if (await TransitionToReplayIfNeeded())
+        {
+            return;
+        }
         await ResumeJobs();
         await TryRecoverAllFailedPartitions();
         await TransitionTo<Routing>();
@@ -142,14 +148,8 @@ public partial class Observer(
             _eventSequence,
             loggerFactory.CreateLogger<Routing>()),
 
-        new ResumeReplay(
-            _observerKey,
-            replayStateServiceClient,
-            _jobsManager),
-
         new Replay(
             _observerKey,
-            replayStateServiceClient,
             _jobsManager,
             loggerFactory.CreateLogger<Replay>()),
 
@@ -213,12 +213,20 @@ public partial class Observer(
 
     async Task ResumeJobs()
     {
-        // TODO: Do this in a Task.WhenAll because JobsManager is reentrant now
         var unfilteredJobs = await _jobsManager.GetAllJobs();
-        foreach (var job in unfilteredJobs.Where(job => job is { Request: IObserverJobRequest, IsResumable: true }).ToArray())
-        {
-            await _jobsManager.Resume(job.Id);
-        }
+
+        // Explicitly do not resume replay jobs.
+        var resumeTasks = unfilteredJobs
+            .Where(job => job is { Request: IObserverJobRequest observerJobRequest } &&
+                          observerJobRequest is not ReplayObserverRequest &&
+                          ShouldResumeJob(job.Status) &&
+                          observerJobRequest.ObserverKey == _subscription.ObserverKey)
+            .Select(job => _jobsManager.Resume(job.Id));
+        await Task.WhenAll(resumeTasks);
+        return;
+
+        static bool ShouldResumeJob(JobStatus status) => status is not JobStatus.Failed and not JobStatus.Stopped and not JobStatus.CompletedSuccessfully
+            and not JobStatus.CompletedWithFailures and not JobStatus.Removing;
     }
 
     async Task RemoveReminder(Key partition)

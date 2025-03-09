@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation.Jobs;
@@ -99,6 +98,6 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.TryingToRecoverFailedPartition(failedPartition.Partition);
         await RemoveReminder(failedPartition.Partition.ToString());
-        await _jobsManager.Start<IRetryFailedPartition, RetryFailedPartitionRequest>(new(_observerKey, _subscription, failedPartition.Partition, failedPartition.LastAttempt.SequenceNumber, State.EventTypes));
+        await _jobsManager.Start<IRetryFailedPartition, RetryFailedPartitionRequest>(new(_observerKey, State.Type, _subscription, failedPartition.Partition, failedPartition.LastAttempt.SequenceNumber, State.EventTypes));
     }
 }
