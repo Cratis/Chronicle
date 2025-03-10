@@ -129,7 +129,7 @@ public class TheJobStepProcessor
 #pragma warning disable MA0106
             (id, states) =>
             {
-                states.Add(jobStepId, (jobStepState, status));
+                states[jobStepId] = (jobStepState, status);
                 return states;
             });
 #pragma warning restore MA0106
