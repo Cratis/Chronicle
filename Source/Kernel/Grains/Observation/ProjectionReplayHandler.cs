@@ -11,11 +11,11 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="ICanHandleReplayForObserver"/> for projections.
 /// </summary>
-/// <param name="projections"><see cref="IProjections"/> for managing projections.</param>
+/// <param name="projections"><see cref="IProjectionsManager"/> for managing projections.</param>
 /// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for managing projection pipelines.</param>
 public class ProjectionReplayHandler(
-    IProjections projections,
+    IProjectionsManager projections,
     IStorage storage,
     IProjectionPipelineManager projectionPipelineManager) : ICanHandleReplayForObserver
 {

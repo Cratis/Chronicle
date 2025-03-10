@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Grains.Namespaces;
-using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -17,7 +16,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <param name="silo"><see cref="Silo"/> the grain belongs to.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
-/// <param name="projections"><see cref="IProjections"/> for managing projections.</param>
+/// <param name="projections"><see cref="Chronicle.Projections.IProjectionsManager"/> for managing projections.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [ImplicitChannelSubscription]
 public class ProjectionsService(
@@ -25,7 +24,7 @@ public class ProjectionsService(
     Silo silo,
     IGrainFactory grainFactory,
     IStorage storage,
-    IProjections projections,
+    Chronicle.Projections.IProjectionsManager projections,
     ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IProjectionsService
 {
     /// <inheritdoc/>

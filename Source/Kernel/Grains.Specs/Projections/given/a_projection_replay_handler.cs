@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Grains.Projections.for_ProjectionReplayHandler.given;
 
 public class a_projection_replay_handler : Specification
 {
-    protected IProjections _projections;
+    protected Chronicle.Projections.IProjectionsManager _projections;
     protected IStorage _storage;
     protected IProjectionPipelineManager _projectionPipelineManager;
     protected ProjectionReplayHandler _handler;
@@ -31,7 +31,7 @@ public class a_projection_replay_handler : Specification
             new ObserverKey("TheObserver", "TheEventStore", "TheNamespace", EventSequenceId.Log),
             ObserverType.Projection);
 
-        _projections = Substitute.For<IProjections>();
+        _projections = Substitute.For<Chronicle.Projections.IProjectionsManager>();
         _storage = Substitute.For<IStorage>();
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
         _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();

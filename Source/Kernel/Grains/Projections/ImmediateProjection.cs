@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
-/// <param name="projectionManager"><see cref="IProjections"/> for managing projections.</param>
+/// <param name="projectionManager"><see cref="Chronicle.Projections.IProjectionsManager"/> for managing projections.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
 /// <param name="logger">Logger for logging.</param>
@@ -37,7 +37,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 public class ImmediateProjection(
     IStorage storage,
     IProjectionFactory projectionFactory,
-    IProjections projectionManager,
+    Chronicle.Projections.IProjectionsManager projectionManager,
     IObjectComparer objectComparer,
     IExpandoObjectConverter expandoObjectConverter,
     ILogger<ImmediateProjection> logger) : Grain<ProjectionDefinition>, IImmediateProjection

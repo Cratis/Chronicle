@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines a system for managing <see cref="IProjection">projections</see>.
 /// </summary>
-public interface IProjections
+public interface IProjectionsManager
 {
     /// <summary>
     /// Register a <see cref="IProjection"/>.

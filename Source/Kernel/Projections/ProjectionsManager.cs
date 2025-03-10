@@ -11,11 +11,11 @@ using Cratis.DependencyInjection;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents the implementation of <see cref="IProjections"/>.
+/// Represents the implementation of <see cref="IProjectionsManager"/>.
 /// </summary>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 [Singleton]
-public class Projections(IProjectionFactory projectionFactory) : IProjections
+public class ProjectionsManager(IProjectionFactory projectionFactory) : IProjectionsManager
 {
     readonly ConcurrentDictionary<EventStoreName, ProjectionDefinition> _definitions = new();
     readonly ConcurrentDictionary<string, IProjection> _projections = new();
