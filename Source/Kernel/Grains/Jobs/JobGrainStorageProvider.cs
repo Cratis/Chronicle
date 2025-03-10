@@ -100,8 +100,8 @@ public class JobGrainStorageProvider(IStorage storage) : IGrainStorage
     {
         var jobState = (state as JobState)!;
         var jobStepStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).JobSteps;
-        var successfulCount = await HandleCatch(jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Succeeded), typeof(T), nameof(ReadStateAsync));
-        var failedCount = await HandleCatch(jobStepStorage.CountForJob(jobState.Id, JobStepStatus.Failed), typeof(T), nameof(ReadStateAsync));
+        var successfulCount = await HandleCatch(jobStepStorage.CountForJob(jobState.Id, JobStepStatus.CompletedSuccessfully), typeof(T), nameof(ReadStateAsync));
+        var failedCount = await HandleCatch(jobStepStorage.CountForJob(jobState.Id, JobStepStatus.CompletedWithFailure), typeof(T), nameof(ReadStateAsync));
 
         var hasChanges = jobState.Progress.SuccessfulSteps != successfulCount ||
                          jobState.Progress.FailedSteps != failedCount;
