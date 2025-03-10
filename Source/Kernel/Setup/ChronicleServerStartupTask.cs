@@ -39,7 +39,7 @@ public class ChronicleServerStartupTask(
 
             var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
             {
-                var jobsManager = grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(eventStore, namespaceName));
+                var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
                 await jobsManager.Rehydrate();
             });
             await Task.WhenAll(rehydrateAll);

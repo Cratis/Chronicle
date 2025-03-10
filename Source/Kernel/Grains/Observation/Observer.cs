@@ -66,7 +66,7 @@ public partial class Observer(
         _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
         _observerId = _observerKey.ObserverId;
 
-        _jobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_observerKey.EventStore, _observerKey.Namespace));
+        _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
         await failures.ReadStateAsync();
 
