@@ -144,18 +144,21 @@ public abstract class JobStep<TRequest, TResult, TState>(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<JobStepError>> Stop()
+    public async Task<Result<JobStepError>> Stop(bool removing)
     {
         using var scope = logger.BeginJobStepScope(State);
         try
         {
-            if (State.Status is JobStepStatus.Stopped)
+            if (!removing && State.Status is JobStepStatus.Stopped)
             {
                 logger.AlreadyStopped();
                 return Result.Success<JobStepError>();
             }
+            if (removing)
+            {
+                _ = await WriteStatusChange(JobStepStatus.Removing);
+            }
             logger.Stopping();
-            _ = await WriteStatusChange(JobStepStatus.Stopped);
             var cancelTokenTask = _cancellationTokenSource?.CancelAsync() ?? Task.CompletedTask;
             await cancelTokenTask;
             _cancellationTokenSource = null;
@@ -239,7 +242,10 @@ public abstract class JobStep<TRequest, TResult, TState>(
     public Task<TState> GetState() => Task.FromResult(State);
 
     /// <inheritdoc/>
-    public Task OnJobStopped() => Stop();
+    public Task OnJobStopped() => Stop(false);
+
+    /// <inheritdoc/>
+    public Task OnJobRemoved() => Stop(true);
 
     /// <summary>
     /// Prepare the step before it starts.

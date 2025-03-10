@@ -216,7 +216,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             _ = await WriteStatusChanged(JobStatus.Stopped);
 
             // Do not call OnStopped here because it should be called after all steps have been stopped
-            await StopNonCompletedStepsAndEnsureCompletion();
+            await StopNonCompletedStepsAndEnsureCompletion(false);
 
             return Result<StopJobError>.Success();
         }
@@ -250,7 +250,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             _ = await WriteStatusChanged(JobStatus.Removing);
 
             // Do not call OnStopped here because it should be called after all steps have been stopped
-            await StopNonCompletedStepsAndEnsureCompletion();
+            await StopNonCompletedStepsAndEnsureCompletion(true);
             return Result<RemoveJobError>.Success();
         }
         catch (Exception e)
@@ -304,12 +304,12 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     /// <returns>The <see cref="JobDetails"/>.</returns>
     protected virtual JobDetails GetJobDetails() => JobDetails.NotSet;
 
-    async Task StopNonCompletedStepsAndEnsureCompletion()
+    async Task StopNonCompletedStepsAndEnsureCompletion(bool removing)
     {
         if (_observers?.Count > 0)
         {
             // The job steps will eventually handle completion
-            await _observers!.Notify(o => o.OnJobStopped());
+            await _observers!.Notify(o => removing ? o.OnJobRemoved() : o.OnJobStopped());
             return;
         }
 
@@ -331,7 +331,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         else
         {
             // The job steps will eventually handle completion
-            await _observers!.Notify(o => o.OnJobStopped());
+            await _observers!.Notify(o => removing ? o.OnJobRemoved() : o.OnJobStopped());
         }
     }
 

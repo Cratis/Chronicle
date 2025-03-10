@@ -64,7 +64,10 @@ public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
         var jobStepStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).JobSteps;
 
         var actualState = (grainState.State as JobStepState)!;
-
+        if (actualState.StatusChanges.SkipLast(1).Any(change => change.Status == JobStepStatus.Removing))
+        {
+            return;
+        }
         switch (GetStatus(actualState))
         {
             case JobStepStatus.CompletedWithFailure:
@@ -73,9 +76,9 @@ public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
                 break;
 
             case JobStepStatus.CompletedSuccessfully:
+            case JobStepStatus.Removing:
                 await HandleCatch(jobStepStorage.Remove(key.JobId, jobStepId), type, methodName);
                 break;
-
             default:
                 await HandleCatchNone(jobStepStorage.Save(key.JobId, jobStepId, grainState.State), type, methodName);
                 break;

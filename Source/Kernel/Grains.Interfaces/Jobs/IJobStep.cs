@@ -30,11 +30,12 @@ public interface IJobStep : IGrainWithGuidCompoundKey
     /// <summary>
     /// Stop the job step.
     /// </summary>
+    /// <param name="removing">Whether job step is being removed.</param>
     /// <remarks>
     /// A stopped job step can be started again later given it has been prepared.
     /// </remarks>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobStepError>> Stop();
+    Task<Result<JobStepError>> Stop(bool removing);
 
     /// <summary>
     /// Report a status change.

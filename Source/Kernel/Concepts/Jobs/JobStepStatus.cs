@@ -42,4 +42,9 @@ public enum JobStepStatus
     /// The job step failed internally.
     /// </summary>
     Failed = 6,
+
+    /// <summary>
+    /// The job step is being removed.
+    /// </summary>
+    Removing = 7,
 }

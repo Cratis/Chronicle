@@ -13,4 +13,10 @@ public interface IJobObserver : IGrainObserver
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task OnJobStopped();
+
+    /// <summary>
+    /// Called when the job has been removed.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task OnJobRemoved();
 }
