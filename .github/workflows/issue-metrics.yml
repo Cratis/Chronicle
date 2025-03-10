@@ -15,6 +15,9 @@ jobs:
       issues: write
       pull-requests: read
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Get dates for last month
         shell: bash
         run: |
