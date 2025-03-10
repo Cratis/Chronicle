@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Api;
+using Cratis.Chronicle.Connections;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -13,8 +15,11 @@ namespace Cratis.Chronicle.Workbench.Embedded;
 /// <summary>
 /// Represents the WebServer that is hosting the Chronicle Workbench.
 /// </summary>
+/// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
 /// <param name="workbenchOptions">The <see cref="ChronicleWorkbenchOptions"/>.</param>
-public class WebServer(IOptions<ChronicleWorkbenchOptions> workbenchOptions) : IHostedService
+public class WebServer(
+    IServiceProvider serviceProvider,
+    IOptions<ChronicleWorkbenchOptions> workbenchOptions) : IHostedService
 {
     WebApplication? _webApplication;
 
@@ -25,6 +30,7 @@ public class WebServer(IOptions<ChronicleWorkbenchOptions> workbenchOptions) : I
             async () =>
             {
                 var builder = WebApplication.CreateBuilder();
+                var chronicleServices = serviceProvider.GetService<IServices>();
 
                 builder.Host
                     .UseCratisApplicationModel(options =>
@@ -34,7 +40,7 @@ public class WebServer(IOptions<ChronicleWorkbenchOptions> workbenchOptions) : I
                         options.IdentityDetailsProvider = workbenchOptions.Value.ApplicationModel.IdentityDetailsProvider;
                     });
 
-                builder.Services.AddCratisChronicleApi();
+                builder.Services.AddCratisChronicleApi(chronicleServices);
 
                 builder.WebHost
                     .UseKestrel()
