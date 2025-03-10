@@ -41,6 +41,6 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add metrics.md
+          git add issue_metrics.md
           git commit -m "Update issue metrics report" || echo "No changes to commit"
           git push
