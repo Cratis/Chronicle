@@ -9,12 +9,12 @@ using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 using Cratis.Chronicle.Storage.Jobs;
 
-using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_is_deleted.context;
+using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_is_stopped_and_then_deleted.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step;
 
 [Collection(GlobalCollection.Name)]
-public class and_job_is_deleted(context context) : Given<context>(context)
+public class and_job_is_stopped_and_then_deleted(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : given.all_dependencies(globalFixture)
     {
@@ -29,8 +29,10 @@ public class and_job_is_deleted(context context) : Given<context>(context)
             StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true });
             JobId = StartJobResult.AsT0;
             await TheJobStepProcessor.WaitForAllPreparedStepsToBeStarted();
-            await JobsManager.Delete(JobId);
+            await JobsManager.Stop(JobId);
             taskCompletionSource.SetResult();
+            await JobStorage.WaitTillJobProgressStopped<JobWithSingleStepState>(JobId);
+            await JobsManager.Delete(JobId);
             await JobStorage.WaitTillJobIsDeleted<JobWithSingleStepState>(JobId);
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
             JobStepStates = getJobStepState.AsT0;
