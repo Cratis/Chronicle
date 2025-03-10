@@ -34,9 +34,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SEARCH_QUERY: 'repo:cratis/chronicle is:issue created:${{ env.last_month }} -reason:"not planned"'
 
-      - name: Create issue
-        uses: peter-evans/create-issue-from-file@v5
-        with:
-          title: Monthly issue metrics report
-          token: ${{ secrets.GITHUB_TOKEN }}
-          content-filepath: ./issue_metrics.md
+      - name: Commit and push report
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add metrics.md
+          git commit -m "Update issue metrics report" || echo "No changes to commit"
+          git push
