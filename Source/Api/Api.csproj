@@ -7,7 +7,6 @@
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <NoWarn>$(NoWarn);RCS1140;CS1998;IDE0005;SA0001</NoWarn>
-        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
