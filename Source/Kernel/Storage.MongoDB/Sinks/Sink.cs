@@ -33,8 +33,6 @@ public class Sink(
     IChangesetConverter changesetConverter,
     IExpandoObjectConverter expandoObjectConverter) : ISink
 {
-    bool _isReplaying;
-
     /// <inheritdoc/>
     public SinkTypeName Name => "MongoDB";
 
@@ -78,7 +76,7 @@ public class Sink(
             await RemoveChildFromAll(key, childRemoved);
         }
 
-        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber, _isReplaying);
+        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
         if (!converted.hasChanges) return;
 
         await Collection.UpdateOneAsync(
@@ -95,17 +93,15 @@ public class Sink(
     public Task PrepareInitialRun() => collections.PrepareInitialRun();
 
     /// <inheritdoc/>
-    public async Task BeginReplay()
+    public async Task BeginReplay(Chronicle.Storage.Sinks.ReplayContext context)
     {
-        _isReplaying = true;
-        await collections.BeginReplay();
+        await collections.BeginReplay(context);
     }
 
     /// <inheritdoc/>
-    public async Task EndReplay()
+    public async Task EndReplay(Chronicle.Storage.Sinks.ReplayContext context)
     {
-        await collections.EndReplay();
-        _isReplaying = true;
+        await collections.EndReplay(context);
     }
 
     async Task RemoveChildFromAll(Key key, ChildRemovedFromAll childRemoved)

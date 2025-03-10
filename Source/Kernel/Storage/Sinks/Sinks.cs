@@ -29,10 +29,11 @@ public class Sinks(
     /// <inheritdoc/>
     public ISink GetFor(
         SinkTypeId typeId,
+        SinkConfigurationId configurationId,
         Model model)
     {
-        ThrowIfUnknownProjectionResultStore(typeId);
-        var key = new SinkKey(typeId, model);
+        ThrowIfUnknownSink(typeId);
+        var key = new SinkKey(typeId, configurationId, model);
         if (_sinks.TryGetValue(key, out var store)) return store;
         return _sinks[key] = _factories[typeId].CreateFor(eventStoreName, eventStoreNamespaceName, model);
     }
@@ -40,10 +41,10 @@ public class Sinks(
     /// <inheritdoc/>
     public bool HasType(SinkTypeId typeId) => _factories.ContainsKey(typeId);
 
-    void ThrowIfUnknownProjectionResultStore(SinkTypeId typeId)
+    void ThrowIfUnknownSink(SinkTypeId typeId)
     {
         if (!HasType(typeId)) throw new UnknownSink(typeId);
     }
 
-    sealed record SinkKey(SinkTypeId TypeId, Model Model);
+    sealed record SinkKey(SinkTypeId TypeId, SinkConfigurationId ConfigurationId, Model Model);
 }

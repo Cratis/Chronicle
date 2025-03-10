@@ -24,14 +24,16 @@ public interface IReducerPipeline
     /// <summary>
     /// Notifies about the beginning of a replay.
     /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>Awaitable task.</returns>
-    Task BeginReplay();
+    Task BeginReplay(ReplayContext context);
 
     /// <summary>
     /// Notifies about the end of a replay.
     /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>Awaitable task.</returns>
-    Task EndReplay();
+    Task EndReplay(ReplayContext context);
 
     /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.

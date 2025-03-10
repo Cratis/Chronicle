@@ -27,14 +27,14 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
 /// </remarks>
-/// <param name="projectionManager"><see cref="IProjectionManager"/> for getting projections.</param>
+/// <param name="projectionManager"><see cref="Chronicle.Projections.IProjectionsManager"/> for getting projections.</param>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for creating projection pipelines.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
 /// <param name="logger">The logger.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class ProjectionObserverSubscriber(
-    IProjectionManager projectionManager,
+    Chronicle.Projections.IProjectionsManager projectionManager,
     IProjectionFactory projectionFactory,
     IProjectionPipelineManager projectionPipelineManager,
     IExpandoObjectConverter expandoObjectConverter,

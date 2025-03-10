@@ -60,9 +60,19 @@ public interface IEventStoreNamespaceStorage
     IObserverKeyIndexes ObserverKeyIndexes { get; }
 
     /// <summary>
+    /// Gets the <see cref="IReplayContexts"/> for the event store namespace.
+    /// </summary>
+    IReplayContexts ReplayContexts { get; }
+
+    /// <summary>
     /// Gets the <see cref="ISinks"/> for the event store namespace.
     /// </summary>
     ISinks Sinks { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IReplayedModelsStorage"/> for the event store namespace.
+    /// </summary>
+    IReplayedModelsStorage ReplayedModels { get; }
 
     /// <summary>
     /// Get the <see cref="IEventSequenceStorage"/> for a specific <see cref="EventSequenceId"/>.

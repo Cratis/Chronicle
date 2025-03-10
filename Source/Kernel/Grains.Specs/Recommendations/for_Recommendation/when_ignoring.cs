@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Grains.Recommendations.for_Recommendation.given;
-
 namespace Cratis.Chronicle.Grains.Recommendations.for_Recommendation;
 
 public class when_ignoring : given.all_dependencies
@@ -12,7 +10,7 @@ public class when_ignoring : given.all_dependencies
 
     async Task Establish()
     {
-        request = new TheRequest(42);
+        request = new given.TheRequest(42);
         await recommendation.Initialize(description, request);
         storageStats.ResetCounts();
     }

@@ -30,10 +30,10 @@ public class ReducerPipeline(
     public ISink Sink { get; } = sink;
 
     /// <inheritdoc/>
-    public Task BeginReplay() => Sink.BeginReplay();
+    public Task BeginReplay(ReplayContext context) => Sink.BeginReplay(context);
 
     /// <inheritdoc/>
-    public Task EndReplay() => Sink.EndReplay();
+    public Task EndReplay(ReplayContext context) => Sink.EndReplay(context);
 
     /// <inheritdoc/>
     public async Task Handle(ReducerContext context, ReducerDelegate reducer)

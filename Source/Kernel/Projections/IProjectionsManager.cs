@@ -4,21 +4,31 @@
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Defines a system for managing <see cref="IProjection">projections</see>.
 /// </summary>
-public interface IProjectionManager
+public interface IProjectionsManager
 {
     /// <summary>
     /// Register a <see cref="IProjection"/>.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the projection is for.</param>
-    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the projection is for.</param>
-    /// <param name="projection"><see cref="IProjection"/> to register.</param>
-    void Register(EventStoreName eventStore, EventStoreNamespaceName @namespace, IProjection projection);
+    /// <param name="definitions"><see cref="IEnumerable{T}"/> of <see cref="ProjectionDefinition"/> to register.</param>
+    /// <param name="namespaces"><see cref="IEnumerable{T}"/> of <see cref="EventStoreNamespaceName"/> the projection is for.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<EventStoreNamespaceName> namespaces);
+
+    /// <summary>
+    /// Add a namespace to the system.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the namespace is for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to add.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task AddNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     /// <summary>
     /// Try to get a <see cref="IProjection"/> by <see cref="ProjectionId"/>.

@@ -183,7 +183,7 @@ public class JobsManager(
     }
 
     Result<IJob, IJobTypes.GetClrTypeForError> GetJobGrain(JobState jobState) => jobTypes.GetClrTypeFor(jobState.Type)
-        .Match<Result<IJob, IJobTypes.GetClrTypeForError>>(
+        .Match(
             jobType => Result<IJob, IJobTypes.GetClrTypeForError>.Success((IJob)GrainFactory.GetGrain(jobType, jobState.Id, new JobKey(_key.EventStore, _key.Namespace))),
             error => error)!;
 
@@ -215,7 +215,7 @@ public class JobsManager(
     }
 
     Task<OneOf<Result<ResumeJobSuccess, ResumeJobError>, Storage.Jobs.JobError>> ResumeJob(JobState jobState) => GetJobGrain(jobState)
-            .Match<Task<OneOf<Result<ResumeJobSuccess, ResumeJobError>, Storage.Jobs.JobError>>>(
+            .Match(
                 async job =>
                 {
                     var result = await job.Resume();
@@ -243,7 +243,7 @@ public class JobsManager(
             ex => Task.FromResult<OneOf<None, JobError, Storage.Jobs.JobError, Exception>>(ex));
 
         Task<OneOf<None, JobError, Storage.Jobs.JobError>> GetJobGrainAndStop(JobState jobState) => GetJobGrain(jobState)
-            .Match<Task<OneOf<None, JobError, Storage.Jobs.JobError>>>(
+            .Match(
                 async job =>
                 {
                     var result = await job.Stop();

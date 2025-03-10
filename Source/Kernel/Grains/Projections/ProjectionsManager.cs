@@ -18,12 +18,14 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// Represents an implementation of <see cref="IProjectionsManager"/>.
 /// </summary>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
+/// <param name="projectionsService"><see cref="IProjectionsServiceClient"/> for managing projections.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
 [ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
 public class ProjectionsManager(
     IProjectionFactory projectionFactory,
+    IProjectionsServiceClient projectionsService,
     ILocalSiloDetails localSiloDetails,
     ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed
 {
@@ -42,19 +44,31 @@ public class ProjectionsManager(
     /// <inheritdoc/>
     public async Task Register(IEnumerable<ProjectionDefinition> definitions)
     {
+        await projectionsService.Register(_eventStoreName, definitions);
         State.Projections = definitions;
         await SetDefinitionAndSubscribeForAllProjections();
     }
 
     /// <inheritdoc/>
+    public Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions()
+    {
+        return Task.FromResult(State.Projections);
+    }
+
+    /// <inheritdoc/>
     public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
     {
+        var eventStore = streamSubscription.ChannelId.GetKeyAsString();
+        if (_eventStoreName != eventStore) return Task.CompletedTask;
+
         streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
         return Task.CompletedTask;
     }
 
     async Task OnNamespaceAdded(NamespaceAdded added)
     {
+        await projectionsService.NamespaceAdded(_eventStoreName, added.Namespace);
+
         foreach (var projectionDefinition in State.Projections)
         {
             var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);
