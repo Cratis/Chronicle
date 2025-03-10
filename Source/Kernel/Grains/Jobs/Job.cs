@@ -364,7 +364,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     {
         try
         {
-            if (!State.Progress.IsCompleted || !State.Progress.IsStopped)
+            if (State.Progress is { IsCompleted: false, IsStopped: false })
             {
                 return HandleCompletionSuccess.AllStepsNotCompletedYet;
             }
