@@ -40,6 +40,7 @@ public class TheJobStep(
 
         return ValueTask.CompletedTask;
     }
+    protected override ValueTask<TheJobStepResult> CreateCancelledResultFromCurrentState(TheJobStepState currentState) => new(new TheJobStepResult());
 
     protected override async Task<Catch<JobStepResult>> PerformStep(TheJobStepState currentState, CancellationToken cancellationToken)
     {
@@ -61,7 +62,7 @@ public class TheJobStep(
                 throw new Exception("Should fail");
             }
 
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, JobStepStatus.Succeeded);
+            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, JobStepStatus.CompletedSuccessfully);
             return JobStepResult.Succeeded(new TheJobStepResult());
         }
         catch (Exception ex) when (ex is OperationCanceledException or TaskCanceledException)
@@ -70,7 +71,7 @@ public class TheJobStep(
         }
         catch (Exception ex)
         {
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, JobStepStatus.Failed);
+            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, JobStepStatus.CompletedWithFailure);
             return JobStepResult.Failed(PerformJobStepError.Failed(ex));
         }
 

@@ -28,7 +28,7 @@ public class and_job_step_completes_successfully(context context) : Given<contex
             StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true });
             await TheJobStepProcessor.WaitForStepsToBeCompleted();
             JobId = StartJobResult.AsT0;
-            CompletedJobState = await JobStorage.WaitTillJobCompleted<JobWithSingleStepState>(JobId);
+            CompletedJobState = await JobStorage.WaitTillJobProgressCompleted<JobWithSingleStepState>(JobId);
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
             JobStepStates = getJobStepState.AsT0;
         }
@@ -56,5 +56,5 @@ public class and_job_step_completes_successfully(context context) : Given<contex
     public void should_perform_work_for_job_step_only_once() => Context.TheJobStepProcessor.ShouldHavePerformedJobStepCalls(Context.JobId, 1);
 
     [Fact]
-    public void should_have_completed_work_successfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, JobStepStatus.Succeeded, 1);
+    public void should_have_completed_work_successfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, JobStepStatus.CompletedSuccessfully, 1);
 }

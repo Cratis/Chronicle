@@ -8,7 +8,7 @@ using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 using Cratis.Chronicle.Storage.Jobs;
-using Humanizer;
+
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_is_stopped.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step;
@@ -32,7 +32,7 @@ public class and_job_is_stopped(context context) : Given<context>(context)
             await TheJobStepProcessor.WaitForAllPreparedStepsToBeStarted();
             await JobsManager.Stop(JobId);
             taskCompletionSource.SetResult();
-            CompletedJobState = await JobStorage.WaitTillJobCompleted<JobWithSingleStepState>(JobId);
+            CompletedJobState = await JobStorage.WaitTillJobProgressStopped<JobWithSingleStepState>(JobId);
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
             JobStepStates = getJobStepState.AsT0;
         }
@@ -45,13 +45,16 @@ public class and_job_is_stopped(context context) : Given<context>(context)
     public void should_have_correct_job_type() => Context.CompletedJobState.Type.Value.ShouldEqual(nameof(JobWithSingleStep));
 
     [Fact]
-    public void should_remove_state_of_job_step() => Context.JobStepStates.ShouldBeEmpty();
+    public void should_not_remove_state_of_job_step() => Context.JobStepStates.ShouldNotBeEmpty();
 
     [Fact]
     public void should_have_stopped_job_status() => Context.CompletedJobState.Status.ShouldEqual(JobStatus.Stopped);
 
     [Fact]
-    public void should_have_completed_job_progress() => Context.CompletedJobState.Progress.IsCompleted.ShouldBeTrue();
+    public void should_have_stopped_job_progress() => Context.CompletedJobState.Progress.IsStopped.ShouldBeTrue();
+
+    [Fact]
+    public void should_have_not_completed_job_progress() => Context.CompletedJobState.Progress.IsCompleted.ShouldBeFalse();
 
     [Fact]
     public void should_have_job_progress_with_one_stopped_step() => Context.CompletedJobState.Progress.StoppedSteps.ShouldEqual(1);

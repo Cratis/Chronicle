@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Grains.Jobs;
+
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 
 public class JobWithSingleStep : Job<JobWithSingleStepRequest, JobWithSingleStepState>, IJobWithSingleStep

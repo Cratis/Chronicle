@@ -45,7 +45,7 @@ public class and_job_step_fails(context context) : Given<context>(context)
     public void should_keep_state_of_failed_job_step() => Context.JobStepStates.ShouldContainSingleItem();
 
     [Fact]
-    public void should_have_job_step_state_where_status_is_failed() => Context.JobStepStates[0].Status.ShouldEqual(JobStepStatus.Failed);
+    public void should_have_job_step_state_where_status_is_failed() => Context.JobStepStates[0].Status.ShouldEqual(JobStepStatus.CompletedWithFailure);
 
     [Fact]
     public void should_have_completed_job_with_failure() => Context.CompletedJobState.Status.ShouldEqual(JobStatus.CompletedWithFailures);
@@ -60,5 +60,5 @@ public class and_job_step_fails(context context) : Given<context>(context)
     public void should_perform_work_for_job_step_only_once() => Context.TheJobStepProcessor.GetNumPerformCallsPerJobStep(Context.StartJobResult.AsT0).ShouldContainSingleItem();
 
     [Fact]
-    public void should_have_completed_work_unsuccessfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, JobStepStatus.Failed, 1);
+    public void should_have_completed_work_unsuccessfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, JobStepStatus.CompletedWithFailure, 1);
 }

@@ -17,7 +17,7 @@ public class all_dependencies(GlobalFixture globalFixture) : IntegrationSpecific
 
     void Establish()
     {
-        JobsManager = GrainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(EventStore.Name.Value, EventStore.Namespace.Value));
+        JobsManager = GrainFactory.GetJobsManager(EventStore.Name.Value, EventStore.Namespace.Value);
         TheJobStepProcessor = Services.GetRequiredService<TheJobStepProcessor>();
         JobStorage = EventStoreStorage.GetNamespace(EventStore.Namespace.Value).Jobs;
         JobStepStorage = EventStoreStorage.GetNamespace(EventStore.Namespace.Value).JobSteps;
