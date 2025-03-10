@@ -35,12 +35,13 @@ public static class ApiServiceCollectionExtensions
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <param name="chronicleServices">Optional <see cref="IServices"/> for the Chronicle services.</param>
+    /// <param name="useGrpc">Whether to use gRPC or not.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     /// <remarks>
     /// Typically the optional <see cref="IServices"/> is used when running everything in process, or one wants
     /// to reuse the services that is already configured for the client.
-    // </remarks>
-    public static IServiceCollection AddCratisChronicleApi(this IServiceCollection services, IServices? chronicleServices = null)
+    /// </remarks>
+    public static IServiceCollection AddCratisChronicleApi(this IServiceCollection services, IServices? chronicleServices = null, bool useGrpc = true)
     {
         services
             .AddControllers()
@@ -64,7 +65,7 @@ public static class ApiServiceCollectionExtensions
             options.AddConcepts();
         });
 
-        if (chronicleServices is null)
+        if (chronicleServices is null || useGrpc)
         {
             services.AddSingleton<IChronicleConnection>(sp =>
             {
@@ -81,7 +82,8 @@ public static class ApiServiceCollectionExtensions
             });
             services.AddSingleton(sp => sp.GetRequiredService<IChronicleConnection>().Services);
         }
-        else
+
+        if (chronicleServices is not null)
         {
             services.AddSingleton(chronicleServices);
         }
