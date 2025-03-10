@@ -67,18 +67,16 @@ public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
 
         switch (GetStatus(actualState))
         {
+            case JobStepStatus.CompletedWithFailure:
             case JobStepStatus.Failed:
                 await HandleCatchNone(jobStepStorage.MoveToFailed(key.JobId, jobStepId, grainState.State), type, methodName);
                 break;
 
-            case JobStepStatus.Stopped:
-            case JobStepStatus.Succeeded:
+            case JobStepStatus.CompletedSuccessfully:
                 await HandleCatch(jobStepStorage.Remove(key.JobId, jobStepId), type, methodName);
                 break;
 
-            case JobStepStatus.Paused:
-            case JobStepStatus.Running:
-            case JobStepStatus.Scheduled:
+            default:
                 await HandleCatchNone(jobStepStorage.Save(key.JobId, jobStepId, grainState.State), type, methodName);
                 break;
         }
@@ -86,30 +84,18 @@ public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
 
         static JobStepStatus GetStatus(JobStepState state)
         {
-            if (IsStopped(state)) return JobStepStatus.Stopped;
-            if (IsSuccessful(state)) return JobStepStatus.Succeeded;
-            if (IsFailed(state)) return JobStepStatus.Failed;
-            if (IsPaused(state)) return JobStepStatus.Paused;
-            return JobStepStatus.Running;
+            if (IsInState(JobStepStatus.Failed, state)) return JobStepStatus.Failed;
+            if (IsInState(JobStepStatus.CompletedWithFailure, state)) return JobStepStatus.CompletedWithFailure;
+            if (IsInState(JobStepStatus.CompletedSuccessfully, state)) return JobStepStatus.CompletedSuccessfully;
+            if (IsInState(JobStepStatus.Stopped, state)) return JobStepStatus.Stopped;
+            if (IsInState(JobStepStatus.Running, state)) return JobStepStatus.Running;
+            if (IsInState(JobStepStatus.Scheduled, state)) return JobStepStatus.Scheduled;
+
+            return JobStepStatus.Unknown;
         }
 
-        static bool IsPaused(JobStepState state) =>
-            state.StatusChanges.Count > 0 &&
-            state.StatusChanges[^1].Status == JobStepStatus.Paused;
-
-        static bool IsStopped(JobStepState state) =>
-            state.StatusChanges.Count > 0 &&
-            state.StatusChanges[^1].Status == JobStepStatus.Stopped;
-
-        static bool IsSuccessful(JobStepState state) =>
-                state.StatusChanges.Count > 1 &&
-                state.StatusChanges[^1].Status == JobStepStatus.Succeeded &&
-                state.StatusChanges[^2].Status == JobStepStatus.Running;
-
-        static bool IsFailed(JobStepState state) =>
-                state.StatusChanges.Count > 1 &&
-                state.StatusChanges[^1].Status == JobStepStatus.Failed &&
-                state.StatusChanges[^2].Status == JobStepStatus.Running;
+        static bool IsInState(JobStepStatus status, JobStepState state) =>
+            state.StatusChanges.Count > 0 && state.StatusChanges[^1].Status == status;
     }
 
     static void ThrowIfInvalidJobStateType(Type type, string operationName) => JobStepStateType
@@ -118,20 +104,20 @@ public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
 
     static async Task HandleCatchNone(Task<Catch<None, Storage.Jobs.JobStepError>> getResult, Type type, string methodName)
     {
-        var monad = await getResult;
-        await monad.Match(
-            _ => Task.CompletedTask,
+        var maybeError = await getResult;
+        await maybeError.Match(
+            none => Task.CompletedTask,
             error => Task.FromException(new JobStepGrainStorageProviderError(type, error, methodName)),
-            error => Task.FromException(new JobStepGrainStorageProviderError(type, error, methodName)));
+            exception => Task.FromException(new JobStepGrainStorageProviderError(type, exception, methodName)));
     }
 
     static async Task HandleCatch(Task<Catch> getResult, Type type, string methodName)
     {
-        var monad = await getResult;
-        await monad.Match(_ => Task.CompletedTask, error => Task.FromException(new JobStepGrainStorageProviderError(type, error, methodName)));
+        var maybeError = await getResult;
+        await maybeError.Match(none => Task.CompletedTask, error => Task.FromException(new JobStepGrainStorageProviderError(type, error, methodName)));
     }
 
-    Task HandleSuccessfulRead<T>(T state, IGrainState<T> grainState)
+    static Task HandleSuccessfulRead<T>(T state, IGrainState<T> grainState)
     {
         grainState.State = state;
         return Task.CompletedTask;
