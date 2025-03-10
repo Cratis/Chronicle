@@ -20,7 +20,7 @@ public abstract partial class Job<TRequest, TJobState>
             _logger.StepSuccessfullyCompleted(stepId);
             State.Progress.SuccessfulSteps++;
             _ = await WriteState();
-            var handleCompletedStepResult = await HandleJobStepCompleted(stepId, jobStepResult);
+            var handleCompletedStepResult = await HandleJobStepCompletedOrStopped(stepId, jobStepResult);
             return handleCompletedStepResult.Match(
                 _ => Result.Success<JobError>(),
                 error =>
@@ -45,7 +45,7 @@ public abstract partial class Job<TRequest, TJobState>
             _logger.StepStopped(stepId);
             State.Progress.StoppedSteps++;
             _ = await WriteState();
-            var handleCompletedStepResult = await HandleJobStepCompleted(stepId, jobStepResult);
+            var handleCompletedStepResult = await HandleJobStepCompletedOrStopped(stepId, jobStepResult);
             return handleCompletedStepResult.Match(
                 _ => Result.Success<JobError>(),
                 error =>
@@ -70,7 +70,7 @@ public abstract partial class Job<TRequest, TJobState>
             _logger.StepFailed(stepId);
             State.Progress.FailedSteps++;
             _ = await WriteState();
-            var handleCompletedStepResult = await HandleJobStepCompleted(stepId, jobStepResult);
+            var handleCompletedStepResult = await HandleJobStepCompletedOrStopped(stepId, jobStepResult);
             return handleCompletedStepResult.Match(
                 _ => Result.Success<JobError>(),
                 error =>
@@ -87,12 +87,12 @@ public abstract partial class Job<TRequest, TJobState>
     }
 
     /// <summary>
-    /// Called when a step has completed.
+    /// Called when a step has completed successfully, completed with failure or stopped.
     /// </summary>
-    /// <param name="jobStepId"><see cref="JobStepId"/> for the completed step.</param>
-    /// <param name="result"><see cref="JobStepResult"/> for the completed step.</param>
+    /// <param name="jobStepId"><see cref="JobStepId"/> for the step.</param>
+    /// <param name="result"><see cref="JobStepResult"/> for the step.</param>
     /// <returns>Awaitable task.</returns>
-    protected virtual Task OnStepCompleted(JobStepId jobStepId, JobStepResult result) => Task.CompletedTask;
+    protected virtual Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result) => Task.CompletedTask;
 
     /// <summary>
     /// Create a new <see cref="IJobStep"/>.
@@ -120,24 +120,17 @@ public abstract partial class Job<TRequest, TJobState>
     }
 
     /// <summary>
-    /// Called before preparing steps.
-    /// </summary>
-    /// <param name="request">The request associated with the job.</param>
-    /// <returns>Awaitable task.</returns>
-    protected virtual Task OnBeforePrepareSteps(TRequest request) => Task.CompletedTask;
-
-    /// <summary>
     /// Start the job.
     /// </summary>
     /// <param name="request">The request associated with the job.</param>
     /// <returns>Collection of <see cref="JobStepDetails"/> .</returns>
     protected abstract Task<IImmutableList<JobStepDetails>> PrepareSteps(TRequest request);
 
-    async Task<Result<JobError>> HandleJobStepCompleted(JobStepId stepId, JobStepResult result)
+    async Task<Result<JobError>> HandleJobStepCompletedOrStopped(JobStepId stepId, JobStepResult result)
     {
         try
         {
-            await OnStepCompleted(stepId, result);
+            await OnStepCompletedOrStopped(stepId, result);
             var handleCompletionResult = await HandleCompletion();
             return await HandleCompletionResult(handleCompletionResult);
         }
@@ -161,8 +154,8 @@ public abstract partial class Job<TRequest, TJobState>
         }
         var needsToWriteState = completionResult.AsT0 switch
         {
-            HandleCompletionSuccess.NotClearedState => true,
-            _ => false
+            HandleCompletionSuccess.ClearedState => false,
+            _ => true
         };
         if (!needsToWriteState)
         {
@@ -185,7 +178,7 @@ public abstract partial class Job<TRequest, TJobState>
 
     async Task<Dictionary<JobStepId, IJobStep>> GetIdAndGrainReferenceToNonCompletedJobSteps()
     {
-        var getJobSteps = await Storage.JobSteps.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Paused, JobStepStatus.Unknown);
+        var getJobSteps = await Storage.JobSteps.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Unknown);
         getJobSteps.RethrowError();
         var jobSteps = getJobSteps.AsT0;
         return jobSteps.ToDictionary(jobStep => jobStep.Id.JobStepId, GetJobStepGrain);
@@ -199,7 +192,6 @@ public abstract partial class Job<TRequest, TJobState>
         try
         {
             var grainId = this.GetGrainId();
-            await OnBeforePrepareSteps(request);
             var steps = await PrepareSteps(request);
             _ = await SetTotalSteps(steps.Count);
             if (steps.Count == 0)
@@ -269,13 +261,14 @@ public abstract partial class Job<TRequest, TJobState>
                 return (JobStepId: id, Result: Result.Failed(PrepareJobStepError.Unknown));
             }
         });
-        var results = await Task.WhenAll(prepareAllSteps);
-        return results.All(_ => _.Result.IsSuccess);
+        var prepareResults = await Task.WhenAll(prepareAllSteps);
+        return prepareResults.All(idAndResult => idAndResult.Result.IsSuccess);
     }
 
     async Task<Result<StartJobError>> StartAndSubscribeToAllJobSteps(GrainId grainId)
     {
-        var prepareAllSteps = _jobStepGrains!.Select(async idAndGrain =>
+        await OnBeforeStartingJobSteps();
+        var startAllSteps = _jobStepGrains!.Select(async idAndGrain =>
         {
             var (id, jobStep) = idAndGrain;
             try
@@ -293,18 +286,18 @@ public abstract partial class Job<TRequest, TJobState>
                 return (JobStepId: id, Result: Result.Failed(StartJobStepError.Unknown));
             }
         });
-        var results = await Task.WhenAll(prepareAllSteps);
-        var numFailedJobSteps = results.Count(finishedTask => !finishedTask.Result.IsSuccess);
-        foreach (var idAndJobStep in results.Where(_ => _.Result.IsSuccess))
+        var startResults = await Task.WhenAll(startAllSteps);
+        var numFailedJobSteps = startResults.Count(finishedTask => !finishedTask.Result.IsSuccess);
+        foreach (var (jobStepId, _) in startResults.Where(idAndStartResult => idAndStartResult.Result.IsSuccess))
         {
-            await SubscribeJobStep(_jobStepGrains![idAndJobStep.JobStepId].AsReference<IJobObserver>());
+            await SubscribeJobStep(_jobStepGrains![jobStepId].AsReference<IJobObserver>());
         }
         if (numFailedJobSteps == 0)
         {
             return Result<StartJobError>.Success();
         }
         State.Progress.FailedSteps += numFailedJobSteps;
-        return numFailedJobSteps == results.Length
+        return numFailedJobSteps == startResults.Length
             ? StartJobError.AllJobStepsFailedStarting
             : StartJobError.FailedStartingSomeJobSteps;
     }

@@ -26,12 +26,6 @@ public abstract partial class Job<TRequest, TJobState>
         }
     }
 
-    /// <summary>
-    /// Gets a value indicating whether the job is in a stopped or completed state.
-    /// </summary>
-    /// <returns>True if it is stopped or completed, false if not.</returns>
-    protected bool IsCompleted() => State.Status is JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures;
-
     async Task<Result<JobError>> SetTotalSteps(int totalSteps)
     {
         _logger.BeginJobScope(JobId, JobKey);

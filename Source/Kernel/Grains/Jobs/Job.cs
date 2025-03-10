@@ -79,11 +79,6 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     protected bool AllStepsCompletedSuccessfully => State.Progress.SuccessfulSteps == State.Progress.TotalSteps;
 
     /// <inheritdoc/>
-#pragma warning disable CA1721
-    public Task<JobType> GetJobType() => Task.FromResult(State.Type);
-#pragma warning restore CA1721
-
-    /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
@@ -117,7 +112,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         {
             return StartJobError.Unknown;
         }
-        if (IsCompleted())
+        if (State.Status is JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures)
         {
             return StartJobError.AlreadyCompleted;
         }
@@ -149,7 +144,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
                 return ResumeJobSuccess.JobAlreadyRunning;
             }
 
-            if (IsCompleted())
+            if (State.Status is JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures)
             {
                 return ResumeJobSuccess.JobIsCompleted;
             }
@@ -165,7 +160,11 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             }
 
             _logger.Resuming();
+            State.Progress.StoppedSteps = 0;
+            _ = await WriteStatusChanged(JobStatus.Running);
+            await OnBeforeResumingJobSteps();
             var grainId = this.GetGrainId();
+
             var tasks = _jobStepGrains!.Select(async jobStepIdAndGrain =>
             {
                 var result = await jobStepIdAndGrain.Value.Start(grainId);
@@ -176,14 +175,13 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
 
             foreach (var (id, result, grain) in startJobStepResults)
             {
-                var failedStep = await HandleStartJobStepResult(id, result, grain);
+                var failedStep = await HandleResumeJobStepResult(id, result, grain);
                 if (failedStep)
                 {
                     failedSteps.Add(id);
                 }
             }
 
-            _ = await WriteStatusChanged(JobStatus.Running);
             return failedSteps.Count == 0
                 ? ResumeJobSuccess.Success
                 : Result<ResumeJobSuccess, ResumeJobError>.Failed(new FailedResumingJobSteps(failedSteps));
@@ -196,83 +194,103 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     }
 
     /// <inheritdoc/>
-    public async Task<Result<PauseJobError>> Pause()
+    public async Task<Result<StopJobError>> Stop()
     {
         using var scope = _logger.BeginJobScope(JobId, JobKey);
         try
         {
             if (State.Status is JobStatus.Failed)
             {
-                return PauseJobError.Unknown;
+                return StopJobError.Unknown;
             }
-            if (IsCompleted() || State.Status is JobStatus.Stopped)
+            if (State.Status is JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures)
             {
-                return PauseJobError.JobIsCompleted;
+                return StopJobError.JobIsCompleted;
             }
             if (!JobIsRunning())
             {
-                return PauseJobError.JobIsNotRunning;
+                return StopJobError.JobIsNotRunning;
             }
 
-            _logger.Pausing();
-            await _observers!.Notify(o => o.OnJobPaused());
-            foreach (var (_, jobStepGrain) in _jobStepGrains)
-            {
-                await UnsubscribeJobStep(jobStepGrain.AsReference<IJobObserver>());
-            }
+            _logger.Stopping();
+            _ = await WriteStatusChanged(JobStatus.Stopped);
 
-            _ = await WriteStatusChanged(JobStatus.Paused);
-            return Result<PauseJobError>.Success();
+            // Do not call OnStopped here because it should be called after all steps have been stopped
+            await StopNonCompletedStepsAndEnsureCompletion();
+
+            return Result<StopJobError>.Success();
         }
         catch (Exception e)
         {
             _logger.Failed(e);
-            return PauseJobError.Unknown;
+            return StopJobError.Unknown;
         }
     }
 
     /// <inheritdoc/>
-    public async Task<Result<JobError>> Stop()
+    public async Task<Result<RemoveJobError>> Remove()
     {
         using var scope = _logger.BeginJobScope(JobId, JobKey);
         try
         {
             if (State.Status is JobStatus.Failed)
             {
-                return JobError.UnknownError;
+                return RemoveJobError.Unknown;
             }
-            if (IsCompleted() || State.Status is JobStatus.Stopped)
+            if (State.Status is JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures)
             {
-                return JobError.JobIsStoppedOrCompleted;
+                return RemoveJobError.JobIsCompleted;
             }
-            if (!JobIsRunning() && State.Status != JobStatus.Paused)
+            if (State.Status is JobStatus.Removing)
             {
-                return JobError.JobIsStoppedOrCompleted;
+                return RemoveJobError.JobIsAlreadyBeingRemoved;
             }
 
-            _logger.Stopping();
+            _logger.Removing();
+            _ = await WriteStatusChanged(JobStatus.Removing);
 
-            // Set status Stopped so that it can be used in the OnCompleted if necessary
-            _ = await WriteStatusChanged(JobStatus.Stopped);
-
-            await _observers!.Notify(o => o.OnJobStopped());
-            return Result<JobError>.Success();
+            // Do not call OnStopped here because it should be called after all steps have been stopped
+            await StopNonCompletedStepsAndEnsureCompletion();
+            return Result<RemoveJobError>.Success();
         }
         catch (Exception e)
         {
             _logger.Failed(e);
-            return JobError.UnknownError;
+            return RemoveJobError.Unknown;
         }
     }
 
     /// <summary>
-    /// What needs to be done by the Job implementation when all job steps are completed.
+    /// What needs to be done by the Job implementation before starting all prepared job steps.
+    /// </summary>
+    /// <returns>A task representing the operation.</returns>
+    protected virtual Task OnBeforeStartingJobSteps() => Task.FromResult(Result.Success<JobError>());
+
+    /// <summary>
+    /// What needs to be done by the Job implementation before resuming all prepared and non-completed job steps.
+    /// </summary>
+    /// <returns>A task representing the operation.</returns>
+    protected virtual Task OnBeforeResumingJobSteps() => Task.FromResult(Result.Success<JobError>());
+
+    /// <summary>
+    /// What needs to be done by the Job implementation when all job steps are completed or job is being removed.
     /// </summary>
     /// <remarks>
-    /// Job step being completed means either successfully completed, failed, partially failed or stopped/paused.
+    /// Job step being completed means either successfully completed, failed or partially failed.
     /// </remarks>
     /// <returns>A task representing the operation.</returns>
     protected virtual Task OnCompleted() => Task.FromResult(Result.Success<JobError>());
+
+    /// <summary>
+    /// What needs to be done by the Job implementation when running job steps are stopped or removed manually.
+    /// </summary>
+    /// <remarks>
+    /// This is also called when a Job is being removed.
+    /// OnStopped can be called on a Job two or more times. For instance if a Job is first stopped then removed later.
+    /// It will first call OnStopped when the non-completed steps are stopped and then call it again when Remove is called
+    /// </remarks>
+    /// <returns>A task representing the operation.</returns>
+    protected virtual Task OnStopped() => Task.FromResult(Result.Success<JobError>());
 
     /// <summary>
     /// Check if the job can be resumed.
@@ -286,14 +304,46 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     /// <returns>The <see cref="JobDetails"/>.</returns>
     protected virtual JobDetails GetJobDetails() => JobDetails.NotSet;
 
-    async Task<bool> HandleStartJobStepResult(JobStepId jobStepId, Result<StartJobStepError> result, IJobStep jobStepGrain)
+    async Task StopNonCompletedStepsAndEnsureCompletion()
+    {
+        if (_observers?.Count > 0)
+        {
+            // The job steps will eventually handle completion
+            await _observers!.Notify(o => o.OnJobStopped());
+            return;
+        }
+
+        // This state can occur when we are trying to stop or remove a Job that is persisted over a system shutdown.
+        // Then we want to resubscribe all non-completed job steps
+        if (State.Progress is { IsCompleted: false, IsStopped: false })
+        {
+            foreach (var (jobStepId, _) in _jobStepGrains ?? [])
+            {
+                await SubscribeJobStep(_jobStepGrains![jobStepId].AsReference<IJobObserver>());
+            }
+        }
+
+        if (_observers is null || _observers.Count == 0)
+        {
+            // All job steps should be in stopped state. Just HandleCompletion manually
+            _ = await HandleCompletionResult(await HandleCompletion());
+        }
+        else
+        {
+            // The job steps will eventually handle completion
+            await _observers!.Notify(o => o.OnJobStopped());
+        }
+    }
+
+    async Task<bool> HandleResumeJobStepResult(JobStepId jobStepId, Result<StartJobStepError> result, IJobStep jobStepGrain)
     {
         try
         {
             if (result.TryGetError(out var error))
             {
-                if (error is StartJobStepError.AlreadyRunning)
+                if (error is StartJobStepError.AlreadyStarted )
                 {
+                    await SubscribeJobStep(jobStepGrain.AsReference<IJobObserver>());
                     return true;
                 }
 
@@ -314,7 +364,19 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     {
         try
         {
-            if (!State.Progress.IsCompleted)
+            if (!State.Progress.IsCompleted || !State.Progress.IsStopped)
+            {
+                return HandleCompletionSuccess.AllStepsNotCompletedYet;
+            }
+
+            // When all steps have been stopped or completed
+            if (State.Status is JobStatus.Stopped or JobStatus.Removing)
+            {
+                await OnStopped();
+            }
+
+            // Don't go to Complete if the job is Stopped, because it can be resumed or removed in the future.
+            if (State.Status is JobStatus.Stopped)
             {
                 return HandleCompletionSuccess.AllStepsNotCompletedYet;
             }
@@ -322,20 +384,20 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             var onCompletedResult = await Complete();
             if (onCompletedResult.TryGetError(out var onCompletedError))
             {
-                // TODO: Should we just log and continue here?
-                return onCompletedError;
+                // TODO: Just log error here
             }
-            if (!KeepAfterCompleted) // TODO: Should we always keep state if some or all steps, or job, failed?
+            var shouldClearState = State.Status is JobStatus.Removing || !KeepAfterCompleted;
+            if (shouldClearState)
             {
                 await ClearStateAsync();
             }
-            else if (State.Status is not JobStatus.Stopped)
+            else if (State.Status is not JobStatus.Removing)
             {
                 StatusChanged(State.Progress.FailedSteps > 0 ? JobStatus.CompletedWithFailures : JobStatus.CompletedSuccessfully);
             }
 
             DeactivateOnIdle();
-            return !KeepAfterCompleted ? HandleCompletionSuccess.ClearedState : HandleCompletionSuccess.NotClearedState;
+            return shouldClearState ? HandleCompletionSuccess.ClearedState : HandleCompletionSuccess.NotClearedState;
         }
         catch (Exception ex)
         {
