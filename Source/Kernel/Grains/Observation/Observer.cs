@@ -28,7 +28,6 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// </remarks>
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
-/// <param name="replayEvaluator">The <see cref="IReplayEvaluator"/>.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -37,7 +36,6 @@ public partial class Observer(
     [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
     IPersistentState<FailedPartitions> failures,
     IConfigurationForObserverProvider configurationProvider,
-    IReplayEvaluator replayEvaluator,
     ILogger<Observer> logger,
     IMeter<Observer> meter,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable

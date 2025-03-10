@@ -65,7 +65,7 @@ public partial class Observer
         var tailSequenceNumber = await _eventSequence.GetTailSequenceNumber();
         var getNextToHandleResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(State.NextEventSequenceNumber, _subscription.EventTypes.ToList());
         var nextUnhandledEventSequenceNumber = getNextToHandleResult.Match(eventSequenceNumber => eventSequenceNumber, _ => EventSequenceNumber.Unavailable);
-
+        var replayEvaluator = new ReplayEvaluator(GrainFactory, _subscription.ObserverKey.EventStore, _observerKey.Namespace);
         if (!await replayEvaluator.Evaluate(new(
                 State.Id,
                 _subscription.ObserverKey,
