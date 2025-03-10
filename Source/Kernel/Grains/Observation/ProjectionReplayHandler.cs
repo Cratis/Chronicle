@@ -46,7 +46,7 @@ public class ProjectionReplayHandler(
                 {
                     var pipeline = projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
                     await pipeline.EndReplay(context);
-                    await namespaceStorage.ReplayedModels.Replayed(context);
+                    await namespaceStorage.ReplayedModels.Replayed(observerDetails.Key.ObserverId, context);
                     await namespaceStorage.ReplayContexts.Evict(projection.Model.Name);
                 },
                 _ => Task.CompletedTask);
