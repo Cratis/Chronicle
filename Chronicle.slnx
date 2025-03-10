@@ -1,0 +1,49 @@
+<Solution>
+  <Folder Name="/Integration/">
+    <Project Path="Integration/Base/Base.csproj" />
+    <Project Path="Integration/Orleans.InProcess/Orleans.InProcess.csproj" />
+  </Folder>
+  <Folder Name="/Source/">
+    <Project Path="Source/Api/Api.csproj" />
+    <Project Path="Source/Infrastructure.Specs/Infrastructure.Specs.csproj" />
+    <Project Path="Source/Infrastructure/Infrastructure.csproj" />
+    <Project Path="Source/Tools/ResourceEmbedder/ResourceEmbedder.csproj" />
+  </Folder>
+  <Folder Name="/Source/Clients/">
+    <Project Path="Source/Clients/AspNetCore.Specs/AspNetCore.Specs.csproj" />
+    <Project Path="Source/Clients/AspNetCore/AspNetCore.csproj" />
+    <Project Path="Source/Clients/Connections/Connections.csproj" />
+    <Project Path="Source/Clients/DotNET.Specs/DotNET.Specs.csproj" />
+    <Project Path="Source/Clients/DotNET/DotNET.csproj" />
+    <Project Path="Source/Clients/Orleans.InProcess/Orleans.InProcess.csproj" />
+    <Project Path="Source/Clients/Orleans.XUnit/Orleans.XUnit.csproj" />
+    <Project Path="Source/Clients/Orleans/Orleans.csproj" />
+    <Project Path="Source/Clients/XUnit/XUnit.csproj" />
+    <Project Path="Source/Tools/AssemblyFixer/AssemblyFixer.csproj" />
+  </Folder>
+  <Folder Name="/Source/Kernel/">
+    <Project Path="Source/Kernel/Compliance.Specs/Compliance.Specs.csproj" />
+    <Project Path="Source/Kernel/Compliance/Compliance.csproj" />
+    <Project Path="Source/Kernel/Concepts.Specs/Concepts.Specs.csproj" />
+    <Project Path="Source/Kernel/Concepts/Concepts.csproj" />
+    <Project Path="Source/Kernel/Contracts/Contracts.csproj" />
+    <Project Path="Source/Kernel/Diagnostics/Diagnostics.csproj" />
+    <Project Path="Source/Kernel/Events/Events.csproj" />
+    <Project Path="Source/Kernel/Grains.Interfaces.Specs/Grains.Interfaces.Specs.csproj" />
+    <Project Path="Source/Kernel/Grains.Interfaces/Grains.Interfaces.csproj" />
+    <Project Path="Source/Kernel/Grains.Specs/Grains.Specs.csproj" />
+    <Project Path="Source/Kernel/Grains/Grains.csproj" />
+    <Project Path="Source/Kernel/Projections.Specs/Projections.Specs.csproj" />
+    <Project Path="Source/Kernel/Projections/Projections.csproj" />
+    <Project Path="Source/Kernel/Server/Server.csproj" />
+    <Project Path="Source/Kernel/Services/Services.csproj" />
+    <Project Path="Source/Kernel/Setup/Setup.csproj" />
+    <Project Path="Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj" />
+    <Project Path="Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
+    <Project Path="Source/Kernel/Storage.Specs/Storage.Specs.csproj" />
+    <Project Path="Source/Kernel/Storage/Storage.csproj" />
+  </Folder>
+  <Folder Name="/Source/Workbench/">
+    <Project Path="Source/Workbench/Embedded/Embedded.csproj" />
+  </Folder>
+</Solution>
