@@ -76,7 +76,7 @@ public class ReplayObserver(
     }
 
     /// <inheritdoc/>
-    protected override Task OnStepCompleted(JobStepId jobStepId, JobStepResult result)
+    protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
         State.HandleResult(result);
         return Task.CompletedTask;
