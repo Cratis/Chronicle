@@ -69,6 +69,10 @@ public class HandleEventsForPartition(
         return ValueTask.CompletedTask;
     }
 
+    /// <inheritdoc />
+    protected override ValueTask<HandleEventsForPartitionResult?> CreateCancelledResultFromCurrentState(HandleEventsForPartitionState currentState) =>
+        ValueTask.FromResult<HandleEventsForPartitionResult?>(new(currentState.LastSuccessfullyHandledEventSequenceNumber));
+
     /// <inheritdoc/>
     protected override Task<Concepts.Result<PrepareJobStepError>> PrepareStep(HandleEventsForPartitionArguments request)
     {
