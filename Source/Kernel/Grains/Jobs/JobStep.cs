@@ -152,11 +152,18 @@ public abstract class JobStep<TRequest, TResult, TState>(
             if (!removing && State.Status is JobStepStatus.Stopped)
             {
                 logger.AlreadyStopped();
+                DeactivateOnIdle();
                 return Result.Success<JobStepError>();
             }
             if (removing)
             {
+                var wasStopped = State.Status == JobStepStatus.Stopped;
                 _ = await WriteStatusChange(JobStepStatus.Removing);
+                if (wasStopped)
+                {
+                    DeactivateOnIdle();
+                    return Result.Success<JobStepError>();
+                }
             }
             logger.Stopping();
             var cancelTokenTask = _cancellationTokenSource?.CancelAsync() ?? Task.CompletedTask;

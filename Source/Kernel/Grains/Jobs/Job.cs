@@ -99,7 +99,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
 
         if (JobIsPrepared())
         {
-            _jobStepGrains = await GetIdAndGrainReferenceToNonCompletedJobSteps();
+            _jobStepGrains = await GetIdAndGrainReferenceForNonCompletedJobSteps();
         }
     }
 
@@ -157,6 +157,11 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             if (!JobIsPrepared())
             {
                 return Result.Failed<ResumeJobSuccess, ResumeJobError>(CannotResumeJobError.JobIsNotPrepared);
+            }
+
+            if (_jobStepGrains?.Count == 0)
+            {
+                _jobStepGrains = await GetIdAndGrainReferenceForNonCompletedJobSteps();
             }
 
             _logger.Resuming();
@@ -317,7 +322,8 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         // Then we want to resubscribe all non-completed job steps
         if (State.Progress is { IsCompleted: false, IsStopped: false })
         {
-            foreach (var (jobStepId, _) in _jobStepGrains ?? [])
+            _jobStepGrains ??= await GetIdAndGrainReferenceForNonCompletedJobSteps();
+            foreach (var (jobStepId, _) in _jobStepGrains)
             {
                 await SubscribeJobStep(_jobStepGrains![jobStepId].AsReference<IJobObserver>());
             }

@@ -176,13 +176,15 @@ public abstract partial class Job<TRequest, TJobState>
             details => details.Id,
             details => new JobStepGrainAndRequest(GetJobStepGrain(details), details.Request)).AsReadOnly();
 
-    async Task<Dictionary<JobStepId, IJobStep>> GetIdAndGrainReferenceToNonCompletedJobSteps()
+    async Task<Dictionary<JobStepId, IJobStep>> GetIdAndGrainReferenceJobSteps(params JobStepStatus[] statuses)
     {
-        var getJobSteps = await Storage.JobSteps.GetForJob(JobId, JobStepStatus.Scheduled, JobStepStatus.Running, JobStepStatus.Unknown);
+        var getJobSteps = await Storage.JobSteps.GetForJob(JobId, statuses);
         getJobSteps.RethrowError();
         var jobSteps = getJobSteps.AsT0;
         return jobSteps.ToDictionary(jobStep => jobStep.Id.JobStepId, GetJobStepGrain);
     }
+    Task<Dictionary<JobStepId, IJobStep>> GetIdAndGrainReferenceForNonCompletedJobSteps() =>
+        GetIdAndGrainReferenceJobSteps(JobStepStatus.Running, JobStepStatus.Scheduled, JobStepStatus.Unknown, JobStepStatus.Stopped);
 
     IJobStep GetJobStepGrain(JobStepDetails details) => (GrainFactory.GetGrain(details.Type, details.Id, keyExtension: details.Key) as IJobStep)!;
     IJobStep GetJobStepGrain(JobStepState state) => (GrainFactory.GetGrain((Type)state.Type, state.Id.JobStepId, keyExtension: new JobStepKey(state.Id.JobId, JobKey.EventStore, JobKey.Namespace)) as IJobStep)!;
