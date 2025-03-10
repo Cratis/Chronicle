@@ -56,7 +56,7 @@ public class WebServer(IOptions<ChronicleWorkbenchOptions> workbenchOptions) : I
         _webApplication.UseStaticFiles(staticFileOptions);
         _webApplication.MapFallbackToFile("index.html", staticFileOptions);
 
-        return Task.CompletedTask;
+        return _webApplication.RunAsync();
     }
 
     /// <inheritdoc/>
