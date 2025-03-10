@@ -18,6 +18,15 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Information, "Starting job")]
     internal static partial void Starting(this ILogger<IJob> logger);
 
+    [LoggerMessage(LogLevel.Information, "Resuming job")]
+    internal static partial void Resuming(this ILogger<IJob> logger);
+
+    [LoggerMessage(LogLevel.Information, "Stopping job")]
+    internal static partial void Stopping(this ILogger<IJob> logger);
+
+    [LoggerMessage(LogLevel.Information, "Removing job")]
+    internal static partial void Removing(this ILogger<IJob> logger);
+
     [LoggerMessage(LogLevel.Debug, "Job changing status to {Status}")]
     internal static partial void ChangingStatus(this ILogger<IJob> logger, JobStatus status);
 
@@ -33,14 +42,6 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Warning, "An error occurred while preparing and starting job steps")]
     internal static partial void ErrorPreparingJobSteps(this ILogger<IJob> logger, Exception ex);
 
-    [LoggerMessage(LogLevel.Information, "Resuming job")]
-    internal static partial void Resuming(this ILogger<IJob> logger);
-
-    [LoggerMessage(LogLevel.Information, "Pausing job")]
-    internal static partial void Pausing(this ILogger<IJob> logger);
-
-    [LoggerMessage(LogLevel.Information, "Stopping job")]
-    internal static partial void Stopping(this ILogger<IJob> logger);
 
     [LoggerMessage(LogLevel.Trace, "Step {JobStepId} successfully completed")]
     internal static partial void StepSuccessfullyCompleted(this ILogger<IJob> logger, JobStepId jobStepId);

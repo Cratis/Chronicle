@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 
 namespace Cratis.Chronicle.Grains.Jobs;
 
@@ -25,11 +24,11 @@ public class NullJob : IJob
     public Task<Result<JobError>> OnStepSucceeded(JobStepId stepId, JobStepResult result) => Task.FromResult(Result.Success<JobError>());
 
     /// <inheritdoc/>
-    public Task<Result<PauseJobError>> Pause() => Task.FromResult(Result.Success<PauseJobError>());
+    public Task<Result<StopJobError>> Stop() => Task.FromResult(Result.Success<StopJobError>());
 
     /// <inheritdoc/>
     public Task<Result<ResumeJobSuccess, ResumeJobError>> Resume() => Task.FromResult(Result.Success<ResumeJobSuccess, ResumeJobError>(ResumeJobSuccess.Success));
 
     /// <inheritdoc/>
-    public Task<Result<JobError>> Stop() => Task.FromResult(Result.Success<JobError>());
+    public Task<Result<RemoveJobError>> Remove() => Task.FromResult(Result.Success<RemoveJobError>());
 }
