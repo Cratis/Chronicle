@@ -24,7 +24,12 @@ public class WebServer(IOptions<ChronicleWorkbenchOptions> workbenchOptions) : I
         var builder = WebApplication.CreateBuilder();
 
         builder.Host
-            .UseCratisApplicationModel();
+            .UseCratisApplicationModel(options =>
+            {
+                options.CorrelationId = workbenchOptions.Value.ApplicationModel.CorrelationId;
+                options.Tenancy = workbenchOptions.Value.ApplicationModel.Tenancy;
+                options.IdentityDetailsProvider = workbenchOptions.Value.ApplicationModel.IdentityDetailsProvider;
+            });
 
         builder.Services.AddCratisChronicleApi();
 

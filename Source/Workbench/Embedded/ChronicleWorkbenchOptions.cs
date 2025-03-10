@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Applications;
+
 namespace Cratis.Chronicle.Workbench.Embedded;
 
 /// <summary>
@@ -17,4 +19,9 @@ public class ChronicleWorkbenchOptions
     /// Gets or sets the port to expose the Workbench on.
     /// </summary>
     public int Port { get; set; } = DefaultPort;
+
+    /// <summary>
+    /// Gets or sets the <see cref="ApplicationModelOptions"/> for the Workbench.
+    /// </summary>
+    public ApplicationModelOptions ApplicationModel { get; set; } = new();
 }
