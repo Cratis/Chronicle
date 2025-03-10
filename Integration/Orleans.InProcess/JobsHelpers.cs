@@ -49,6 +49,21 @@ public static class JobsHelpers
         where TJobState : JobState
         => WaitTillJobMeetsPredicate<TJobState>(jobStorage, jobId, state => state.Progress.IsStopped, timeout);
 
+    public static async Task WaitTillJobIsDeleted<TJobState>(this IJobStorage jobStorage, JobId jobId, TimeSpan? timeout = null)
+        where TJobState : JobState
+    {
+        timeout ??= TimeSpan.FromSeconds(5);
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (true)
+        {
+            var getJobState = await jobStorage.Read<TJobState>(jobId);
+            if (getJobState.TryGetError(out _))
+            {
+                return;
+            }
+            await Task.Delay(100, cts.Token);
+        }
+    }
     public static async Task<TJobState> WaitTillJobMeetsPredicate<TJobState>(this IJobStorage jobStorage, JobId jobId, Func<JobState, bool> predicate, TimeSpan? timeout = null)
         where TJobState : JobState
     {
@@ -62,7 +77,7 @@ public static class JobsHelpers
             {
                 return getJobState.AsT0;
             }
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
     }
 
