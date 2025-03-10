@@ -21,42 +21,49 @@ public class WebServer(IOptions<ChronicleWorkbenchOptions> workbenchOptions) : I
     /// <inheritdoc/>
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        var builder = WebApplication.CreateBuilder();
-
-        builder.Host
-            .UseCratisApplicationModel(options =>
+        _ = Task.Run(
+            async () =>
             {
-                options.CorrelationId = workbenchOptions.Value.ApplicationModel.CorrelationId;
-                options.Tenancy = workbenchOptions.Value.ApplicationModel.Tenancy;
-                options.IdentityDetailsProvider = workbenchOptions.Value.ApplicationModel.IdentityDetailsProvider;
-            });
+                var builder = WebApplication.CreateBuilder();
 
-        builder.Services.AddCratisChronicleApi();
+                builder.Host
+                    .UseCratisApplicationModel(options =>
+                    {
+                        options.CorrelationId = workbenchOptions.Value.ApplicationModel.CorrelationId;
+                        options.Tenancy = workbenchOptions.Value.ApplicationModel.Tenancy;
+                        options.IdentityDetailsProvider = workbenchOptions.Value.ApplicationModel.IdentityDetailsProvider;
+                    });
 
-        builder.WebHost
-            .UseKestrel()
-            .UseUrls($"http://*:{workbenchOptions.Value.Port}");
+                builder.Services.AddCratisChronicleApi();
 
-        _webApplication = builder.Build();
+                builder.WebHost
+                    .UseKestrel()
+                    .UseUrls($"http://*:{workbenchOptions.Value.Port}");
 
-        _webApplication.UseCratisChronicleApi();
+                _webApplication = builder.Build();
 
-        var rootType = typeof(WorkbenchWebApplicationBuilderExtensions);
-        var rootResourceNamespace = $"{rootType.Namespace}.Files";
-        var fileProvider = new ManifestEmbeddedFileProvider(rootType.Assembly, rootResourceNamespace);
-        _webApplication.UseDefaultFiles(new DefaultFilesOptions
-        {
-            FileProvider = fileProvider
-        });
-        var staticFileOptions = new StaticFileOptions
-        {
-            FileProvider = fileProvider,
-            RequestPath = string.Empty
-        };
-        _webApplication.UseStaticFiles(staticFileOptions);
-        _webApplication.MapFallbackToFile("index.html", staticFileOptions);
+                _webApplication.UseCratisChronicleApi();
 
-        return _webApplication.RunAsync();
+                var rootType = typeof(WorkbenchWebApplicationBuilderExtensions);
+                var rootResourceNamespace = $"{rootType.Namespace}.Files";
+                var fileProvider = new ManifestEmbeddedFileProvider(rootType.Assembly, rootResourceNamespace);
+                _webApplication.UseDefaultFiles(new DefaultFilesOptions
+                {
+                    FileProvider = fileProvider
+                });
+                var staticFileOptions = new StaticFileOptions
+                {
+                    FileProvider = fileProvider,
+                    RequestPath = string.Empty
+                };
+                _webApplication.UseStaticFiles(staticFileOptions);
+                _webApplication.MapFallbackToFile("index.html", staticFileOptions);
+
+                await _webApplication.RunAsync();
+            },
+            cancellationToken);
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
