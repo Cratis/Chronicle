@@ -8,12 +8,12 @@ using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 using Cratis.Chronicle.Storage.Jobs;
-using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_step_fails.context;
+using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_step_fails_and_keep_state_is_false.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step;
 
 [Collection(GlobalCollection.Name)]
-public class and_job_step_fails(context context) : Given<context>(context)
+public class and_job_step_fails_and_keep_state_is_false(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : given.a_jobs_manager(globalFixture)
     {
@@ -25,15 +25,13 @@ public class and_job_step_fails(context context) : Given<context>(context)
         async Task Because()
         {
             TheJobStepProcessor.SetNumJobStepsToComplete(1);
-            StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true, ShouldFail = true });
+            StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = false, ShouldFail = true });
             await TheJobStepProcessor.WaitForStepsToBeCompleted();
             JobId = StartJobResult.AsT0;
             var getJobState = await JobStorage.GetJob(JobId);
+            CompletedJobState = getJobState.AsT0;
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
-
-            CompletedJobState = await JobStorage.WaitTillJobProgressCompleted<JobWithSingleStepState>(JobId);
             JobStepStates = getJobStepState.AsT0;
-            CompletedJobState = await JobStorage.WaitTillJobMeetsPredicate<JobWithSingleStepState>(JobId, state => state.Status is JobStatus.CompletedWithFailures);
         }
     }
 
@@ -41,7 +39,7 @@ public class and_job_step_fails(context context) : Given<context>(context)
     public void should_start_job() => Context.StartJobResult.IsSuccess.ShouldBeTrue();
 
     [Fact]
-    public void should_keep_job_state() => Context.CompletedJobState.ShouldNotBeNull();
+    public void should_keep_job_state() => Context.JobStorage.GetJob(Context.JobId).Result.IsSuccess.ShouldBeTrue();
 
     [Fact]
     public void should_have_correct_job_type() => Context.CompletedJobState.Type.Value.ShouldEqual(nameof(JobWithSingleStep));
@@ -51,9 +49,6 @@ public class and_job_step_fails(context context) : Given<context>(context)
 
     [Fact]
     public void should_have_job_step_state_where_status_is_failed() => Context.JobStepStates[0].Status.ShouldEqual(JobStepStatus.CompletedWithFailure);
-
-    [Fact]
-    public void should_have_completed_job_with_failure() => Context.CompletedJobState.Status.ShouldEqual(JobStatus.CompletedWithFailures);
 
     [Fact]
     public void should_have_completed_job_progress() => Context.CompletedJobState.Progress.IsCompleted.ShouldBeTrue();

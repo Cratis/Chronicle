@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_st
 [Collection(GlobalCollection.Name)]
 public class and_job_step_completes_successfully(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : given.all_dependencies(globalFixture)
+    public class context(GlobalFixture globalFixture) : given.a_jobs_manager(globalFixture)
     {
         public Result<JobId, StartJobError> StartJobResult;
         public JobState CompletedJobState;

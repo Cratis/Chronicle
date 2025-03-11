@@ -10,7 +10,7 @@ public class JobWithSingleStep : Job<JobWithSingleStepRequest, JobWithSingleStep
 
     protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(JobWithSingleStepRequest request)
     {
-        _keepAfterCompleted = KeepAfterCompleted;
+        _keepAfterCompleted = request.KeepAfterCompleted;
 
         return Task.FromResult<IImmutableList<JobStepDetails>>([CreateStep<ITheJobStep>(new TheJobStepRequest(
             request.ShouldFail, request.WaitTime ?? TimeSpan.Zero, request.WaitCount))]);
