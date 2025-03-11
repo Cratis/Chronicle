@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="RunningState">The <see cref="ObserverRunningState"/> of the observer.</param>
 /// <param name="ReplayingPartitions">The individual partitions that are being replayed.</param>
 /// <param name="CatchingUpPartitions">The individual partitions that are catching up.</param>
+/// <param name="IsReplaying">Whether the observer is replaying.</param>
 public record ObserverState(
     ObserverId Id,
     IEnumerable<EventType> EventTypes,
@@ -27,7 +28,8 @@ public record ObserverState(
     EventSequenceNumber LastHandledEventSequenceNumber,
     ObserverRunningState RunningState,
     ISet<Key> ReplayingPartitions,
-    ISet<Key> CatchingUpPartitions)
+    ISet<Key> CatchingUpPartitions,
+    bool IsReplaying)
 {
     readonly EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
 
@@ -43,7 +45,8 @@ public record ObserverState(
               EventSequenceNumber.Unavailable,
               ObserverRunningState.Unknown,
               new HashSet<Key>(),
-              new HashSet<Key>())
+              new HashSet<Key>(),
+              false)
     {
     }
 

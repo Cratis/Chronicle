@@ -71,6 +71,12 @@ public class Routing(
 
     async Task<ObserverState> EvaluateState(ObserverState state)
     {
+        if (state.IsReplaying)
+        {
+            await StateMachine.TransitionTo<Replay>();
+            return state;
+        }
+
         if (!_subscription.IsSubscribed)
         {
             logger.NotSubscribed();

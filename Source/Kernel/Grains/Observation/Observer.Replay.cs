@@ -37,7 +37,13 @@ public partial class Observer
     public async Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+
+        State = State with
+        {
+            IsReplaying = false,
+            LastHandledEventSequenceNumber = lastHandledEventSequenceNumber,
+            NextEventSequenceNumber = lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : lastHandledEventSequenceNumber.Next()
+        };
         await WriteStateAsync();
         await TransitionTo<Routing>();
     }

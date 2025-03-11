@@ -58,6 +58,6 @@ public class Replay(
                 logger.StartReplayJob();
                 return Task.CompletedTask;
             });
-        return state;
+        return state with { IsReplaying = true };
     }
 }
