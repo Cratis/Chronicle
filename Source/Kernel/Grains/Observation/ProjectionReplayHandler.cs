@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation;
@@ -12,11 +13,13 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="ICanHandleReplayForObserver"/> for projections.
 /// </summary>
-/// <param name="projectionManager"><see cref="IProjectionManager"/> for managing projections.</param>
+/// <param name="projections"><see cref="IProjectionsManager"/> for managing projections.</param>
+/// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for managing projection pipelines.</param>
 /// <param name="logger">The logger.</param>
 public class ProjectionReplayHandler(
     IProjectionManager projectionManager,
+    IStorage storage,
     IProjectionPipelineManager projectionPipelineManager,
     ILogger<ProjectionReplayHandler> logger) : ICanHandleReplayForObserver
 {
@@ -31,7 +34,7 @@ public class ProjectionReplayHandler(
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
 
-    async Task<Result<ICanHandleReplayForObserver.Error>> DoWorkOnPipeline(ObserverDetails observerDetails, Func<IProjectionPipeline, Task> doWork)
+    async Task<Result<ICanHandleReplayForObserver.Error>> DoWorkOnPipeline(ObserverDetails observerDetails, ReplayContext context, Func<IProjectionPipeline, ReplayContext, Task> doWork)
     {
         try
         {

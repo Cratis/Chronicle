@@ -8,6 +8,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
@@ -125,6 +126,7 @@ public class EventStore : IEventStore
         Projections = new Projections.Projections(
             this,
             EventTypes,
+            new ProjectionWatcherManager(new ProjectionWatcherFactory(this), this),
             clientArtifactsProvider,
             new RulesProjections(
                 serviceProvider,
@@ -138,6 +140,7 @@ public class EventStore : IEventStore
             _eventSerializer,
             serviceProvider,
             jsonSerializerOptions);
+        FailedPartitions = new FailedPartitions(this);
 
         AggregateRootFactory = new AggregateRootFactory(
             this,
@@ -183,6 +186,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IProjections Projections { get; }
+
+    /// <inheritdoc/>
+    public IFailedPartitions FailedPartitions { get; }
 
     /// <inheritdoc/>
     public async Task DiscoverAll()

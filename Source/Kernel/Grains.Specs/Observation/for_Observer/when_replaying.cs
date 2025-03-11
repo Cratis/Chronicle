@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+
 namespace Cratis.Chronicle.Grains.Observation.for_Observer;
 
 public class when_replaying : given.an_observer_with_subscription

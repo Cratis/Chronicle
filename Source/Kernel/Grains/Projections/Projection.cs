@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Observation.Replaying;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Grains.Namespaces;
-using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Grains.Recommendations;
 using Cratis.Chronicle.Projections;
@@ -23,25 +22,17 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Projection"/> class.
 /// </remarks>
-/// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
-/// <param name="projectionManager"><see cref="IProjectionManager"/> for managing projections.</param>
 /// <param name="projectionDefinitionComparer"><see cref="IProjectionDefinitionComparer"/> for comparing projection definitions.</param>
-/// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
 /// <param name="logger">Logger for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class Projection(
-    IProjectionFactory projectionFactory,
-    IProjectionManager projectionManager,
     IProjectionDefinitionComparer projectionDefinitionComparer,
-    ILocalSiloDetails localSiloDetails,
     ILogger<Projection> logger) : Grain<ProjectionDefinition>, IProjection
 {
-    readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromMinutes(1), logger);
-    IObserver? _observer;
-    bool _subscribed;
+    readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.MaxValue, logger);
 
     /// <inheritdoc/>
-    public async Task SetDefinitionAndSubscribe(ProjectionDefinition definition)
+    public async Task SetDefinition(ProjectionDefinition definition)
     {
         var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
         logger.SettingDefinition(key.ProjectionId);
@@ -53,31 +44,14 @@ public class Projection(
         if (compareResult == ProjectionDefinitionCompareResult.Different)
         {
             logger.ProjectionHasChanged(key.ProjectionId);
-            if (_subscribed)
-            {
-                await _observer!.Unsubscribe();
-                _subscribed = false;
-            }
             await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged());
             var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
             await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
         }
-
-        if (!_subscribed && definition.IsActive)
-        {
-            logger.Registering(key.ProjectionId);
-            _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, key.Namespace, key.EventSequenceId));
-            var projection = await projectionFactory.Create(key.EventStore, key.Namespace, definition);
-            projectionManager.Register(key.EventStore, key.Namespace, projection);
-
-            await _observer.Subscribe<IProjectionObserverSubscriber>(
-                ObserverType.Projection,
-                projection.EventTypes,
-                localSiloDetails.SiloAddress);
-
-            _subscribed = true;
-        }
     }
+
+    /// <inheritdoc/>
+    public Task<ProjectionDefinition> GetDefinition() => Task.FromResult(State);
 
     /// <inheritdoc/>
     public Task SubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber)

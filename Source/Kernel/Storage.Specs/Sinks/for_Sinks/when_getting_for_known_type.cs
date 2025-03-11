@@ -25,7 +25,7 @@ public class when_getting_for_known_type : Specification
         _stores = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>([_factory]));
     }
 
-    void Because() => _result = _stores.GetFor(_type, _model);
+    void Because() => _result = _stores.GetFor(_type, SinkConfigurationId.None, _model);
 
     [Fact] void should_create_and_return_store() => _result.ShouldEqual(_store);
 }

@@ -166,7 +166,7 @@ public class JobsManager(
     }
 
     Result<IJob, IJobTypes.GetClrTypeForError> GetJobGrain(JobState jobState) => jobTypes.GetClrTypeFor(jobState.Type)
-        .Match<Result<IJob, IJobTypes.GetClrTypeForError>>(
+        .Match(
             jobType => Result<IJob, IJobTypes.GetClrTypeForError>.Success((IJob)GrainFactory.GetGrain(jobType, jobState.Id, new JobKey(_key.EventStore, _key.Namespace))),
             error => error)!;
 

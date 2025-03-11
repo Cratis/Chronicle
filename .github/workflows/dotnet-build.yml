@@ -1,7 +1,7 @@
 name: .NET Build
 
 env:
-  DOTNET8_VERSION: "8.0.405"
+  DOTNET8_VERSION: "8.0.406"
   DOTNET_VERSION: "9.0.x"
 
 on:
@@ -39,10 +39,10 @@ jobs:
             ${{ env.DOTNET_VERSION }}
 
       - name: Build
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Release --framework net9.0
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --settings specs.runsettings
+        run: dotnet test --no-build --configuration Release --framework net9.0 --settings specs.runsettings
 
   integration:
     runs-on: ubuntu-latest
@@ -54,7 +54,9 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET_VERSION }}
 
       - name: Run integration tests for .Net 9
-        run: dotnet test --logger "console;verbosity=normal" --configuration Debug --settings integration.runsettings
+        run: dotnet test --logger "console;verbosity=normal" --configuration Release --framework net9.0 --settings integration.runsettings

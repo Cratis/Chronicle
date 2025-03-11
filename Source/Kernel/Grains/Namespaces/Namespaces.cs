@@ -42,7 +42,8 @@ public class Namespaces(
         logger.BroadcastAddedNamespace(@namespace);
 
         var channelWriter = _namespaceAddedChannel.GetChannelWriter<NamespaceAdded>(channelId);
-        await channelWriter.Publish(new NamespaceAdded(@namespace));
+        var eventStore = this.GetPrimaryKeyString();
+        await channelWriter.Publish(new NamespaceAdded(eventStore, @namespace));
     }
 
     /// <inheritdoc/>

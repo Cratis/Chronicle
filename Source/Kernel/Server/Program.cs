@@ -32,7 +32,7 @@ builder.Services.Configure<ChronicleOptions>(builder.Configuration);
 
 if (chronicleOptions.Features.Api)
 {
-    builder.Services.AddCratisChronicleApi(false);
+    builder.Services.AddCratisChronicleApi(useGrpc: false);
 }
 
 builder.WebHost.UseKestrel(options =>

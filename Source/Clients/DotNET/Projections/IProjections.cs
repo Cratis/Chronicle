@@ -32,6 +32,20 @@ public interface IProjections
     bool HasFor(Type modelType);
 
     /// <summary>
+    /// Get the <see cref="ProjectionId"/> for a specific type.
+    /// </summary>
+    /// <typeparam name="TModel">Type of model to get for.</typeparam>
+    /// <returns>The <see cref="ProjectionId"/> for the type.</returns>
+    ProjectionId GetProjectionIdForModel<TModel>();
+
+    /// <summary>
+    /// Get the <see cref="ProjectionId"/> for a specific type.
+    /// </summary>
+    /// <param name="modelType">Type of model to get for.</param>
+    /// <returns>The <see cref="ProjectionId"/> for the type.</returns>
+    ProjectionId GetProjectionIdForModel(Type modelType);
+
+    /// <summary>
     /// Get an instance by a specific <see cref="ModelKey"/> and type.
     /// </summary>
     /// <param name="modelType">Type of model the projection is for.</param>
@@ -82,6 +96,13 @@ public interface IProjections
     /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
     /// <returns>Awaitable task.</returns>
     Task DehydrateSession(ProjectionSessionId sessionId, Type modelType, ModelKey modelKey);
+
+    /// <summary>
+    /// Observe changes for a specific model with optionally a specific <see cref="ModelKey"/>.
+    /// </summary>
+    /// <typeparam name="TModel">Type of model to observe changes for.</typeparam>
+    /// <returns>An observable of <see cref="ProjectionChangeset{TModel}"/>.</returns>
+    IObservable<ProjectionChangeset<TModel>> Watch<TModel>();
 
     /// <summary>
     /// Discover all projections from entry assembly and dependencies.

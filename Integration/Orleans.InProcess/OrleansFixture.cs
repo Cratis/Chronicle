@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
@@ -27,7 +28,9 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
 public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory<Startup>, IClientArtifactsProvider
 {
+#if DEBUG
     bool _backupPerformed;
+#endif
     string _name = string.Empty;
 
     protected override IHostBuilder CreateHostBuilder()
@@ -136,11 +139,13 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
 
     protected override void Dispose(bool disposing)
     {
+#if DEBUG
         if (!_backupPerformed)
         {
             GlobalFixture.PerformBackup(_name);
             _backupPerformed = true;
         }
+#endif
         GlobalFixture.RemoveAllDatabases().GetAwaiter().GetResult();
         base.Dispose(false);
     }

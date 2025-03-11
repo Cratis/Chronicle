@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Concepts.Jobs;
 public interface IJobTypes
 {
     /// <summary>
-    /// Error types for <see cref="IJobTypes.GetRequestClrTypeFor"/>.
+    /// Error types for <see cref="GetRequestClrTypeFor"/>.
     /// </summary>
     enum GetRequestClrTypeForError
     {
@@ -19,7 +19,7 @@ public interface IJobTypes
     }
 
     /// <summary>
-    /// Error types for <see cref="IJobTypes.GetClrTypeFor"/>.
+    /// Error types for <see cref="GetClrTypeFor"/>.
     /// </summary>
     enum GetClrTypeForError
     {
@@ -28,7 +28,7 @@ public interface IJobTypes
     }
 
     /// <summary>
-    /// Error types for <see cref="IJobTypes.GetFor"/>.
+    /// Error types for <see cref="GetFor"/>.
     /// </summary>
     enum GetForError
     {

@@ -1,9 +1,13 @@
 ﻿// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Grains;
+using Orleans.Streams;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Projections;
@@ -11,8 +15,13 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IProjections"/>.
 /// </summary>
+/// <param name="clusterClient"><see cref="IClusterClient"/> for interacting with the cluster.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-public class Projections(IGrainFactory grainFactory) : IProjections
+/// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+public class Projections(
+    IClusterClient clusterClient,
+    IGrainFactory grainFactory,
+    JsonSerializerOptions jsonSerializerOptions) : IProjections
 {
     /// <inheritdoc/>
     public Task Register(RegisterRequest request, CallContext context = default)
@@ -58,7 +67,7 @@ public class Projections(IGrainFactory grainFactory) : IProjections
     }
 
     /// <inheritdoc/>
-    public async Task<ProjectionResult> GetInstanceByIdFOrSessionWithEventsApplied(GetInstanceByIdForSessionWithEventsAppliedRequest request, CallContext context = default)
+    public async Task<ProjectionResult> GetInstanceByIdForSessionWithEventsApplied(GetInstanceByIdForSessionWithEventsAppliedRequest request, CallContext context = default)
     {
         var projectionKey = new ImmediateProjectionKey(
             request.ProjectionId,
@@ -73,6 +82,36 @@ public class Projections(IGrainFactory grainFactory) : IProjections
         var eventsToApply = request.Events.Select(_ => _.ToChronicle()).ToArray();
         var result = await projection.GetCurrentModelInstanceWithAdditionalEventsApplied(eventsToApply);
         return result.ToContract();
+    }
+
+    /// <inheritdoc/>
+    public IObservable<ProjectionChangeset> Watch(ProjectionWatchRequest request, CallContext context = default)
+    {
+        var streamProvider = clusterClient.GetStreamProvider(WellKnownStreamProviders.ProjectionChangesets);
+        var streamId = StreamId.Create(new StreamIdentity(Guid.Empty, request.ProjectionId));
+
+        var stream = streamProvider.GetStream<Grains.Projections.ProjectionChangeset>(streamId);
+        StreamSubscriptionHandle<Grains.Projections.ProjectionChangeset>? subscription = null;
+
+        var observable = Observable.Create<ProjectionChangeset>(async (observer, cancellationToken) =>
+        {
+            subscription = await stream.SubscribeAsync((changeset, _) =>
+            {
+                observer.OnNext(new ProjectionChangeset
+                {
+                    Namespace = changeset.Namespace,
+                    ModelKey = changeset.ModelKey,
+                    Model = changeset.Model.ToJsonString(jsonSerializerOptions)
+                });
+
+                return Task.CompletedTask;
+            });
+
+            await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        });
+
+        context.CancellationToken.Register(() => subscription?.UnsubscribeAsync().GetAwaiter().GetResult());
+        return observable;
     }
 
     /// <inheritdoc/>

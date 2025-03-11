@@ -32,6 +32,7 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Observers)]
+[KeepAlive]
 public partial class Observer(
     [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
     IPersistentState<FailedPartitions> failures,
@@ -58,9 +59,6 @@ public partial class Observer(
     /// <inheritdoc/>
     public override async Task OnActivation(CancellationToken cancellationToken)
     {
-        // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
-        DelayDeactivation(TimeSpan.MaxValue);
-
         _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
         _observerId = _observerKey.ObserverId;
 

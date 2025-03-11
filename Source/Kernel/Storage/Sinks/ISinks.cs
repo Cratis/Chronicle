@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.Sinks;
 public interface ISinks
 {
     /// <summary>
-    /// Check if there is a <see cref="ISink"/> of a specific <see cref="SinkTypeId"/> registered in the system.
+    /// Check if there is a <see cref="ISink"/> of a specific <see cref="SinkTypeId"/> and <see cref="SinkConfigurationId"/>  registered in the system.
     /// </summary>
     /// <param name="typeId"><see cref="SinkTypeId"/> to check for.</param>
     /// <returns>True if it exists, false if not.</returns>
@@ -22,7 +22,8 @@ public interface ISinks
     /// Get a <see cref="ISink"/> of a specific <see cref="SinkTypeId"/>.
     /// </summary>
     /// <param name="typeId"><see cref="SinkTypeId"/> to get for.</param>
+    /// /// <param name="configurationId"><see cref="SinkConfigurationId"/> to get for.</param>
     /// <param name="model"><see cref="Model"/> to get for.</param>
     /// <returns><see cref="ISink"/> instance.</returns>
-    ISink GetFor(SinkTypeId typeId, Model model);
+    ISink GetFor(SinkTypeId typeId, SinkConfigurationId configurationId, Model model);
 }

@@ -36,10 +36,20 @@ public class JobTypes : IJobTypes
     public static IJobTypes Instance { get; private set; } = null!;
 
     /// <inheritdoc />
-    public Result<JobType, IJobTypes.GetForError> GetFor(Type type) =>
-        _jobTypePerType.TryGetValue(type, out var jobType)
+    public Result<JobType, IJobTypes.GetForError> GetFor(Type type)
+    {
+        if (type.IsClass)
+        {
+            var result = _jobTypePerType.Keys.FirstOrDefault(type.Implements);
+            return result is not null
+                ? _jobTypePerType[result]
+                : IJobTypes.GetForError.NoAssociatedJobType;
+        }
+
+        return _jobTypePerType.TryGetValue(type, out var jobType)
             ? jobType
             : IJobTypes.GetForError.NoAssociatedJobType;
+    }
 
     /// <inheritdoc />
     public Result<Type, IJobTypes.GetClrTypeForError> GetClrTypeFor(JobType type)
@@ -75,9 +85,8 @@ public class JobTypes : IJobTypes
 
     void PopulateJobTypes(ITypes types)
     {
-        foreach (var jobClrType in types.FindMultiple<IJob>()
-                     .Where(type => type is { IsClass: true, IsAbstract: false, IsInterface: false, IsGenericType: false }
-                                    && !type.HasAttribute<GeneratedCodeAttribute>() && type != typeof(NullJob) && type.Assembly.FullName != typeof(IJob).Assembly.FullName))
+        foreach (var jobClrType in types.All.Where(type => type.Implements(typeof(IJob))
+                                                           && type is { IsInterface: true, IsGenericType: false }).ToArray())
         {
             var jobTypeAttribute = jobClrType.GetCustomAttribute<JobTypeAttribute>();
             var jobType = jobTypeAttribute?.JobType ?? jobClrType;
