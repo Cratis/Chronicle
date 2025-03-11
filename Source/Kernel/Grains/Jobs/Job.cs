@@ -401,8 +401,6 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             {
                 StatusChanged(State.Progress.FailedSteps > 0 ? JobStatus.CompletedWithFailures : JobStatus.CompletedSuccessfully);
             }
-
-            DeactivateOnIdle();
             return shouldClearState ? HandleCompletionSuccess.ClearedState : HandleCompletionSuccess.NotClearedState;
         }
         catch (Exception ex)

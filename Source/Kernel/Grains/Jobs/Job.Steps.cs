@@ -152,23 +152,30 @@ public abstract partial class Job<TRequest, TJobState>
         {
             return handleCompletionError;
         }
-        var needsToWriteState = completionResult.AsT0 switch
+        try
         {
-            HandleCompletionSuccess.ClearedState => false,
-            _ => true
-        };
-        if (!needsToWriteState)
-        {
-            return Result<JobError>.Success();
-        }
-        var writeStateResult = await WriteState();
-        return writeStateResult.Match(
-            _ => Result<JobError>.Success(),
-            ex =>
+            var needsToWriteState = completionResult.AsT0 switch
             {
-                _logger.FailedUpdatingStateAfterHandlingCompletion(ex);
-                return JobError.PersistStateError;
-            });
+                HandleCompletionSuccess.ClearedState => false,
+                _ => true
+            };
+            if (!needsToWriteState)
+            {
+                return Result<JobError>.Success();
+            }
+            var writeStateResult = await WriteState();
+            return writeStateResult.Match(
+                _ => Result<JobError>.Success(),
+                ex =>
+                {
+                    _logger.FailedUpdatingStateAfterHandlingCompletion(ex);
+                    return JobError.PersistStateError;
+                });
+        }
+        finally
+        {
+            DeactivateOnIdle();
+        }
     }
 
     ReadOnlyDictionary<JobStepId, JobStepGrainAndRequest> CreateGrainsFromJobSteps(IImmutableList<JobStepDetails> jobSteps) =>
@@ -199,7 +206,7 @@ public abstract partial class Job<TRequest, TJobState>
             if (steps.Count == 0)
             {
                 _logger.NoJobStepsToStart();
-                _ = HandleCompletion();
+                _ = HandleCompletionResult(await HandleCompletion());
                 return StartJobError.NoJobStepsToStart;
             }
 
