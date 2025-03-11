@@ -23,6 +23,11 @@ public interface ICanHandleReplayForObserver
         /// Handler cannot handle for the observer.
         /// </summary>
         CannotHandle = 1,
+
+        /// <summary>
+        /// Handler could not get replay context.
+        /// </summary>
+        CouldNotGetReplayContext = 2,
     }
 
     /// <summary>
