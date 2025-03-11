@@ -46,7 +46,7 @@ public class a_routing_state : Specification
         _subscription = new ObserverSubscription(
             _observerKey.ObserverId,
             _observerKey,
-            [],
+            [EventType.Unknown],
             typeof(object),
             SiloAddress.Zero,
             string.Empty);

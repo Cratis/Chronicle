@@ -18,7 +18,6 @@ public class a_replay_state : Specification
 {
     protected IObserver _observer;
     protected ObserverKey _observerKey;
-    protected IObserverServiceClient _observerServiceClient;
     protected IJobsManager _jobsManager;
     protected ObserverSubscription _subscription;
     protected ObserverState _storedState;
@@ -31,11 +30,9 @@ public class a_replay_state : Specification
         _observer = Substitute.For<IObserver>();
         _observerId = Guid.NewGuid().ToString();
         _observerKey = new(_observerId, Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
-        _observerServiceClient = Substitute.For<IObserverServiceClient>();
         _jobsManager = Substitute.For<IJobsManager>();
         _state = new Replay(
             _observerKey,
-            _observerServiceClient,
             _jobsManager,
             Substitute.For<ILogger<Replay>>());
         _state.SetStateMachine(_observer);

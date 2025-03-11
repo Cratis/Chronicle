@@ -73,11 +73,7 @@ public class JobsManager(
 
         logger.ResumingJob(jobId);
 
-        var jobStateResult = await _jobStorage!.GetJob(jobId);
-        await jobStateResult.Match(
-            state => ResumeJobAndHandleResult(state.Id),
-            error => HandleJobStorageError(jobId, error),
-            error => HandleUnknownFailure(jobId, error));
+        await ResumeJobAndHandleResult(jobId);
     }
 
     /// <inheritdoc/>

@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 
@@ -22,6 +23,7 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
                         Id = JobId.New(),
                         Request = new ReplayObserverRequest(
                             _observerKey,
+                            ObserverType.Unknown,
                             _subscription,
                             [new EventType(Guid.NewGuid().ToString(), EventTypeGeneration.First)]),
                         StatusChanges =

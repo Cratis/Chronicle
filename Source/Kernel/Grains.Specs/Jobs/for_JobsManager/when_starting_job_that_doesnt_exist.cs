@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Orleans.TestKit;
+using Catch = Cratis.Specifications.Catch;
 namespace Cratis.Chronicle.Grains.Jobs.for_JobsManager;
 
 public class when_starting_job_that_doesnt_exist : given.the_manager
@@ -14,6 +16,7 @@ public class when_starting_job_that_doesnt_exist : given.the_manager
     {
         _request = new(42);
         _job = Substitute.For<INullJobWithSomeRequest>();
+        _job.Start(Arg.Any<SomeJobRequest>()).Returns(Result.Failed(StartJobError.Unknown));
         _silo.AddProbe(_ => _job);
     }
 
