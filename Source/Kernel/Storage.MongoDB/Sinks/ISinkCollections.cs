@@ -27,8 +27,9 @@ public interface ISinkCollections
     /// <summary>
     /// Signals that a replay is about to resume.
     /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task ResumeReplay();
+    Task ResumeReplay(Chronicle.Storage.Sinks.ReplayContext context);
 
     /// <summary>
     /// Signals that a replay has ended.

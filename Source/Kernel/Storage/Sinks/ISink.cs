@@ -50,8 +50,9 @@ public interface ISink
     /// <summary>
     /// Re-enter replay state.
     /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task ResumeReplay();
+    Task ResumeReplay(ReplayContext context);
 
     /// <summary>
     /// End replay state.
