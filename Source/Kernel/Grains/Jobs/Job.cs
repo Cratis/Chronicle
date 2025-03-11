@@ -388,18 +388,18 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             }
 
             var onCompletedResult = await Complete();
-            if (onCompletedResult.TryGetError(out var onCompletedError))
+            if (onCompletedResult.TryGetException(out var onCompletedError))
             {
-                // TODO: Just log error here
-            }
-            var shouldClearState = State.Status is JobStatus.Removing || !KeepAfterCompleted;
-            if (shouldClearState)
-            {
-                await ClearStateAsync();
+                StatusChanged(JobStatus.Failed, onCompletedError);
             }
             else if (State.Status is not JobStatus.Removing)
             {
                 StatusChanged(State.Progress.FailedSteps > 0 ? JobStatus.CompletedWithFailures : JobStatus.CompletedSuccessfully);
+            }
+            var shouldClearState = State.Status is not JobStatus.Failed and not JobStatus.CompletedWithFailures && (State.Status is JobStatus.Removing || !KeepAfterCompleted);
+            if (shouldClearState)
+            {
+                await ClearStateAsync();
             }
             DeactivateOnIdle();
             return shouldClearState ? HandleCompletionSuccess.ClearedState : HandleCompletionSuccess.NotClearedState;
@@ -411,7 +411,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         }
     }
 
-    async Task<Result<JobError>> Complete()
+    async Task<Catch> Complete()
     {
         try
         {
@@ -420,12 +420,12 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
                 _logger.AllStepsNotCompletedSuccessfully();
             }
             await OnCompleted();
-            return Result<JobError>.Success();
+            return Catch.Success();
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            _logger.FailedOnCompleted(e, State.Id, State.Type);
-            return Result.Failed(JobError.UnknownError);
+            _logger.FailedOnCompleted(ex, State.Id, State.Type);
+            return ex;
         }
     }
 }
