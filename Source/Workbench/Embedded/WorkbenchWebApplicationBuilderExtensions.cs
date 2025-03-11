@@ -32,8 +32,9 @@ public static class WorkbenchWebApplicationBuilderExtensions
     {
         configSection ??= ConfigurationPath.Combine(DefaultSectionPaths);
 
-        builder.Services.AddOptions(configureOptions);
-        builder.Configuration.Bind(configSection);
+        builder.Services
+            .AddOptions(configureOptions)
+            .BindConfiguration(configSection);
         builder.Services.AddHostedService<WebServer>();
 
         return builder;
