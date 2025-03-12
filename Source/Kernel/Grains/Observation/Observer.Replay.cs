@@ -87,5 +87,4 @@ public partial class Observer
         await TransitionTo<Replay>();
         return true;
     }
-
 }

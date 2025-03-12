@@ -15,9 +15,6 @@ public class NullJob : IJob
     public Task<Result<JobError>> OnStepFailed(JobStepId stepId, JobStepResult jobStepResult) => Task.FromResult(Result.Success<JobError>());
 
     /// <inheritdoc/>
-    public Task<JobType> GetJobType() => Task.FromResult<JobType>(new("NullJob"));
-
-    /// <inheritdoc/>
     public Task<Result<JobError>> OnStepStopped(JobStepId stepId, JobStepResult jobStepResult) => Task.FromResult(Result.Success<JobError>());
 
     /// <inheritdoc/>

@@ -137,10 +137,6 @@ public partial class Observer(
 
         new Routing(
             _observerKey,
-            new ReplayEvaluator(
-                GrainFactory,
-                _observerKey.EventStore,
-                _observerKey.Namespace),
             _eventSequence,
             loggerFactory.CreateLogger<Routing>()),
 

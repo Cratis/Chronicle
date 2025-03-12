@@ -13,7 +13,6 @@ namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.when_entering;
 public class and_a_paused_replay_job_exists : given.a_replay_state
 {
     JobState _pausedJob;
-    ObserverDetails _observerDetails;
 
     void Establish()
     {

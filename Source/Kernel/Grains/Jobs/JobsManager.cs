@@ -312,7 +312,6 @@ public class JobsManager(
         return Task.CompletedTask;
     }
 
-
     Task HandleUnknownFailure(JobId jobId, Exception ex)
     {
         logger.UnknownError(ex, jobId);

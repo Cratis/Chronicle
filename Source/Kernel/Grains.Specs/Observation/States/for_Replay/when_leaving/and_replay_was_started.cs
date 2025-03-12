@@ -7,8 +7,6 @@ namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.when_leaving;
 
 public class and_replay_was_started : given.a_replay_state
 {
-    ObserverDetails observer_details;
-
     async Task Establish()
     {
         _storedState = _storedState with

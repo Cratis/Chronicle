@@ -9,6 +9,7 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Grains.Projections.for_ProjectionReplayHandler.given;
 
@@ -28,7 +29,7 @@ public class a_projection_replay_handler : Specification
     void Establish()
     {
         _observerDetails = new ObserverDetails(
-            new ObserverKey("TheObserver", "TheEventStore", "TheNamespace", EventSequenceId.Log),
+            new("TheObserver", "TheEventStore", "TheNamespace", EventSequenceId.Log),
             ObserverType.Projection);
 
         _projections = Substitute.For<Chronicle.Projections.IProjectionsManager>();
@@ -49,6 +50,6 @@ public class a_projection_replay_handler : Specification
             _observerDetails.Key.Namespace,
             Arg.Any<Chronicle.Projections.IProjection>()).Returns(_projectionPipeline);
 
-        _handler = new ProjectionReplayHandler(_projections, _storage, _projectionPipelineManager);
+        _handler = new ProjectionReplayHandler(_projections, _storage, _projectionPipelineManager, NullLogger<ProjectionReplayHandler>.Instance);
     }
 }

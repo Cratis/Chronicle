@@ -77,7 +77,7 @@ public class Projection(
                 new()
                 {
                     ObserverId = key.ProjectionId,
-                    ObserverKey = new(key.ProjectionId, key.EventStore, @namespace, key.EventSequenceId),
+                    ObserverKey = new(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId),
                     ObserverType = ObserverType.Projection,
                     Reasons = [new ProjectionDefinitionChangedReplayCandidateReason()]
                 });

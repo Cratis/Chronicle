@@ -129,8 +129,6 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
                 _status = CpuBoundWorkerStatus.Completed;
                 _logger.TaskHasCompleted();
 
-                return;
-
                 void HandleCancellation()
                 {
                     _logger.TaskHasBeenCancelled();

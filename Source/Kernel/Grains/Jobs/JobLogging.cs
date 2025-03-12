@@ -42,7 +42,6 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Warning, "An error occurred while preparing and starting job steps")]
     internal static partial void ErrorPreparingJobSteps(this ILogger<IJob> logger, Exception ex);
 
-
     [LoggerMessage(LogLevel.Trace, "Step {JobStepId} successfully completed")]
     internal static partial void StepSuccessfullyCompleted(this ILogger<IJob> logger, JobStepId jobStepId);
 

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.EventSequences;
@@ -15,12 +14,10 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// Represents the subscribing state of an observer.
 /// </summary>
 /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
-/// <param name="replayEvaluator"><see cref="IReplayEvaluator"/> for evaluating replays.</param>
 /// <param name="eventSequence"><see cref="IEventSequence"/> provider.</param>
 /// <param name="logger">Logger for logging.</param>
 public class Routing(
     ObserverKey observerKey,
-    IReplayEvaluator replayEvaluator,
     IEventSequence eventSequence,
     ILogger<Routing> logger) : BaseObserverState
 {

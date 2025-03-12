@@ -11,7 +11,6 @@ namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.when_entering;
 public class and_no_jobs_are_running : given.a_replay_state
 {
     ReplayObserverRequest _request;
-    ObserverDetails _observerDetails;
 
     void Establish()
     {

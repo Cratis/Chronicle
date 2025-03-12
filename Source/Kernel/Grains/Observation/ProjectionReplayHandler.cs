@@ -32,7 +32,7 @@ public class ProjectionReplayHandler(
             var replayContexts = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace).ReplayContexts;
             return await replayContexts.Establish(projection.Model.Name);
         },
-        (pipeline, context) => pipeline.BeginReplay(context));
+        (pipeline, _, context) => pipeline.BeginReplay(context));
 
     /// <inheritdoc/>
     public async Task<Result<ICanHandleReplayForObserver.Error>> ResumeReplayFor(ObserverDetails observerDetails) => await DoWorkOnPipeline(
@@ -42,7 +42,13 @@ public class ProjectionReplayHandler(
             var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
             return await namespaceStorage.ReplayContexts.TryGet(projection.Model.Name);
         },
-        (pipeline, context) => pipeline.ResumeReplay(context));
+        async (pipeline, projection, context) =>
+        {
+            await pipeline.ResumeReplay(context);
+            var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
+            await namespaceStorage.ReplayedModels.Replayed(observerDetails.Key.ObserverId, context);
+            await namespaceStorage.ReplayContexts.Evict(projection.Model.Name);
+        });
 
     /// <inheritdoc/>
     public async Task<Result<ICanHandleReplayForObserver.Error>> EndReplayFor(ObserverDetails observerDetails) => await DoWorkOnPipeline(
@@ -52,11 +58,20 @@ public class ProjectionReplayHandler(
             var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
             return await namespaceStorage.ReplayContexts.TryGet(projection.Model.Name);
         },
-        (pipeline, context) => pipeline.EndReplay(context));
+        async (pipeline, projection, context) =>
+        {
+            await pipeline.EndReplay(context);
+            var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
+            await namespaceStorage.ReplayedModels.Replayed(observerDetails.Key.ObserverId, context);
+            await namespaceStorage.ReplayContexts.Evict(projection.Model.Name);
+        });
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
 
-    async Task<Result<ICanHandleReplayForObserver.Error>> DoWorkOnPipeline(ObserverDetails observerDetails, Func<IProjection, Task<Result<ReplayContext, GetContextError>>> getContext, Func<IProjectionPipeline, ReplayContext, Task> doWork)
+    async Task<Result<ICanHandleReplayForObserver.Error>> DoWorkOnPipeline(
+        ObserverDetails observerDetails,
+        Func<IProjection, Task<Result<ReplayContext, GetContextError>>> getContext,
+        Func<IProjectionPipeline, IProjection, ReplayContext, Task> doWork)
     {
         try
         {
@@ -76,7 +91,7 @@ public class ProjectionReplayHandler(
                 return ICanHandleReplayForObserver.Error.CouldNotGetReplayContext;
             }
             var pipeline = projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
-            await doWork(pipeline, replayContext);
+            await doWork(pipeline, projection, replayContext);
             return Result<ICanHandleReplayForObserver.Error>.Success();
         }
         catch (Exception ex)

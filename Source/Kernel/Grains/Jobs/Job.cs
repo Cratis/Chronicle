@@ -292,7 +292,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     /// <remarks>
     /// This is also called when a Job is being removed.
     /// OnStopped can be called on a Job two or more times. For instance if a Job is first stopped then removed later.
-    /// It will first call OnStopped when the non-completed steps are stopped and then call it again when Remove is called
+    /// It will first call OnStopped when the non-completed steps are stopped and then call it again when Remove is called.
     /// </remarks>
     /// <returns>A task representing the operation.</returns>
     protected virtual Task OnStopped() => Task.FromResult(Result.Success<JobError>());
