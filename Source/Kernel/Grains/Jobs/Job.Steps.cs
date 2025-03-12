@@ -242,37 +242,33 @@ public abstract partial class Job<TRequest, TJobState>
 
     async Task<Result<StartJobError>> StartAndSubscribeToAllJobSteps(GrainId grainId)
     {
+        var numFailedJobSteps = 0;
         await OnBeforeStartingJobSteps();
-        var startAllSteps = _jobStepGrains!.Select(async idAndGrain =>
+        foreach (var idAndGrain in _jobStepGrains!)
         {
             var (id, jobStep) = idAndGrain;
             try
             {
                 if (!(await jobStep.Start(grainId)).TryGetError(out var startError))
                 {
-                    return (JobStepId: id, Result: Result.Success<StartJobStepError>());
+                    await SubscribeJobStep(_jobStepGrains![id].AsReference<IJobObserver>());
+                    continue;
                 }
+                numFailedJobSteps++;
                 _logger.FailedStartingJobStep(id, startError);
-                return (JobStepId: id, Result: startError);
             }
             catch (Exception ex)
             {
+                numFailedJobSteps++;
                 _logger.FailedStartingJobStep(ex, id);
-                return (JobStepId: id, Result: Result.Failed(StartJobStepError.Unknown));
             }
-        });
-        var startResults = await Task.WhenAll(startAllSteps);
-        var numFailedJobSteps = startResults.Count(finishedTask => !finishedTask.Result.IsSuccess);
-        foreach (var (jobStepId, _) in startResults.Where(idAndStartResult => idAndStartResult.Result.IsSuccess))
-        {
-            await SubscribeJobStep(_jobStepGrains![jobStepId].AsReference<IJobObserver>());
         }
         if (numFailedJobSteps == 0)
         {
             return Result<StartJobError>.Success();
         }
         State.Progress.FailedSteps += numFailedJobSteps;
-        return numFailedJobSteps == startResults.Length
+        return numFailedJobSteps == _jobStepGrains.Count
             ? StartJobError.AllJobStepsFailedStarting
             : StartJobError.FailedStartingSomeJobSteps;
     }
