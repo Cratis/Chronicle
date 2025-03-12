@@ -94,11 +94,11 @@ public class ReplayObserver(
         {
             if (State.LastHandledEventSequenceNumber.IsActualValue)
             {
-                logger.NotAllEventsWereHandled(nameof(CatchUpObserver), State.LastHandledEventSequenceNumber);
+                logger.NotAllEventsWereHandled(nameof(ReplayObserver), State.LastHandledEventSequenceNumber);
             }
             else
             {
-                logger.NoneEventsWereHandled(nameof(CatchUpObserver));
+                logger.NoneEventsWereHandled(nameof(ReplayObserver));
             }
         }
 
