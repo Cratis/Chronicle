@@ -93,12 +93,11 @@ public class JobTypes : IJobTypes
             {
                 throw new ArgumentException($"JobType for type {jobClrType} is not set");
             }
-            var jobInterface = jobClrType.GetInterfaces().Single(jobInterfaceType => jobInterfaceType.GetInterfaces().Any(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IJob<>)));
-            if (!_jobTypes.TryAdd(jobType, jobInterface))
+            if (!_jobTypes.TryAdd(jobType, jobClrType))
             {
-                throw new JobTypeAlreadyExists(jobType, _jobTypes[jobType], jobInterface);
+                throw new JobTypeAlreadyExists(jobType, _jobTypes[jobType], jobClrType);
             }
-            _jobTypePerType.Add(jobInterface, jobType);
+            _jobTypePerType.Add(jobClrType, jobType);
         }
     }
     void PopulateJobRequestTypes()
