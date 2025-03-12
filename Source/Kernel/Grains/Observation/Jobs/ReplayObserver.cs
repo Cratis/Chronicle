@@ -53,9 +53,6 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnBeforeStartingJobSteps()
     {
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.Replay();
-
         await DeleteAllOtherJobsForObserver();
         await replayStateServiceClient.BeginReplayFor(State.ObserverDetails);
     }
