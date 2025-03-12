@@ -179,6 +179,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         catch (Exception ex)
         {
             logger.FailedUnexpectedly(ex);
+            _ = await WriteStatusChange(JobStepStatus.Failed, ex.GetAllMessages(), ex.StackTrace);
             return JobStepError.Unknown;
         }
         finally
