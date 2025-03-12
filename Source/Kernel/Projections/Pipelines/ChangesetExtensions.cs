@@ -20,8 +20,23 @@ public static class ChangesetExtensions
     /// <param name="source">Source to add from.</param>
     public static void AddPropertiesFrom(this IChangeset<AppendedEvent, ExpandoObject> changeset, ExpandoObject source)
     {
-        var initialModelState = source as IDictionary<string, object>;
+        var initialModelStateAsDictionary = source as IDictionary<string, object>;
         var existingProperties = new List<PropertyPath>();
+
+        List<KeyValuePair<string, object>> safeCopy;
+
+        // Note: Since our internals are not necessarily thread safe, we need to reduce the risk of conflicts
+        // when copying the key-value pairs. This is a best effort to avoid exceptions due to concurrent modifications.
+        try
+        {
+            // Attempt to copy key-value pairs safely
+            safeCopy = new List<KeyValuePair<string, object>>(initialModelStateAsDictionary);
+        }
+        catch (InvalidOperationException)
+        {
+            // Handle modification issue by retrying, could still fail - so this is a best effort fallback mechanism
+            safeCopy = initialModelStateAsDictionary.ToList();
+        }
 
         existingProperties.AddRange(changeset.Changes
             .OfType<PropertiesChanged<ExpandoObject>>()
@@ -32,7 +47,7 @@ public static class ChangesetExtensions
             .OfType<ChildAdded>()
             .Select(_ => (PropertyPath)_.ChildrenProperty.Segments.First().Value));
 
-        var newProperties = initialModelState
+        var newProperties = safeCopy
             .Where(_ => !existingProperties.Exists(property => property == _.Key))
             .Select(_ => new PropertyDifference(_.Key, null, _.Value)).ToArray();
 
