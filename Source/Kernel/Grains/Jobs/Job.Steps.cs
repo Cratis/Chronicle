@@ -15,75 +15,27 @@ public abstract partial class Job<TRequest, TJobState>
     public async Task<Result<JobError>> OnStepSucceeded(JobStepId stepId, JobStepResult jobStepResult)
     {
         using var scope = _logger.BeginJobScope(JobId, JobKey);
-        try
-        {
-            _logger.StepSuccessfullyCompleted(stepId);
-            State.Progress.SuccessfulSteps++;
-            _ = await WriteState();
-            var handleCompletedStepResult = await HandleJobStepCompletedOrStopped(stepId, jobStepResult);
-            return handleCompletedStepResult.Match(
-                _ => Result.Success<JobError>(),
-                error =>
-                {
-                    _logger.FailedHandlingCompletedJobStep(stepId, error);
-                    return Result.Failed(error);
-                });
-        }
-        catch (Exception ex)
-        {
-            _logger.Failed(ex);
-            return JobError.UnknownError;
-        }
+        _logger.StepSuccessfullyCompleted(stepId);
+        State.Progress.SuccessfulSteps++;
+        return await PerformStepEventHandling(stepId, jobStepResult);
     }
 
     /// <inheritdoc/>
     public async Task<Result<JobError>> OnStepStopped(JobStepId stepId, JobStepResult jobStepResult)
     {
         using var scope = _logger.BeginJobScope(JobId, JobKey);
-        try
-        {
-            _logger.StepStopped(stepId);
-            State.Progress.StoppedSteps++;
-            _ = await WriteState();
-            var handleCompletedStepResult = await HandleJobStepCompletedOrStopped(stepId, jobStepResult);
-            return handleCompletedStepResult.Match(
-                _ => Result.Success<JobError>(),
-                error =>
-                {
-                    _logger.FailedHandlingCompletedJobStep(stepId, error);
-                    return Result.Failed(error);
-                });
-        }
-        catch (Exception ex)
-        {
-            _logger.Failed(ex);
-            return JobError.UnknownError;
-        }
+        _logger.StepStopped(stepId);
+        State.Progress.StoppedSteps++;
+        return await PerformStepEventHandling(stepId, jobStepResult);
     }
 
     /// <inheritdoc/>
     public async Task<Result<JobError>> OnStepFailed(JobStepId stepId, JobStepResult jobStepResult)
     {
         using var scope = _logger.BeginJobScope(JobId, JobKey);
-        try
-        {
-            _logger.StepFailed(stepId);
-            State.Progress.FailedSteps++;
-            _ = await WriteState();
-            var handleCompletedStepResult = await HandleJobStepCompletedOrStopped(stepId, jobStepResult);
-            return handleCompletedStepResult.Match(
-                _ => Result.Success<JobError>(),
-                error =>
-                {
-                    _logger.FailedHandlingCompletedJobStep(stepId, error);
-                    return Result.Failed(error);
-                });
-        }
-        catch (Exception ex)
-        {
-            _logger.Failed(ex);
-            return JobError.UnknownError;
-        }
+        _logger.StepFailed(stepId);
+        State.Progress.FailedSteps++;
+        return await PerformStepEventHandling(stepId, jobStepResult);
     }
 
     /// <summary>
@@ -125,6 +77,27 @@ public abstract partial class Job<TRequest, TJobState>
     /// <param name="request">The request associated with the job.</param>
     /// <returns>Collection of <see cref="JobStepDetails"/> .</returns>
     protected abstract Task<IImmutableList<JobStepDetails>> PrepareSteps(TRequest request);
+
+    async Task<Result<JobError>> PerformStepEventHandling(JobStepId stepId, JobStepResult jobStepResult)
+    {
+        try
+        {
+            _ = await WriteState();
+            var handleCompletedStepResult = await HandleJobStepCompletedOrStopped(stepId, jobStepResult);
+            return handleCompletedStepResult.Match(
+                _ => Result.Success<JobError>(),
+                error =>
+                {
+                    _logger.FailedHandlingCompletedJobStep(stepId, error);
+                    return Result.Failed(error);
+                });
+        }
+        catch (Exception ex)
+        {
+            _logger.Failed(ex);
+            return JobError.UnknownError;
+        }
+    }
 
     async Task<Result<JobError>> HandleJobStepCompletedOrStopped(JobStepId stepId, JobStepResult result)
     {
