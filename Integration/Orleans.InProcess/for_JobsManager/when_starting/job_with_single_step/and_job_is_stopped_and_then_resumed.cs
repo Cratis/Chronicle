@@ -34,7 +34,7 @@ public class and_job_is_stopped_and_then_resumed(context context) : Given<contex
             taskCompletionSource.SetResult();
             await JobStorage.WaitTillJobProgressStopped<JobWithSingleStepState>(JobId);
             await JobsManager.Resume(JobId);
-            CompletedJobState = await JobStorage.WaitTillJobProgressCompleted<JobWithSingleStepState>(JobId);
+            CompletedJobState = await JobStorage.WaitTillJobMeetsPredicate<JobWithSingleStepState>(JobId, state => state.Status == JobStatus.CompletedSuccessfully);
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
             JobStepStates = getJobStepState.AsT0;
         }
