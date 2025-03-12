@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Collections;
 
@@ -15,6 +16,7 @@ public class Constraints(
     IEventStore eventStore,
     IEnumerable<ICanProvideConstraints> constraintsProviders) : IConstraints
 {
+    readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     readonly List<IConstraintDefinition> _constraints = [];
 
     /// <inheritdoc/>
@@ -43,7 +45,7 @@ public class Constraints(
             EventStore = eventStore.Name,
             Constraints = _constraints.ConvertAll(_ => _.ToContract())
         };
-        return eventStore.Connection.Services.Constraints.Register(request);
+        return _servicesAccessor.Services.Constraints.Register(request);
     }
 
     /// <inheritdoc/>

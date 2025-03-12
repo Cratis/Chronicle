@@ -6,14 +6,14 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// Converter methods for <see cref="EventType"/>.
 /// </summary>
-public static class EventTypeConverters
+internal static class EventTypeConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="EventType"/>.
     /// </summary>
     /// <param name="type"><see cref="EventType"/> to convert.</param>
     /// <returns>Converted contract version.</returns>
-    public static Contracts.Events.EventType ToContract(this EventType type)
+    internal static Contracts.Events.EventType ToContract(this EventType type)
     {
         return new()
         {
@@ -28,7 +28,7 @@ public static class EventTypeConverters
     /// </summary>
     /// <param name="types">Collection of <see cref="EventType"/> to convert.</param>
     /// <returns>Converted collection of contract version.</returns>
-    public static IList<Contracts.Events.EventType> ToContract(this IEnumerable<EventType> types) =>
+    internal static IList<Contracts.Events.EventType> ToContract(this IEnumerable<EventType> types) =>
         types.Select(_ => _.ToContract()).ToList();
 
     /// <summary>
@@ -36,7 +36,7 @@ public static class EventTypeConverters
     /// </summary>
     /// <param name="eventType"><see cref="Contracts.Events.EventType"/> to convert from.</param>
     /// <returns>Converted <see cref="EventType"/>.</returns>
-    public static EventType ToClient(this Contracts.Events.EventType eventType) =>
+    internal static EventType ToClient(this Contracts.Events.EventType eventType) =>
         new(eventType.Id, eventType.Generation, eventType.Tombstone);
 
     /// <summary>
@@ -44,6 +44,6 @@ public static class EventTypeConverters
     /// </summary>
     /// <param name="types">Collection of <see cref="Contracts.Events.EventType"/> to convert.</param>
     /// <returns>Converted collection of contract version.</returns>
-    public static IEnumerable<EventType> ToClient(this IEnumerable<Contracts.Events.EventType> types) =>
+    internal static IEnumerable<EventType> ToClient(this IEnumerable<Contracts.Events.EventType> types) =>
         types.Select(_ => _.ToClient()).ToArray();
 }

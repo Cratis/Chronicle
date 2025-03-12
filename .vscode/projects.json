@@ -37,5 +37,15 @@
         "name": "ResourceEmbedder",
         "path": "${workspaceFolder}/Source/Tools/ResourceEmbedder",
         "outputPath": "${workspaceFolder}/Source/Tools/ResourceEmbedder/bin/Debug/net9.0/ResourceEmbedder.dll"
+    },
+    {
+        "name": "InternalsVerifier",
+        "path": "${workspaceFolder}/Source/Tools/InternalsVerifier",
+        "outputPath": "${workspaceFolder}/Source/Tools/InternalsVerifier/bin/Debug/net9.0/InternalsVerifier.dll"
+    },
+    {
+        "name": "GrpcClients",
+        "path": "${workspaceFolder}/Source/Tools/GrpcClients",
+        "outputPath": "${workspaceFolder}/Source/Tools/GrpcClients/bin/Debug/net9.0/GrpcClients.dll"
     }
 ]

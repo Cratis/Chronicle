@@ -6,14 +6,14 @@ namespace Cratis.Chronicle.Identities;
 /// <summary>
 /// Extension methods for converting to and from <see cref="Identity"/>.
 /// </summary>
-public static class IdentityConverters
+internal static class IdentityConverters
 {
     /// <summary>
     /// Convert to <see cref="Contracts.Identities.Identity"/>.
     /// </summary>
     /// <param name="identity"><see cref="Identity"/> to convert.</param>
     /// <returns>Converted <see cref="Contracts.Identities.Identity"/>.</returns>
-    public static Contracts.Identities.Identity ToContract(this Identity identity) => new()
+    internal static Contracts.Identities.Identity ToContract(this Identity identity) => new()
     {
         Subject = identity.Subject,
         Name = identity.Name,
@@ -26,6 +26,6 @@ public static class IdentityConverters
     /// </summary>
     /// <param name="identity"><see cref="Contracts.Identities.Identity"/> to convert from.</param>
     /// <returns>Converted <see cref="Identity"/>.</returns>
-    public static Identity ToClient(this Contracts.Identities.Identity identity) =>
+    internal static Identity ToClient(this Contracts.Identities.Identity identity) =>
         new(identity.Subject, identity.Name, identity.UserName, identity.OnBehalfOf?.ToClient());
 }

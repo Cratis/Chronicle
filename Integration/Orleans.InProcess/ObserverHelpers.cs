@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation;
 using FailedPartition = Cratis.Chronicle.Contracts.Observation.FailedPartition;
@@ -76,9 +77,12 @@ public static class ObserverHelpers
         timeout ??= TimeSpan.FromSeconds(5);
         var failedPartitions = Enumerable.Empty<FailedPartition>();
         using var cts = new CancellationTokenSource(timeout.Value);
+
+        var service = (eventStore.Connection as IChronicleServicesAccessor)!.Services.FailedPartitions;
+
         while (!failedPartitions.Any() && !cts.IsCancellationRequested)
         {
-            failedPartitions = await eventStore.Connection.Services.FailedPartitions.GetFailedPartitions(new()
+            failedPartitions = await service.GetFailedPartitions(new()
             {
                 EventStore = eventStore.Name.Value,
                 Namespace = Concepts.EventStoreNamespaceName.Default,
