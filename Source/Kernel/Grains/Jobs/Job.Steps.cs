@@ -218,26 +218,26 @@ public abstract partial class Job<TRequest, TJobState>
 
     async Task<bool> TryPrepareAllJobSteps(ReadOnlyDictionary<JobStepId, JobStepGrainAndRequest> jobStepRequests)
     {
-        var prepareAllSteps = jobStepRequests.Select(async idAndGrain =>
+        var success = true;
+        foreach (var idAndGrain in jobStepRequests)
         {
             var (id, jobStep) = idAndGrain;
             try
             {
                 if (!(await jobStep.Grain.Prepare(jobStep.Request)).TryGetError(out var prepareError))
                 {
-                    return (JobStepId: id, Result: Result.Success<PrepareJobStepError>());
+                    continue;
                 }
                 _logger.FailedPreparingJobStep(id, prepareError);
-                return (JobStepId: id, Result: prepareError);
+                success = false;
             }
             catch (Exception ex)
             {
                 _logger.ErrorPreparingJobStep(ex, id);
-                return (JobStepId: id, Result: Result.Failed(PrepareJobStepError.Unknown));
+                success = false;
             }
-        });
-        var prepareResults = await Task.WhenAll(prepareAllSteps);
-        return prepareResults.All(idAndResult => idAndResult.Result.IsSuccess);
+        }
+        return success;
     }
 
     async Task<Result<StartJobError>> StartAndSubscribeToAllJobSteps(GrainId grainId)
