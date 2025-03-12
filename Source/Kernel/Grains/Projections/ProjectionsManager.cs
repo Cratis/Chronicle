@@ -94,6 +94,11 @@ public class ProjectionsManager(
         var projection = GrainFactory.GetGrain<IProjection>(key);
         await projection.SetDefinition(definition);
 
+        if (!definition.IsActive)
+        {
+            return;
+        }
+
         foreach (var namespaceName in namespaces)
         {
             await SubscribeIfNotSubscribed(definition, namespaceName);
